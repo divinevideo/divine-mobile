@@ -4,7 +4,6 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
@@ -24,8 +23,8 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Remix stands in for Add to clips; on the web ([isWeb]) it points to the app
 /// instead. Add to list and the debug copies stay in the share sheet. When the
-/// remix Remix asked for is ready, this section opens it in the editor. Save's
-/// result shows below the row, which the sheet's listener leaves to it.
+/// remix Remix asked for is ready, this section shows it in the clip library.
+/// Save's result shows below the row, which the sheet's listener leaves to it.
 ///
 /// Reads the [VideoContentActionsBloc] the sheet provides, and the
 /// [OwnerVideoActionsCubit] it provides alongside when [isOwnVideo] is true.
@@ -35,7 +34,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Kept alive in the sheet's lazy list: its context drives flows that outlive
 /// a tap (delete, remix), and those must still close the sheet and report or
 /// open their outcome after the row has scrolled out of view.
-class MetadataActionsSection extends ConsumerStatefulWidget {
+class MetadataActionsSection extends StatefulWidget {
   const MetadataActionsSection({
     required this.video,
     this.isOwnVideo = false,
@@ -55,15 +54,14 @@ class MetadataActionsSection extends ConsumerStatefulWidget {
   /// decided once by the sheet. Only then is Report this remix offered.
   final bool isRemixOfViewersVideo;
 
-  /// Whether the app runs on the web, where the editor is unavailable.
+  /// Whether the app runs on the web, where the clip library is unavailable.
   final bool isWeb;
 
   @override
-  ConsumerState<MetadataActionsSection> createState() =>
-      _MetadataActionsSectionState();
+  State<MetadataActionsSection> createState() => _MetadataActionsSectionState();
 }
 
-class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
+class _MetadataActionsSectionState extends State<MetadataActionsSection>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -144,12 +142,12 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
     );
   }
 
-  /// Opens the remix in the editor, unless a route the user opened over the
+  /// Shows the remix in the library, unless a route the user opened over the
   /// sheet meanwhile covers it: closing the sheet would then close that
   /// route instead. The clip stays in the library either way.
   ///
   /// The bloc holds the sheet's actions until this reports the launch
-  /// finished, whether it opened the editor or gave up.
+  /// finished, whether it opened the library or gave up.
   void _openReadyRemix(BuildContext context, VideoContentActionsState state) {
     final result = state.actionResult;
     if (result is! VideoContentRemixReady || _isLaunchingRemix) return;
@@ -166,11 +164,13 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
     }
     _isLaunchingRemix = true;
     runDetached(
-      openRemixInEditor(context, ref, result.clip).whenComplete(() {
-        _isLaunchingRemix = false;
-        bloc.addIfOpen(const VideoContentRemixLaunchFinished());
-      }),
-      'open remix in the editor',
+      openRemixInLibrary(context, fromOthers: !widget.isOwnVideo).whenComplete(
+        () {
+          _isLaunchingRemix = false;
+          bloc.addIfOpen(const VideoContentRemixLaunchFinished());
+        },
+      ),
+      'show remix in the clip library',
       logName: 'MetadataActionsSection',
       category: LogCategory.video,
     );

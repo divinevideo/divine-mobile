@@ -26,6 +26,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -850,6 +851,7 @@ void main() {
       const openSheetLabel = 'open sheet';
       const coverText = 'covering route';
       const editorLabel = 'editor';
+      const libraryLabel = 'clip library';
       final remixClip = DivineVideoClip(
         id: 'classic_vine_remix',
         video: EditorVideo.file('/tmp/classic_vine_remix.mp4'),
@@ -868,6 +870,7 @@ void main() {
       late _MockDraftStorageService draftStorage;
       late _PopCounter pops;
       late int editorBuilds;
+      late List<Uri> libraryLocations;
 
       setUp(() {
         // Broadcast, so closing it completes in tests that never listen.
@@ -879,18 +882,16 @@ void main() {
         );
         when(() => contentActions.isClosed).thenReturn(false);
         draftStorage = _MockDraftStorageService();
-        when(
-          () => draftStorage.draftExists(any()),
-        ).thenAnswer((_) async => false);
         pops = _PopCounter();
         editorBuilds = 0;
+        libraryLocations = [];
       });
 
       tearDown(() => results.close());
 
       // Pushes [sheetBody] on its own route, standing in for the sheet, under
-      // a router that knows the editor. By default the body is the section in
-      // a scrolling list, reading the mocked bloc.
+      // a router that knows the library and editor. By default the body is the
+      // section in a scrolling list, reading the mocked bloc.
       Future<void> openSheet(WidgetTester tester, {Widget? sheetBody}) async {
         final router = GoRouter(
           observers: [pops],
@@ -919,6 +920,13 @@ void main() {
                   child: const Text(openSheetLabel),
                 ),
               ),
+            ),
+            GoRoute(
+              path: LibraryScreen.clipsPath,
+              builder: (_, state) {
+                libraryLocations.add(state.uri);
+                return const Scaffold(body: Text(libraryLabel));
+              },
             ),
             GoRoute(
               path: VideoEditorScreen.path,
@@ -956,7 +964,34 @@ void main() {
       }
 
       testWidgets(
-        'opens the editor with a remix that became ready after the row '
+        'shows the imported remix in the library without replacing the session',
+        (tester) async {
+          await openSheet(tester);
+          final existingClip = remixClip.copyWith(id: 'existing_recording');
+          container
+              .read(clipManagerProvider.notifier)
+              .insertClip(0, existingClip);
+
+          results.add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(libraryLabel), findsOneWidget);
+          // Another creator's video: its import is listed under From others.
+          expect(libraryLocations.single.queryParameters, {
+            'from-others': 'true',
+          });
+          expect(find.text(editorLabel), findsNothing);
+          expect(container.read(clipManagerProvider).clips, [existingClip]);
+          verifyZeroInteractions(draftStorage);
+        },
+      );
+
+      testWidgets(
+        'opens the library with a remix that became ready after the row '
         'scrolled out of view',
         (tester) async {
           await openSheet(tester);
@@ -971,8 +1006,8 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(sheetList, findsNothing);
-          expect(find.text(editorLabel), findsOneWidget);
-          expect(container.read(clipManagerProvider).clips, [remixClip]);
+          expect(find.text(libraryLabel), findsOneWidget);
+          expect(container.read(clipManagerProvider).clips, isEmpty);
         },
       );
 
@@ -1000,67 +1035,15 @@ void main() {
       });
 
       testWidgets(
-        'leaves a route opened over the sheet while the autosave is checked',
-        (tester) async {
-          final sessionClip = DivineVideoClip(
-            id: 'earlier_session_clip',
-            video: EditorVideo.file('/tmp/earlier_session_clip.mp4'),
-            duration: const Duration(seconds: 6),
-            recordedAt: DateTime.utc(2026),
-            targetAspectRatio: .square,
-            originalAspectRatio: 1,
-          );
-          final autosaveCheck = Completer<bool>();
-          when(
-            () => draftStorage.draftExists(any()),
-          ).thenAnswer((_) => autosaveCheck.future);
-          await openSheet(tester);
-          container
-              .read(clipManagerProvider.notifier)
-              .insertClip(0, sessionClip);
-
-          results.add(
-            VideoContentActionsState(
-              actionResult: VideoContentRemixReady(clip: remixClip),
-            ),
-          );
-          await tester.pump();
-          verify(() => draftStorage.draftExists(any())).called(1);
-
-          // The launcher is waiting on storage when the user opens a route.
-          Navigator.of(tester.element(sheetList)).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const Scaffold(body: Text(coverText)),
-            ),
-          );
-          await tester.pumpAndSettle();
-          autosaveCheck.complete(false);
-          await tester.pumpAndSettle();
-
-          expect(find.text(coverText), findsOneWidget);
-          expect(pops.count, 0);
-          expect(editorBuilds, 0);
-          // Given up before the session was cleared.
-          expect(container.read(clipManagerProvider).clips, [sessionClip]);
-          verify(
-            () => contentActions.add(const VideoContentRemixLaunchFinished()),
-          ).called(1);
-        },
-      );
-
-      testWidgets(
-        'holds Remix and the row until the editor opens, then opens it once',
+        'holds Remix and the row while importing, then opens the library once',
         (tester) async {
           final video = _video();
           final importer = _MockVideoClipImportService();
+          final importedClip = Completer<DivineVideoClip?>();
           when(
             () => importer.findImportedClipOf(any()),
-          ).thenAnswer((_) async => remixClip);
+          ).thenAnswer((_) => importedClip.future);
           final ownerCubit = stubbedOwnerCubit();
-          final autosaveCheck = Completer<bool>();
-          when(
-            () => draftStorage.draftExists(any()),
-          ).thenAnswer((_) => autosaveCheck.future);
           final l10n = lookupAppLocalizations(const Locale('en'));
 
           await openSheet(
@@ -1089,10 +1072,7 @@ void main() {
           await tester.tap(remixButton);
           await tester.pump();
           await tester.pump();
-          verify(() => draftStorage.draftExists(any())).called(1);
-
-          // The launcher is waiting on the autosave check; nothing more may
-          // start meanwhile.
+          // The import is pending; another tap cannot start more work.
           await tester.tap(remixButton);
           await tester.tap(find.text(l10n.shareMenuDeleteVideo));
           await tester.pump(const Duration(seconds: 1));
@@ -1111,26 +1091,23 @@ void main() {
             findsOneWidget,
           );
 
-          autosaveCheck.complete(false);
+          importedClip.complete(remixClip);
           await tester.pumpAndSettle();
 
-          expect(editorBuilds, 1);
+          expect(editorBuilds, 0);
           expect(pops.count, 1);
-          expect(find.text(editorLabel), findsOneWidget);
-          expect(container.read(clipManagerProvider).clips, [remixClip]);
+          expect(find.text(libraryLabel), findsOneWidget);
+          // The viewer's own video: its import is listed under Clips.
+          expect(libraryLocations.single.queryParameters, isEmpty);
+          expect(container.read(clipManagerProvider).clips, isEmpty);
           verifyNever(() => ownerCubit.deleteVideo(any()));
         },
       );
 
-      testWidgets('opens one editor when two ready remixes arrive at once', (
+      testWidgets('opens one library when two ready remixes arrive at once', (
         tester,
       ) async {
-        final autosaveCheck = Completer<bool>();
-        when(
-          () => draftStorage.draftExists(any()),
-        ).thenAnswer((_) => autosaveCheck.future);
         await openSheet(tester);
-
         results
           ..add(
             VideoContentActionsState(
@@ -1142,13 +1119,12 @@ void main() {
               actionResult: VideoContentRemixReady(clip: remixClip),
             ),
           );
-        await tester.pump();
-        autosaveCheck.complete(false);
         await tester.pumpAndSettle();
 
-        verify(() => draftStorage.draftExists(any())).called(1);
-        expect(editorBuilds, 1);
+        expect(find.text(libraryLabel), findsOneWidget);
+        expect(editorBuilds, 0);
         expect(pops.count, 1);
+        verifyNever(() => draftStorage.draftExists(any()));
       });
 
       testWidgets('ends the launch when a covering route drops the remix', (
@@ -1174,30 +1150,7 @@ void main() {
         ).called(1);
       });
 
-      testWidgets(
-        'ends the launch when keeping the autosave throws an Error',
-        (tester) async {
-          when(
-            () => draftStorage.draftExists(any()),
-          ).thenThrow(StateError('broken autosave id'));
-          await openSheet(tester);
-
-          results.add(
-            VideoContentActionsState(
-              actionResult: VideoContentRemixReady(clip: remixClip),
-            ),
-          );
-          await tester.pumpAndSettle();
-
-          expect(tester.takeException(), isNull);
-          expect(editorBuilds, 0);
-          verify(
-            () => contentActions.add(const VideoContentRemixLaunchFinished()),
-          ).called(1);
-        },
-      );
-
-      testWidgets('ends the launch once the editor has opened', (
+      testWidgets('ends the launch once the library has opened', (
         tester,
       ) async {
         await openSheet(tester);
@@ -1209,7 +1162,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text(editorLabel), findsOneWidget);
+        expect(find.text(libraryLabel), findsOneWidget);
         verify(
           () => contentActions.add(const VideoContentRemixLaunchFinished()),
         ).called(1);

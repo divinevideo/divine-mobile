@@ -4612,14 +4612,16 @@ void main() {
       originalAspectRatio: 1,
     );
 
-    DivineVideoDraft autosave({List<DivineVideoClip>? clips}) =>
-        DivineVideoDraft.create(
-          clips: clips ?? [sessionClip],
-          title: 'Half-finished idea',
-          description: '',
-          hashtags: const {},
-          selectedApproach: 'native',
-        ).copyWith(id: VideoEditorConstants.autoSaveId);
+    DivineVideoDraft autosave({
+      List<DivineVideoClip>? clips,
+      String title = 'Half-finished idea',
+    }) => DivineVideoDraft.create(
+      clips: clips ?? [sessionClip],
+      title: title,
+      description: '',
+      hashtags: const {},
+      selectedApproach: 'native',
+    ).copyWith(id: VideoEditorConstants.autoSaveId);
 
     void stubAutosaveRow(DivineVideoDraft? draft) {
       when(
@@ -4723,6 +4725,18 @@ void main() {
 
     test('writes nothing when the autosave holds no clips', () async {
       stubAutosaveRow(autosave(clips: const []));
+
+      final keptId = await container
+          .read(videoEditorProvider.notifier)
+          .keepAutosaveAsDraft();
+
+      expect(keptId, isNull);
+
+      verifyNever(() => mockDraftStorage.saveDraft(any()));
+    });
+
+    test('writes nothing when the session holds clips but no edits', () async {
+      stubAutosaveRow(autosave(title: ''));
 
       final keptId = await container
           .read(videoEditorProvider.notifier)

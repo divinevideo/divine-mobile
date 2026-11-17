@@ -314,11 +314,11 @@ class VideoContentActionsBloc
   }
 
   /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
-  /// with the clip the editor opens with. An import that fails reports
+  /// with the saved clip to show in the library. An import that fails reports
   /// [VideoContentRemixFailed].
   ///
   /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
-  /// result, holding the sheet's actions while the UI opens the editor, until
+  /// result, holding the sheet's actions while the UI opens the library, until
   /// [VideoContentRemixLaunchFinished]. Like every action, a request arriving
   /// while any action is in flight is ignored.
   Future<void> _onRemixRequested(
@@ -359,10 +359,11 @@ class VideoContentActionsBloc
     emit(state.copyWith(isPreparingRemix: false));
   }
 
-  /// The clip a remix of this video opens with: the one an earlier import
-  /// left in the library, or else a fresh import under [defaultClipTitle].
+  /// The library clip for a remix of this video: the one an earlier import
+  /// left in the library, restored first if it was archived, or else a fresh
+  /// import under [defaultClipTitle].
   ///
-  /// Returns null when the video could not be imported.
+  /// Returns null when the video could not be imported or restored.
   Future<DivineVideoClip?> _remixClip() async {
     final importer = _videoClipImportService;
     if (importer == null) {
@@ -376,7 +377,19 @@ class VideoContentActionsBloc
 
     try {
       final earlierImport = await importer.findImportedClipOf(_video);
-      if (earlierImport != null) return earlierImport;
+      if (earlierImport != null) {
+        if (earlierImport.archivedAt == null) return earlierImport;
+        final restored = await importer.unarchiveImportedClip(earlierImport);
+        if (restored == null) {
+          Log.warning(
+            'Could not restore the archived clip ${earlierImport.id} '
+            'for a remix',
+            name: 'VideoContentActionsBloc',
+            category: LogCategory.ui,
+          );
+        }
+        return restored;
+      }
 
       final result = await importer.importToLibrary(
         _video,

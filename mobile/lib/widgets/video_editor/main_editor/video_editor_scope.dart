@@ -122,7 +122,7 @@ class VideoEditorScope extends InheritedWidget {
   final double? targetClipAspectRatio;
 
   /// Whether the editor was opened from the Library screen (its clips or
-  /// drafts tab) or by a remix from a video's info sheet.
+  /// drafts tab).
   final bool fromLibrary;
 
   /// Notifier for the body size, updated by [_CanvasFitter].

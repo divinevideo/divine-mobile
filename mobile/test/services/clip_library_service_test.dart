@@ -1166,6 +1166,21 @@ void main() {
         expect(found?.id, 'classic_vine_vine-123_1');
       });
 
+      test('returns an archived import with its archive time', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2026)),
+        );
+        await service.setClipArchived(
+          clipId: 'classic_vine_vine-123_1',
+          archived: true,
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(found?.id, 'classic_vine_vine-123_1');
+        expect(found?.archivedAt, isNotNull);
+      });
+
       test("matches an import by the video's addressable id", () async {
         await service.saveClip(
           clipOf(

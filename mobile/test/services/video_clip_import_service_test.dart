@@ -280,6 +280,45 @@ void main() {
     });
   });
 
+  group('unarchiveImportedClip', () {
+    test(
+      'unarchiving a remix restores its existing row without copying footage',
+      () async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
+        final library = ClipLibraryService(
+          clipsDao: database.clipsDao,
+          draftsDao: database.draftsDao,
+          clipCategoriesDao: database.clipCategoriesDao,
+          ownerPubkey: _ownerPubkey,
+        );
+        final clip = DivineVideoClip(
+          id: 'archived_import',
+          video: EditorVideo.file(sourceVideo.path),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime.utc(2026),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 1,
+        );
+        await library.saveClip(clip);
+        await library.setClipArchived(clipId: clip.id, archived: true);
+        final archived = await library.getClipById(clip.id);
+        expect(archived!.archivedAt, isNotNull);
+
+        final restored = await buildService(library: library)
+            .unarchiveImportedClip(archived);
+
+        expect(restored!.id, clip.id);
+        expect(restored.archivedAt, isNull);
+        final stored = await library.getAllClips();
+        expect(stored, hasLength(1));
+        expect(stored.single.id, clip.id);
+        expect(stored.single.archivedAt, isNull);
+        expect(sourceVideo.existsSync(), isTrue);
+      },
+    );
+  });
+
   group('defaultLibraryTitleFor', () {
     test('uses a timestamp fallback when metadata has no title text', () {
       final title = VideoClipImportService.defaultLibraryTitleFor(

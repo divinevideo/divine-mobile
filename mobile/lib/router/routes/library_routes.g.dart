@@ -50,10 +50,19 @@ RouteBase get $libraryClipsRouteData => GoRouteData.$route(
 
 mixin $LibraryClipsRouteData on GoRouteData {
   static LibraryClipsRouteData _fromState(GoRouterState state) =>
-      const LibraryClipsRouteData();
+      LibraryClipsRouteData(
+        fromOthers: state.uri.queryParameters['from-others'],
+      );
+
+  LibraryClipsRouteData get _self => this as LibraryClipsRouteData;
 
   @override
-  String get location => GoRouteData.$location('/clips');
+  String get location => GoRouteData.$location(
+    '/clips',
+    queryParams: {
+      if (_self.fromOthers != null) 'from-others': _self.fromOthers,
+    },
+  );
 
   @override
   void go(BuildContext context) => context.go(location);

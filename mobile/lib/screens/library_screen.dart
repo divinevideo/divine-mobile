@@ -23,6 +23,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -550,7 +551,19 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (selectedClips.isEmpty) return;
 
     if (!widget.selectionMode) {
-      await ref.read(videoPublishProvider.notifier).clearAll();
+      // Keep the unfinished session before replacing it with selected clips.
+      final videoEditor = ref.read(videoEditorProvider.notifier);
+      final videoPublish = ref.read(videoPublishProvider.notifier);
+      final keptDraftId = await videoEditor.keepAutosaveAsDraft();
+      if (!mounted ||
+          !context.mounted ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        if (keptDraftId != null) {
+          await videoEditor.discardKeptDraft(keptDraftId);
+        }
+        return;
+      }
+      await videoPublish.clearAll();
       if (!mounted) return;
 
       final clipManagerNotifier = ref.read(clipManagerProvider.notifier);

@@ -21,6 +21,14 @@ while the remix is prepared and the rest of the row held; on the web it
 closes the sheet and points to the app. The "Remix this video" string is
 gone. Wherever this spec says "the Remix button", read "the Remix action".
 
+*As built (#11066):* Remix no longer opens the editor. It saves or reuses the
+video's footage, restoring an archived import, and opens the clip library on
+From others, or on Clips for the viewer's own video. It leaves the editor
+session alone; the autosave-kept-as-draft step below moved to the Library's
+"Create video", which every way into the Library now shares. The footage
+is then used from the library or through the editor's clip picker. Read "open
+editor" in this spec as "open the clip library".
+
 ### Consent
 
 - **Default flips to allowed.** A video may be remixed unless its creator
@@ -187,6 +195,10 @@ message reads better as one sentence or two.
   regular draft, then the session is cleared. Nothing is asked; nothing is
   lost. (The Library's create-from-clips path discards the autosave today;
   Remix deliberately does better and the Library path is left alone.)
+  *As built (#11066):* the step lives in the Library's "Create video", before
+  it clears the session. It keeps only an edited autosave, by the rule the
+  editor's close button asks by: an autosave holding clips alone would add a
+  draft each time someone backs out of the editor and creates again.
 - **Every clip picker gets the From others tab:** the editor's add-clips
   picker, the split-screen cell picker (reactions are what layouts are for),
   and the DM attach-clip picker all open `LibraryScreen(selectionMode: true)`;

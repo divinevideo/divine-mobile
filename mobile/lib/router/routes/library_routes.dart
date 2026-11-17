@@ -29,14 +29,21 @@ class LibraryDraftsRouteData extends GoRouteData with $LibraryDraftsRouteData {
   name: LibraryScreen.clipsRouteName,
 )
 class LibraryClipsRouteData extends GoRouteData with $LibraryClipsRouteData {
-  const LibraryClipsRouteData();
+  const LibraryClipsRouteData({
+    @TypedQueryParameter(name: 'from-others') this.fromOthers,
+  });
+
+  /// `true` opens the From others tab; any other value, or none, opens Clips.
+  final String? fromOthers;
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       fadeUpwardsPage(
         state: state,
-        child: const LibraryScreen(
-          initialTabIndex: LibraryScreen.clipsTabIndex,
+        child: LibraryScreen(
+          initialTabIndex: fromOthers == 'true'
+              ? LibraryScreen.fromOthersTabIndex
+              : LibraryScreen.clipsTabIndex,
         ),
       );
 }

@@ -1495,7 +1495,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// First persists a debounced autosave that has not fired yet and waits for
   /// autosaves in flight, so the copy is the session as last edited. Copies
-  /// only an autosave holding clips. The copy gets a fresh id and shares the
+  /// only an edited autosave holding clips. The copy gets a fresh id and shares the
   /// autosave's files; it keeps the challenge and post time, because this is
   /// the same session moving to the Drafts tab rather than a duplicate
   /// project.
@@ -1524,7 +1524,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     final autosave = await _draftService.getDraftById(
       VideoEditorConstants.autoSaveId,
     );
-    if (autosave == null || autosave.clips.isEmpty) return null;
+    if (autosave == null || !autosave.hasBeenEdited) return null;
     final kept = autosave.duplicate().copyWith(
       challengeContext: autosave.challengeContext,
       scheduledAt: autosave.scheduledAt,
