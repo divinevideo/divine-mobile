@@ -152,7 +152,7 @@ String? campaignAppRoute({required String? type, required String? value}) {
       ).hasMatch(value)) {
     return type == NotificationWireValues.announcement
         ? RoutePaths.announcementDetailForId(value)
-        : '/explore/tab/featured?campaignFeedId=$value';
+        : RoutePaths.exploreFeaturedCampaign(value);
   }
   if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;

@@ -259,12 +259,25 @@ class ExploreRouteData extends GoRouteData with $ExploreRouteData {
 
 /// An explore tab chosen by its URL slug.
 class ExploreTabRouteData extends GoRouteData with $ExploreTabRouteData {
-  const ExploreTabRouteData({required this.name});
+  const ExploreTabRouteData({
+    required this.name,
+    @TypedQueryParameter(name: ExploreQueryParameters.campaignFeedId)
+    this.campaignFeedId,
+  });
 
   /// The tab's URL slug. An unknown or currently unconfigured slug opens the
   /// default tab rather than an error, and is kept for a featured tab whose
   /// configuration arrives later.
   final String name;
+
+  /// Featured-feed id a campaign link requires, as it arrived in the URL.
+  final String? campaignFeedId;
+
+  /// [campaignFeedId], or null when the link carries none or an empty one,
+  /// so `?campaignFeedId=` opens normal Explore instead of a feed that can
+  /// never match.
+  String? get requiredFeaturedFeedId =>
+      campaignFeedId?.isEmpty ?? true ? null : campaignFeedId;
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
@@ -272,7 +285,7 @@ class ExploreTabRouteData extends GoRouteData with $ExploreTabRouteData {
     ExploreScreen(
       initialTabName: ExploreScreen.tabNameFromPathParameter(name),
       initialTabSlug: name,
-      requiredFeaturedFeedId: state.uri.queryParameters['campaignFeedId'],
+      requiredFeaturedFeedId: requiredFeaturedFeedId,
     ),
   );
 }
