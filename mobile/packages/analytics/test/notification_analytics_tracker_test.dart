@@ -34,17 +34,6 @@ void main() {
   late bool allowed;
   late String boundary;
 
-  group('campaignConsentChanged', () {
-    test('campaign opt-out measurement honors analytics consent', () async {
-      await tracker.campaignConsentChanged(enabled: false);
-      expect(sink.events.single.name, 'campaign_consent_changed');
-      expect(sink.events.single.parameters, {'enabled': 0});
-      allowed = false;
-      await tracker.campaignConsentChanged(enabled: true);
-      expect(sink.events.length, 1);
-    });
-  });
-
   setUp(() {
     sink = _RecordingSink();
     allowed = true;
@@ -204,5 +193,19 @@ void main() {
         expect(sink.events, hasLength(1));
       },
     );
+  });
+
+  group('campaignConsentChanged', () {
+    test('records the new choice as a numeric flag', () async {
+      await tracker.campaignConsentChanged(enabled: false);
+      expect(sink.events.single.name, 'campaign_consent_changed');
+      expect(sink.events.single.parameters, {'enabled': 0});
+    });
+
+    test('does not record when collection is disabled', () async {
+      allowed = false;
+      await tracker.campaignConsentChanged(enabled: true);
+      expect(sink.events, isEmpty);
+    });
   });
 }
