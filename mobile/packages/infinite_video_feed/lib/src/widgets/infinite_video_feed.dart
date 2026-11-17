@@ -1087,7 +1087,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _pageRevisions.putIfAbsent(index, () => ValueNotifier<int>(0));
 
   void _setPlaybackActive(bool isActive) {
-    if (_isActive == isActive) return;
+    if (_isActive == isActive) {
+      // A card already pauses playback, but an owner hiding the feed still
+      // needs to release its players, including a simultaneous codec drain.
+      if (!isActive) _releasePlayersForInactiveOwner();
+      return;
+    }
     _isActive = isActive;
     if (_isActive) {
       final currentController = _controllers[_currentIndex];
@@ -1134,11 +1139,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
-      if (widget.releaseCurrentWhenInactive) {
-        _fullyReleaseWhileInactive();
-      } else if (widget.releaseNeighboursWhenInactive) {
-        _releaseNeighboursAndPrefetch();
-      }
+      _releasePlayersForInactiveOwner();
+    }
+  }
+
+  void _releasePlayersForInactiveOwner() {
+    // An in-feed card is not a backgrounded feed. Keep its next video warm.
+    if (_ownerWantsPlayback) return;
+    if (widget.releaseCurrentWhenInactive) {
+      _fullyReleaseWhileInactive();
+    } else if (widget.releaseNeighboursWhenInactive) {
+      _releaseNeighboursAndPrefetch();
     }
   }
 
@@ -1452,11 +1463,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // video-list update while drained must not re-allocate a decoder the
     // camera/editor needs. Flag a re-init so the window rebuilds from the
     // current list once the feed becomes active again.
-    if (widget.releaseCurrentWhenInactive && !_isActive) {
+    if (widget.releaseCurrentWhenInactive && !_ownerWantsPlayback) {
       _controllers.keys.toList().forEach(_disposeAt);
       _needsReinitOnActivate = true;
       return;
     }
+    _needsReinitOnActivate = false;
 
     final lastIndex = widget.videos.length - 1;
     // Neighbour players are kept alive while the feed is active. When the feed
@@ -1464,7 +1476,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // ([InfiniteVideoFeed.releaseNeighboursWhenInactive]), the window collapses
     // to the current video so a background feed holds only one native player;
     // the neighbours re-initialize when it becomes active again.
-    final keepNeighbours = !widget.releaseNeighboursWhenInactive || _isActive;
+    final keepNeighbours =
+        !widget.releaseNeighboursWhenInactive || _ownerWantsPlayback;
     final start = widget.keepPreviousAlive && keepNeighbours
         ? (index - 1).clamp(0, lastIndex)
         : index;
@@ -1549,7 +1562,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // only, or a full drain under a codec-heavy surface) so it stops
     // downloading upcoming videos. It resumes from the current index on
     // reactivation.
-    if (!_isActive &&
+    if (!_ownerWantsPlayback &&
         (widget.releaseNeighboursWhenInactive ||
             widget.releaseCurrentWhenInactive)) {
       return;
