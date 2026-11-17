@@ -121,6 +121,24 @@ class ReleaseNotesTests(unittest.TestCase):
             )
         self.assertEqual(result, self.bundle)
 
+    def test_ledger_failures_are_typed_preparation_errors(self):
+        from release_train.ledger import LedgerError
+        from release_train_fakes import MemoryLedgerStore
+
+        for operation in ['paths', 'read_json', 'create_json']:
+            with self.subTest(operation=operation):
+                path = self.notes.bundle_path('android', 'b' * 40, 'a' * 40)
+                ledger = MemoryLedgerStore({path: self.bundle} if operation == 'read_json' else {})
+                with (
+                    patch.object(ledger, operation, side_effect=LedgerError('Ledger unavailable')),
+                    patch.object(self.notes, '_check_ancestry'),
+                    patch.object(self.notes, '_generate', return_value=self.bundle),
+                    self.assertRaisesRegex(self.notes.ReleaseNotesError, 'ledger'),
+                ):
+                    self.notes.ensure_bundle('android', 'b' * 40,
+                        {'production': [{'number': 855, **self.bundle['baseline']}]},
+                        env={}, ledger=ledger)
+
     def test_source_cache_remains_bound_after_production_advances(self):
         class Ledger:
             def paths(inner):

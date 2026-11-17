@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from release_train.ledger import LedgerError
 from release_train.providers import (
     APP_ID,
     Apple,
@@ -587,6 +588,15 @@ plainly rather than inventing an improvement.
 
 
 def ensure_bundle(platform, source_sha, data=None, *, env, ledger):
+    try:
+        return _ensure_bundle(platform, source_sha, data, env=env, ledger=ledger)
+    except LedgerError:
+        raise ReleaseNotesError(
+            "Release-note ledger unavailable; no store operation started"
+        ) from None
+
+
+def _ensure_bundle(platform, source_sha, data=None, *, env, ledger):
     if platform not in {"ios", "android"} or not SHA.fullmatch(source_sha or ""):
         raise ReleaseNotesError("Invalid release-note source/platform")
     prefix = f"release-notes/{platform}/{source_sha}/"
