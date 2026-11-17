@@ -1159,8 +1159,11 @@ class NostrClient {
   ///
   /// The result reads like a [queryEventsDetailed] with
   /// `requireAllRelaysSettled` and no cache: `timedOut` unless every relay
-  /// answered within [timeout], which includes connecting, and `noRelays` when
-  /// no relay is connected or the client has begun disposing.
+  /// answered within [timeout], and `noRelays` when no relay is connected or
+  /// the client has begun disposing. Opening each connection is also bounded
+  /// by the pool's own `RelayPool.perRelaySendTimeout` (5 s), whatever
+  /// [timeout] is: a relay whose connection does not open by then is never
+  /// asked, and the read reports it as unfinished.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsOnFreshConnections(
     List<Filter> filters, {
