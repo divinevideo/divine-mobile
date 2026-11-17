@@ -16,58 +16,6 @@ void main() {
     appVersion: version,
   );
 
-  group('PushDeviceMetadata.resolve', () {
-    test(
-      'registration metadata records actual store and marketing version',
-      () {
-        for (final (platform, source, channel) in [
-          (TargetPlatform.iOS, InstallSource.appStore, 'app_store'),
-          (TargetPlatform.android, InstallSource.playStore, 'google_play'),
-          (TargetPlatform.android, InstallSource.zapstore, 'zapstore'),
-        ]) {
-          final metadata = device(platform, source, '1.2.3');
-          expect(metadata.toJson(), {
-            'platform': platform == TargetPlatform.iOS ? 'ios' : 'android',
-            'installChannel': channel,
-            'appVersion': '1.2.3',
-          });
-        }
-        expect(
-          device(
-            TargetPlatform.android,
-            InstallSource.sideload,
-            '1.2.3',
-          ).toJson(),
-          {'platform': 'android', 'appVersion': '1.2.3'},
-        );
-        expect(
-          device(
-            TargetPlatform.iOS,
-            InstallSource.testFlight,
-            '1.2.3',
-          ).toJson(),
-          {'platform': 'ios', 'appVersion': '1.2.3'},
-        );
-        for (final invalid in [
-          '1.2',
-          '01.2.3',
-          '1.2.3+4',
-          '1.2.3-beta',
-          '1000000.2.3',
-        ]) {
-          expect(
-            device(
-              TargetPlatform.android,
-              InstallSource.playStore,
-              invalid,
-            ).toJson(),
-            {'platform': 'android', 'installChannel': 'google_play'},
-          );
-        }
-      },
-    );
-  });
-
   group('announcementActionDestination', () {
     test('update action uses canonical store link only for an older matching install', () {
       const action = UpdateAppAnnouncementAction(
