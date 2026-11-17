@@ -32,6 +32,10 @@ class _ExhaustiveReader implements ProfileReader {
   @override
   Future<bool> isOgDiviner(String pubkey) async => false;
 
+  // Session-cache observation only; no signing or network capability.
+  @override
+  Stream<String> get ogDivinerEligibilityChanges => const Stream.empty();
+
   @override
   Future<UserProfile?> getCachedProfile({required String pubkey}) async => null;
 

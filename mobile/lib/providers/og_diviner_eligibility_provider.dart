@@ -18,11 +18,17 @@ final ogDivinerEligibilityServiceProvider =
 final FutureProviderFamily<bool, String> ogDivinerEligibilityProvider =
     FutureProvider.autoDispose.family<bool, String>(
       (ref, pubkey) async {
+        final service = ref.watch(ogDivinerEligibilityServiceProvider);
+        if (service == null) return false;
+        final normalized = pubkey.trim().toLowerCase();
+        final subscription = service.eligibilityChanges
+            .where((changed) => changed == normalized)
+            .listen((_) {
+              if (ref.mounted) ref.invalidateSelf();
+            });
+        ref.onDispose(subscription.cancel);
         try {
-          return await ref
-                  .watch(ogDivinerEligibilityServiceProvider)
-                  ?.isEligible(pubkey) ??
-              false;
+          return await service.isEligible(pubkey);
         } on Object {
           // Eligibility is decorative. A transient lookup failure should hide
           // the chit for this render without entering Riverpod's retry loop.

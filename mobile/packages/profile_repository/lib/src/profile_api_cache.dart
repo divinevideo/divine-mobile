@@ -1,6 +1,8 @@
 // ABOUTME: Shares canonical Funnelcake profile reads and eligibility answers.
 // ABOUTME: Keeps server-owned decoration separate from publishable Kind 0 data.
 
+import 'dart:async';
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 
@@ -23,6 +25,10 @@ class ProfileApiCache {
   final _eligibility = <String, bool>{};
   final _unknownUntil = <String, DateTime>{};
   final _inFlight = <String, Future<UserProfileResult?>>{};
+  final _eligibilityChanges = StreamController<String>.broadcast();
+
+  /// Pubkeys whose cached eligibility answer changed during hydration.
+  Stream<String> get eligibilityChanges => _eligibilityChanges.stream;
 
   /// Reuses a single/bulk response; fetches only if this session has no answer.
   ///
@@ -39,6 +45,7 @@ class ProfileApiCache {
   }
 
   void _remember(String pubkey, UserProfileResult? result) {
+    final previous = _eligibility[pubkey];
     final eligible = result?.isOgDiviner;
     if (eligible == null) {
       _eligibility.remove(pubkey);
@@ -47,6 +54,7 @@ class ProfileApiCache {
       _unknownUntil.remove(pubkey);
       _eligibility[pubkey] = eligible;
     }
+    if (previous != eligible) _eligibilityChanges.add(pubkey);
   }
 
   /// Fetches a fresh profile response, sharing any already-running request.

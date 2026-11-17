@@ -51,6 +51,9 @@ import 'test_user_ranking_loader.dart';
 class _IneligibleOgDivinerService extends Fake
     implements OgDivinerEligibilityService {
   @override
+  Stream<String> get eligibilityChanges => const Stream.empty();
+
+  @override
   Future<bool> isEligible(String pubkey) async => false;
 }
 

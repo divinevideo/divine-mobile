@@ -11,9 +11,15 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/services/og_diviner_eligibility_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 
-class _EligibilityService extends Mock implements OgDivinerEligibilityService {}
+class _EligibilityService extends Mock implements OgDivinerEligibilityService {
+  @override
+  Stream<String> get eligibilityChanges => const Stream.empty();
+}
 
-class _Profiles extends Mock implements ProfileReader {}
+class _Profiles extends Mock implements ProfileReader {
+  @override
+  Stream<String> get ogDivinerEligibilityChanges => const Stream.empty();
+}
 
 void main() {
   const pubkey =

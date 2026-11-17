@@ -9,6 +9,10 @@ class OgDivinerEligibilityService {
 
   final ProfileReader _profiles;
 
+  /// Pubkeys whose cached answer should be read again by mounted surfaces.
+  Stream<String> get eligibilityChanges =>
+      _profiles.ogDivinerEligibilityChanges;
+
   Future<bool> isEligible(String pubkey) {
     final normalized = pubkey.trim().toLowerCase();
     if (normalized.isEmpty) return Future.value(false);

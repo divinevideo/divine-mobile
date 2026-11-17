@@ -247,6 +247,10 @@ class ProfileRepository implements ProfileReader {
     return !_vanished.contains(normalized) && eligible;
   }
 
+  @override
+  Stream<String> get ogDivinerEligibilityChanges =>
+      _profileApiCache.eligibilityChanges;
+
   /// Pubkeys confirmed to have no Kind 0 profile by an authoritative source.
   /// Session-scoped — cleared on app restart.
   final _confirmedMissing = <String>{};

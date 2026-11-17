@@ -49,6 +49,10 @@ abstract interface class ProfileReader {
   /// Throws `FunnelcakeException` subtypes when the profile read fails.
   Future<bool> isOgDiviner(String pubkey);
 
+  /// Pubkeys whose server-owned eligibility changed during profile hydration.
+  /// Observes the session cache without signing, publishing or requesting data.
+  Stream<String> get ogDivinerEligibilityChanges;
+
   /// Returns the cached profile from local storage (SQLite) only.
   ///
   /// Returns `null` if no cached profile exists for the given pubkey.
