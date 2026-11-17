@@ -167,6 +167,47 @@ void main() {
       },
     );
 
+    group('campaign revision', () {
+      const revision = '12345678-1234-4234-8234-123456789abc';
+
+      test('is exported for a campaign open', () async {
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: revision,
+        );
+        expect(sink.events.single.parameters, {
+          'notification_type': 'campaign',
+          'open_source': 'local_tap',
+          'campaign_revision_id': revision,
+        });
+      });
+
+      test('is dropped when it is not a lowercase UUID', () async {
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: 'free text from the payload',
+        );
+        expect(
+          sink.events.single.parameters,
+          isNot(contains('campaign_revision_id')),
+        );
+      });
+
+      test('is ignored on a non-campaign open', () async {
+        await tracker.opened(
+          notificationType: 'like',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: revision,
+        );
+        expect(
+          sink.events.single.parameters,
+          isNot(contains('campaign_revision_id')),
+        );
+      });
+    });
+
     test(
       'sink failure is best effort and does not prevent a later open',
       () async {
