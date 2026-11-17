@@ -29,7 +29,9 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Gives up without opening the editor when, once the autosave is safe, a
 /// route the user opened covers the sheet or the sheet is already closing:
-/// dismissing it then would close that other route instead.
+/// dismissing it then would close that other route instead. Giving up before
+/// the autosave is cleared deletes the kept copy again, so the session stays
+/// listed once.
 ///
 /// Backing out of the editor is its usual save-or-discard prompt: a timeline
 /// with a credited clip counts as edited.
@@ -43,8 +45,9 @@ Future<void> openRemixInEditor(
   final videoPublish = ref.read(videoPublishProvider.notifier);
   final clipManager = ref.read(clipManagerProvider.notifier);
 
+  final String? keptDraftId;
   try {
-    await videoEditor.keepAutosaveAsDraft();
+    keptDraftId = await videoEditor.keepAutosaveAsDraft();
   } catch (e, stackTrace) {
     Log.error(
       'Could not keep the autosaved session before a remix: $e',
@@ -61,7 +64,12 @@ Future<void> openRemixInEditor(
     if (e is Error) rethrow;
     return;
   }
-  if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) return;
+  if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) {
+    // The autosave still holds the session, so the copy would list it twice
+    // and a retry would copy it again.
+    if (keptDraftId != null) await videoEditor.discardKeptDraft(keptDraftId);
+    return;
+  }
 
   await videoPublish.clearAll();
   if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) return;
