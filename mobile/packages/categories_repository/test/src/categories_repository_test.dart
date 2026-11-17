@@ -303,7 +303,16 @@ void main() {
               )
               .toList();
           expect(results, hasLength(2));
-          expect(results.every((result) => result.data.videos.isEmpty), isTrue);
+          expect(
+            results,
+            everyElement(
+              isA<CacheResult<CategoryVideosPage>>().having(
+                (result) => result.data.videos,
+                'videos',
+                isEmpty,
+              ),
+            ),
+          );
         },
       );
 
@@ -502,7 +511,7 @@ void main() {
         },
       );
 
-      test('never serves or fetches denied discovery categories', () async {
+      test('never caches or fetches denied discovery categories', () async {
         final results = await repository
             .watchVideosForCategoryCached(
               category: ' ADULT ',

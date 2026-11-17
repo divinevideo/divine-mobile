@@ -120,14 +120,18 @@ class CategoriesRepository {
   /// Snapshots are scoped to [viewerPubkey], canonical category, API sort and
   /// platform. [viewerPubkey] is the signed-in viewer's hex pubkey, the prefix
   /// sign-out clears; null uses a shared anonymous scope that nothing clears.
-  /// They can be served across gallery/app restarts for 24 hours and
-  /// share CacheSync's global size limit and oldest-entry eviction. Every
-  /// opening still fetches live data. Personalized recommendations deliberately
-  /// use [getRecommendedVideos] instead of this cache.
+  /// They can be served across gallery/app restarts for 24 hours and share
+  /// CacheSync's global size limit and oldest-entry eviction. Every opening
+  /// still fetches live data. Personalized recommendations deliberately use
+  /// [getRecommendedVideos] instead of this cache.
   ///
   /// The current block filter and NIP-40 expiry run again on every cached and
   /// live emission. [CategoryVideosPage.hasMore] reflects the unfiltered API
   /// page size.
+  ///
+  /// A failed live fetch arrives as a stream error after any snapshot, so a
+  /// caller can keep the snapshot on screen. The error is whatever the live
+  /// request threw, usually a [FunnelcakeException].
   Stream<CacheResult<CategoryVideosPage>> watchVideosForCategoryCached({
     required String category,
     required String? viewerPubkey,

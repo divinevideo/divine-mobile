@@ -199,7 +199,7 @@ void main() {
       });
 
       test(
-        'renders cached videos before refresh and retains them on failure',
+        'keeps cached videos visible during refresh and after a failed refresh',
         () async {
           bloc.add(const CategorySelected(music));
           await pumpEventQueue();
