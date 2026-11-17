@@ -585,9 +585,9 @@ void main() {
         expect(settled.videos.map((video) => video.id), equals(['video-1']));
       });
 
-      // #7634: syncGlobalBookmarks() returns false when no relay answered for
-      // the kind-10003 list. The ids the repository still holds are then only
-      // what this device kept, so an empty list proves nothing.
+      // #7634: syncGlobalBookmarks() returns false when the kind-10003 list
+      // could not be reconciled with the relay. An empty list the repository
+      // still holds then proves nothing.
       group('when the bookmark list could not be read from the relay', () {
         setUp(() {
           when(
@@ -612,13 +612,80 @@ void main() {
 
           expect(bloc.state.status, ProfileSavedVideosStatus.failure);
           expect(bloc.state.error, ProfileSavedVideosError.loadFailed);
-          expect(bloc.state.isRefreshing, isFalse);
           expect(
             await cacheDao.readEntry(snapshotCacheKey),
             isNull,
             reason: 'an unanswered read is not the viewer list to cache',
           );
         });
+
+        test(
+          'keeps a settled empty list on a refresh it cannot read',
+          () async {
+            var synced = true;
+            when(
+              () => mockBookmarksRepository.syncGlobalBookmarks(),
+            ).thenAnswer((_) async => synced);
+            when(
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(const []);
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            await syncAndSettle(bloc);
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+
+            synced = false;
+            await syncAndSettle(bloc);
+
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+            expect(bloc.state.error, isNull);
+            expect(bloc.state.isRefreshing, isFalse);
+          },
+        );
+
+        test('stops refreshing when a failed load fails again', () async {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const []);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          await syncAndSettle(bloc);
+          final emitted = <ProfileSavedVideosState>[];
+          final subscription = bloc.stream.listen(emitted.add);
+          addTearDown(subscription.cancel);
+
+          await syncAndSettle(bloc);
+          await pumpEventQueue();
+
+          expect(emitted.map((state) => state.isRefreshing), [true, false]);
+          expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+        });
+
+        test(
+          'recovers when a later reconciled read finds no bookmarks',
+          () async {
+            final changes = StreamController<List<String>>.broadcast();
+            addTearDown(changes.close);
+            when(
+              () => mockBookmarksRepository.watchBookmarkedVideoReferences(),
+            ).thenAnswer((_) => changes.stream);
+            when(
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(const []);
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            await syncAndSettle(bloc);
+            expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+
+            // The share sheet's own sync reconciled and found no list.
+            changes.add(const []);
+            await pumpEventQueue();
+
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+            expect(bloc.state.error, isNull);
+            expect(bloc.state.savedEventIds, isEmpty);
+          },
+        );
 
         test('keeps the saved videos already on screen', () async {
           await cacheDao.write(
@@ -702,7 +769,7 @@ void main() {
         });
 
         /// The relay holds a kind-10003 saving [savedVideoId]; [timedOut]
-        /// says whether the read of it finished.
+        /// says whether the read of it ran out of time.
         void stubRelayHoldingTheList({required bool timedOut}) {
           final list = Event(
             currentUserPubkey,

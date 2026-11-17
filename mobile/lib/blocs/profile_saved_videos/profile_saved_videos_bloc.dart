@@ -203,8 +203,13 @@ class ProfileSavedVideosBloc
     }
 
     try {
-      final (:ids, :privateBookmarksLocked) = await _resolveSavedIds();
+      final (:ids, :privateBookmarksLocked, :synced) = await _resolveSavedIds();
       if (isClosed) return;
+
+      if (!synced && ids.isEmpty) {
+        _settleUnreadList(emit);
+        return;
+      }
 
       if (state.videos.isEmpty) {
         await _coldLoad(
@@ -250,18 +255,48 @@ class ProfileSavedVideosBloc
   /// how the Liked and Reposted tabs call `syncUserReactions()` /
   /// `syncUserReposts()` from their own sync handlers.
   ///
-  /// A failed sync is not fatal here: the cached list is still worth showing,
-  /// and the caller is only reading. (The write path treats the same failure
-  /// as fatal, because republishing an unreconciled list destroys bookmarks.)
+  /// A failed sync is not fatal here: a list this device still holds is
+  /// worth showing, and the caller is only reading. (The write path treats
+  /// the same failure as fatal, because republishing an unreconciled list
+  /// destroys bookmarks.) `synced` says whether the list was reconciled with
+  /// the relay, because after a failure an empty list proves nothing (#7634).
   ///
   /// The lock flag is read with the ids: when the private section stayed
   /// encrypted, the ids are only the public part of the viewer's list.
-  Future<({List<String> ids, bool privateBookmarksLocked})>
+  Future<({List<String> ids, bool privateBookmarksLocked, bool synced})>
   _resolveSavedIds() async {
-    await _bookmarksRepository.syncGlobalBookmarks();
+    final synced = await _bookmarksRepository.syncGlobalBookmarks();
     return (
       ids: _newestFirst(_bookmarksRepository.bookmarkedVideoReferences),
       privateBookmarksLocked: _bookmarksRepository.hasUnreadablePrivateItems,
+      synced: synced,
+    );
+  }
+
+  /// Settles a sync whose list could not be reconciled with the relay and
+  /// left no ids. The repository then holds only what it last reconciled or,
+  /// before its first reconciled read, what this device kept (never the
+  /// private items), so the empty list proves nothing. A result already on
+  /// screen stays as it is; with nothing settled yet the tab reports a failed
+  /// load instead of "nothing saved" (#7634).
+  void _settleUnreadList(Emitter<ProfileSavedVideosState> emit) {
+    final keepsResult = state.status == ProfileSavedVideosStatus.success;
+    Log.warning(
+      'ProfileSavedVideosBloc: bookmark list not reconciled with the relay; '
+      '${keepsResult ? 'keeping what is on screen' : 'reporting a failed load'}',
+      name: 'ProfileSavedVideosBloc',
+      category: LogCategory.video,
+    );
+    if (keepsResult) {
+      emit(state.copyWith(isRefreshing: false));
+      return;
+    }
+    emit(
+      state.copyWith(
+        status: ProfileSavedVideosStatus.failure,
+        isRefreshing: false,
+        error: ProfileSavedVideosError.loadFailed,
+      ),
     );
   }
 
@@ -377,7 +412,10 @@ class ProfileSavedVideosBloc
       return;
     }
     final freshIds = event.savedEventIds;
-    if (listEquals(freshIds, state.savedEventIds)) {
+    // A failed load is replaced even by an unchanged, empty list: the read
+    // behind this notification did reconcile with the relay.
+    if (listEquals(freshIds, state.savedEventIds) &&
+        state.status != ProfileSavedVideosStatus.failure) {
       // The private section can lock or unlock without moving a video id.
       emit(
         state.copyWith(privateBookmarksLocked: event.privateBookmarksLocked),
