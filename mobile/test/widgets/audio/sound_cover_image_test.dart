@@ -58,7 +58,7 @@ void main() {
       });
 
       // A slow cover without a blurhash showed a blank grey tile until it
-      // loaded, or until the download timed out up to 30 s later.
+      // loaded or failed; on Android a stalled download has no timeout.
       testWidgets(
         'the colour tile while an image without a blurhash loads',
         (tester) async {
