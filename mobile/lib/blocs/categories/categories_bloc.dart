@@ -230,6 +230,18 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
             cacheScope: currentUserPubkey ?? 'anonymous',
           )) {
         if (version != _selectionVersion || emit.isDone) return;
+        if (result.isStale &&
+            state.videosStatus == CategoriesVideosStatus.loaded) {
+          // A manual refresh may already show several pages. Keep those pages
+          // and their cursor metadata until the live first page arrives.
+          emit(
+            state.copyWith(
+              videos: _filterCurrentBlocks(state.videos),
+              isRefreshingVideos: true,
+            ),
+          );
+          continue;
+        }
         emit(
           state.copyWith(
             videosStatus: CategoriesVideosStatus.loaded,

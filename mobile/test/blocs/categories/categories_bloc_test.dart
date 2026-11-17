@@ -313,7 +313,7 @@ void main() {
       });
 
       test(
-        'manual refresh keeps the loaded grid and stops on failure',
+        'manual refresh keeps all loaded pages through cache and failure',
         () async {
           final next = StreamController<CacheResult<CategoryVideosPage>>();
           bloc.add(const CategorySelected(music));
@@ -325,6 +325,22 @@ void main() {
           );
           await pumpEventQueue();
           when(
+            () => mockRepository.getVideosForCategory(
+              category: 'music',
+              before: oldVideo.createdAt,
+              sort: 'trending',
+            ),
+          ).thenAnswer(
+            (_) async => CategoryVideosPage(
+              videos: [newVideo],
+              hasMore: false,
+            ),
+          );
+          bloc.add(const CategoryVideosLoadMore());
+          await pumpEventQueue();
+          expect(bloc.state.videos, [oldVideo, newVideo]);
+          expect(bloc.state.hasMoreVideos, isFalse);
+          when(
             () => mockRepository.watchVideosForCategoryCached(
               category: 'music',
               cacheScope: _viewerPubkey,
@@ -333,11 +349,20 @@ void main() {
           bloc.add(const CategorySelected(music));
           await pumpEventQueue();
           expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-          expect(bloc.state.videos, [oldVideo]);
+          expect(bloc.state.videos, [oldVideo, newVideo]);
           expect(bloc.state.isRefreshingVideos, isTrue);
+          next.add(
+            CacheResult.cached(
+              CategoryVideosPage(videos: [oldVideo], hasMore: true),
+            ),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.videos, [oldVideo, newVideo]);
+          expect(bloc.state.hasMoreVideos, isFalse);
           next.addError(const FunnelcakeException('Offline'));
           await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo]);
+          expect(bloc.state.videos, [oldVideo, newVideo]);
+          expect(bloc.state.hasMoreVideos, isFalse);
           expect(bloc.state.isRefreshingVideos, isFalse);
           await next.close();
         },
