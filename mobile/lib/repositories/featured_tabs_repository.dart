@@ -99,6 +99,7 @@ class FeaturedTabsRepository {
   /// not allow viewers under 18. The public config endpoint is shared-cacheable
   /// and therefore not personalized, so this gate is the client's
   /// responsibility.
+  ///
   /// [requiredFeaturedFeedId] selects only that feed, retaining all eligibility
   /// gates and returning no tab if it is absent or ineligible.
   Future<FeaturedTabsSnapshot> refresh({

@@ -50,7 +50,9 @@ counted as measured zero conversions. A provider-accepted send is not proof of
 notification display or opening.
 
 Release order: compatible push backend, this app, then campaign dashboard
-video/profile choices. Physical iOS/Android verification must cover one alert,
+video, profile, announcement and featured-feed choices. Physical iOS/Android
+verification must cover one alert,
 correct destination, campaign revision preservation, foreground/background/cold
-starts, account changes and analytics opt-out. Older devices retain Following
-support and are filtered out of unsupported video/profile sends server-side.
+starts, account changes and analytics opt-out. Older devices that advertise no
+`campaignTargetTypes` keep Following support. The server filters those devices
+from sends for other target types.

@@ -157,7 +157,8 @@ Future<void> _renderBackgroundLocalPush({
 /// preloader shares: a usable signed coordinate is routed to directly, and
 /// otherwise the executor walks `targetEventId` to a root video. Encoding the
 /// coordinate-over-walk precedence in the returned value keeps it out of the
-/// executor's branch order.
+/// executor's branch order. Campaign `video_address` and `creator_profile`
+/// targets skip it and route the payload's coordinate or pubkey directly.
 ///
 /// Campaign payloads skip this: an `app_route`, `video_address` or
 /// `creator_profile` target is validated by the campaign helpers beside

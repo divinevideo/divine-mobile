@@ -1,5 +1,5 @@
 // ABOUTME: Keeps a featured-feed campaign bound to its exact configuration.
-// ABOUTME: Withdrawn campaigns show an unavailable state, never a substitute feed.
+// ABOUTME: A withdrawn campaign feed shows an unavailable state, never another.
 
 import 'dart:async';
 
@@ -8,7 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 
-/// Guards the existing Explore destination while its configuration hydrates.
+/// Shows [child] only while [feedId] is the resolved, enabled, in-window tab:
+/// a spinner before the first answer, and an unavailable message otherwise.
 class FeaturedCampaignGate extends StatefulWidget {
   const FeaturedCampaignGate({
     required this.feedId,

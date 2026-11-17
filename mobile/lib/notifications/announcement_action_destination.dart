@@ -1,11 +1,14 @@
-// ABOUTME: Maps validated announcement actions to approved native destinations.
+// ABOUTME: Maps validated announcement actions to store or contest URLs.
 
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/push_device_metadata.dart';
 
+/// Returns the URL [action] should open on [device], or null to hide it.
+///
 /// No arbitrary store URL is accepted: update links come from the existing
 /// install-source URL catalog, and only apply to older matching installs.
+/// Contest URLs were already validated by the catalog parser.
 Uri? announcementActionDestination(
   AnnouncementAction? action,
   PushDeviceMetadata device,

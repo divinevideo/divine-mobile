@@ -1,10 +1,13 @@
-// ABOUTME: Device-only release targeting metadata for encrypted push registration.
+// ABOUTME: Release-targeting metadata for push registration and update actions.
 // ABOUTME: Unknown installs never guess a distribution channel.
 
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:flutter/foundation.dart';
 
-/// Installed platform, store and marketing version; never sent to engagement.
+/// Platform, install channel and marketing version for this install.
+///
+/// Sent in the encrypted kind-3079 registration and compared against
+/// announcement update actions; never added to analytics.
 class PushDeviceMetadata {
   const PushDeviceMetadata._({
     this.platform,
@@ -12,7 +15,7 @@ class PushDeviceMetadata {
     this.appVersion,
   });
 
-  /// Resolves actual bootstrap metadata, omitting unsupported or unknown values.
+  /// Resolves this install's metadata, omitting unsupported or unknown values.
   factory PushDeviceMetadata.resolve({
     required TargetPlatform platform,
     required InstallSource source,
@@ -47,7 +50,9 @@ class PushDeviceMetadata {
   };
 }
 
-/// The bounded canonical version contract shared with release targeting.
+/// Whether [value] is a canonical `major.minor.patch` of at most six digits
+/// per part. Keep in step with `AnnouncementsRepository._action` and `_version`
+/// in `mobile/scripts/release_train/campaign_drafts.py`.
 bool validReleaseVersion(String value) =>
     value.length <= 20 &&
     RegExp(r'^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$')

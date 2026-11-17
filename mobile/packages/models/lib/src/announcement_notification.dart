@@ -85,24 +85,32 @@ sealed class AnnouncementAction extends Equatable {
   const AnnouncementAction();
 }
 
-/// Opens the canonical store for an older matching platform/channel install.
+/// Asks installs on [platform] from [channel] older than [version] to update.
 final class UpdateAppAnnouncementAction extends AnnouncementAction {
   const UpdateAppAnnouncementAction({
     required this.platform,
     required this.channel,
     required this.version,
   });
+
+  /// `ios` or `android`.
   final String platform;
+
+  /// `app_store` for iOS; `google_play` or `zapstore` for Android.
   final String channel;
+
+  /// Canonical `major.minor.patch` the install must be older than.
   final String version;
 
   @override
   List<Object?> get props => [platform, channel, version];
 }
 
-/// Opens an approved official contest detail after the native description.
+/// Links to an official contest page at [url].
 final class ContestAnnouncementAction extends AnnouncementAction {
   const ContestAnnouncementAction({required this.url});
+
+  /// A contest URL the catalog parser has validated against its allowlist.
   final Uri url;
 
   @override

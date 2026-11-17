@@ -45,7 +45,8 @@ enum PushRegistrationResult {
 /// visible to the push service's key pair.
 ///
 /// Event kinds:
-/// - 3079: Registration — encrypted FCM token sent to push service
+/// - 3079: Registration — encrypted FCM token, timezone, campaign target
+///   types and install metadata sent to push service
 /// - 3080: Deregistration — removes device from push service
 /// - 3083: Preferences — encrypted notification kind preferences
 class PushNotificationService {

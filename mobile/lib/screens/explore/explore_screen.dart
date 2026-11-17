@@ -84,7 +84,9 @@ class ExploreScreen extends ConsumerWidget {
   /// app, so a featured slug resolves to `null` there by design.
   final String? initialTabSlug;
 
-  /// Campaign configuration identity; never fall back to another tab.
+  /// Featured-feed id a campaign link requires. When set, Explore opens the
+  /// featured tab for exactly this feed, ignoring [initialTabName] and
+  /// [initialTabSlug], and never falls back to another feed.
   final String? requiredFeaturedFeedId;
 
   @override
@@ -101,8 +103,9 @@ class ExploreScreen extends ConsumerWidget {
           ),
         ),
         BlocProvider(
-          // Keyed on the repository so an environment swap rebuilds the cubit
-          // against the new host instead of polling a stale one.
+          // Keyed on the repository and the campaign feed, so an environment
+          // swap or a different campaign rebuilds the cubit instead of
+          // polling a stale one.
           // The shell keeps Explore mounted after the first visit; continuing
           // at the clamped cadence lets backend kill switches land off-tab.
           key: ValueKey((featuredTabsRepository, requiredFeaturedFeedId)),
