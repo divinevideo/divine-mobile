@@ -608,6 +608,52 @@ class StoreAuthorizationRefreshTest(unittest.TestCase):
 
 
 class NotesPreparationJournalTest(unittest.TestCase):
+    def test_ledger_preparation_failure_leaves_other_actions_runnable(self):
+        from release_train.ledger import LedgerError
+        from release_train.runner import Runtime
+
+        class Ledger:
+            def paths(self):
+                raise LedgerError('Ledger unavailable')
+
+        class Apple:
+            def __init__(self):
+                self.attached = []
+
+            def attach_groups(self, build):
+                self.attached.append(build['id'])
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = Ledger()
+        runtime.apple = Apple()
+        state = {}
+        build = {'id': '10', 'number': 10, 'sha': 'a' * 40}
+        plan = {'actions': [{'kind': 'public-beta', 'platform': 'ios', 'build': build},
+                            {'kind': 'attach-beta-groups', 'platform': 'ios', 'build': build}]}
+        execute_plan(plan, state, {}, Store(), runtime)
+        self.assertIn('ledger', plan['errors'][0])
+        self.assertFalse(state.get('holds'))
+        self.assertFalse(state.get('attempts'))
+        self.assertEqual(runtime.apple.attached, ['10'])
+        self.assertEqual(list(state['operations']), ['attach-beta-groups:ios:10'])
+        self.assertEqual(state['operations']['attach-beta-groups:ios:10']['status'], 'done')
+
+    def test_journal_does_not_duplicate_retained_localized_copy(self):
+        from release_train_fakes import release_notes_bundle
+
+        bundle = release_notes_bundle('android')
+        state = {}
+        store = Store()
+        provider = Provider(store)
+        action = {'kind': 'play-production', 'platform': 'android',
+                  'build': {'number': 10, 'sha': 'a' * 40}, 'release_notes': bundle}
+        execute_plan({'actions': [action]}, state, {}, store, provider)
+        self.assertEqual(provider.calls[0]['release_notes'], bundle)
+        self.assertNotIn('release_notes', state['operations']['play-production:android:10']['action'])
+        self.assertTrue(all('release_notes' not in saved['operations']['play-production:android:10']['action']
+                            for saved in store.saves))
+
     def test_generation_failure_for_every_store_action_does_not_create_operation_or_hold(self):
         import hashlib
         from unittest.mock import patch
@@ -673,7 +719,7 @@ class NotesPreparationJournalTest(unittest.TestCase):
         self.assertFalse(state.get('holds'))
         self.assertIn('identity conflicts', plan['errors'][0])
 
-    def test_store_failure_still_holds_after_notes_are_durable(self):
+    def test_store_failure_still_holds_after_notes_are_prepared(self):
         from unittest.mock import patch
 
         from release_train.runner import Runtime, operation_key
@@ -691,7 +737,7 @@ class NotesPreparationJournalTest(unittest.TestCase):
         class Apple:
             def submit_beta(self, build, notes):
                 self_status = store.saves[-1]['operations'][key]
-                if self_status['status'] != 'started' or not self_status['action'].get('release_notes'):
+                if self_status['status'] != 'started' or notes != release_notes_bundle()['testflight']:
                     raise AssertionError('Store mutation must have durable intent and prepared notes')
                 raise ProviderError('Store response unavailable')
 
@@ -705,8 +751,7 @@ class NotesPreparationJournalTest(unittest.TestCase):
             execute_plan({'actions': [action]}, state, {}, store, runtime)
         self.assertEqual(state['operations'][key]['status'], 'ambiguous')
         self.assertEqual(state['holds'], {'ios': key})
-        self.assertEqual(state['operations'][key]['action']['release_notes']['testflight'],
-                         [{'language': 'en-US', 'text': 'Try recording a loop.'}])
+        self.assertEqual(state['operations'][key]['action']['build']['sha'], 'a' * 40)
 
 
 class BeforeStoreMutationFailureTest(unittest.TestCase):

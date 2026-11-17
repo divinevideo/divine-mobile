@@ -231,7 +231,9 @@ def execute_plan(plan, state, snapshot, store, provider):
             plan["actions"].remove(raw)
             continue
         state.setdefault("operations", {})[key] = {
-            "action": action,
+            # Notes already live in the immutable source/artifact ledger. Keep
+            # only operation identity here, not another full copy on every save.
+            "action": {name: value for name, value in action.items() if name != "release_notes"},
             "status": "started",
             "started_at": snapshot.get("now", int(time.time())),
         }
@@ -1351,7 +1353,9 @@ def main(env=os.environ):
                         raise ProviderError(
                             "Multiple deferred Android artifacts require operator reconciliation"
                         )
-                    state["deferred_android"] = record
+                    state["deferred_android"] = {
+                        name: value for name, value in record.items() if name != "release_notes"
+                    }
                 elif record["number"] in uploaded:
                     if record["number"] not in state.setdefault(
                         "resolved_android_uploads", []
