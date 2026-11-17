@@ -551,7 +551,7 @@ void main() {
         1.0,
       ]);
       // One shader draws every intro and outro: halfway covered, at its
-      // look's starting structure, the look told apart by its last value,
+      // look's starting structure, the look told apart by its third value,
       // which an intro shares with the outro of the same look.
       for (final type in EditorEffectType.values.where((t) => t.isIntroOutro)) {
         final look = type.introOutroLook!;
