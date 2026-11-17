@@ -97,6 +97,7 @@ void main(List<String> args) {
     setUp(() {
       requests.clear();
       responseStatus = HttpStatus.unauthorized;
+      if (hookMarker.existsSync()) hookMarker.deleteSync();
     });
 
     Future<ProcessResult> runWrapper(String environment) => Process.run(
@@ -116,7 +117,6 @@ void main(List<String> args) {
       expect(result.stderr, contains('Unused native hook must not run'));
       expect(hookMarker.readAsStringSync(), 'executed');
       expect(requests, isEmpty);
-      hookMarker.deleteSync();
     });
 
     test('probes both routes without running the unused hook', () async {
