@@ -227,7 +227,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
             category: category.name,
             sort: _apiSortFor(sortOrder),
             platform: _platformFor(sortOrder),
-            cacheScope: currentUserPubkey ?? 'anonymous',
+            viewerPubkey: currentUserPubkey,
           )) {
         if (version != _selectionVersion || emit.isDone) return;
         if (result.isStale &&

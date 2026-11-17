@@ -32,7 +32,7 @@ void main() {
         category: any(named: 'category'),
         sort: any(named: 'sort'),
         platform: any(named: 'platform'),
-        cacheScope: any(named: 'cacheScope'),
+        viewerPubkey: any(named: 'viewerPubkey'),
       ),
     ).thenAnswer((invocation) async* {
       yield CacheResult.live(
@@ -185,7 +185,7 @@ void main() {
             category: any(named: 'category'),
             sort: any(named: 'sort'),
             platform: any(named: 'platform'),
-            cacheScope: any(named: 'cacheScope'),
+            viewerPubkey: any(named: 'viewerPubkey'),
           ),
         ).thenAnswer((_) => results.stream);
         bloc = CategoriesBloc(
@@ -260,7 +260,7 @@ void main() {
           when(
             () => mockRepository.watchVideosForCategoryCached(
               category: 'animals',
-              cacheScope: _viewerPubkey,
+              viewerPubkey: _viewerPubkey,
             ),
           ).thenAnswer((_) => next.stream);
           bloc.add(const CategorySelected(music));
@@ -291,7 +291,7 @@ void main() {
           () => mockRepository.watchVideosForCategoryCached(
             category: 'music',
             sort: 'timestamp',
-            cacheScope: _viewerPubkey,
+            viewerPubkey: _viewerPubkey,
           ),
         ).thenAnswer((_) => next.stream);
         bloc.add(const CategorySelected(music));
@@ -342,7 +342,7 @@ void main() {
           when(
             () => mockRepository.watchVideosForCategoryCached(
               category: 'music',
-              cacheScope: _viewerPubkey,
+              viewerPubkey: _viewerPubkey,
             ),
           ).thenAnswer((_) => next.stream);
           bloc.add(const CategorySelected(music));
@@ -379,7 +379,7 @@ void main() {
         when(
           () => mockRepository.watchVideosForCategoryCached(
             category: 'animals',
-            cacheScope: _viewerPubkey,
+            viewerPubkey: _viewerPubkey,
           ),
         ).thenAnswer((_) => next.stream);
         bloc.add(const CategorySelected(music));

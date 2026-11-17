@@ -117,8 +117,10 @@ class CategoriesRepository {
 
   /// Watches the first page of a public category feed, then refreshes it.
   ///
-  /// Snapshots are scoped to the viewer, canonical category, API sort and
-  /// platform. They can be served across gallery/app restarts for 24 hours and
+  /// Snapshots are scoped to [viewerPubkey], canonical category, API sort and
+  /// platform. [viewerPubkey] is the signed-in viewer's hex pubkey, the prefix
+  /// sign-out clears; null uses a shared anonymous scope that nothing clears.
+  /// They can be served across gallery/app restarts for 24 hours and
   /// share CacheSync's global size limit and oldest-entry eviction. Every
   /// opening still fetches live data. Personalized recommendations deliberately
   /// use [getRecommendedVideos] instead of this cache.
@@ -128,7 +130,7 @@ class CategoriesRepository {
   /// page size.
   Stream<CacheResult<CategoryVideosPage>> watchVideosForCategoryCached({
     required String category,
-    String cacheScope = 'anonymous',
+    required String? viewerPubkey,
     String sort = 'trending',
     String? platform,
   }) {
@@ -140,7 +142,7 @@ class CategoriesRepository {
     }
 
     final key =
-        '$cacheScope:category-videos:v1:'
+        '${viewerPubkey ?? 'anonymous'}:category-videos:v1:'
         '${jsonEncode([canonicalCategory, sort, platform])}';
     return CacheSync.watchOne<CategoryVideosPage>(
       key: key,

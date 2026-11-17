@@ -253,7 +253,7 @@ void main() {
           await repository
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           final pending = Completer<List<VideoStats>>();
@@ -266,7 +266,7 @@ void main() {
           final iterator = StreamIterator(
             restarted.watchVideosForCategoryCached(
               category: ' Music ',
-              cacheScope: viewer,
+              viewerPubkey: viewer,
             ),
           );
           expect(await iterator.moveNext(), isTrue);
@@ -292,14 +292,14 @@ void main() {
           await scoped
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           blocked = true;
           final results = await scoped
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           expect(results, hasLength(2));
@@ -309,7 +309,10 @@ void main() {
 
       test('isolates category, sort, platform and account snapshots', () async {
         await repository
-            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
             .toList();
         for (final selection in [
           (
@@ -329,7 +332,7 @@ void main() {
             category: 'music',
             sort: 'trending',
             platform: null,
-            scope: 'anonymous',
+            scope: null,
           ),
         ]) {
           final results = await repository
@@ -337,7 +340,7 @@ void main() {
                 category: selection.category,
                 sort: selection.sort,
                 platform: selection.platform,
-                cacheScope: selection.scope,
+                viewerPubkey: selection.scope,
               )
               .toList();
           expect(results.single.isLive, isTrue);
@@ -350,7 +353,7 @@ void main() {
           await repository
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           final key = cacheDao.keys.single;
@@ -363,7 +366,7 @@ void main() {
           final results = await repository
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           expect(results.single.isLive, isTrue);
@@ -372,7 +375,10 @@ void main() {
 
       test('drops snapshots dated after the current time', () async {
         await repository
-            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
             .toList();
         final key = cacheDao.keys.single;
         final payload =
@@ -383,7 +389,10 @@ void main() {
             .toIso8601String();
         await cacheDao.write(key: key, payload: jsonEncode(payload));
         final results = await repository
-            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
             .toList();
         expect(results.single.isLive, isTrue);
       });
@@ -400,7 +409,10 @@ void main() {
           ],
         );
         await repository
-            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
             .toList();
         final key = cacheDao.keys.single;
         final payload =
@@ -418,7 +430,7 @@ void main() {
         final iterator = StreamIterator(
           repository.watchVideosForCategoryCached(
             category: 'music',
-            cacheScope: viewer,
+            viewerPubkey: viewer,
           ),
         );
         expect(await iterator.moveNext(), isTrue);
@@ -446,7 +458,7 @@ void main() {
           await repository
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           final blocked = CategoriesRepository(
@@ -456,7 +468,7 @@ void main() {
           final results = await blocked
               .watchVideosForCategoryCached(
                 category: 'music',
-                cacheScope: viewer,
+                viewerPubkey: viewer,
               )
               .toList();
           expect(results.first.data.videos, isEmpty);
@@ -468,7 +480,7 @@ void main() {
         final results = await repository
             .watchVideosForCategoryCached(
               category: ' ADULT ',
-              cacheScope: viewer,
+              viewerPubkey: viewer,
             )
             .toList();
         expect(results.single.data.videos, isEmpty);

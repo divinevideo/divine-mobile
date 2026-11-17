@@ -357,7 +357,7 @@ void main() {
           category: any(named: 'category'),
           sort: any(named: 'sort'),
           platform: any(named: 'platform'),
-          cacheScope: any(named: 'cacheScope'),
+          viewerPubkey: any(named: 'viewerPubkey'),
         ),
       ).thenAnswer((invocation) async* {
         yield CacheResult.live(
@@ -447,7 +447,7 @@ void main() {
       when(
         () => categoriesRepository.watchVideosForCategoryCached(
           category: 'animals',
-          cacheScope: _viewerPubkey,
+          viewerPubkey: _viewerPubkey,
         ),
       ).thenAnswer((_) => results.stream);
       await tester.pumpWidget(
