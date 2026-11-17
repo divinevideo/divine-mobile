@@ -29,6 +29,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
+import 'package:openvine/screens/feed/classics_playback_page.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_coordinator.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
@@ -193,6 +194,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.autoOpenComments = false,
     this.focusCommentId,
     this.onPageChanged,
+    this.onActiveVideoChanged,
     this.dmReplyContext,
     this.onBack,
     super.key,
@@ -231,6 +233,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   /// search) to keep the URL in sync for deep-linking.
   final void Function(int index)? onPageChanged;
 
+  /// Reports stable active identity after fullscreen filtering/removals.
+  final void Function(VideoEvent video)? onActiveVideoChanged;
+
   /// Overrides the app-bar back action.
   ///
   /// When the fullscreen feed is embedded as a "video mode" of a parent screen
@@ -242,6 +247,14 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (const bool.fromEnvironment(
+      'ADAPTIVE_CLASSICS_ENABLED',
+      defaultValue: true,
+    )) {
+      if (source case ClassicVinesViewSource(anchor: final anchor?)) {
+        return ClassicsPlaybackPage(anchor: anchor, screen: this);
+      }
+    }
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
     // Resolved once and handed to the bloc as plain objects / bound methods.
@@ -286,6 +299,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // capturing it once in `create:` stays correct across auth changes (no
     // ValueKey guard needed — see feedTuningRepositoryProvider).
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
+    final recommendationFeedback = ref
+        .read(analyticsServiceProvider)
+        .recordRecommendationInteraction;
 
     return MultiBlocProvider(
       providers: [
@@ -306,6 +322,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
             hideFilter: hideFilter,
             unavailableFilter: unavailabilityGate.isVideoBroken,
             feedTuningRepository: feedTuningRepository,
+            recommendationFeedback: recommendationFeedback,
           )..add(const FullscreenFeedStarted()),
         ),
         BlocProvider(
@@ -324,6 +341,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         autoOpenComments: autoOpenComments,
         focusCommentId: focusCommentId,
         onPageChanged: onPageChanged,
+        onActiveVideoChanged: onActiveVideoChanged,
         dmReplyContext: dmReplyContext,
         loadMoreOnEndSwipe: source is SingleVideoViewSource,
         initialVideoKey: switch (source) {
@@ -352,6 +370,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.autoOpenComments = false,
     this.focusCommentId,
     this.onPageChanged,
+    this.onActiveVideoChanged,
     this.dmReplyContext,
     this.initialVideoKey,
     this.loadMoreOnEndSwipe = false,
@@ -383,6 +402,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   ///
   /// Used by embedded surfaces to keep the URL in sync.
   final void Function(int index)? onPageChanged;
+  final void Function(VideoEvent video)? onActiveVideoChanged;
 
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar in the body footer.
@@ -1020,7 +1040,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                             trafficSourceForVideo:
                                                 _trafficSourceForVideo,
                                             sourceDetail: widget.sourceDetail,
-                                            onActiveVideoChanged: (_, index) {
+                                            onActiveVideoChanged: (video, index) {
                                               ref
                                                   .read(
                                                     foregroundFeedActivityGateProvider,
@@ -1034,6 +1054,9 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                       index,
                                                     ),
                                                   );
+                                              widget.onActiveVideoChanged?.call(
+                                                video,
+                                              );
                                               widget.onPageChanged?.call(index);
                                             },
                                             onNearEnd: () {

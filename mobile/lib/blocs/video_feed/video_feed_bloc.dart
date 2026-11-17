@@ -56,6 +56,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    ClassicFeedSession? classicSession,
     HashtagSubscriptionRepository? hashtagSubscriptionRepository,
     PeopleListsRepository? peopleListsRepository,
     ProfileRepository? profileRepository,
@@ -79,6 +80,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Stream<VideosRepository>? removalRepositoryStream,
   }) : _videosRepository = videosRepository,
        _removalRepository = videosRepository,
+       _classicSession = classicSession,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
        _hashtagSubscriptionRepository = hashtagSubscriptionRepository,
@@ -107,6 +109,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
+    on<VideoFeedClassicsSessionChanged>(_onClassicsSessionChanged);
+    on<VideoFeedVisibilityChanged>((event, emit) {
+      _classicSession?.setActive(
+        active:
+            event.visible && state.source.type == VideoFeedSourceType.classic,
+      );
+    });
+    _classicSessionSubscription = _classicSession?.stream.listen((snapshot) {
+      if (!_isClosing && !isClosed) {
+        add(VideoFeedClassicsSessionChanged(snapshot));
+      }
+    });
     on<VideoFeedModeChanged>(_onModeChanged);
     on<VideoFeedSourceChanged>(_onSourceChanged);
     on<VideoFeedLoadMoreRequested>(
@@ -174,6 +188,38 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   StreamSubscription<VideosRepository>? _removalRepositorySubscription;
   int _removalGeneration = 0;
   final _pendingRemovalCancellations = <Future<void>>{};
+  final ClassicFeedSession? _classicSession;
+  StreamSubscription<ClassicFeedSessionState>? _classicSessionSubscription;
+
+  void _onClassicsSessionChanged(
+    VideoFeedClassicsSessionChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    if (state.source.type != VideoFeedSourceType.classic ||
+        state.status != VideoFeedStatus.success) {
+      return;
+    }
+    final snapshot = event.snapshot;
+    final videos = _videosRepository.applyContentPreferences(snapshot.videos);
+    final activeKey = state.videos.isEmpty
+        ? null
+        : state
+              .videos[state.currentIndex.clamp(0, state.videos.length - 1)]
+              .feedDedupKey;
+    final activeIndex = activeKey == null
+        ? 0
+        : videos.indexWhere((video) => video.feedDedupKey == activeKey);
+    emit(
+      state.copyWith(
+        videos: videos,
+        currentIndex: activeIndex < 0 ? 0 : activeIndex,
+        hasMore: snapshot.hasMore,
+        paginationCursor: snapshot.cursor,
+        clearPaginationCursor: snapshot.cursor == null,
+      ),
+    );
+  }
+
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
   final HashtagSubscriptionRepository? _hashtagSubscriptionRepository;
@@ -289,7 +335,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
       source.type == VideoFeedSourceType.newVideos ||
-      source.type == VideoFeedSourceType.classic;
+      (source.type == VideoFeedSourceType.classic && _classicSession == null);
 
   /// Whether [source] can paginate via an opaque server cursor rather than a
   /// `createdAt` "until" timestamp.
@@ -344,6 +390,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       video: target,
       direction: event.direction,
     );
+    if (_isClosing || emit.isDone) return;
+    if (state.source.type == VideoFeedSourceType.classic) {
+      _classicSession?.recordInteraction(
+        ClassicFeedInteraction(
+          videoId: event.videoId,
+          signal: event.direction == FeedTuningDirection.more
+              ? ClassicFeedSignal.positive
+              : ClassicFeedSignal.less,
+        ),
+      );
+    }
     final sequence = state.tuningActionSequence + 1;
 
     emit(
@@ -364,7 +421,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedTuningUndoRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final action = state.lastTuningAction;
     await _feedTuningRepository?.undo(event.feedTuningEventId);
+    if (action?.publishedEventId == event.feedTuningEventId) {
+      _classicSession?.forgetInteraction(action!.videoId);
+    }
   }
 
   /// Handle feed started event.
@@ -792,6 +853,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   Future<void> close() async {
     _isClosing = true;
     _modePreferences._release();
+    await _classicSessionSubscription?.cancel();
+    await _classicSession?.dispose();
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
@@ -855,6 +918,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         )) {
       return;
     }
+    _classicSession?.setActive(
+      active: source.type == VideoFeedSourceType.classic,
+    );
     _pendingRestoredPeopleList = null;
     _pendingRestoredCuratedList = null;
     final selectionSequence = ++_sourceSelectionSequence;
@@ -1739,6 +1805,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     String? pubkey,
     Emitter<VideoFeedBlocState> emit,
   ) {
+    if (state.source.type == VideoFeedSourceType.classic &&
+        _classicSession != null) {
+      _classicSession.reapplyFilters();
+      final snapshot = _classicSession.state;
+      emit(
+        state.copyWith(
+          videos: snapshot.videos,
+          currentIndex: snapshot.currentIndex,
+        ),
+      );
+      return;
+    }
     if (pubkey != null) {
       final filtered = state.videos.where((v) => v.pubkey != pubkey).toList();
       if (filtered.length != state.videos.length) {
@@ -1847,7 +1925,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               currentIndex: state.currentIndex,
             )
           : validVideos;
-      final displayedVideos = source.type == VideoFeedSourceType.newVideos
+      final displayedVideos =
+          source.type == VideoFeedSourceType.classic && _classicSession != null
+          ? _classicSession.state.videos
+          : source.type == VideoFeedSourceType.newVideos
           ? filterNewFeedVideos(mergedVideos)
           : mergedVideos;
 
@@ -1859,6 +1940,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         state.copyWith(
           status: VideoFeedStatus.success,
           videos: displayedVideos,
+          currentIndex:
+              source.type == VideoFeedSourceType.classic &&
+                  _classicSession != null
+              ? _classicSession.state.currentIndex
+              : state.currentIndex,
           coordination: state.coordination.copyWith(
             newVideosUntil: source.type == VideoFeedSourceType.newVideos
                 ? _oldestTimestamp(result.videos)
@@ -2066,6 +2152,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) {
     final index = event.index < 0 ? 0 : event.index;
+    if (state.source.type == VideoFeedSourceType.classic) {
+      _classicSession?.activate(index);
+    }
     if (state.currentIndex == index) return;
     emit(state.copyWith(currentIndex: index));
 
@@ -2179,10 +2268,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     // time-window pagination, so `until` does not apply. `revalidate` does
     // not apply either: the source's 15-minute first-page cache exists so
     // re-entry resumes the same opening, and bypassing it would re-shuffle.
-    VideoFeedSourceType.classic => _videosRepository.getClassicVideos(
-      cursor: paginationCursor,
-      skipCache: skipCache,
-    ),
+    VideoFeedSourceType.classic =>
+      _classicSession == null
+          ? _videosRepository.getClassicVideos(
+              cursor: paginationCursor,
+              skipCache: skipCache,
+            )
+          : paginationCursor == null
+          ? _classicSession.loadInitial(refresh: skipCache)
+          : _classicSession.loadMore(),
   };
 
   Future<HomeFeedResult> _fetchHashtagVideos(

@@ -39,6 +39,7 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 class VideoFeedPage extends ConsumerWidget {
   /// Route name for this screen.
@@ -102,6 +103,7 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    final analytics = ref.watch(analyticsServiceProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
@@ -131,6 +133,33 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
+                  classicSession:
+                      !const bool.fromEnvironment(
+                        'ADAPTIVE_CLASSICS_ENABLED',
+                        defaultValue: true,
+                      )
+                      ? null
+                      : (ClassicFeedSession(
+                          loadPage: (request) {
+                            final contextId = analytics.privacyGeneration;
+                            final allowed =
+                                analytics.initializedAnalyticsConsent;
+                            return videosRepository.getClassicRecommendations(
+                              request: request,
+                              userPubkey: allowed ? viewerPubkey : null,
+                              isCurrent: () =>
+                                  contextId == analytics.privacyGeneration &&
+                                  allowed ==
+                                      analytics.initializedAnalyticsConsent,
+                            );
+                          },
+                          canPersonalize: () =>
+                              analytics.initializedAnalyticsConsent,
+                          feedback: analytics.recommendationFeedback,
+                          privacyChanges: analytics.privacyChanges,
+                          removedVideoIds: videosRepository.removedVideoIds,
+                          filter: videosRepository.applyContentPreferences,
+                        )..setActive(active: false)),
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,
@@ -350,6 +379,9 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
     final isObscured = ref.read(shellObscuredProvider);
     final hasOverlay = ref.read(overlayVisibilityProvider).hasVisibleOverlay;
 
+    context.read<VideoFeedBloc>().add(
+      VideoFeedVisibilityChanged(isHomeRoute && !isObscured),
+    );
     final shouldBeActive = isHomeRoute && !isObscured && !hasOverlay;
     if (shouldBeActive == _isNewFeedActive) return;
     setState(() => _isNewFeedActive = shouldBeActive);

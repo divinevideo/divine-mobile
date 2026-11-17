@@ -5,11 +5,13 @@ import 'dart:async';
 
 import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/state/video_feed_state.dart';
@@ -19,12 +21,12 @@ import 'package:videos_repository/videos_repository.dart';
 
 part 'classic_vines_provider.g.dart';
 
-/// ClassicVines feed provider - shows pre-2017 Vine archive sorted by loops
+/// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///
-/// Uses REST API (Funnelcake) with offset pagination to load pages on demand.
+/// Uses opaque cursor pagination, with archive fallback owned by the repository.
 /// Each page is 50 videos.
 ///
-/// Pull-to-refresh selects a fresh random slice of classics while retrying
+/// Pull-to-refresh starts a new Classics selection while retrying
 /// transient failures and empty pages.
 @Riverpod(keepAlive: true)
 class ClassicVinesFeed extends _$ClassicVinesFeed {
@@ -33,9 +35,24 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
   /// Repository cursor for the next page of the current loaded classics window.
   String? _paginationCursor;
+  int _feedGeneration = 0;
 
   @override
   Future<VideoFeedState> build() async {
+    _feedGeneration++;
+    _paginationCursor = null;
+    if (const bool.fromEnvironment(
+      'ADAPTIVE_CLASSICS_ENABLED',
+      defaultValue: true,
+    )) {
+      final analytics = ref.watch(analyticsServiceProvider);
+      final privacy = analytics.privacyChanges.listen((_) {
+        _feedGeneration++;
+        _paginationCursor = null;
+        ref.invalidateSelf();
+      });
+      ref.onDispose(() => unawaited(privacy.cancel()));
+    }
     // Watch content filter version — rebuilds when preferences change.
     ref.watch(contentFilterVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
@@ -68,6 +85,8 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       return const VideoFeedState(videos: [], hasMoreContent: false);
     }
 
+    // A personalized grid must not carry another account's cursor forward.
+    ref.watch(currentAuthStateProvider);
     final funnelcakeAvailable =
         ref.watch(funnelcakeAvailableProvider).asData?.value ?? false;
 
@@ -81,6 +100,8 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     bool preserveCurrentOnEmptyFallback = false,
     bool skipCache = false,
   }) async {
+    final generation = _feedGeneration;
+    bool isCurrent() => ref.mounted && generation == _feedGeneration;
     final videoEventService = ref.read(videoEventServiceProvider);
     Object? restError;
     StackTrace? restStackTrace;
@@ -99,6 +120,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
             cursor: cursor,
             skipCache: skipCache,
           );
+          if (!isCurrent()) {
+            return const HomeFeedResult(videos: [], hasMore: false);
+          }
           final filteredResult = _filterRepositoryResult(
             result,
             videoEventService,
@@ -120,6 +144,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
           return filteredResult;
         } catch (e) {
+          if (!isCurrent()) {
+            return const HomeFeedResult(videos: [], hasMore: false);
+          }
           if (attempt < attempts) {
             Log.warning(
               '🎬 ClassicVinesFeed: REST API error, retrying: $e',
@@ -160,6 +187,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
           skipCache: skipCache,
         );
 
+        if (!isCurrent()) {
+          return const VideoFeedState(videos: [], hasMoreContent: false);
+        }
         if (firstPage.videos.isNotEmpty) {
           return restFeedState(result: firstPage);
         }
@@ -177,6 +207,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
           skipCache: true,
         );
 
+        if (!isCurrent()) {
+          return const VideoFeedState(videos: [], hasMoreContent: false);
+        }
         if (recoveryPage.videos.isEmpty) {
           restError = StateError(
             'Classics API recovery page returned no videos',
@@ -202,6 +235,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       }
     }
 
+    if (!isCurrent()) {
+      return const VideoFeedState(videos: [], hasMoreContent: false);
+    }
     // Fallback: Get videos from Nostr that have embedded loop stats
     Log.info(
       '🎬 ClassicVinesFeed: Using Nostr fallback',
@@ -240,6 +276,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
   /// Refresh with a new random slice of classic vines.
   Future<void> refresh() async {
+    final generation = ++_feedGeneration;
     final funnelcakeAvailable =
         ref.read(funnelcakeAvailableProvider).asData?.value ?? false;
 
@@ -253,8 +290,12 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     await staleWhileRevalidate(
       getCurrentState: () => state,
-      isMounted: () => ref.mounted,
-      setState: (s) => state = s,
+      isMounted: () => ref.mounted && generation == _feedGeneration,
+      setState: (s) {
+        if (ref.mounted && generation == _feedGeneration) {
+          state = s;
+        }
+      },
       fetchFresh: () => _loadFirstPage(
         funnelcakeAvailable: funnelcakeAvailable,
         preserveCurrentOnEmptyFallback: true,
@@ -265,16 +306,23 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
   /// Load more videos (append next sequential page from current offset)
   Future<void> loadMore() async {
-    if (!state.hasValue || state.value == null) return;
+    final generation = _feedGeneration;
+    if (!state.hasValue || state.value == null) {
+      return;
+    }
     final currentState = state.value!;
-    if (currentState.isLoadingMore) return;
+    if (currentState.isLoadingMore) {
+      return;
+    }
 
     final repository = ref.read(videosRepositoryProvider);
     final videoEventService = ref.read(videoEventServiceProvider);
     final funnelcakeAvailable =
         ref.read(funnelcakeAvailableProvider).asData?.value ?? false;
 
-    if (!funnelcakeAvailable || !currentState.hasMoreContent) return;
+    if (!funnelcakeAvailable || !currentState.hasMoreContent) {
+      return;
+    }
 
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
@@ -285,6 +333,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
         cursor: requestCursor,
         skipCache: true,
       );
+      if (!ref.mounted || generation != _feedGeneration) {
+        return;
+      }
       final filteredVideos = dedupeByFeedKey(
         _filterRepositoryVideos(page.videos, videoEventService),
         alreadySeen: currentState.videos.map((v) => v.feedDedupKey),
@@ -308,6 +359,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
         ),
       );
     } catch (e) {
+      if (!ref.mounted || generation != _feedGeneration) {
+        return;
+      }
       Log.error(
         '🎬 ClassicVinesFeed: Error loading more: $e',
         name: 'ClassicVinesFeedProvider',

@@ -1,6 +1,7 @@
 // ABOUTME: Governed feed-depth and engagement analytics without raw relationship pubkeys.
 // ABOUTME: Keeps delivery best-effort and separate from product actions.
 
+import 'package:models/models.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/analytics_service.dart';
@@ -72,12 +73,30 @@ class ConsumptionAnalyticsTracker {
     targetVideoId,
   );
 
+  /// Stops an unlike from retaining a confirmed positive session signal.
+  void reactionRetracted({required String targetVideoId}) {
+    _analytics().recordRecommendationInteraction(
+      ClassicFeedInteractionRetracted(videoId: targetVideoId),
+    );
+  }
+
   Future<void> _engagement(
     ProductAnalyticsV2EngagementAction action,
     String? contentId,
-  ) => _record(
-    () => _analytics().recordEngagement(action: action, contentId: contentId),
-  );
+  ) {
+    if (contentId != null &&
+        action != ProductAnalyticsV2EngagementAction.shareTapped) {
+      _analytics().recordRecommendationInteraction(
+        ClassicFeedInteraction(
+          videoId: contentId,
+          signal: ClassicFeedSignal.positive,
+        ),
+      );
+    }
+    return _record(
+      () => _analytics().recordEngagement(action: action, contentId: contentId),
+    );
+  }
 
   ProductAnalyticsV2Surface _surface(ViewTrafficSource source) =>
       switch (source) {

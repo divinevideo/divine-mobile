@@ -14,9 +14,13 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/analytics_service.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+class _MockAnalyticsService extends Mock implements AnalyticsService {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -24,6 +28,13 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _TestCurrentAuth extends CurrentAuthState {
+  @override
+  AuthState build() => AuthState.unauthenticated;
+
+  void signIn() => state = AuthState.authenticated;
+}
 
 class _TestFunnelcakeAvailable extends FunnelcakeAvailable {
   @override
@@ -43,11 +54,18 @@ void main() {
     late _MockVideoEventService mockVideoEventService;
     late _MockContentBlocklistRepository mockBlocklistRepository;
     late SharedPreferences sharedPreferences;
+    late _MockAnalyticsService analytics;
+    late StreamController<void> privacyChanges;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
 
+      analytics = _MockAnalyticsService();
+      privacyChanges = StreamController<void>.broadcast(sync: true);
+      when(() => analytics.privacyChanges)
+          .thenAnswer((_) => privacyChanges.stream);
+      addTearDown(privacyChanges.close);
       mockVideosRepository = _MockVideosRepository();
       mockVideoEventService = _MockVideoEventService();
       mockBlocklistRepository = _MockContentBlocklistRepository();
@@ -80,6 +98,8 @@ void main() {
       return ProviderContainer(
         overrides: [
           appReadyProvider.overrideWithValue(true),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -92,6 +112,113 @@ void main() {
         ],
       );
     }
+
+    test(
+      'privacy reset rejects a late grid page even if consent returns',
+      () async {
+        final pending = Completer<HomeFeedResult>();
+        final pageStarted = Completer<void>();
+        var firstPages = 0;
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#cursor] != null) {
+            pageStarted.complete();
+            return pending.future;
+          }
+          firstPages++;
+          return HomeFeedResult(
+            videos: [
+              _videoEvent(firstPages.toRadixString(16).padLeft(64, '0')),
+            ],
+            paginationCursor: 'page-$firstPages',
+            hasMore: true,
+          );
+        });
+        final container = createContainer();
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        await container.read(classicVinesFeedProvider.future);
+        final next = container
+            .read(classicVinesFeedProvider.notifier)
+            .loadMore();
+        await pageStarted.future;
+        privacyChanges.add(null);
+        privacyChanges.add(null);
+        await container.pump();
+        await container.read(classicVinesFeedProvider.future);
+        pending.complete(
+          HomeFeedResult(
+            videos: [_videoEvent('obsolete')],
+            paginationCursor: 'obsolete',
+            hasMore: true,
+          ),
+        );
+        await next;
+        expect(
+          container
+              .read(classicVinesFeedProvider)
+              .value!
+              .videos
+              .map((v) => v.id),
+          [2.toRadixString(16).padLeft(64, '0')],
+        );
+      },
+    );
+
+    test(
+      'late pagination failure cannot restore a previous account grid',
+      () async {
+        final pending = Completer<HomeFeedResult>();
+        final pageStarted = Completer<void>();
+        var firstPages = 0;
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#cursor] != null) {
+            pageStarted.complete();
+            return pending.future;
+          }
+          return HomeFeedResult(
+            videos: [
+              _videoEvent((++firstPages).toRadixString(16).padLeft(64, '0')),
+            ],
+            paginationCursor: 'page-$firstPages',
+            hasMore: true,
+          );
+        });
+        final container = createContainer();
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        await container.read(classicVinesFeedProvider.future);
+        final next = container
+            .read(classicVinesFeedProvider.notifier)
+            .loadMore();
+        await pageStarted.future;
+        (container.read(currentAuthStateProvider.notifier) as _TestCurrentAuth)
+            .signIn();
+        await container.pump();
+        await container.read(classicVinesFeedProvider.future);
+        pending.completeError(Exception('viewer changed'));
+        await next;
+        expect(
+          container
+              .read(classicVinesFeedProvider)
+              .value!
+              .videos
+              .map((v) => v.id),
+          [2.toRadixString(16).padLeft(64, '0')],
+        );
+      },
+    );
 
     test('loads the first classics page through the repository', () async {
       final container = createContainer();

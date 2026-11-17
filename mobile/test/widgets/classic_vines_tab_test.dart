@@ -247,7 +247,11 @@ void main() {
                 as PooledFullscreenVideoFeedArgs;
         expect(args.source, isA<ClassicVinesViewSource>());
         expect(args.feedRepository, same(feedRepository));
-        expect(args.initialIndex, 1);
+        expect(args.initialIndex, 0);
+        expect(
+          (args.source as ClassicVinesViewSource).anchor?.id,
+          _secondClassicId,
+        );
         expect(args.initialVideoId, _secondClassicId);
         expect(
           args.contextTitle,

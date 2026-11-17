@@ -8,32 +8,32 @@ part of 'classic_vines_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// ClassicVines feed provider - shows pre-2017 Vine archive sorted by loops
+/// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///
-/// Uses REST API (Funnelcake) with offset pagination to load pages on demand.
+/// Uses opaque cursor pagination, with archive fallback owned by the repository.
 /// Each page is 50 videos.
 ///
-/// Pull-to-refresh selects a fresh random slice of classics while retrying
+/// Pull-to-refresh starts a new Classics selection while retrying
 /// transient failures and empty pages.
 
 @ProviderFor(ClassicVinesFeed)
 final classicVinesFeedProvider = ClassicVinesFeedProvider._();
 
-/// ClassicVines feed provider - shows pre-2017 Vine archive sorted by loops
+/// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///
-/// Uses REST API (Funnelcake) with offset pagination to load pages on demand.
+/// Uses opaque cursor pagination, with archive fallback owned by the repository.
 /// Each page is 50 videos.
 ///
-/// Pull-to-refresh selects a fresh random slice of classics while retrying
+/// Pull-to-refresh starts a new Classics selection while retrying
 /// transient failures and empty pages.
 final class ClassicVinesFeedProvider
     extends $AsyncNotifierProvider<ClassicVinesFeed, VideoFeedState> {
-  /// ClassicVines feed provider - shows pre-2017 Vine archive sorted by loops
+  /// ClassicVines grid provider, ranked by the repository's recommendation path.
   ///
-  /// Uses REST API (Funnelcake) with offset pagination to load pages on demand.
+  /// Uses opaque cursor pagination, with archive fallback owned by the repository.
   /// Each page is 50 videos.
   ///
-  /// Pull-to-refresh selects a fresh random slice of classics while retrying
+  /// Pull-to-refresh starts a new Classics selection while retrying
   /// transient failures and empty pages.
   ClassicVinesFeedProvider._()
     : super(
@@ -54,14 +54,14 @@ final class ClassicVinesFeedProvider
   ClassicVinesFeed create() => ClassicVinesFeed();
 }
 
-String _$classicVinesFeedHash() => r'd67c29fa844dfd40b3cc46cf0ed71112576c24e6';
+String _$classicVinesFeedHash() => r'ad18b3a0142bbd016cc41f505dcc685f41dfaae2';
 
-/// ClassicVines feed provider - shows pre-2017 Vine archive sorted by loops
+/// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///
-/// Uses REST API (Funnelcake) with offset pagination to load pages on demand.
+/// Uses opaque cursor pagination, with archive fallback owned by the repository.
 /// Each page is 50 videos.
 ///
-/// Pull-to-refresh selects a fresh random slice of classics while retrying
+/// Pull-to-refresh starts a new Classics selection while retrying
 /// transient failures and empty pages.
 
 abstract class _$ClassicVinesFeed extends $AsyncNotifier<VideoFeedState> {

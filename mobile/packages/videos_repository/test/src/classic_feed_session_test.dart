@@ -1,0 +1,333 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+String _id(int value) => value.toRadixString(16).padLeft(64, '0');
+
+VideoEvent _video(int value) => VideoEvent(
+  id: _id(value),
+  pubkey: _id(1000 + value),
+  createdAt: 1,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+  videoUrl: 'https://example.com/$value.mp4',
+  rawTags: const {'platform': 'vine'},
+);
+
+HomeFeedResult _page(List<int> ids, {String? cursor = 'next'}) =>
+    HomeFeedResult(
+      videos: ids.map(_video).toList(),
+      recommendationPageCount: 1,
+      paginationCursor: cursor,
+      hasMore: cursor != null,
+    );
+
+void main() {
+  test(
+    'adapts the tail without moving history, current or prepared next',
+    () async {
+      final requests = <ClassicRecommendationsRequest>[];
+      final session = ClassicFeedSession(
+        loadPage: (request) async {
+          requests.add(request);
+          return requests.length == 1 ? _page([1, 2, 3, 4, 5]) : _page([6, 7]);
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      session.activate(1);
+      await session.settled;
+
+      expect(session.state.videos.map((v) => v.id), [1, 2, 3, 6, 7].map(_id));
+      expect(session.state.currentIndex, 1);
+      expect(requests.last.cursor, 'next');
+      expect(requests.last.recentVideoIds, [_id(1), _id(2)]);
+    },
+  );
+
+  test('a backwards swipe cannot replace previously reached videos', () async {
+    final pending = Completer<HomeFeedResult>();
+    var calls = 0;
+    final session = ClassicFeedSession(
+      loadPage: (_) async =>
+          ++calls == 1 ? _page([1, 2, 3, 4, 5, 6]) : pending.future,
+    );
+    addTearDown(session.dispose);
+    await session.loadInitial();
+    session
+      ..activate(3)
+      ..activate(1);
+    pending.complete(_page([7, 8]));
+    await session.settled;
+
+    expect(
+      session.state.videos.take(5).map((v) => v.id),
+      [1, 2, 3, 4, 5].map(_id),
+    );
+    expect(session.state.currentIndex, 1);
+  });
+
+  test('coalesces feedback while one request is in flight', () async {
+    final pending = Completer<HomeFeedResult>();
+    final requests = <ClassicRecommendationsRequest>[];
+    final session = ClassicFeedSession(
+      loadPage: (request) async {
+        requests.add(request);
+        return switch (requests.length) {
+          1 => _page([1, 2, 3, 4]),
+          2 => pending.future,
+          _ => _page([7, 8]),
+        };
+      },
+    );
+    addTearDown(session.dispose);
+    await session.loadInitial();
+    session
+      ..recordInteraction(
+        ClassicFeedInteraction(
+          videoId: _id(1),
+          signal: ClassicFeedSignal.completed,
+        ),
+      )
+      ..recordInteraction(
+        ClassicFeedInteraction(
+          videoId: _id(1),
+          signal: ClassicFeedSignal.positive,
+        ),
+      )
+      ..recordInteraction(
+        ClassicFeedInteraction(videoId: _id(2), signal: ClassicFeedSignal.skip),
+      );
+    expect(requests, hasLength(2));
+    pending.complete(_page([5, 6]));
+    await session.settled;
+
+    expect(requests, hasLength(3));
+    expect(requests.last.recentInteractions.map((v) => v.signal), [
+      ClassicFeedSignal.positive,
+      ClassicFeedSignal.skip,
+    ]);
+  });
+
+  test(
+    'failed or empty adaptation preserves the playable tail and retries',
+    () async {
+      var calls = 0;
+      final session = ClassicFeedSession(
+        loadPage: (_) async {
+          calls++;
+          if (calls == 1) return _page([1, 2, 3, 4]);
+          if (calls == 2) throw StateError('offline');
+          return _page([]);
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      session.activate(1);
+      await session.settled;
+      expect(session.state.videos, hasLength(4));
+      session.recordInteraction(
+        ClassicFeedInteraction(
+          videoId: _id(2),
+          signal: ClassicFeedSignal.positive,
+        ),
+      );
+      await session.settled;
+      expect(calls, 3);
+      expect(session.state.videos, hasLength(4));
+    },
+  );
+
+  test(
+    'privacy boundary clears context and discards an old response',
+    () async {
+      final privacy = StreamController<void>.broadcast(sync: true);
+      addTearDown(privacy.close);
+      var allowed = true;
+      final pending = Completer<HomeFeedResult>();
+      final requests = <ClassicRecommendationsRequest>[];
+      final session = ClassicFeedSession(
+        canPersonalize: () => allowed,
+        privacyChanges: privacy.stream,
+        loadPage: (request) async {
+          requests.add(request);
+          return switch (requests.length) {
+            1 => _page([1, 2, 3, 4]),
+            2 => pending.future,
+            _ => _page([7, 8]),
+          };
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      final oldSeed = requests.single.seed;
+      session.recordInteraction(
+        ClassicFeedInteraction(
+          videoId: _id(1),
+          signal: ClassicFeedSignal.positive,
+        ),
+      );
+      allowed = false;
+      privacy.add(null);
+      pending.complete(_page([5, 6]));
+      await session.settled;
+
+      expect(session.state.videos.map((v) => v.id), isNot(contains(_id(5))));
+      expect(requests.last.seed, isNot(oldSeed));
+      expect(requests.last.recentInteractions, isEmpty);
+      expect(requests.last.recentVideoIds, isEmpty);
+      expect(requests.last.anchorVideoId, isNull);
+    },
+  );
+
+  test(
+    'separate sessions do not share queues, cursors or selected anchors',
+    () async {
+      final first = ClassicFeedSession(
+        initialVideos: [_video(1)],
+        loadPage: (_) async => _page([3, 4]),
+      );
+      final second = ClassicFeedSession(
+        initialVideos: [_video(2)],
+        loadPage: (request) async {
+          expect(request.anchorVideoId, _id(2));
+          expect(request.cursor, isNull);
+          return _page([5, 6]);
+        },
+      );
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      await first.loadInitial();
+      await second.loadInitial();
+      expect(first.state.videos.map((v) => v.id), [1, 3, 4].map(_id));
+      expect(second.state.videos.map((v) => v.id), [2, 5, 6].map(_id));
+    },
+  );
+
+  test('disposal suppresses late results and further feedback', () async {
+    final pending = Completer<HomeFeedResult>();
+    final session = ClassicFeedSession(loadPage: (_) => pending.future);
+    final initial = session.loadInitial();
+    await session.dispose();
+    pending.complete(_page([1, 2]));
+    await initial;
+    expect(session.state.videos, isEmpty);
+  });
+  test(
+    'a hidden initial request is retried when the session becomes visible',
+    () async {
+      final pending = Completer<HomeFeedResult>();
+      var calls = 0;
+      final session = ClassicFeedSession(
+        loadPage: (_) async => ++calls == 1 ? pending.future : _page([3, 4]),
+      );
+      addTearDown(session.dispose);
+      final initial = session.loadInitial();
+      session.setActive(active: false);
+      pending.complete(_page([1, 2]));
+      await initial;
+      expect(session.state.videos, isEmpty);
+      session.setActive(active: true);
+      await session.settled;
+      expect(calls, 2);
+      expect(session.state.videos.map((v) => v.id), [3, 4].map(_id));
+    },
+  );
+
+  test(
+    'player-side removal preserves actual active and prepared next identities',
+    () async {
+      final removed = StreamController<String>.broadcast(sync: true);
+      addTearDown(removed.close);
+      final pending = Completer<HomeFeedResult>();
+      var calls = 0;
+      final requests = <ClassicRecommendationsRequest>[];
+      final session = ClassicFeedSession(
+        removedVideoIds: removed.stream,
+        loadPage: (request) async {
+          requests.add(request);
+          return ++calls == 1 ? _page([1, 2, 3, 4, 5]) : pending.future;
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      removed.add(_id(2));
+      session.activateVideo(_video(3));
+      expect(requests.last.anchorVideoId, _id(3));
+      pending.complete(_page([6, 7]));
+      await session.settled;
+      expect(session.state.videos.map((v) => v.id), [1, 3, 4, 6, 7].map(_id));
+      expect(session.state.currentIndex, 1);
+    },
+  );
+
+  test(
+    'legacy archive fallback does not trigger network reads on each swipe',
+    () async {
+      var calls = 0;
+      final session = ClassicFeedSession(
+        loadPage: (_) async {
+          calls++;
+          return HomeFeedResult(
+            videos: [1, 2, 3, 4].map(_video).toList(),
+            paginationCursor: 'classic-offset:50',
+            hasMore: true,
+          );
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      session
+        ..activate(1)
+        ..recordInteraction(
+          ClassicFeedInteraction(
+            videoId: _id(2),
+            signal: ClassicFeedSignal.positive,
+          ),
+        );
+      await session.settled;
+      expect(calls, 1);
+      expect(session.state.videos, hasLength(4));
+    },
+  );
+
+  test(
+    'bounds request context while coalescing rapid navigation and feedback',
+    () async {
+      final pending = Completer<HomeFeedResult>();
+      final requests = <ClassicRecommendationsRequest>[];
+      final session = ClassicFeedSession(
+        loadPage: (request) async {
+          requests.add(request);
+          return requests.length == 1
+              ? _page(List.generate(30, (i) => i + 1))
+              : pending.future;
+        },
+      );
+      addTearDown(session.dispose);
+      await session.loadInitial();
+      for (var i = 0; i < 25; i++) {
+        session
+          ..activate(i)
+          ..recordInteraction(
+            ClassicFeedInteraction(
+              videoId: _id(i + 1),
+              signal: ClassicFeedSignal.completed,
+            ),
+          );
+      }
+      pending.complete(_page([100, 101]));
+      await session.settled;
+      expect(
+        requests.last.recentInteractions.map((v) => v.videoId),
+        List.generate(20, (i) => _id(i + 6)),
+      );
+      expect(
+        requests.last.recentVideoIds,
+        List.generate(10, (i) => _id(i + 16)),
+      );
+    },
+  );
+}

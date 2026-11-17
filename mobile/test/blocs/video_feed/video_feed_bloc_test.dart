@@ -210,8 +210,10 @@ void main() {
     VideoFeedBloc createBloc({
       FeedTuningRepository? feedTuningRepository,
       FeedPerformanceTracker? feedTracker,
+      ClassicFeedSession? classicSession,
     }) => VideoFeedBloc(
       videosRepository: mockVideosRepository,
+      classicSession: classicSession,
       followRepository: mockFollowRepository,
       curatedListRepository: mockCuratedListRepository,
       feedTuningRepository: feedTuningRepository,
@@ -275,6 +277,82 @@ void main() {
 
     /// Page size constant must match the one in video_feed_bloc.dart
     const pageSize = 5;
+
+    test(
+      'adaptive Classics keeps Home aligned with its independent queue',
+      () async {
+        var calls = 0;
+        final first = List.generate(
+          5,
+          (n) => createTestVideo((n + 1).toRadixString(16).padLeft(64, '0')),
+        );
+        final fresh = List.generate(
+          2,
+          (n) => createTestVideo((n + 10).toRadixString(16).padLeft(64, '0')),
+        );
+        when(
+          () => mockVideosRepository.applyContentPreferences(any()),
+        ).thenAnswer((i) => i.positionalArguments.single as List<VideoEvent>);
+        final session = ClassicFeedSession(
+          loadPage: (_) async => HomeFeedResult(
+            videos: ++calls == 1 ? first : fresh,
+            paginationCursor: 'next-$calls',
+            hasMore: true,
+            recommendationPageCount: 1,
+          ),
+        );
+        final bloc = createBloc(classicSession: session);
+        addTearDown(bloc.close);
+        final loaded = bloc.stream.firstWhere(
+          (s) =>
+              s.status == VideoFeedStatus.success && s.mode == FeedMode.classic,
+        );
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await loaded;
+        final adapted = bloc.stream.firstWhere(
+          (s) => s.videos.any((v) => v.id == fresh.first.id),
+        );
+        bloc.add(const VideoFeedActiveIndexChanged(1));
+        await adapted;
+        expect(bloc.state.currentIndex, 1);
+        expect(
+          bloc.state.videos.map((v) => v.id),
+          [...first.take(3), ...fresh].map((v) => v.id),
+        );
+        expect(bloc.state.videos, session.state.videos);
+      },
+    );
+
+    test('adaptive Home clears a removed final classic', () async {
+      final removed = StreamController<String>.broadcast(sync: true);
+      addTearDown(removed.close);
+      final video = createTestVideo('1' * 64);
+      when(() => mockVideosRepository.applyContentPreferences(any()))
+          .thenAnswer((i) => i.positionalArguments.single as List<VideoEvent>);
+      final session = ClassicFeedSession(
+        removedVideoIds: removed.stream,
+        loadPage: (_) async => HomeFeedResult(
+          videos: [video],
+          hasMore: false,
+          recommendationPageCount: 1,
+        ),
+      );
+      final bloc = createBloc(classicSession: session);
+      addTearDown(bloc.close);
+      final loaded = bloc.stream.firstWhere(
+        (s) =>
+            s.status == VideoFeedStatus.success && s.mode == FeedMode.classic,
+      );
+      bloc.add(const VideoFeedStarted(mode: FeedMode.classic, forceMode: true));
+      await loaded;
+      removed.add(video.id);
+      await pumpEventQueue();
+      expect(session.state.videos, isEmpty);
+      expect(bloc.state.videos, isEmpty);
+      expect(bloc.state.currentIndex, 0);
+    });
 
     group('New feed creator limit', () {
       test('keeps two videos per creator in chronological order', () async {

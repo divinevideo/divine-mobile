@@ -1096,7 +1096,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'b3ced2b819e59c0c68d52fdc34bdf2ff2ebb81b7';
+String _$videosRepositoryHash() => r'c3fed0405bc2e6fcc6feafbb7ae702eced6740b3';
 
 /// Provider for LikesRepository instance
 ///
@@ -1131,11 +1131,10 @@ String _$videosRepositoryHash() => r'b3ced2b819e59c0c68d52fdc34bdf2ff2ebb81b7';
 /// an identity (#6838). `video_providers_signer_resolution_test` pins both.
 ///
 /// An empty result from `syncUserReactions()` is still not proof of emptiness:
-/// a read only some relays answered returns whatever arrived, and
+/// a relay read that times out returns whatever arrived, and
 /// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
 /// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
-/// `initialize` groups. A read no relay answered throws instead, pinned by
-/// `likes_repository_short_read_test.dart` (#11182).
+/// `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1179,11 +1178,10 @@ final likesRepositoryProvider = LikesRepositoryProvider._();
 /// an identity (#6838). `video_providers_signer_resolution_test` pins both.
 ///
 /// An empty result from `syncUserReactions()` is still not proof of emptiness:
-/// a read only some relays answered returns whatever arrived, and
+/// a relay read that times out returns whatever arrived, and
 /// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
 /// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
-/// `initialize` groups. A read no relay answered throws instead, pinned by
-/// `likes_repository_short_read_test.dart` (#11182).
+/// `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1228,11 +1226,10 @@ final class LikesRepositoryProvider
   /// an identity (#6838). `video_providers_signer_resolution_test` pins both.
   ///
   /// An empty result from `syncUserReactions()` is still not proof of emptiness:
-  /// a read only some relays answered returns whatever arrived, and
+  /// a relay read that times out returns whatever arrived, and
   /// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
   /// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
-  /// `initialize` groups. A read no relay answered throws instead, pinned by
-  /// `likes_repository_short_read_test.dart` (#11182).
+  /// `initialize` groups.
   ///
   /// Uses:
   /// - NostrClient from nostrServiceProvider (for relay communication)

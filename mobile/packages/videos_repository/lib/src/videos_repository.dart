@@ -232,6 +232,9 @@ class VideosRepository {
     InMemoryFeedCache? inMemoryFeedCache,
     SeenVideoLookup? seenVideoLookup,
     String? Function()? viewerPubkey,
+    bool classicRecommendationsEnabled = false,
+    String? Function()? classicViewerPubkey,
+    Object? Function()? classicContextKey,
     Random? random,
   }) : _nostrClient = nostrClient,
        _localStorage = localStorage,
@@ -244,6 +247,9 @@ class VideosRepository {
        _inMemoryFeedCache = inMemoryFeedCache,
        _seenVideoLookup = seenVideoLookup,
        _viewerPubkey = viewerPubkey,
+       _classicRecommendationsEnabled = classicRecommendationsEnabled,
+       _classicViewerPubkey = classicViewerPubkey,
+       _classicContextKey = classicContextKey,
        _random = random ?? Random();
 
   final NostrClient _nostrClient;
@@ -275,6 +281,13 @@ class VideosRepository {
   final Random _random;
 
   String _recommendationSessionSeed = generateRecommendationSessionSeed();
+  String _classicBrowsingSeed = generateRecommendationSessionSeed();
+  String? _classicBrowsingViewer;
+  Object? _classicBrowsingContext;
+  bool _classicBrowsingViewerInitialized = false;
+  final bool _classicRecommendationsEnabled;
+  final String? Function()? _classicViewerPubkey;
+  final Object? Function()? _classicContextKey;
 
   /// Whether [video] is already known deleted by the app-wide deletion
   /// contract supplied to this repository.
@@ -1280,6 +1293,127 @@ class VideosRepository {
     return (videos: visible, nextBefore: nextBefore);
   }
 
+  /// Reads a ranked, independent Classics session with request-only context.
+  ///
+  /// Legacy archive cursors stay on their original source. An unavailable new
+  /// endpoint can fall back on the first page; a failed adaptive continuation
+  /// is retried with its cursor instead of mixing unrelated pagination modes.
+  Future<HomeFeedResult> getClassicRecommendations({
+    required ClassicRecommendationsRequest request,
+    String? userPubkey,
+    bool Function()? isCurrent,
+  }) async {
+    void checkCurrent() {
+      if (isCurrent != null && !isCurrent()) {
+        throw const FunnelcakeException('Classics request superseded');
+      }
+    }
+
+    checkCurrent();
+    if (_decodeClassicsOffsetCursor(request.cursor) != null) {
+      return _getClassicArchiveVideos(
+        limit: request.limit,
+        cursor: request.cursor,
+      );
+    }
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) {
+      return _getClassicArchiveVideos(limit: request.limit, skipCache: true);
+    }
+    await _seenVideoLookup?.ensureInitialized();
+    var pageRequest = request;
+    final cursors = <String>{if (request.cursor != null) request.cursor!};
+    final maxPages = _seenVideoLookup == null
+        ? _classicsMaxPageFetches
+        : maxSeenOnlyFeedPages;
+    for (var page = 0; page < maxPages; page++) {
+      checkCurrent();
+      late final RecommendationsResponse response;
+      try {
+        response = await api.getClassicRecommendations(
+          request: pageRequest,
+          userPubkey: userPubkey,
+        );
+      } on FunnelcakeException {
+        checkCurrent();
+        if (pageRequest.cursor != null) rethrow;
+        return _getClassicArchiveVideos(limit: request.limit, skipCache: true);
+      }
+      checkCurrent();
+      final videos = _withoutSeenVideos(
+        _transformVideoStats(response.videos, sortByCreatedAt: false)
+            .where(
+              (video) =>
+                  video.isOriginalVine &&
+                  (video.isVerifiedArchive ||
+                      (response.source == 'popular' &&
+                          video.isArchiveVerificationUnknown)),
+            )
+            .toList(),
+      );
+      final cursor = response.nextCursor;
+      final hasMore = response.hasMore && cursor != null && cursors.add(cursor);
+      final result = HomeFeedResult(
+        videos: videos,
+        paginationCursor: hasMore ? cursor : null,
+        hasMore: hasMore,
+        recommendationPageCount: page + 1,
+      );
+      if (videos.isNotEmpty || !hasMore || page == maxPages - 1) return result;
+      pageRequest = request.withCursor(cursor);
+    }
+    return const HomeFeedResult(videos: [], hasMore: false);
+  }
+
+  /// Fetches a stable Classics browsing selection.
+  ///
+  /// The application opts into private recommendations with
+  /// `classicRecommendationsEnabled`.
+  /// Its viewer callback must respect consent.
+  /// A refresh rotates the browsing seed; cursor pages retain server order.
+  /// Older/disabled servers use the bounded, shuffled archive reader below.
+  Future<HomeFeedResult> getClassicVideos({
+    int limit = _defaultLimit,
+    String? cursor,
+    bool skipCache = false,
+  }) async {
+    if (!_classicRecommendationsEnabled) {
+      return _getClassicArchiveVideos(
+        limit: limit,
+        cursor: cursor,
+        skipCache: skipCache,
+      );
+    }
+    final viewer = _classicViewerPubkey?.call();
+    final contextKey = _classicContextKey?.call();
+    bool isCurrent() =>
+        viewer == _classicViewerPubkey?.call() &&
+        contextKey == _classicContextKey?.call();
+    final contextChanged =
+        _classicBrowsingViewerInitialized &&
+        (viewer != _classicBrowsingViewer ||
+            contextKey != _classicBrowsingContext);
+    if ((cursor == null && skipCache) || contextChanged) {
+      _classicBrowsingSeed = generateRecommendationSessionSeed();
+    }
+    _classicBrowsingViewerInitialized = true;
+    _classicBrowsingViewer = viewer;
+    _classicBrowsingContext = contextKey;
+    final result = await getClassicRecommendations(
+      request: ClassicRecommendationsRequest(
+        seed: _classicBrowsingSeed,
+        limit: limit,
+        cursor: contextChanged ? null : cursor,
+      ),
+      userPubkey: viewer,
+      isCurrent: isCurrent,
+    );
+    if (!isCurrent()) {
+      throw const FunnelcakeException('Classics viewer changed during request');
+    }
+    return result;
+  }
+
   /// Fetches classic Vine archive videos for the home feed's Classics mode.
   ///
   /// Reads the same offset-paginated archive as the standalone Explore →
@@ -1306,7 +1440,7 @@ class VideosRepository {
   ///
   /// Funnelcake-only: returns an empty result when no Funnelcake relay is
   /// connected (relays do not expose the server-side `platform` filter).
-  Future<HomeFeedResult> getClassicVideos({
+  Future<HomeFeedResult> _getClassicArchiveVideos({
     int limit = _defaultLimit,
     String? cursor,
     bool skipCache = false,
@@ -1376,7 +1510,9 @@ class VideosRepository {
         // Apply seen filtering per-page: drop recently-seen when lookup
         // available (inventory is unlimited, so dropping is safe), but only
         // if we have not already filled limit via filtered results.
-        final filteredPage = _withoutSeenVideos(pageVideos);
+        final filteredPage = _withoutSeenVideos(
+          pageVideos.where((video) => video.countsAsArchiveVine).toList(),
+        );
 
         // If filtering would drop an entire page but we have no filtered
         // results yet, don't let one leaderboard page trap us — we continue

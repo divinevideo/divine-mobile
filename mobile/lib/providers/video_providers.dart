@@ -1026,6 +1026,20 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
+    classicRecommendationsEnabled: const bool.fromEnvironment(
+      'ADAPTIVE_CLASSICS_ENABLED',
+      defaultValue: true,
+    ),
+    classicViewerPubkey: () {
+      final analytics = ref.read(analyticsServiceProvider);
+      return analytics.initializedAnalyticsConsent
+          ? authService.currentPublicKeyHex
+          : null;
+    },
+    classicContextKey: () {
+      final analytics = ref.read(analyticsServiceProvider);
+      return (analytics, analytics.privacyGeneration);
+    },
     inMemoryFeedCache: InMemoryFeedCache(),
     viewerPubkey: () =>
         authService.currentPublicKeyHex ?? nostrClient.publicKey,

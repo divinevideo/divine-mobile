@@ -214,6 +214,9 @@ class _PopCountingObserver extends NavigatorObserver {
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(const ClassicRecommendationsRequest(seed: 'test'));
+  });
   group('PooledFullscreenVideoFeedScreen', () {
     group('fullscreen video media alignment', () {
       test('centers contained 1 x 1 / landscape videos in the viewport', () {
@@ -484,6 +487,98 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'selected Classics retain Classics attribution after the anchor',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final page = Completer<HomeFeedResult>();
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((_) => page.future);
+        when(() => repository.removedVideoIds)
+            .thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+                consumptionAnalyticsTrackerProvider.overrideWithValue(
+                  ConsumptionAnalyticsTracker(analytics: () => analytics),
+                ),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(anchor: videos.first),
+                feedRepository: StaticFeedRepository(),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final bloc = tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+        expect(bloc.state.videos, [videos.first]);
+        page.complete(
+          HomeFeedResult(
+            videos: [videos.last],
+            hasMore: false,
+            recommendationPageCount: 1,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(nativeFeed(tester).videos, videos);
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.trafficSource,
+          },
+          {
+            for (final video in videos)
+              video.id: ViewTrafficSource.discoveryClassic,
+          },
+        );
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        await tester.pump();
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .single
+              .parameters['feed_type'],
+          'classics',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     testWidgets(
       'a single-video route appends For You without replacing its anchor',
