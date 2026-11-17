@@ -56,14 +56,16 @@
 #     this key to reach public relays without a manual `zsp publish`. Never log
 #     or echo this value.
 # 12 - Create environment variable group "store_release_credentials" with:
-#   - Secure GH_TOKEN, GITHUB_TOKEN and PROVENANCE_TOKEN, refreshed by GitHub store drivers
+#   - Secure PROVENANCE_TOKEN, refreshed by GitHub store drivers for private ledger access only
 #   - Secure DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS forwarded from the repository policy
 #   - Application-scoped; native store workflows import it last. Other workflows keep github_credentials.
+#   - Public GitHub publishing retains github_credentials; candidate-tag credentials never enter a native build.
 #
 # Public people-list discovery exclusions come from the GitHub repository
-# variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Release builds
-# read it with the existing github_credentials token, or accept an explicit
-# environment override. Missing/malformed policy blocks a release; values are
+# variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Native store
+# builds receive it from store_release_credentials. Other artifact workflows
+# read it with github_credentials, or accept an explicit environment override.
+# Missing/malformed policy blocks a release; values are
 # never printed or committed. Shorebird provenance includes the resolved policy.
 #
 # Every group named under a workflow's `groups:` key must appear in this
@@ -1036,6 +1038,7 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - build/shorebird/ios_release.env
+      - build/shorebird/ios_provenance.json
       - build/ios/archive/Runner.xcarchive/dSYMs/**
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
@@ -1185,6 +1188,7 @@ workflows:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
       - build/shorebird/android_release.env
+      - build/shorebird/android_provenance.json
       - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
   # Publish a promoted GitHub release with the existing Codemagic signer.

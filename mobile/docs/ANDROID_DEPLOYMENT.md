@@ -3,10 +3,13 @@
 Status: Launch-critical
 Validated against: `mobile/build_android.sh`, `mobile/deploy_android.sh`, `mobile/android/app/build.gradle.kts`, and `mobile/android/app/src/main/AndroidManifest.xml` on 2026-03-19.
 
-Store releases ship through the Codemagic `android-build` workflow, which
+Start store releases with `Android Store Release` in GitHub Actions on `main`.
+The protected driver refreshes credentials and starts Codemagic `android-build`, which
 publishes the signed, Shorebird-enabled AAB to Play's internal testing track;
 after internal testing passes, promote that exact Play artifact in the Play
 Console (see [docs/RELEASE_CHECKLIST.md](../../docs/RELEASE_CHECKLIST.md#7-android-submission-checklist)).
+Direct Codemagic native starts are unsupported. Manual backend, release channel,
+and GitHub publication choices remain available in the GitHub workflow.
 This guide covers the local build and manual upload lanes. They produce a plain
 `flutter build` AAB that is not a Shorebird release and cannot be patched, so
 use them for local verification and throwaway test lanes — never as the

@@ -31,7 +31,7 @@ def load_driver():
 
 def environment():
     return {'CODEMAGIC_API_TOKEN': 'private-codemagic-token', 'GH_TOKEN': 'private-gh-token',
-            'PROVENANCE_TOKEN': 'private-ledger-token', 'RELEASE_GITHUB_TOKEN': 'mobile-release-token', 'PUBLIC_PEOPLE_LIST_POLICY': '[]',
+            'PROVENANCE_TOKEN': 'private-ledger-token', 'PUBLIC_PEOPLE_LIST_POLICY': '[]',
             'GITHUB_REPOSITORY': 'example/repo', 'GITHUB_RUN_ID': '123',
             'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_REF': 'refs/heads/main',
             'GITHUB_SHA': SHA, 'GITHUB_WORKFLOW_SHA': SHA,
@@ -55,8 +55,8 @@ class FakeAPI:
         self.ci = ci
         self.calls = []
         self.pages = []
-        self.variables = [{'id': name, 'name': name, 'secure': True, 'value': None}
-                          for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS']]
+        self.variables = [{'id': 'id-' + name, 'name': name, 'secure': True, 'value': None}
+                          for name in ['PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS']]
         self.source_config = (
             'workflows:\n  ios-build:\n    publishing:\n'
             '      app_store_connect:\n'
@@ -98,12 +98,59 @@ class FakeAPI:
 
 
 class IOSReleaseTest(unittest.TestCase):
+    def test_manual_inputs_are_forwarded_and_validated(self):
+        inputs = {'DEFAULT_ENV': 'STAGING', 'RELEASE_CHANNEL': 'BETA', 'PUBLISH_TO_GITHUB': 'YES'}
+        self.env.update({'NATIVE_' + key: value for key, value in inputs.items()})
+        self.api.polls = [build() | {'build_inputs': inputs}]
+        self.run_driver()
+        self.assertEqual(self.api.posts[0][3]['inputs'], inputs)
+
+    def test_invalid_manual_input_is_rejected_before_network(self):
+        self.env['NATIVE_DEFAULT_ENV'] = 'invalid'
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'DEFAULT_ENV'):
+            self.run_driver()
+        self.assertEqual(self.api.calls, [])
+
+    def test_android_manual_dispatch_refreshes_credentials_and_observes_completion(self):
+        self.env.update(RELEASE_PLATFORM='android', GITHUB_WORKFLOW_REF='example/repo/.github/workflows/android_store_release.yml@refs/heads/main')
+        self.api.polls = [build(asc=None) | {'workflow': {'id': 'android-build'}}]
+        self.run_driver()
+        self.assertEqual(self.api.posts[0][3]['workflow_id'], 'android-build')
+        self.assertIn('Android native workflow finished', self.output.getvalue())
+
+    def test_scheduled_ios_build_blocks_manual_dispatch(self):
+        self.api.builds = [build(status='building') | {'workflow': {'id': 'ios-scheduled-build'}}]
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'Another'):
+            self.run_driver()
+        self.assertFalse(self.api.posts)
+
+    def test_completed_scheduled_upload_does_not_block_manual_dispatch(self):
+        self.api.builds = [build(asc=None) | {'workflow': {'id': 'ios-scheduled-build'}}]
+        self.api.source_config = ('workflows:\n  ios-build:\n    publishing:\n'
+                                 '      app_store_connect:\n        submit_to_testflight: true\n'
+                                 '  ios-scheduled-build:\n    publishing:\n'
+                                 '      app_store_connect:\n        submit_to_testflight: false\n'
+                                 '        submit_to_app_store: false\n')
+        self.run_driver()
+        self.assertEqual(len(self.api.posts), 1)
+
+    def test_other_platform_build_does_not_block_android(self):
+        self.env.update(RELEASE_PLATFORM='android', GITHUB_WORKFLOW_REF='example/repo/.github/workflows/android_store_release.yml@refs/heads/main')
+        self.api.builds = [build(status='building')]
+        self.api.polls = [build(asc=None) | {'workflow': {'id': 'android-build'}}]
+        self.run_driver()
+        self.assertEqual(len(self.api.posts), 1)
+
+    def test_nonproduction_backend_cannot_publish_a_production_release(self):
+        self.env.update(NATIVE_DEFAULT_ENV='STAGING', NATIVE_RELEASE_CHANNEL='PRODUCTION')
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'production backend'):
+            self.run_driver()
+        self.assertEqual(self.api.calls, [])
+
     def test_rotates_scoped_credentials_securely_before_build_without_exposing_them(self):
         self.run_driver()
         patches = [c for c in self.api.calls if c[0] == 'PATCH']
-        self.assertEqual({c[1].rsplit('/', 1)[-1]: c[3] for c in patches}, {
-            'GH_TOKEN': {'value': 'mobile-release-token', 'secure': True},
-            'GITHUB_TOKEN': {'value': 'mobile-release-token', 'secure': True},
+        self.assertEqual({c[1].rsplit('/', 1)[-1].removeprefix('id-'): c[3] for c in patches}, {
             'PROVENANCE_TOKEN': {'value': 'private-ledger-token', 'secure': True},
             'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS': {'value': '[]', 'secure': True},
         })
@@ -113,7 +160,7 @@ class IOSReleaseTest(unittest.TestCase):
             self.assertNotIn(token, self.output.getvalue())
 
     def test_missing_scoped_credentials_prevents_network_or_build(self):
-        for name in ['PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
+        for name in ['PROVENANCE_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
             env = self.env.copy()
             del env[name]
             with self.subTest(name=name), self.assertRaisesRegex(self.driver.ReleaseError, name):
@@ -122,10 +169,11 @@ class IOSReleaseTest(unittest.TestCase):
 
     def test_secure_variable_transport_accepts_created_and_empty_update_responses(self):
         for method, status, body, expected in [('POST', 201, b'', {}),
-                                               ('PATCH', 204, b'', {})]:
+                                               ('PATCH', 204, b'', {}),
+                                               ('DELETE', 204, b'', {})]:
             response = io.BytesIO(body)
             response.status = status
-            url = 'https://codemagic.io/api/v3/variable-groups/g/variables' + ('/v' if method == 'PATCH' else '')
+            url = 'https://codemagic.io/api/v3/variable-groups/g/variables' + ('/v' if method in {'PATCH', 'DELETE'} else '')
             with self.subTest(method=method), patch('urllib.request.urlopen', return_value=response):
                 self.assertEqual(self.driver.request_json(method, url, 'synthetic-token', {}), expected)
 
@@ -405,7 +453,12 @@ class IOSReleaseTest(unittest.TestCase):
                 self.assertTrue(failure.fp.closed, 'HTTP error response must be closed')
 
     def test_parsed_workflow_is_manual_serial_and_checks_out_main_source(self):
-        path = ROOT / '.github/workflows/ios_testflight_release.yml'
+        for workflow in ['ios_testflight_release.yml', 'android_store_release.yml']:
+            with self.subTest(workflow=workflow):
+                self.check_manual_workflow(workflow)
+
+    def check_manual_workflow(self, workflow):
+        path = ROOT / '.github/workflows' / workflow
         data = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
             'print JSON.generate(YAML.load_file(ARGV[0]))', str(path)], text=True))
         trigger = data.get('on', data.get('true'))
@@ -415,13 +468,23 @@ class IOSReleaseTest(unittest.TestCase):
         job = data['jobs']['release']
         self.assertEqual(job['environment'], 'store-release')
         tokens = [step for step in job['steps'] if step.get('uses', '').startswith('actions/create-github-app-token@')]
-        self.assertEqual({step['with']['repositories'] for step in tokens}, {'divine-mobile', 'divine-release-provenance'})
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual({step['with']['repositories'] for step in tokens}, {'divine-release-provenance'})
         self.assertTrue(all(step['with']['skip-token-revoke'] for step in tokens))
         self.assertGreaterEqual(job['timeout-minutes'], 90)
         checkout = next(step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@'))
         self.assertEqual('${{ github.sha }}', checkout['with']['ref'])
         self.assertEqual(False, checkout['with']['persist-credentials'])
         self.assertIn('refs/heads/main', job['if'])
+        inputs = trigger['workflow_dispatch']['inputs']
+        step = job['steps'][-1]
+        self.assertEqual(step['env']['PROVENANCE_TOKEN'], '${{ steps.' + tokens[0]['id'] + '.outputs.token }}')
+        self.assertNotIn('RELEASE_GITHUB_TOKEN', step['env'])
+        for name in ['default_env', 'release_channel', 'publish_to_github']:
+            self.assertEqual('choice', inputs[name]['type'])
+            self.assertEqual('${{ inputs.' + name + ' }}', step['env']['NATIVE_' + name.upper()])
+        if workflow == 'android_store_release.yml':
+            self.assertEqual('android', step['env']['RELEASE_PLATFORM'])
 
 
 if __name__ == '__main__':

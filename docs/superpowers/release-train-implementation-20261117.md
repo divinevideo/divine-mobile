@@ -29,11 +29,15 @@ workflow receives release credentials. It holds:
   environment. Signing and Shorebird secrets remain in Codemagic.
 
 Before starting each store build, the GitHub driver refreshes the existing
-application-scoped Codemagic `store_release_credentials` group with secure,
-repository-scoped App tokens. Only native store workflows import this group;
+application-scoped Codemagic `store_release_credentials` group with a secure,
+private-ledger-scoped App token. Only native store workflows import this group;
 shared credentials used by other manual workflows remain unchanged.
-`GH_TOKEN` and `GITHUB_TOKEN` can publish only to the mobile repository;
-`PROVENANCE_TOKEN` can access only the private release ledger. Ledger operations
+`PROVENANCE_TOKEN` can access only the private release ledger. Native public
+publishing retains the existing `github_credentials` credential, with its
+separate permissions and lifetime. The candidate-tag App token stays in GitHub
+Actions, is revoked when the coordinator exits, and is never copied into native
+builds. Any obsolete `GH_TOKEN`/`GITHUB_TOKEN` entries in the native-only group
+are deleted and their absence verified before dispatch. Ledger operations
 select that private token without changing the public publisher's environment.
 The repository public-list policy is forwarded into the same secure group,
 so native builds do not need Actions-variable access. Token values are not placed in build request variables or printed in summaries.
@@ -41,9 +45,21 @@ The App private key remains in the main-only GitHub Environment and Secret Manag
 
 Delegated tokens are not revoked when the dispatch job exits, because Codemagic
 continues independently. GitHub's one-hour token expiration still applies:
-queued or unusually long builds that outlive it need a fresh GitHub dispatch.
-Start manual iOS releases through `iOS TestFlight Release` so credentials refresh
-before the build; a direct Codemagic UI start does not refresh them.
+queued or unusually long builds can outlive it. There is no in-build refresh,
+and the native workflow's 60-minute duration does not include provider queue
+time or guarantee completion before expiry. Native operations fail when their
+scoped token expires; use the partial-result recovery procedure below before
+any new dispatch. Token refresh does not repair a previous external mutation.
+
+Start manual builds through `iOS TestFlight Release` or `Android Store Release`
+on GitHub Actions `main`. Both retain `default_env`, `release_channel`, and
+`publish_to_github` inputs; production publication requires the production
+backend. The scheduled coordinator remains the Android production-promotion
+entrypoint. Direct Codemagic UI/API native starts are retired: the first source
+step requires the exact expected SHA supplied by a controlled GitHub dispatch,
+and stops with the replacement workflow names when it is absent. Do not copy
+an expected SHA into a direct start to evade this check. Other manual workflows
+(including publishing an existing release) retain their existing credentials.
 
 Repository variables:
 
@@ -93,6 +109,51 @@ replacement also preserves the current internal candidate's full continuous
 six hours, including when a manual build supersedes a scheduled candidate.
 
 ## Recovery
+
+### Native credential expiry and partial results
+
+A native failure is not proof that nothing was published. Do not rerun an old
+Codemagic job with its captured credentials, or treat fresh credentials as a
+recovery mechanism. Inspect the exact Codemagic build and its allocated
+`<platform>_release.env`, Shorebird release list, App Store Connect build or
+Play internal track, any requested GitHub release publication, and private
+ledger before starting another build.
+
+- Before identity allocation or external mutation, a new GitHub dispatch can
+  retry after the failed provider build is terminal.
+- After Shorebird registration, that release identity is spent even if the
+  provenance write failed. Preserve the signed native artifacts and retained
+  `<platform>_provenance.json`; never rebuild or overwrite that identity.
+- An allocated store build without completed provenance is observation-only,
+  excluded from promotion and CI eligibility. Its presence does not block
+  later eligible candidates; existing cadence/exposure rules still apply.
+  A conflicting record holds the queue for reconciliation. Restore only the
+  original authenticated record through the
+  existing private provenance create-only procedure, with its original source,
+  version, and HMAC verification. Never reconstruct it from current settings.
+  If the original record is unavailable or cannot be authenticated, recovery of
+  that release is unsupported: leave it unpromoted, resolve its store/provider
+  state, and create a new identity through GitHub dispatch. Do not enable
+  patching for that orphan release.
+- If Play accepted an upload before the ledger receipt failed, verify the exact
+  version code on its track first. The artifact identity and digest are recorded
+  before upload; the coordinator observes actual track membership and does not
+  upload an already-present candidate again. If acceptance is unknown, leave it
+  held until resolved. A failed receipt is not permission to upload or rebuild.
+
+For a retained original record, `shorebird_provenance.rb policy-required`
+authenticates its HMAC without needing raw dart-defines. Run it in the trusted
+environment containing the original provenance HMAC key and key ID, verify its
+source and version against the recorded build and native artifact, then use
+`shorebird_provenance_store.sh create`. The existing create-only history guard
+still applies. Do not replace an existing record or place either key into an
+artifact, command argument, or log.
+
+There is no automatic restoration of missing provenance or ambiguous store
+receipts in this credential repair. An operator must reconcile those partial
+results. Expiry may require a new native build after reconciliation; neither
+token renewal nor a successful controller run proves that an earlier release
+completed. Preserved artifacts remain subject to Codemagic retention.
 
 Dispatch `acknowledge` with the exact item from the run summary: an
 `ios-build:<store-id>` beta rejection, `ios-version:<store-id>` store rejection,

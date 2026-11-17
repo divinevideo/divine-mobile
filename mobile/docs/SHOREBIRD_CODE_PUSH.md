@@ -175,9 +175,13 @@ until removed from the workflow environment.
 
 ## Cutting a release
 
-Run `ios-build` or `android-build` in Codemagic as usual. They now produce
-Shorebird releases as a side effect of building the store artifact — no extra
-step, no change to how you ship.
+Start `iOS TestFlight Release` or `Android Store Release` from GitHub Actions
+on `main`. These refresh the native build's private-ledger credential before
+starting Codemagic's `ios-build` or `android-build`. Direct native starts in
+Codemagic are unsupported and fail at the first source check. Both GitHub
+entrypoints retain backend, release channel, and GitHub publication inputs.
+See [store operations](../../docs/superpowers/release-train-implementation-20261117.md)
+for token lifetime and partial-result recovery limits.
 
 Before starting a store build, confirm `mobile/pubspec.yaml` has the intended
 marketing version. Keep the current marketing version while its train is in
@@ -258,8 +262,12 @@ fails, treat the release build as incomplete and do not patch that release.
 
 A cloud agent can trigger and monitor `ios-build` through GitHub Actions without
 controlling a laptop or browser. Configure the repository Actions secret
-`CODEMAGIC_API_TOKEN` with a Codemagic API token that can read team builds and
-start builds for this app. The workflow fails before submission if it is absent.
+`CODEMAGIC_API_TOKEN` with a Codemagic API token that can read team builds,
+update app-scoped secure variables, and start builds for this app. The main-only
+`store-release` environment must hold `PROVENANCE_APP_ID` and
+`PROVENANCE_APP_PRIVATE_KEY`; the repository variable
+`DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS` supplies the native public-list policy.
+The workflow fails before submission when required configuration is absent.
 Never put the token in a command, issue, or chat.
 
 From a cloud shell with GitHub access:
@@ -616,9 +624,12 @@ release, never while a shipped release is the only thing standing between
 production and a hot fix, and retain the retired pair for as long as any
 release signed with it can still be patched.
 
-The `github_credentials` token used by release and patch jobs must have read
-and write access to the private `divinevideo/divine-release-provenance`
-repository. Provenance writes are create-only. Never delete or replace a record
+Native store jobs use the private-ledger-only `PROVENANCE_TOKEN` refreshed by
+the GitHub driver in `store_release_credentials`; public publishing keeps its
+separate existing credential. Held patch jobs retain their legacy
+`github_credentials` token, which needs read/write access to the private
+`divinevideo/divine-release-provenance` repository. Provenance writes are
+create-only. Never delete or replace a record
 for a release that may still be patched. The workflow accepts one HMAC key and
 identifier at a time. When patching an older release after rotation, temporarily
 replace both Codemagic values with that release's retained key pair, run only
@@ -626,7 +637,7 @@ the intended patch workflow, then restore the current pair. Do not run a store
 release while the older pair is selected. Retain each pair securely until every
 release fingerprinted with it is no longer patchable.
 
-The token is currently generated from an individual's account. Moving it to a
+The legacy patch token is generated from an individual's account. Moving it to a
 Divine service identity is tracked in #7200.
 
 ## Local setup

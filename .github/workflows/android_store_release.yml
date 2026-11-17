@@ -1,0 +1,68 @@
+name: Android Store Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional full lowercase 40-character SHA; must equal current main'
+        required: false
+        type: string
+      default_env:
+        description: Default backend for fresh installs
+        type: choice
+        default: PRODUCTION
+        options: [PRODUCTION, STAGING, POC]
+      release_channel:
+        description: GitHub release channel when publishing binaries
+        type: choice
+        default: BETA
+        options: [BETA, PRODUCTION]
+      publish_to_github:
+        description: Publish APKs to GitHub (production also publishes to Zapstore)
+        type: choice
+        default: 'NO'
+        options: ['NO', 'YES']
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+concurrency:
+  group: android-store-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: store-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Scope private ledger build token
+        id: provenance
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PROVENANCE_APP_ID }}
+          private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
+          owner: divinevideo
+          repositories: divine-release-provenance
+          permission-contents: write
+          skip-token-revoke: true
+      - name: Submit and monitor main Android release
+        id: codemagic
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
+          PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
+          RELEASE_PLATFORM: android
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          NATIVE_DEFAULT_ENV: ${{ inputs.default_env }}
+          NATIVE_RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          NATIVE_PUBLISH_TO_GITHUB: ${{ inputs.publish_to_github }}
+        run: python3 mobile/scripts/start_ios_release.py

@@ -7,6 +7,21 @@ on:
         description: 'Optional full lowercase 40-character SHA; must equal current main'
         required: false
         type: string
+      default_env:
+        description: Default backend for fresh installs
+        type: choice
+        default: PRODUCTION
+        options: [PRODUCTION, STAGING, POC]
+      release_channel:
+        description: GitHub release channel when publishing binaries
+        type: choice
+        default: BETA
+        options: [BETA, PRODUCTION]
+      publish_to_github:
+        description: Publish the IPA to GitHub Releases
+        type: choice
+        default: 'NO'
+        options: ['NO', 'YES']
 
 permissions:
   contents: read
@@ -38,23 +53,15 @@ jobs:
           repositories: divine-release-provenance
           permission-contents: write
           skip-token-revoke: true
-      - name: Scope public release build token
-        id: publisher
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ secrets.PROVENANCE_APP_ID }}
-          private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
-          owner: divinevideo
-          repositories: divine-mobile
-          permission-contents: write
-          skip-token-revoke: true
       - name: Submit and monitor main iOS beta release
         id: codemagic
         env:
           GH_TOKEN: ${{ github.token }}
           CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
           PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
-          RELEASE_GITHUB_TOKEN: ${{ steps.publisher.outputs.token }}
           PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
           SOURCE_SHA: ${{ inputs.source_sha }}
+          NATIVE_DEFAULT_ENV: ${{ inputs.default_env }}
+          NATIVE_RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          NATIVE_PUBLISH_TO_GITHUB: ${{ inputs.publish_to_github }}
         run: python3 mobile/scripts/start_ios_release.py

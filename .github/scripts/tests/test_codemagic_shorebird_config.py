@@ -937,7 +937,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             ["git", "rev-parse", "HEAD"], cwd=CODEMAGIC_PATH.parent, text=True,
         ).strip()
         for branch, expected, succeeds in [
-            ("main", None, True), ("feature", None, False),
+            ("main", None, False), ("feature", None, False),
             ("main", head, True), ("main", "f" * 40, False),
             ("main", "short", False), ("main", "A" * 40, False),
             ("main", head + "\n", False),

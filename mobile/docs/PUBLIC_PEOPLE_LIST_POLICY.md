@@ -9,10 +9,11 @@ reads remain unaffected.
 Identifying policy values belong in configuration, not code, fixtures, or PR
 comments. The existing production exclusion is stored in the GitHub repository
 variable with the same name. Actions web builds read that variable. Codemagic
-store releases, patches, and macOS artifacts read it using their existing
-`github_credentials` token, or accept an explicit environment override. The token
-must be able to read repository Actions variables. No new environment group is
-required.
+store releases receive the policy from the application-scoped
+`store_release_credentials` group, refreshed by the protected GitHub driver.
+Patches and macOS artifacts keep using their existing `github_credentials`
+token, or an explicit environment override; that legacy token must be able to
+read repository Actions variables. Patch holds remain in effect.
 
 `scripts/write_public_people_list_defines.py` validates the array before writing
 or merging a dart-defines file. Missing/malformed policy or failed configuration

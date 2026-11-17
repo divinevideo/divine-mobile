@@ -11,6 +11,23 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class ProvenanceCredentialsTest(unittest.TestCase):
+    def test_coordinator_keeps_tag_token_out_of_native_environment(self):
+        workflow = json.loads(subprocess.check_output([
+            'ruby', '-ryaml', '-rjson', '-e', 'print JSON.generate(YAML.load_file(ARGV[0]))',
+            str(ROOT / '.github/workflows/release_train.yml'),
+        ], text=True))
+        steps = workflow['jobs']['tick']['steps']
+        tokens = {step['id']: step['with'] for step in steps
+                  if step.get('uses', '').startswith('actions/create-github-app-token@')}
+        self.assertEqual(tokens['provenance']['repositories'], 'divine-release-provenance')
+        self.assertTrue(tokens['provenance']['skip-token-revoke'])
+        self.assertEqual(tokens['candidate']['repositories'], 'divine-mobile')
+        self.assertFalse(tokens['candidate']['skip-token-revoke'])
+        env = steps[-1]['env']
+        self.assertEqual(env['PROVENANCE_TOKEN'], '${{ steps.provenance.outputs.token }}')
+        self.assertEqual(env['CANDIDATE_TAG_TOKEN'], '${{ steps.candidate.outputs.token }}')
+        self.assertEqual(env['PUBLIC_PEOPLE_LIST_POLICY'], '${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}')
+
     def test_expiring_group_is_last_and_only_imported_by_native_store_workflows(self):
         groups = json.loads(subprocess.check_output([
             'ruby', '-ryaml', '-rjson', '-e',
@@ -67,5 +84,4 @@ else:
             ], env=env, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(output.read_text()), {"schema": 1})
-            self.assertEqual(env["GH_TOKEN"], "public-release-token")
             self.assertNotIn("private-ledger-token", result.stdout + result.stderr)

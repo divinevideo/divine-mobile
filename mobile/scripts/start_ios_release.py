@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dispatch and monitor a main-only Codemagic TestFlight build from GitHub Actions.
+"""Dispatch and monitor main-only native store builds from GitHub Actions.
 
 Provider contract: https://codemagic.io/api/v3/schema/openapi.json
 This driver does not verify Apple Beta App Review or external tester availability.
@@ -52,7 +52,7 @@ def request_json(method, url, token, payload=None):
         with urllib.request.urlopen(request, timeout=30) as response:
             expected = 202 if method == 'POST' else 200
             if '/variable-groups' in url and url.startswith('https://codemagic.io/api/v3/'):
-                expected = {'POST': 201, 'PATCH': 204}.get(method, 200)
+                expected = {'POST': 201, 'PATCH': 204, 'DELETE': 204}.get(method, 200)
             if response.status != expected:
                 raise APIError(response.status)
             if response.status in {201, 204}:
@@ -89,16 +89,17 @@ def record(env, message, outputs=None):
             stream.writelines(f'{key}={value}\n' for key, value in outputs.items())
 
 
-def validate_build(build, expected_sha, *, require_main=True):
+def validate_build(build, expected_sha, *, require_main=True, platform='ios'):
     # Codemagic can expose an accepted build before it has fetched the branch.
     # Only a pre-fetch build without a commit may defer the main-branch check.
     source_pending = (isinstance(build, dict) and build.get('status') in SOURCE_PENDING
                       and build.get('branch') is None and build.get('commit') is None)
     if (not isinstance(build, dict) or build.get('app_id') != APP_ID
-            or (build.get('workflow') or {}).get('id') != 'ios-build'
+            or (build.get('workflow') or {}).get('id') not in
+               ({'ios-build', 'ios-scheduled-build'} if platform == 'ios' else {'android-build'})
             or (require_main and ((build.get('branch') != 'main' and not source_pending)
                                   or build.get('tag')))):
-        raise ReleaseError('Codemagic build identity does not match the requested main iOS release.')
+        raise ReleaseError('Codemagic build identity does not match the requested main native release.')
     build_id(build.get('id'))
     status = build.get('status')
     asc = build.get('app_store_connect_status')
@@ -112,14 +113,26 @@ def validate_build(build, expected_sha, *, require_main=True):
 
 def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.sleep,
                 monotonic=time.monotonic, timeout=4800):
+    platform = env.get('RELEASE_PLATFORM', 'ios')
+    if platform not in {'ios', 'android'}:
+        raise ReleaseError('RELEASE_PLATFORM must be ios or android.')
+    inputs = {key: env.get('NATIVE_' + key) or default for key, default in INPUTS.items()}
+    for key, choices in {'DEFAULT_ENV': {'PRODUCTION', 'STAGING', 'POC'},
+                         'RELEASE_CHANNEL': {'BETA', 'PRODUCTION'},
+                         'PUBLISH_TO_GITHUB': {'NO', 'YES'}}.items():
+        if inputs[key] not in choices:
+            raise ReleaseError('Invalid ' + key + '; no build started.')
+    if inputs['DEFAULT_ENV'] != 'PRODUCTION' and inputs['RELEASE_CHANNEL'] == 'PRODUCTION':
+        raise ReleaseError('Production publishing requires the production backend.')
     for name in ['CODEMAGIC_API_TOKEN', 'GH_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID',
-                 'PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
+                 'PROVENANCE_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
         if not env.get(name):
             raise ReleaseError(f'Missing {name}; configure the GitHub Actions secret/environment before dispatching. No build started.')
     repo = env['GITHUB_REPOSITORY']
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo) or not env['GITHUB_RUN_ID'].isdigit():
         raise ReleaseError('Invalid GitHub run identity.')
-    workflow_ref = repo + '/.github/workflows/ios_testflight_release.yml@refs/heads/main'
+    workflow = 'ios_testflight_release.yml' if platform == 'ios' else 'android_store_release.yml'
+    workflow_ref = repo + '/.github/workflows/' + workflow + '@refs/heads/main'
     if env.get('GITHUB_REF') != 'refs/heads/main' or env.get('GITHUB_WORKFLOW_REF') != workflow_ref:
         raise ReleaseError('Release workflow must run from trusted main.')
     checked_out_sha = checked_out_sha or subprocess.check_output(
@@ -168,9 +181,11 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
         # successful upload. Verify their exact publishing policy rather than
         # treating null as either completed or pending for every release.
         commit = (build.get('commit') or {}).get('hash')
+        workflow_id = (build.get('workflow') or {}).get('id')
+        cache_key = (commit, workflow_id)
         if not sha(commit) or 'release_notes' not in build or build['release_notes'] not in (None, []):
             return False
-        if commit not in upload_only_sources:
+        if cache_key not in upload_only_sources:
             try:
                 contents = gh('/contents/codemagic.yaml?' + urllib.parse.urlencode({'ref': commit}))
                 if contents.get('encoding') != 'base64' or len(contents['content']) > 1_000_000:
@@ -179,37 +194,43 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
                 ruby = (
                     "require 'yaml'; require 'json'; "
                     "p=YAML.safe_load(STDIN.read, aliases: true).fetch('workflows')"
-                    ".fetch('ios-build').fetch('publishing').fetch('app_store_connect'); "
+                    ".fetch(ARGV.fetch(0)).fetch('publishing').fetch('app_store_connect'); "
                     "puts JSON.generate(p['submit_to_testflight']==false && "
                     "p['submit_to_app_store']==false && (p['beta_groups'].nil? || p['beta_groups']==[]) && "
                     "!p['expire_build_submitted_for_review'] && !p['cancel_previous_submissions'])"
                 )
-                parsed = subprocess.run(['ruby', '-e', ruby], input=source_yaml,
+                parsed = subprocess.run(['ruby', '-e', ruby, workflow_id], input=source_yaml,
                                         capture_output=True, check=True, timeout=10)
-                upload_only_sources[commit] = json.loads(parsed.stdout) is True
+                upload_only_sources[cache_key] = json.loads(parsed.stdout) is True
             except (APIError, KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
-                upload_only_sources[commit] = False
-        return upload_only_sources[commit]
+                upload_only_sources[cache_key] = False
+        return upload_only_sources[cache_key]
 
-    label = f'github:{repo}:{env["GITHUB_RUN_ID"]}:ios-testflight:{source}'
+    lane = 'ios-testflight' if platform == 'ios' else 'android-store'
+    label = f'github:{repo}:{env["GITHUB_RUN_ID"]}:{lane}:{source}'
     # Scan all statuses: the API's status filter omits some active states.
     cursor = None
     seen_cursors = set()
     matches = []
     blockers = []
     while True:
-        query = {'app_id': APP_ID, 'workflow_id': 'ios-build', 'page_size': 100}
+        query = {'app_id': APP_ID, 'page_size': 100}
         if cursor is not None:
             query['cursor'] = cursor
         page = cm('GET', '/teams/' + TEAM_ID + '/builds?' + urllib.parse.urlencode(query))
         for item in page['data']:
+            workflows = {'ios-build', 'ios-scheduled-build'} if platform == 'ios' else {'android-build'}
+            if (item.get('workflow') or {}).get('id') not in workflows:
+                if label in item.get('labels', []):
+                    raise ReleaseError('Matching build label has an unexpected workflow.')
+                continue
             # Historical releases may target older commits; validate source only for reuse.
             expected = source if label in item.get('labels', []) else (item.get('commit') or {}).get('hash')
-            status, asc, _ = validate_build(item, expected, require_main=label in item.get('labels', []))
+            status, asc, _ = validate_build(item, expected, require_main=label in item.get('labels', []), platform=platform)
             if label in item.get('labels', []):
                 matches.append(item)
-            elif (status in ACTIVE or asc in ASC_PENDING
-                  or (status == 'finished' and asc is None and not verified_upload_only(item))):
+            elif (status in ACTIVE or (platform == 'ios' and (asc in ASC_PENDING
+                  or (status == 'finished' and asc is None and not verified_upload_only(item))))):
                 blockers.append(build_id(item['id']))
         cursor = page.get('cursor')
         if cursor is None:
@@ -219,7 +240,7 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
             raise ReleaseError('Could not finish Codemagic build pagination; refusing a new submission.')
         seen_cursors.add(serialized)
     if blockers:
-        raise ReleaseError('Another iOS build has active or unverified App Store Connect processing: ' + ', '.join(blockers))
+        raise ReleaseError('Another native build has active or unverified store processing: ' + ', '.join(blockers))
     if len(matches) > 1:
         raise ReleaseError('Multiple builds match this GitHub run; reconcile in Codemagic before continuing.')
     if matches:
@@ -231,11 +252,10 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
         from release_train.setup import configure_build_credentials
 
         try:
-            configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['RELEASE_GITHUB_TOKEN'],
-                                        env['PUBLIC_PEOPLE_LIST_POLICY'])
+            configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['PUBLIC_PEOPLE_LIST_POLICY'])
         except (ProviderError, ReleaseError) as error:
             raise ReleaseError(f'Could not prepare secure build credentials: {error}. No build started.') from None
-        payload = {'workflow_id': 'ios-build', 'branch': 'main', 'inputs': INPUTS,
+        payload = {'workflow_id': platform + '-build', 'branch': 'main', 'inputs': inputs,
                    'environment': {'variables': {'RELEASE_EXPECTED_SHA': source}}, 'labels': [label]}
         try:
             accepted = cm('POST', '/apps/' + APP_ID + '/builds', payload)
@@ -257,12 +277,14 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
                 raise
             sleep(15)
             continue
-        status, asc, commit = validate_build(build, source)
+        status, asc, commit = validate_build(build, source, platform=platform)
         if build['id'] != selected:
             raise ReleaseError('Provider returned a different build id.')
-        inputs = build.get('build_inputs')
-        if inputs is not None and any(inputs.get(key) != value for key, value in INPUTS.items()):
-            raise ReleaseError('Codemagic release inputs differ from the requested beta release.')
+        if (build.get('workflow') or {}).get('id') != platform + '-build':
+            raise ReleaseError('Provider returned a different native workflow.')
+        actual_inputs = build.get('build_inputs')
+        if actual_inputs is not None and any(actual_inputs.get(key) != value for key, value in inputs.items()):
+            raise ReleaseError('Codemagic release inputs differ from the requested native release.')
         state = (status, asc, commit)
         if state != last_state:
             record(env, f'Build `{selected}`: {status}; App Store Connect: {asc or "not reported"}; '
@@ -273,6 +295,9 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
         if status == 'finished':
             if commit != source:
                 raise ReleaseError('Finished build has no verified source commit.')
+            if platform == 'android':
+                record(env, 'Android native workflow finished. Verify the observed Play track and review state separately.', {'result': 'built'})
+                return selected
             if asc == 'finished':
                 record(env, 'App Store Connect processing finished. Upload/submission completed in Codemagic; '
                            'verify Beta App Review and group availability in App Store Connect separately.', {'result': 'uploaded'})

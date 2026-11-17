@@ -67,7 +67,7 @@ jobs:
           owner: divinevideo
           repositories: divine-mobile
           permission-contents: write
-          skip-token-revoke: true
+          skip-token-revoke: false
       - name: Observe and coordinate both store queues
         env:
           GH_TOKEN: ${{ github.token }}
