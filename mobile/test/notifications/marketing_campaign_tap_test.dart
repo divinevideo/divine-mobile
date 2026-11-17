@@ -45,12 +45,18 @@ void main() {
       ('video_address', '34236:short:clip'),
       ('video_address', '34236:$creator:'),
       ('video_address', '30023:$creator:article'),
+      ('video_address', '34236:${'A' * 64}:clip'),
+      ('video_address', creator),
       ('creator_profile', 'short'),
       ('creator_profile', 'A' * 64),
+      ('creator_profile', '34236:$creator:clip'),
       ('app_route', '/not-a-campaign-destination'),
+      ('app_route', '34236:$creator:clip'),
+      ('app_route', creator),
       ('https_url', 'https://example.com'),
     ]) {
-      test('unsupported ${target.$1} target falls back to the inbox', () {
+      test('unsupported ${target.$1} target "${target.$2}" falls back to the '
+          'inbox', () {
         final result = pushNotificationTapTarget(
           referencedAddress: null,
           referencedEventId: null,
