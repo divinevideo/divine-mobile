@@ -278,8 +278,8 @@ Future<void> routeNotificationTap({
   required String? tapTargetType,
   required String? tapTargetValue,
   required NotificationOpenSource openSource,
+  required String? campaignRevisionId,
   String? messageId,
-  String? campaignRevisionId,
 }) async {
   // Keep provider initialization and analytics off the navigation critical path.
   scheduleMicrotask(() {
