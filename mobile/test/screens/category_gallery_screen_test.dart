@@ -36,12 +36,14 @@ void main() {
     VoidCallback? onBack,
     VoidCallback? onRetry,
     Widget? galleryOverride,
+    Locale? locale,
   }) {
     // No Scaffold: the route mounts this view on the root navigator, so
     // nothing above it supplies a Material. Pump it the same way here.
     return MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: CategoryGalleryView(
         category: category,
         state: state,
@@ -200,6 +202,7 @@ void main() {
       Future<void> pumpAtPhoneSize(
         WidgetTester tester, {
         VideoCategory shown = category,
+        Locale? locale,
       }) async {
         tester.view.physicalSize = const Size(screenWidth, 874);
         tester.view.devicePixelRatio = 1;
@@ -213,6 +216,7 @@ void main() {
               videosStatus: CategoriesVideosStatus.loaded,
             ),
             galleryOverride: const SizedBox.expand(),
+            locale: locale,
           ),
         );
       }
@@ -299,6 +303,30 @@ void main() {
         expect(
           tester.getRect(title).right,
           lessThanOrEqualTo(tester.getRect(mascotSlot).left),
+        );
+      });
+
+      testWidgets('mirrors the header in a right-to-left locale', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester, locale: const Locale('ar'));
+
+        // The sort button is now at the start edge, so the mascot meets it
+        // there and the title stops at the mascot's far side.
+        expect(
+          tester.getRect(mascotSlot),
+          equals(const Rect.fromLTRB(56, barBottom - 90, 56 + 149, barBottom)),
+        );
+        expect(
+          tester.getRect(filterButton).right,
+          equals(tester.getRect(mascotSlot).left),
+        );
+        final title = find.text(
+          lookupAppLocalizations(const Locale('ar')).categoryAnimals,
+        );
+        expect(
+          tester.getRect(title).left,
+          greaterThanOrEqualTo(tester.getRect(mascotSlot).right),
         );
       });
 
