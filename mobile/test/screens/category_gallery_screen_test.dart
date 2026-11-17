@@ -245,6 +245,21 @@ void main() {
         );
       });
 
+      testWidgets('centres the actions in the bar at small text', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 0.85;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        // The bar keeps its 72 px design height around shorter content.
+        expect(tester.getRect(bodyClip).top, equals(barBottom));
+        expect(
+          tester.getCenter(backButton).dy,
+          closeTo(barBottom - 72 / 2, 0.001),
+        );
+      });
+
       testWidgets('starts the gallery right below the bar, edge to edge', (
         tester,
       ) async {

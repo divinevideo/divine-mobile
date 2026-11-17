@@ -312,6 +312,7 @@ class _CategoryGalleryHeader extends StatelessWidget {
           // The mascot is painted first so the actions stay on top where the
           // two overlap, and it may rise above the bar into the status area.
           child: Stack(
+            alignment: AlignmentDirectional.centerStart,
             clipBehavior: Clip.none,
             children: [
               PositionedDirectional(
