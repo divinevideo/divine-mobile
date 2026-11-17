@@ -2,6 +2,11 @@
 # Fetches and creates private Shorebird release provenance records.
 set -euo pipefail
 
+# Keep private ledger authentication separate from public release publishing.
+if [ -n "${PROVENANCE_TOKEN:-}" ]; then
+  export GH_TOKEN="$PROVENANCE_TOKEN"
+fi
+
 repository="${SHOREBIRD_PROVENANCE_REPOSITORY:-divinevideo/divine-release-provenance}"
 command="${1:-}"
 platform="${2:-}"

@@ -4,12 +4,14 @@ import contextlib
 import importlib.util
 import io
 import json
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
+
+import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / 'mobile/scripts/start_ios_release.py'
@@ -29,6 +31,7 @@ def load_driver():
 
 def environment():
     return {'CODEMAGIC_API_TOKEN': 'private-codemagic-token', 'GH_TOKEN': 'private-gh-token',
+            'PROVENANCE_TOKEN': 'private-ledger-token', 'RELEASE_GITHUB_TOKEN': 'mobile-release-token',
             'GITHUB_REPOSITORY': 'example/repo', 'GITHUB_RUN_ID': '123',
             'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_REF': 'refs/heads/main',
             'GITHUB_SHA': SHA, 'GITHUB_WORKFLOW_SHA': SHA,
@@ -52,6 +55,8 @@ class FakeAPI:
         self.ci = ci
         self.calls = []
         self.pages = []
+        self.variables = [{'id': name, 'name': name, 'secure': True, 'value': None}
+                          for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN']]
         self.source_config = (
             'workflows:\n  ios-build:\n    publishing:\n'
             '      app_store_connect:\n'
@@ -61,6 +66,10 @@ class FakeAPI:
 
     def __call__(self, method, url, token, payload=None):
         self.calls.append((method, url, token, payload))
+        if '/apps/' in url and '/variable-groups' in url:
+            return {'data': [{'id': 'g', 'name': 'github_credentials'}]}
+        if '/variable-groups/' in url:
+            return {'data': self.variables} if method == 'GET' else {}
         if '/git/ref/heads/main' in url:
             return {'object': {'sha': SHA}}
         if '/actions/workflows/mobile_ci.yaml/runs?' in url:
@@ -89,6 +98,36 @@ class FakeAPI:
 
 
 class IOSReleaseTest(unittest.TestCase):
+    def test_rotates_scoped_credentials_securely_before_build_without_exposing_them(self):
+        self.run_driver()
+        patches = [c for c in self.api.calls if c[0] == 'PATCH']
+        self.assertEqual({c[1].rsplit('/', 1)[-1]: c[3] for c in patches}, {
+            'GH_TOKEN': {'value': 'mobile-release-token', 'secure': True},
+            'GITHUB_TOKEN': {'value': 'mobile-release-token', 'secure': True},
+            'PROVENANCE_TOKEN': {'value': 'private-ledger-token', 'secure': True},
+        })
+        self.assertLess(self.api.calls.index(patches[-1]), self.api.calls.index(self.api.posts[0]))
+        for token in ['mobile-release-token', 'private-ledger-token']:
+            self.assertNotIn(token, json.dumps(self.api.posts[0][3]))
+            self.assertNotIn(token, self.output.getvalue())
+
+    def test_missing_scoped_credentials_prevents_network_or_build(self):
+        for name in ['PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN']:
+            env = self.env.copy()
+            del env[name]
+            with self.subTest(name=name), self.assertRaisesRegex(self.driver.ReleaseError, name):
+                self.driver.run_release(env, request=self.api, checked_out_sha=SHA)
+        self.assertFalse(self.api.calls)
+
+    def test_secure_variable_transport_accepts_created_and_empty_update_responses(self):
+        for method, status, body, expected in [('POST', 201, b'{"data": []}', {'data': []}),
+                                               ('PATCH', 204, b'', {})]:
+            response = io.BytesIO(body)
+            response.status = status
+            url = 'https://codemagic.io/api/v3/variable-groups/g/variables' + ('/v' if method == 'PATCH' else '')
+            with self.subTest(method=method), patch('urllib.request.urlopen', return_value=response):
+                self.assertEqual(self.driver.request_json(method, url, 'synthetic-token', {}), expected)
+
     def setUp(self):
         self.assertTrue(SCRIPT.is_file(), "headless release driver is missing")
         self.driver = load_driver()
@@ -139,7 +178,7 @@ class IOSReleaseTest(unittest.TestCase):
         for override in [{'head_sha': OTHER}, {'conclusion': 'skipped'},
                          {'app': {'slug': 'other-app'}},
                          {'details_url': 'https://github.com/example/repo/actions/runs/99/job/2'}]:
-            def changed(method, url, token, payload=None):
+            def changed(method, url, token, payload=None, override=override):
                 data = original(method, url, token, payload)
                 if '/check-runs?' in url:
                     data['check_runs'][0].update(override)
@@ -162,7 +201,7 @@ class IOSReleaseTest(unittest.TestCase):
     def test_feature_branch_push_or_wrong_check_app_id_is_rejected(self):
         original = self.api
         for target in ['workflow_runs', 'check_runs']:
-            def bad_ci(method, url, token, payload=None):
+            def bad_ci(method, url, token, payload=None, target=target):
                 data = original(method, url, token, payload)
                 if target == 'workflow_runs' and target in data:
                     data[target][0]['head_branch'] = 'feature'
@@ -185,6 +224,8 @@ class IOSReleaseTest(unittest.TestCase):
         self.assertIn('App Store Connect processing finished', summary)
         self.assertNotIn('available to external testers', summary)
         method, url, token, payload = self.api.posts[0]
+        self.assertEqual(method, 'POST')
+        self.assertEqual(token, self.env['CODEMAGIC_API_TOKEN'])
         self.assertEqual('https://codemagic.io/api/v3/apps/' + APP_ID + '/builds', url)
         self.assertEqual({'workflow_id': 'ios-build', 'branch': 'main',
                           'inputs': {'DEFAULT_ENV': 'PRODUCTION', 'RELEASE_CHANNEL': 'BETA', 'PUBLISH_TO_GITHUB': 'NO'},
@@ -356,9 +397,8 @@ class IOSReleaseTest(unittest.TestCase):
     def test_http_client_does_not_print_provider_body_or_credentials(self):
         for failure in [HTTPError('https://codemagic.io', 500, 'private-codemagic-token', {},
                                   io.BytesIO(b'private-codemagic-token')), URLError('private-codemagic-token')]:
-            with patch('urllib.request.urlopen', side_effect=failure):
-                with self.assertRaises(self.driver.APIError) as error:
-                    self.driver.request_json('POST', 'https://codemagic.io/api/v3/apps/x/builds', 'secret', {})
+            with patch('urllib.request.urlopen', side_effect=failure), self.assertRaises(self.driver.APIError) as error:
+                self.driver.request_json('POST', 'https://codemagic.io/api/v3/apps/x/builds', 'secret', {})
             self.assertNotIn('private-codemagic-token', str(error.exception))
             if isinstance(failure, HTTPError):
                 self.assertTrue(failure.fp.closed, 'HTTP error response must be closed')
@@ -372,6 +412,10 @@ class IOSReleaseTest(unittest.TestCase):
         self.assertEqual(False, data['concurrency']['cancel-in-progress'])
         self.assertEqual({'contents': 'read', 'checks': 'read', 'actions': 'read'}, data['permissions'])
         job = data['jobs']['release']
+        self.assertEqual(job['environment'], 'store-release')
+        tokens = [step for step in job['steps'] if step.get('uses', '').startswith('actions/create-github-app-token@')]
+        self.assertEqual({step['with']['repositories'] for step in tokens}, {'divine-mobile', 'divine-release-provenance'})
+        self.assertTrue(all(step['with']['skip-token-revoke'] for step in tokens))
         self.assertGreaterEqual(job['timeout-minutes'], 90)
         checkout = next(step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@'))
         self.assertEqual('${{ github.sha }}', checkout['with']['ref'])

@@ -28,6 +28,20 @@ workflow receives release credentials. It holds:
 - `CODEMAGIC_API_TOKEN`: existing repository secret is inherited by the
   environment. Signing and Shorebird secrets remain in Codemagic.
 
+Before starting each store build, the GitHub driver refreshes the existing
+Codemagic `github_credentials` group with secure, repository-scoped App tokens.
+`GH_TOKEN` and `GITHUB_TOKEN` can publish only to the mobile repository;
+`PROVENANCE_TOKEN` can access only the private release ledger. Ledger operations
+select that private token without changing the public publisher's environment.
+Token values are not placed in build request variables or printed in summaries.
+The App private key remains in the main-only GitHub Environment and Secret Manager.
+
+Delegated tokens are not revoked when the dispatch job exits, because Codemagic
+continues independently. GitHub's one-hour token expiration still applies:
+queued or unusually long builds that outlive it need a fresh GitHub dispatch.
+Start manual iOS releases through `iOS TestFlight Release` so credentials refresh
+before the build; a direct Codemagic UI start does not refresh them.
+
 Repository variables:
 
 - `RELEASE_TRAIN_IOS`: `off`, `dry-run`, `build`, `testflight`, `app-store`.

@@ -50,8 +50,13 @@ def request_json(method, url, token, payload=None):
                                      data=None if payload is None else json.dumps(payload).encode())
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            if response.status != (202 if method == 'POST' else 200):
+            expected = 202 if method == 'POST' else 200
+            if url.startswith('https://codemagic.io/api/v3/variable-groups/'):
+                expected = {'POST': 201, 'PATCH': 204}.get(method, 200)
+            if response.status != expected:
                 raise APIError(response.status)
+            if response.status == 204:
+                return {}
             result = json.load(response)
             if not isinstance(result, dict):
                 raise APIError(None)
@@ -81,8 +86,7 @@ def record(env, message, outputs=None):
             stream.write(message + '\n\n')
     if outputs and env.get('GITHUB_OUTPUT'):
         with open(env['GITHUB_OUTPUT'], 'a', encoding='utf-8') as stream:
-            for key, value in outputs.items():
-                stream.write(f'{key}={value}\n')
+            stream.writelines(f'{key}={value}\n' for key, value in outputs.items())
 
 
 def validate_build(build, expected_sha, *, require_main=True):
@@ -108,7 +112,8 @@ def validate_build(build, expected_sha, *, require_main=True):
 
 def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.sleep,
                 monotonic=time.monotonic, timeout=4800):
-    for name in ['CODEMAGIC_API_TOKEN', 'GH_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID']:
+    for name in ['CODEMAGIC_API_TOKEN', 'GH_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID',
+                 'PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN']:
         if not env.get(name):
             raise ReleaseError(f'Missing {name}; configure the GitHub Actions secret/environment before dispatching. No build started.')
     repo = env['GITHUB_REPOSITORY']
@@ -222,6 +227,13 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
     else:
         if env.get('GITHUB_RUN_ATTEMPT', '1') != '1':
             raise ReleaseError('Retry has no discoverable matching build; reconcile the previous request in Codemagic before a new dispatch.')
+        from release_train.providers import ProviderError
+        from release_train.setup import configure_build_credentials
+
+        try:
+            configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['RELEASE_GITHUB_TOKEN'])
+        except (ProviderError, ReleaseError) as error:
+            raise ReleaseError(f'Could not prepare secure build credentials: {error}. No build started.') from None
         payload = {'workflow_id': 'ios-build', 'branch': 'main', 'inputs': INPUTS,
                    'environment': {'variables': {'RELEASE_EXPECTED_SHA': source}}, 'labels': [label]}
         try:

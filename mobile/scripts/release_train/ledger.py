@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import subprocess
 import time
 from typing import Protocol
@@ -39,20 +40,24 @@ def provenance_path(platform, version, n) -> str:
 
 
 class GhLedgerStore:
-    def __init__(self, repository, branch="main", run=subprocess.run, sleep=time.sleep):
+    def __init__(self, repository, branch="main", run=subprocess.run, sleep=time.sleep, token=None):
         self._repository = repository
         self._branch = branch
         self._run = run
         self._paths = None
         self._sleep = sleep
+        self._token = token or os.environ.get("PROVENANCE_TOKEN")
 
     def refresh(self):
         self._paths = None
         return self.paths()
 
     def _gh(self, *args):
+        kwargs = {}
+        if self._token:
+            kwargs["env"] = dict(os.environ, GH_TOKEN=self._token)
         return self._run(
-            ["gh", "api", *args], capture_output=True, text=True, check=False
+            ["gh", "api", *args], capture_output=True, text=True, check=False, **kwargs
         )
 
     def paths(self) -> frozenset[str]:

@@ -57,6 +57,7 @@ jobs:
           owner: divinevideo
           repositories: divine-release-provenance
           permission-contents: write
+          skip-token-revoke: true
       - name: Scope immutable candidate tag installation token
         id: candidate
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
@@ -66,6 +67,7 @@ jobs:
           owner: divinevideo
           repositories: divine-mobile
           permission-contents: write
+          skip-token-revoke: true
       - name: Observe and coordinate both store queues
         env:
           GH_TOKEN: ${{ github.token }}

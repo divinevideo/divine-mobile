@@ -381,9 +381,7 @@ class Runtime:
         self.private = GitHub(repository, private_token)
         self.ledger = GhLedgerStore(
             repository,
-            run=lambda args, **kwargs: subprocess.run(  # noqa: PLW1510 - ledger supplies check=False
-                args, env=dict(os.environ, GH_TOKEN=private_token), **kwargs
-            ),
+            token=private_token,
         )
         self.store = StateStore(self.private)
         self.apple = None
@@ -965,6 +963,11 @@ class Runtime:
         platform = action["platform"]
         build = action.get("build")
         if kind == "build":
+            from release_train.setup import configure_build_credentials
+
+            configure_build_credentials(
+                self.cm, self.env["PROVENANCE_TOKEN"], self.env["CANDIDATE_TAG_TOKEN"]
+            )
             sha = action["sha"]
             tag = "release-candidate/" + sha
             try:

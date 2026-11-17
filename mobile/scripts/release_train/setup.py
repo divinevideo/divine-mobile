@@ -35,7 +35,9 @@ def cm_pages(cm, path):
     raise ProviderError("Incomplete Codemagic configuration listing")
 
 
-def configure_codemagic(cm, token):
+def configure_secure_variables(cm, values):
+    if any(not value for value in values.values()):
+        raise ProviderError("Missing scoped GitHub build credential")
     groups = cm_pages(cm, "/apps/" + CM_APP_ID + "/variable-groups")
     if not any(g["name"] == "github_credentials" for g in groups):
         groups += cm_pages(cm, "/teams/" + TEAM_ID + "/variable-groups")
@@ -47,26 +49,33 @@ def configure_codemagic(cm, token):
     identifier = next(iter(matches))
     path = "/variable-groups/" + identifier + "/variables"
     variables = cm_pages(cm, path)
-    existing = [v for v in variables if v["name"] == "CODEMAGIC_API_TOKEN"]
-    if len(existing) > 1:
-        raise ProviderError(
-            "Duplicate Codemagic API variables require operator reconciliation"
-        )
-    if existing:
-        cm("PATCH", path + "/" + existing[0]["id"], {"value": token, "secure": True})
-    else:
-        cm(
-            "POST",
-            path,
-            {
-                "secure": True,
-                "variables": [{"name": "CODEMAGIC_API_TOKEN", "value": token}],
-            },
-        )
-    verified = [v for v in cm_pages(cm, path) if v["name"] == "CODEMAGIC_API_TOKEN"]
-    if len(verified) != 1 or verified[0].get("secure") is not True:
-        raise ProviderError("Codemagic variable encryption could not be verified")
+    for name, value in values.items():
+        existing = [v for v in variables if v["name"] == name]
+        if len(existing) > 1:
+            raise ProviderError("Duplicate Codemagic variables require reconciliation")
+        if existing:
+            cm("PATCH", path + "/" + existing[0]["id"], {"value": value, "secure": True})
+        else:
+            cm("POST", path, {"secure": True, "variables": [{"name": name, "value": value}]})
+    verified = cm_pages(cm, path)
+    for name in values:
+        matches = [v for v in verified if v["name"] == name]
+        if len(matches) != 1 or matches[0].get("secure") is not True:
+            raise ProviderError("Codemagic variable encryption could not be verified")
+
+
+def configure_codemagic(cm, token):
+    configure_secure_variables(cm, {"CODEMAGIC_API_TOKEN": token})
     return "Scheduled allocator credential configured and verified secure in existing github_credentials."
+
+
+def configure_build_credentials(cm, private_token, mobile_token):
+    # API build overrides are plain strings; use the provider's secure storage.
+    configure_secure_variables(cm, {
+        "PROVENANCE_TOKEN": private_token,
+        "GH_TOKEN": mobile_token,
+        "GITHUB_TOKEN": mobile_token,
+    })
 
 
 def bootstrap_live(runtime, dry_run):
