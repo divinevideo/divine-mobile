@@ -15,47 +15,85 @@ VideoEvent _video(int n) => VideoEvent(
 );
 
 void main() {
-  test(
-    'a selected classic plays before its independent recommendations arrive',
-    () async {
-      final pending = Completer<HomeFeedResult>();
-      final session = ClassicFeedSession(
-        initialVideos: [_video(1)],
-        loadPage: (_) => pending.future,
-      );
-      final cubit = ClassicsFeedCubit(session: session);
-      addTearDown(cubit.close);
-      expect(await cubit.videos.first, [_video(1)]);
-      pending.complete(
-        HomeFeedResult(
-          videos: [_video(2), _video(3)],
-          paginationCursor: 'next',
-          hasMore: true,
-          recommendationPageCount: 1,
-        ),
-      );
-      await session.settled;
-      expect(
-        (await cubit.videos.first).map((v) => v.id),
-        [1, 2, 3].map((n) => n.toRadixString(16).padLeft(64, '0')),
-      );
-    },
-  );
+  group('ClassicsFeedCubit', () {
+    test(
+      'closing stops new feedback reads before stream cleanup settles',
+      () async {
+        final feedback = StreamController<ClassicFeedFeedback>.broadcast(
+          sync: true,
+        );
+        addTearDown(feedback.close);
+        var reads = 0;
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          feedback: feedback.stream,
+          loadPage: (_) async {
+            reads++;
+            return HomeFeedResult(
+              videos: [_video(2)],
+              hasMore: true,
+              recommendationPageCount: 1,
+              paginationCursor: 'next',
+            );
+          },
+        );
+        final cubit = ClassicsFeedCubit(session: session);
+        await session.settled;
+        final closing = cubit.close();
+        feedback.add(
+          ClassicFeedInteraction(
+            videoId: _video(1).id,
+            signal: ClassicFeedSignal.positive,
+          ),
+        );
+        await closing;
+        expect(reads, 1);
+        expect(cubit.isClosed, isTrue);
+      },
+    );
 
-  test(
-    'route disposal cancels subscriptions and ignores its pending read',
-    () async {
-      final pending = Completer<HomeFeedResult>();
-      final session = ClassicFeedSession(
-        initialVideos: [_video(1)],
-        loadPage: (_) => pending.future,
-      );
-      final cubit = ClassicsFeedCubit(session: session);
-      await cubit.close();
-      pending.complete(HomeFeedResult(videos: [_video(2)]));
-      await session.settled;
-      expect(cubit.isClosed, isTrue);
-      expect(cubit.state.videos, [_video(1)]);
-    },
-  );
+    test(
+      'a selected classic plays before its independent recommendations arrive',
+      () async {
+        final pending = Completer<HomeFeedResult>();
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (_) => pending.future,
+        );
+        final cubit = ClassicsFeedCubit(session: session);
+        addTearDown(cubit.close);
+        expect(await cubit.videos.first, [_video(1)]);
+        pending.complete(
+          HomeFeedResult(
+            videos: [_video(2), _video(3)],
+            paginationCursor: 'next',
+            hasMore: true,
+            recommendationPageCount: 1,
+          ),
+        );
+        await session.settled;
+        expect(
+          (await cubit.videos.first).map((v) => v.id),
+          [1, 2, 3].map((n) => n.toRadixString(16).padLeft(64, '0')),
+        );
+      },
+    );
+
+    test(
+      'route disposal cancels subscriptions and ignores its pending read',
+      () async {
+        final pending = Completer<HomeFeedResult>();
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (_) => pending.future,
+        );
+        final cubit = ClassicsFeedCubit(session: session);
+        await cubit.close();
+        pending.complete(HomeFeedResult(videos: [_video(2)]));
+        await session.settled;
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.videos, [_video(1)]);
+      },
+    );
+  });
 }

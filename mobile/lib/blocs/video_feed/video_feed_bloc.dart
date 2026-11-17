@@ -853,30 +853,30 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   Future<void> close() async {
     _isClosing = true;
     _modePreferences._release();
-    await _classicSessionSubscription?.cancel();
-    await _classicSession?.dispose();
-    // Flush any swipe still inside the debounce window before tearing down, so
-    // the last move isn't lost on dispose.
+    // Flush the last swipe before detaching its persistence owner.
     _resumeManager.dispose();
-    final repositoryCancelled = _removalRepositorySubscription?.cancel();
+    // Start every teardown before waiting: one stream's asynchronous drain
+    // must not keep the Bloc or unrelated repository listeners alive.
+    final cleanup = <Future<void>?>[
+      _removalRepositorySubscription?.cancel(),
+      _removedIdsSubscription?.cancel(),
+      ..._pendingRemovalCancellations,
+      _classicSessionSubscription?.cancel(),
+      _classicSession?.dispose(),
+      _hashtagsSubscription?.cancel(),
+      _followingSubscription?.cancel(),
+      _curatedListsSubscription?.cancel(),
+      _followedPeopleListsSubscription?.cancel(),
+      _badgeSubscriptionsSubscription?.cancel(),
+      super.close(),
+    ];
     _removalRepositorySubscription = null;
-    final removedIdsCancelled = _removedIdsSubscription?.cancel();
     _removedIdsSubscription = null;
-    await _hashtagsSubscription?.cancel();
-    await _followingSubscription?.cancel();
-    await _curatedListsSubscription?.cancel();
-    await _followedPeopleListsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
-    await _badgeSubscriptionsSubscription?.cancel();
     _badgeSubscriptionsSubscription = null;
-    await super.close();
-    await Future.wait([
-      ?repositoryCancelled,
-      ?removedIdsCancelled,
-      ..._pendingRemovalCancellations,
-    ]);
+    await Future.wait(cleanup.nonNulls);
   }
 
   Future<void> _onHashtagsChanged(

@@ -38,8 +38,12 @@ class ClassicsFeedCubit extends Cubit<ClassicFeedSessionState> {
 
   @override
   Future<void> close() async {
-    await _subscription?.cancel();
-    await _session.dispose();
-    await super.close();
+    // Stop feedback and close presentation immediately, then await all drains.
+    final cleanup = <Future<void>?>[
+      _subscription?.cancel(),
+      _session.dispose(),
+      super.close(),
+    ];
+    await Future.wait(cleanup.nonNulls);
   }
 }

@@ -24,6 +24,19 @@ void main() {
       expect(const NewVideosViewSource(), equals(const NewVideosViewSource()));
     });
 
+    test('selected Classics keep separate route identities and anchors', () {
+      final first = _video('1' * 64);
+      final second = _video('2' * 64);
+      final firstSource = ClassicVinesViewSource(anchor: first);
+      final secondSource = ClassicVinesViewSource(anchor: second);
+      final selections = {firstSource: first, secondSource: second};
+      expect(selections, hasLength(2));
+      expect(selections[ClassicVinesViewSource(anchor: first)], same(first));
+      expect(selections[ClassicVinesViewSource(anchor: second)], same(second));
+      expect(firstSource, isNot(const ClassicVinesViewSource()));
+      expect(firstSource.anchor, same(first));
+    });
+
     test('distinct singleton feeds are not equal', () {
       expect(
         const ForYouViewSource(),
