@@ -37,8 +37,8 @@ final findPeopleRepositoryProvider = Provider<FindPeopleRepository>((ref) {
     apiClient: ref.watch(funnelcakeApiClientProvider),
     accountPubkey: owner,
     currentPubkey: () => auth.currentPublicKeyHex,
+    isFollowing: follows.isFollowing,
     isExcluded: (pubkey) =>
-        follows.isFollowing(pubkey) ||
         blocklist.shouldFilterFromFeeds(pubkey) ||
         engine.evaluate(PolicyInput(pubkey: pubkey), blocklist.currentState)
             is Block ||

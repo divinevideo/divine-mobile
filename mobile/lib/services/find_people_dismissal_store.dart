@@ -14,8 +14,28 @@ class FindPeopleDismissalStore {
       _preferences.getStringList(storageKey(owner)) ?? [];
 
   Future<void> write(String owner, List<String> pubkeys) async {
-    if (!await _preferences.setStringList(storageKey(owner), pubkeys)) {
-      throw StateError('Unable to save dismissed suggestions');
+    final key = storageKey(owner);
+    final previous = _preferences.getStringList(key);
+    try {
+      if (!await _preferences.setStringList(key, pubkeys)) {
+        throw StateError('Unable to save dismissed suggestions');
+      }
+    } on Object {
+      // SharedPreferences changes its process cache before the platform write.
+      // Restore only this owner's key so a failed dismissal stays retryable,
+      // including after account-container recreation, without reloading other
+      // accounts' concurrent writes out of the shared cache.
+      try {
+        if (previous == null) {
+          await _preferences.remove(key);
+        } else {
+          await _preferences.setStringList(key, previous);
+        }
+      } on Object {
+        // The cache is restored before this compensating platform write too.
+        // Preserve the original failure for the caller's retry state.
+      }
+      rethrow;
     }
   }
 }

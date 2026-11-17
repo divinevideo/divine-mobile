@@ -326,6 +326,7 @@ void main() {
         backgroundActivityManager: backgroundActivityManager,
         productEventQueue: queue,
         productAnalyticsEnabled: true,
+        consumptionAnalyticsEnabled: true,
         currentUserPubkey: () =>
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );

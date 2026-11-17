@@ -75,21 +75,16 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
 
   void _refilter() {
     if (isClosed) return;
-    // FollowRepository emits optimistically, then rolls back on failure. Keep
-    // pending rows until their operation resolves so failed follows can retry.
-    final eligible = _repository
-        .filter(state.suggestions)
-        .map((s) => s.pubkey)
-        .toSet();
+    if (_repository.isCurrent && !_repository.isEligibilityAvailable) {
+      emit(const FindPeopleState(status: FindPeopleStatus.failure));
+      return;
+    }
     emit(
       state.copyWith(
-        suggestions: state.suggestions
-            .where(
-              (s) =>
-                  eligible.contains(s.pubkey) ||
-                  state.pendingPubkeys.contains(s.pubkey),
-            )
-            .toList(),
+        suggestions: _repository.filter(
+          state.suggestions,
+          pendingFollowPubkeys: state.pendingPubkeys,
+        ),
       ),
     );
   }
@@ -126,9 +121,14 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
         FindPeopleState(
           status: FindPeopleStatus.success,
           suggestions: _repository.filter([
-            if (append && !page.restarted) ...state.suggestions,
+            if (append && !page.restarted)
+              ...state.suggestions
+            else
+              ...state.suggestions.where(
+                (item) => state.pendingPubkeys.contains(item.pubkey),
+              ),
             ...page.suggestions,
-          ]),
+          ], pendingFollowPubkeys: state.pendingPubkeys),
           nextCursor: page.nextCursor,
           pendingPubkeys: state.pendingPubkeys,
         ),
@@ -191,6 +191,10 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
         state.pendingPubkeys.contains(suggestion.pubkey)) {
       return false;
     }
+    if (_repository.filter([suggestion]).isEmpty) {
+      _refilter();
+      return false;
+    }
     final key = suggestion.pubkey;
     emit(
       state.copyWith(
@@ -203,7 +207,10 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
       if (isClosed || !_repository.isCurrent) return false;
       emit(
         state.copyWith(
-          suggestions: _repository.filter(state.suggestions),
+          suggestions: _repository.filter(
+            state.suggestions,
+            pendingFollowPubkeys: state.pendingPubkeys,
+          ),
           pendingPubkeys: {...state.pendingPubkeys}..remove(key),
         ),
       );

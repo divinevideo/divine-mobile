@@ -17393,17 +17393,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get findPeopleDescription =>
-      'Segue criadores ativos e arquivos restaurados do Vine.';
+      'Siga criadores ativos e arquivos restaurados do Vine.';
 
   @override
-  String get findPeopleSuggested => 'Sugestão para ti';
+  String get findPeopleSuggested => 'Sugestão para você';
 
   @override
   String get findPeopleArchive => 'Arquivo restaurado do Vine';
 
   @override
   String get findPeopleEmpty =>
-      'Não há mais sugestões por agora. Experimenta procurar alguém.';
+      'Não há mais sugestões por enquanto. Tente procurar alguém.';
 
   @override
   String get findPeopleDismiss => 'Dispensar sugestão';
@@ -17412,5 +17412,5 @@ class AppLocalizationsPt extends AppLocalizations {
   String get findPeopleLoadMore => 'Carregar mais';
 
   @override
-  String get findPeopleContinueWatching => 'Continuar a ver';
+  String get findPeopleContinueWatching => 'Continuar assistindo';
 }
