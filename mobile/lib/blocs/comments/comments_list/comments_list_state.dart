@@ -195,6 +195,18 @@ final class CommentsListState extends Equatable {
   /// Top rank again.
   final List<String>? topOrder;
 
+  /// Whether Top holds the list back until the vote totals it ranks by have
+  /// loaded, so the comments do not jump into place when they land.
+  ///
+  /// Only until Top first holds its order, and never while the list has a
+  /// comment to bring into view.
+  bool awaitsTopRanking({required bool isLoadingVoteTotals}) =>
+      isLoadingVoteTotals &&
+      sortMode == CommentsSortMode.topEngagement &&
+      topOrder == null &&
+      scrollToCommentId == null &&
+      pendingFocusCommentId == null;
+
   /// Whether this root has the coordinate required to persist moderation.
   bool get supportsModeration => rootAddressableId?.isNotEmpty ?? false;
 
