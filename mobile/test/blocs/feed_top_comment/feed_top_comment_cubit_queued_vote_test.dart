@@ -67,19 +67,36 @@ void main() {
     late _MockCommentsRepository comments;
     late _MockCommentModerationRepository moderation;
 
-    setUpAll(() => registerFallbackValue(<Filter>[]));
+    setUpAll(() {
+      registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
+    });
 
     setUp(() {
       final client = _MockNostrClient();
-      when(() => client.publicKey).thenReturn(_me);
-      when(client.resolvePublicKey).thenAnswer((_) async => _me);
-      when(() => client.queryEvents(any())).thenAnswer((invocation) async {
+      List<Event> matching(Invocation invocation) {
         final filters = invocation.positionalArguments.first as List;
         return [
           for (final event in relay)
             if (filters.cast<Filter>().any((f) => _matches(f, event))) event,
         ];
-      });
+      }
+
+      when(() => client.publicKey).thenReturn(_me);
+      when(client.resolvePublicKey).thenAnswer((_) async => _me);
+      when(
+        () => client.queryEvents(any()),
+      ).thenAnswer((invocation) async => matching(invocation));
+      // The vote reads (#10996), each one the relay finished answering.
+      when(
+        () => client.readEvents(any(), timeout: any(named: 'timeout')),
+      ).thenAnswer(
+        (invocation) async => QueryResult(
+          events: matching(invocation),
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
+        ),
+      );
       // Both comments hold one vote, so the newer one is on top.
       relay = [_upvote(_other, _newer), _upvote(_other, _older)];
       queue = [];

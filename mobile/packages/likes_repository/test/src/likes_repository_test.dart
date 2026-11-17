@@ -125,6 +125,35 @@ void main() {
       );
     }
 
+    /// Stubs the comment vote reads (#10996) with [responses] in call order,
+    /// each a read every relay finished answering. The viewer's own vote
+    /// reads wait for every relay (#10809), the totals' reads do not.
+    void mockVoteReadsSequence(List<List<Event>> responses) {
+      var callCount = 0;
+      when(
+        () => mockNostrClient.readEvents(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (_) async => QueryResult(
+          events: responses[callCount++ % responses.length],
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
+        ),
+      );
+    }
+
+    /// The filters of every comment vote read, in call order.
+    List<List<Filter>> capturedVoteReads() => verify(
+      () => mockNostrClient.readEvents(
+        captureAny(),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
+      ),
+    ).captured.cast<List<Filter>>();
+
     /// Asserts no relay list read ran, through queryEvents or the settled read
     /// the likers fallback now makes (#10846). It does not cover readEvents,
     /// which the sync and retraction reads use.
@@ -7698,6 +7727,166 @@ void main() {
       );
     });
 
+    group('comment vote reads that end short (#10996)', () {
+      const targetId = 'vote_target_id_1234567890abcdef';
+
+      void stubVoteReads(QueryEnd endedBy) {
+        final vote = createMockReaction(
+          id: 'voter_reaction',
+          targetEventId: targetId,
+          authorPubkey: 'some_voter_pubkey_1234567890abcdef',
+        );
+        when(
+          () =>
+              mockNostrClient.readEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
+          (invocation) async => QueryResult(
+            events: [
+              if ((invocation.positionalArguments.first as List<Filter>).any(
+                (f) => f.kinds?.contains(EventKind.reaction) ?? false,
+              ))
+                vote,
+            ],
+            endedBy: endedBy,
+            answeredNetworkRelayCount: 1,
+          ),
+        );
+      }
+
+      test('counts a read that settled after the first relay '
+          'answered', () async {
+        stubVoteReads(QueryEnd.settledEarly);
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([targetId]);
+
+        expect(counts.upvotes[targetId], equals(1));
+      });
+
+      test('leaves out a target whose read reached its deadline after one '
+          'relay answered', () async {
+        stubVoteReads(QueryEnd.deadline);
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([targetId]);
+
+        expect(counts.upvotes, isNot(contains(targetId)));
+      });
+
+      group("the viewer's own votes need a proven answer (#10809)", () {
+        void stubViewerVoteReads({
+          QueryEnd endedBy = QueryEnd.complete,
+          int answeredNetworkRelayCount = 1,
+          bool possiblyCapped = false,
+        }) {
+          final vote = createMockReaction(
+            id: 'own_reaction',
+            targetEventId: targetId,
+            authorPubkey: testUserPubkey,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (invocation) async => QueryResult(
+              events: [
+                if ((invocation.positionalArguments.first as List<Filter>).any(
+                  (f) => f.kinds?.contains(EventKind.reaction) ?? false,
+                ))
+                  vote,
+              ],
+              endedBy: endedBy,
+              answeredNetworkRelayCount: answeredNetworkRelayCount,
+              possiblyCapped: possiblyCapped,
+            ),
+          );
+        }
+
+        test('control: reports the vote when every relay proved its '
+            'answer', () async {
+          stubViewerVoteReads();
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, isEmpty);
+          expect(votes.upvotedIds, equals({targetId}));
+        });
+
+        test('leaves the vote unknown when the read settled after the first '
+            'relay answered', () async {
+          stubViewerVoteReads(endedBy: QueryEnd.settledEarly);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+
+        test('leaves the vote unknown when a relay may have stopped at its '
+            'result limit', () async {
+          stubViewerVoteReads(possiblyCapped: true);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+
+        test('leaves the vote unknown when only the local cache '
+            'answered', () async {
+          stubViewerVoteReads(answeredNetworkRelayCount: 0);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+
+        test('leaves the vote unknown when its deletions read may have '
+            'stopped at a result limit', () async {
+          // The vote itself is proven; only the read for its retraction is
+          // short. A deletion the relay held back would mean the viewer took
+          // the vote back, so the arrow can't be shown as live.
+          final vote = createMockReaction(
+            id: 'own_reaction',
+            targetEventId: targetId,
+            authorPubkey: testUserPubkey,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final asksForVotes =
+                (invocation.positionalArguments.first as List<Filter>).any(
+                  (f) => f.kinds?.contains(EventKind.reaction) ?? false,
+                );
+            return QueryResult(
+              events: [if (asksForVotes) vote],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 1,
+              possiblyCapped: !asksForVotes,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+      });
+    });
+
     group('coordinate-aware vote reads (#6124)', () {
       const supersededId = 'superseded_reply_id_1234567890abcdef';
       const editedId = 'edited_reply_id_1234567890abcdef';
@@ -7716,7 +7905,7 @@ void main() {
             ['a', coordinate],
           ],
         );
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           <Event>[],
           [reaction],
         ]);
@@ -7748,7 +7937,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockVoteReadsSequence([
             [reaction],
             [reaction],
             <Event>[], // no deletions
@@ -7767,9 +7956,7 @@ void main() {
           // sweep over the reactions those returned. Every one has to stay
           // single-filter — NostrClient skips the local event cache the
           // moment a call carries more than one.
-          final captured = verify(
-            () => mockNostrClient.queryEvents(captureAny()),
-          ).captured.cast<List<Filter>>();
+          final captured = capturedVoteReads();
           expect(captured, hasLength(3));
           expect(captured.every((filters) => filters.length == 1), isTrue);
           expect(captured[0].single.e, equals([editedId]));
@@ -7789,19 +7976,15 @@ void main() {
           // today only by the comment page size — the same incidental bound
           // the like path already stopped relying on.
           final eventIds = [for (var i = 0; i < 600; i++) 'vote_target_$i'];
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => <Event>[]);
+          mockVoteReadsSequence([<Event>[]]);
 
           repository = createRepository(withLocalStorage: false);
           await repository.getVoteCounts(eventIds);
 
-          final eFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
-                  .cast<List<Filter>>()
-                  .map((filters) => filters.single)
-                  .where((f) => f.e != null)
-                  .toList();
+          final eFilters = capturedVoteReads()
+              .map((filters) => filters.single)
+              .where((f) => f.e != null)
+              .toList();
 
           expect(eFilters, hasLength(2));
           expect(eFilters[0].e, hasLength(500));
@@ -7821,9 +8004,7 @@ void main() {
           // `#a` leg reaches the frame cap sooner than the `#e` leg it runs
           // beside.
           final eventIds = [for (var i = 0; i < 600; i++) 'vote_target_$i'];
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => <Event>[]);
+          mockVoteReadsSequence([<Event>[]]);
 
           repository = createRepository(withLocalStorage: false);
           await repository.getVoteCounts(
@@ -7833,12 +8014,10 @@ void main() {
             },
           );
 
-          final aFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
-                  .cast<List<Filter>>()
-                  .map((filters) => filters.single)
-                  .where((f) => f.a != null)
-                  .toList();
+          final aFilters = capturedVoteReads()
+              .map((filters) => filters.single)
+              .where((f) => f.a != null)
+              .toList();
 
           expect(aFilters, hasLength(2));
           expect(aFilters[0].a, hasLength(500));
@@ -7861,9 +8040,7 @@ void main() {
           // far past the frame cap while nowhere near the count cap.
           final eventIds = [for (var i = 0; i < 300; i++) 'vote_target_$i'];
           final oversizedDTag = 'd' * 1024;
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => <Event>[]);
+          mockVoteReadsSequence([<Event>[]]);
 
           repository = createRepository(withLocalStorage: false);
           await repository.getVoteCounts(
@@ -7874,12 +8051,10 @@ void main() {
             },
           );
 
-          final aFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
-                  .cast<List<Filter>>()
-                  .map((filters) => filters.single)
-                  .where((f) => f.a != null)
-                  .toList();
+          final aFilters = capturedVoteReads()
+              .map((filters) => filters.single)
+              .where((f) => f.a != null)
+              .toList();
 
           expect(aFilters.length, greaterThan(1));
           for (final filter in aFilters) {
@@ -7898,7 +8073,7 @@ void main() {
       );
 
       test('getUserVoteStatuses resolves the own vote by coordinate', () async {
-        mockReadEventsSequence([
+        mockVoteReadsSequence([
           <Event>[],
           [
             createMockReaction(
@@ -7928,7 +8103,7 @@ void main() {
 
       test('getUserVoteStatuses still excludes a deleted coordinate '
           'vote', () async {
-        mockReadEventsSequence([
+        mockVoteReadsSequence([
           <Event>[],
           [
             createMockReaction(
@@ -7943,6 +8118,8 @@ void main() {
             ),
           ],
           [
+            // The read asks for the viewer's own deletions, so the viewer
+            // signed it; NIP-09 has the client check that (09.md:41).
             createMockDeletion(['own_downvote'], authorPubkey: testUserPubkey),
           ],
         ]);
@@ -7972,7 +8149,7 @@ void main() {
             ['e', editedId],
           ],
         );
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [reaction],
           <Event>[],
           <Event>[],
@@ -8016,7 +8193,7 @@ void main() {
             ['a', coordinate],
           ],
         );
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [liveDownvote],
           [retractedUpvote, liveDownvote],
           [
@@ -8049,7 +8226,7 @@ void main() {
             ['a', coordinate],
           ],
         );
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [upvote],
           [upvote],
           [
@@ -8079,7 +8256,7 @@ void main() {
             ['a', '34236:$testAuthorPubkey:some-other-d-tag'],
           ],
         );
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           <Event>[],
           [reaction],
         ]);
@@ -8100,7 +8277,7 @@ void main() {
         // number of votes and bury a comment in the Top order.
         const brigader = 'brigading_voter_pubkey_1234567890abcdef';
         const honest = 'honest_voter_pubkey_1234567890abcdef';
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [
             for (var i = 0; i < 3; i++)
               createMockReaction(
@@ -8132,7 +8309,7 @@ void main() {
         // A voter who switched from up to down without the retraction
         // reaching this relay still holds one vote: the newer one.
         const voter = 'some_voter_pubkey_1234567890abcdef';
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [
             createMockReaction(
               id: 'newer_downvote',
@@ -8178,7 +8355,7 @@ void main() {
           [upvote, downvote],
           [downvote, upvote],
         ]) {
-          mockQueryEventsSequence([order, <Event>[], <Event>[]]);
+          mockVoteReadsSequence([order, <Event>[], <Event>[]]);
           repository = createRepository(withLocalStorage: false);
 
           final counts = await repository.getVoteCounts([editedId]);
@@ -8191,7 +8368,7 @@ void main() {
       test('getVoteCounts counts an emoji reaction as no vote', () async {
         // NIP-25: `+` or empty content is an upvote and `-` a downvote; an
         // emoji SHOULD NOT be read as either.
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [
             createMockReaction(
               id: 'emoji_reaction',
@@ -8220,7 +8397,7 @@ void main() {
       test('getVoteCounts keeps a downvote when a newer emoji reaction '
           'follows it', () async {
         const voter = 'some_voter_pubkey_1234567890abcdef';
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [
             createMockReaction(
               id: 'newer_emoji',
@@ -8249,7 +8426,7 @@ void main() {
 
       test('getVoteCounts sends no deletion lookup for emoji-only '
           'reactions', () async {
-        mockQueryEventsSequence([
+        mockVoteReadsSequence([
           [
             createMockReaction(
               id: 'only_emoji',
@@ -8268,7 +8445,7 @@ void main() {
         expect(counts.downvotes[editedId], equals(0));
         // Only the kind 7 read: a retracted emoji can't change a vote, so
         // no kind 5 query is sent for it.
-        verify(() => mockNostrClient.queryEvents(any())).called(1);
+        expect(capturedVoteReads(), hasLength(1));
       });
 
       test('getUserVoteStatuses skips an own emoji reaction and keeps own '
@@ -8277,7 +8454,7 @@ void main() {
         // control: a skip that dropped upvotes too would still leave the
         // emoji target out of upvotedIds.
         const otherId = 'other_reply_id_1234567890abcdef';
-        mockReadEventsSequence([
+        mockVoteReadsSequence([
           [
             createMockReaction(
               id: 'own_downvote',

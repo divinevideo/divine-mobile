@@ -70,6 +70,23 @@ const _queuedLikeCheckTimeout = Duration(seconds: 15);
 /// attempt publishes, so the like is not lost.
 const _queuedLikeCheckAttempts = 3;
 
+/// How long the first read of the votes on comments waits for the relays.
+const _voteReadTimeout = Duration(seconds: 5);
+
+/// How long the one read again of the targets whose first vote read did not
+/// finish waits for the relays (#10996).
+const _voteRereadTimeout = Duration(seconds: 15);
+
+/// A chunked read, and the values whose chunk ended without a relay's answer.
+typedef _ChunkedVoteRead = ({List<Event> events, Set<String> unfinished});
+
+/// The live votes a read found, each with the target it counts toward, and
+/// the targets whose votes it could not settle.
+typedef _VoteSnapshot = ({
+  List<({String targetId, Event vote})> votes,
+  Set<String> unknownTargets,
+});
+
 /// What a relay read returned, and whether that answer was complete by the
 /// rule of the reader that built it: `_readChunked` requires proof of absence
 /// (`LikesRepository._provesAbsence`), `_queryChunkedDetailed` only that no
@@ -2005,6 +2022,10 @@ class LikesRepository {
   /// The current user's like or unlike that is still queued counts as
   /// published, so the totals agree with [getUserVoteStatuses] (#10922).
   ///
+  /// A target whose votes the relays did not settle, even when read again
+  /// with a longer budget, is left out of both maps: its count is unknown,
+  /// not zero (#10996).
+  ///
   /// Returns a record of upvote and downvote count maps.
   Future<({Map<String, int> upvotes, Map<String, int> downvotes})>
   getVoteCounts(
@@ -2019,54 +2040,29 @@ class LikesRepository {
       eventIds,
       addressableIds,
     );
-    final knownEventIds = eventIds.toSet();
     // Read the queue before the relays: a vote already gone from it was
     // published, so the relay read that follows has it, and one still in it
     // is counted once even if its publish lands during that read.
-    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
+    final queuedLikesFuture = _queuedLikesOn(eventIds.toSet());
 
-    final events = await _queryVoteTargetReactions(
-      eventIds: eventIds,
-      eventIdByCoordinate: eventIdByCoordinate,
-    );
+    final snapshot = await _readVotes(eventIds, eventIdByCoordinate);
 
-    final upvotes = <String, int>{};
-    final downvotes = <String, int>{};
-    for (final eventId in eventIds) {
-      upvotes[eventId] = 0;
-      downvotes[eventId] = 0;
-    }
-
-    // Retracted votes have to be excluded here, not just in
-    // [getUserVoteStatuses]. The coordinate leg reaches reactions cast against
-    // every earlier revision of the target, including ones their author has
-    // since deleted — switching an upvote to a downvote on an edited reply
-    // publishes exactly that pair. Counting both inflates the visible totals
-    // and incorrectly gives the reply a net score of zero (#6124).
-    // Emoji reactions are dropped before the deletion lookup, since a
-    // retracted emoji can't change a vote.
-    final reactionsById = {
-      for (final event in events.where(_isVoteReaction)) event.id: event,
+    final upvotes = <String, int>{
+      for (final eventId in eventIds)
+        if (!snapshot.unknownTargets.contains(eventId)) eventId: 0,
     };
-    final deletedReactionIds = await _deletedReactionIds(reactionsById);
+    final downvotes = {...upvotes};
 
     // One vote per account per target, decided by the account's newest
     // surviving reaction. Kind 7 is a regular event, so a relay keeps every
     // reaction an account publishes; counting events would let one account
     // cast any number of votes and set a comment's place in the Top order.
     final newestVoteByVoter = <(String, String), Event>{};
-    for (final event in reactionsById.values) {
-      if (deletedReactionIds.contains(event.id)) continue;
-      final targetId = _resolveVoteTarget(
-        event,
-        knownEventIds,
-        eventIdByCoordinate,
-      );
-      if (targetId == null) continue;
-      final key = (targetId, event.pubkey);
+    for (final (:targetId, :vote) in snapshot.votes) {
+      final key = (targetId, vote.pubkey);
       final current = newestVoteByVoter[key];
-      if (current == null || _isNewerReaction(event, current)) {
-        newestVoteByVoter[key] = event;
+      if (current == null || _isNewerReaction(vote, current)) {
+        newestVoteByVoter[key] = vote;
       }
     }
 
@@ -2079,6 +2075,7 @@ class LikesRepository {
     if (viewer != null) {
       for (final MapEntry(key: targetId, value: isLike)
           in queuedLikes.entries) {
+        if (!upvotes.containsKey(targetId)) continue;
         final key = (targetId, viewer);
         if (isLike) {
           isDownvoteByVoter[key] = false;
@@ -2109,83 +2106,54 @@ class LikesRepository {
   /// A like or unlike that is still queued counts as published (#10922).
   ///
   /// Returns the sets of event IDs the user has upvoted or downvoted.
-  ///
-  /// Throws [LikesRepositoryException] when the relays could not prove the
-  /// answer: a read that ended short, or a vote whose deletion they could
-  /// not rule out (#10809).
-  Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
+  /// `unknownIds` names the targets whose votes could not be settled, even
+  /// when read again with a longer budget: the sets say nothing about those
+  /// targets, and stay right for the rest (#10996). Only a proven answer
+  /// settles a target, since a short one would clear the arrow of a vote that
+  /// is still live or keep the arrow of one already taken back (#10809).
+  Future<
+    ({Set<String> upvotedIds, Set<String> downvotedIds, Set<String> unknownIds})
+  >
   getUserVoteStatuses(
     List<String> eventIds, {
     Map<String, String> addressableIds = const {},
   }) async {
     if (eventIds.isEmpty) {
-      return (upvotedIds: <String>{}, downvotedIds: <String>{});
+      return (
+        upvotedIds: <String>{},
+        downvotedIds: <String>{},
+        unknownIds: <String>{},
+      );
     }
 
     // Signed out: both queries below are author-scoped, and a null author
     // would widen them to every user's votes rather than narrowing to none.
     final pubkey = await _currentUserPubkey();
     if (pubkey == null) {
-      return (upvotedIds: <String>{}, downvotedIds: <String>{});
+      return (
+        upvotedIds: <String>{},
+        downvotedIds: <String>{},
+        unknownIds: <String>{},
+      );
     }
 
     final eventIdByCoordinate = _voteTargetsByCoordinate(
       eventIds,
       addressableIds,
     );
-    final knownEventIds = eventIds.toSet();
     // Read before the relays, as in [getVoteCounts].
-    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
+    final queuedLikesFuture = _queuedLikesOn(eventIds.toSet());
 
-    // Both reads wait for every relay, and only a proven answer counts: a
-    // short one would clear the arrow of a vote that is still live, or keep
-    // the arrow of one already taken back (#10809).
-    const unconfirmed = LikesRepositoryException(
-      "Relays did not confirm this account's votes",
+    final snapshot = await _readVotes(
+      eventIds,
+      eventIdByCoordinate,
+      voter: pubkey,
     );
-    // With no `limit`, a relay that publishes no `max_limit` counts as
-    // possibly capped as soon as it returns one vote, so nothing found would
-    // ever be proven.
-    Filter votesOn({List<String>? e, List<String>? a}) => Filter(
-      kinds: const [EventKind.reaction],
-      authors: [pubkey],
-      e: e,
-      a: a,
-      limit: _defaultReactionFetchLimit,
-    );
-    final reads = await Future.wait([
-      _readChunked(eventIds, (chunk) => votesOn(e: chunk)),
-      _readChunked(
-        eventIdByCoordinate.keys.toList(),
-        (chunk) => votesOn(a: chunk),
-      ),
-    ]);
-    if (!reads.every((read) => read.isComplete)) throw unconfirmed;
-
-    // A relay that ignores `authors`, or a merged cache hit, must not fill
-    // this account's arrow with someone else's vote.
-    final votesById = {
-      for (final read in reads)
-        for (final event in read.events)
-          if (event.pubkey == pubkey && _isVoteReaction(event)) event.id: event,
-    };
-    final retractions = await _readRetractions(votesById, pubkey: pubkey);
-    if (retractions.undecided.isNotEmpty) throw unconfirmed;
 
     final upvotedIds = <String>{};
     final downvotedIds = <String>{};
-
-    for (final event in votesById.values) {
-      if (retractions.retracted.contains(event.id)) continue;
-
-      final targetId = _resolveVoteTarget(
-        event,
-        knownEventIds,
-        eventIdByCoordinate,
-      );
-      if (targetId == null) continue;
-
-      if (event.content == _downvoteContent) {
+    for (final (:targetId, :vote) in snapshot.votes) {
+      if (vote.content == _downvoteContent) {
         downvotedIds.add(targetId);
       } else {
         upvotedIds.add(targetId);
@@ -2202,8 +2170,227 @@ class LikesRepository {
       }
     }
 
-    return (upvotedIds: upvotedIds, downvotedIds: downvotedIds);
+    return (
+      upvotedIds: upvotedIds,
+      downvotedIds: downvotedIds,
+      unknownIds: snapshot.unknownTargets,
+    );
   }
+
+  /// Reads the live votes on [eventIds], and reads once more, with a longer
+  /// budget, the targets whose first read did not finish (#10996).
+  ///
+  /// With [voter], only that account's votes and deletions are read, and a
+  /// target settles only on a proven answer (#10809). Without it, every
+  /// account's votes are read, and a relay's answer settles a target.
+  Future<_VoteSnapshot> _readVotes(
+    List<String> eventIds,
+    Map<String, String> eventIdByCoordinate, {
+    String? voter,
+  }) async {
+    final first = await _readVotesOnce(
+      eventIds,
+      eventIdByCoordinate,
+      voter: voter,
+      timeout: _voteReadTimeout,
+    );
+    final unknown = first.unknownTargets;
+    if (unknown.isEmpty) return first;
+
+    final again = await _readVotesOnce(
+      eventIds,
+      eventIdByCoordinate,
+      voter: voter,
+      timeout: _voteRereadTimeout,
+      targetsToRead: unknown,
+    );
+    return (
+      votes: [...first.votes, ...again.votes],
+      unknownTargets: again.unknownTargets,
+    );
+  }
+
+  /// One read of the live votes on [eventIds], by `#e` and by coordinate.
+  ///
+  /// A target is unknown, and its votes left out, when a read asking for it,
+  /// or for the retractions of a vote found on it, ended without a relay's
+  /// answer.
+  Future<_VoteSnapshot> _readVotesOnce(
+    List<String> eventIds,
+    Map<String, String> eventIdByCoordinate, {
+    required Duration timeout,
+    String? voter,
+    Set<String>? targetsToRead,
+  }) async {
+    // Narrow the queries, not target resolution: a reaction returned for a
+    // copied ancestor tag must still resolve to its already-settled target.
+    final readIds = targetsToRead == null
+        ? eventIds
+        : eventIds.where(targetsToRead.contains).toList();
+    final readCoordinates = [
+      for (final MapEntry(key: coordinate, value: eventId)
+          in eventIdByCoordinate.entries)
+        if (targetsToRead == null || targetsToRead.contains(eventId))
+          coordinate,
+    ];
+    // A proof needs a `limit`: without one, a relay that publishes no
+    // `max_limit` counts as possibly capped once it returns a single vote.
+    Filter votesOn({List<String>? e, List<String>? a}) => Filter(
+      kinds: const [EventKind.reaction],
+      authors: voter == null ? null : [voter],
+      e: e,
+      a: a,
+      limit: voter == null ? null : _defaultReactionFetchLimit,
+    );
+    final reads = await Future.wait([
+      _readVoteChunks(
+        readIds,
+        (chunk) => votesOn(e: chunk),
+        timeout: timeout,
+        requireProof: voter != null,
+      ),
+      _readVoteChunks(
+        readCoordinates,
+        (chunk) => votesOn(a: chunk),
+        timeout: timeout,
+        requireProof: voter != null,
+      ),
+    ]);
+    final unknownTargets = <String>{
+      ...reads[0].unfinished,
+      for (final coordinate in reads[1].unfinished)
+        ?eventIdByCoordinate[coordinate],
+    };
+
+    // Retracted votes have to be excluded. The coordinate leg reaches
+    // reactions cast against every earlier revision of the target, including
+    // ones their author has since deleted — switching an upvote to a downvote
+    // on an edited reply publishes exactly that pair (#6124). Emoji reactions
+    // are dropped first, since a retracted emoji can't change a vote. A relay
+    // that ignores `authors`, or a merged cache hit, must not give [voter]
+    // someone else's vote.
+    final votesById = {
+      for (final event in [...reads[0].events, ...reads[1].events])
+        if (_isVoteReaction(event) && (voter == null || event.pubkey == voter))
+          event.id: event,
+    };
+    final retractions = await _readVoteRetractions(
+      votesById,
+      voter: voter,
+      timeout: timeout,
+    );
+
+    final knownEventIds = eventIds.toSet();
+    final votes = <({String targetId, Event vote})>[];
+    for (final vote in votesById.values) {
+      final targetId = _resolveVoteTarget(
+        vote,
+        knownEventIds,
+        eventIdByCoordinate,
+      );
+      if (targetId == null ||
+          (targetsToRead != null && !targetsToRead.contains(targetId)) ||
+          retractions.retracted.contains(vote.id)) {
+        continue;
+      }
+      if (retractions.undecided.contains(vote.id)) {
+        unknownTargets.add(targetId);
+      } else {
+        votes.add((targetId: targetId, vote: vote));
+      }
+    }
+    return (
+      votes: [
+        for (final entry in votes)
+          if (!unknownTargets.contains(entry.targetId)) entry,
+      ],
+      unknownTargets: unknownTargets,
+    );
+  }
+
+  /// Reads the retractions of [votesById]: a vote is retracted when a
+  /// deletion its own author signed names it, and undecided when the read
+  /// asking for it ended without a relay's answer, or without proof of it
+  /// when the votes are [voter]'s.
+  Future<_Retractions> _readVoteRetractions(
+    Map<String, Event> votesById, {
+    required Duration timeout,
+    String? voter,
+  }) async {
+    final read = await _readVoteChunks(
+      votesById.keys.toList(),
+      (chunk) => Filter(
+        kinds: const [EventKind.eventDeletion],
+        authors: voter == null ? null : [voter],
+        e: chunk,
+        limit: voter == null ? null : _defaultReactionFetchLimit,
+      ),
+      timeout: timeout,
+      requireProof: voter != null,
+    );
+    final retracted = <String>{};
+    for (final deletion in read.events) {
+      for (final tag in deletion.tags) {
+        if (tag.length > 1 && tag[0] == 'e') {
+          final vote = votesById[tag[1]];
+          if (vote != null && vote.pubkey == deletion.pubkey) {
+            retracted.add(vote.id);
+          }
+        }
+      }
+    }
+    return (
+      retracted: retracted,
+      undecided: read.unfinished.difference(retracted),
+    );
+  }
+
+  /// Runs [buildFilter] over [values] in chunks, as [_queryChunked] does, and
+  /// names the values whose chunk ended without a relay's answer.
+  ///
+  /// Without [requireProof] a chunk settles shortly after the first relays
+  /// answer, so a silent extra relay does not hold it to its deadline. With
+  /// it, a chunk waits for every relay and needs [_provesAbsence] too.
+  Future<_ChunkedVoteRead> _readVoteChunks(
+    List<String> values,
+    Filter Function(List<String> chunk) buildFilter, {
+    required Duration timeout,
+    required bool requireProof,
+  }) async {
+    if (values.isEmpty) {
+      return (events: const <Event>[], unfinished: const <String>{});
+    }
+
+    final chunks = _chunkStrings(values, _reqEidChunkSize);
+    final filters = [for (final chunk in chunks) buildFilter(chunk)];
+    final results = await Future.wait([
+      for (final filter in filters)
+        _nostrClient.readEvents(
+          [filter],
+          requireAllRelaysSettled: requireProof,
+          timeout: timeout,
+        ),
+    ]);
+    return (
+      events: {
+        for (final result in results)
+          for (final event in result.events) event.id: event,
+      }.values.toList(),
+      unfinished: {
+        for (var i = 0; i < chunks.length; i++)
+          if (!_aRelayAnswered(results[i]) ||
+              (requireProof && !_provesAbsence(results[i], filters[i])))
+            ...chunks[i],
+      },
+    );
+  }
+
+  /// Whether [read] ended on a relay's answer: a network relay sent `EOSE`
+  /// and the read did not stop at its deadline. A relay's `CLOSED`, a dropped
+  /// socket or a read no relay took is no answer, though one relay refusing
+  /// beside another's `EOSE` still leaves an answer (#10996).
+  static bool _aRelayAnswered(QueryResult read) =>
+      read.answeredNetworkRelayCount > 0 && read.endedBy != QueryEnd.deadline;
 
   /// The current user's queued vote on each of [targets]: `true` for a
   /// queued like, `false` for a queued unlike, decided by the newest queued
@@ -2221,27 +2408,6 @@ class LikesRepository {
       for (final action in actions ?? const <QueuedLikeAction>[])
         if (targets.contains(action.eventId)) action.eventId: action.isLike,
     };
-  }
-
-  Future<List<Event>> _queryVoteTargetReactions({
-    required List<String> eventIds,
-    required Map<String, String> eventIdByCoordinate,
-  }) async {
-    final eEventsFuture = _queryChunked(
-      eventIds,
-      (chunk) => Filter(kinds: const [EventKind.reaction], e: chunk),
-    );
-    final aEventsFuture = _queryChunked(
-      eventIdByCoordinate.keys.toList(),
-      (chunk) => Filter(kinds: const [EventKind.reaction], a: chunk),
-    );
-    final results = await Future.wait([eEventsFuture, aEventsFuture]);
-
-    final eventsById = <String, Event>{};
-    for (final event in [...results[0], ...results[1]]) {
-      eventsById[event.id] = event;
-    }
-    return eventsById.values.toList();
   }
 
   /// Inverts [addressableIds] into a coordinate → event-id lookup, limited to

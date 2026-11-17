@@ -54,7 +54,11 @@ void main() {
         (_) async => (upvotes: <String, int>{}, downvotes: <String, int>{}),
       );
       when(() => mockLikesRepository.getUserVoteStatuses(any())).thenAnswer(
-        (_) async => (upvotedIds: <String>{}, downvotedIds: <String>{}),
+        (_) async => (
+          upvotedIds: <String>{},
+          downvotedIds: <String>{},
+          unknownIds: <String>{},
+        ),
       );
       when(
         () => mockLikesRepository.watchLikedEventIds(),
@@ -169,7 +173,13 @@ void main() {
       test('publishes totals while the viewer vote is still loading', () async {
         final id = validId('c1');
         final viewerVote =
-            Completer<({Set<String> upvotedIds, Set<String> downvotedIds})>();
+            Completer<
+              ({
+                Set<String> upvotedIds,
+                Set<String> downvotedIds,
+                Set<String> unknownIds,
+              })
+            >();
         when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
           (_) async => (upvotes: {id: 4}, downvotes: {id: 2}),
         );
@@ -180,7 +190,11 @@ void main() {
         final bloc = createBloc();
         addTearDown(() async {
           if (!viewerVote.isCompleted) {
-            viewerVote.complete((upvotedIds: {id}, downvotedIds: <String>{}));
+            viewerVote.complete((
+              upvotedIds: {id},
+              downvotedIds: <String>{},
+              unknownIds: <String>{},
+            ));
           }
           await bloc.close();
         });
@@ -191,7 +205,11 @@ void main() {
         expect(bloc.state.commentDownvoteCounts[id], 2);
         expect(bloc.state.upvotedCommentIds, isEmpty);
 
-        viewerVote.complete((upvotedIds: {id}, downvotedIds: <String>{}));
+        viewerVote.complete((
+          upvotedIds: {id},
+          downvotedIds: <String>{},
+          unknownIds: <String>{},
+        ));
         await pumpEventQueue();
 
         expect(bloc.state.upvotedCommentIds, {id});
@@ -306,7 +324,13 @@ void main() {
       test('drops a viewer-vote read that a vote overtook', () async {
         final id = validId('c1');
         final staleViewerVote =
-            Completer<({Set<String> upvotedIds, Set<String> downvotedIds})>();
+            Completer<
+              ({
+                Set<String> upvotedIds,
+                Set<String> downvotedIds,
+                Set<String> unknownIds,
+              })
+            >();
         var reads = 0;
         when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
           (_) async =>
@@ -339,7 +363,11 @@ void main() {
 
         // The relay snapshot predates the vote, so it says "not upvoted".
         staleViewerVote.complete(
-          (upvotedIds: <String>{}, downvotedIds: <String>{}),
+          (
+            upvotedIds: <String>{},
+            downvotedIds: <String>{},
+            unknownIds: <String>{},
+          ),
         );
         await pumpEventQueue();
 
@@ -402,6 +430,7 @@ void main() {
           (_) async => (
             upvotedIds: ++reads == 1 ? {id} : <String>{},
             downvotedIds: <String>{},
+            unknownIds: <String>{},
           ),
         );
 
@@ -419,6 +448,78 @@ void main() {
         expect(bloc.state.upvotedCommentIds, isEmpty);
       });
 
+      test('keeps the viewer arrows when a viewer-vote read did not '
+          'finish (#10996)', () async {
+        final id = validId('c1');
+        var reads = 0;
+        when(() => mockLikesRepository.getUserVoteStatuses([id])).thenAnswer(
+          (_) async => ++reads == 1
+              ? (
+                  upvotedIds: {id},
+                  downvotedIds: <String>{},
+                  unknownIds: <String>{},
+                )
+              : (
+                  upvotedIds: <String>{},
+                  downvotedIds: <String>{},
+                  unknownIds: {id},
+                ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+        expect(bloc.state.upvotedCommentIds, {id});
+
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+
+        expect(reads, 2);
+        expect(bloc.state.upvotedCommentIds, {id});
+      });
+
+      test('shows the viewer arrow on a comment whose read finished beside '
+          'one whose read did not (#10996)', () async {
+        final settled = validId('c1');
+        final unsettled = validId('c2');
+        when(
+          () => mockLikesRepository.getUserVoteStatuses([settled, unsettled]),
+        ).thenAnswer(
+          (_) async => (
+            upvotedIds: {settled},
+            downvotedIds: <String>{},
+            unknownIds: {unsettled},
+          ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([settled, unsettled]));
+        await pumpEventQueue();
+
+        expect(bloc.state.upvotedCommentIds, {settled});
+      });
+
+      test('leaves a total unknown when the repository could not settle '
+          'it (#10996)', () async {
+        final known = validId('c1');
+        final unknown = validId('c2');
+        when(
+          () => mockLikesRepository.getVoteCounts([known, unknown]),
+        ).thenAnswer((_) async => (upvotes: {known: 3}, downvotes: {known: 1}));
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([known, unknown]));
+        await pumpEventQueue();
+
+        expect(bloc.state.isLoadingVoteCounts, isFalse);
+        expect(bloc.state.commentUpvoteCounts[known], 3);
+        expect(bloc.state.commentUpvoteCounts, isNot(contains(unknown)));
+        expect(bloc.state.commentDownvoteCounts, isNot(contains(unknown)));
+      });
+
       blocTest<CommentReactionsBloc, CommentReactionsState>(
         'populates counts and statuses from likes repo',
         setUp: () {
@@ -427,8 +528,11 @@ void main() {
                 (upvotes: {validId('c1'): 5}, downvotes: {validId('c1'): 1}),
           );
           when(() => mockLikesRepository.getUserVoteStatuses(any())).thenAnswer(
-            (_) async =>
-                (upvotedIds: {validId('c1')}, downvotedIds: <String>{}),
+            (_) async => (
+              upvotedIds: {validId('c1')},
+              downvotedIds: <String>{},
+              unknownIds: <String>{},
+            ),
           );
         },
         build: createBloc,
@@ -474,7 +578,11 @@ void main() {
               addressableIds: any(named: 'addressableIds'),
             ),
           ).thenAnswer(
-            (_) async => (upvotedIds: <String>{}, downvotedIds: <String>{}),
+            (_) async => (
+              upvotedIds: <String>{},
+              downvotedIds: <String>{},
+              unknownIds: <String>{},
+            ),
           );
         },
         build: createBloc,

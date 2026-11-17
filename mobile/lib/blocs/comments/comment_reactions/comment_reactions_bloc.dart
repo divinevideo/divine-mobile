@@ -255,7 +255,13 @@ class CommentReactionsBloc
       );
       if (emit.isDone) return;
 
-      final refreshed = viewerIds.where(canApply).toSet();
+      // A comment whose read did not finish cannot tell a vote taken back
+      // from one the read did not reach, so its arrows stay as they are. The
+      // comments whose reads finished still refresh (#10996).
+      final refreshed = viewerIds
+          .where(canApply)
+          .toSet()
+          .difference(votes.unknownIds);
       emit(
         state.copyWith(
           upvotedCommentIds: {

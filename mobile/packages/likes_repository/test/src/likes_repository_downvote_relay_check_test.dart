@@ -61,6 +61,7 @@ class _Relay {
       return QueryResult(
         events: answer.events,
         endedBy: answer.complete ? QueryEnd.complete : QueryEnd.deadline,
+        answeredNetworkRelayCount: answer.complete ? 1 : 0,
         possiblyCapped: answer.possiblyCapped,
       );
     });
@@ -471,28 +472,28 @@ void main() {
       );
     });
     group('getUserVoteStatuses', () {
-      test('throws instead of reporting no vote when the relays did not '
-          'answer', () async {
+      test('reports the comment unknown instead of reporting no vote when '
+          'the relays did not answer', () async {
         relay
           ..vote(_me, _comment, content: '-')
           ..answers = false;
 
-        await expectLater(
-          repository.getUserVoteStatuses([_comment]),
-          throwsA(isA<LikesRepositoryException>()),
-        );
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.unknownIds, equals({_comment}));
+        expect(votes.downvotedIds, isEmpty);
       });
 
-      test('throws instead of showing a vote whose deletion it could not '
-          'read', () async {
+      test('reports the comment unknown instead of showing a vote whose '
+          'deletion it could not read', () async {
         relay
           ..vote(_me, _comment, content: '-')
           ..deletionsAnswer = false;
 
-        await expectLater(
-          repository.getUserVoteStatuses([_comment]),
-          throwsA(isA<LikesRepositoryException>()),
-        );
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.unknownIds, equals({_comment}));
+        expect(votes.downvotedIds, isEmpty);
       });
 
       test("finds a vote's deletion past the relay's result limit", () async {
@@ -506,6 +507,7 @@ void main() {
 
         final votes = await repository.getUserVoteStatuses([_comment]);
 
+        expect(votes.unknownIds, isEmpty);
         expect(votes.downvotedIds, isEmpty);
       });
 
@@ -516,6 +518,7 @@ void main() {
 
         final votes = await repository.getUserVoteStatuses([_comment]);
 
+        expect(votes.unknownIds, isEmpty);
         expect(votes.downvotedIds, isEmpty);
       });
 
