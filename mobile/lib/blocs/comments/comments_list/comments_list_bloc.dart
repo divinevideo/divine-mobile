@@ -584,8 +584,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   ) {
     // A post can rank below other comments in Top until the order is
     // frozen, and goes on top after. In Recent a new top-level post lands at
-    // the top, while replies can nest off-screen under an older parent
-    // (#5854).
+    // the top. In either mode a reply nests under its parent, which can be
+    // off-screen (#5854).
     final updated = {
       ...state.commentsById,
       event.placeholder.id: event.placeholder,

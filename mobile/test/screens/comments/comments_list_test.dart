@@ -334,9 +334,8 @@ void main() {
           .widgetList<CommentItem>(find.byType(CommentItem))
           .map((item) => item.comment.id);
 
-      testWidgets('ranks replies with all comments by net votes', (
-        tester,
-      ) async {
+      testWidgets('ranks threads by net votes with replies nested under '
+          'their parent', (tester) async {
         when(() => mockReactionsBloc.state).thenReturn(
           CommentReactionsState(
             commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
@@ -347,7 +346,13 @@ void main() {
         await tester.pumpWidget(buildTestWidget(listState: listState()));
         await tester.pump();
 
-        expect(displayedOrder(tester), [highest.id, unvoted.id, runnerUp.id]);
+        // The upvoted reply stays under the comment it answers.
+        expect(
+          tester
+              .widgetList<CommentItem>(find.byType(CommentItem))
+              .map((item) => (item.comment.id, item.depth)),
+          [(unvoted.id, 0), (runnerUp.id, 0), (highest.id, 1)],
+        );
       });
 
       // Replaces "reorders when downvotes change" (#10921): once the order is
@@ -361,15 +366,22 @@ void main() {
         final updates = StreamController<CommentReactionsState>();
         addTearDown(updates.close);
         whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
-        final frozen = [highest.id, runnerUp.id, unvoted.id];
+        final frozen = [runnerUp.id, highest.id, unvoted.id];
 
         await tester.pumpWidget(
-          buildTestWidget(listState: listState(topOrder: frozen)),
+          buildTestWidget(
+            listState: listState(
+              topOrder: [highest.id, runnerUp.id, unvoted.id],
+            ),
+          ),
         );
         await tester.pump();
         expect(displayedOrder(tester), frozen);
 
-        updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
+        // Ranked live, the unvoted comment would now rise above runnerUp.
+        updates.add(
+          reactions.copyWith(commentDownvoteCounts: {runnerUp.id: 7}),
+        );
         await tester.pump();
 
         expect(displayedOrder(tester), frozen);
