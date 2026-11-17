@@ -48,7 +48,7 @@ void main() {
       await expectLater(_read(), throwsA(isA<Error>()));
     });
 
-    test('fails a write instead of keeping it', () async {
+    test('rejects a write and says how to install a store', () async {
       await resetCacheSyncStore();
 
       await expectLater(
@@ -62,6 +62,24 @@ void main() {
         ),
       );
     });
+
+    test(
+      'throws on invalidation synchronously, as an unset store does',
+      () async {
+        await resetCacheSyncStore();
+
+        // ignore() drops an asynchronous failure, so only a synchronous throw
+        // reaches the matcher.
+        expect(
+          () => CacheSync.invalidate(_key).ignore(),
+          throwsA(isA<Error>()),
+        );
+        expect(
+          () => CacheSync.invalidatePrefix(_key).ignore(),
+          throwsA(isA<Error>()),
+        );
+      },
+    );
   });
 
   group('flutter_test_config', () {
