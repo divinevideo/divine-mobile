@@ -5,7 +5,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:db_client/db_client.dart';
+import 'package:bookmarks_repository/bookmarks_repository.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,12 +20,14 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/bookmark_signer_adapter.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
@@ -76,6 +79,8 @@ class _MockPushNotificationSessionCoordinator extends Mock
 class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
@@ -246,13 +251,18 @@ void main() {
     );
   }
 
-  AuthService makeIncomingAuth({bool failClaim = false}) {
+  AuthService makeIncomingAuth({
+    bool failClaim = false,
+    UserDataCleanupService? userDataCleanupService,
+  }) {
     final discovery = _MockDiscovery();
     when(() => discovery.discoverRelays(any())).thenAnswer(
       (_) async =>
           RelayDiscoveryResult.failure('No network in account swap tests'),
     );
-    final cleanup = UserDataCleanupService(deviceScope.sharedPreferences);
+    final cleanup =
+        userDataCleanupService ??
+        UserDataCleanupService(deviceScope.sharedPreferences);
     if (failClaim) {
       cleanup.onClaimLegacyRows = (owner) async =>
           throw StateError('database unavailable');
@@ -2309,6 +2319,267 @@ void main() {
       expect(events, equals(['suspend lists', 'resume lists']));
     });
   });
+
+  // The incoming sign-in clears the device-wide bookmark keys, and the leaving
+  // container is disposed only after the swap commits. A bookmark sync the
+  // leaving account started earlier must not save that account's list into
+  // the cleared keys when its relay read answers in between. See #8313.
+  group('outgoing bookmarks (#8313)', () {
+    // Named by the leaving account's list on the relay.
+    const relayBookmarkId =
+        'a831300000000000000000000000000000000000000000000000000000000001';
+    // Named only by the snapshot an earlier sync left on the device.
+    const cachedBookmarkId =
+        'a831300000000000000000000000000000000000000000000000000000000002';
+
+    late _MockNostrClient bookmarksClient;
+    late Completer<({List<Event> events, bool timedOut, bool noRelays})>
+    relayAnswer;
+
+    setUpAll(() => registerFallbackValue(<Filter>[]));
+
+    setUp(() async {
+      bookmarksClient = _MockNostrClient();
+      relayAnswer = Completer();
+      when(
+        () => bookmarksClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer((_) => relayAnswer.future);
+      await deviceScope.sharedPreferences.setString(
+        BookmarksRepository.globalBookmarksStorageKey,
+        jsonEncode([
+          {'type': 'e', 'id': cachedBookmarkId},
+        ]),
+      );
+    });
+
+    void answerWithLeavingList() => relayAnswer.complete((
+      events: [
+        Event(leavingHex, BookmarksRepository.globalBookmarksKind, [
+          ['e', relayBookmarkId],
+        ], ''),
+      ],
+      timedOut: false,
+      noRelays: false,
+    ));
+
+    /// Mounts the leaving account with a real [BookmarksRepository], as its
+    /// Saved tab does, and starts a sync whose relay read has not answered.
+    Future<Future<bool>> pumpLeavingSyncInFlight(WidgetTester tester) async {
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          bookmarksRepositoryProvider.overrideWith((ref) {
+            final repository = BookmarksRepository(
+              nostrClient: bookmarksClient,
+              signer: BookmarkSignerAdapter(currentAuthService),
+              prefs: deviceScope.sharedPreferences,
+            );
+            ref.onDispose(repository.dispose);
+            return repository;
+          }),
+        ],
+      );
+      final sync = leaving
+          .read(bookmarksRepositoryProvider)
+          .syncGlobalBookmarks();
+      await tester.pump();
+      return sync;
+    }
+
+    Future<void> switchToTarget() => driveSwap(
+      swapAccount(
+        deviceScope: deviceScope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        signIn: (_, _) async {},
+      ),
+    );
+
+    /// Switches to the target while the leaving read answers just after the
+    /// target's sign-in cleared the device-wide keys. Returns what the
+    /// bookmark key held at that moment and whether the leaving sync settled
+    /// the list it read.
+    Future<({String? keyAfterCleanup, bool leavingSynced})>
+    switchWhileLeavingReadAnswersAfterCleanup(WidgetTester tester) async {
+      late Future<bool> leavingSync;
+      String? keyAfterCleanup;
+      var leavingSynced = false;
+      incomingAuthOverride = makeIncomingAuth(
+        userDataCleanupService: _IdentityCleanupThen(
+          deviceScope.sharedPreferences,
+          afterIdentityCleanup: () async {
+            keyAfterCleanup = deviceScope.sharedPreferences.getString(
+              BookmarksRepository.globalBookmarksStorageKey,
+            );
+            answerWithLeavingList();
+            leavingSynced = await leavingSync;
+          },
+        ),
+      );
+      leavingSync = await pumpLeavingSyncInFlight(tester);
+
+      await switchToTarget();
+      await tester.pump();
+      return (keyAfterCleanup: keyAfterCleanup, leavingSynced: leavingSynced);
+    }
+
+    testWidgets('keeps the leaving list out of the cleared keys when its '
+        'read answers after the target signs in', (tester) async {
+      final prefs = deviceScope.sharedPreferences;
+
+      final result = await switchWhileLeavingReadAnswersAfterCleanup(tester);
+
+      expect(result.leavingSynced, isTrue);
+      expect(result.keyAfterCleanup, isNull);
+      expect(prefs.getString('current_user_pubkey_hex'), equals(targetHex));
+      expect(
+        prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+        isNull,
+      );
+      expect(
+        prefs.getString(BookmarksRepository.globalBookmarksRevisionStorageKey),
+        isNull,
+      );
+    });
+
+    testWidgets("does not start the target with the leaving account's "
+        'bookmarks', (tester) async {
+      final result = await switchWhileLeavingReadAnswersAfterCleanup(tester);
+      expect(result.leavingSynced, isTrue);
+
+      final targetBookmarks = BookmarksRepository(
+        nostrClient: _MockNostrClient(),
+        signer: BookmarkSignerAdapter(
+          controller.currentContainer!.read(authServiceProvider),
+        ),
+        prefs: deviceScope.sharedPreferences,
+      );
+      addTearDown(targetBookmarks.dispose);
+
+      expect(targetBookmarks.globalBookmarks, isEmpty);
+    });
+
+    testWidgets('suspends the leaving bookmarks before signing the target in', (
+      tester,
+    ) async {
+      final events = <String>[];
+      final bookmarks = _MockBookmarksRepository();
+      when(bookmarks.suspend).thenAnswer((_) => events.add('suspend'));
+      when(bookmarks.resume).thenAnswer((_) => events.add('resume'));
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          bookmarksRepositoryProvider.overrideWithValue(bookmarks),
+        ],
+      );
+      leaving.read(bookmarksRepositoryProvider);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
+      );
+      await tester.pump();
+
+      expect(events, equals(['suspend', 'sign in target']));
+    });
+
+    testWidgets('resumes the leaving bookmarks when the target sign-in fails', (
+      tester,
+    ) async {
+      final events = <String>[];
+      final bookmarks = _MockBookmarksRepository();
+      when(bookmarks.suspend).thenAnswer((_) => events.add('suspend'));
+      when(bookmarks.resume).thenAnswer((_) => events.add('resume'));
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          bookmarksRepositoryProvider.overrideWithValue(bookmarks),
+        ],
+      );
+      leaving.read(bookmarksRepositoryProvider);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw _FakeSignInException(),
+        ),
+        expected: throwsA(isA<_FakeSignInException>()),
+      );
+      await tester.pump();
+
+      // The leaving account stays signed in on a rollback.
+      expect(events, equals(['suspend', 'resume']));
+    });
+
+    testWidgets('clears a leaving list saved before the target signs in', (
+      tester,
+    ) async {
+      final prefs = deviceScope.sharedPreferences;
+      final leavingSync = await pumpLeavingSyncInFlight(tester);
+      answerWithLeavingList();
+      bool? leavingSynced;
+      unawaited(leavingSync.then((synced) => leavingSynced = synced));
+      // The preference writes settle across frames, as in driveSwap.
+      for (var frame = 0; leavingSynced == null && frame < 50; frame += 1) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+      expect(leavingSynced, isTrue);
+      expect(
+        prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+        contains(relayBookmarkId),
+      );
+
+      await switchToTarget();
+      await tester.pump();
+
+      expect(
+        prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+        isNull,
+      );
+    });
+  });
+}
+
+/// Runs the real identity-change cleanup, then [afterIdentityCleanup]: the
+/// moment a relay answering the leaving account's read lands after the
+/// incoming sign-in has wiped the device-wide keys (#8313).
+class _IdentityCleanupThen extends UserDataCleanupService {
+  _IdentityCleanupThen(super._prefs, {required this.afterIdentityCleanup});
+
+  final Future<void> Function() afterIdentityCleanup;
+
+  @override
+  Future<int> clearUserSpecificData({
+    String? reason,
+    bool isIdentityChange = false,
+    String? userPubkey,
+    bool deleteUserData = false,
+    bool forgetAccount = false,
+  }) async {
+    final cleared = await super.clearUserSpecificData(
+      reason: reason,
+      isIdentityChange: isIdentityChange,
+      userPubkey: userPubkey,
+      deleteUserData: deleteUserData,
+      forgetAccount: forgetAccount,
+    );
+    if (isIdentityChange) await afterIdentityCleanup();
+    return cleared;
+  }
 }
 
 class _RefusingCleanupPreferences extends Fake implements SharedPreferences {

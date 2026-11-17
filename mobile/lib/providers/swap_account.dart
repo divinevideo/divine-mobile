@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
@@ -127,6 +128,20 @@ CuratedListService? _suspendOutgoingCuratedLists(ProviderContainer? outgoing) {
     return null;
   }
   return outgoing.read(curatedListsStateProvider.notifier).service?..suspend();
+}
+
+/// Stops the outgoing account's bookmarks from saving before the incoming
+/// sign-in clears the device-wide bookmark keys.
+///
+/// For the same reason as [_suspendOutgoingCuratedLists]: a bookmark sync
+/// still in flight would otherwise save this account's list into the keys the
+/// next account reads, and its next Save would publish it (#8313).
+BookmarksRepository? _suspendOutgoingBookmarks(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(bookmarksRepositoryProvider)) {
+    return null;
+  }
+  final bookmarks = outgoing.read(bookmarksRepositoryProvider);
+  return bookmarks..suspend();
 }
 
 Future<void> _defaultSignIn(
@@ -319,6 +334,7 @@ Future<void> swapAccount({
     var targetSubmitted = false;
     final incomingAuth = container.read(authServiceProvider);
     CuratedListService? suspendedOutgoingLists;
+    BookmarksRepository? suspendedOutgoingBookmarks;
     try {
       // Capture only while the original identity and rendered host still own
       // the device. A generated or imported account owns the primary slot, so
@@ -357,6 +373,7 @@ Future<void> swapAccount({
       await _pruneOutgoingDmVideos(current);
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
+      suspendedOutgoingBookmarks = _suspendOutgoingBookmarks(current);
       await CuratedListSessionCoordinator.forPreferences(
         deviceScope.sharedPreferences,
       ).retireAndDrain();
@@ -425,6 +442,7 @@ Future<void> swapAccount({
         await _resumeOutgoingDmIngest(current);
       }
       suspendedOutgoingLists?.resume();
+      suspendedOutgoingBookmarks?.resume();
       try {
         if (failedTicket == null) {
           throw const AccountActivationRetiredException();

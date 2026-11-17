@@ -2062,9 +2062,12 @@ void main() {
           'video-b',
         ]);
         expect(
-          jsonDecode(
-            prefs.getString(BookmarksRepository.globalBookmarksStorageKey)!,
-          ),
+          (jsonDecode(
+                prefs.getString(
+                  BookmarksRepository.globalBookmarksStorageKey,
+                )!,
+              )
+              as Map<String, dynamic>)['items'],
           [
             {'type': 'e', 'id': 'video-a'},
             {'type': 'e', 'id': 'video-b'},
@@ -3768,6 +3771,176 @@ void main() {
           );
         },
       );
+    });
+
+    // An account switch keeps the outgoing account's repository alive until
+    // the switch commits, after the incoming sign-in has cleared the
+    // device-wide keys. Nothing it finishes in between may land in them, and
+    // a repository never adopts another account's snapshot (#8313).
+    group('account switch (#8313)', () {
+      const relayItemId =
+          'b831300000000000000000000000000000000000000000000000000000000001';
+      const relayItem = BookmarkItem(type: 'e', id: relayItemId);
+
+      Map<String, dynamic> savedJson(String key) =>
+          jsonDecode(prefs.getString(key)!) as Map<String, dynamic>;
+
+      group('suspend', () {
+        test(
+          'keeps a sync that settles while suspended off the device',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+            );
+            final service = createService()..suspend();
+
+            expect(await service.syncGlobalBookmarks(), isTrue);
+
+            expect(service.globalBookmarks, equals([relayItem]));
+            expect(
+              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+              isNull,
+            );
+            expect(
+              prefs.getString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+              ),
+              isNull,
+            );
+          },
+        );
+
+        test('saves to the device again once resumed', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent([relayItemId]),
+            ],
+          );
+          final service = createService()..suspend();
+          await service.syncGlobalBookmarks();
+
+          service.resume();
+          await service.syncGlobalBookmarks();
+
+          expect(createService().globalBookmarks, equals([relayItem]));
+        });
+      });
+
+      group('owner stamp', () {
+        test(
+          'stamps the saved snapshot and revision with their account',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+            );
+
+            await createService().syncGlobalBookmarks();
+
+            expect(
+              savedJson(BookmarksRepository.globalBookmarksStorageKey)['owner'],
+              equals(pubkey),
+            );
+            expect(
+              savedJson(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+              )['owner'],
+              equals(pubkey),
+            );
+          },
+        );
+
+        test('loads the snapshot it saved for its own account', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent([relayItemId]),
+            ],
+          );
+          await createService().syncGlobalBookmarks();
+
+          expect(createService().globalBookmarks, equals([relayItem]));
+        });
+
+        test(
+          "ignores another account's snapshot and revision, so its own older "
+          'list is adopted rather than treated as stale',
+          () async {
+            final otherPubkey = getPublicKey(generatePrivateKey());
+            SharedPreferences.setMockInitialValues({
+              BookmarksRepository.globalBookmarksStorageKey: jsonEncode({
+                'owner': otherPubkey,
+                'items': [
+                  {'type': 'e', 'id': 'c' * 64},
+                ],
+              }),
+              BookmarksRepository.globalBookmarksRevisionStorageKey: jsonEncode(
+                {
+                  'owner': otherPubkey,
+                  'createdAt': 2000000000,
+                  'id': 'f' * 64,
+                  'publicTags': [
+                    ['e', 'c' * 64],
+                  ],
+                  'content': '',
+                },
+              ),
+            });
+            prefs = await SharedPreferences.getInstance();
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId], createdAt: 1000000000),
+              ],
+            );
+            final service = createService();
+
+            expect(service.globalBookmarks, isEmpty);
+            expect(await service.syncGlobalBookmarks(), isTrue);
+            expect(service.globalBookmarks, equals([relayItem]));
+          },
+        );
+
+        test(
+          'does not save a list read for an account that is no longer '
+          'signed in',
+          () async {
+            final answer =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) => answer.future);
+            final service = createService();
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+
+            when(
+              () => signer.currentPublicKeyHex,
+            ).thenReturn(getPublicKey(generatePrivateKey()));
+            answer.complete((
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ));
+
+            expect(await sync, isTrue);
+            expect(service.globalBookmarks, equals([relayItem]));
+            expect(
+              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+              isNull,
+            );
+          },
+        );
+      });
     });
   });
 }
