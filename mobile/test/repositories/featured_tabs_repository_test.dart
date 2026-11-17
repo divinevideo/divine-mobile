@@ -119,8 +119,10 @@ void main() {
         )).tab,
         isNull,
       );
-      stubFailure();
-      clock = clock.add(FeaturedTabsRepository.defaultCacheTtl);
+      stubTabs([
+        _tab(id: 'ft_a'),
+        _tab(id: 'ft_b', endsAt: clock.subtract(const Duration(minutes: 1))),
+      ]);
       expect(
         (await repository.refresh(
           gateAgeRestrictedContent: false,
