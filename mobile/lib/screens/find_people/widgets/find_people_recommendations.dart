@@ -496,10 +496,21 @@ class _CreatorPreview extends StatelessWidget {
                   BlurhashDisplay(blurhash: preview.blurhash),
             ),
             const Center(
-              child: DivineIcon(
-                icon: DivineIconName.play,
-                color: VineTheme.whiteText,
-                size: 32,
+              child: SizedBox.square(
+                dimension: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: VineTheme.scrim56,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: DivineIcon(
+                      icon: DivineIconName.play,
+                      color: VineTheme.whiteText,
+                      size: 32,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
