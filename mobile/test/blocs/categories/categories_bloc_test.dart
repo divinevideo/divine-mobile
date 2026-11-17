@@ -298,17 +298,60 @@ void main() {
         await pumpEventQueue();
         bloc.add(const CategoryVideosSortChanged('timestamp'));
         await pumpEventQueue();
+        results.addError(const FunnelcakeException('Old request failed'));
+        await pumpEventQueue();
+        expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
         next.add(
           CacheResult.live(
             CategoryVideosPage(videos: [newVideo], hasMore: false),
           ),
         );
         await pumpEventQueue();
-        results.addError(const FunnelcakeException('Old request failed'));
-        await pumpEventQueue();
         expect(bloc.state.sortOrder, 'timestamp');
         expect(bloc.state.videos, [newVideo]);
         expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
+        await next.close();
+      });
+
+      test('a sort change during load-more leaves paging usable', () async {
+        final pending = Completer<CategoryVideosPage>();
+        final next = StreamController<CacheResult<CategoryVideosPage>>();
+        when(
+          () => mockRepository.getVideosForCategory(
+            category: 'music',
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) => pending.future);
+        when(
+          () => mockRepository.watchVideosForCategoryCached(
+            category: 'music',
+            sort: 'timestamp',
+            viewerPubkey: _viewerPubkey,
+          ),
+        ).thenAnswer((_) => next.stream);
+        bloc.add(const CategorySelected(music));
+        await pumpEventQueue();
+        results.add(
+          CacheResult.live(
+            CategoryVideosPage(videos: [oldVideo], hasMore: true),
+          ),
+        );
+        await pumpEventQueue();
+        bloc.add(const CategoryVideosLoadMore());
+        await pumpEventQueue();
+        expect(bloc.state.isLoadingMore, isTrue);
+        bloc.add(const CategoryVideosSortChanged('timestamp'));
+        await pumpEventQueue();
+        next.add(
+          CacheResult.live(
+            CategoryVideosPage(videos: [newVideo], hasMore: true),
+          ),
+        );
+        await pumpEventQueue();
+        pending.complete(CategoryVideosPage(videos: [oldVideo], hasMore: true));
+        await pumpEventQueue();
+        expect(bloc.state.videos, [newVideo]);
+        expect(bloc.state.isLoadingMore, isFalse);
         await next.close();
       });
 
