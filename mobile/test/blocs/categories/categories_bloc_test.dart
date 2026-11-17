@@ -536,6 +536,44 @@ void main() {
       );
     });
 
+    group(CategoryVideosLoadMore, () {
+      final loadedVideo = _createDefaultVideoStats('loaded-id').toVideoEvent();
+
+      blocTest<CategoriesBloc, CategoriesState>(
+        'reports a failed page and clears the loading flag',
+        setUp: () {
+          when(
+            () => mockRepository.getVideosForCategory(
+              category: 'music',
+              before: any(named: 'before'),
+            ),
+          ).thenThrow(const FunnelcakeException('Offline'));
+        },
+        seed: () => CategoriesState(
+          selectedCategory: const VideoCategory(
+            name: 'music',
+            videoCount: 1500,
+          ),
+          videosStatus: CategoriesVideosStatus.loaded,
+          videos: [loadedVideo],
+          hasMoreVideos: true,
+        ),
+        build: () => CategoriesBloc(categoriesRepository: mockRepository),
+        act: (bloc) => bloc.add(const CategoryVideosLoadMore()),
+        expect: () => [
+          isA<CategoriesState>().having(
+            (s) => s.isLoadingMore,
+            'isLoadingMore',
+            isTrue,
+          ),
+          isA<CategoriesState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse)
+              .having((s) => s.videos, 'videos', [loadedVideo]),
+        ],
+        errors: () => [isA<FunnelcakeException>()],
+      );
+    });
+
     group('CategoryVideosSortChanged', () {
       const category = VideoCategory(name: 'music', videoCount: 1500);
 

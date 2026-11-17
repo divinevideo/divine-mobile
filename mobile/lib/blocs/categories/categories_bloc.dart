@@ -146,8 +146,9 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
           isLoadingMore: false,
         ),
       );
-    } catch (e) {
+    } catch (error, stackTrace) {
       if (version != _selectionVersion || emit.isDone) return;
+      addError(error, stackTrace);
       emit(state.copyWith(isLoadingMore: false));
     }
   }
