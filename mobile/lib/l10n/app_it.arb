@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Mostra/nascondi fotogramma fantasma",
   "videoRecorderGhostFrameEnabled": "Fotogramma fantasma attivato",
   "videoRecorderGhostFrameDisabled": "Fotogramma fantasma disattivato",
+  "videoRecorderSoundLockedHint": "Le tue clip sono sincronizzate con questo suono. Eliminale per sceglierne un altro.",
   "videoRecorderClipDeletedMessage": "Clip spostato nel cestino",
   "videoRecorderClipUndoLabel": "Annulla",
   "libraryTrashEmptyTitle": "Il cestino è vuoto",

@@ -448,7 +448,7 @@ class _LibraryImportProgressOverlay extends StatelessWidget {
   }
 }
 
-/// Full-screen progress overlay shown while clips recorded in chroma key mode
+/// Full-screen progress overlay shown while clips recorded with the color mask
 /// have the key they were recorded with baked in.
 ///
 /// Covers the editor like the other renders: until the bake lands the timeline

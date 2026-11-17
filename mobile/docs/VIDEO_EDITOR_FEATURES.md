@@ -24,10 +24,8 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 
 | Mode | Opens the editor | Notes |
 |---|---|---|
-| Capture | Yes | Default mode. |
+| Capture | Yes | Default mode. The sound chip picks a sound to record against: it plays during each take, can only change while there are no clips, and the clips open muted with the sound as its own track. The color mask button on the control rail swaps the background live while recording; each take is keyed right after recording. The mask is only offered on devices whose renderer can draw the live key. |
 | Stop Motion | Yes | Output must be at least 1 s. |
-| Lip Sync | Yes | Opens on the sound list; the camera appears once a sound is picked. Recorded clips are muted. |
-| Color mask | Yes | The viewfinder shows the swapped background live while recording; each take is keyed right after recording. Only offered on devices whose renderer can draw the live key. |
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 

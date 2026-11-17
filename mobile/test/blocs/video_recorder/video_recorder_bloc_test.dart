@@ -3820,21 +3820,15 @@ void main() {
         ).thenReturn(mode);
 
         // Classic hides the control; Stop Motion captures stills, which the
-        // stabilization never reaches, so only the preview would be cropped;
-        // Chroma Key composites its backdrop live against the preview, which
-        // look-ahead stabilization delays behind the file.
+        // stabilization never reaches, so only the preview would be cropped.
         for (final mode in [
           VideoRecorderMode.classic,
           VideoRecorderMode.stopMotion,
-          VideoRecorderMode.chromaKey,
         ]) {
           blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
             'turns stabilization off in ${mode.name}, keeping the saved choice',
             setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
-            // Chroma Key is only offered where the key renders live.
-            build: () => buildBloc(
-              liveChromaKeySupported: mode == VideoRecorderMode.chromaKey,
-            ),
+            build: buildBloc,
             act: (bloc) => bloc.add(VideoRecorderRecorderModeSet(mode)),
             verify: (_) {
               verify(
@@ -3848,6 +3842,46 @@ void main() {
             },
           );
         }
+
+        // The color mask composites its backdrop live against the preview,
+        // which look-ahead stabilization delays behind the file.
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'turns stabilization off under the color mask, keeping the saved '
+          'choice',
+          setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
+          build: () => buildBloc(liveChromaKeySupported: true),
+          act: (bloc) => bloc.add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: true),
+          ),
+          verify: (_) {
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'restores the saved stabilization when the color mask turns off',
+          setUp: () => cameraRuns(DivineVideoStabilizationMode.off),
+          build: () => buildBloc(liveChromaKeySupported: true),
+          seed: () => const VideoRecorderBlocState(
+            isLiveChromaKeySupported: true,
+            isChromaKeyEnabled: true,
+          ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: false),
+          ),
+          verify: (_) => verify(
+            () => cameraService.setVideoStabilizationMode(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          ).called(1),
+        );
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
           'clears the retained stabilization request when classic starts on '
@@ -4052,27 +4086,6 @@ void main() {
           );
         });
 
-        test('stays paused on opening into the lip-sync sound picker, whose '
-            'pause arrives before the camera has started', () async {
-          final bloc = buildBloc();
-          addTearDown(bloc.close);
-          // The picker shows on the first lip-sync frame, before init has
-          // enabled remote control, so this pause is dropped.
-          bloc
-            ..add(
-              const VideoRecorderInitializeRequested(
-                recorderMode: VideoRecorderMode.lipSync,
-              ),
-            )
-            ..add(const VideoRecorderRemoteRecordPaused());
-          await pumpEventQueue();
-
-          verifyInOrder([
-            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
-            () => cameraService.setRemoteRecordControlEnabled(enabled: false),
-          ]);
-        });
-
         test(
           'leaves remote control on when opening into a capture tab',
           () async {
@@ -4089,27 +4102,6 @@ void main() {
             );
           },
         );
-
-        test('is ignored on lip-sync before a sound is picked, which shows '
-            'the sound picker instead of a preview', () async {
-          final bloc = buildBloc();
-          addTearDown(bloc.close);
-          bloc.add(
-            const VideoRecorderInitializeRequested(
-              recorderMode: VideoRecorderMode.lipSync,
-            ),
-          );
-          await pumpEventQueue();
-
-          trigger!();
-          await pumpEventQueue();
-
-          verifyNever(
-            () => cameraService.startRecording(
-              maxDuration: any(named: 'maxDuration'),
-            ),
-          );
-        });
 
         test('leaves the camera alone when the recorder closes while remote '
             'control resumes', () async {

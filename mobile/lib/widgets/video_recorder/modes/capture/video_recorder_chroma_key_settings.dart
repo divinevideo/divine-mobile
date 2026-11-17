@@ -1,5 +1,5 @@
-// ABOUTME: The chroma-key recorder's settings: a top-bar chip showing the
-// ABOUTME: current backdrop, and the sheet that tunes the key over the camera.
+// ABOUTME: The color mask's settings in capture mode: the sheet that tunes
+// ABOUTME: the key and backdrop over the live camera, and turns the mask off.
 
 import 'dart:io';
 
@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
-import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/chroma_key_backdrop_image.dart';
@@ -16,16 +15,17 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
 
-/// Opens the chroma-key settings over the live viewfinder.
+/// Opens the color mask settings over the live viewfinder.
 ///
 /// The barrier stays clear on purpose: the settings are tuned against the
 /// camera, and a scrim would dim exactly the picture being judged.
 ///
-/// Remote record triggers are paused while it is open, the way the lip-sync
-/// sound picker pauses them, so a volume key cannot start a take behind it.
+/// Remote record triggers are paused while it is open, the way the sound
+/// picker pauses them, so a volume key cannot start a take behind it.
 Future<void> showVideoRecorderChromaKeySettings(BuildContext context) async {
   final bloc = context.read<VideoRecorderBloc>()
     ..add(const VideoRecorderRemoteRecordPaused());
@@ -55,108 +55,8 @@ Future<void> showVideoRecorderChromaKeySettings(BuildContext context) async {
   }
 }
 
-/// Top-bar chip naming the mode's settings, led by a swatch of the backdrop.
-class VideoRecorderChromaKeyChip extends StatelessWidget {
-  const VideoRecorderChromaKeyChip({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final chromaKey = context.select(
-      (VideoRecorderBloc b) => b.state.chromaKey,
-    );
-
-    return Flexible(
-      child: Material(
-        type: .transparency,
-        child: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: chipLabelTextScaleLimit,
-          child: Semantics(
-            button: true,
-            child: InkWell(
-              onTap: () => showVideoRecorderChromaKeySettings(context),
-              borderRadius: .circular(16),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 40),
-                padding: const .fromLTRB(8, 8, 16, 8),
-                decoration: ShapeDecoration(
-                  color: VineTheme.scrim15,
-                  shape: RoundedRectangleBorder(borderRadius: .circular(16)),
-                ),
-                child: Row(
-                  mainAxisSize: .min,
-                  spacing: 8,
-                  children: [
-                    ExcludeSemantics(
-                      child: _BackdropSwatch(chromaKey: chromaKey),
-                    ),
-                    Flexible(
-                      child: Text(
-                        context.l10n.videoEditorChromaKeyTitle,
-                        maxLines: 1,
-                        overflow: .ellipsis,
-                        style: VineTheme.labelLargeFont(
-                          color: VineTheme.whiteText,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A small picture of what the key puts behind the subject.
-class _BackdropSwatch extends StatelessWidget {
-  const _BackdropSwatch({required this.chromaKey});
-
-  static const double _size = 24;
-
-  final ClipChromaKey chromaKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final imagePath = chromaKey.backgroundImagePath;
-    final color = chromaKey.key.backgroundColor;
-    final icon = switch (chromaKey.backgroundType) {
-      ClipChromaKeyBackgroundType.transparent => DivineIconName.squareDuo,
-      ClipChromaKeyBackgroundType.video => DivineIconName.filmSlate,
-      ClipChromaKeyBackgroundType.color ||
-      ClipChromaKeyBackgroundType.image => DivineIconName.userFocus,
-    };
-    final fallback = DivineIcon(
-      icon: icon,
-      size: 20,
-      color: VineTheme.whiteText,
-    );
-
-    return ClipRRect(
-      borderRadius: .circular(6),
-      child: SizedBox.square(
-        dimension: _size,
-        child: switch (chromaKey.backgroundType) {
-          ClipChromaKeyBackgroundType.color when color != null => ColoredBox(
-            color: color,
-          ),
-          ClipChromaKeyBackgroundType.image when imagePath != null =>
-            Image.file(
-              File(imagePath),
-              fit: .cover,
-              cacheWidth: 72,
-              errorBuilder: (_, _, _) => Center(child: fallback),
-            ),
-          _ => Center(child: fallback),
-        },
-      ),
-    );
-  }
-}
-
-/// The settings panel, bound to the recorder.
+/// The settings panel, bound to the recorder, under the button that turns the
+/// mask off.
 ///
 /// The same panel as the editor's chroma key screen, so the key and
 /// backdrop a clip is recorded with are the ones baked into it and the ones
@@ -195,34 +95,45 @@ class _ChromaKeySettings extends StatelessWidget {
           logName: 'VideoRecorderChromaKeySettings',
         );
       },
-      child: ChromaKeyControlsPanel(
-        scrollController: scrollController,
-        chromaKey: chromaKey,
-        // Also while a written-off still is out: the camera cannot take a
-        // second one until it is back.
-        isDetecting:
-            status == ChromaKeyMeasurementStatus.detecting ||
-            status == ChromaKeyMeasurementStatus.superseded,
-        detectionNotice: _measurementNotice(context.l10n, status),
-        onDetect: () =>
-            bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
-        onGreenPreset: () => bloc.add(
-          const VideoRecorderChromaKeyPresetSelected(ChromaKey.greenScreen()),
-        ),
-        onBluePreset: () => bloc.add(
-          const VideoRecorderChromaKeyPresetSelected(ChromaKey.blueScreen()),
-        ),
-        onKeyColorChanged: (color) =>
-            bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
-        onSimilarityChanged: (value) => bloc.add(
-          VideoRecorderChromaKeySettingsChanged(similarity: value),
-        ),
-        onSmoothnessChanged: (value) => bloc.add(
-          VideoRecorderChromaKeySettingsChanged(smoothness: value),
-        ),
-        onSpillChanged: (value) =>
-            bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
-        onPickBackground: (type) => _pickBackdrop(context, type),
+      child: Column(
+        children: [
+          const _RemoveColorMaskButton(),
+          Flexible(
+            child: ChromaKeyControlsPanel(
+              scrollController: scrollController,
+              chromaKey: chromaKey,
+              // Also while a written-off still is out: the camera cannot take a
+              // second one until it is back.
+              isDetecting:
+                  status == ChromaKeyMeasurementStatus.detecting ||
+                  status == ChromaKeyMeasurementStatus.superseded,
+              detectionNotice: _measurementNotice(context.l10n, status),
+              onDetect: () =>
+                  bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
+              onGreenPreset: () => bloc.add(
+                const VideoRecorderChromaKeyPresetSelected(
+                  ChromaKey.greenScreen(),
+                ),
+              ),
+              onBluePreset: () => bloc.add(
+                const VideoRecorderChromaKeyPresetSelected(
+                  ChromaKey.blueScreen(),
+                ),
+              ),
+              onKeyColorChanged: (color) =>
+                  bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
+              onSimilarityChanged: (value) => bloc.add(
+                VideoRecorderChromaKeySettingsChanged(similarity: value),
+              ),
+              onSmoothnessChanged: (value) => bloc.add(
+                VideoRecorderChromaKeySettingsChanged(smoothness: value),
+              ),
+              onSpillChanged: (value) =>
+                  bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
+              onPickBackground: (type) => _pickBackdrop(context, type),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -299,5 +210,38 @@ class _ChromaKeySettings extends StatelessWidget {
       );
       messenger.showSnackBar(DivineSnackbarContainer.snackBar(failedMessage));
     }
+  }
+}
+
+/// Turns the color mask off and closes the settings.
+///
+/// The key and backdrop stay as they were set, so turning the mask on again
+/// brings them back.
+class _RemoveColorMaskButton extends StatelessWidget {
+  const _RemoveColorMaskButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.videoEditorChromaKeyRemove;
+    return Padding(
+      padding: const .symmetric(horizontal: 16),
+      child: WholeWordButtonTextScale(
+        label: label,
+        child: DivineButton(
+          label: label,
+          type: .ghost,
+          size: .small,
+          expanded: true,
+          maxLines: 2,
+          onPressed: () {
+            context.read<VideoRecorderBloc>().add(
+              const VideoRecorderChromaKeyEnabledSet(enabled: false),
+            );
+            // The sheet sits on the root navigator; this context is inside it.
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
   }
 }

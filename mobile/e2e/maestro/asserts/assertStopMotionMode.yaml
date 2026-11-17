@@ -21,15 +21,21 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_library_button
 
-# The shot budget, in the top-bar slot capture mode leaves empty. Stop-motion
-# never enters the recording state, so the duration progress bar capture mode
-# shows while recording never appears; this counts stills instead. Its node
-# carries the remaining-shots count as its label.
+# The shot budget, in the top-bar slot where capture mode shows its sound
+# chip. Stop-motion never enters the recording state, so the duration progress
+# bar capture mode shows while recording never appears; this counts stills
+# instead. Its node carries the remaining-shots count as its label.
 - assertVisible:
     id: camera_stop_motion_budget
 
+# And no sound chip: stills take no sound, so the budget takes its slot. This
+# is the line that separates the two top bars, the mirror of the one
+# assertCaptureMode carries.
+- assertNotVisible:
+    id: audio_chip
+
 # Control rail, top to bottom. The grid is rendered only by the mode that
-# captures stills; the ghost frame is shared with capture and lip-sync. The
+# captures stills; the ghost frame is shared with capture and classic. The
 # timer is shared too, but here it sets the interval of the hands-free loop
 # rather than a delayed start.
 - assertVisible:

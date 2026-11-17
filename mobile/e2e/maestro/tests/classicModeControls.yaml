@@ -14,7 +14,7 @@ tags:
 # neither of the declared-only pair.
 #
 # All three are shared per-control utils: the lens switch with every mode that
-# renders a rail, the ghost toggle with capture, lip-sync and stop-motion, and
+# renders a rail, the ghost toggle with capture and stop-motion, and
 # the grid with stop-motion, the other mode that declares it. So what this file
 # actually owns is the order — see step 3 — not the sequences themselves. Grid
 # and ghost carry a Semantics `toggled` flag rather than a `value`, which

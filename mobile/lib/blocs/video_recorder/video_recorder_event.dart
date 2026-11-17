@@ -363,6 +363,20 @@ final class VideoRecorderStopMotionAssembleRequested
 
 // === Chroma key ===
 
+/// Turns the color mask on or off.
+///
+/// While it is on in a mode that [VideoRecorderMode.supportsChromaKey], the
+/// viewfinder shows [VideoRecorderBlocState.chromaKey] live and every take
+/// carries it.
+final class VideoRecorderChromaKeyEnabledSet extends VideoRecorderEvent {
+  const VideoRecorderChromaKeyEnabledSet({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 /// Captures a still and measures the wall behind the subject, adopting the
 /// measured screen colour and amount into
 /// [VideoRecorderBlocState.chromaKey].

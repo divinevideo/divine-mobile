@@ -93,7 +93,7 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
         ref.read(creationAnalyticsTrackerProvider).editorOpened(recorderMode),
       );
       // `ref.listen` only fires on a *change*, so a render that already failed
-      // signing before this screen mounted (resumed draft, or capture/lip-sync
+      // signing before this screen mounted (resumed draft, or capture
       // where the render is kicked off before navigation) would never surface
       // the prompt. Catch that already-true case here (#6058).
       if (ref.read(videoEditorProvider).c2paSigningFailed) {
@@ -223,7 +223,6 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
       child: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: switch (recorderMode) {
-          // Lip-sync and chroma key share capture's editor + metadata flow.
           // Stop-motion produces a normal video clip, so it shares the same
           // capture-mode metadata UI. Upload has no video editor, so recorder
           // navigation pushes this route without a mode query. A restored
@@ -231,8 +230,6 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
           // recorder mode.
           .capture ||
           .stopMotion ||
-          .lipSync ||
-          .chromaKey ||
           .upload => const VideoMetadataCaptureStack(),
           .classic => const VideoMetadataClassicStack(),
         },

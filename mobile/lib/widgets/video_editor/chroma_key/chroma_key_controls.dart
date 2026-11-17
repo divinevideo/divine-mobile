@@ -76,8 +76,8 @@ class ChromaKeyControls extends StatelessWidget {
 /// The chroma-key settings panel, free of any particular state holder.
 ///
 /// Shared by the editor's chroma key screen, where [ChromaKeyControls] binds
-/// it to [ChromaKeyEditorCubit], and the recorder's chroma key mode, which
-/// binds it to the recorder so the key can be tuned against the live camera.
+/// it to [ChromaKeyEditorCubit], and the recorder's color mask, which binds
+/// it to the recorder so the key can be tuned against the live camera.
 class ChromaKeyControlsPanel extends StatelessWidget {
   const ChromaKeyControlsPanel({
     required this.chromaKey,

@@ -2,7 +2,7 @@ appId: co.openvine.app.staging
 ---
 #Utility: toggle the ghost-frame (onion-skin) overlay on and back off, leaving
 #it on its default. Rendered by every mode that draws the previous take over
-#the live preview — capture, lip-sync and stop-motion on the capture rail,
+#the live preview — capture and stop-motion on the capture rail,
 #classic in its own action row.
 #
 # Not persisted, so it always starts off. Restoring it is not just tidiness:

@@ -195,8 +195,8 @@ class _CameraPreview extends StatelessWidget {
   }
 }
 
-/// Keys the camera texture live in chroma key mode, and passes it through
-/// untouched in every other mode.
+/// Keys the camera texture live while the color mask is on, and passes it
+/// through untouched otherwise.
 ///
 /// Preview only: the recorder still writes the raw camera frames. Sits inside
 /// the sensor-shaped box the texture fills, so the backdrop is stretched over
@@ -249,9 +249,7 @@ class _ChromaKeyViewfinderState extends State<_ChromaKeyViewfinder> {
   Widget build(BuildContext context) {
     final (:chromaKey, :isFrontCamera) = context.select(
       (VideoRecorderBloc b) => (
-        chromaKey: b.state.recorderMode.needsLiveChromaKey
-            ? b.state.chromaKey
-            : null,
+        chromaKey: b.state.isChromaKeyActive ? b.state.chromaKey : null,
         isFrontCamera: b.state.isFrontCamera,
       ),
     );

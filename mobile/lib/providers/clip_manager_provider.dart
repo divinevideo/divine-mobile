@@ -734,8 +734,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Mutes every clip by setting its volume to zero.
   ///
-  /// Used by lip-sync mode before handing off to the editor so the recorded
-  /// clips are silent and only the selected sound is audible.
+  /// Used by capture mode before handing off to the editor when its takes
+  /// were recorded against a sound, so the clips are silent and only that
+  /// sound is audible.
   void muteAllClips() {
     if (_clips.isEmpty || _clips.every((c) => c.volume == 0)) return;
     for (var i = 0; i < _clips.length; i++) {
@@ -743,7 +744,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     }
     state = state.copyWith(clips: List.unmodifiable(_clips));
     Log.debug(
-      '🔇 Muted all clips for lip-sync',
+      '🔇 Muted all clips recorded against a sound',
       name: 'ClipManagerNotifier',
       category: .video,
     );

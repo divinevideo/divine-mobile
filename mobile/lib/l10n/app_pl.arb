@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Przełącz klatkę odniesienia",
   "videoRecorderGhostFrameEnabled": "Klatka odniesienia włączona",
   "videoRecorderGhostFrameDisabled": "Klatka odniesienia wyłączona",
+  "videoRecorderSoundLockedHint": "Twoje klipy są zsynchronizowane z tym dźwiękiem. Usuń je, aby wybrać inny.",
   "videoRecorderClipDeletedMessage": "Klip przeniesiony do kosza",
   "videoRecorderClipUndoLabel": "Cofnij",
   "libraryTrashEmptyTitle": "Kosz jest pusty",

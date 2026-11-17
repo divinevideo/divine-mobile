@@ -163,8 +163,8 @@ class _UseButton extends StatelessWidget {
       label: context.l10n.videoEditorAudioUseSound,
       size: .small,
       expanded: expanded,
-      // Named again so the button reports when it is disabled: the lip-sync
-      // E2E waits for it to become enabled.
+      // Named again so the button reports when it is disabled: the capture
+      // sound E2E waits for it to become enabled.
       semanticLabel: context.l10n.videoEditorAudioUseSound,
       semanticIdentifier: SemanticIds.audioSelectionDoneButton,
       onPressed: onPressed,

@@ -1,8 +1,8 @@
 appId: co.openvine.app.staging
 ---
-#Utility: given the recorder is on lip-sync with no sound picked, pick a
-#bundled sound from the inline sound picker and wait for the viewfinder to come
-#up with it in the chip.
+#Utility: given an idle capture viewfinder with no clips and no sound picked,
+#open the sound picker from the top-bar sound chip, pick a bundled sound, and
+#wait for the chip to name it.
 #
 # Drives a **bundled** sound, never a relay one. Every entry on the picker's
 # Divine tab comes from `assets/sounds/sounds_manifest.json` and ships with the
@@ -11,6 +11,14 @@ appId: co.openvine.app.staging
 # Effect" is picked for being 864ms: comfortably under the 6.3s maximum clip
 # length, so `_handleDoneSelection` hands the sound straight back instead of
 # routing through the trim screen a longer sound would need.
+
+# The chip opens the picker as a full-height sheet over the viewfinder.
+- tapOn:
+    id: audio_chip
+- extendedWaitUntil:
+    visible:
+      id: audio_search_field
+    timeout: 10000
 
 # Search. Typing rather than scrolling the manifest's 94 entries, and asserting
 # the title back, so a reordered or renamed manifest fails here rather than
@@ -46,7 +54,7 @@ appId: co.openvine.app.staging
 - tapOn:
     id: audio_selection_done_button
 
-# The picker gives way to the viewfinder, with the sound in its chip.
+# The sheet closes over the viewfinder, with the sound in the chip.
 - extendedWaitUntil:
     visible:
       id: audio_chip

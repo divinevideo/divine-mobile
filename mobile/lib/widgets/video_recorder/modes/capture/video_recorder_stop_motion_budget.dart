@@ -26,8 +26,8 @@ import 'package:openvine/widgets/video_recorder/video_recorder_progress_bar.dart
 /// rather than from a full budget.
 ///
 /// Returns a [Flexible], so it belongs in the top bar's center slot between
-/// the close and next buttons — the same slot (and the same shape) lip-sync's
-/// audio chip uses.
+/// the close and next buttons — the same slot (and the same shape) capture's
+/// sound chip uses.
 class VideoRecorderStopMotionBudget extends ConsumerWidget {
   const VideoRecorderStopMotionBudget({super.key});
 
@@ -62,7 +62,7 @@ class VideoRecorderStopMotionBudget extends ConsumerWidget {
     final label = context.l10n.videoRecorderStopMotionShotsLeft(remaining);
 
     return Flexible(
-      // The same cap as the audio chip lip-sync puts in this slot. Past it the
+      // The same cap as the sound chip capture puts in this slot. Past it the
       // count wraps on a small phone, and the row grows tall enough to push
       // the buttons beside it down into the side rail.
       child: MediaQuery.withClampedTextScaling(

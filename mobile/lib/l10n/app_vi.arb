@@ -4648,6 +4648,7 @@
   "videoRecorderToggleGhostFrameLabel": "Bật/tắt khung ma",
   "videoRecorderGhostFrameEnabled": "Đã bật khung ma",
   "videoRecorderGhostFrameDisabled": "Đã tắt khung ma",
+  "videoRecorderSoundLockedHint": "Các clip của bạn đã được đồng bộ với âm thanh này. Hãy xóa chúng để chọn âm thanh khác.",
   "videoRecorderClipDeletedMessage": "Đã chuyển clip vào thùng rác",
   "videoRecorderClipUndoLabel": "Hoàn tác",
   "@videoRecorderClipUndoLabel": {

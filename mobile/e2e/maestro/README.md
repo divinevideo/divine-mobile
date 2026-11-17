@@ -105,23 +105,23 @@ or Maestro version change. The `e2e-smoke-android` workflow is manual.
 
 ## The recorder flows
 
-Four of the recorder's six modes are covered, one flow each:
+Three of the recorder's four modes are covered, one flow each:
 
 | Flow | Mode | Covers |
 |---|---|---|
-| `flows/captureModeFlow.yaml` | capture | open, drive the control rail, record a clip, delete it, close |
-| `flows/lipSyncModeFlow.yaml` | lip-sync | open on the sound picker, pick a sound to bring up the viewfinder, drive the control rail, record a clip, delete it, close |
+| `flows/captureModeFlow.yaml` | capture | open, drive the control rail, record a clip, delete it, pick a sound from the chip and record a clip against it, delete that, close |
 | `flows/stopMotionModeFlow.yaml` | stop-motion | open, drive the control rail, shoot two stills, undo them, close |
 | `flows/classicModeFlow.yaml` | classic | open, drive the action row, record a clip off the preview, prove a second recording stops itself at the duration limit, delete both, close |
 
-Upload and Chroma Key are not covered yet.
+Upload is not covered yet, and neither is capture's color mask: the rail
+offers it only where the renderer can key the viewfinder live, so whether it
+shows depends on the device.
 
-Lip-sync starts from its sound: until one is picked the mode shows the sound
-picker where the viewfinder goes, so there is no shutter to tap without one.
-`lipSyncModePickSound` picks a sound and asserts the viewfinder that replaces
-the picker, and every later lip-sync test starts from that viewfinder.
-`assertLipSyncMode` pins the picker state and `assertLipSyncViewfinder` the
-viewfinder state.
+Lip sync is capture with a sound: the top-bar chip opens the sound picker as a
+sheet, and the takes recorded afterwards play against the picked sound.
+`captureModeSound` picks one with `utils/pickCaptureSound`, records a clip
+against it and checks the chip still names it, since a sound cannot change
+once a clip is synced to it.
 
 Picking a sound stays deterministic because the flow only ever touches the
 picker's **Divine** tab, whose entries come from
@@ -129,12 +129,13 @@ picker's **Divine** tab, whose entries come from
 is the relay-backed one, and it is the live-content dependency this file names
 elsewhere as the suite's main source of flakiness — no flow goes near it.
 
-Every file in all four flows has been run green on a Galaxy SM-S942B. The
-lip-sync, stop-motion and classic tests were driven test-by-test against an
+Every file in all three flows has been run green on a Galaxy SM-S942B, except
+`captureModeSound`, which was added when lip sync moved into capture. The
+stop-motion and classic tests were driven test-by-test against an
 already-signed-in app rather than through their flow end to end, because the
 device runs a German system locale and `loginFreshInstall`'s `clearState` drops
 the per-app English override mid-run (see step 0b). The login and `removeKeys`
-bookends of those three flows are the same ones `captureModeFlow` already runs.
+bookends of those two flows are the same ones `captureModeFlow` already runs.
 
 The classic run settled the two things only hardware could, both of which had
 been flagged as unknowns while it was written: the native auto-stop reaches the
@@ -142,7 +143,7 @@ Flutter side as a clip, so `classicModeRecordingLimit` sees the session hold it,
 and the ghost-frame snackbar does not cover the action row `classicModeControls`
 drives above it.
 
-None of them is in **`smoke.yaml`**, and all four are deliberately off the iOS
+None of them is in **`smoke.yaml`**, and all three are deliberately off the iOS
 lane:
 
 - **They need real camera hardware.** Without a camera the bloc never reports
@@ -152,15 +153,12 @@ lane:
   emulator's virtual scene camera is enough, and a device is best.
 - **The `…Open` tests alone** — the chrome assertions — do pass without a
   camera, because the viewfinder falls back to a placeholder and every control
-  still renders. So does `lipSyncModePickSound`: the picker and the viewfinder
-  that replaces it render from the audio selection, not from the camera being
-  ready.
+  still renders.
 
 Run one against a booted Android emulator or a connected device:
 
 ```bash
 maestro --device <serial> test e2e/maestro/flows/captureModeFlow.yaml
-maestro --device <serial> test e2e/maestro/flows/lipSyncModeFlow.yaml
 maestro --device <serial> test e2e/maestro/flows/stopMotionModeFlow.yaml
 maestro --device <serial> test e2e/maestro/flows/classicModeFlow.yaml
 ```
@@ -176,7 +174,7 @@ recorder selectors:
 - **A selector may combine `id` with `text`**, and here it must: "Off" is the
   value of the flash control *and* the timer control — and, once its sheet is
   open, of the stabilization menu's own first row.
-- **`selected: true` is readable too**, which is what all four `assert…Mode`
+- **`selected: true` is readable too**, which is what all three `assert…Mode`
   files use to prove the right mode is armed. The mode wheel renders an entry
   for every mode in every mode, so a bare `id: camera_mode_capture` would pass
   on the Upload tab just as happily.
@@ -198,60 +196,57 @@ recorder selectors:
   its off state fails on device. Don't "fix" a `checked:` selector because the
   log looks bare; prove it with a deliberately-wrong assertion instead.
 
-### What the four viewfinders share, and what tells them apart
+### What the three viewfinders share, and what tells them apart
 
-Three of them *are* the capture stack: same close, next, delete, library button
-and record button. Between those three, only the top bar's center slot and the
+Two of them *are* the capture stack: same close, next, delete, library button
+and record button. Between those two, only the top bar's center slot and the
 control rail differ. Classic is the odd one out — its own stack, its own top
 bar, its own action rows, and no record button at all.
 
-| | capture | lip-sync | stop-motion | classic |
-|---|---|---|---|---|
-| `camera_record_button` | ✅ | ✅ | ✅ | — |
-| `camera_classic_shutter` (the preview) | — | — | — | ✅ |
-| `audio_chip` (center slot) | — | ✅ | — | — |
-| `camera_stop_motion_budget` (center slot) | — | — | ✅ | — |
-| `camera_flash_button` | ✅ | ✅ | ✅ | — |
-| `camera_aspect_ratio_button` | ✅ | ✅ | ✅ | — |
-| `camera_switch_camera_button` | ✅ | ✅ | ✅ | ✅ |
-| `camera_timer_button` | ✅ | ✅ | ✅ | — |
-| `camera_stabilization_button` | ✅ | ✅ | — | — |
-| `camera_ghost_frame_button` | ✅ | ✅ | ✅ | ✅ |
-| `camera_grid_button` | — | — | ✅ | ✅ |
+| | capture | stop-motion | classic |
+|---|---|---|---|
+| `camera_record_button` | ✅ | ✅ | — |
+| `camera_classic_shutter` (the preview) | — | — | ✅ |
+| `audio_chip` (center slot) | ✅ | — | — |
+| `camera_stop_motion_budget` (center slot) | — | ✅ | — |
+| `camera_flash_button` | ✅ | ✅ | — |
+| `camera_aspect_ratio_button` | ✅ | ✅ | — |
+| `camera_switch_camera_button` | ✅ | ✅ | ✅ |
+| `camera_timer_button` | ✅ | ✅ | — |
+| `camera_stabilization_button` | ✅ | — | — |
+| `camera_ghost_frame_button` | ✅ | ✅ | ✅ |
+| `camera_grid_button` | — | ✅ | ✅ |
+| `camera_color_mask_button` | device | — | — |
 
-Lip-sync and capture are the subset trap. Their rails are identical, so assert
-only what each mode renders and `assertCaptureMode` passes on the lip-sync
-viewfinder,
-because everything it checks is there. It asserts `audio_chip` *absent*, and
-that one line is what keeps it honest. `video_editor_audio_chip_test.dart` pins
-the anchor itself at the widget level.
+The color mask button is on capture's rail only where the renderer can key the
+viewfinder live, so no assert mentions it. While the mask is on, the rail also
+drops stabilization and the ghost frame.
 
-Stop-motion is not that case, and its `assertNotVisible` block is there for a
-different reason. Its rail and capture's **overlap without either containing
+Stop-motion's rail and capture's **overlap without either containing
 the other** — both have the timer and the ghost frame, but only capture has
 stabilization and only stop-motion has the grid — so each assert already fails
 on the other's viewfinder on the rail alone. What settles
 which viewfinder is up before either gets that far is the mode wheel's
-`selected` state, asserted on the first line of all four files.
+`selected` state, asserted on the first line of all three files.
 
 So the lines those two asserts carry — `assertStopMotionMode` pinning
-stabilization absent, `assertCaptureMode` pinning grid and the budget absent —
-are **leak guards**, not mode separators: they fail when a
+stabilization and the sound chip absent, `assertCaptureMode` pinning grid and
+the budget absent — are **leak guards**, not mode separators: they fail when a
 control starts rendering in a mode that does not declare it, which nothing else
-in the suite would catch. `camera_classic_shutter`, pinned absent by all three
+in the suite would catch. `camera_classic_shutter`, pinned absent by both
 capture-stack asserts, is the same kind of line: the record button is already
 enough to tell classic apart, and `assertClassicMode` pins that one absent from
 its side. `video_recorder_capture_actions_test.dart` pins the
 same split at the widget level.
 
 Because flash, aspect ratio and the lens switch are unconditional *on that
-rail*, the three capture-stack modes drive them with the same three files —
+rail*, the two capture-stack modes drive them with the same three files —
 `utils/driveAspectRatioControl`, `utils/driveLensControl`,
-`utils/driveFlashControl`. Capture and lip-sync wrap those in
-`utils/driveCaptureRail.yaml`, which adds the timer and stabilization controls
-they alone render, and the ghost toggle. The grid toggle (`supportGridLines`)
+`utils/driveFlashControl`. Capture wraps those in
+`utils/driveCaptureRail.yaml`, which adds the stabilization control it alone
+renders, the timer and the ghost toggle. The grid toggle (`supportGridLines`)
 is shared by stop-motion and classic, and the ghost toggle
-(`supportsGhostFrame`) by those two plus capture and lip-sync, so they are
+(`supportsGhostFrame`) by those two plus capture, so they are
 per-control utils on the same rule — `utils/driveGridControl`,
 `utils/driveGhostFrameControl`. Each mode's
 `…Controls` test is a sequence of those utils plus its own mode assert, and
@@ -285,9 +280,9 @@ Shared:
   whose buttons are OS-localized copy. Note the relaunch deliberately does
   *not* clear state: on Android `pm clear` wipes the encrypted preferences the
   Nostr key lives in and would sign the account back out mid-flow.
-- **Hardware for the guarded rail controls.** Flash (the three capture-stack
-  modes — classic renders no rail at all) and stabilization (capture and
-  lip-sync) are driven behind an `enabled: true`
+- **Hardware for the guarded rail controls.** Flash (the two capture-stack
+  modes — classic renders no rail at all) and stabilization (capture) are
+  driven behind an `enabled: true`
   guard, because both are disabled outright when the active lens has no flash
   unit or reports a single stabilization mode. Where the feature is missing the
   block prints `SKIPPED` rather than failing — check the run output before
@@ -302,15 +297,14 @@ Shared:
   first). Run from the top this is handled — `loginFreshInstall`'s `clearState`
   wipes all four — but a standalone run inherits whatever the last session left.
   A phone whose last session used the front lens fails the rail on its first
-  `.*Back camera.*`, and the four flows leave the mode key on different values,
-  so a `captureModeFlow` run straight after a lip-sync, stop-motion or classic
-  one, skipping the login step, opens on the wrong mode. When iterating
+  `.*Back camera.*`, and the three flows leave the mode key on different values,
+  so a `captureModeFlow` run straight after a stop-motion or classic one,
+  skipping the login step, opens on the wrong mode. When iterating
   standalone, either reset the keys or start from a flow that clears state.
 - **An empty session when the rail is driven.** The aspect-ratio control is
   disabled once the session holds a clip, because clips of mixed ratios cannot
   share an editor timeline. `captureModeControls` therefore runs before the
-  recording tests, and `lipSyncModeControls` runs after the sound is picked
-  but before `lipSyncModeRecordClip`. Stop-motion stills are not clips until
+  recording tests. Stop-motion stills are not clips until
   the assemble, so its rail stays live mid-session — but
   `stopMotionModeControls` closes on its mode assert, which pins next and undo
   absent, so it needs the empty session anyway and the flow keeps the same
@@ -336,30 +330,27 @@ Capture only:
   4-second banner stop-motion has floats over the bottom of the screen, which
   is where the stabilization sheet lists its modes and where the record and
   delete buttons sit. `utils/driveCaptureRail` therefore drives ghost last and
-  waits the banner out before handing over, for lip-sync as well, since it
-  runs the same util.
+  waits the banner out before handing over.
 
-Lip-sync only:
+Capture's sound:
 
-- **Reaching the mode at all.** `openLipSyncMode` selects rather than asserts,
-  because the recorder falls back to Capture whenever the persisted key is
-  absent and so never opens here on its own. It walks the wheel one entry at a
-  time: Lip Sync sits two places from Capture, and the wheel is a lazy
-  `ListView` that only builds entries near the armed one.
-- **No sound picked when the mode is entered.** `openLipSyncMode` asserts the
-  picker, so it needs the editor to hold no sound. The selection lives in the
-  editor provider rather than a preference: closing the recorder or a relaunch
-  clears it, and so does the wheel walk, since switching between recording
-  modes resets the session. An iterating run that picked a sound by hand and
-  skipped all three lands on the viewfinder instead.
+- **An empty session when the sound is picked.** The takes are synced to the
+  sound, so the chip only opens the picker while the session holds no clip;
+  after that a tap only explains how to change it. `captureModeSound` therefore
+  runs after `captureModeDeleteClip` has emptied the session.
+- **A picked sound stays on the chip.** The selection lives in the editor
+  provider rather than a preference: closing the recorder or a relaunch clears
+  it, and so does a switch between recording modes, which resets the session.
+  Until then `assertCaptureMode` still holds, because it only asserts the chip,
+  not what it says; `captureModeSound` runs last in its flow all the same.
 - **The keyboard hides the confirm bar.** The picker's done button is anchored
   to the bottom of the picker, so with the search keyboard up it is pushed off
-  screen entirely. `utils/pickLipSyncSound` types its query and then calls
+  screen entirely. `utils/pickCaptureSound` types its query and then calls
   `hideKeyboard` before touching the list. Skip that and the failure is a
   nasty one to read: the sound selects correctly, the tile turns green in the
   failure screenshot, and the run dies waiting on a button that is simply not
   in the hierarchy.
-- **The sound is picked by title, from the manifest.** `pickLipSyncSound`
+- **The sound is picked by title, from the manifest.** `pickCaptureSound`
   searches "Bruh Sound Effect" and asserts the title back off the first
   result, so a reordered or renamed manifest fails there rather than silently
   recording against a different sound. That title comes from the asset
@@ -371,7 +362,7 @@ Lip-sync only:
 Stop-motion only:
 
 - **Reaching the mode at all.** `openStopMotionMode` selects rather than
-  asserts, for the same reason `openLipSyncMode` does. It taps the entry
+  asserts, for the same reason `openClassicMode` does. It taps the entry
   directly instead of hopping: Stop Motion sits next to Capture, so the lazy
   `ListView` has it built in both states this flow can arrive in. From Classic
   or Upload it would not be, same trap as everywhere else on this wheel.
@@ -392,18 +383,13 @@ Stop-motion only:
 
 Classic only:
 
-- **Reaching the mode at all.** Classic sits three places from Capture, or
-  four where the wheel also offers Chroma Key between Lip Sync and Classic —
+- **Reaching the mode at all.** Classic sits two places from Capture —
   further than any other mode a flow has to travel on a lazy `ListView` that
-  only builds entries near the armed one. `openClassicMode`
-  therefore hops one entry at a time, and guards the hops on Classic not
-  already being on screen: on a rerun the recorder opens straight on Classic
-  (selecting a mode persists it), and from there Stop Motion is at least two
-  entries away and may not be built at all.
-- **Chroma Key is not on every wheel.** `VideoRecorderMode.available` offers
-  it only where the renderer supports shader image filters: every iOS build,
-  but not every Android one. So `openClassicMode` hops through it only while
-  its entry shows, and elsewhere steps from Lip Sync straight to Classic.
+  only builds entries near the armed one. `openClassicMode` selects rather
+  than asserts, because the recorder falls back to Capture whenever the
+  persisted key is absent, and it hops one entry at a time, guarded on Classic
+  not already being on screen: on a rerun the recorder opens straight on
+  Classic (selecting a mode persists it).
   `test/tools/maestro_mode_wheel_walk_test.dart` holds every mode-selecting
   helper to this walk, so a mode added between Capture and a helper's target
   fails it until the helper hops through the new entry.

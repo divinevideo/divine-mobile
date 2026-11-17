@@ -15191,6 +15191,12 @@ abstract class AppLocalizations {
   /// **'Ghost frame disabled'**
   String get videoRecorderGhostFrameDisabled;
 
+  /// Snackbar when the capture sound chip is tapped after the first clip. Clips are recorded in sync with the picked sound, so it can only change once they are deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clips are synced to this sound. Delete them to pick another one.'**
+  String get videoRecorderSoundLockedHint;
+
   /// No description provided for @videoRecorderClipDeletedMessage.
   ///
   /// In en, this message translates to:

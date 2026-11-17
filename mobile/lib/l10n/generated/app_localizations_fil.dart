@@ -9128,6 +9128,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Naka-disable ang ghost frame';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Naka-sync ang mga clip mo sa sound na ito. I-delete mo sila para pumili ng iba.';
+
+  @override
   String get videoRecorderClipDeletedMessage =>
       'Inilipat ang clip sa basurahan';
 

@@ -9069,6 +9069,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'الإطار الشبحي معطل';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'المقاطع متزامنة مع هذا الصوت. لاختيار صوت آخر، يجب حذفها أولًا.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'تم نقل المقطع إلى المهملات';
 
   @override

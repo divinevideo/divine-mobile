@@ -344,36 +344,6 @@ void main() {
       });
     });
 
-    group('layout', () {
-      test('takes either the sheet controller or an embedding callback', () {
-        expect(AudioSelectionBottomSheet.new, throwsAssertionError);
-        expect(
-          () => AudioSelectionBottomSheet(
-            scrollController: ScrollController(),
-            onSoundPicked: (_) {},
-          ),
-          throwsAssertionError,
-        );
-      });
-
-      test('takes a category bar leading only when embedded', () {
-        expect(
-          () => AudioSelectionBottomSheet(
-            scrollController: ScrollController(),
-            categoryBarLeading: const SizedBox(),
-          ),
-          throwsAssertionError,
-        );
-        expect(
-          () => AudioSelectionBottomSheet(
-            onSoundPicked: (_) {},
-            categoryBarLeading: const SizedBox(),
-          ),
-          returnsNormally,
-        );
-      });
-    });
-
     group('Rendering', () {
       testWidgets('renders $AudioSelectionBottomSheet', (tester) async {
         await tester.pumpWidget(

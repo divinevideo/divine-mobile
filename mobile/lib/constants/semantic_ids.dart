@@ -34,7 +34,7 @@ abstract class SemanticIds {
   static const String cameraClassicShutter = 'camera_classic_shutter';
 
   /// Recorder chrome. Close, next and delete-clip come from the capture
-  /// stack, which capture, stop-motion and lip-sync all render, and from
+  /// stack, which capture and stop-motion render, and from
   /// classic mode's own top bar and action row; the library button lives in
   /// the bottom bar, which every mode renders. Every label behind these is
   /// localized, so the E2E recorder flows drive them by id.
@@ -51,19 +51,21 @@ abstract class SemanticIds {
 
   /// Capture-mode control rail, top to bottom. Flash, aspect ratio and the
   /// lens switch are unconditional, so every mode that renders the rail drives
-  /// them with the same three E2E utils. Timer and stabilization are rendered
-  /// only by the modes that declare them — capture and lip-sync, which share
-  /// the rail unchanged and drive all five with `driveCaptureRail`.
+  /// them with the same three E2E utils. Timer, stabilization and the color
+  /// mask are rendered only by the modes that declare them — capture, which
+  /// drives the first five with `driveCaptureRail`. The color mask also needs
+  /// a renderer that keys the viewfinder live, and hides stabilization while
+  /// it is on.
   static const String cameraFlashButton = 'camera_flash_button';
   static const String cameraTimerButton = 'camera_timer_button';
   static const String cameraAspectRatioButton = 'camera_aspect_ratio_button';
   static const String cameraSwitchCameraButton = 'camera_switch_camera_button';
   static const String cameraStabilizationButton = 'camera_stabilization_button';
+  static const String cameraColorMaskButton = 'camera_color_mask_button';
 
-  /// Sound picker on [VideoEditorAudioChip]. Lip-sync puts it in the top-bar
-  /// slot capture mode leaves empty, and because the two render an identical
-  /// control rail it is the *only* thing separating those viewfinders — so
-  /// `assertCaptureMode` asserts its absence.
+  /// Sound picker on [VideoEditorAudioChip]. Capture puts it in the top-bar
+  /// slot stop-motion fills with its shot budget, so `assertCaptureMode`
+  /// asserts it and the stop-motion assert its absence.
   ///
   /// The chip is shared with the editor's audio-timing screen, which is a
   /// different route, so the id stays unambiguous on any one screen.

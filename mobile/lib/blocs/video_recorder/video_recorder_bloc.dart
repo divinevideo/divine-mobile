@@ -186,9 +186,9 @@ class VideoRecorderBloc
   /// audio-session wiring required by #4539.
   ///
   /// [liveChromaKeySupported] says whether the renderer can draw the keyed
-  /// chroma-key viewfinder. Without it [VideoRecorderMode.chromaKey] is
-  /// neither restored nor entered. Off unless the caller knows, so a bloc built
-  /// without asking the renderer never offers a mode it cannot show.
+  /// viewfinder. Without it the color mask cannot be turned on. Off unless
+  /// the caller knows, so a bloc built without asking the renderer never
+  /// keys a viewfinder it cannot show.
   /// [detectChromaKeyStill] is a test seam for the wall measurement.
   VideoRecorderBloc({
     required ReadClipManager readClipManager,
@@ -217,7 +217,11 @@ class VideoRecorderBloc
        _onRecordingStarted = onRecordingStarted,
        _liveChromaKeySupported = liveChromaKeySupported,
        _detectChromaKeyStill = detectChromaKeyStill,
-       super(const VideoRecorderBlocState()) {
+       super(
+         VideoRecorderBlocState(
+           isLiveChromaKeySupported: liveChromaKeySupported,
+         ),
+       ) {
     _cameraService =
         _cameraServiceOverride ??
         cameraServiceFactory(
@@ -304,6 +308,13 @@ class VideoRecorderBloc
       _onStopMotionAssembleRequested,
       transformer: droppable(),
     );
+    on<VideoRecorderChromaKeyEnabledSet>(
+      _onChromaKeyEnabledSet,
+      // Turning the mask on or off points the camera's stabilization at the
+      // new setting, a CameraX rebind on Android; process them FIFO so quick
+      // taps cannot overlap and the last one wins.
+      transformer: sequential(),
+    );
     on<VideoRecorderChromaKeyMeasureRequested>(
       _onChromaKeyMeasureRequested,
       transformer: droppable(),
@@ -385,12 +396,6 @@ class VideoRecorderBloc
   bool get _remoteRecordPausedForSound =>
       _readVideoEditorState().selectedSound != null;
 
-  /// Lip-sync shows its sound picker in place of the preview until a sound
-  /// is picked.
-  bool get _lipSyncSoundPickerShowing =>
-      state.recorderMode == VideoRecorderMode.lipSync &&
-      !_remoteRecordPausedForSound;
-
   /// Keeps background chroma-key bakes off the hardware while the camera
   /// encodes: held from the moment a take starts, released once it is over.
   ///
@@ -444,12 +449,11 @@ class VideoRecorderBloc
         prefs.setString(VideoRecorderMode.persistenceKey, requestedMode.name),
       );
     }
-    final savedMode = _offeredMode(
-      requestedMode ??
-          VideoRecorderMode.fromName(
-            prefs.getString(VideoRecorderMode.persistenceKey),
-          ),
-    );
+    final savedMode =
+        requestedMode ??
+        VideoRecorderMode.fromName(
+          prefs.getString(VideoRecorderMode.persistenceKey),
+        );
     if (!event.fromEditor && savedMode != state.recorderMode) {
       try {
         await _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
@@ -520,8 +524,8 @@ class VideoRecorderBloc
         // Rides the first bind: applying it after init would rebind the
         // whole camera a second time on Android.
         videoStabilizationMode: _stabilizationModeFor(
-          state.recorderMode,
-          prefs,
+          stabilizes: state.supportsVideoStabilization,
+          prefs: prefs,
         ),
         // Read at init because the outputs' mirroring is fixed when the
         // camera binds them; flipping the setting applies to the next open.
@@ -780,7 +784,7 @@ class VideoRecorderBloc
     if (event.mode == state.videoStabilizationMode) return;
     // Already on a mode that hides the control: keep the pick, but do not
     // start a rebind. Upload's camera is paused, and a rebind would restart it.
-    if (!state.recorderMode.supportsVideoStabilization) {
+    if (!state.supportsVideoStabilization) {
       await _saveStabilizationModePreference(event.mode);
       return;
     }
@@ -794,10 +798,11 @@ class VideoRecorderBloc
       return;
     }
     if (isClosed) return;
-    // The picker and a mode change run concurrently. The mode handler may
-    // have seen the camera still on the old value and skipped its own apply,
-    // and on Android this set rebinds even a camera Upload has paused.
-    if (!state.recorderMode.supportsVideoStabilization) {
+    // The picker and a mode or color-mask change run concurrently. That
+    // handler may have seen the camera still on the old value and skipped its
+    // own apply, and on Android this set rebinds even a camera Upload has
+    // paused.
+    if (!state.supportsVideoStabilization) {
       await _saveStabilizationModePreference(event.mode);
       if (isClosed) return;
       if (state.recorderMode == VideoRecorderMode.upload) {
@@ -1306,9 +1311,7 @@ class VideoRecorderBloc
 
     // The footage is the raw camera frame. The key the viewfinder showed
     // travels with it as an intent and is baked right after the take.
-    final captureChromaKey = state.recorderMode.needsLiveChromaKey
-        ? state.chromaKey
-        : null;
+    final captureChromaKey = state.isChromaKeyActive ? state.chromaKey : null;
     final clip = clipManager.addClip(
       video: videoResult,
       originalAspectRatio: _cameraService.cameraAspectRatio,
@@ -1861,7 +1864,6 @@ class VideoRecorderBloc
     VideoRecorderRecorderModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    if (_offeredMode(event.mode) != event.mode) return;
     final previousMode = state.recorderMode;
     await _applyRecorderMode(
       emit,
@@ -1931,12 +1933,6 @@ class VideoRecorderBloc
     );
   }
 
-  /// [mode], or [VideoRecorderMode.capture] when this device cannot show it.
-  VideoRecorderMode _offeredMode(VideoRecorderMode mode) =>
-      mode.needsLiveChromaKey && !_liveChromaKeySupported
-      ? VideoRecorderMode.capture
-      : mode;
-
   /// The timer setting to keep when switching to [mode].
   ///
   /// Kept only between modes that use it the same way: a delayed start left
@@ -1979,7 +1975,9 @@ class VideoRecorderBloc
     _stopIntervalCapture(emit);
     // An unfinished stop-motion session stays in the library, see
     // _applyRecorderMode.
-    emit(const VideoRecorderBlocState());
+    emit(
+      VideoRecorderBlocState(isLiveChromaKeySupported: _liveChromaKeySupported),
+    );
   }
 
   void _onShowLastClipOverlayToggled(
@@ -2006,6 +2004,31 @@ class VideoRecorderBloc
 
   // === Chroma-key handlers ===
 
+  /// Turns the color mask on or off.
+  ///
+  /// Refused mid-take, where it would change what the take carries, and
+  /// turning it on is refused where the renderer cannot key the viewfinder
+  /// live or the mode has no mask. The camera's stabilization follows, since
+  /// the mask runs without it. Turning the mask off writes off a measurement
+  /// that is still out.
+  Future<void> _onChromaKeyEnabledSet(
+    VideoRecorderChromaKeyEnabledSet event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    if (event.enabled == state.isChromaKeyEnabled) return;
+    if (_refusesRebindMidTake('Color mask change')) return;
+    if (event.enabled && !state.offersChromaKey) return;
+    emit(
+      state.copyWith(
+        isChromaKeyEnabled: event.enabled,
+        chromaKeyMeasurementStatus: event.enabled
+            ? null
+            : state.chromaKeyMeasurementWrittenOff,
+      ),
+    );
+    await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
+  }
+
   /// Measures the wall behind the subject from a still and adopts the
   /// measured screen colour and amount.
   ///
@@ -2016,7 +2039,7 @@ class VideoRecorderBloc
     VideoRecorderChromaKeyMeasureRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    if (!state.recorderMode.needsLiveChromaKey ||
+    if (!state.isChromaKeyActive ||
         state.isRecording ||
         !_cameraService.isInitialized ||
         _cameraService.isSwitchingCamera) {
@@ -2639,9 +2662,11 @@ class VideoRecorderBloc
         // Its timer outlives the re-sync too. Reading false here would leave
         // the loop capturing behind a shutter that offers to start it.
         isIntervalCaptureRunning: state.isIntervalCaptureRunning,
-        // The key and backdrop are the user's, and the backdrop photo is still
-        // this recorder's to delete: a flip, a stabilization rebind or a
-        // re-init must not reset them.
+        // The mask, its key and backdrop are the user's, and the backdrop
+        // photo is still this recorder's to delete: a flip, a stabilization
+        // rebind or a re-init must not reset them.
+        isLiveChromaKeySupported: _liveChromaKeySupported,
+        isChromaKeyEnabled: state.isChromaKeyEnabled,
         chromaKey: state.chromaKey,
         chromaKeyMeasurementStatus: isFrontCamera == state.isFrontCamera
             ? state.chromaKeyMeasurementStatus
@@ -2655,11 +2680,9 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    // Neither the Upload tab, which pauses the camera, nor the lip-sync sound
-    // picker shows a preview, so a volume or Bluetooth press there must not
-    // start a recording the user cannot see.
-    if (state.recorderMode == VideoRecorderMode.upload ||
-        _lipSyncSoundPickerShowing) {
+    // The Upload tab pauses the camera and shows no preview, so a volume or
+    // Bluetooth press there must not start a recording the user cannot see.
+    if (state.recorderMode == VideoRecorderMode.upload) {
       Log.debug(
         '🎮 Remote record trigger ignored - no preview on '
         '${state.recorderMode.name}',
@@ -2727,16 +2750,7 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
 
-      if (_lipSyncSoundPickerShowing) {
-        // The picker's pause arrived while the camera was still starting and
-        // was dropped, so apply it now; the picker resumes on leaving.
-        await _cameraService.setRemoteRecordControlEnabled(enabled: false);
-        Log.debug(
-          '🎮 Remote record control paused (lip-sync sound picker)',
-          name: 'VideoRecorderBloc',
-          category: LogCategory.video,
-        );
-      } else if (_remoteRecordPausedForSound) {
+      if (_remoteRecordPausedForSound) {
         await _cameraService.setVolumeKeysEnabled(enabled: false);
         Log.debug(
           '🎮 Volume keys released (sound already selected)',
@@ -2806,18 +2820,19 @@ class VideoRecorderBloc
     return DivineVideoStabilizationMode.fromNativeString(saved);
   }
 
-  /// The stabilization the camera runs in [mode]: the saved choice where the
-  /// mode shows the control, off where it hides it, so Classic and Stop
-  /// Motion never run a mode picked in Capture. The saved choice itself stays
-  /// untouched.
-  DivineVideoStabilizationMode _stabilizationModeFor(
-    VideoRecorderMode mode,
-    SharedPreferences prefs,
-  ) => mode.supportsVideoStabilization
+  /// The stabilization the camera runs: the saved choice where the recorder
+  /// [stabilizes] and shows the control, off where it hides it, so Classic,
+  /// Stop Motion and the color mask never run a mode picked in Capture. The
+  /// saved choice itself stays untouched.
+  DivineVideoStabilizationMode _stabilizationModeFor({
+    required bool stabilizes,
+    required SharedPreferences prefs,
+  }) => stabilizes
       ? _savedStabilizationMode(prefs)
       : DivineVideoStabilizationMode.off;
 
-  /// Points the live camera at [_stabilizationModeFor] the current mode.
+  /// Points the live camera at [_stabilizationModeFor] the current mode and
+  /// color mask.
   ///
   /// A saved mode the current lens cannot take is left alone: the camera
   /// already opened with off for it, and requesting it again would rebind the
@@ -2831,7 +2846,10 @@ class VideoRecorderBloc
     if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
       return;
     }
-    final target = _stabilizationModeFor(mode, _readSharedPreferences());
+    final target = _stabilizationModeFor(
+      stabilizes: state.supportsVideoStabilization,
+      prefs: _readSharedPreferences(),
+    );
     // Off must clear the native request even when this lens already reports
     // off: an unsupported lens can retain a non-off request for the next lens.
     // Otherwise switching to Classic here would enable stabilization again

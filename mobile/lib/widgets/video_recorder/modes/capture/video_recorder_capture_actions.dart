@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_chroma_key_settings.dart';
 
 class VideoRecorderCaptureActions extends ConsumerWidget {
   const VideoRecorderCaptureActions({super.key});
@@ -31,8 +32,9 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         showGridLines: b.state.showGridLines,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
         capturesStills: b.state.recorderMode.capturesStills,
-        supportsGhostFrame: b.state.recorderMode.supportsGhostFrame,
-        supportsStabilization: b.state.recorderMode.supportsVideoStabilization,
+        supportsGhostFrame: b.state.supportsGhostFrame,
+        supportsStabilization: b.state.supportsVideoStabilization,
+        offersChromaKey: b.state.offersChromaKey,
       ),
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
@@ -120,6 +122,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                       : null,
                 ),
                 if (state.supportsStabilization) const _StabilizationButton(),
+                if (state.offersChromaKey) const _ColorMaskButton(),
               ],
             ),
           ),
@@ -158,6 +161,36 @@ class _GhostFrameButton extends StatelessWidget {
                   : context.l10n.videoRecorderGhostFrameDisabled,
             ),
           );
+      },
+    );
+  }
+}
+
+/// Turns the color mask on, or opens its settings again while it is on.
+///
+/// Turning it on opens the settings straight away: the wall and the backdrop
+/// are set there, and the sheet is also where the mask is turned off.
+class _ColorMaskButton extends StatelessWidget {
+  const _ColorMaskButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = context.select(
+      (VideoRecorderBloc b) => b.state.isChromaKeyEnabled,
+    );
+    return _IconButton(
+      icon: .selection,
+      label: context.l10n.videoEditorChromaKeyLabel,
+      identifier: SemanticIds.cameraColorMaskButton,
+      toggled: isEnabled,
+      highlighted: isEnabled,
+      onTap: () async {
+        if (!isEnabled) {
+          context.read<VideoRecorderBloc>().add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: true),
+          );
+        }
+        await showVideoRecorderChromaKeySettings(context);
       },
     );
   }
@@ -269,6 +302,7 @@ class _IconButton extends StatelessWidget {
     this.identifier,
     this.value,
     this.toggled,
+    this.highlighted = false,
   });
 
   final String label;
@@ -286,6 +320,10 @@ class _IconButton extends StatelessWidget {
   /// Current setting of a control that only flips on and off, announced as
   /// "on"/"off" (e.g. the grid overlay).
   final bool? toggled;
+
+  /// Draws the icon in the brand green, for a control whose effect is easy to
+  /// miss in the viewfinder while it is on.
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +348,8 @@ class _IconButton extends StatelessWidget {
             // time, the baked glyph is one image draw.
             child: ShadowedDivineIcon(
               icon: icon,
-              color: VineTheme.whiteText.withAlpha(onTap != null ? 255 : 100),
+              color: (highlighted ? VineTheme.vineGreen : VineTheme.whiteText)
+                  .withAlpha(onTap != null ? 255 : 100),
               shadows: const [],
             ),
           ),

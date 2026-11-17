@@ -4648,6 +4648,7 @@
   "videoRecorderToggleGhostFrameLabel": "Togol bingkai hantu",
   "videoRecorderGhostFrameEnabled": "Bingkai hantu didayakan",
   "videoRecorderGhostFrameDisabled": "Bingkai hantu dilumpuhkan",
+  "videoRecorderSoundLockedHint": "Klip anda diselaraskan dengan bunyi ini. Padam klip untuk memilih bunyi lain.",
   "videoRecorderClipDeletedMessage": "Klip dialihkan ke tong sampah",
   "videoRecorderClipUndoLabel": "Buat Asal",
   "@videoRecorderClipUndoLabel": {

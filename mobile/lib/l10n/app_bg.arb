@@ -2856,6 +2856,7 @@
   "videoRecorderToggleGhostFrameLabel": "Превключване на призрачна рамка",
   "videoRecorderGhostFrameEnabled": "Рамката призрак е активирана",
   "videoRecorderGhostFrameDisabled": "Призрачната рамка е деактивирана",
+  "videoRecorderSoundLockedHint": "Клиповете ти са синхронизирани с този звук. Изтрий ги, за да избереш друг.",
   "videoRecorderClipDeletedMessage": "Клипът е преместен в кошчето",
   "videoRecorderClipUndoLabel": "Отмени",
   "libraryTrashEmptyTitle": "Кошчето е празно",

@@ -100,7 +100,7 @@ class VideoClipChromaKeyScreen extends StatefulWidget {
 
   /// The key the screen opens on, or `null` to measure one off the footage.
   ///
-  /// A timeline clip recorded in chroma key mode whose bake has not landed
+  /// A timeline clip recorded with the color mask whose bake has not landed
   /// opens on the settings it was recorded with: the user already chose them
   /// against the live camera, so measuring over them would throw that away.
   ClipChromaKey? get initialChromaKey => switch (surface) {

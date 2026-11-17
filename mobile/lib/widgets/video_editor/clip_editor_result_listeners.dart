@@ -1095,7 +1095,7 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
           clips: state.clips,
           addedAudioTracks: audioTracks,
         );
-        // A library clip recorded in chroma key mode carries the key it was
+        // A library clip recorded with the color mask carries the key it was
         // recorded with, still unbaked.
         context.read<ClipEditorBloc>().add(
           const ClipEditorCapturedChromaKeysBakeRequested(),
@@ -1125,7 +1125,7 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
 }
 
 /// Listens to [ClipEditorState.lastCapturedChromaKeyBakeResult] and says so
-/// when a clip recorded in chroma key mode could not be keyed.
+/// when a clip recorded with the color mask could not be keyed.
 ///
 /// Success needs nothing here: the bloc has already swapped the clip files,
 /// the screen writes them into editor history as the session's starting

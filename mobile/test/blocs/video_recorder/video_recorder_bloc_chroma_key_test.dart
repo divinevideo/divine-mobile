@@ -17,7 +17,6 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -113,25 +112,6 @@ void main() {
     when(() => cameraService.dispose()).thenAnswer((_) async {});
   });
 
-  /// A mode switch persists the mode and clears the session it leaves.
-  void stubModeSwitch() {
-    // The camera is not up, so the switch leaves its stabilization alone.
-    when(() => cameraService.isInitialized).thenReturn(false);
-    when(() => prefs.getString(any())).thenReturn(null);
-    when(() => prefs.setString(any(), any())).thenAnswer((_) async => true);
-    when(() => prefs.getBool(any())).thenReturn(null);
-    when(
-      () => clipManager.clearAll(
-        keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => videoEditor.resetForRecorderMode(
-        keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
-      ),
-    ).thenAnswer((_) async {});
-  }
-
   /// A camera that is up and can take a still.
   void stubReadyCamera() {
     when(() => cameraService.isInitialized).thenReturn(true);
@@ -182,7 +162,8 @@ void main() {
   }
 
   const chromaKeyState = VideoRecorderBlocState(
-    recorderMode: VideoRecorderMode.chromaKey,
+    isLiveChromaKeySupported: true,
+    isChromaKeyEnabled: true,
   );
 
   /// Requests a measurement and waits for it to land: the still is real file
@@ -198,73 +179,43 @@ void main() {
   }
 
   group(VideoRecorderBloc, () {
-    group('VideoRecorderRecorderModeSet', () {
-      setUp(stubModeSwitch);
+    group('VideoRecorderChromaKeyEnabledSet', () {
+      // The camera is not up, so the mask leaves its stabilization alone.
+      setUp(() => when(() => cameraService.isInitialized).thenReturn(false));
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'enters chroma key when the renderer can draw the live key',
+        'keys the viewfinder without stabilization or ghost frame once on',
         build: buildBloc,
-        act: (bloc) => bloc.add(
-          const VideoRecorderRecorderModeSet(VideoRecorderMode.chromaKey),
-        ),
+        act: (bloc) =>
+            bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: true)),
         verify: (bloc) {
-          expect(bloc.state.recorderMode, VideoRecorderMode.chromaKey);
+          expect(bloc.state.isChromaKeyActive, isTrue);
+          expect(bloc.state.supportsVideoStabilization, isFalse);
+          expect(bloc.state.supportsGhostFrame, isFalse);
         },
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'stays put when the renderer cannot draw the live key',
-        build: () => buildBloc(liveChromaKeySupported: false),
-        act: (bloc) => bloc.add(
-          const VideoRecorderRecorderModeSet(VideoRecorderMode.chromaKey),
-        ),
-        expect: () => const <VideoRecorderBlocState>[],
-        verify: (_) {
-          // Nothing was discarded for a mode that never opened.
-          verifyNever(
-            () => clipManager.clearAll(
-              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+        'keeps the key and writes off a running measurement when turned off',
+        build: () => buildBloc()
+          ..emit(
+            chromaKeyState.copyWith(
+              chromaKey: const ClipChromaKey(key: ChromaKey.blueScreen()),
+              chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.detecting,
             ),
-          );
-        },
-      );
-    });
-
-    group('VideoRecorderInitializeRequested', () {
-      setUp(() {
-        stubModeSwitch();
-        when(
-          () => prefs.getString(VideoRecorderMode.persistenceKey),
-        ).thenReturn(VideoRecorderMode.chromaKey.name);
-        when(
-          () => cameraService.initialize(
-            videoQuality: any(named: 'videoQuality'),
-            initialLens: any(named: 'initialLens'),
-            enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
-            preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
-            videoStabilizationMode: any(named: 'videoStabilizationMode'),
-            mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
           ),
-        ).thenThrow(StateError('camera stays down in this test'));
-      });
-
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'restores a persisted chroma key where it can be shown',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        errors: () => [isA<StateError>()],
+        act: (bloc) =>
+            bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: false)),
         verify: (bloc) {
-          expect(bloc.state.recorderMode, VideoRecorderMode.chromaKey);
-        },
-      );
-
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'falls back to capture on a device that cannot show chroma key',
-        build: () => buildBloc(liveChromaKeySupported: false),
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        errors: () => [isA<StateError>()],
-        verify: (bloc) {
-          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          expect(bloc.state.isChromaKeyActive, isFalse);
+          expect(
+            bloc.state.chromaKey,
+            const ClipChromaKey(key: ChromaKey.blueScreen()),
+          );
+          expect(
+            bloc.state.chromaKeyMeasurementStatus,
+            ChromaKeyMeasurementStatus.superseded,
+          );
         },
       );
     });

@@ -5390,6 +5390,7 @@
   "videoRecorderToggleGhostFrameLabel": "గోస్ట్ ఫ్రేమ్‌ని టోగుల్ చేయండి",
   "videoRecorderGhostFrameEnabled": "ఘోస్ట్ ఫ్రేమ్ ప్రారంభించబడింది",
   "videoRecorderGhostFrameDisabled": "ఘోస్ట్ ఫ్రేమ్ నిలిపివేయబడింది",
+  "videoRecorderSoundLockedHint": "మీ క్లిప్‌లు ఈ శబ్దంతో సింక్ అయ్యాయి. వేరే శబ్దాన్ని ఎంచుకోవడానికి వాటిని తొలగించండి.",
   "videoRecorderClipDeletedMessage": "క్లిప్ ట్రాష్‌కి తరలించబడింది",
   "videoRecorderClipUndoLabel": "అన్డు",
   "@videoRecorderClipUndoLabel": {

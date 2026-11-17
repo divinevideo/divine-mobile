@@ -75,12 +75,15 @@ void main() {
     Widget buildTestWidget({
       bool showLastClipOverlay = false,
       VideoRecorderMode recorderMode = VideoRecorderMode.capture,
+      bool isChromaKeyEnabled = false,
       List<DivineVideoClip> clips = const [],
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           showLastClipOverlay: showLastClipOverlay,
           recorderMode: recorderMode,
+          isLiveChromaKeySupported: isChromaKeyEnabled,
+          isChromaKeyEnabled: isChromaKeyEnabled,
         ),
       );
       return ProviderScope(
@@ -118,13 +121,13 @@ void main() {
         expect(find.byType(Opacity), findsNothing);
       });
 
-      // The toggle outlives a mode switch, and chroma key has no toggle to
-      // turn the overlay back off.
-      testWidgets('$SizedBox in a mode without a ghost toggle', (tester) async {
+      // The toggle outlives the color mask turning on, which hides the ghost
+      // toggle that could turn the overlay back off.
+      testWidgets('$SizedBox while the color mask is on', (tester) async {
         await tester.pumpWidget(
           buildTestWidget(
             showLastClipOverlay: true,
-            recorderMode: VideoRecorderMode.chromaKey,
+            isChromaKeyEnabled: true,
             clips: [createClip(ghostFramePath: tempFile.path)],
           ),
         );

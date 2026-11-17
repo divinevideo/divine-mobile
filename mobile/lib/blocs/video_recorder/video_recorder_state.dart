@@ -50,7 +50,8 @@ enum ChromaKeyMeasurementStatus {
 /// The chroma-key key a session starts from before anything is measured.
 ///
 /// The green preset rather than a bare default, so the viewfinder shows a
-/// plausible matte the moment the mode opens against an actual green screen.
+/// plausible matte the moment the color mask turns on against an actual green
+/// screen.
 const _initialChromaKey = ClipChromaKey(key: ChromaKey.greenScreen());
 
 /// State for [VideoRecorderBloc].
@@ -100,6 +101,8 @@ class VideoRecorderBlocState extends Equatable {
     this.stopMotionStatus = StopMotionStatus.idle,
     this.stopMotionShutterTick = 0,
     this.isIntervalCaptureRunning = false,
+    this.isLiveChromaKeySupported = false,
+    this.isChromaKeyEnabled = false,
     this.chromaKey = _initialChromaKey,
     this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
     this.unrecordedChromaKeyImagePath,
@@ -307,13 +310,23 @@ class VideoRecorderBlocState extends Equatable {
   /// while it runs.
   final bool isIntervalCaptureRunning;
 
-  /// The key the chroma-key viewfinder previews, and that every clip
-  /// recorded in [VideoRecorderMode.chromaKey] carries as its
+  /// Whether the renderer can key the viewfinder live, which the color mask
+  /// needs: at capture there is no unkeyed preview to fall back to.
+  final bool isLiveChromaKeySupported;
+
+  /// Whether the user turned the color mask on.
+  ///
+  /// Only modes that [VideoRecorderMode.supportsChromaKey] act on it, so it is
+  /// kept across a switch to another mode and back. See [isChromaKeyActive].
+  final bool isChromaKeyEnabled;
+
+  /// The key the color-masked viewfinder previews, and that every clip
+  /// recorded while [isChromaKeyActive] carries as its
   /// [DivineVideoClip.captureChromaKey].
   ///
-  /// Kept across mode switches and camera re-syncs, so leaving the mode and
-  /// coming back, or flipping the camera, finds the wall and backdrop as they
-  /// were set.
+  /// Kept across mode switches, the mask being turned off, and camera
+  /// re-syncs, so turning it back on, or flipping the camera, finds the wall
+  /// and backdrop as they were set.
   final ClipChromaKey chromaKey;
 
   /// Where the wall measurement stands.
@@ -334,6 +347,29 @@ class VideoRecorderBlocState extends Equatable {
   /// Stop tap and the recording limit both ending it — and is dropped, so the
   /// take is not added as two clips.
   final String? stoppedTakePath;
+
+  /// Whether the viewfinder shows the color mask live, so the takes recorded
+  /// now carry it.
+  bool get isChromaKeyActive => isChromaKeyEnabled && offersChromaKey;
+
+  /// Whether the color mask control shows.
+  bool get offersChromaKey =>
+      isLiveChromaKeySupported && recorderMode.supportsChromaKey;
+
+  /// Whether the stabilization control shows and the camera stabilizes.
+  ///
+  /// Off under the color mask: look-ahead stabilization delays the preview
+  /// behind the file, and the backdrop is composited live against that
+  /// preview.
+  bool get supportsVideoStabilization =>
+      recorderMode.supportsVideoStabilization && !isChromaKeyActive;
+
+  /// Whether the ghost-frame control shows and the ghost is drawn.
+  ///
+  /// Off under the color mask: the ghost comes from the raw take, so it would
+  /// lay the bare backdrop over the keyed viewfinder.
+  bool get supportsGhostFrame =>
+      recorderMode.supportsGhostFrame && !isChromaKeyActive;
 
   /// Whether a wall measurement is running.
   bool get isMeasuringChromaKey =>
@@ -433,6 +469,8 @@ class VideoRecorderBlocState extends Equatable {
     StopMotionStatus? stopMotionStatus,
     int? stopMotionShutterTick,
     bool? isIntervalCaptureRunning,
+    bool? isLiveChromaKeySupported,
+    bool? isChromaKeyEnabled,
     ClipChromaKey? chromaKey,
     ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
     String? unrecordedChromaKeyImagePath,
@@ -495,6 +533,9 @@ class VideoRecorderBlocState extends Equatable {
           stopMotionShutterTick ?? this.stopMotionShutterTick,
       isIntervalCaptureRunning:
           isIntervalCaptureRunning ?? this.isIntervalCaptureRunning,
+      isLiveChromaKeySupported:
+          isLiveChromaKeySupported ?? this.isLiveChromaKeySupported,
+      isChromaKeyEnabled: isChromaKeyEnabled ?? this.isChromaKeyEnabled,
       chromaKey: chromaKey ?? this.chromaKey,
       chromaKeyMeasurementStatus:
           chromaKeyMeasurementStatus ?? this.chromaKeyMeasurementStatus,
@@ -551,6 +592,8 @@ class VideoRecorderBlocState extends Equatable {
     stopMotionStatus,
     stopMotionShutterTick,
     isIntervalCaptureRunning,
+    isLiveChromaKeySupported,
+    isChromaKeyEnabled,
     chromaKey,
     chromaKeyMeasurementStatus,
     unrecordedChromaKeyImagePath,

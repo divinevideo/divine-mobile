@@ -57,6 +57,8 @@ void main() {
       bool showGridLines = false,
       bool showLastClipOverlay = false,
       bool isVideoStabilizationSupported = false,
+      bool isLiveChromaKeySupported = false,
+      bool isChromaKeyEnabled = false,
       DivineVideoStabilizationMode videoStabilizationMode =
           DivineVideoStabilizationMode.off,
       List<DivineVideoStabilizationMode> availableVideoStabilizationModes =
@@ -79,6 +81,8 @@ void main() {
           showGridLines: showGridLines,
           showLastClipOverlay: showLastClipOverlay,
           isVideoStabilizationSupported: isVideoStabilizationSupported,
+          isLiveChromaKeySupported: isLiveChromaKeySupported,
+          isChromaKeyEnabled: isChromaKeyEnabled,
           videoStabilizationMode: videoStabilizationMode,
           availableVideoStabilizationModes: availableVideoStabilizationModes,
           isCameraInitialized: true,
@@ -452,23 +456,11 @@ void main() {
     });
 
     group('ghost frame button', () {
-      testWidgets('is shown in lip-sync mode', (tester) async {
-        await tester.pumpWidget(
-          buildWidget(recorderMode: VideoRecorderMode.lipSync),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          findByTooltip(l10n.videoRecorderToggleGhostFrameLabel),
-          findsOneWidget,
-        );
-      });
-
       // The ghost is the raw take, so over the keyed viewfinder it would show
       // the bare backdrop.
-      testWidgets('is hidden in chroma-key mode', (tester) async {
+      testWidgets('is hidden while the color mask is on', (tester) async {
         await tester.pumpWidget(
-          buildWidget(recorderMode: VideoRecorderMode.chromaKey),
+          buildWidget(isLiveChromaKeySupported: true, isChromaKeyEnabled: true),
         );
         await tester.pumpAndSettle();
 
@@ -501,6 +493,77 @@ void main() {
           );
         },
       );
+    });
+
+    group('color mask button', () {
+      testWidgets('is hidden where the viewfinder cannot be keyed live', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(findByTooltip(l10n.videoEditorChromaKeyLabel), findsNothing);
+      });
+
+      testWidgets('is hidden in stop-motion', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            isLiveChromaKeySupported: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(findByTooltip(l10n.videoEditorChromaKeyLabel), findsNothing);
+      });
+
+      testWidgets('turns the mask on and opens its settings', (tester) async {
+        await tester.pumpWidget(buildWidget(isLiveChromaKeySupported: true));
+        await tester.pumpAndSettle();
+
+        await tester.tap(findByTooltip(l10n.videoEditorChromaKeyLabel));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => recorderBloc.add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: true),
+          ),
+        ).called(1);
+        expect(find.text(l10n.videoEditorChromaKeyRemove), findsOneWidget);
+      });
+
+      testWidgets('reopens the settings of a mask that is already on', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(isLiveChromaKeySupported: true, isChromaKeyEnabled: true),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(findByTooltip(l10n.videoEditorChromaKeyLabel));
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => recorderBloc.add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: true),
+          ),
+        );
+        expect(find.text(l10n.videoEditorChromaKeyRemove), findsOneWidget);
+      });
+
+      // Look-ahead stabilization delays the preview the backdrop is
+      // composited against.
+      testWidgets('hides stabilization while the mask is on', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(isLiveChromaKeySupported: true, isChromaKeyEnabled: true),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
+          findsNothing,
+        );
+      });
     });
 
     group('semantics', () {

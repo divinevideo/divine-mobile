@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -114,7 +113,8 @@ void main() {
           )
           ..emit(
             VideoRecorderBlocState(
-              recorderMode: VideoRecorderMode.chromaKey,
+              isLiveChromaKeySupported: true,
+              isChromaKeyEnabled: true,
               timerDuration: timer,
             ),
           )
