@@ -716,7 +716,7 @@ void main() {
       });
 
       test(
-        'legacy v1 normalizes durable tables and replaces its cache',
+        'v1 normalizes durable data and replaces caches',
         () async {
           // The generated `migration_test.dart` cannot cover this: both
           // `drift_schema_v1.json` and `drift_schema_v2.json` are dumps of the

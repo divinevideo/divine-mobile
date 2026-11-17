@@ -104,3 +104,10 @@ The pre-existing plaintext-to-encrypted bootstrap migration is unchanged; it
 can still copy a plaintext database before Drift opens it. This fix addresses
 the encrypted-cache upgrade path observed in TestFlight, not that older path.
 Real-device end-to-end startup remains to be validated on the release build.
+
+The repository CI analysis scope is `lib test integration_test tools` on Flutter
+3.47.9. An earlier unscoped run on the older locally selected Flutter 3.47.2 also
+included the unchanged manual integration script and reported a missing
+`allowVideoReuse` argument in `integration_test_manual/upload_publish_real_e2e_test.dart`,
+plus existing script/lint configuration notices. Those paths were not changed;
+the CI-scope analysis and database-package analysis passed with Flutter 3.47.9.
