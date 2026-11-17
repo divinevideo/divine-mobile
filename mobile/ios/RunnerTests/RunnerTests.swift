@@ -2157,8 +2157,8 @@ final class ShaderVideoEffectTests: XCTestCase {
     let output = blackFade.render(
       frame, history: [], timeUs: 0, effectTimeUs: IntroOutroProgress.defaultDurationUs)
     XCTAssertTrue(output === frame)
-    // Smootherstep comes to rest gently: 10 ms before the end it still
-    // covers a little.
+    // It is fully open only at the end of its window: 10 ms before, it
+    // still covers a little.
     XCTAssertNotNil(blackFade.values(effectTimeUs: 990_000))
   }
 
