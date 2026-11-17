@@ -17,6 +17,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -260,6 +261,49 @@ void main() {
         expect(find.text('Loop makers'), findsOneWidget);
         expect(find.text('Small films together'), findsOneWidget);
       });
+
+      testWidgets(
+        'builds the next row below the fold so VoiceOver can scroll to it',
+        (tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          when(() => cubit.state).thenReturn(
+            ExploreBadgesState(
+              status: ExploreBadgesStatus.loaded,
+              definitions: [
+                for (var i = 0; i < 12; i++)
+                  Nip58BadgeDefinition(
+                    event: _definition.event,
+                    coordinate: '30009:$_issuer:group-$i',
+                    dTag: 'group-$i',
+                    name: 'Group $i',
+                  ),
+              ],
+            ),
+          );
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pump();
+
+          final viewportBottom = tester
+              .getBottomLeft(find.byType(CustomScrollView))
+              .dy;
+          final builtBelowFold = tester
+              .widgetList<BadgeCommunityCard>(
+                find.byType(BadgeCommunityCard, skipOffstage: false),
+              )
+              .where(
+                (card) =>
+                    tester
+                        .getTopLeft(find.byWidget(card, skipOffstage: false))
+                        .dy >=
+                    viewportBottom,
+              );
+          expect(builtBelowFold, isNotEmpty);
+        },
+      );
     });
 
     group('interactions', () {
