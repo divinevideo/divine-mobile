@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What Android 11 (API 30) and older may copy to a backup or to a new
+    phone. Android 12 and newer read data_extraction_rules.xml instead; it
+    explains why each of these files is left out, and both must exclude the
+    same files.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    <exclude domain="file" path="openvine/database" />
+</full-backup-content>

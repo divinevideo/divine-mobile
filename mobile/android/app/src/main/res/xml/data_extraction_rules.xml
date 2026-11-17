@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What Android 12 (API 31) and newer may copy to a Google cloud backup or
+    to a new phone during device transfer. Android 11 and older read
+    full_backup_content.xml instead, which must exclude the same files;
+    test/android/backup_rules_test.dart keeps the two and the manifest in step.
+
+    Everything excluded here is encrypted, directly or indirectly, with an
+    Android Keystore key. Keystore keys never leave the phone, so a restored
+    copy arrives without the key that reads it:
+
+    * FlutterSecureStorage.xml holds flutter_secure_storage's values: the
+      database cipher key, the Nostr private key and the Keycast session.
+      FlutterSecureKeyStorage.xml holds the AES key the plugin wraps with a
+      Keystore key when it does not use EncryptedSharedPreferences.
+    * openvine/database (under getFilesDir, where getApplicationSupportDirectory
+      points) holds the encrypted local database, its WAL, SHM and journal
+      files, and the copies a recovery sets aside. All of them need the
+      database cipher key above.
+
+    Restoring the database without its key made the first launch on the new
+    phone find an encrypted database it could not open, back it up and
+    recreate it (Crashlytics: "backed up + recreated (missing)"). Leaving all
+    of it out makes a restored install start these files from scratch, like a
+    fresh install.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+        <exclude domain="file" path="openvine/database" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+        <exclude domain="file" path="openvine/database" />
+    </device-transfer>
+</data-extraction-rules>

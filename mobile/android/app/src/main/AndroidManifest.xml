@@ -91,7 +91,9 @@
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/NormalTheme"
         android:localeConfig="@xml/locales_config"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/full_backup_content">
         <!-- Render with Impeller. This reverses the Skia opt-out added in
              df2e479f7 ("perf(android): switch rendering backend to
              Skia"), and it is a traded risk rather than a fix landing on
