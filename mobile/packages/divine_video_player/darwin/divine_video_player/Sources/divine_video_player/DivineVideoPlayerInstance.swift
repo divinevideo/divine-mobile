@@ -427,6 +427,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.safePreroll(at: actualTime)
             }
         }
+        output.onFrameDelivered = { [weak self] frameTime in
+            self?.onTextureFrameDelivered(at: frameTime)
+        }
         output.setClipOffsets(clipOffsets)
         textureOutput = output
         return output.textureId
@@ -2439,6 +2442,67 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         sendStateUpdate()
     }
 
+    // MARK: - Picture on screen
+
+    /// Whether the last report said playing; a change to playing is a start.
+    private var reportedPlaying = false
+
+    /// The frame the picture rested on when playback started, while no later
+    /// frame has reached the texture yet.
+    private var pictureRestFrameTime: CMTime?
+
+    /// Whether frames are moving on screen since playback started. A player
+    /// with sound holds its first frame until the audio runs, and a player
+    /// started beside it on the playing report ran that far ahead.
+    private var pictureAdvancing = false
+
+    /// How long a start waits for a frame before reporting the picture as
+    /// moving anyway.
+    private static let pictureAdvanceTimeout: TimeInterval = 0.5
+
+    /// Bumped on each start, so the timeout of an earlier one cannot cut a
+    /// later wait short.
+    private var pictureStartGeneration = 0
+
+    private func onTextureFrameDelivered(at frameTime: CMTime) {
+        guard let player else { return }
+        if player.rate == 0 {
+            // A pause is reported before its last frame reaches the texture,
+            // so the frame it names is the one before.
+            sendStateUpdate()
+            return
+        }
+        guard let rest = pictureRestFrameTime, frameTime != rest else { return }
+        markPictureAdvancing()
+    }
+
+    private func markPictureAdvancing() {
+        pictureRestFrameTime = nil
+        guard reportedPlaying, !pictureAdvancing else { return }
+        pictureAdvancing = true
+        sendStateUpdate()
+    }
+
+    /// Follows a change between playing and not playing in a report.
+    private func trackPictureStart(playing: Bool) {
+        defer { reportedPlaying = playing }
+        guard playing != reportedPlaying else { return }
+        pictureAdvancing = false
+        guard playing, let output = textureOutput else {
+            pictureRestFrameTime = nil
+            return
+        }
+        pictureRestFrameTime = output.shownFrameTime
+        pictureStartGeneration += 1
+        let generation = pictureStartGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pictureAdvanceTimeout) {
+            [weak self] in
+            guard let self, generation == self.pictureStartGeneration,
+                  self.pictureRestFrameTime != nil else { return }
+            self.markPictureAdvancing()
+        }
+    }
+
     // MARK: - State broadcasting
 
     private func sendStateUpdate() {
@@ -2494,6 +2558,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             status = currentStatus
         }
 
+        let playing = status == "playing"
+        trackPictureStart(playing: playing)
+
         var map: [String: Any] = [
             "status": status,
             "positionMs": positionMs,
@@ -2508,6 +2575,17 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             "videoWidth": videoWidth,
             "videoHeight": videoHeight,
         ]
+        if textureOutput != nil {
+            map["isPictureAdvancing"] = playing && pictureAdvancing
+        }
+        // Something seeked to the paused position showed a frame more than
+        // the picture whenever the pause fell late in a frame; see ShownFrame.
+        if status == "paused", reportedPositionOverrideMs == nil,
+           let frameTime = textureOutput?.shownFrameTime, frameTime.isNumeric,
+           let shownMs = ShownFrame.seekTargetMilliseconds(
+               frameAt: frameTime.seconds, position: currentTime) {
+            map["shownPositionMs"] = shownMs
+        }
         if let errorMessage {
             map["errorMessage"] = errorMessage
         }
