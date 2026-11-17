@@ -2,25 +2,33 @@
 // ABOUTME: Late suggestions cannot insert a page behind the viewer's position.
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class FeedPeopleInterstitialCubit extends Cubit<bool> {
+typedef FeedPeopleInterstitialState = ({bool armed, bool boundaryPassed});
+
+class FeedPeopleInterstitialCubit extends Cubit<FeedPeopleInterstitialState> {
   FeedPeopleInterstitialCubit({required int initialVideoIndex})
-    : _boundaryPassed = initialVideoIndex >= insertBeforeIndex,
-      super(false);
+    : super((
+        armed: false,
+        boundaryPassed: initialVideoIndex >= insertBeforeIndex,
+      ));
 
   static const insertBeforeIndex = 10;
-  bool _boundaryPassed;
 
   void availabilityChanged(bool available) {
-    if (isClosed || state || _boundaryPassed || !available) return;
-    emit(true);
+    if (isClosed || state.armed || state.boundaryPassed || !available) return;
+    emit((armed: true, boundaryPassed: false));
   }
 
   void videoChanged(int index) {
-    if (index >= insertBeforeIndex) _boundaryPassed = true;
+    if (!isClosed && index >= insertBeforeIndex) {
+      emit((armed: state.armed, boundaryPassed: true));
+    }
   }
 
   void reset({required int initialVideoIndex}) {
-    _boundaryPassed = initialVideoIndex >= insertBeforeIndex;
-    emit(false);
+    if (isClosed) return;
+    emit((
+      armed: false,
+      boundaryPassed: initialVideoIndex >= insertBeforeIndex,
+    ));
   }
 }

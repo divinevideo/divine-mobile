@@ -122,24 +122,30 @@ class _PeopleSessionState extends State<_PeopleSession> {
       listenWhen: (before, after) => before.suggestions != after.suggestions,
       listener: (_, state) =>
           _policy.availabilityChanged(state.suggestions.isNotEmpty),
-      child: BlocBuilder<FeedPeopleInterstitialCubit, bool>(
-        bloc: _policy,
-        builder: (context, armed) => widget.configuration.builder(
-          context,
-          FeedPeopleSlot(
-            builder: armed
-                ? (context) => _FeedPeopleCard(
-                    people: _people,
-                    cardVisible: _cardVisible,
-                    isFeedActive: widget.configuration.isFeedActive,
-                    onContinue: widget.configuration.onContinue,
-                  )
-                : null,
-            onVisibilityChanged: (visible) => _cardVisible.value = visible,
-            onVideoChanged: _policy.videoChanged,
+      child:
+          BlocSelector<
+            FeedPeopleInterstitialCubit,
+            FeedPeopleInterstitialState,
+            bool
+          >(
+            bloc: _policy,
+            selector: (state) => state.armed,
+            builder: (context, armed) => widget.configuration.builder(
+              context,
+              FeedPeopleSlot(
+                builder: armed
+                    ? (context) => _FeedPeopleCard(
+                        people: _people,
+                        cardVisible: _cardVisible,
+                        isFeedActive: widget.configuration.isFeedActive,
+                        onContinue: widget.configuration.onContinue,
+                      )
+                    : null,
+                onVisibilityChanged: (visible) => _cardVisible.value = visible,
+                onVideoChanged: _policy.videoChanged,
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 }

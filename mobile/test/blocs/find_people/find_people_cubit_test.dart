@@ -43,6 +43,68 @@ void main() {
   });
 
   group('FindPeopleCubit', () {
+    test('newer loads keep their generation and page size in state', () async {
+      final firstResponse = Completer<http.Response>();
+      final firstRequested = Completer<void>();
+      var requests = 0;
+      final repo = repository((_) async {
+        if (++requests == 1) {
+          firstRequested.complete();
+          return firstResponse.future;
+        }
+        return http.Response(
+          jsonEncode({
+            'suggestions': [
+              {'pubkey': 'c' * 64},
+            ],
+          }),
+          200,
+        );
+      });
+      final cubit = FindPeopleCubit(
+        repository: repo,
+        followRepository: follows,
+      );
+      final first = cubit.load(limit: 3);
+      await firstRequested.future;
+      await cubit.load(limit: 5);
+      expect(cubit.state.requestGeneration, 2);
+      expect(cubit.state.limit, 5);
+      expect(cubit.state.suggestions.single.pubkey, 'c' * 64);
+      firstResponse.complete(http.Response(payload(), 200));
+      await first;
+      expect(cubit.state.requestGeneration, 2);
+      expect(cubit.state.limit, 5);
+      expect(cubit.state.suggestions.single.pubkey, 'c' * 64);
+      await cubit.close();
+      await repo.dispose();
+    });
+
+    test('a policy refusal preserves the page size for retry', () async {
+      final limits = <String?>[];
+      final repo = repository((request) async {
+        limits.add(request.url.queryParameters['limit']);
+        return limits.length == 1
+            ? http.Response('{}', 503)
+            : http.Response(payload(), 200);
+      });
+      final cubit = FindPeopleCubit(
+        repository: repo,
+        followRepository: follows,
+      );
+      await cubit.load(limit: 3);
+      expect(cubit.state.status, FindPeopleStatus.failure);
+      expect(cubit.state.limit, 3);
+      expect(cubit.state.requestGeneration, 1);
+      await cubit.retry();
+      expect(limits, ['3', '3']);
+      expect(cubit.state.status, FindPeopleStatus.success);
+      expect(cubit.state.limit, 3);
+      expect(cubit.state.requestGeneration, 2);
+      await cubit.close();
+      await repo.dispose();
+    });
+
     test('a failed follow keeps the person and allows retry', () async {
       final repo = repository((_) async => http.Response(payload(), 200));
       final cubit = FindPeopleCubit(
