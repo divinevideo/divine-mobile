@@ -1019,7 +1019,8 @@ class VideosRepository {
     bool skipCache = false,
     bool revalidate = false,
   }) async {
-    // Return the cached first page regardless of what has since been watched.
+    // Replay the cached first page even if all of it was watched; an empty
+    // one is fetched again rather than replayed.
     if (!skipCache && !revalidate && until == null && cursor == null) {
       final cached = _inMemoryFeedCache?.get('latest');
       if (cached != null && cached.videos.isNotEmpty) return cached;
