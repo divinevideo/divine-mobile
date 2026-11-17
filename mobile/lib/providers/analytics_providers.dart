@@ -1,10 +1,13 @@
 // ABOUTME: Riverpod providers for the analytics package's tracker services,
 // ABOUTME: migrated off the factory-singleton pattern to constructor injection (#4743).
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -187,4 +190,18 @@ final feedPerformanceTrackerProvider = Provider<FeedPerformanceTracker>(
 /// through a provider override in tests instead of reaching into static state.
 final errorAnalyticsTrackerProvider = Provider<ErrorAnalyticsTracker>(
   (ref) => ErrorAnalyticsTracker(),
+);
+
+/// Measures Following entry as navigation, without inferring playback or targets.
+final peopleDiscoveryFollowingVisitRecorderProvider = Provider<void Function()>(
+  (ref) {
+    final analytics = ref.watch(analyticsServiceProvider);
+    return () => unawaited(
+      analytics.recordNavigationContext(
+        fromSurface: ProductAnalyticsV2Surface.feed,
+        toSurface: ProductAnalyticsV2Surface.following,
+        action: ProductAnalyticsV2NavigationAction.tab,
+      ),
+    );
+  },
 );

@@ -2,18 +2,18 @@
   "artifacts": {
     "productAnalytics.ts": {
       "path": "analytics/generated/productAnalytics.ts",
-      "sha256": "e391362fa5f145bc86e5e8fe47306cc5be7cde4c29796a6d9ccf021b5519bbf3"
+      "sha256": "62095f9c22e7e497272de12a27c6b71a880cc57289e13ea74e9004f26d71f6d3"
     },
     "product_analytics.dart": {
       "path": "analytics/generated/product_analytics.dart",
-      "sha256": "1d0817f67acd578c6e7d08270904a7369b4ad694f39cc05bce5c46a3545339b0"
+      "sha256": "25f45f105280a05fa20a6d6ecb3b133366ebda4911dcbd09ceb0b239b615c030"
     },
     "product_analytics.rs": {
       "path": "analytics/generated/product_analytics.rs",
-      "sha256": "b4a223a433be28e8c5eb127c97d6b45f1fe282cd95d12df46560bddad46a3048"
+      "sha256": "9c5379ceb58ffcc54da52d2ae70d7b31c7bece30766113269d2d02c03a5375be"
     }
   },
-  "contract_commit": "68380fb9b9f7cbb2d8f952a119ea460eb906342e",
+  "contract_commit": "d58dedc82695a6873c87f225111b5b6f2e732663",
   "event_id_algorithm": "sha256-rfc8785-v1",
   "schema_version": 2
 }
