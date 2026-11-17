@@ -1030,7 +1030,7 @@ void main() {
       });
     });
 
-    group('followed-list videos', () {
+    group('subscribed-list videos', () {
       var cacheInitialized = false;
 
       Finder badgeFinder() => find.byWidgetPredicate(
@@ -1095,7 +1095,7 @@ void main() {
         );
       });
 
-      testWidgets('does not mark videos from followed lists with a badge', (
+      testWidgets('does not mark videos from subscribed lists with a badge', (
         tester,
       ) async {
         // A populated subscription cache must not add list icons to tiles.
@@ -1106,7 +1106,7 @@ void main() {
         expect(badgeFinder(), findsNothing);
       });
 
-      testWidgets('still initializes the followed-list video cache', (
+      testWidgets('initializes the subscribed-list video cache', (
         tester,
       ) async {
         await tester.pumpWidget(buildGrid());
