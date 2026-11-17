@@ -451,13 +451,7 @@ class PushNotificationService {
     final plaintext = jsonEncode({
       'token': token,
       'timezoneOffsetMinutes': timezone.offset,
-      'campaignTargetTypes': [
-        'app_route',
-        'video_address',
-        'creator_profile',
-        'announcement',
-        'featured_feed',
-      ],
+      'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
       ...?_deviceMetadata?.toJson(),
       if (timezone.name != null) 'timezone': timezone.name,
     });

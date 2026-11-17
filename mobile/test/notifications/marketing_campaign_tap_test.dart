@@ -48,6 +48,8 @@ void main() {
         NotificationWireValues.appRoute: RoutePaths.followingNew,
         NotificationWireValues.videoAddress: '34236:$creator:clip',
         NotificationWireValues.creatorProfile: creator,
+        NotificationWireValues.announcement: revision,
+        NotificationWireValues.featuredFeed: revision,
       };
       for (final type in NotificationWireValues.campaignTargetTypes) {
         final result = pushNotificationTapTarget(
