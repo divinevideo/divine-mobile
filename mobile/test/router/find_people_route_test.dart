@@ -26,74 +26,82 @@ void main() {
     ],
   );
 
-  testWidgets('direct links cannot bypass the disabled experiment', (
-    tester,
-  ) async {
-    final navigation = router();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          isFeatureEnabledProvider(FeatureFlag.findPeople)
-              .overrideWithValue(false),
-        ],
-        child: MaterialApp.router(routerConfig: navigation),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Home'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox.shrink());
-    navigation.dispose();
-  });
-
-  testWidgets(
-    'signed out discovery never requests another account suggestions',
-    (tester) async {
-      final repository = FindPeopleRepository(
-        apiClient: FunnelcakeApiClient(
-          baseUrl: 'https://example.test',
-          httpClient: MockClient(
-            (_) => throw StateError('No signed-in account'),
-          ),
-        ),
-        accountPubkey: null,
-        currentPubkey: () => null,
-        isExcluded: (_) => false,
-        readDismissed: () => [],
-        writeDismissed: (_) async {},
-      );
+  group('Find people navigation', () {
+    testWidgets('direct links cannot bypass the disabled experiment', (
+      tester,
+    ) async {
       final navigation = router();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             isFeatureEnabledProvider(FeatureFlag.findPeople)
-                .overrideWithValue(true),
-            findPeopleRepositoryProvider.overrideWithValue(repository),
-            followRepositoryProvider.overrideWithValue(_Follows()),
-            findPeopleActionRecorderProvider.overrideWithValue(
-              (_) => (_, _, _) {},
-            ),
+                .overrideWithValue(false),
           ],
           child: MaterialApp.router(
-            routerConfig: navigation,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: navigation,
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Find people'), findsOneWidget);
-      expect(
-        find.text('No more suggestions right now. Try searching for someone.'),
-        findsOneWidget,
-      );
-      final semantics = tester.ensureSemantics();
-      await tester.tap(find.bySemanticsIdentifier('back_button'));
-      semantics.dispose();
-      await tester.pumpAndSettle();
       expect(find.text('Home'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
-      await repository.dispose();
       navigation.dispose();
-    },
-  );
+    });
+
+    testWidgets(
+      'signed out discovery never requests another account suggestions',
+      (tester) async {
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient(
+              (_) => throw StateError('No signed-in account'),
+            ),
+          ),
+          accountPubkey: null,
+          currentPubkey: () => null,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+        );
+        final navigation = router();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              isFeatureEnabledProvider(FeatureFlag.findPeople)
+                  .overrideWithValue(true),
+              findPeopleRepositoryProvider.overrideWithValue(repository),
+              followRepositoryProvider.overrideWithValue(_Follows()),
+              findPeopleActionRecorderProvider.overrideWithValue(
+                (_) => (_, _, _) {},
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: navigation,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Find people'), findsOneWidget);
+        expect(
+          find.text(
+            'No more suggestions right now. Try searching for someone.',
+          ),
+          findsOneWidget,
+        );
+        final semantics = tester.ensureSemantics();
+        await tester.tap(find.bySemanticsIdentifier('back_button'));
+        semantics.dispose();
+        await tester.pumpAndSettle();
+        expect(find.text('Home'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await repository.dispose();
+        navigation.dispose();
+      },
+    );
+  });
 }

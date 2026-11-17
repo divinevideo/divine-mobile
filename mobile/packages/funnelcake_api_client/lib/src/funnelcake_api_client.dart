@@ -175,11 +175,16 @@ class FunnelcakeApiClient {
   /// therefore unchanged by retrying — which matters because callers await
   /// this inline (the login pre-fetch blocks the post-auth redirect on it),
   /// and a per-attempt bound would have multiplied that stall by
-  /// [maxGetAttempts]. The trade is that a request which burns the entire
+  /// [maxGetAttempts]. Domain-specific authoritative refusals may be returned
+  /// immediately through [terminalStatusCodes]. The trade is that a request
+  /// which burns the entire
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) => _retryRead(
+  Future<http.Response> _get(
+    Uri uri, {
+    Set<int> terminalStatusCodes = const {},
+  }) => _retryRead(
     uri,
     () => _httpClient.get(
       uri,
@@ -188,13 +193,15 @@ class FunnelcakeApiClient {
         ...buildDivineClientHeaders(appVersion: _appVersion),
       },
     ),
+    terminalStatusCodes: terminalStatusCodes,
   );
 
   /// Retries an idempotent read within one shared timeout budget.
   Future<http.Response> _retryRead(
     Uri uri,
-    Future<http.Response> Function() request,
-  ) async {
+    Future<http.Response> Function() request, {
+    Set<int> terminalStatusCodes = const {},
+  }) async {
     final elapsed = Stopwatch()..start();
     Duration remaining() => _timeout - elapsed.elapsed;
 
@@ -212,7 +219,8 @@ class FunnelcakeApiClient {
       try {
         final response = await request().timeout(remaining());
 
-        if (_canRetry(attempt, remaining()) &&
+        if (!terminalStatusCodes.contains(response.statusCode) &&
+            _canRetry(attempt, remaining()) &&
             _isRetryableStatus(response.statusCode)) {
           await _awaitRetryDelay(attempt, remaining());
           continue;
@@ -1311,7 +1319,9 @@ class FunnelcakeApiClient {
           },
         );
     try {
-      final response = await _get(uri);
+      // A policy refusal must invalidate every discovery surface immediately.
+      // Retrying here could hide it behind a later successful response.
+      final response = await _get(uri, terminalStatusCodes: const {503});
       if (response.statusCode != 200) {
         throw FunnelcakeApiException(
           message: 'Failed to load follow suggestions',

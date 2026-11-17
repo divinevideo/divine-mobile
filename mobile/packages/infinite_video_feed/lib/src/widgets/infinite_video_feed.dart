@@ -467,8 +467,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   void _jumpToCurrentVideo() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.videos.isEmpty || !_pageController.hasClients)
+      if (!mounted || widget.videos.isEmpty || !_pageController.hasClients) {
         return;
+      }
       final target = _pageForVideo(_currentIndex);
       if (_pageController.page?.round() != target) {
         _pageController.jumpToPage(target);
@@ -523,7 +524,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   // ─── Public API ─────────────────────────────────────────────────────────
 
-  /// Logical index of the last active video, retained while the card is visible.
+  /// Logical index of the last active video, retained while the card is
+  /// visible.
   int get currentIndex => _currentIndex;
 
   /// The feed indices that currently have a live player controller.

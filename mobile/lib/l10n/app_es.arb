@@ -6427,10 +6427,10 @@
   "dmPendingVideoFailedSemantics": "No se pudo enviar el video",
   "dmVideoOutcomeInChat": "{chat}: {outcome}",
   "findPeopleTitle": "Encontrar personas",
-  "findPeopleDescription": "Sigue a creadores activos y archivos recuperados de Vine.",
-  "findPeopleSuggested": "Sugerido para ti",
+  "findPeopleDescription": "Seguí a creadores activos y archivos recuperados de Vine.",
+  "findPeopleSuggested": "Sugerido para vos",
   "findPeopleArchive": "Archivo recuperado de Vine",
-  "findPeopleEmpty": "No hay más sugerencias por ahora. Prueba a buscar a alguien.",
+  "findPeopleEmpty": "No hay más sugerencias por ahora. Probá buscar a alguien.",
   "findPeopleDismiss": "Descartar sugerencia",
   "findPeopleLoadMore": "Cargar más",
   "findPeopleContinueWatching": "Seguir viendo"

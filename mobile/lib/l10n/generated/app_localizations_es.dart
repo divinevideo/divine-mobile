@@ -16536,17 +16536,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get findPeopleDescription =>
-      'Sigue a creadores activos y archivos recuperados de Vine.';
+      'Seguí a creadores activos y archivos recuperados de Vine.';
 
   @override
-  String get findPeopleSuggested => 'Sugerido para ti';
+  String get findPeopleSuggested => 'Sugerido para vos';
 
   @override
   String get findPeopleArchive => 'Archivo recuperado de Vine';
 
   @override
   String get findPeopleEmpty =>
-      'No hay más sugerencias por ahora. Prueba a buscar a alguien.';
+      'No hay más sugerencias por ahora. Probá buscar a alguien.';
 
   @override
   String get findPeopleDismiss => 'Descartar sugerencia';

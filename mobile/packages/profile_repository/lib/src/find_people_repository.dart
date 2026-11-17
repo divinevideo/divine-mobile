@@ -42,10 +42,12 @@ class FindPeopleRepository {
     required bool Function(String) isExcluded,
     required List<String> Function() readDismissed,
     required Future<void> Function(List<String>) writeDismissed,
+    bool Function(String)? isFollowing,
     this.contentSafety = 'default',
   }) : _apiClient = apiClient,
        _currentPubkey = currentPubkey,
        _isExcluded = isExcluded,
+       _isFollowing = isFollowing ?? ((_) => false),
        _writeDismissed = writeDismissed,
        _dismissed = readDismissed().toSet();
 
@@ -58,10 +60,13 @@ class FindPeopleRepository {
   final String contentSafety;
   final String? Function() _currentPubkey;
   final bool Function(String) _isExcluded;
+  final bool Function(String) _isFollowing;
   final Future<void> Function(List<String>) _writeDismissed;
   final Set<String> _dismissed;
   final _changes = StreamController<void>.broadcast(sync: true);
   bool _disposed = false;
+  bool _eligibilityAvailable = true;
+  int _eligibilityEpoch = 0;
   Future<void> _dismissWrites = Future<void>.value();
 
   /// Invalidates lists on all subscribed discovery surfaces.
@@ -71,9 +76,16 @@ class FindPeopleRepository {
   bool get isCurrent =>
       !_disposed && accountPubkey != null && accountPubkey == _currentPubkey();
 
+  /// Whether a fresh safe response has cleared any shared server refusal.
+  bool get isEligibilityAvailable => isCurrent && _eligibilityAvailable;
+
   /// Reads live exclusions on every boundary, including after network awaits.
-  List<FollowSuggestion> filter(Iterable<FollowSuggestion> suggestions) {
-    if (!isCurrent) return const [];
+  /// Pending follows bypass only optimistic following, never policy or blocks.
+  List<FollowSuggestion> filter(
+    Iterable<FollowSuggestion> suggestions, {
+    Set<String> pendingFollowPubkeys = const {},
+  }) {
+    if (!isEligibilityAvailable) return const [];
     final seen = <String>{};
     return List.unmodifiable(
       suggestions.where(
@@ -81,6 +93,8 @@ class FindPeopleRepository {
             item.pubkey != accountPubkey &&
             !_dismissed.contains(item.pubkey) &&
             !_isExcluded(item.pubkey) &&
+            (pendingFollowPubkeys.contains(item.pubkey) ||
+                !_isFollowing(item.pubkey)) &&
             seen.add(item.pubkey),
       ),
     );
@@ -90,6 +104,7 @@ class FindPeopleRepository {
   Future<FindPeopleResult> load({int limit = 20, String? cursor}) async {
     final owner = accountPubkey;
     if (!isCurrent || owner == null) return const FindPeopleResult();
+    final eligibilityEpoch = _eligibilityEpoch;
     FollowSuggestionsPage page;
     try {
       page = await _apiClient.getFollowSuggestions(
@@ -99,7 +114,16 @@ class FindPeopleRepository {
         contentSafety: contentSafety,
       );
       if (!isCurrent) return const FindPeopleResult();
+      // A response requested before a policy refusal cannot reopen discovery.
+      if (eligibilityEpoch != _eligibilityEpoch) {
+        throw const FindPeopleUnavailableException();
+      }
+      if (!_eligibilityAvailable) {
+        _eligibilityAvailable = true;
+        notifyExclusionsChanged();
+      }
     } on FunnelcakeException catch (error) {
+      if (!isCurrent) return const FindPeopleResult();
       if (error is FunnelcakeApiException) {
         if (error.statusCode == 410 && cursor != null) {
           final fresh = await load(limit: limit);
@@ -110,10 +134,12 @@ class FindPeopleRepository {
           );
         }
         if (error.statusCode == 503) {
+          _eligibilityAvailable = false;
+          ++_eligibilityEpoch;
+          notifyExclusionsChanged();
           throw const FindPeopleUnavailableException();
         }
       }
-      if (!isCurrent) return const FindPeopleResult();
       rethrow;
     }
     return FindPeopleResult(
@@ -128,6 +154,9 @@ class FindPeopleRepository {
     // must never leak into a later successful dismissal's persisted snapshot.
     final operation = _dismissWrites.then((_) async {
       if (!isCurrent || _dismissed.contains(pubkey)) return;
+      if (!_eligibilityAvailable) {
+        throw const FindPeopleUnavailableException();
+      }
       final updated = {..._dismissed, pubkey};
       await _writeDismissed(updated.toList());
       if (!isCurrent) return;

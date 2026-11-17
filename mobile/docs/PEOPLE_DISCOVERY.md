@@ -16,7 +16,11 @@ Both internal switches are off by default:
 Enable the backend endpoint and its analytics migration before enabling either
 client switch. The canonical analytics adoption is tracked in
 https://github.com/divinevideo/divine-context/pull/203. No switch changes the
-existing analytics consent or held consumption-event release gates.
+existing analytics consent or held consumption-event release gates. Suggestion
+`followed` measurements share the default-off `CONSUMPTION_ANALYTICS_ENABLED`
+gate with engagement measurements and require the recorded
+`engagement_linkability` and release approvals. Exposure and dismissal
+measurements remain subject to ordinary product-analytics consent.
 
 ## Shared recommendations
 
@@ -49,7 +53,8 @@ when its suggestions are exhausted, so it cannot shift the visible feed.
 ## Measurements and next steps
 
 `people_suggestion_recorded` measures actual visible suggestion rows, confirmed
-follows and successful dismissals with source and position only. Suggested
+follows (only after the held identity/release gate is approved) and successful
+dismissals with source and position only. Suggested
 pubkeys and imported identities are not sent. Onboarding skips use the existing
 onboarding event; Following-feed entries are a navigation proxy for subsequent
 use, not proof of playback.

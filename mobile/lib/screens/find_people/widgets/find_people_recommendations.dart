@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/find_people/find_people_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/find_people_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -90,7 +91,7 @@ class FindPeopleRecommendations extends ConsumerWidget {
 }
 
 /// Thin presentation over the shared cubit's final, eligible rows.
-class FindPeopleSuggestionsList extends StatefulWidget {
+class FindPeopleSuggestionsList extends ConsumerStatefulWidget {
   const FindPeopleSuggestionsList({
     this.isActive = true,
     this.showPagination = true,
@@ -104,11 +105,12 @@ class FindPeopleSuggestionsList extends StatefulWidget {
   final ValueChanged<bool>? onAvailabilityChanged;
 
   @override
-  State<FindPeopleSuggestionsList> createState() =>
+  ConsumerState<FindPeopleSuggestionsList> createState() =>
       _FindPeopleSuggestionsListState();
 }
 
-class _FindPeopleSuggestionsListState extends State<FindPeopleSuggestionsList> {
+class _FindPeopleSuggestionsListState
+    extends ConsumerState<FindPeopleSuggestionsList> {
   bool? _available;
 
   void _notify(FindPeopleState state) {
@@ -121,68 +123,70 @@ class _FindPeopleSuggestionsListState extends State<FindPeopleSuggestionsList> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<FindPeopleCubit, FindPeopleState>(
-        builder: (context, state) {
-          _notify(state);
-          final cubit = context.read<FindPeopleCubit>();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (state.actionFailed)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    context.l10n.commonSomethingWentWrong,
-                    style: TextStyle(color: context.vineColors.primaryText),
-                  ),
+  Widget build(BuildContext context) {
+    final isActive = widget.isActive && ref.watch(appForegroundProvider);
+    return BlocBuilder<FindPeopleCubit, FindPeopleState>(
+      builder: (context, state) {
+        _notify(state);
+        final cubit = context.read<FindPeopleCubit>();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (state.actionFailed)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  context.l10n.commonSomethingWentWrong,
+                  style: TextStyle(color: context.vineColors.primaryText),
                 ),
-              for (var index = 0; index < state.suggestions.length; index++)
-                _SuggestionTile(
-                  key: ValueKey(state.suggestions[index].pubkey),
-                  suggestion: state.suggestions[index],
-                  position: index,
-                  isActive: widget.isActive,
-                  isPending: state.pendingPubkeys.contains(
-                    state.suggestions[index].pubkey,
-                  ),
-                  onAction: widget.onAction,
+              ),
+            for (var index = 0; index < state.suggestions.length; index++)
+              _SuggestionTile(
+                key: ValueKey(state.suggestions[index].pubkey),
+                suggestion: state.suggestions[index],
+                position: index,
+                isActive: isActive,
+                isPending: state.pendingPubkeys.contains(
+                  state.suggestions[index].pubkey,
                 ),
-              if (state.status == FindPeopleStatus.loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: BrandedLoadingIndicator()),
-                )
-              else if (state.status == FindPeopleStatus.failure) ...[
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(context.l10n.commonSomethingWentWrong),
+                onAction: widget.onAction,
+              ),
+            if (state.status == FindPeopleStatus.loading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: BrandedLoadingIndicator()),
+              )
+            else if (state.status == FindPeopleStatus.failure) ...[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(context.l10n.commonSomethingWentWrong),
+              ),
+              DivineButton(
+                label: context.l10n.commonRetry,
+                onPressed: () => unawaited(cubit.retry()),
+              ),
+            ] else if (widget.showPagination && state.nextCursor != null)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: DivineButton(
+                  label: context.l10n.findPeopleLoadMore,
+                  onPressed: () => unawaited(cubit.loadMore()),
                 ),
-                DivineButton(
-                  label: context.l10n.commonRetry,
-                  onPressed: () => unawaited(cubit.retry()),
+              )
+            else if (state.suggestions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  context.l10n.findPeopleEmpty,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.vineColors.secondaryText),
                 ),
-              ] else if (widget.showPagination && state.nextCursor != null)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: DivineButton(
-                    label: context.l10n.findPeopleLoadMore,
-                    onPressed: () => unawaited(cubit.loadMore()),
-                  ),
-                )
-              else if (state.suggestions.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    context.l10n.findPeopleEmpty,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: context.vineColors.secondaryText),
-                  ),
-                ),
-            ],
-          );
-        },
-      );
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _SuggestionTile extends StatefulWidget {

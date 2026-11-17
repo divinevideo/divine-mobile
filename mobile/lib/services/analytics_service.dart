@@ -105,7 +105,7 @@ class AnalyticsService implements BackgroundAwareService {
   final DateTime Function() _now;
   final bool _productAnalyticsEnabled;
 
-  /// Separate release gate for engagement and depth, default-off in every
+  /// Separate release gate for engagement, depth and suggestion follows, off in every
   /// environment. Enable only after contract/server acceptance and the recorded
   /// consent and identity decisions. Existing playback uses its own release gate.
   final bool _consumptionAnalyticsEnabled;
@@ -463,6 +463,10 @@ class AnalyticsService implements BackgroundAwareService {
     required ProductAnalyticsV2PeopleSuggestionAction action,
     required int position,
   }) {
+    if (action == ProductAnalyticsV2PeopleSuggestionAction.followed &&
+        !_consumptionAnalyticsEnabled) {
+      return Future.value();
+    }
     if (position < productAnalyticsV2PeopleSuggestionRecordedPositionMinimum ||
         position > productAnalyticsV2PeopleSuggestionRecordedPositionMaximum) {
       return Future.value();
