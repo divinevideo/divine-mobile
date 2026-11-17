@@ -16,6 +16,7 @@ void main() {
   group('check_coordinator_route_serving.sh', () {
     late Directory sandbox;
     late HttpServer server;
+    late ServerSocket stagingSocket;
     late File hookMarker;
     late List<String> requests;
     var responseStatus = HttpStatus.unauthorized;
@@ -29,6 +30,11 @@ void main() {
         request.response.statusCode = responseStatus;
         await request.response.close();
       });
+      // The probe reaches every environment but production over HTTPS, and a
+      // loopback server has no certificate it would trust. STAGING's socket
+      // drops each connection instead, so a run that probes STAGING fails it.
+      stagingSocket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      stagingSocket.listen((socket) => socket.destroy());
 
       void write(String path, String contents) {
         File(p.join(sandbox.path, path))
@@ -73,8 +79,12 @@ void main(List<String> args) {
             'http://127.0.0.1:${server.port}',
           )
           .replaceFirst(
+            'wss://relay.staging.divine.video',
+            'wss://127.0.0.1:${stagingSocket.port}',
+          )
+          .replaceFirst(
             'poc, staging, production, local',
-            'production, local',
+            'staging, production, local',
           );
       // These substitutions are all that keep the wrapper off real hosts. If a
       // fixture edit defeats one, stop here, before any test can run it.
@@ -83,7 +93,10 @@ void main(List<String> args) {
           for (final target in extractCoordinatorTargets(config))
             target.environment: target.apiBaseUrl,
         },
-        {'PRODUCTION': 'http://127.0.0.1:${server.port}'},
+        {
+          'STAGING': 'https://127.0.0.1:${stagingSocket.port}',
+          'PRODUCTION': 'http://127.0.0.1:${server.port}',
+        },
       );
       write('lib/models/environment_config.dart', config);
       final resolve = await Process.run('dart', [
@@ -100,6 +113,7 @@ void main(List<String> args) {
 
     tearDownAll(() async {
       await server.close(force: true);
+      await stagingSocket.close();
       sandbox.deleteSync(recursive: true);
     });
 
@@ -128,13 +142,14 @@ void main(List<String> args) {
       expect(requests, isEmpty);
     });
 
-    test('probes both routes without running the unused hook', () async {
+    test('probes both routes of DEFAULT_ENV alone, without the hook', () async {
       final result = await runWrapper('PRODUCTION');
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
       expect(requests, [
         '/api/account-deletion/attempts/current',
         '/api/account-deletion/attempts/00000000-0000-4000-8000-000000000000/status',
       ]);
+      expect(result.stderr, isNot(contains('STAGING')));
       expect(hookMarker.existsSync(), isFalse);
     });
 
@@ -142,10 +157,16 @@ void main(List<String> args) {
       'probes all configured environments when DEFAULT_ENV is empty',
       () async {
         final result = await runWrapper('');
+        // STAGING always fails here (see setUpAll); its line is the evidence
+        // that the run was not narrowed to PRODUCTION.
         expect(
           result.exitCode,
-          0,
+          1,
           reason: '${result.stdout}\n${result.stderr}',
+        );
+        expect(
+          result.stderr,
+          contains('FAIL STAGING: coordinator route is unreachable'),
         );
         expect(requests, hasLength(2));
         expect(hookMarker.existsSync(), isFalse);
