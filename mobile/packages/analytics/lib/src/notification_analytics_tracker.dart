@@ -57,11 +57,13 @@ class NotificationAnalyticsTracker {
         name: 'campaign_consent_changed',
         parameters: {'enabled': enabled ? 1 : 0},
       );
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
       Log.warning(
         'Campaign consent analytics failed: $error',
         name: 'NotificationAnalyticsTracker',
         category: LogCategory.system,
+        error: error,
+        stackTrace: stackTrace,
       );
     }
   }
