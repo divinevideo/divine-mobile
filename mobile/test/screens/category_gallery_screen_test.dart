@@ -261,14 +261,15 @@ void main() {
             ),
           ),
         );
-        // The slot ends where the sort button begins.
         expect(
           tester.getRect(mascotSlot).right,
           equals(tester.getRect(filterButton).left),
         );
       });
 
-      testWidgets('ends a long title where the mascot begins', (tester) async {
+      testWidgets('stops the title box where the mascot begins', (
+        tester,
+      ) async {
         const entertainment = VideoCategory(
           name: 'entertainment',
           videoCount: 1500,
@@ -723,7 +724,8 @@ void main() {
         ),
       );
 
-      // Two columns of (402 - 4) / 2 px, starting right below the 72 px bar.
+      // Two (402 - 4) / 2 px columns from the bar's bottom: the 24 px
+      // minimum top plus the 72 px bar.
       expect(tile(0).topLeft, equals(const Offset(0, 96)));
       expect(tile(0).width, equals(199));
       expect(tile(1).left - tile(0).right, equals(4));

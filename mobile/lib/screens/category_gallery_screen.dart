@@ -165,12 +165,8 @@ class CategoryGalleryView extends StatelessWidget {
 
     // This screen is a root-navigator route, so nothing above it provides a
     // `Material`. Without one every `Text` inherits Flutter's yellow
-    // double-underline fallback style from `MaterialApp`.
-    //
-    // The page carries the header's colour so the gallery's rounded top
-    // corners read as a continuation of the header rather than a hole. The
-    // clip sits outside the scroll view, so the corners stay put while the
-    // videos scroll under them.
+    // double-underline fallback style from `MaterialApp`. It is nav-coloured
+    // so the gallery's cut top corners blend into the header.
     return Material(
       color: context.vineColors.nav,
       child: Column(
@@ -183,13 +179,13 @@ class CategoryGalleryView extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
           Expanded(
+            // Outside the scroll view, so the corners stay put while the
+            // videos scroll under them.
             child: ClipRRect(
               key: const Key('category-gallery-body-clip'),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(_galleryTopRadius),
               ),
-              // Material, not ColoredBox: the grid's tiles paint their ink
-              // onto the nearest Material, and a ColoredBox would hide it.
               child: Material(
                 color: context.vineColors.surfaceContainerHigh,
                 child: _CategoryGalleryBody(
@@ -339,7 +335,7 @@ class _CategoryGalleryHeader extends StatelessWidget {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
-                          start: _titleHorizontalPadding,
+                          start: _titleStartPadding,
                           end: _titleEndPadding,
                         ),
                         child: Text(
@@ -410,12 +406,12 @@ const _categoryActionShadows = <BoxShadow>[
   BoxShadow(color: Color(0x1A000000), offset: Offset(1, 1), blurRadius: 1),
 ];
 
-/// Header metrics from the Figma category page's top app bar, below the
-/// status area.
+// Header metrics from the Figma category page's top app bar, below the
+// status area.
 const _headerBarHeight = 72.0;
 const _headerBarPadding = 12.0;
 const _headerBarGap = 8.0;
-const _titleHorizontalPadding = 4.0;
+const _titleStartPadding = 4.0;
 
 // Each action is a 24 px icon (DivineIcon's default size) padded to a 40 px
 // button inside a 4 px margin, Figma's 48 px slot. The icon, and so the
@@ -438,8 +434,8 @@ const _mascotWidth = 132.0;
 const double _titleEndPadding =
     _mascotSlotWidth - _headerActionMargin - _headerBarGap;
 
-/// The gallery's top corner radius: Figma's `radius 96` corner pair, 48 px
-/// on each side.
+/// The gallery's top corner radius: Figma's `radius 96` corner pieces are
+/// 96 px across, so 48 per side.
 const _galleryTopRadius = 48.0;
 
 Future<String?> _showCategorySortSheet({
@@ -472,8 +468,7 @@ class _CategoryHeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The margin around the 40 px button is Figma's action slot; the row
-    // reserves the full slot so the title and edges line up with the design.
+    // Pads the button out to Figma's 48 px slot; only the button is tappable.
     return Padding(
       padding: const EdgeInsets.all(_headerActionMargin),
       child: Semantics(
@@ -520,9 +515,8 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
       key: const Key('category-header-mascot-slot'),
       width: _mascotSlotWidth,
       height: _mascotSlotHeight,
-      // The slot clips its mascot, as in Figma, so it never spills past the
-      // bar onto the gallery's rounded corners. The mascot is sized to the
-      // slot's height so the clip only trims its empty corners.
+      // Clipped to the slot, as in Figma: the 8° tilt pushes the mascot's
+      // corners a few px past it, and those corners are empty artwork.
       child: ClipRect(
         child: Center(
           child: Transform.rotate(
