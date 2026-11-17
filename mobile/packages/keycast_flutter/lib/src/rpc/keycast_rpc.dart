@@ -120,6 +120,24 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
   bool _signCanonicalUnsupported = false;
   bool _isClosed = false;
 
+  /// The zone every HTTP request and client close of this signer runs in:
+  /// the zone it was created in.
+  ///
+  /// The HTTP stack listens to its own internal futures from whichever zone
+  /// calls into it: a request listens to its connect attempt, and closing the
+  /// client listens to every connect still in progress so it can cancel it.
+  /// Dart never delivers a future's error to a listener in another error
+  /// zone; it reports the error to the future's own zone as uncaught instead.
+  /// So closing the client from one error zone while a request started in
+  /// another was still connecting handed that zone's uncaught-error handler a
+  /// raw `SocketException: Connection attempt cancelled`, on top of the
+  /// `ClientException` the request itself received. The app has more than one
+  /// error zone: go_router runs every redirect inside its own
+  /// `runZonedGuarded`, and work started from a redirect keeps that zone.
+  /// Running all HTTP work in one zone keeps each of those listeners in the
+  /// same zone as its future.
+  final Zone _homeZone = Zone.current;
+
   /// Maximum time to wait for a single-op RPC request before failing with a
   /// [RpcTimeoutException].
   final Duration requestTimeout;
@@ -283,7 +301,34 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
       _clientsPendingClose.add(client);
       return;
     }
-    client.close();
+    _closeHttpClient(client);
+  }
+
+  /// Closes [client] in [_homeZone], the zone its requests ran in.
+  void _closeHttpClient(http.Client client) => _homeZone.run(client.close);
+
+  /// Posts to [nostrApi] on [client] in [_homeZone] and returns the outcome
+  /// to the calling zone.
+  ///
+  /// The [Completer] carries the result across: completing a future from
+  /// another zone is allowed, listening to one across error zones is not.
+  Future<http.Response> _postInHomeZone(
+    http.Client client, {
+    required Map<String, String> headers,
+    required String body,
+  }) {
+    Future<http.Response> post() =>
+        client.post(Uri.parse(nostrApi), headers: headers, body: body);
+    if (Zone.current.inSameErrorZone(_homeZone)) return post();
+    final completer = Completer<http.Response>();
+    _homeZone.run(() {
+      unawaited(
+        Future<http.Response>.sync(
+          post,
+        ).then(completer.complete, onError: completer.completeError),
+      );
+    });
+    return completer.future;
   }
 
   http.Client _acquireHttpClient([http.Client? preferredClient]) {
@@ -301,7 +346,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
     }
     _inFlightByClient.remove(client);
     if (_clientsPendingClose.remove(client)) {
-      client.close();
+      _closeHttpClient(client);
     }
   }
 
@@ -323,16 +368,14 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
     final requestClient = _acquireHttpClient(client);
     http.Response response;
     try {
-      response = await requestClient
-          .post(
-            Uri.parse(nostrApi),
-            headers: {
-              'Authorization': 'Bearer $_accessToken',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({'method': method, 'params': params}),
-          )
-          .timeout(effectiveTimeout);
+      response = await _postInHomeZone(
+        requestClient,
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'method': method, 'params': params}),
+      ).timeout(effectiveTimeout);
     } on TimeoutException {
       if (!classifyLocalTimeout) rethrow;
       throw RpcTimeoutException(
@@ -616,11 +659,9 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
     if (_isClosed) return;
     _isClosed = true;
     if (_ownsClient) {
-      _client.close();
+      _closeHttpClient(_client);
     }
-    for (final client in _clientsPendingClose) {
-      client.close();
-    }
+    _clientsPendingClose.forEach(_closeHttpClient);
     _clientsPendingClose.clear();
     _inFlightByClient.clear();
   }

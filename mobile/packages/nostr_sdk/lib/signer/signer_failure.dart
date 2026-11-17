@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:http/http.dart' show ClientException;
+
 /// Marker for a [NostrSigner] failure that happened *instead of* the
 /// operation, and that is expected to clear on its own.
 ///
@@ -20,3 +24,26 @@
 /// package so consumers can branch on it without depending on the transport
 /// that produced it.
 abstract interface class TransientSignerFailure {}
+
+/// Whether [error], thrown by a [NostrSigner] call, means the signer did not
+/// answer: it ran out of time, or it could not be reached at all.
+///
+/// True for a [TransientSignerFailure] (a remote signer that bounded itself
+/// and gave up), a local [TimeoutException], and a `package:http`
+/// [ClientException], which is how an HTTP remote signer such as Keycast
+/// reports a failed DNS lookup, a refused or reset connection, or a connect
+/// cancelled because the client was closed.
+///
+/// These are states of a phone on a bad network, not defects, so error
+/// reporters log them and leave them out of crash reports (the "Network / IO"
+/// row of the error-handling matrix). The classification says nothing about
+/// retrying: unlike [TransientSignerFailure], a transport failure does not
+/// promise that the request never reached the signer, so each caller keeps
+/// its own retry and queue handling.
+///
+/// A refusal the signer did answer with, and any programming error such as a
+/// [StateError] or [TypeError], stays outside it and is still reported.
+bool isUnreachableSignerFailure(Object error) =>
+    error is TransientSignerFailure ||
+    error is TimeoutException ||
+    error is ClientException;

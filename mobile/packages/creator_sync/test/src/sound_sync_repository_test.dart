@@ -2,10 +2,23 @@
 // ABOUTME: Pins LWW, tombstone handling, and the resurrection guard.
 
 import 'package:creator_sync/creator_sync.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/signer/signer_failure.dart';
 import 'package:test/test.dart';
 
 class _MockIndexClient extends Mock implements SyncIndexClient {}
+
+class _MockSigner extends Mock implements NostrSigner {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+/// A remote signer that bounded itself and gave up, like Keycast's
+/// `RpcTimeoutException`.
+class _SignerGaveUp implements TransientSignerFailure, Exception {}
 
 class _FakeLocalSoundStore implements LocalSoundStore {
   final Map<String, Map<String, dynamic>> sounds = {};
@@ -855,6 +868,42 @@ void main() {
           sites,
           equals([CreatorSyncReportableSites.publishSoundDeletion]),
         );
+      },
+    );
+
+    test(
+      'does not report a remote signer that gave up while publishing a '
+      'change, and records nothing so the next reconcile retries',
+      () async {
+        const pubkey =
+            'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
+        registerFallbackValue(Event(pubkey, 30078, const [], ''));
+        final signer = _MockSigner();
+        when(signer.getPublicKey).thenAnswer((_) async => pubkey);
+        when(
+          () => signer.signEvent(any()),
+        ).thenAnswer((_) async => throw _SignerGaveUp());
+        final nostrClient = _MockNostrClient();
+        final sites = <String>[];
+        local.sounds[idA] = {'label': 'fresh'};
+        repository = SoundSyncRepository(
+          index: SyncIndexClient(
+            client: nostrClient,
+            signer: signer,
+            cipher: SyncCipher(await AesGcm.with256bits().newSecretKey()),
+          ),
+          state: state,
+          local: local,
+          errorReporter: (_, _, {required site}) => sites.add(site),
+        );
+
+        await expectLater(
+          repository.publishLocalChange(idA),
+          throwsA(isA<SyncIndexException>()),
+        );
+        expect(sites, isEmpty);
+        expect(await state.readApplied(SyncItemKind.sound), isEmpty);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       },
     );
   });
