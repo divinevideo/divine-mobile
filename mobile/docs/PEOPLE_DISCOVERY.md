@@ -27,6 +27,13 @@ gate with engagement measurements and require the recorded
 `engagement_linkability` and release approvals. Exposure and dismissal
 measurements remain subject to ordinary product-analytics consent.
 
+Before enabling these switches, the canonical analytics change must also land
+with a merge commit that preserves the source and artifact commits pinned in
+`analytics-contract.lock`. Squashing or rebasing that contract change requires
+regenerating and re-vendoring its artifacts first; an open contract branch is
+not evidence that the server accepts the event. These are rollout prerequisites,
+not permission to deploy or enable this client change.
+
 ## Shared recommendations
 
 `GET /api/users/{pubkey}/follow-suggestions` provides a cursor-paginated blend of
