@@ -149,6 +149,12 @@ void main(List<String> args) {
         '/api/account-deletion/attempts/current',
         '/api/account-deletion/attempts/00000000-0000-4000-8000-000000000000/status',
       ]);
+      expect(
+        LineSplitter.split(
+          result.stdout as String,
+        ).where((line) => line.startsWith('PASS PRODUCTION')),
+        hasLength(2),
+      );
       expect(result.stderr, isNot(contains('STAGING')));
       expect(hookMarker.existsSync(), isFalse);
     });
