@@ -12,22 +12,19 @@ start a native build. The baseline is the actual previous numbered production
 release in the owning store, mapped to its retained source provenance. A previous
 beta or an unverified GitHub tag is not a baseline.
 
-Generation reads the final app-source delta, groups it into bounded batches and
-checks the resulting facts in a separate model context. A second editorial pass
-writes and checks ordinary-person TestFlight instructions and store benefits in
-Divine's [brand voice](BRAND_VOICE.md). It omits internal, reverted, disabled,
-held and platform-inapplicable work. Google Play receives all 23 shipped language
-locales with at most 500 Unicode characters each. Apple receives its configured
-locales with at most 4000 characters each. Copy is never silently cut to fit.
+One LunaRoute request rewrites the complete app changelog into plain-language
+TestFlight instructions and store benefits in Divine's [brand voice](BRAND_VOICE.md).
+Code checks the build identity, exact language set, nonblank text, store limits
+and accidental copies of English before anything is published. Google Play gets
+all 23 shipped locales with at most 500 Unicode characters each; Apple gets its
+configured locales with at most 4000 each. Notes are never silently cut to fit.
 
 The protected `store-release` environment supplies
 `RELEASE_NOTES_LUNAROUTE_API_KEY`. `RELEASE_NOTES_MODEL` defaults to `glm-5.3` and can
-select a compatible managed LunaRoute model. Configure and verify a
-funded credential before activating the new generation path. No model credential
-is sent to Codemagic. Generation uses `store:false` and bounded concurrency.
+select a compatible managed LunaRoute model. Use the existing managed Lunaroute credential in this protected environment. No model credential
+is sent to Codemagic. Generation uses `store:false`.
 
-Verified source facts and the completed bundle are retained create-only in the
-private release ledger. A bundle is bound to platform, exact source, original
+The completed bundle is retained create-only in the private release ledger. A bundle is bound to platform, exact source, original
 production baseline and brand-policy digest. Build uploads and later promotion
 reuse it. Android retained-artifact retries preserve their original localized
 bundle. Native builds reject missing, malformed or mismatched bundles; there is

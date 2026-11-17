@@ -54,6 +54,10 @@ DEFAULT_GROUPS = [
 WORKFLOWS = {"ios": "ios-scheduled-build", "android": "android-build"}
 
 
+class BeforeStoreMutationError(ProviderError):
+    """A known local/authentication failure before any store write was attempted."""
+
+
 def beta_attributes(attributes, detail, legacy):
     if detail is not None:
         return detail["attributes"]
@@ -246,6 +250,15 @@ def execute_plan(plan, state, snapshot, store, provider):
             result = provider.execute(action, state, snapshot)
             state["operations"][key]["status"] = "done"
             state["operations"][key]["result"] = result
+        except BeforeStoreMutationError as error:
+            # No store request has occurred, so preserve the prior retryable
+            # intent rather than manufacturing an ambiguous submission hold.
+            if old is None:
+                state["operations"].pop(key)
+            else:
+                state["operations"][key] = old
+            plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
+            plan["actions"].remove(raw)
         except DeferredReview:
             state["operations"][key]["status"] = "deferred"
             state.setdefault("messages", []).append(
@@ -1002,12 +1015,19 @@ class Runtime:
 
     def refresh_store_authorization(self, platform):
         """Renew snapshot credentials after slow generation or artifact downloads."""
-        if platform == "ios" and isinstance(self.apple, Apple):
-            self.apple.headers["Authorization"] = "Bearer " + apple_token(self.env)
-        elif platform == "android" and isinstance(self.play, Play):
-            self.play.headers["Authorization"] = "Bearer " + play_token(
-                self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
-            )
+        try:
+            if platform == "ios" and isinstance(self.apple, Apple):
+                self.apple.headers["Authorization"] = "Bearer " + apple_token(self.env)
+            elif platform == "android" and isinstance(self.play, Play):
+                self.play.headers["Authorization"] = "Bearer " + play_token(
+                    self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+                )
+        except (ProviderError, KeyError, ValueError, OSError):
+            # Only token creation/refresh belongs to this safe-to-retry boundary.
+            # Provider calls below must keep their conservative ambiguity guard.
+            raise BeforeStoreMutationError(
+                "Store authorization unavailable before any store mutation; retry remains enabled"
+            ) from None
 
     def retry_artifact_record(self, action):
         record = self.ledger.read_json(

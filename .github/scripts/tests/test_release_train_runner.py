@@ -707,3 +707,88 @@ class NotesPreparationJournalTest(unittest.TestCase):
         self.assertEqual(state['holds'], {'ios': key})
         self.assertEqual(state['operations'][key]['action']['release_notes']['testflight'],
                          [{'language': 'en-US', 'text': 'Try recording a loop.'}])
+
+
+class BeforeStoreMutationFailureTest(unittest.TestCase):
+    def test_oauth_transport_failure_reverts_intent_without_hold_or_budget(self):
+        import hashlib
+        from unittest.mock import patch
+
+        from release_train.providers import Play, play_token
+        from release_train.runner import Runtime, operation_key
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        for kind in ['play-production', 'retry-android-upload']:
+            for prior_status in [None, 'deferred']:
+                with self.subTest(kind=kind, prior_status=prior_status):
+                    bundle = release_notes_bundle('android')
+                    record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                              'digest': hashlib.sha256(b'original signed aab').hexdigest(),
+                              'build_id': '123', 'artifact_name': 'app.aab', 'release_notes': bundle}
+                    action = {'kind': kind, 'platform': 'android', 'release_notes': bundle}
+                    action.update(record if kind == 'retry-android-upload' else {'build': record})
+                    key = operation_key(action)
+                    previous = {'status': prior_status, 'action': copy.deepcopy(action), 'started_at': 1}
+                    state = {'last_play_promotion': 222, 'app_store_submissions': [111]}
+                    if prior_status:
+                        state['operations'] = {key: copy.deepcopy(previous)}
+                    store = Store()
+                    runtime = Runtime.__new__(Runtime)
+                    runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': json.dumps({
+                        'private_key': 'unused-in-test', 'client_email': 'test@example.invalid'})}
+                    runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+                    store_calls = []
+                    runtime.play = Play('snapshot-token', request=lambda *args, store_calls=store_calls: store_calls.append(args))
+                    runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+                    runtime.download = lambda url, path: path.write_bytes(b'original signed aab')
+                    oauth_calls = []
+
+                    def oauth_request(method, url, headers=None, body=None, *, oauth_calls=oauth_calls):
+                        oauth_calls.append((method, url))
+                        raise ProviderError('OAuth transport unavailable')
+
+                    def refresh(credentials):
+                        return play_token(credentials, request=oauth_request)
+
+                    plan = {'actions': [action]}
+                    with patch('release_train.providers.signed_jwt', return_value='test-assertion'), patch('release_train.runner.play_token', side_effect=refresh):
+                        execute_plan(plan, state, {'now': 3600}, store, runtime)
+                    self.assertEqual(oauth_calls, [('POST', 'https://oauth2.googleapis.com/token')])
+                    self.assertEqual(store_calls, [])
+                    self.assertFalse(state.get('holds'))
+                    self.assertFalse(state.get('attempts'))
+                    if prior_status:
+                        self.assertEqual(state['operations'][key], previous)
+                    else:
+                        self.assertFalse(state.get('operations'))
+                    self.assertEqual(state['last_play_promotion'], 222)
+                    self.assertEqual(state['app_store_submissions'], [111])
+                    self.assertIn('authorization', plan['errors'][0].lower())
+                    self.assertEqual(store.saves[-1], state)
+
+    def test_store_request_failure_after_authorization_still_holds(self):
+        from unittest.mock import patch
+
+        from release_train.providers import Play
+        from release_train.runner import Runtime, operation_key
+        from release_train_fakes import release_notes_bundle
+
+        action = {'kind': 'play-production', 'platform': 'android',
+                  'build': {'id': '10', 'number': 10, 'sha': 'a' * 40},
+                  'release_notes': release_notes_bundle('android')}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': 'test-credentials'}
+        store_calls = []
+
+        def store_http(method, url, headers=None, body=None):
+            store_calls.append((method, url))
+            raise ProviderError('Provider request failed (HTTP 401)')
+
+        runtime.play = Play('snapshot-token', request=store_http)
+        state = {}
+        with patch('release_train.runner.play_token', return_value='fresh-token'):
+            execute_plan({'actions': [action]}, state, {'now': 3600}, Store(), runtime)
+        key = operation_key(action)
+        self.assertEqual(len(store_calls), 1)
+        self.assertEqual(state['operations'][key]['status'], 'ambiguous')
+        self.assertEqual(state['holds'], {'android': key})
