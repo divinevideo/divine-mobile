@@ -778,8 +778,10 @@ class _KeyboardStableBottomInsetState
 /// [analyticsServiceProvider] rebuilds, disposing the old service, at
 /// Nostr-ready for the same account, and Home keeps its feed across that. The
 /// session therefore follows [analyticsServiceIdentityStreamProvider] rather
-/// than the instance built with the page. The old service's disposal is itself
-/// a privacy change, so it is never re-read while Riverpod disposes it.
+/// than the instance built with the page. Reads use the tracked instance, not
+/// the provider: the old service emits a privacy change synchronously while it
+/// is disposed, and Riverpod rejects re-reading the provider inside that
+/// disposal. Such a read sees the disposed service and sends no identity.
 ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
   var analytics = ref.read(analyticsServiceProvider);
   return ClassicFeedSession(
