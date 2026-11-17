@@ -31,6 +31,37 @@ void main() {
           ),
         ),
       );
+  group('renders', () {
+    testWidgets('loading settles and stays static with reduced motion', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: VineTheme.theme,
+          home: const MediaQuery(
+            data: MediaQueryData(disableAnimations: true),
+            child: FeaturedCampaignGate(
+              feedId: id,
+              state: FeaturedTabsState(),
+              child: Text('Requested feed content'),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Requested feed content'), findsNothing);
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 1),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.binding.transientCallbackCount, 0);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+  });
+
   group('navigation', () {
     testWidgets(
       'cold lookup waits for config; exact config opens and withdrawal clears content',

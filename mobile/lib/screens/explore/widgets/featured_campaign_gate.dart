@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -72,7 +73,7 @@ class _FeaturedCampaignGateState extends State<FeaturedCampaignGate> {
       return widget.child;
     }
     if (widget.state.status != FeaturedTabsStatus.resolved && tab == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: DivineCircularProgressIndicator());
     }
     return Center(
       child: Padding(
