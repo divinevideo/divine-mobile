@@ -779,7 +779,6 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       );
     }
     inspiredByVideo ??= _attributionSourceFromClips();
-    final clipSourceCredits = _clipSourceCreditsFromClips();
 
     return DivineVideoDraft.create(
       id:
@@ -2096,7 +2095,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// attributable source. Clips without provenance are local/original material
   /// and do not conflict with the reused source; multiple reused sources do.
   InspiredByInfo? _attributionSourceFromClips() {
-    final credits = _clipSourceCreditsFromClips()
+    final credits = clipSourceCredits
         .where((credit) => credit.hasAddressableSource)
         .toList();
     if (credits.length != 1) return null;
@@ -2106,20 +2105,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// The credits carried by the clips on the timeline, one per source.
   ///
   /// These are published automatically and are not editable in the post form.
-  List<ClipSourceCredit> get clipSourceCredits => _clipSourceCreditsFromClips();
-
-  List<ClipSourceCredit> _clipSourceCreditsFromClips() {
-    final credits = <ClipSourceCredit>[];
-    final seen = <String>{};
-
-    for (final clip in _clips) {
-      for (final credit in clip.sourceCredits) {
-        if (seen.add(credit.identityKey)) credits.add(credit);
-      }
-    }
-
-    return credits;
-  }
+  List<ClipSourceCredit> get clipSourceCredits =>
+      DivineVideoClip.combinedSourceCredits(_clips);
 
   /// Build render parameters for video export.
   ///

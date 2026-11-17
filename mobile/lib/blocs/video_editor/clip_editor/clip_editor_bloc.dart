@@ -1625,7 +1625,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// Every picked set contributes its stills as they are, every picked video
   /// clip is sampled into stills at the composition's own hold, and all of it
   /// lands on the end of the single frames clip the frame-first editor edits
-  /// (see StopMotionFrameOps.mergeClips for why there is exactly one). A
+  /// (see StopMotionFrameOps.mergeClips for why there is exactly one), which
+  /// takes on the source credits of everything picked. A
   /// sampled clip's audio comes along as a sound track over its stills — the
   /// stills themselves are silent, and the footage's own sound is usually the
   /// point of bringing it in.
@@ -1754,7 +1755,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     emit(
       state.copyWith(
         clips: List.unmodifiable([
-          StopMotionFrameOps.clipWithFrames(previousClips.first, frames),
+          // Credits every clip whose stills landed here, or a remix sampled
+          // in from someone else publishes without naming them.
+          StopMotionFrameOps.clipWithFrames(
+            previousClips.first,
+            frames,
+            mergedFrom: [...previousClips.skip(1), ...picked],
+          ),
         ]),
         isImportingLibraryClips: false,
         clearLibraryImportRenderId: true,

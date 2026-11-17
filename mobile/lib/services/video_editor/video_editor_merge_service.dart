@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:models/models.dart' as model show ClipSourceCredit;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -86,7 +85,6 @@ class VideoEditorMergeService {
     );
 
     final first = clips.first;
-    final sourceCredits = _sourceCreditsFromClips(clips);
     return DivineVideoClip(
       id: 'merged_${DateTime.now().microsecondsSinceEpoch}',
       video: EditorVideo.file(outputPath),
@@ -96,7 +94,7 @@ class VideoEditorMergeService {
       originalAspectRatio: first.originalAspectRatio,
       thumbnailPath: first.thumbnailPath,
       lensMetadata: first.lensMetadata,
-      sourceCredits: sourceCredits,
+      sourceCredits: DivineVideoClip.combinedSourceCredits(clips),
       proofManifestJson: proof == null ? null : jsonEncode(proof),
       derivedFrom: mergedFrom,
       retainedSourcePaths: {
@@ -108,20 +106,5 @@ class VideoEditorMergeService {
             ...clip.ownedFilePaths.whereType<String>(),
       }.toList(),
     );
-  }
-
-  static List<model.ClipSourceCredit> _sourceCreditsFromClips(
-    List<DivineVideoClip> clips,
-  ) {
-    final credits = <model.ClipSourceCredit>[];
-    final seen = <String>{};
-
-    for (final clip in clips) {
-      for (final credit in clip.sourceCredits) {
-        if (seen.add(credit.identityKey)) credits.add(credit);
-      }
-    }
-
-    return credits;
   }
 }

@@ -8,7 +8,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart' show Alignment;
-import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
@@ -467,14 +467,6 @@ abstract final class SplitScreenLayoutRenderService {
       clips: cells,
     );
 
-    final credits = <model.ClipSourceCredit>[];
-    final seen = <String>{};
-    for (final clip in cells) {
-      for (final credit in clip.sourceCredits) {
-        if (seen.add(credit.identityKey)) credits.add(credit);
-      }
-    }
-
     return DivineVideoClip(
       id: id,
       video: video,
@@ -486,7 +478,7 @@ abstract final class SplitScreenLayoutRenderService {
       originalAspectRatio: aspectRatio.value,
       thumbnailPath: thumbnail?.path,
       thumbnailTimestamp: thumbnail?.timestamp,
-      sourceCredits: credits,
+      sourceCredits: DivineVideoClip.combinedSourceCredits(cells),
       proofManifestJson: proof == null ? null : jsonEncode(proof),
       derivedFrom: proof?.c2paManifestId == null
           ? NativeProofModeService.editSources(clips: cells)

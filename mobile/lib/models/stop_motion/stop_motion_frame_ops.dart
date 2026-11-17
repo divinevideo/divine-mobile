@@ -464,13 +464,21 @@ abstract class StopMotionFrameOps {
 
   /// [clip] with its stop-motion [frames] replaced and its cached [duration]
   /// recomputed from the new frame holds.
+  ///
+  /// When [frames] also hold stills taken from other clips, name those clips
+  /// in [mergedFrom]: their source credits join [clip]'s, so a creator whose
+  /// footage or set went into the stills is still credited on publish.
   static DivineVideoClip clipWithFrames(
     DivineVideoClip clip,
-    List<StopMotionClipFrame> frames,
-  ) {
+    List<StopMotionClipFrame> frames, {
+    Iterable<DivineVideoClip> mergedFrom = const [],
+  }) {
     return clip.copyWith(
       stopMotionFrames: frames,
       duration: totalDuration(frames),
+      sourceCredits: mergedFrom.isEmpty
+          ? null
+          : DivineVideoClip.combinedSourceCredits([clip, ...mergedFrom]),
     );
   }
 
@@ -520,8 +528,8 @@ abstract class StopMotionFrameOps {
   }
 
   /// Collapses multiple stop-motion [clips] into one frames clip — the first
-  /// clip with every set's stills concatenated in selection order (and the
-  /// duration recomputed).
+  /// clip with every set's stills concatenated in selection order, the
+  /// duration recomputed, and every set's source credits.
   ///
   /// The frame-first editor (strip, preview, hold controls) edits exactly one
   /// frames clip, the same shape a recorder session produces, so a multi-set
@@ -533,7 +541,7 @@ abstract class StopMotionFrameOps {
     if (!clips.every((clip) => clip.isStopMotion)) return null;
     return clipWithFrames(clips.first, [
       for (final clip in clips) ...clip.stopMotionFrames!,
-    ]);
+    ], mergedFrom: clips.skip(1));
   }
 }
 
