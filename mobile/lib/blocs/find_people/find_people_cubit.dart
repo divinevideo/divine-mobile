@@ -27,24 +27,32 @@ class FindPeopleState extends Equatable {
     this.nextCursor,
     this.pendingPubkeys = const {},
     this.actionFailed = false,
+    this.requestGeneration = 0,
+    this.limit = 20,
   });
   final FindPeopleStatus status;
   final List<FollowSuggestion> suggestions;
   final String? nextCursor;
   final Set<String> pendingPubkeys;
   final bool actionFailed;
+  final int requestGeneration;
+  final int limit;
 
   FindPeopleState copyWith({
     FindPeopleStatus? status,
     List<FollowSuggestion>? suggestions,
     Set<String>? pendingPubkeys,
     bool? actionFailed,
+    int? requestGeneration,
+    int? limit,
   }) => FindPeopleState(
     status: status ?? this.status,
     suggestions: suggestions ?? this.suggestions,
     nextCursor: nextCursor,
     pendingPubkeys: pendingPubkeys ?? this.pendingPubkeys,
     actionFailed: actionFailed ?? this.actionFailed,
+    requestGeneration: requestGeneration ?? this.requestGeneration,
+    limit: limit ?? this.limit,
   );
 
   @override
@@ -54,6 +62,8 @@ class FindPeopleState extends Equatable {
     nextCursor,
     pendingPubkeys,
     actionFailed,
+    requestGeneration,
+    limit,
   ];
 }
 
@@ -70,13 +80,17 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
   final FindPeopleRepository _repository;
   final FollowRepository _followRepository;
   late final StreamSubscription<void> _subscription;
-  int _generation = 0;
-  int _limit = 20;
 
   void _refilter() {
     if (isClosed) return;
     if (_repository.isCurrent && !_repository.isEligibilityAvailable) {
-      emit(const FindPeopleState(status: FindPeopleStatus.failure));
+      emit(
+        FindPeopleState(
+          status: FindPeopleStatus.failure,
+          requestGeneration: state.requestGeneration,
+          limit: state.limit,
+        ),
+      );
       return;
     }
     emit(
@@ -91,15 +105,14 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
 
   Future<void> load({int limit = 20}) async {
     if (isClosed) return;
-    _limit = limit;
-    await _load(append: false);
+    await _load(append: false, limit: limit);
   }
 
   /// Retries the failed request without changing a feed card's page size.
   Future<void> retry() =>
       state.suggestions.isNotEmpty && state.nextCursor != null
       ? loadMore()
-      : load(limit: _limit);
+      : load(limit: state.limit);
 
   Future<void> loadMore() async {
     if (isClosed ||
@@ -110,13 +123,21 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
     await _load(append: true);
   }
 
-  Future<void> _load({required bool append}) async {
-    final generation = ++_generation;
+  Future<void> _load({required bool append, int? limit}) async {
+    final generation = state.requestGeneration + 1;
+    final pageLimit = limit ?? state.limit;
     final cursor = append ? state.nextCursor : null;
-    emit(state.copyWith(status: FindPeopleStatus.loading, actionFailed: false));
+    emit(
+      state.copyWith(
+        status: FindPeopleStatus.loading,
+        actionFailed: false,
+        requestGeneration: generation,
+        limit: pageLimit,
+      ),
+    );
     try {
-      final page = await _repository.load(limit: _limit, cursor: cursor);
-      if (isClosed || generation != _generation) return;
+      final page = await _repository.load(limit: pageLimit, cursor: cursor);
+      if (isClosed || generation != state.requestGeneration) return;
       emit(
         FindPeopleState(
           status: FindPeopleStatus.success,
@@ -131,13 +152,21 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
           ], pendingFollowPubkeys: state.pendingPubkeys),
           nextCursor: page.nextCursor,
           pendingPubkeys: state.pendingPubkeys,
+          requestGeneration: generation,
+          limit: pageLimit,
         ),
       );
     } catch (error, stack) {
-      if (isClosed || generation != _generation) return;
+      if (isClosed || generation != state.requestGeneration) return;
       addError(error, stack);
       if (error is FindPeopleUnavailableException) {
-        emit(const FindPeopleState(status: FindPeopleStatus.failure));
+        emit(
+          FindPeopleState(
+            status: FindPeopleStatus.failure,
+            requestGeneration: generation,
+            limit: pageLimit,
+          ),
+        );
       } else {
         emit(state.copyWith(status: FindPeopleStatus.failure));
       }
@@ -230,8 +259,7 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
 
   @override
   Future<void> close() async {
-    ++_generation;
+    await super.close();
     await _subscription.cancel();
-    return super.close();
   }
 }
