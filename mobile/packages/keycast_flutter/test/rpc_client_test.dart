@@ -3,10 +3,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:http/testing.dart';
 import 'package:keycast_flutter/src/models/exceptions.dart';
 import 'package:keycast_flutter/src/models/keycast_session.dart';
@@ -748,6 +750,106 @@ void main() {
           );
         },
       );
+    });
+
+    group('requests and close across error zones', () {
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+
+      test(
+        'closing from another error zone cancels a pending connect without '
+        'leaking it to the zone that started the request',
+        () async {
+          // A real dart:io client whose connect never finishes until it is
+          // cancelled, like one stuck on a stalled network. dart:io creates
+          // the attempt's future in the zone that opened the request, and
+          // HttpClient.close listens to it from the zone that closes.
+          final connectStarted = Completer<void>();
+          final rpc = KeycastRpc(
+            nostrApi: 'https://login.divine.video/api/nostr',
+            accessToken: 'test_token',
+            httpClientFactory: () => IOClient(
+              HttpClient()
+                ..connectionFactory = (uri, proxyHost, proxyPort) async {
+                  final attempt = Completer<Socket>();
+                  if (!connectStarted.isCompleted) connectStarted.complete();
+                  return ConnectionTask.fromSocket(attempt.future, () {
+                    if (attempt.isCompleted) return;
+                    attempt.completeError(
+                      const SocketException('Connection attempt cancelled'),
+                    );
+                  });
+                },
+            ),
+          );
+          final leaked = <Object>[];
+
+          late Future<Object?> outcome;
+          runZonedGuarded(() {
+            outcome = rpc.getPublicKey().then<Object?>(
+              (value) => value,
+              onError: (Object error) => error,
+            );
+          }, (error, _) => leaked.add(error));
+          await connectStarted.future;
+          // HttpClient registers the attempt for cancellation only once the
+          // factory's future has resolved.
+          await pumpEventQueue();
+
+          runZonedGuarded(rpc.close, (error, _) => leaked.add(error));
+
+          expect(await outcome, isA<http.ClientException>());
+          await pumpEventQueue();
+          expect(leaked, isEmpty);
+        },
+      );
+
+      test('returns the result to a request made from another zone', () async {
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: MockClient(
+            (request) async =>
+                http.Response(jsonEncode({'result': pubkey}), 200),
+          ),
+        );
+        final leaked = <Object>[];
+
+        late Future<String?> result;
+        runZonedGuarded(() {
+          result = rpc.getPublicKey();
+        }, (error, _) => leaked.add(error));
+
+        expect(await result, pubkey);
+        expect(leaked, isEmpty);
+      });
+
+      test('returns the failure to a request made from another zone', () async {
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: MockClient(
+            (request) async =>
+                throw http.ClientException('Connection reset', request.url),
+          ),
+          httpClientFactory: () => MockClient(
+            (request) async =>
+                throw http.ClientException('Connection reset', request.url),
+          ),
+        );
+        final leaked = <Object>[];
+
+        late Future<Object?> outcome;
+        runZonedGuarded(() {
+          outcome = rpc.getPublicKey().then<Object?>(
+            (value) => value,
+            onError: (Object error) => error,
+          );
+        }, (error, _) => leaked.add(error));
+
+        expect(await outcome, isA<http.ClientException>());
+        expect(leaked, isEmpty);
+      });
     });
 
     group('signCanonicalPayload', () {

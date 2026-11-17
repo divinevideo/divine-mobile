@@ -13,6 +13,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/signer/signer_failure.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// One decrypted sync index event fetched from a relay.
@@ -55,18 +56,36 @@ class SyncIndexClient {
 
   static const String _logName = 'SyncIndexClient';
 
+  /// Runs a signer call, turning a signer that timed out or could not be
+  /// reached into the [SyncIndexException] callers already treat as a
+  /// transient failure to retry on the next trigger.
+  ///
+  /// A remote signer reports these by throwing rather than returning null,
+  /// so without this a Keycast timeout or DNS failure escaped untyped and
+  /// every caller's catch-all filed it as a crash. Anything else the signer
+  /// throws propagates unchanged.
+  Future<T> _askSigner<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on Object catch (e) {
+      if (!isUnreachableSignerFailure(e)) rethrow;
+      throw SyncIndexException('signer unavailable: ${e.runtimeType}');
+    }
+  }
+
   /// Publishes [entry] as the addressable event for [ref].
   ///
   /// Returns the `created_at` stamped on the event so the caller can
   /// record the authoritative value rather than re-deriving it.
   ///
-  /// Throws [SyncIndexException] when signing fails or no relay accepts.
+  /// Throws [SyncIndexException] when signing fails, the signer times out or
+  /// cannot be reached, or no relay accepts.
   Future<int> publish(
     SyncItemRef ref,
     SyncIndexEntry entry, {
     int? latestKnownRemote,
   }) async {
-    final pubkey = await _signer.getPublicKey();
+    final pubkey = await _askSigner(_signer.getPublicKey);
     if (pubkey == null || pubkey.isEmpty) {
       throw SyncIndexException('cannot publish while signed out');
     }
@@ -88,7 +107,7 @@ class SyncIndexClient {
       createdAt: createdAt,
     );
 
-    final signed = await _signer.signEvent(event);
+    final signed = await _askSigner(() => _signer.signEvent(event));
     if (signed == null) {
       throw SyncIndexException('signer refused to sign ${ref.dTag}');
     }
@@ -119,9 +138,10 @@ class SyncIndexClient {
   /// means the caller cannot distinguish "no record" from "newest record
   /// unreadable".
   ///
-  /// Throws [SyncIndexException] when signed out or the query fails.
+  /// Throws [SyncIndexException] when signed out, the signer times out or
+  /// cannot be reached, or the query fails.
   Future<List<RemoteSyncRecord>> fetch(SyncItemKind kind, {int? since}) async {
-    final pubkey = await _signer.getPublicKey();
+    final pubkey = await _askSigner(_signer.getPublicKey);
     if (pubkey == null || pubkey.isEmpty) {
       throw SyncIndexException('cannot fetch while signed out');
     }

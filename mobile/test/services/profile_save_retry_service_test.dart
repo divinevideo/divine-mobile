@@ -8,12 +8,16 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/profile_save_retry_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockCrashReportingService extends Mock
+    implements CrashReportingService {}
 
 void main() {
   const pubkey =
@@ -33,9 +37,11 @@ void main() {
   // the DB/streams close or a late fire would sweep a torn-down fixture.
   final built = <ProfileSaveRetryService>[];
 
-  ProfileSaveRetryService buildService() {
+  ProfileSaveRetryService buildService({
+    CrashReportingService? crashReporting,
+  }) {
     final service = ProfileSaveRetryService(
-      crashReporting: CrashReportingService(),
+      crashReporting: crashReporting ?? CrashReportingService(),
       profileRepository: repository,
       pendingProfileSavesDao: dao,
       userPubkey: pubkey,
@@ -646,5 +652,69 @@ void main() {
         );
       },
     );
+  });
+
+  group('sweep failures', () {
+    late _MockCrashReportingService crashReporting;
+
+    setUp(() {
+      crashReporting = _MockCrashReportingService();
+      when(
+        () => crashReporting.recordError(
+          any<Object>(),
+          any(),
+          reason: any(named: 'reason'),
+        ),
+      ).thenAnswer((_) async {});
+    });
+
+    test('does not report a remote signer that could not be reached, and keeps '
+        'the slot queued', () async {
+      final generation = await seed();
+      when(
+        () => repository.drivePendingSave(
+          pubkey,
+          expectedGeneration: any(named: 'expectedGeneration'),
+        ),
+      ).thenThrow(
+        http.ClientException(
+          "Failed host lookup: 'login.divine.video'",
+          Uri.parse('https://login.divine.video/api/nostr'),
+        ),
+      );
+
+      await buildService(crashReporting: crashReporting).sweep();
+
+      verifyNever(
+        () => crashReporting.recordError(
+          any<Object>(),
+          any(),
+          reason: any(named: 'reason'),
+        ),
+      );
+      final entry = await dao.get(pubkey);
+      expect(entry?.generation, generation);
+      expect(entry?.status, isNot(PendingProfileSaveStatus.failed));
+    });
+
+    test('reports an unexpected failure', () async {
+      await seed();
+      when(
+        () => repository.drivePendingSave(
+          pubkey,
+          expectedGeneration: any(named: 'expectedGeneration'),
+        ),
+      ).thenThrow(StateError('broken invariant'));
+
+      await buildService(crashReporting: crashReporting).sweep();
+
+      verify(
+        () => crashReporting.recordError(
+          any<Object>(that: isA<StateError>()),
+          any(),
+          reason: 'ProfileSaveRetryService.sweepTopLevel',
+        ),
+      ).called(1);
+    });
   });
 }

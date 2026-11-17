@@ -1,6 +1,8 @@
 // ABOUTME: Tests for publishing and fetching encrypted sync index events.
 // ABOUTME: Pins tag shape, tombstone expiry, and foreign-event filtering.
 
+import 'dart:async';
+
 import 'package:creator_sync/creator_sync.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:mocktail/mocktail.dart';
@@ -9,9 +11,14 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/signer/signer_failure.dart';
 import 'package:test/test.dart';
 
 class _MockSigner extends Mock implements NostrSigner {}
+
+/// A remote signer that bounded itself and gave up, like Keycast's
+/// `RpcTimeoutException`.
+class _SignerGaveUp implements TransientSignerFailure, Exception {}
 
 class _MockClient extends Mock implements NostrClient {}
 
@@ -205,6 +212,48 @@ void main() {
           verifyNever(() => client.publishEventAwaitOk(any()));
         },
       );
+
+      test(
+        'throws $SyncIndexException when the signer gives up on signing',
+        () async {
+          when(
+            () => signer.signEvent(any()),
+          ).thenAnswer((_) async => throw _SignerGaveUp());
+
+          await expectLater(
+            indexClient.publish(ref, SyncIndexEntry.tombstone()),
+            throwsA(isA<SyncIndexException>()),
+          );
+          verifyNever(() => client.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'throws $SyncIndexException when the public key request times out',
+        () async {
+          when(signer.getPublicKey).thenAnswer(
+            (_) async => throw TimeoutException('get_public_key'),
+          );
+
+          await expectLater(
+            indexClient.publish(ref, SyncIndexEntry.tombstone()),
+            throwsA(isA<SyncIndexException>()),
+          );
+          verifyNever(() => signer.signEvent(any()));
+        },
+      );
+
+      test('rethrows any other signer failure unchanged', () async {
+        when(
+          () => signer.signEvent(any()),
+        ).thenAnswer((_) async => throw StateError('broken signer'));
+
+        await expectLater(
+          indexClient.publish(ref, SyncIndexEntry.tombstone()),
+          throwsA(isA<StateError>()),
+        );
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      });
     });
 
     group('fetch', () {
@@ -548,6 +597,22 @@ void main() {
         );
         verifyNever(() => client.queryEventsDetailed(any()));
       });
+
+      test(
+        'throws $SyncIndexException when the signer gives up on the '
+        'public key',
+        () async {
+          when(
+            signer.getPublicKey,
+          ).thenAnswer((_) async => throw _SignerGaveUp());
+
+          await expectLater(
+            indexClient.fetch(SyncItemKind.sound),
+            throwsA(isA<SyncIndexException>()),
+          );
+          verifyNever(() => client.queryEventsDetailed(any()));
+        },
+      );
     });
   });
 }

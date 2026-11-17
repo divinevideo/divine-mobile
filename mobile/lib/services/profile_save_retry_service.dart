@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/signer/signer_failure.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -255,13 +256,18 @@ class ProfileSaveRetryService {
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(
-        _crashReporting.recordError(
-          e,
-          stackTrace,
-          reason: _sweepTopLevelSite,
-        ),
-      );
+      // A remote signer that timed out or could not be reached is a bad
+      // network, not a defect. The slot stays queued, and the next
+      // foreground or connectivity trigger drives it again.
+      if (!isUnreachableSignerFailure(e)) {
+        unawaited(
+          _crashReporting.recordError(
+            e,
+            stackTrace,
+            reason: _sweepTopLevelSite,
+          ),
+        );
+      }
     } finally {
       _isSweeping = false;
     }
