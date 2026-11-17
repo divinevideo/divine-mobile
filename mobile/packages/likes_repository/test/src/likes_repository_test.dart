@@ -7848,6 +7848,42 @@ void main() {
           expect(votes.unknownIds, equals({targetId}));
           expect(votes.upvotedIds, isEmpty);
         });
+
+        test('leaves the vote unknown when its deletions read may have '
+            'stopped at a result limit', () async {
+          // The vote itself is proven; only the read for its retraction is
+          // short. A deletion the relay held back would mean the viewer took
+          // the vote back, so the arrow can't be shown as live.
+          final vote = createMockReaction(
+            id: 'own_reaction',
+            targetEventId: targetId,
+            authorPubkey: testUserPubkey,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final asksForVotes =
+                (invocation.positionalArguments.first as List<Filter>).any(
+                  (f) => f.kinds?.contains(EventKind.reaction) ?? false,
+                );
+            return QueryResult(
+              events: [if (asksForVotes) vote],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 1,
+              possiblyCapped: !asksForVotes,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
       });
     });
 
