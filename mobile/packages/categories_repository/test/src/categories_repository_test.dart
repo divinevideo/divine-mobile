@@ -316,6 +316,27 @@ void main() {
         },
       );
 
+      test(
+        "sign-out's prefix invalidation clears the viewer's snapshot",
+        () async {
+          await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                viewerPubkey: viewer,
+              )
+              .toList();
+          expect(cacheDao.length, 1);
+          await CacheSync.invalidatePrefix(viewer);
+          final results = await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                viewerPubkey: viewer,
+              )
+              .toList();
+          expect(results.single.isLive, isTrue);
+        },
+      );
+
       test('isolates category, sort, platform and account snapshots', () async {
         await repository
             .watchVideosForCategoryCached(
