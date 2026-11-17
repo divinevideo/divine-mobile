@@ -2,7 +2,6 @@
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -82,7 +81,6 @@ class ExploreBadgesView extends StatelessWidget {
             backgroundColor: VineTheme.vineGreen,
             onRefresh: cubit.refresh,
             child: CustomScrollView(
-              scrollCacheExtent: const ScrollCacheExtent.pixels(0),
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
