@@ -656,26 +656,36 @@ void main() {
         endTime: endTime,
       );
 
-      test('learns where the video ends from its clips', () {
+      test('learns where the video ends on the editor timeline from its '
+          'clips', () {
+        DivineVideoClip clip(String id, {ClipTransition? transition}) =>
+            DivineVideoClip(
+              id: id,
+              video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+              transition: transition,
+            );
+        // The dissolve overlaps the clips, so the exported video ends half a
+        // second before the editor timeline does.
         final cubit = buildCubit()
           ..syncBeatSource(
             sounds: const [],
             clips: [
-              DivineVideoClip(
-                id: 'clip',
-                video: EditorVideo.file(
-                  '${Directory.systemTemp.path}/clip.mp4',
+              clip(
+                'a',
+                transition: const ClipTransition(
+                  type: ClipTransitionType.dissolve,
                 ),
-                duration: const Duration(milliseconds: 4500),
-                recordedAt: DateTime(2026),
-                targetAspectRatio: model.AspectRatio.vertical,
-                originalAspectRatio: 9 / 16,
               ),
+              clip('b'),
             ],
           );
         addTearDown(cubit.close);
 
-        expect(cubit.state.timelineEnd, const Duration(milliseconds: 4500));
+        expect(cubit.state.timelineEnd, const Duration(seconds: 4));
       });
 
       test("adds a new intro over the first second, at its look's starting "
@@ -785,6 +795,11 @@ void main() {
         final cubit = editing(applied: [trimmed], effectId: 'intro')
           ..selectType(EditorEffectType.introCinema);
 
+        // The preview already shows it there, in the middle of its window.
+        expect(
+          cubit.state.introOutroPreviewPosition(playing: false),
+          const Duration(milliseconds: 1250),
+        );
         expect(cubit.confirm().effects, [
           introOutro(
             'intro',
