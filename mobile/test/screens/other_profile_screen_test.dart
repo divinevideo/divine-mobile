@@ -183,13 +183,6 @@ void main() {
     ).thenAnswer(
       (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
-    // ProfileFeedCubit._restoreFromCache filters tombstones through this, but
-    // only when the shared cache already holds videos for this author. Under
-    // the merged `very_good --optimization` isolate that depends on which test
-    // files ran first, so leaving it unstubbed fails only on some orderings.
-    when(
-      () => videoEventService.isVideoEventLocallyDeleted(any()),
-    ).thenReturn(false);
     when(
       () => videoEventService.isVideoEventKnownDeleted(any()),
     ).thenReturn(false);

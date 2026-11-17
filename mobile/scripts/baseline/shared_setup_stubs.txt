@@ -18,7 +18,7 @@ test/providers/push_notification_sync_test.dart	18
 test/screens/inbox/conversation/conversation_page_test.dart	12
 test/screens/inbox/inbox_page_test.dart	14
 test/screens/inbox/message_requests/message_requests_page_test.dart	19
-test/screens/other_profile_screen_test.dart	34
+test/screens/other_profile_screen_test.dart	33
 test/screens/settings/settings_account_switch_test.dart	26
 test/screens/settings/settings_share_divine_test.dart	22
 test/screens/settings/settings_taxonomy_test.dart	26
