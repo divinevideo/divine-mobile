@@ -12,6 +12,16 @@ import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
 
+/// Most recent outcomes a request carries as context.
+const _maxRecentInteractions = 20;
+
+/// Most recently reached videos a request carries as context.
+const _maxRecentVideoIds = 10;
+
+/// Videos past the furthest reached one that adaptation keeps, so the video
+/// queued next does not change under the viewer.
+const _stableVideosAhead = 1;
+
 /// Reads a private Classics page.
 ///
 /// Transport and fallback belong to the repository.
@@ -218,7 +228,7 @@ class ClassicFeedSession {
     _interactions
       ..remove(interaction.videoId)
       ..[interaction.videoId] = interaction;
-    while (_interactions.length > 20) {
+    while (_interactions.length > _maxRecentInteractions) {
       _interactions.remove(_interactions.keys.first);
     }
     _requestAdaptation();
@@ -273,7 +283,7 @@ class ClassicFeedSession {
     _recentIds
       ..remove(id)
       ..add(id);
-    if (_recentIds.length > 10) _recentIds.removeAt(0);
+    if (_recentIds.length > _maxRecentVideoIds) _recentIds.removeAt(0);
   }
 
   int _strength(ClassicFeedSignal signal) => switch (signal) {
@@ -342,7 +352,7 @@ class ClassicFeedSession {
       final protectedCount = replaceAll
           ? 0
           : replaceTail && result.videos.isNotEmpty
-          ? min(existing.length, _furthestIndex + 2)
+          ? min(existing.length, _furthestIndex + 1 + _stableVideosAhead)
           : existing.length;
       final preserved = existing.take(protectedCount);
       final keys = <String>{};

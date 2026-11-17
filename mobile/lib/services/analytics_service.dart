@@ -120,6 +120,12 @@ class AnalyticsService implements BackgroundAwareService {
   final _privacyChanges = StreamController<void>.broadcast(sync: true);
   int _privacyGeneration = 0;
 
+  /// Loops watched below which a view reads as a [ClassicFeedSignal.skip].
+  static const _classicSkipBelowLoops = 0.75;
+
+  /// Loops watched above which a view reads as a [ClassicFeedSignal.replay].
+  static const _classicReplayAboveLoops = 1.25;
+
   final _recommendationFeedback =
       StreamController<ClassicFeedFeedback>.broadcast(sync: true);
 
@@ -865,9 +871,9 @@ class AnalyticsService implements BackgroundAwareService {
         recordRecommendationInteraction(
           ClassicFeedInteraction(
             videoId: video.id,
-            signal: ratio < 0.75
+            signal: ratio < _classicSkipBelowLoops
                 ? ClassicFeedSignal.skip
-                : ratio <= 1.25
+                : ratio <= _classicReplayAboveLoops
                 ? ClassicFeedSignal.completed
                 : ClassicFeedSignal.replay,
           ),
