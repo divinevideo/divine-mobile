@@ -1090,6 +1090,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text(l10n.badgeSubscriptionsPublicNotice), findsOneWidget);
+      expect(find.text(l10n.badgeCommunityFollowHint), findsOneWidget);
     });
 
     testWidgets('offers a retry when the lookup fails', (tester) async {
