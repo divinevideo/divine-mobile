@@ -4998,3 +4998,43 @@ final class CameraPurposeLocalizationTests: XCTestCase {
     }
   }
 }
+||||||| parent of e986da5 (feat(watch): surface the Watch remote with a Live Activity)
+
+
+/// What the camera's Live Activity shows comes from the map the recorder
+/// publishes for remote controls. A misread key leaves the Activity at
+/// `00:00` with no error anywhere.
+@available(iOS 16.2, *)
+final class RecorderActivityContentStateTests: XCTestCase {
+  func testReadsRecordedTimeWhileNoTakeRuns() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 3900, "budgetMs": 6300, "modeName": "Capture"]
+    )
+
+    XCTAssertEqual(state.recordedDuration, 3.9, accuracy: 0.001)
+    XCTAssertFalse(state.isRecording)
+    XCTAssertNil(state.timerStart)
+    XCTAssertEqual(state.durationLabel, "00:03")
+  }
+
+  func testTimerStartsBeforeTheTakeByTheTimeAlreadyRecorded() {
+    let takeStartedAtMs: Double = 1_800_000_000_000
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 2000, "activeTakeStartedAtMs": takeStartedAtMs]
+    )
+
+    XCTAssertTrue(state.isRecording)
+    XCTAssertEqual(
+      state.timerStart,
+      Date(timeIntervalSince1970: takeStartedAtMs / 1000 - 2)
+    )
+  }
+
+  func testATakeThatIsNotRunningArrivesAsNull() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 1000, "activeTakeStartedAtMs": NSNull()]
+    )
+
+    XCTAssertFalse(state.isRecording)
+  }
+}

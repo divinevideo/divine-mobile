@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import UserNotifications
 import AVFoundation
+import divine_camera
 import LibProofMode
 import ZendeskCoreSDK
 import SupportSDK
@@ -57,6 +58,14 @@ extension FlutterError: @retroactive Error {}
     IntroOutroVideoEffect.register()
     LookVideoEffect.register()
     AdjustVideoEffect.register()
+    if #available(iOS 16.2, *) {
+      // A Live Activity while the camera is open puts the Apple Watch remote
+      // in the Watch's Smart Stack.
+      let recorderLiveActivity = RecorderLiveActivityController()
+      DivineCameraPlugin.onWatchRemoteChanged = { recorderState in
+        recorderLiveActivity.show(recorderState: recorderState)
+      }
+    }
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

@@ -81,6 +81,10 @@
 		9B9F30F0789DAA167021C3EF /* DivineWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9A5AAB2250A23AEE3C02C52 /* DivineWatchApp.swift */; };
 		E022E1B3A9C7C123F0A6F9F3 /* RecordingBudgetStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052516A86C2B1B3CB9DEF08C /* RecordingBudgetStrip.swift */; };
 		E4EBAD77EA22CAFB2CD1993D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C116B284C742B3A17F256FD5 /* Assets.xcassets */; };
+		2F7B5DA248607A8E6E3461C2 /* RecorderActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F862ACA77E3420BC6D62F7B /* RecorderActivityAttributes.swift */; };
+		49C048EEA4F29809408FE5DB /* RecorderLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01AD4ABC2883AA481B4BA0B4 /* RecorderLiveActivity.swift */; };
+		7BD0B5AD364238A109090DA0 /* RecorderActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F862ACA77E3420BC6D62F7B /* RecorderActivityAttributes.swift */; };
+		ADFC01ADBC5A0E8A3D34E123 /* RecorderLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEFC063145033D59F2B36ABB /* RecorderLiveActivityController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -294,6 +298,9 @@
 		D9A5AAB2250A23AEE3C02C52 /* DivineWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DivineWatchApp.swift; sourceTree = "<group>"; };
 		ED8F532DDE1F96A68C7142F7 /* RemoteShutterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemoteShutterView.swift; sourceTree = "<group>"; };
 		FDA8DDBD3D82351E5E345B06 /* PhoneRecorderLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneRecorderLink.swift; sourceTree = "<group>"; };
+		01AD4ABC2883AA481B4BA0B4 /* RecorderLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecorderLiveActivity.swift; sourceTree = "<group>"; };
+		3F862ACA77E3420BC6D62F7B /* RecorderActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecorderActivityAttributes.swift; sourceTree = "<group>"; };
+		FEFC063145033D59F2B36ABB /* RecorderLiveActivityController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecorderLiveActivityController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -402,6 +409,7 @@
 				D1A00000000000000000001C /* CameraQuickActionWidget */,
 				E6E5343B49E34738EBCF225C /* DivineUITests */,
 				0C7C49D2F9C78F1EAD72F002 /* DivineWatch */,
+				5BCC0B8C1E4A52AFB5F16268 /* Shared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -474,6 +482,7 @@
 				AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				1D777AEE1B05282C0928DE2F /* PrivacyInfo.xcprivacy */,
+				FEFC063145033D59F2B36ABB /* RecorderLiveActivityController.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -485,6 +494,7 @@
 				D1A00000000000000000001B /* Localizable.strings */,
 				D1A000000000000000000006 /* Info.plist */,
 				D1A000000000000000000007 /* CameraQuickActionWidget.entitlements */,
+				01AD4ABC2883AA481B4BA0B4 /* RecorderLiveActivity.swift */,
 			);
 			name = CameraQuickActionWidget;
 			path = CameraQuickActionWidget;
@@ -541,6 +551,15 @@
 			);
 			name = DivineWatch;
 			path = DivineWatch;
+			sourceTree = "<group>";
+		};
+		5BCC0B8C1E4A52AFB5F16268 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				3F862ACA77E3420BC6D62F7B /* RecorderActivityAttributes.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -989,6 +1008,8 @@
 				E5D13268C70E0C097FA36A12 /* LookVideoEffect.swift in Sources */,
 				AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
+				2F7B5DA248607A8E6E3461C2 /* RecorderActivityAttributes.swift in Sources */,
+				ADFC01ADBC5A0E8A3D34E123 /* RecorderLiveActivityController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -997,6 +1018,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1A000000000000000000001 /* CameraQuickActionWidget.swift in Sources */,
+				7BD0B5AD364238A109090DA0 /* RecorderActivityAttributes.swift in Sources */,
+				49C048EEA4F29809408FE5DB /* RecorderLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1853,6 +1876,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
+				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = RecorderActivityAttributes;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1883,6 +1907,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
+				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = RecorderActivityAttributes;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1913,6 +1938,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app;
+				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = RecorderActivityAttributes;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1943,6 +1969,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app;
+				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = RecorderActivityAttributes;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

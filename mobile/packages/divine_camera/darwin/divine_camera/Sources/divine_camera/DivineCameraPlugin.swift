@@ -17,6 +17,13 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     #if os(iOS)
     private var volumeKeyHandler: VolumeKeyHandler?
     private var watchRemoteLink: WatchRemoteLink?
+
+    /// Called on the main queue with the recorder state an Apple Watch remote
+    /// can show (`RemoteRecorderState.toMap`), or `nil` when the recorder is
+    /// closed or no paired Watch has the app.
+    ///
+    /// The host app sets this to present the recorder outside the plugin.
+    public static var onWatchRemoteChanged: (([String: Any]?) -> Void)?
     #endif
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -37,9 +44,14 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         #if os(iOS)
         // Up from launch so a Watch still showing a recorder from a previous
         // run of the app learns that it is gone.
-        let watchRemoteLink = WatchRemoteLink { [weak instance] in
-            instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: "watch")
-        }
+        let watchRemoteLink = WatchRemoteLink(
+            onToggleRecording: { [weak instance] in
+                instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: "watch")
+            },
+            onWatchRemoteChanged: { state in
+                DivineCameraPlugin.onWatchRemoteChanged?(state)
+            }
+        )
         watchRemoteLink.activate()
         instance.watchRemoteLink = watchRemoteLink
         #endif
