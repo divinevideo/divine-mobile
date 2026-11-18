@@ -4383,7 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "一致するタグがありません",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{ハッシュタグは{max}文字までです。}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{ハッシュタグは{max}個まで追加できます。}}",
-  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{ハッシュタグは{max}個まで追加できます。追加するには、どれか1つを削除してください。}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{ハッシュタグは{max}個まで追加できます。追加するには、どれかを削除してください。}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{max}文字中{count}文字}}",
   "videoMetadataTagsPickerAddTag": "「#{tag}」を追加",
   "@videoMetadataTagsPickerAddTag": {

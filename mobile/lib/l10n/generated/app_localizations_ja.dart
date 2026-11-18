@@ -13002,7 +13002,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       max,
       locale: localeName,
-      other: 'ハッシュタグは$max個まで追加できます。追加するには、どれか1つを削除してください。',
+      other: 'ハッシュタグは$max個まで追加できます。追加するには、どれかを削除してください。',
     );
     return '$_temp0';
   }
