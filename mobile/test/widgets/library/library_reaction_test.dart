@@ -63,11 +63,11 @@ class _Editor extends VideoEditorNotifier {
   _Editor(this.events);
   final List<String> events;
   Completer<String?>? keepGate;
-  final cleanedPaths = <String>[];
+  final deferredPaths = <String>[];
 
   @override
   void deferFileCleanup(Iterable<String?> paths) {
-    cleanedPaths.addAll(paths.whereType<String>());
+    deferredPaths.addAll(paths.whereType<String>());
   }
 
   @override
@@ -107,9 +107,13 @@ void main() {
     late _Editor editor;
     late _Auth auth;
     late String owner;
+    late List<String> abandoned;
+    late List<String>? deferredWhenEditorOpened;
 
     setUp(() {
       events = [];
+      abandoned = [];
+      deferredWhenEditorOpened = null;
       manager = _Manager();
       editor = _Editor(events);
       auth = _Auth();
@@ -147,9 +151,11 @@ void main() {
                     mergeTakes: merge,
                     extractThumbnail: (path) async =>
                         (path: '$path.jpg', timestamp: Duration.zero),
-                    cleanupAbandoned: (paths) async =>
-                        editor.cleanedPaths.addAll(paths),
-                    openEditor: (_) async => events.add('open editor'),
+                    cleanupAbandoned: (paths) async => abandoned.addAll(paths),
+                    openEditor: (_) async {
+                      deferredWhenEditorOpened = [...editor.deferredPaths];
+                      events.add('open editor');
+                    },
                   ),
                   child: const Text('react'),
                 ),
@@ -226,10 +232,11 @@ void main() {
         'merge cuts',
         'open editor',
       ]);
-      expect(editor.cleanedPaths, [
+      expect(deferredWhenEditorOpened, [
         '/documents/combined.mp4',
         '/documents/combined.mp4.jpg',
       ]);
+      expect(abandoned, isEmpty);
     });
 
     testWidgets(
@@ -246,10 +253,11 @@ void main() {
           layout: (_, _, _, _) async => null,
         );
         expect(events, ['keep draft', 'clear session']);
-        expect(editor.cleanedPaths, [
+        expect(abandoned, [
           '/documents/combined.mp4',
           '/documents/combined.mp4.jpg',
         ]);
+        expect(editor.deferredPaths, isEmpty);
         expect(manager.clips, isEmpty);
       },
     );
