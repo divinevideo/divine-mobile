@@ -373,6 +373,9 @@ class VideoRecorderBloc
   late final _stopMotionSessions = StopMotionSessionStore(
     readClipManager: _readClipManager,
   );
+
+  /// Whether setup turned remote record control on. A sheet's pause turns it
+  /// off natively but leaves this set, so the resume turns it back on.
   bool _remoteRecordControlEnabled = false;
 
   /// How long the zoom ruler stays visible after the last pinch activity
@@ -653,7 +656,7 @@ class VideoRecorderBloc
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: false);
       Log.debug(
-        '🎮 Remote record control paused (for audio playback)',
+        '🎮 Remote record control paused (sheet open)',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );

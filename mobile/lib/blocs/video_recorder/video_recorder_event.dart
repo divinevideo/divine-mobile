@@ -64,8 +64,9 @@ final class VideoRecorderAppLifecycleChanged extends VideoRecorderEvent {
 
 /// Temporarily pauses remote record control (volume buttons / Bluetooth).
 ///
-/// Call when opening screens that need to play audio (e.g. Sounds picker)
-/// to release MediaSession to the system audio session.
+/// Call while a sheet covers the preview, such as the sound picker or the
+/// color mask settings, so a press cannot start a take behind it and the
+/// sound picker's previews get the MediaSession back.
 final class VideoRecorderRemoteRecordPaused extends VideoRecorderEvent {
   const VideoRecorderRemoteRecordPaused();
 }
