@@ -91,6 +91,7 @@ class VideoRecorderBlocState extends Equatable {
     this.pendingStopAfterStart = false,
     this.recordingLockedForNavigation = false,
     this.editorNavigationInProgress = false,
+    this.isRemoteRecordPaused = false,
     this.baseZoomLevel = 1.0,
     this.snappedTo1x = false,
     this.lastRawZoom = 1.0,
@@ -253,6 +254,15 @@ class VideoRecorderBlocState extends Equatable {
   /// the editor awaits auth and analytics before it pushes, and a second tap on
   /// "next" in that window would push a second editor over the first.
   final bool editorNavigationInProgress;
+
+  /// True while a sheet over the preview, the sound picker or the color mask
+  /// settings, has paused remote record control.
+  ///
+  /// Kept apart from whether remote control is on: those sheets can open
+  /// while the camera is still starting, before setup turns remote control
+  /// on, and setup must keep it paused then, or a volume or Bluetooth press
+  /// would start a take behind the sheet.
+  final bool isRemoteRecordPaused;
 
   /// Zoom level captured at the start of the current pinch gesture.
   ///
@@ -459,6 +469,7 @@ class VideoRecorderBlocState extends Equatable {
     bool? pendingStopAfterStart,
     bool? recordingLockedForNavigation,
     bool? editorNavigationInProgress,
+    bool? isRemoteRecordPaused,
     double? baseZoomLevel,
     bool? snappedTo1x,
     double? lastRawZoom,
@@ -521,6 +532,7 @@ class VideoRecorderBlocState extends Equatable {
           recordingLockedForNavigation ?? this.recordingLockedForNavigation,
       editorNavigationInProgress:
           editorNavigationInProgress ?? this.editorNavigationInProgress,
+      isRemoteRecordPaused: isRemoteRecordPaused ?? this.isRemoteRecordPaused,
       baseZoomLevel: baseZoomLevel ?? this.baseZoomLevel,
       snappedTo1x: snappedTo1x ?? this.snappedTo1x,
       lastRawZoom: lastRawZoom ?? this.lastRawZoom,
@@ -582,6 +594,7 @@ class VideoRecorderBlocState extends Equatable {
     pendingStopAfterStart,
     recordingLockedForNavigation,
     editorNavigationInProgress,
+    isRemoteRecordPaused,
     baseZoomLevel,
     snappedTo1x,
     lastRawZoom,

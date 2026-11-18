@@ -373,6 +373,9 @@ class VideoRecorderBloc
   late final _stopMotionSessions = StopMotionSessionStore(
     readClipManager: _readClipManager,
   );
+
+  /// Whether setup turned remote record control on. A sheet's pause turns it
+  /// off natively but leaves this set, so the resume turns it back on.
   bool _remoteRecordControlEnabled = false;
 
   /// How long the zoom ruler stays visible after the last pinch activity
@@ -647,10 +650,13 @@ class VideoRecorderBloc
     VideoRecorderRemoteRecordPaused event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // Recorded even before setup has turned remote control on, so setup
+    // can honor it.
+    emit(state.copyWith(isRemoteRecordPaused: true));
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: false);
       Log.debug(
-        '🎮 Remote record control paused (for audio playback)',
+        '🎮 Remote record control paused (sheet open)',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
@@ -661,6 +667,7 @@ class VideoRecorderBloc
     VideoRecorderRemoteRecordResumed event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    emit(state.copyWith(isRemoteRecordPaused: false));
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: true);
       if (_isClosing) return;
@@ -2594,9 +2601,9 @@ class VideoRecorderBloc
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
   /// was entered from), overlay and grid toggles, the timer setting, the take
   /// in flight, the navigation lock and the editor navigation in progress, the
-  /// stop-motion session and interval loop, the chroma-key setup and (while
-  /// initialized) the screen flash carry over; flash resets to `off` and every
-  /// other field to its default.
+  /// remote record pause, the stop-motion session and interval loop, the
+  /// chroma-key setup and (while initialized) the screen flash carry over;
+  /// flash resets to `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
@@ -2652,6 +2659,9 @@ class VideoRecorderBloc
         // The camera is released while the editor is open, and that dispose
         // re-syncs here; the editor navigation only ends when its route returns.
         editorNavigationInProgress: state.editorNavigationInProgress,
+        // A sheet that paused remote control can be open across the re-sync
+        // that initialize emits, and stays paused until it closes.
+        isRemoteRecordPaused: state.isRemoteRecordPaused,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on
@@ -2750,7 +2760,17 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
 
-      if (_remoteRecordPausedForSound) {
+      if (state.isRemoteRecordPaused) {
+        // A sheet opened while the camera was starting, so its pause could
+        // not reach remote control yet. Apply it now; the sheet resumes it
+        // on closing.
+        await _cameraService.setRemoteRecordControlEnabled(enabled: false);
+        Log.debug(
+          '🎮 Remote record control paused (sheet opened during startup)',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      } else if (_remoteRecordPausedForSound) {
         await _cameraService.setVolumeKeysEnabled(enabled: false);
         Log.debug(
           '🎮 Volume keys released (sound already selected)',
