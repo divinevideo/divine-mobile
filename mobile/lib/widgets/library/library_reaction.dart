@@ -2,8 +2,10 @@
 // ABOUTME: Keeps the unfinished draft and the source footage before a new session.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -16,15 +18,9 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
-import 'package:openvine/services/file_cleanup_service.dart';
-import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
-import 'package:openvine/services/video_thumbnail_service.dart';
 
 /// Concatenates all cuts accepted from the reaction camera, in capture order.
-typedef LibraryReactionMerge = Future<DivineVideoClip?> Function({
-  required List<DivineVideoClip> clips,
-  required String renderId,
-});
+typedef LibraryReactionMerge = MergeReactionTakes;
 
 /// Opens a filled layout, returning only the user's confirmed render.
 typedef LibraryReactionLayout = Future<DivineVideoClip?> Function(
@@ -44,7 +40,7 @@ Future<void> recordLibraryReaction(
   SplitScreenCellPicker? recordWithCamera,
   LibraryReactionLayout? showLayout,
   LibraryReactionMerge? mergeTakes,
-  Future<ThumbnailFileResult?> Function(String path)? extractThumbnail,
+  ExtractReactionPoster? extractThumbnail,
   Future<void> Function(List<String> paths)? cleanupAbandoned,
   Future<void> Function(BuildContext context)? openEditor,
 }) async {
@@ -54,18 +50,6 @@ Future<void> recordLibraryReaction(
   final owner = ref.read(authServiceProvider).currentPublicKeyHex;
   // Capture the connection before navigation; cleanup can outlive its widget.
   final database = cleanupAbandoned == null ? ref.read(databaseProvider) : null;
-  Future<void> cleanup(List<String> paths) async {
-    if (cleanupAbandoned != null) {
-      await cleanupAbandoned(paths);
-      return;
-    }
-    final remaining = await FileCleanupService.deleteFilesIfUnreferenced(
-      paths,
-      draftsDao: database!.draftsDao,
-      clipsDao: database.clipsDao,
-    );
-    if (remaining.isNotEmpty) editor.deferFileCleanup(remaining);
-  }
 
   bool isActive() =>
       context.mounted &&
@@ -83,6 +67,14 @@ Future<void> recordLibraryReaction(
   }
   await publish.clearAll();
   if (!context.mounted || !isActive() || manager.clips.isNotEmpty) return;
+  final reaction = LibraryReactionCubit(
+    deferFileCleanup: editor.deferFileCleanup,
+    draftsDao: database?.draftsDao,
+    clipsDao: database?.clipsDao,
+    mergeTakes: mergeTakes,
+    extractThumbnail: extractThumbnail,
+    cleanupFiles: cleanupAbandoned,
+  );
 
   Future<List<DivineVideoClip>?> record(
     BuildContext cameraContext, {
@@ -129,7 +121,6 @@ Future<void> recordLibraryReaction(
     ),
   );
 
-  final mergedPaths = <String>[];
   final capture = recordWithCamera ?? record;
   Future<List<DivineVideoClip>?> recordCell(
     BuildContext captureContext, {
@@ -151,31 +142,17 @@ Future<void> recordLibraryReaction(
 
     // Several stop/start cuts are one reaction, rather than extra cells.
     final overlay = OverlayEntry(
-      builder: (_) => const _ReactionMergeProgress(),
+      builder: (_) => BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
+        bloc: reaction,
+        builder: (_, state) => state.status == LibraryReactionStatus.merging
+            ? const _ReactionMergeProgress()
+            : const SizedBox.shrink(),
+      ),
     );
     Overlay.of(captureContext, rootOverlay: true).insert(overlay);
     DivineVideoClip? merged;
     try {
-      final rendered = await (mergeTakes ?? VideoEditorMergeService.mergeClips)(
-        clips: takes,
-        renderId: 'reaction_${DateTime.now().microsecondsSinceEpoch}',
-      );
-      if (rendered?.video?.file?.path case final path?) {
-        mergedPaths.add(path);
-        final poster =
-            await (extractThumbnail?.call(path) ??
-                VideoThumbnailService.extractThumbnail(videoPath: path));
-        if (poster != null) {
-          mergedPaths.add(poster.path);
-          // Merge keeps the original canvas coordinates, but its encoded
-          // file has the target shape. Layout framing must use those pixels.
-          merged = rendered!.copyWith(
-            videoAspectRatio: rendered.targetAspectRatio.value,
-            thumbnailPath: poster.path,
-            thumbnailTimestamp: poster.timestamp,
-          );
-        }
-      }
+      merged = await reaction.combine(takes);
     } finally {
       overlay.remove();
       overlay.dispose();
@@ -223,15 +200,14 @@ Future<void> recordLibraryReaction(
     if (!context.mounted ||
         !isActive() ||
         ModalRoute.of(context)?.isCurrent == false) {
-      await cleanup(result.ownedFilePaths.whereType<String>().toList());
+      await reaction.cleanupFiles(
+        result.ownedFilePaths.whereType<String>().toList(),
+      );
       return;
     }
     manager.insertClip(0, result);
     // Queue before the editor can publish/discard and flush this session.
-    if (mergedPaths.isNotEmpty) {
-      editor.deferFileCleanup(mergedPaths);
-      mergedPaths.clear();
-    }
+    reaction.adoptGeneratedFiles();
     if (openEditor != null) {
       await openEditor(context);
     } else {
@@ -239,9 +215,8 @@ Future<void> recordLibraryReaction(
           .push<void>(context);
     }
   } finally {
-    // Only generated merge videos and posters. Saved camera takes are never
-    // deleted here; reference checks preserve any adopted output sources.
-    if (mergedPaths.isNotEmpty) await cleanup(mergedPaths);
+    await reaction.cleanupGeneratedFiles();
+    await reaction.close();
   }
 }
 

@@ -3,7 +3,7 @@
 > Execute inline with superpowers:executing-plans; obtain fresh independent branch review before publication.
 
 **Goal:** Select saved Classics in an existing editor and record side-by-side reactions from the library.
-**Architecture:** Reuse the clip picker crop guide, recorder and split-screen builder; keep library reaction coordination in a focused widget file.
+**Architecture:** Reuse the clip picker crop guide, recorder and split-screen builder. The UI coordinates navigation; LibraryReactionCubit owns media preparation, immutable progress/file-ownership state, and reference-checked cleanup.
 **Tech stack:** Flutter 3.47.9, Dart, BLoC, existing clip manager.
 **Spec:** docs/superpowers/specs/2026-11-18-library-reaction-design.md
 

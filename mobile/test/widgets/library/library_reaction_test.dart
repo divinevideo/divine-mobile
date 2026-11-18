@@ -18,7 +18,6 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -136,10 +135,8 @@ void main() {
                     recordWithCamera: record,
                     showLayout: layout,
                     mergeTakes: merge,
-                    extractThumbnail: (path) async => ThumbnailFileResult(
-                      path: '$path.jpg',
-                      timestamp: Duration.zero,
-                    ),
+                    extractThumbnail: (path) async =>
+                        (path: '$path.jpg', timestamp: Duration.zero),
                     cleanupAbandoned: (paths) async =>
                         editor.cleanedPaths.addAll(paths),
                     openEditor: (_) async => events.add('open editor'),
