@@ -2,6 +2,7 @@
 // ABOUTME: BookmarksRepository and paginating through VideosRepository.
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -35,6 +36,33 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockBookmarkSigner extends Mock implements BookmarkSigner {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
+
+/// The public references of a list with no private section: whatever the
+/// mocked list names is public. The bloc only asks it [contains].
+class _EveryReferenceIsPublic extends SetBase<String> {
+  @override
+  bool contains(Object? element) => element is String;
+
+  @override
+  Iterator<String> get iterator =>
+      throw UnsupportedError('the set of every reference cannot be listed');
+
+  @override
+  int get length =>
+      throw UnsupportedError('the set of every reference has no length');
+
+  @override
+  bool add(String value) => throw UnsupportedError('read-only');
+
+  @override
+  String? lookup(Object? element) => element is String ? element : null;
+
+  @override
+  bool remove(Object? value) => throw UnsupportedError('read-only');
+
+  @override
+  Set<String> toSet() => this;
+}
 
 /// In-memory [CacheDao] so the bloc's [CacheSync] reads/writes are isolated
 /// per test without touching disk.
@@ -91,7 +119,7 @@ void main() {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     /// Where the bloc persists its snapshot.
-    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v3';
+    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v4';
 
     /// Author of every fixture video.
     final videoAuthor = '0' * 64;
@@ -123,6 +151,11 @@ void main() {
       when(
         () => mockBookmarksRepository.hasUnreadablePrivateItems,
       ).thenReturn(false);
+      // These lists have no private section; the private case runs against a
+      // real repository ('with private bookmarks on the list').
+      when(
+        () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+      ).thenReturn(_EveryReferenceIsPublic());
     });
 
     ProfileSavedVideosBloc createBloc({
@@ -1401,8 +1434,8 @@ void main() {
         /// The relay holds a kind-10003 with [publicIds] in `tags` and
         /// [privateIds] NIP-44 encrypted to the owner in `content`.
         Future<void> stubRelayHoldingTheList({
-          List<String> publicIds = const [],
           required List<String> privateIds,
+          List<String> publicIds = const [],
         }) async {
           final content = await identity.nip44Encrypt(
             ownerPubkey,
@@ -1477,6 +1510,31 @@ void main() {
             expect(persisted.payload, isNot(contains(privateVideoId)));
           },
         );
+
+        // Every earlier key could hold private bookmarks, and a new key only
+        // stopped reading the old row; nothing deleted it.
+        test('deletes the snapshots earlier versions wrote', () async {
+          await stubRelayHoldingTheList(privateIds: [privateVideoId]);
+          final legacyKeys = [
+            '$currentUserPubkey:profile_saved_videos',
+            '$currentUserPubkey:profile_saved_videos_v2',
+            '$currentUserPubkey:profile_saved_videos_v3',
+          ];
+          final otherAccountsKey = '${'f' * 64}:profile_saved_videos_v3';
+          for (final key in [...legacyKeys, otherAccountsKey]) {
+            await cacheDao.write(key: key, payload: '"$privateVideoId"');
+          }
+          for (final key in legacyKeys) {
+            expect(await cacheDao.readEntry(key), isNotNull);
+          }
+
+          await syncedBloc();
+
+          for (final key in legacyKeys) {
+            expect(await cacheDao.readEntry(key), isNull, reason: key);
+          }
+          expect(await cacheDao.readEntry(otherAccountsKey), isNotNull);
+        });
       });
 
       group('when a video saved by its address is removed', () {

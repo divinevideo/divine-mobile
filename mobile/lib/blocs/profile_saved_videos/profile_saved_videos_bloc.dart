@@ -103,11 +103,19 @@ class ProfileSavedVideosBloc
   /// in user because this is the viewer's own list and must be cleared on
   /// sign-out.
   ///
-  /// `_v3` because the snapshot's item ids are now bookmark references — a
-  /// video's address where known, else its event id — and a v2 snapshot holds
-  /// event ids only, along with the revisions they named, which may predate an
-  /// edit (#7135). Starting cold loads one page.
-  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v3';
+  /// `_v4` because the snapshot now leaves out the viewer's private bookmarks
+  /// (#11180); every earlier version could hold them, so those rows are
+  /// deleted rather than read ([_legacyCacheKeys]). Starting cold loads one
+  /// page.
+  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v4';
+
+  /// Where earlier versions kept the snapshot. `_v3` named videos by address
+  /// (#7135); `_v2` and the unversioned key by event id.
+  List<String> get _legacyCacheKeys => [
+    '$_currentUserPubkey:profile_saved_videos',
+    '$_currentUserPubkey:profile_saved_videos_v2',
+    '$_currentUserPubkey:profile_saved_videos_v3',
+  ];
 
   /// Video references in reverse repository order: private entries first,
   /// then public entries, with each group reversed. The source contains no
@@ -559,6 +567,7 @@ class ProfileSavedVideosBloc
       );
 
   Future<ProfileVideoListSnapshot?> _readCachedSnapshot() async {
+    await _deleteLegacySnapshots();
     try {
       // Expired snapshots are served too; the sync revalidates right after.
       final entry = await CacheSync.readEntry<ProfileVideoListSnapshot>(
@@ -603,15 +612,61 @@ class ProfileSavedVideosBloc
     );
   }
 
+  /// Deletes the rows [_legacyCacheKeys] name, which may hold private
+  /// bookmarks.
+  Future<void> _deleteLegacySnapshots() async {
+    for (final key in _legacyCacheKeys) {
+      try {
+        await CacheSync.invalidate(key);
+      } on Object catch (e) {
+        Log.warning(
+          'ProfileSavedVideosBloc: Failed to delete legacy snapshot - $e',
+          name: 'ProfileSavedVideosBloc',
+          category: LogCategory.video,
+        );
+      }
+    }
+  }
+
+  /// [snapshot] without the bookmarks the viewer keeps privately.
+  ///
+  /// The snapshot is written to unencrypted storage, which the repository
+  /// never puts private items in (#11180). Only references the list holds
+  /// publicly, and the videos they name, are kept.
+  ProfileVideoListSnapshot _publicPart(ProfileVideoListSnapshot snapshot) {
+    final public = _bookmarksRepository.publicBookmarkedVideoReferences;
+    final privateIds = {
+      for (final id in snapshot.itemIds)
+        if (!public.contains(id)) id,
+    };
+    if (privateIds.isEmpty) return snapshot;
+
+    final pruned = pruneProfileVideoListIds(
+      itemIds: snapshot.itemIds,
+      removedIds: privateIds,
+      nextPageOffset: snapshot.nextPageOffset,
+    );
+    return ProfileVideoListSnapshot(
+      videos: [
+        for (final video in snapshot.videos)
+          if (_referencesTo(video).any(public.contains)) video,
+      ],
+      itemIds: pruned.itemIds,
+      nextPageOffset: pruned.nextPageOffset,
+      hasMoreContent: pruned.nextPageOffset < pruned.itemIds.length,
+    );
+  }
+
   Future<void> _persistSnapshot(ProfileVideoListSnapshot snapshot) async {
     try {
+      final stored = _publicPart(snapshot);
       await CacheSync.write<ProfileVideoListSnapshot>(
         key: _cacheKey,
         value: ProfileVideoListSnapshot.capped(
-          videos: snapshot.videos,
-          itemIds: snapshot.itemIds,
-          nextPageOffset: snapshot.nextPageOffset,
-          hasMoreContent: snapshot.hasMoreContent,
+          videos: stored.videos,
+          itemIds: stored.itemIds,
+          nextPageOffset: stored.nextPageOffset,
+          hasMoreContent: stored.hasMoreContent,
         ),
         toJson: (s) => s.toJson(),
       );
