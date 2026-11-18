@@ -8,10 +8,14 @@ import WatchKit
 /// from the left while a take runs.
 ///
 /// With no recorder open on the iPhone the shutter is dimmed and inert, and
-/// nothing but the empty strip is shown around it.
+/// nothing but the empty strip is shown around it. It is dimmed and inert too
+/// while the iPhone is out of reach, over the last state it sent.
 struct RemoteShutterView: View {
   /// The iPhone's recorder, or `nil` while it has none on screen.
   let recorder: RecorderSnapshot?
+
+  /// Whether a tap can reach the iPhone now.
+  let isPhoneReachable: Bool
   let onToggleRecording: () -> Void
 
   /// What to draw: the open recorder, or an empty one.
@@ -29,8 +33,8 @@ struct RemoteShutterView: View {
         VStack(spacing: 0) {
           GeometryReader { region in
             RecordButton(
-              isRecording: shown.isRecording,
-              isEnabled: recorder != nil,
+              isRecording: shown.isShutterActive,
+              isEnabled: recorder != nil && isPhoneReachable,
               diameter: min(region.size.width, region.size.height) * Self.buttonFraction,
               action: onToggleRecording
             )
@@ -62,8 +66,8 @@ struct RemoteShutterView: View {
         }
       }
     }
-    .onChange(of: shown.isRecording) { isRecording in
-      WKInterfaceDevice.current().play(isRecording ? .start : .stop)
+    .onChange(of: shown.isShutterActive) { isShutterActive in
+      WKInterfaceDevice.current().play(isShutterActive ? .start : .stop)
     }
   }
 }
@@ -92,6 +96,7 @@ struct RemoteShutterView_Previews: PreviewProvider {
   static var previews: some View {
     RemoteShutterView(
       recorder: RecorderSnapshot(recordedDuration: 2.5),
+      isPhoneReachable: true,
       onToggleRecording: {}
     )
   }

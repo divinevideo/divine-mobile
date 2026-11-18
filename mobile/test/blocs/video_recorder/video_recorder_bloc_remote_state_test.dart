@@ -119,6 +119,56 @@ void main() {
         state.activeTakeStartedAt,
         equals(now.subtract(const Duration(milliseconds: 40))),
       );
+      expect(state.isShutterActive, isTrue);
+    });
+
+    test('reports an idle shutter while nothing runs', () {
+      stubClips(total: const Duration(seconds: 2));
+      final bloc = buildBloc()..emit(openRecorder);
+      addTearDown(bloc.close);
+
+      expect(published.last!.isShutterActive, isFalse);
+    });
+
+    test(
+      'reports an active shutter while stop-motion captures on its interval',
+      () {
+        stubClips(total: Duration.zero);
+        const stopMotion = VideoRecorderBlocState(
+          isCameraInitialized: true,
+          recorderMode: VideoRecorderMode.stopMotion,
+        );
+        final bloc = buildBloc()..emit(stopMotion);
+        addTearDown(bloc.close);
+        expect(published.last!.isShutterActive, isFalse);
+
+        bloc.emit(stopMotion.copyWith(isIntervalCaptureRunning: true));
+
+        final state = published.last!;
+        expect(state.isShutterActive, isTrue);
+        expect(state.activeTakeStartedAt, isNull);
+
+        bloc.emit(stopMotion);
+
+        expect(published.last!.isShutterActive, isFalse);
+      },
+    );
+
+    test('reports an active shutter during the countdown before a take', () {
+      stubClips(total: const Duration(seconds: 2));
+      final bloc = buildBloc()..emit(openRecorder);
+      addTearDown(bloc.close);
+
+      bloc.emit(
+        openRecorder.copyWith(
+          recordingState: VideoRecorderState.recording,
+          isStartingRecording: true,
+        ),
+      );
+
+      final state = published.last!;
+      expect(state.isShutterActive, isTrue);
+      expect(state.activeTakeStartedAt, isNull);
     });
 
     test('counts a take being finalized as recorded time', () {

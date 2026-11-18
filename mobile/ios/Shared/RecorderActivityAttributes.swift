@@ -18,6 +18,11 @@ struct RecorderActivityAttributes: ActivityAttributes {
     /// When the take in progress started, or `nil` while none is running.
     var activeTakeStartedAt: Date?
 
+    /// Whether a shutter press stops what is running: a take, its countdown,
+    /// or stop-motion capturing on its interval.
+    var isShutterActive = false
+
+    /// Whether recorded time is counting.
     var isRecording: Bool { activeTakeStartedAt != nil }
 
     /// The moment a clock that has counted `recordedDuration` would have
@@ -43,7 +48,8 @@ extension RecorderActivityAttributes.ContentState {
     let startedAtMs = (recorderState["activeTakeStartedAtMs"] as? NSNumber)?.doubleValue
     self.init(
       recordedDuration: recordedMs / 1000,
-      activeTakeStartedAt: startedAtMs.map { Date(timeIntervalSince1970: $0 / 1000) }
+      activeTakeStartedAt: startedAtMs.map { Date(timeIntervalSince1970: $0 / 1000) },
+      isShutterActive: recorderState["shutterActive"] as? Bool ?? (startedAtMs != nil)
     )
   }
 }

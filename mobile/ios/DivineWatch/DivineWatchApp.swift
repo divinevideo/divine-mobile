@@ -2,6 +2,7 @@
 // ABOUTME: Shows the remote shutter for the recorder.
 
 import SwiftUI
+import WatchKit
 
 @main
 struct DivineWatchApp: App {
@@ -11,8 +12,12 @@ struct DivineWatchApp: App {
     WindowGroup {
       RemoteShutterView(
         recorder: phone.recorder,
+        isPhoneReachable: phone.isPhoneReachable,
         onToggleRecording: { phone.toggleRecording() }
       )
+      .onReceive(phone.deliveryFailures) {
+        WKInterfaceDevice.current().play(.failure)
+      }
       .onAppear { phone.activate() }
     }
   }
