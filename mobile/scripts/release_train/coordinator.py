@@ -223,7 +223,7 @@ def plan_tick(snapshot, state, levels):
         )
         candidate = snapshot.get("candidate")
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
-        interval = HOUR if platform == "ios" else 4 * HOUR
+        interval = 6 * HOUR if platform == "ios" else 4 * HOUR
         can_replace = True
         if platform == "android":
             for b in data.get("internal", []):

@@ -143,15 +143,16 @@ replays the ticks it missed.
 
 | Step | Happens when | Reaches |
 |---|---|---|
-| iOS build | App-affecting changes merged since the last iOS candidate, and no `ios-build` is queued or running | Divine Internal, automatically |
+| iOS build | App-affecting changes merged since the last iOS candidate, the last iOS build attempt started at least 6 h ago, and no iOS native build is queued or running | Divine Internal, automatically |
 | Public TestFlight | The newest processed iOS build isn't public, no beta review is waiting, the last beta submission was at least 4 h ago, and there were fewer than 6 in the trailing 24 h | Public group, after beta review |
 | App Store | No App Store submission is waiting or approved but not live, none in the trailing 24 h, and a candidate has had 6 h in public TestFlight | App Store review, released automatically on approval |
 | Android build | App-affecting changes merged since the last Android candidate, the last Android build started at least 4 h ago, no `android-build` is queued or running, no upload is deferred, and replacing the current internal build would not interrupt its six-hour availability period | Play internal testing |
 | Play production | No Play production promotion in the trailing 24 h, a candidate has had 6 h on the internal track, and Play accepts the commit without cancelling a review in progress | Play review, then full rollout |
 
-Internal iOS testers get every hourly build. Public iOS testers get the newest
-build up to six times a day: every four hours on busy days, within the hour on
-quiet ones. A build that never goes public is recorded as internal-only, not as
+Internal iOS testers get automatic builds no more often than every six hours
+(updated November 18, 2026). Retries use the same spacing. Public iOS testers
+get the newest eligible processed build within the existing review and daily
+submission limits. A build that never goes public is recorded as internal-only, not as
 a failure.
 
 Android builds have no public beta stage in this design, and nothing outside
@@ -698,9 +699,9 @@ Cases to test with fakes:
 
 ## Decisions (resolved 2026-11-04 and 2026-11-05)
 
-1. **Cadence.** Build iOS hourly for internal testers, and send the newest
-   build to public TestFlight at most every four hours, within Apple's
-   six-a-day cap.
+1. **Cadence (updated 2026-11-18).** Build iOS at most once every six hours
+   when app changes exist, including automatic retries. Public TestFlight
+   retains its existing review, spacing, and daily submission limits.
 2. **Automatic production from `main`,** with no person choosing the build or
    the version. Rabble accepted this release-speed tradeoff and occasional
    escaped bugs. This retires the maintainer-confirms-version rule from #9061;

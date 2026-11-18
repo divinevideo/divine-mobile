@@ -82,11 +82,32 @@ class CoordinatorTest(unittest.TestCase):
             ]
             self.assertEqual(bool(actions), expected)
 
-    def test_ios_internal_hourly(self):
-        state = {"last_build_started": {"ios": NOW - 3599}}
-        self.assertFalse(
-            plan_tick(snapshot(), state, {"ios": "build", "android": "off"})["actions"]
-        )
+    def test_ios_builds_wait_six_hours_even_when_new_commits_arrive(self):
+        state = {"last_build_started": {"ios": NOW}}
+        for mode in ["build", "testflight", "app-store"]:
+            for elapsed in [0, 3600, 7200, 10800, 14400, 18000, 21599, 21600]:
+                with self.subTest(mode=mode, elapsed=elapsed):
+                    s = snapshot()
+                    s["now"] = NOW + elapsed
+                    s["candidate"] = f"{elapsed + 1:040x}"
+                    actions = plan_tick(s, state, {"ios": mode, "android": "off"})["actions"]
+                    self.assertEqual(bool(actions), elapsed >= 21600)
+                    if actions:
+                        self.assertEqual(actions[0]["kind"], "build")
+
+    def test_ios_automatic_retry_also_waits_six_hours(self):
+        state = {
+            "last_build_started": {"ios": NOW},
+            "attempts": {"ios": {SHA: {"count": 1, "status": "failed"}}},
+        }
+        for elapsed in [3600, 21599, 21600]:
+            with self.subTest(elapsed=elapsed):
+                s = snapshot()
+                s["now"] = NOW + elapsed
+                actions = plan_tick(s, state, {"ios": "testflight", "android": "off"})["actions"]
+                self.assertEqual(bool(actions), elapsed >= 21600)
+                if actions:
+                    self.assertEqual(actions[0]["attempt"], 2)
 
     def test_public_waiting_rejection_budget_and_spacing(self):
         for external, dates in [

@@ -5,7 +5,11 @@ Both levels default to `off`; merging this implementation does not enable it.
 Patches and livestreams remain under their existing holds.
 
 The main-only `Store release train` workflow runs hourly at :17 UTC and accepts
-manual dispatch. The coordinator uses exact-source Mobile CI results, immutable
+manual dispatch. Automatic iOS builds are spaced at least six hours apart,
+including retries, and require app-affecting changes. The hourly tick still
+observes testing exposure and store reviews; it is not an hourly native build.
+The explicit manual iOS release workflow remains an operator-triggered path.
+The coordinator uses exact-source Mobile CI results, immutable
 candidate tags, platform-specific Codemagic builds, the private allocation and
 operational ledger, and provider observations. The scheduled iOS lane uploads
 internally; manual iOS retains its four external groups. Scheduled public
