@@ -1355,6 +1355,19 @@ void main() {
           });
         },
         wait: const Duration(milliseconds: 100),
+        // Never settles on the one repost the subscription brought back, not
+        // even on the way to the full list.
+        expect: () => everyElement(
+          isNot(
+            isA<ProfileRepostedVideosState>()
+                .having(
+                  (s) => s.status,
+                  'status',
+                  ProfileRepostedVideosStatus.success,
+                )
+                .having((s) => s.videos.length, 'videos', 1),
+          ),
+        ),
         verify: (bloc) {
           expect(bloc.state.status, ProfileRepostedVideosStatus.success);
           expect(bloc.state.videos.map((v) => v.vineId), equals(['d2', 'd1']));

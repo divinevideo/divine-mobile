@@ -1260,6 +1260,19 @@ void main() {
           likedIdsController.add(['event2']);
         },
         wait: const Duration(milliseconds: 100),
+        // Never settles on the one like the subscription brought back, not
+        // even on the way to the full list.
+        expect: () => everyElement(
+          isNot(
+            isA<ProfileLikedVideosState>()
+                .having(
+                  (s) => s.status,
+                  'status',
+                  ProfileLikedVideosStatus.success,
+                )
+                .having((s) => s.videos.length, 'videos', 1),
+          ),
+        ),
         verify: (bloc) {
           expect(bloc.state.status, ProfileLikedVideosStatus.success);
           expect(

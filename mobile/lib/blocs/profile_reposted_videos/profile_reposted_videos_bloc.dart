@@ -188,8 +188,11 @@ class ProfileRepostedVideosBloc
         _targetUserPubkey!,
       );
     } else {
-      final localIds = await _repostsRepository
-          .getOrderedRepostedAddressableIds();
+      // After a failed load the local list may hold only the one repost the
+      // live subscription brought back, so a retry asks the relays (#11182).
+      final localIds = state.status == ProfileRepostedVideosStatus.failure
+          ? const <String>[]
+          : await _repostsRepository.getOrderedRepostedAddressableIds();
       if (localIds.isNotEmpty) {
         _scheduleBackgroundRelaySync();
         addressableIds = localIds;

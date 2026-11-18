@@ -221,7 +221,11 @@ class ProfileLikedVideosBloc
     if (_isOtherUserProfile) {
       likedEventIds = await _likesRepository.fetchUserLikes(_targetUserPubkey!);
     } else {
-      final localIds = await _likesRepository.getOrderedLikedEventIds();
+      // After a failed load the local list may hold only the one like the
+      // live subscription brought back, so a retry asks the relays (#11182).
+      final localIds = state.status == ProfileLikedVideosStatus.failure
+          ? const <String>[]
+          : await _likesRepository.getOrderedLikedEventIds();
       if (localIds.isNotEmpty) {
         _scheduleBackgroundRelaySync();
         likedEventIds = localIds;
