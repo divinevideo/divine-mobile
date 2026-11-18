@@ -206,5 +206,49 @@ void main() {
         await cubit.close();
       },
     );
+
+    test('cleans a render that finishes after the flow closed it', () async {
+      final gate = Completer<DivineVideoClip?>();
+      final cleaned = <String>[];
+      final cubit = LibraryReactionCubit(
+        deferFileCleanup: (_) {},
+        bakeCapturedChromaKey: _noBake,
+        cleanupFiles: (paths) async => cleaned.addAll(paths),
+        mergeTakes: ({required clips, required renderId}) => gate.future,
+        extractThumbnail: (path) async =>
+            (path: '$path.jpg', timestamp: Duration.zero),
+      );
+      final result = cubit.combine([_clip('one'), _clip('two')]);
+      await cubit.cleanupGeneratedFiles();
+      await cubit.close();
+      gate.complete(_clip('merged'));
+      expect(await result, isNull);
+      expect(cleaned, ['/documents/merged.mp4']);
+    });
+
+    test('cleans a poster that finishes after the flow closed it', () async {
+      final gate = Completer<ReactionPoster?>();
+      final cleaned = <String>[];
+      final cubit = LibraryReactionCubit(
+        deferFileCleanup: (_) {},
+        bakeCapturedChromaKey: _noBake,
+        cleanupFiles: (paths) async => cleaned.addAll(paths),
+        mergeTakes: ({required clips, required renderId}) async =>
+            _clip('merged'),
+        extractThumbnail: (_) => gate.future,
+      );
+      final result = cubit.combine([_clip('one'), _clip('two')]);
+      await pumpEventQueue();
+      expect(cubit.state.generatedPaths, ['/documents/merged.mp4']);
+      await cubit.close();
+      gate.complete(
+        (path: '/documents/merged.mp4.jpg', timestamp: Duration.zero),
+      );
+      expect(await result, isNull);
+      expect(cleaned, [
+        '/documents/merged.mp4',
+        '/documents/merged.mp4.jpg',
+      ]);
+    });
   });
 }

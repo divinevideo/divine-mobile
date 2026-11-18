@@ -110,15 +110,9 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
         renderId: 'reaction_${DateTime.now().microsecondsSinceEpoch}',
       );
       final path = rendered?.video?.file?.path;
-      if (path == null) return null;
-      emitIfOpen(
-        state.copyWith(generatedPaths: [...state.generatedPaths, path]),
-      );
+      if (path == null || !await _keepGenerated(path)) return null;
       final poster = await _extractThumbnail(path);
-      if (poster == null) return null;
-      emitIfOpen(
-        state.copyWith(generatedPaths: [...state.generatedPaths, poster.path]),
-      );
+      if (poster == null || !await _keepGenerated(poster.path)) return null;
       return rendered!.copyWith(
         videoAspectRatio: rendered.targetAspectRatio.value,
         thumbnailPath: poster.path,
@@ -137,6 +131,26 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
         emitIfOpen(state.copyWith(status: LibraryReactionStatus.idle));
       }
     }
+  }
+
+  /// Records [path] as owned here, or deletes it when the flow closed this
+  /// cubit while the file was being written and nothing else would.
+  Future<bool> _keepGenerated(String path) async {
+    final kept = emitIfOpen(
+      state.copyWith(generatedPaths: [...state.generatedPaths, path]),
+    );
+    if (!kept) await cleanupFiles([path]);
+    return kept;
+  }
+
+  /// Deletes generated files still owned here, including any recorded after
+  /// the flow's last [cleanupGeneratedFiles].
+  @override
+  Future<void> close() async {
+    final owned = state.generatedPaths;
+    final closing = super.close();
+    await cleanupFiles(owned);
+    await closing;
   }
 
   /// Transfers generated media to the editor before it can end its session.
