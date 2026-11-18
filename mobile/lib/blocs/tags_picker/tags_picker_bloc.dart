@@ -180,27 +180,39 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   }
 
   /// Adds every valid token that still fits under
-  /// [HashtagExtractor.maxHashtagsPerVideo], counting the sticker tags. A
-  /// token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
-  /// with [TagsPickerNotice.tagTooLong] rather than truncated.
+  /// [HashtagExtractor.maxHashtagsPerVideo], counting the sticker tags.
+  ///
+  /// A token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
+  /// with [TagsPickerNotice.tagTooLong] rather than truncated. A new tag that
+  /// does not fit is dropped and flagged with
+  /// [TagsPickerNotice.tagLimitReached], which wins because it is the one
+  /// that blocks the rest. A tag the video already has is not a rejection.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
-    var notice = TagsPickerNotice.none;
+    var droppedForLength = false;
+    var droppedForLimit = false;
     for (final raw in rawTokens) {
-      if ({...state.stickerTags, ...updated}.length >=
-          HashtagExtractor.maxHashtagsPerVideo) {
-        break;
-      }
       final tag = HashtagExtractor.normalizeVideoHashtag(raw);
       if (tag == null) {
         if (raw.length > HashtagExtractor.maxHashtagLength) {
-          notice = TagsPickerNotice.tagTooLong;
+          droppedForLength = true;
         }
         continue;
       }
-      // A sticker's hashtag is on the video already.
-      if (!state.stickerTags.contains(tag)) updated.add(tag);
+      // Already on the video, as a sticker's hashtag or a tag.
+      if (state.stickerTags.contains(tag) || updated.contains(tag)) continue;
+      if ({...state.stickerTags, ...updated}.length >=
+          HashtagExtractor.maxHashtagsPerVideo) {
+        droppedForLimit = true;
+        continue;
+      }
+      updated.add(tag);
     }
+    final notice = droppedForLimit
+        ? TagsPickerNotice.tagLimitReached
+        : droppedForLength
+        ? TagsPickerNotice.tagTooLong
+        : TagsPickerNotice.none;
     return state.copyWith(selectedTags: updated, notice: notice);
   }
 }

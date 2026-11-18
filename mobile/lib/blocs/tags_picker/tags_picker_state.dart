@@ -23,6 +23,10 @@ enum TagsPickerNotice {
   /// A token was longer than [HashtagExtractor.maxHashtagLength] and was
   /// rejected.
   tagTooLong,
+
+  /// A valid tag the video did not already have was dropped because the
+  /// video carries [HashtagExtractor.maxHashtagsPerVideo] tags.
+  tagLimitReached,
 }
 
 /// State for the tags picker sheet.
