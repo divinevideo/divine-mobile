@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
@@ -335,6 +336,12 @@ void main() {
       final tooLongCopy = l10n.videoMetadataTagsPickerTagTooLong(
         HashtagExtractor.maxHashtagLength,
       );
+      final limitStanding = l10n.videoMetadataTagsPickerTagLimitReached(
+        HashtagExtractor.maxHashtagsPerVideo,
+      );
+      final limitWarning = l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
+        HashtagExtractor.maxHashtagsPerVideo,
+      );
 
       Future<void> openPicker(
         WidgetTester tester, {
@@ -483,8 +490,144 @@ void main() {
         await tester.enterText(find.byType(TextField).last, 'eleven ');
         await tester.pump();
         expect(find.text('eleven'), findsNothing);
+        expect(find.text(limitWarning), findsOneWidget);
+        expect(find.text(limitStanding), findsNothing);
 
         await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      group('pressing return', () {
+        final tenTags = {for (var i = 0; i < 10; i++) 'tag$i'};
+
+        Finder field() => find.byType(TextField).last;
+        String fieldText(WidgetTester tester) =>
+            tester.widget<TextField>(field()).controller!.text;
+        Finder chip(String tag) =>
+            find.bySemanticsLabel(l10n.videoMetadataDeleteTagHint(tag));
+
+        // `done` unfocuses the field, so each press refocuses it first, as a
+        // person taps the field again before pressing return.
+        Future<void> pressReturn(WidgetTester tester) async {
+          await tester.showKeyboard(field());
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+        }
+
+        Future<void> submit(WidgetTester tester, String text) async {
+          await tester.enterText(field(), text);
+          await pressReturn(tester);
+        }
+
+        List<String> captureAnnouncements(WidgetTester tester) {
+          final announcements = <String>[];
+          tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                (message) async {
+                  final data = message! as Map<Object?, Object?>;
+                  if (data['type'] == 'announce') {
+                    final payload = data['data']! as Map<Object?, Object?>;
+                    announcements.add(payload['message']! as String);
+                  }
+                  return null;
+                },
+              );
+          addTearDown(
+            () => tester.binding.defaultBinaryMessenger
+                .setMockDecodedMessageHandler<Object?>(
+                  SystemChannels.accessibility,
+                  null,
+                ),
+          );
+          return announcements;
+        }
+
+        testWidgets('at the limit keeps the tag and explains why', (
+          tester,
+        ) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          expect(find.text(limitWarning), findsOneWidget);
+          expect(find.text(limitStanding), findsNothing);
+          expect(fieldText(tester), equals('news'));
+          expect(chip('news'), findsNothing);
+        });
+
+        testWidgets(
+          'removing a tag after a rejection clears the warning and lets the '
+          'tag in',
+          (tester) async {
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+            expect(find.text(limitWarning), findsOneWidget);
+
+            await tester.tap(chip('tag0'), warnIfMissed: false);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 250));
+
+            expect(find.text(limitWarning), findsNothing);
+            expect(fieldText(tester), equals('news'));
+
+            await pressReturn(tester);
+
+            expect(chip('news'), findsOneWidget);
+            expect(fieldText(tester), isEmpty);
+          },
+        );
+
+        testWidgets('below the limit still clears the field', (tester) async {
+          await openPicker(tester, tags: tenTags.take(9).toSet());
+
+          await submit(tester, 'news');
+
+          expect(chip('news'), findsOneWidget);
+          expect(fieldText(tester), isEmpty);
+          expect(find.text(limitWarning), findsNothing);
+        });
+
+        testWidgets('announces a repeat rejection', (tester) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+          await pressReturn(tester);
+
+          // The first rejection is announced by the hint's live region.
+          expect(
+            announcements.where((message) => message == limitWarning),
+            hasLength(1),
+          );
+        });
+
+        testWidgets('with an empty field at the limit says nothing new', (
+          tester,
+        ) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+
+          await pressReturn(tester);
+
+          expect(find.text(limitStanding), findsOneWidget);
+          expect(find.text(limitWarning), findsNothing);
+          expect(announcements, isEmpty);
+        });
+
+        testWidgets(
+          'with an empty field after a rejection does not announce again',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await submit(tester, '');
+
+            expect(find.text(limitWarning), findsOneWidget);
+            expect(announcements, isEmpty);
+          },
+        );
       });
     });
   });

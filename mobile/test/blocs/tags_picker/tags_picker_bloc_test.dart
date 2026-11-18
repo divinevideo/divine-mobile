@@ -261,6 +261,38 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice while typing at the limit',
+        setUp: () {
+          when(
+            () => repo.searchHashtags(query: 'news'),
+          ).thenAnswer((_) async => const []);
+        },
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: {for (var i = 0; i < 10; i++) 'tag$i'},
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerQueryChanged('news')),
+        wait: debounce,
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.searching)
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.success)
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
         'clears a too-long notice once a new query is typed',
         build: createBloc,
         seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),

@@ -6435,6 +6435,7 @@
   "videoMetadataTagsPickerNoResults": "Không có thẻ phù hợp",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag có thể dài tối đa {max} ký tự.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Bạn có thể thêm tối đa {max} hashtag.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{Bạn có thể thêm tối đa {max} hashtag. Hãy xóa bớt một cái để có chỗ.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} ký tự}}",
   "videoMetadataTagsPickerAddTag": "Thêm \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {

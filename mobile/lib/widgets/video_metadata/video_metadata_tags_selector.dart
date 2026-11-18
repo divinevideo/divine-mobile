@@ -12,6 +12,7 @@ import 'package:openvine/blocs/tags_picker/tags_picker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
 
@@ -180,10 +181,33 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
   }
 
   void _addTag(String raw) {
-    context.read<TagsPickerBloc>().add(TagsPickerTagsAdded([raw]));
-    context.read<TagsPickerBloc>().add(const TagsPickerSearchCleared());
+    final bloc = context.read<TagsPickerBloc>();
+    if (bloc.state.isAtTagLimit) {
+      if (raw.trim().isNotEmpty) _rejectAtTagLimit(bloc, raw);
+      return;
+    }
+    bloc
+      ..add(TagsPickerTagsAdded([raw]))
+      ..add(const TagsPickerSearchCleared());
     _previousText = '';
     _searchController.clear();
+  }
+
+  /// Leaves [raw] in the field so the creator can add it once they remove a
+  /// tag. The hint's live region announces the first rejection; a repeat
+  /// leaves its text unchanged, so it is announced here.
+  void _rejectAtTagLimit(TagsPickerBloc bloc, String raw) {
+    if (bloc.state.notice == TagsPickerNotice.tagLimitReached) {
+      announceDetached(
+        context,
+        context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
+          HashtagExtractor.maxHashtagsPerVideo,
+        ),
+        description: 'announce repeated tag limit rejection',
+        logName: 'VideoMetadataTagsSelector',
+      );
+    }
+    bloc.add(TagsPickerTagsAdded([raw]));
   }
 
   void _addSuggestionTag(String raw) {
@@ -473,7 +497,8 @@ class HashtagInputFormatter extends TextInputFormatter {
 
 /// Explains the hashtag limits under the field: a character counter for the
 /// tag being typed once it gets long, and a helper line when a tag is too
-/// long or the video already has the maximum number of tags.
+/// long or the video already has the maximum number of tags. When a tag was
+/// just turned away for that limit, the line says so in the warning colour.
 class _TagInputHint extends StatelessWidget {
   const _TagInputHint({required this.controller});
 
@@ -492,7 +517,12 @@ class _TagInputHint extends StatelessWidget {
         final length = value.text.trim().length;
         const max = HashtagExtractor.maxHashtagLength;
         final l10n = context.l10n;
-        final helper = isAtTagLimit
+        final limitRejected = notice == TagsPickerNotice.tagLimitReached;
+        final helper = limitRejected
+            ? l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
+                HashtagExtractor.maxHashtagsPerVideo,
+              )
+            : isAtTagLimit
             ? l10n.videoMetadataTagsPickerTagLimitReached(
                 HashtagExtractor.maxHashtagsPerVideo,
               )
@@ -505,6 +535,11 @@ class _TagInputHint extends StatelessWidget {
         final style = VineTheme.bodySmallFont(
           color: context.vineColors.onSurfaceMuted,
         );
+        // Not muted, and not the brand green: a tag the creator typed was
+        // just dropped.
+        final helperStyle = limitRejected
+            ? VineTheme.bodySmallFont(color: context.vineColors.accentWarning)
+            : style;
         return Padding(
           padding: const EdgeInsets.fromLTRB(32, 0, 32, 8),
           child: Row(
@@ -516,7 +551,7 @@ class _TagInputHint extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : Semantics(
                         liveRegion: true,
-                        child: Text(helper, style: style),
+                        child: Text(helper, style: helperStyle),
                       ),
               ),
               if (showCounter)

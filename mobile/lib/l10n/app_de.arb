@@ -4383,6 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "Keine passenden Tags",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags dürfen bis zu {max} Zeichen lang sein.} other{Hashtags dürfen bis zu {max} Zeichen lang sein.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Du kannst bis zu {max} Hashtag hinzufügen.} other{Du kannst bis zu {max} Hashtags hinzufügen.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Du kannst bis zu {max} Hashtag hinzufügen. Entferne ihn, um Platz zu schaffen.} other{Du kannst bis zu {max} Hashtags hinzufügen. Entferne einen, um Platz zu schaffen.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} von {max} Zeichen} other{{count} von {max} Zeichen}}",
   "videoMetadataTagsPickerAddTag": "„#{tag}\" hinzufügen",
   "@videoMetadataTagsPickerAddTag": {

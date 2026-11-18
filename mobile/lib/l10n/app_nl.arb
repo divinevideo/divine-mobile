@@ -4383,6 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "Geen overeenkomende tags",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags mogen maximaal {max} teken lang zijn.} other{Hashtags mogen maximaal {max} tekens lang zijn.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Je kunt maximaal {max} hashtag toevoegen.} other{Je kunt maximaal {max} hashtags toevoegen.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Je kunt maximaal {max} hashtag toevoegen. Verwijder die om ruimte te maken.} other{Je kunt maximaal {max} hashtags toevoegen. Verwijder er een om ruimte te maken.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} van {max} teken} other{{count} van {max} tekens}}",
   "videoMetadataTagsPickerAddTag": "«#{tag}» toevoegen",
   "@videoMetadataTagsPickerAddTag": {

@@ -4383,6 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "Nicio etichetă potrivită",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtagurile pot avea până la {max} caracter.} few{Hashtagurile pot avea până la {max} caractere.} other{Hashtagurile pot avea până la {max} de caractere.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Poți adăuga până la {max} hashtag.} few{Poți adăuga până la {max} hashtaguri.} other{Poți adăuga până la {max} de hashtaguri.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Poți adăuga până la {max} hashtag. Șterge-l ca să faci loc.} few{Poți adăuga până la {max} hashtaguri. Șterge unul ca să faci loc.} other{Poți adăuga până la {max} de hashtaguri. Șterge unul ca să faci loc.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} din {max} caracter} few{{count} din {max} caractere} other{{count} din {max} de caractere}}",
   "videoMetadataTagsPickerAddTag": "Adaugă „#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {

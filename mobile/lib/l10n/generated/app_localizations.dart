@@ -23007,6 +23007,12 @@ abstract class AppLocalizations {
   /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}'**
   String videoMetadataTagsPickerTagLimitReached(int max);
 
+  /// Warning under the tags picker field when a tag was not added because the video already has the maximum number of hashtags. Tells the person how to make room.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{You can add up to {max} hashtag. Remove it to make room.} other{You can add up to {max} hashtags. Remove one to make room.}}'**
+  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max);
+
   /// Screen-reader label for the tags picker character counter, which is shown visually as count/max.
   ///
   /// In en, this message translates to:

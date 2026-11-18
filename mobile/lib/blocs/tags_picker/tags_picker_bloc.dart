@@ -162,11 +162,16 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
       return;
     }
 
+    // Typing a new tag clears a rejection notice, except the limit one: it
+    // stays true until a tag is removed, and the field keeps the turned-away
+    // text, so its own debounced query arrives after the rejection.
+    final keepsLimitNotice =
+        state.notice == TagsPickerNotice.tagLimitReached && state.isAtTagLimit;
     emit(
       state.copyWith(
         status: TagsPickerStatus.searching,
         query: query,
-        notice: TagsPickerNotice.none,
+        notice: keepsLimitNotice ? null : TagsPickerNotice.none,
       ),
     );
 

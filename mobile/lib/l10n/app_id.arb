@@ -4383,6 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "Tidak ada tag yang cocok",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag bisa sampai {max} karakter.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Kamu bisa menambahkan hingga {max} hashtag.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{Kamu bisa menambahkan hingga {max} hashtag. Hapus satu untuk memberi ruang.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count} dari {max} karakter}}",
   "videoMetadataTagsPickerAddTag": "Tambahkan \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {

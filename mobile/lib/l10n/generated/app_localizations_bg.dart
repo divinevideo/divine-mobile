@@ -13777,6 +13777,19 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other:
+          'Можеш да добавиш до $max хаштага. Премахни един, за да освободиш място.',
+      one:
+          'Можеш да добавиш до $max хаштаг. Премахни го, за да освободиш място.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerCharacterCount(int count, int max) {
     String _temp0 = intl.Intl.pluralLogic(
       max,

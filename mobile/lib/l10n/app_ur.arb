@@ -6435,6 +6435,7 @@
   "videoMetadataTagsPickerNoResults": "کوئی میلتا ٹیگ نہیں",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{ہیش ٹیگ زیادہ سے زیادہ {max} حرف کے ہو سکتے ہیں۔} other{ہیش ٹیگ زیادہ سے زیادہ {max} حروف کے ہو سکتے ہیں۔}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔} other{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔ جگہ بنانے کے لیے اسے ہٹا دیں۔} other{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔ جگہ بنانے کے لیے ایک ہٹا دیں۔}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} میں سے {count} حرف} other{{max} میں سے {count} حروف}}",
   "videoMetadataTagsPickerAddTag": "\"#{tag}\" شامل کریں",
   "@videoMetadataTagsPickerAddTag": {

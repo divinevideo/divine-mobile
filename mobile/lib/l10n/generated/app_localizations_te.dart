@@ -13983,6 +13983,19 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other:
+          'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు. చోటు కోసం ఒకదాన్ని తీసివేయండి.',
+      one:
+          'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్ జోడించవచ్చు. చోటు కోసం దాన్ని తీసివేయండి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerCharacterCount(int count, int max) {
     String _temp0 = intl.Intl.pluralLogic(
       max,

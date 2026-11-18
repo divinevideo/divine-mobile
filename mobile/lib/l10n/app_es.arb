@@ -4383,6 +4383,7 @@
   "videoMetadataTagsPickerNoResults": "Sin etiquetas coincidentes",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Los hashtags pueden tener hasta {max} carácter.} many{Los hashtags pueden tener hasta {max} de caracteres.} other{Los hashtags pueden tener hasta {max} caracteres.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Puedes añadir hasta {max} hashtag.} many{Puedes añadir hasta {max} de hashtags.} other{Puedes añadir hasta {max} hashtags.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Podés agregar hasta {max} hashtag. Quitalo para hacer lugar.} many{Podés agregar hasta {max} de hashtags. Quitá uno para hacer lugar.} other{Podés agregar hasta {max} hashtags. Quitá uno para hacer lugar.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} de {max} carácter} many{{count} de {max} de caracteres} other{{count} de {max} caracteres}}",
   "videoMetadataTagsPickerAddTag": "Añadir «#{tag}»",
   "@videoMetadataTagsPickerAddTag": {
