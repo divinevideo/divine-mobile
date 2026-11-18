@@ -2447,6 +2447,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Whether the last report said playing; a change to playing is a start.
     private var reportedPlaying = false
 
+    /// The paused frame last reported. A paused output hands its frame to the
+    /// texture again on every display refresh, and a report for each one sent
+    /// about 60 a second for the same picture.
+    private var reportedPausedFrameTime: CMTime?
+
     /// The frame the picture rested on when playback started, while no later
     /// frame has reached the texture yet.
     private var pictureRestFrameTime: CMTime?
@@ -2467,11 +2472,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private func onTextureFrameDelivered(at frameTime: CMTime) {
         guard let player else { return }
         if player.rate == 0 {
+            guard frameTime != reportedPausedFrameTime else { return }
+            reportedPausedFrameTime = frameTime
             // A pause is reported before its last frame reaches the texture,
             // so the frame it names is the one before.
             sendStateUpdate()
             return
         }
+        reportedPausedFrameTime = nil
         guard let rest = pictureRestFrameTime, frameTime != rest else { return }
         markPictureAdvancing()
     }
