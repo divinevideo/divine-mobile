@@ -165,11 +165,52 @@ class CoordinatorTest(unittest.TestCase):
                 s = snapshot()
                 s["changes"]["ios"] = False
                 s["ios"]["builds"] = [build() | {"id": "20", "number": 20,
-                    "public": False, "external": "WAITING_FOR_BETA_REVIEW"}]
+                    "version": "1.0.32", "public": False,
+                    "external": "WAITING_FOR_BETA_REVIEW"}]
                 s["ios"]["versions"] = [{"id": "v", "version": "1.0.31",
                     "state": status, "build_id": "10"}]
                 actions = plan_tick(s, {}, {"ios": "app-store", "android": "off"})["actions"]
                 self.assertFalse(any(a["kind"] == "app-store" for a in actions))
+
+    def test_app_store_skips_ineligible_builds_after_acknowledgement(self):
+        for external, valid, ci_verified in [
+            ("BETA_REJECTED", True, True), ("REJECTED", True, True),
+            ("EXPIRED", False, True), ("PROCESSING", False, True),
+            ("READY_FOR_BETA_TESTING", True, False),
+        ]:
+            with self.subTest(external=external, valid=valid, ci_verified=ci_verified):
+                s = snapshot()
+                s["changes"]["ios"] = False
+                s["ios"]["builds"] = [
+                    build() | {"id": "19", "number": 19, "public": False},
+                    build() | {"id": "20", "number": 20, "public": False,
+                               "external": external, "valid": valid,
+                               "ci_verified": ci_verified},
+                ]
+                state = {"acknowledged": ["ios-build:20"]}
+                actions = plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
+                self.assertEqual([a["build"]["number"] for a in actions if a["kind"] == "app-store"], [19])
+
+    def test_unacknowledged_beta_rejection_holds_sibling_app_store_submission(self):
+        s = snapshot()
+        s["changes"]["ios"] = False
+        s["ios"]["builds"] = [
+            build() | {"id": "20", "number": 20, "public": False,
+                       "external": "BETA_REJECTED"},
+            build() | {"id": "21", "number": 21, "public": False,
+                       "external": "WAITING_FOR_BETA_REVIEW"},
+        ]
+        result = plan_tick(s, {}, {"ios": "app-store", "android": "off"})
+        self.assertFalse(any(a["kind"] == "app-store" for a in result["actions"]))
+        self.assertTrue(any("ios app-store:" in r and "rejection" in r for r in result["reasons"]))
+        actions = plan_tick(s, {"acknowledged": ["ios-build:20"]},
+                            {"ios": "app-store", "android": "off"})["actions"]
+        self.assertEqual([a["build"]["number"] for a in actions if a["kind"] == "app-store"], [21])
+
+    def test_observe_does_not_create_an_unused_ios_public_clock(self):
+        s = snapshot()
+        s["ios"]["builds"] = [build()]
+        self.assertNotIn("public_available", observe(s, {}))
 
     def test_app_store_waiting_live_rejected_and_ack(self):
         s = snapshot()

@@ -138,13 +138,6 @@ def observe(snapshot, previous):
     """Reconcile first observations, preserving completed continuous exposure only."""
     state = copy.deepcopy(previous)
     now = snapshot["now"]
-    for b in snapshot.get("ios", {}).get("builds", []):
-        if (
-            b.get("public")
-            and b.get("valid")
-            and b.get("external") in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
-        ):
-            state.setdefault("public_available", {}).setdefault(b["id"], now)
     consume_version_acknowledgements(
         state,
         {
@@ -357,6 +350,11 @@ def plan_tick(snapshot, state, levels):
                     and not unresolved_review_is_acknowledged(r, versions, ack)
                     for r in reviews
                 )
+                if rejected:
+                    reasons.append(
+                        "ios app-store: held by the unacknowledged beta rejection above"
+                    )
+                blocked = blocked or rejected
                 resumable = {
                     o["action"]["build"]["number"]
                     for o in state.get("operations", {}).values()

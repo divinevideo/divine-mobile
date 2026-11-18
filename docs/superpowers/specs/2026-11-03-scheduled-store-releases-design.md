@@ -340,15 +340,15 @@ versions that run ahead of GitHub Latest before production is enabled.
      Apple's length limit, with a generic fallback.
   2. Submit the build for beta review and add it to the public group.
 - **Waiting** means any build whose external state is `WAITING_FOR_BETA_REVIEW`
-  or `IN_BETA_REVIEW`. While one is waiting the coordinator submits nothing.
+  or `IN_BETA_REVIEW`. While one is waiting, public beta submissions pause.
   This is Rabble's rule, and it is stricter than Apple's one-per-version rule.
 - **Budget**: count beta submissions in the trailing 24 hours from App Store
   Connect, including manual ones. Submit only if there are fewer than six and
   the most recent was at least four hours ago.
 - The first build of each new version needs a full beta review. Public
   testers wait for that review once a day, and then the 4-hour rhythm resumes.
-- A beta-review rejection holds public submissions until a person acknowledges
-  it (see Controls). Internal builds continue.
+- A beta-review rejection holds public and App Store submissions until a person
+  acknowledges it (see Controls). Internal builds continue.
 - Codemagic can report success before App Store Connect finishes processing. It
   can also report a post-processing timeout after a good upload. The
   coordinator acts only on what App Store Connect reports.
@@ -369,7 +369,8 @@ The coordinator checks every tick and submits only when all of these hold:
 - A candidate exists: the newest processed, CI-verified build with a version
   above the highest version the App Store has claimed. There is no minimum
   TestFlight waiting period or dependency on external beta review. Known
-  rejected builds and the explicitly blocked build 1.0.30+916 remain excluded.
+  rejected builds and the explicitly blocked build 1.0.30+916 remain excluded,
+  and an unacknowledged beta rejection holds submission entirely.
   A submission already waiting or in review keeps its build; newer betas do
   not withdraw or replace it. A real discovered bug requires operator action.
 
