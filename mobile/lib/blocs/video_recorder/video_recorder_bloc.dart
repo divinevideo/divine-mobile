@@ -75,6 +75,12 @@ const DivineVideoStabilizationMode _kDefaultStabilizationMode =
 /// SharedPreferences key for the last grid-lines on/off choice.
 const _kGridLinesEnabledKey = 'camera_grid_lines_enabled';
 
+/// SharedPreferences key for the last dual-camera on/off choice.
+///
+/// Leaving the recorder for the editor or the library disposes the camera,
+/// and the next one opens with one camera, so the choice is kept here.
+const _kDualCameraEnabledKey = 'camera_dual_camera_enabled';
+
 /// Factory for creating a [CountdownSoundService].
 ///
 /// Injectable so tests can verify the wiring that protects the
@@ -394,6 +400,10 @@ class VideoRecorderBloc
   /// One step of the stop-motion interval countdown.
   static const _intervalCaptureTickInterval = Duration(seconds: 1);
 
+  /// Preferences about this device's camera rather than an account, so an
+  /// account switch keeps them.
+  static const List<String> deviceScopedPrefsKeys = [_kDualCameraEnabledKey];
+
   /// The current active camera lens. Delegates to the camera service.
   DivineCameraLens get currentLens => _cameraService.currentLens;
 
@@ -591,8 +601,10 @@ class VideoRecorderBloc
       aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
     );
 
-    // A mode switched to while the camera was starting could not reach it.
-    await _applyStabilizationForRecorderMode();
+    // A mode switched to while the camera was starting could not reach it,
+    // and the camera opens with one camera even where dual capture was left
+    // on.
+    await _applyCameraForRecorderMode(emit);
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
@@ -651,7 +663,7 @@ class VideoRecorderBloc
     // Leaving the Upload tab resumes the camera it paused, into whichever
     // mode the user switched to meanwhile.
     if (event.state == AppLifecycleState.resumed) {
-      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
+      await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
     }
   }
 
@@ -820,7 +832,7 @@ class VideoRecorderBloc
       if (state.recorderMode == VideoRecorderMode.upload) {
         await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
       } else {
-        await _applyStabilizationForRecorderMode();
+        await _applyCameraForRecorderMode(emit);
       }
       return;
     }
@@ -2045,7 +2057,7 @@ class VideoRecorderBloc
     // Leaving Upload resumes a paused camera: a rebind while paused would
     // restart it on Android, so the resume applies the mode instead.
     if (previousMode != VideoRecorderMode.upload) {
-      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
+      await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
     }
   }
 
@@ -2169,14 +2181,28 @@ class VideoRecorderBloc
     final enable = !dualCamera.isDualCameraEnabled;
     if (enable && !dualCamera.isDualCameraSupported) return;
 
-    // The session is rebuilt; the preview holds its last frame meanwhile,
-    // blurred like during a lens switch.
+    if (await _setDualCameraEnabled(emit, enabled: enable)) {
+      await _readSharedPreferences().setBool(_kDualCameraEnabledKey, enable);
+    }
+  }
+
+  /// Turns dual-camera capture on or off and re-syncs the state. Returns
+  /// whether the requested state is in effect.
+  ///
+  /// The session is rebuilt; the preview holds its last frame meanwhile,
+  /// blurred like during a lens switch.
+  Future<bool> _setDualCameraEnabled(
+    Emitter<VideoRecorderBlocState> emit, {
+    required bool enabled,
+  }) async {
+    final dualCamera = _dualCamera;
+    if (dualCamera == null) return false;
     emit(state.copyWith(isSwitchingCamera: true));
     try {
-      final applied = await dualCamera.setDualCameraEnabled(enabled: enable);
+      final applied = await dualCamera.setDualCameraEnabled(enabled: enabled);
       if (!applied) {
         Log.warning(
-          '⚠️ Dual camera ${enable ? 'on' : 'off'} did not take effect',
+          '⚠️ Dual camera ${enabled ? 'on' : 'off'} did not take effect',
           name: 'VideoRecorderBloc',
           category: LogCategory.video,
         );
@@ -2185,6 +2211,7 @@ class VideoRecorderBloc
         emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
         _emitCameraSync(emit);
       }
+      return applied;
     } finally {
       if (!emit.isDone) {
         emit(state.copyWith(isSwitchingCamera: false));
@@ -2245,7 +2272,7 @@ class VideoRecorderBloc
             : state.chromaKeyMeasurementWrittenOff,
       ),
     );
-    await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
+    await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
   }
 
   /// Measures the wall behind the subject from a still and adopts the
@@ -3062,11 +3089,43 @@ class VideoRecorderBloc
       ? _savedStabilizationMode(prefs)
       : DivineVideoStabilizationMode.off;
 
-  /// Points the live camera at [_stabilizationModeFor] the current mode and
-  /// color mask.
+  /// Points the live camera at the current mode and color mask: dual-camera
+  /// capture where it is offered and was last left on, and the stabilization
+  /// [_stabilizationModeFor] them.
   ///
   /// Where dual-camera capture is not offered it is turned off first, so the
-  /// stabilization lands on the single-camera session.
+  /// stabilization lands on the single-camera session. Where it is offered it
+  /// comes back last: dual capture runs without stabilization, and turning it
+  /// off later rebinds one camera with the mode set here.
+  Future<void> _applyCameraForRecorderMode(
+    Emitter<VideoRecorderBlocState> emit, {
+    bool clearRetainedRequest = false,
+  }) async {
+    // Upload pauses the camera and records nothing.
+    if (state.recorderMode == VideoRecorderMode.upload ||
+        !_cameraService.isInitialized) {
+      return;
+    }
+    // Where dual capture is not offered — another mode, or the color mask,
+    // which keys one camera's footage — one camera runs.
+    final dualCamera = _dualCamera;
+    if (!state.supportsDualCamera &&
+        (dualCamera?.isDualCameraEnabled ?? false)) {
+      await _setDualCameraEnabled(emit, enabled: false);
+    }
+    await _applyStabilizationForRecorderMode(
+      clearRetainedRequest: clearRetainedRequest,
+    );
+    if (emit.isDone || dualCamera == null) return;
+    if (state.supportsDualCamera &&
+        !dualCamera.isDualCameraEnabled &&
+        (_readSharedPreferences().getBool(_kDualCameraEnabledKey) ?? false)) {
+      await _setDualCameraEnabled(emit, enabled: true);
+    }
+  }
+
+  /// Points the live camera at [_stabilizationModeFor] the current mode and
+  /// color mask.
   ///
   /// A saved mode the current lens cannot take is left alone: the camera
   /// already opened with off for it, and requesting it again would rebind the
@@ -3076,18 +3135,6 @@ class VideoRecorderBloc
     bool clearRetainedRequest = false,
   }) async {
     final mode = state.recorderMode;
-    // Upload pauses the camera and records nothing.
-    if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
-      return;
-    }
-    // Where dual capture is not offered — another mode, or the color mask,
-    // which keys one camera's footage — one camera runs, and the rebuild
-    // below applies the stabilization to that session.
-    final dualCamera = _dualCamera;
-    if (!state.supportsDualCamera &&
-        (dualCamera?.isDualCameraEnabled ?? false)) {
-      await dualCamera!.setDualCameraEnabled(enabled: false);
-    }
     final target = _stabilizationModeFor(
       stabilizes: state.supportsVideoStabilization,
       prefs: _readSharedPreferences(),

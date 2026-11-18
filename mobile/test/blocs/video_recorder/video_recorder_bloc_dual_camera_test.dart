@@ -1,5 +1,5 @@
-// ABOUTME: Tests dual-camera capture in the recorder: the toggle, the second
-// ABOUTME: camera's window position, and the second file each take carries.
+// ABOUTME: Tests dual-camera capture in the recorder: the toggle and its
+// ABOUTME: restore, the second camera's window, and each take's second file.
 
 import 'dart:async';
 import 'dart:io';
@@ -48,9 +48,12 @@ void main() {
     late _MockDualCameraService camera;
     late _MockClipManager clipManager;
     late WakelockPlusPlatformInterface previousWakelock;
+    late SharedPreferences prefs;
     late bool dualEnabled;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
       camera = _MockDualCameraService();
       clipManager = _MockClipManager();
       previousWakelock = wakelockPlusPlatformInstance;
@@ -103,17 +106,20 @@ void main() {
     VideoRecorderBloc buildBloc({
       VideoRecorderMode mode = VideoRecorderMode.capture,
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      bool liveChromaKeySupported = false,
     }) =>
         VideoRecorderBloc(
           readClipManager: () => clipManager,
           readVideoEditor: _MockVideoEditor.new,
           readVideoEditorState: VideoEditorProviderState.new,
-          readSharedPreferences: _MockSharedPreferences.new,
+          readSharedPreferences: () => prefs,
           cameraService: camera,
+          liveChromaKeySupported: liveChromaKeySupported,
         )..emit(
           VideoRecorderBlocState(
             recorderMode: mode,
             recordingState: recordingState,
+            isLiveChromaKeySupported: liveChromaKeySupported,
           ),
         );
 
@@ -182,6 +188,84 @@ void main() {
       );
     });
 
+    group('reopening the camera', () {
+      setUpAll(() {
+        registerFallbackValue(DivineVideoQuality.fhd);
+        registerFallbackValue(DivineCameraLens.back);
+        registerFallbackValue(DivineVideoStabilizationMode.off);
+      });
+
+      setUp(() {
+        stubCamera();
+        // A camera opens with one camera, whatever the last one ran.
+        when(
+          () => camera.initialize(
+            videoQuality: any(named: 'videoQuality'),
+            initialLens: any(named: 'initialLens'),
+            enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+            preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+            videoStabilizationMode: any(named: 'videoStabilizationMode'),
+            mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
+          ),
+        ).thenAnswer((_) async => dualEnabled = false);
+        when(() => camera.initializationError).thenReturn(null);
+        when(
+          () => camera.setRemoteRecordControlEnabled(
+            enabled: any(named: 'enabled'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(() => clipManager.clips).thenReturn(const []);
+      });
+
+      /// Toggles dual capture [times] on a recorder, then reopens its camera
+      /// the way returning from the editor or the library does.
+      Future<VideoRecorderBloc> toggleAndReopen({required int times}) async {
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        for (var i = 0; i < times; i++) {
+          bloc.add(const VideoRecorderDualCameraToggled());
+          await pumpEventQueue();
+        }
+        bloc.add(const VideoRecorderInitializeRequested());
+        await pumpEventQueue();
+        return bloc;
+      }
+
+      test('turns dual-camera capture back on', () async {
+        final bloc = await toggleAndReopen(times: 1);
+
+        verify(() => camera.setDualCameraEnabled(enabled: true)).called(2);
+        expect(bloc.state.isDualCameraEnabled, isTrue);
+        expect(bloc.state.secondaryPreviewTextureId, equals(2));
+        expect(bloc.state.isSwitchingCamera, isFalse);
+      });
+
+      test('stays on one camera when dual capture was turned off', () async {
+        final bloc = await toggleAndReopen(times: 2);
+
+        verify(() => camera.setDualCameraEnabled(enabled: true)).called(1);
+        expect(bloc.state.isDualCameraEnabled, isFalse);
+      });
+
+      test('stays on one camera in a mode without dual capture', () async {
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoRecorderDualCameraToggled());
+        await pumpEventQueue();
+        bloc.emit(bloc.state.copyWith(recorderMode: VideoRecorderMode.classic));
+        await prefs.setString(
+          VideoRecorderMode.persistenceKey,
+          VideoRecorderMode.classic.name,
+        );
+
+        bloc.add(const VideoRecorderInitializeRequested());
+        await pumpEventQueue();
+
+        verify(() => camera.setDualCameraEnabled(enabled: true)).called(1);
+        expect(bloc.state.isDualCameraEnabled, isFalse);
+      });
+    });
+
     group(VideoRecorderChromaKeyEnabledSet, () {
       setUp(() {
         stubCamera();
@@ -195,10 +279,9 @@ void main() {
         'turns dual-camera capture off when the color mask goes on',
         setUp: () => dualEnabled = true,
         build: () {
-          final bloc = buildBloc();
+          final bloc = buildBloc(liveChromaKeySupported: true);
           return bloc..emit(
             bloc.state.copyWith(
-              isLiveChromaKeySupported: true,
               isDualCameraSupported: true,
               isDualCameraEnabled: true,
             ),
@@ -209,6 +292,22 @@ void main() {
         verify: (bloc) {
           verify(() => camera.setDualCameraEnabled(enabled: false)).called(1);
           expect(bloc.state.supportsDualCamera, isFalse);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'turns dual-camera capture back on when the color mask goes off',
+        build: () => buildBloc(liveChromaKeySupported: true),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderDualCameraToggled());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: true));
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: false));
+        },
+        verify: (bloc) {
+          verify(() => camera.setDualCameraEnabled(enabled: true)).called(2);
+          expect(bloc.state.isDualCameraEnabled, isTrue);
         },
       );
     });
