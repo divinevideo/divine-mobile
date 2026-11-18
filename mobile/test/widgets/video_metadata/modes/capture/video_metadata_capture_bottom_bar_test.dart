@@ -730,40 +730,51 @@ void main() {
         expect(snackbar.label, equals('Saved to library'));
       });
 
-      testWidgets('save for later shows error snackbar when draft save fails '
-          'even if gallery succeeds', (tester) async {
-        when(
-          () => mockGallerySaveService.saveVideoToGallery(any()),
-        ).thenAnswer((_) async => const GallerySaveSuccess());
+      for (final outcome in [
+        DraftSaveOutcome.failed,
+        DraftSaveOutcome.timedOut,
+      ]) {
+        testWidgets('save for later keeps the session without a library action '
+            'when the draft save is ${outcome.name}', (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          when(
+            () => mockGallerySaveService.saveVideoToGallery(any()),
+          ).thenAnswer((_) async => const GallerySaveSuccess());
 
-        final mockNotifier = _MockVideoEditorNotifier(
-          validState0(),
-          saveAsDraftResult: DraftSaveOutcome.failed,
-        );
+          final mockNotifier = _MockVideoEditorNotifier(
+            validState0(),
+            saveAsDraftResult: outcome,
+          );
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              videoEditorProvider.overrideWith(() => mockNotifier),
-              gallerySaveServiceProvider.overrideWith(
-                (ref) => mockGallerySaveService,
-              ),
-              permissionsServiceProvider.overrideWithValue(
-                mockPermissionsService,
-              ),
-            ],
-            child: _createTestApp(const VideoMetadataCaptureBottomBar()),
-          ),
-        );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                videoEditorProvider.overrideWith(() => mockNotifier),
+                gallerySaveServiceProvider.overrideWith(
+                  (ref) => mockGallerySaveService,
+                ),
+                permissionsServiceProvider.overrideWithValue(
+                  mockPermissionsService,
+                ),
+              ],
+              child: _createTestApp(const VideoMetadataCaptureBottomBar()),
+            ),
+          );
 
-        await tester.tap(find.text('Save for Later'));
-        await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoMetadataSaveForLaterButton));
+          await tester.pumpAndSettle();
 
-        // Gallery success is not surfaced — only draft status matters.
-        final snackbar = findSnackbarContainer(tester);
-        expect(snackbar.error, isTrue);
-        expect(snackbar.label, equals('Failed to save'));
-      });
+          // Gallery success is not surfaced — only draft status matters.
+          final snackbar = findSnackbarContainer(tester);
+          expect(snackbar.error, isTrue);
+          expect(snackbar.label, l10n.videoMetadataFailedToSaveSnackbar);
+          // The unsaved session is still live below this snackbar. Opening the
+          // standalone library here would offer actions that replace it.
+          expect(snackbar.actionLabel, isNull);
+          expect(snackbar.onActionPressed, isNull);
+          expect(find.byType(VideoMetadataCaptureBottomBar), findsOneWidget);
+        });
+      }
 
       testWidgets('save for later shows success snackbar when gallery '
           'save fails but draft succeeds', (tester) async {

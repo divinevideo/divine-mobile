@@ -75,9 +75,14 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
           ? context.l10n.videoMetadataSavedToLibrarySnackbar
           : context.l10n.videoMetadataFailedToSaveSnackbar,
       error: !draftSaved,
-      actionLabel: context.l10n.videoMetadataGoToLibraryButton,
-      onActionPressed: () =>
-          router.push(const LibraryDraftsRouteData().location),
+      // A failed save leaves this session live. Do not stack the standalone
+      // library above it, where a reaction can replace the active session.
+      actionLabel: draftSaved
+          ? context.l10n.videoMetadataGoToLibraryButton
+          : null,
+      onActionPressed: draftSaved
+          ? () => router.push(const LibraryDraftsRouteData().location)
+          : null,
     );
 
     if (draftSaved) {
