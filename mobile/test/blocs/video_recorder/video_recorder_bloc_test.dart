@@ -3932,6 +3932,26 @@ void main() {
     });
 
     group('VideoRecorderAppLifecycleChanged', () {
+      test('does not resume the camera when foregrounded on Upload', () async {
+        final bloc = buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              recorderMode: VideoRecorderMode.upload,
+            ),
+          );
+        addTearDown(bloc.close);
+
+        bloc.add(
+          const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+        );
+        await pumpEventQueue();
+
+        verifyNever(
+          () =>
+              cameraService.handleAppLifecycleState(AppLifecycleState.resumed),
+        );
+      });
+
       setUp(stubRecorderDefaults);
       const initialized = VideoRecorderBlocState(
         isCameraInitialized: true,
@@ -4666,6 +4686,52 @@ void main() {
             ),
           ).called(1);
         });
+
+        test(
+          'waits for preview resume before accepting a remote tap',
+          () async {
+            final resumed = Completer<void>();
+            when(
+              () => cameraService.handleAppLifecycleState(
+                AppLifecycleState.resumed,
+              ),
+            ).thenAnswer((_) => resumed.future);
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+            );
+            await pumpEventQueue();
+            trigger!();
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+            await pumpEventQueue();
+            trigger!();
+            await pumpEventQueue();
+
+            verifyNever(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            );
+
+            resumed.complete();
+            await pumpEventQueue();
+            trigger!();
+            await pumpEventQueue();
+
+            verify(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ).called(1);
+          },
+        );
 
         test('is ignored on the Upload tab, which shows no preview', () async {
           final bloc = buildBloc();

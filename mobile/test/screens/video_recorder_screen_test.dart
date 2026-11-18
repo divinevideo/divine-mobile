@@ -554,8 +554,9 @@ void main() {
         }
       });
 
-      testWidgets('keeps the camera paused when the app returns to the '
-          'Upload tab', (tester) async {
+      testWidgets('forwards resumes on the Upload tab to the recorder bloc', (
+        tester,
+      ) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
         try {
           when(() => recorderBloc.state).thenReturn(
@@ -572,11 +573,11 @@ void main() {
           );
           await tester.pump();
 
-          verifyNever(
+          verify(
             () => recorderBloc.add(
               const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
             ),
-          );
+          ).called(1);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
