@@ -1089,6 +1089,67 @@ void main() {
         },
       );
 
+      test(
+        'events a subscription delivers are still emitted when each cache '
+        'write fails, and the failures log once',
+        () async {
+          // The reported crashes: a relay delivers a burst of events and
+          // each one's own cache write fails after the relay callback has
+          // returned, here as SQLite does when it cannot create its journal.
+          final journalCannotBeCreated = Exception(
+            'SqliteException(14): unable to open database file',
+          );
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              onEose: any(named: 'onEose'),
+              onClosed: any(named: 'onClosed'),
+            ),
+          ).thenReturn('test-sub-id');
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) => Future<void>.error(journalCannotBeCreated));
+          final received = <Event>[];
+          final subscription = clientWithCache
+              .subscribe([
+                Filter(kinds: const [1063], limit: 10),
+              ])
+              .listen(received.add);
+          addTearDown(subscription.cancel);
+          final deliver =
+              verify(
+                    () => mockNostr.subscribe(
+                      any(),
+                      captureAny(),
+                      id: any(named: 'id'),
+                      tempRelays: any(named: 'tempRelays'),
+                      targetRelays: any(named: 'targetRelays'),
+                      relayTypes: any(named: 'relayTypes'),
+                      sendAfterAuth: any(named: 'sendAfterAuth'),
+                      onEose: any(named: 'onEose'),
+                      onClosed: any(named: 'onClosed'),
+                    ),
+                  ).captured.single
+                  as void Function(Event);
+
+          for (final id in ['one', 'two', 'three']) {
+            deliver(_createTestEvent(id: id, kind: 1063));
+          }
+          // Let the failed writes settle: unhandled, they would fail this test.
+          await pumpEventQueue();
+
+          expect(received.map((e) => e.id), equals(['one', 'two', 'three']));
+          verify(() => mockNostrEventsDao.upsertEvent(any())).called(3);
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
+
       test('a failure after a successful write logs again', () async {
         final event = _createTestEvent(kind: EventKind.textNote);
         when(
