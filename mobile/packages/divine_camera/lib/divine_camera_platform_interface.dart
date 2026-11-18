@@ -120,6 +120,21 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     );
   }
 
+  /// Turns dual-camera capture on or off.
+  ///
+  /// While on, the front and the back camera run at once: the current lens
+  /// keeps filling the main preview and recording with sound, and the
+  /// opposite camera feeds [CameraState.secondaryCamera] and records a
+  /// second, silent file of every take ([VideoRecordingResult.secondary]).
+  /// [switchCamera] then swaps the two cameras' roles.
+  ///
+  /// Returns the new camera state.
+  Future<CameraState> setDualCameraEnabled({required bool enabled}) {
+    throw UnimplementedError(
+      'setDualCameraEnabled() has not been implemented.',
+    );
+  }
+
   /// Starts video recording.
   ///
   /// [maxDuration] optionally limits the recording duration.

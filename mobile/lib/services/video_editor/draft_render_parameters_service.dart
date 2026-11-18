@@ -13,6 +13,7 @@ import 'package:models/models.dart' show AspectRatio, StickerData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
+import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
@@ -34,6 +35,8 @@ import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
+import 'package:openvine/widgets/video_editor/secondary_camera_layers.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -129,13 +132,20 @@ class DraftRenderParametersService {
   /// A draft with no overlays to begin with is not an error, and neither is a
   /// single sticker image that fails to load — that one costs its own sticker
   /// and is logged.
+  ///
+  /// The second camera of a dual-camera take gets its picture-in-picture
+  /// layer here when the editor never placed one: the editor places it when
+  /// a session opens, and a draft posted without one, or after a session
+  /// that saved no edit, would otherwise publish without it.
   Future<CompleteParameters?> buildForDraft(DivineVideoDraft draft) async {
     // `selectedSound` counts: a sound picked in the recorder is stored on the
     // draft alone, so a draft that never entered the editor still has audio to
-    // carry into the render.
+    // carry into the render. So does a dual-camera take, whose window only
+    // becomes a layer here.
     if (draft.editorEditingParameters.isEmpty &&
         draft.editorStateHistory.isEmpty &&
-        draft.selectedSound == null) {
+        draft.selectedSound == null &&
+        !draft.clips.any((clip) => clip.secondaryCamera != null)) {
       return null;
     }
 
@@ -164,23 +174,40 @@ class DraftRenderParametersService {
     // way. `safeParseSize` yields `Size.zero` for a history that carries no
     // size, which is no more usable than none at all.
     final historySize = history?.lastRenderedImgSize;
+    final editorLayers = entry?.layers ?? const <Layer>[];
+    // A draft with no editor layers may never have had an editor surface; its
+    // picture-in-picture layers then get the one the editor would lay out.
     final bodySize =
         base.bodySize ??
-        (historySize != null && !historySize.isEmpty ? historySize : null);
+        (historySize != null && !historySize.isEmpty ? historySize : null) ??
+        (editorLayers.isEmpty ? _unopenedEditorRenderSize(draft) : null);
 
-    final capturedLayers = entry == null
-        ? const <ExportedLayer>[]
-        : await _rasterizeLayers(
-            layers: entry.layers,
-            stickers: stickers,
-            bodySize: bodySize,
-            aspectRatio: draft.clips.isNotEmpty
-                ? draft.clips.first.targetAspectRatio
-                : AspectRatio.square,
+    // The active entry is the one rendered, and later entries inherit its
+    // record, so a window the creator deleted stays deleted.
+    final takeLayers = bodySize == null
+        ? const <({String takeId, WidgetLayer layer})>[]
+        : secondaryCameraTakeLayers(
+            clips: draft.clips,
+            canvasRenderSize: bodySize,
+            now: DateTime.now(),
+            placedTakeIds: entry == null
+                ? const {}
+                : placedSecondaryCameraTakeIdsOf(entry.meta),
+            poster: true,
           );
 
+    final capturedLayers = await _rasterizeLayers(
+      layers: [...editorLayers, for (final take in takeLayers) take.layer],
+      stickers: stickers,
+      bodySize: bodySize,
+      aspectRatio: draft.clips.isNotEmpty
+          ? draft.clips.first.targetAspectRatio
+          : AspectRatio.square,
+    );
+
     Log.info(
-      'Restored draft render parameters: ${capturedLayers.length} layer(s), '
+      'Restored draft render parameters: ${capturedLayers.length} layer(s) '
+      '(${takeLayers.length} second-camera take(s) placed), '
       '${entry?.filters.length ?? 0} filter(s), '
       '${entry?.tuneAdjustments.length ?? 0} tune adjustment(s), '
       '${audioTracks.length} audio track(s)',
@@ -198,6 +225,24 @@ class DraftRenderParametersService {
       // has to be the size they were captured at — otherwise a fallback size
       // would place them correctly in the raster and wrongly in the video.
       bodySize: bodySize,
+    );
+  }
+
+  /// The surface the editor would lay [draft] out at, for a draft that never
+  /// opened it.
+  ///
+  /// Layers land on the video by where they sit on this surface, not by its
+  /// size, so the frame stands in for the screen the editor would measure:
+  /// the first clip's uncropped picture, laid out the way
+  /// [VideoEditorCanvasGeometry.renderSizeFor] lays out the canvas.
+  static Size? _unopenedEditorRenderSize(DivineVideoDraft draft) {
+    if (draft.clips.isEmpty) return null;
+    final clip = draft.clips.first;
+    return VideoEditorCanvasGeometry.renderSizeFor(
+      VideoEditorConstants.quality.resolutionForAspectRatio(
+        clip.targetAspectRatio,
+      ),
+      clip.originalAspectRatio,
     );
   }
 

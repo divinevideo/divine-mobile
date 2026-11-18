@@ -27,6 +27,19 @@ class MockDivineCameraPlatform
 
   /// Counts [resumeAudioCapture] calls that reached the platform.
   int resumeAudioCaptureCalls = 0;
+
+  /// Whether [initializeCamera] reports dual-camera support.
+  bool dualCameraSupported = true;
+
+  /// Whether [setDualCameraEnabled] throws, as a failed native rebuild does.
+  bool throwOnSetDualCamera = false;
+
+  /// Whether [setDualCameraEnabled] leaves the session unchanged, as a native
+  /// rebuild that fell back to the single camera does.
+  bool ignoreSetDualCamera = false;
+
+  /// The `enabled` argument of every [setDualCameraEnabled] call.
+  final List<bool> setDualCameraCalls = [];
   void Function(VideoRecordingResult? result)? _onRecordingAutoStopped;
   void Function(RemoteRecordTrigger trigger)? _onRemoteRecordTrigger;
 
@@ -98,6 +111,7 @@ class MockDivineCameraPlatform
       textureId: 1,
       isFocusPointSupported: true,
       isExposurePointSupported: true,
+      isDualCameraSupported: dualCameraSupported,
       availableLenses: const [
         DivineCameraLens.front,
         DivineCameraLens.frontUltraWide,
@@ -105,6 +119,21 @@ class MockDivineCameraPlatform
         DivineCameraLens.ultraWide,
         DivineCameraLens.telephoto,
       ],
+    );
+  }
+
+  @override
+  Future<CameraState> setDualCameraEnabled({required bool enabled}) async {
+    setDualCameraCalls.add(enabled);
+    if (throwOnSetDualCamera) {
+      throw PlatformException(code: 'DUAL_CAMERA_FAILED');
+    }
+    if (ignoreSetDualCamera) return _state;
+    return _state = _state.copyWith(
+      secondaryCamera: enabled
+          ? SecondaryCameraState(lens: _state.lens.opposite, textureId: 2)
+          : null,
+      clearSecondaryCamera: !enabled,
     );
   }
 
@@ -313,6 +342,13 @@ void main() {
 
       test('listAudioDevices throws', () {
         expect(() => basePlatform.listAudioDevices(), throwsUnimplementedError);
+      });
+
+      test('setDualCameraEnabled throws', () {
+        expect(
+          () => basePlatform.setDualCameraEnabled(enabled: true),
+          throwsUnimplementedError,
+        );
       });
     });
   });
@@ -726,6 +762,136 @@ void main() {
           expect(DivineCamera.instance.state.lens, DivineCameraLens.front);
         },
       );
+    });
+
+    group('dual camera', () {
+      test(
+        'turns dual-camera capture on and reports the second camera',
+        () async {
+          await DivineCamera.instance.initialize();
+
+          final enabled = await DivineCamera.instance.setDualCameraEnabled(
+            enabled: true,
+          );
+
+          expect(enabled, isTrue);
+          expect(DivineCamera.instance.isDualCameraSupported, isTrue);
+          expect(DivineCamera.instance.isDualCameraEnabled, isTrue);
+          expect(
+            DivineCamera.instance.secondaryCamera,
+            equals(
+              const SecondaryCameraState(
+                lens: DivineCameraLens.front,
+                textureId: 2,
+              ),
+            ),
+          );
+          expect(DivineCamera.instance.isSwitchingCamera, isFalse);
+        },
+      );
+
+      test('turns dual-camera capture off again', () async {
+        await DivineCamera.instance.initialize();
+        await DivineCamera.instance.setDualCameraEnabled(enabled: true);
+
+        final disabled = await DivineCamera.instance.setDualCameraEnabled(
+          enabled: false,
+        );
+
+        expect(disabled, isTrue);
+        expect(DivineCamera.instance.secondaryCamera, isNull);
+        expect(mockPlatform.setDualCameraCalls, equals([true, false]));
+      });
+
+      test('holds the preview frame while the session is rebuilt', () async {
+        await DivineCamera.instance.initialize();
+        final switching = <bool>[];
+        DivineCamera.instance.onStateChanged = (state) {
+          switching.add(state.isSwitchingCamera);
+        };
+
+        await DivineCamera.instance.setDualCameraEnabled(enabled: true);
+
+        expect(switching, equals([true, false]));
+      });
+
+      test(
+        'does nothing when the requested state is already in effect',
+        () async {
+          await DivineCamera.instance.initialize();
+
+          final result = await DivineCamera.instance.setDualCameraEnabled(
+            enabled: false,
+          );
+
+          expect(result, isTrue);
+          expect(mockPlatform.setDualCameraCalls, isEmpty);
+        },
+      );
+
+      test('refuses on a device without dual-camera support', () async {
+        mockPlatform.dualCameraSupported = false;
+        await DivineCamera.instance.initialize();
+
+        final result = await DivineCamera.instance.setDualCameraEnabled(
+          enabled: true,
+        );
+
+        expect(result, isFalse);
+        expect(mockPlatform.setDualCameraCalls, isEmpty);
+      });
+
+      test('refuses while recording', () async {
+        await DivineCamera.instance.initialize();
+        await DivineCamera.instance.startRecording();
+
+        final result = await DivineCamera.instance.setDualCameraEnabled(
+          enabled: true,
+        );
+
+        expect(result, isFalse);
+        expect(mockPlatform.setDualCameraCalls, isEmpty);
+      });
+
+      test('refuses while a lens switch is in flight', () async {
+        await DivineCamera.instance.initialize();
+        final gate = Completer<void>();
+        mockPlatform.switchGate = gate;
+        final switching = DivineCamera.instance.switchCamera();
+
+        final result = await DivineCamera.instance.setDualCameraEnabled(
+          enabled: true,
+        );
+
+        expect(result, isFalse);
+        gate.complete();
+        await switching;
+        expect(mockPlatform.setDualCameraCalls, isEmpty);
+      });
+
+      test('reports false when the platform stays on one camera', () async {
+        await DivineCamera.instance.initialize();
+        mockPlatform.ignoreSetDualCamera = true;
+
+        final result = await DivineCamera.instance.setDualCameraEnabled(
+          enabled: true,
+        );
+
+        expect(result, isFalse);
+        expect(DivineCamera.instance.isDualCameraEnabled, isFalse);
+      });
+
+      test('clears the switching flag after a thrown rebuild', () async {
+        await DivineCamera.instance.initialize();
+        mockPlatform.throwOnSetDualCamera = true;
+
+        await expectLater(
+          DivineCamera.instance.setDualCameraEnabled(enabled: true),
+          throwsA(isA<PlatformException>()),
+        );
+
+        expect(DivineCamera.instance.isSwitchingCamera, isFalse);
+      });
     });
 
     group('setLens', () {
@@ -1191,6 +1357,134 @@ void main() {
       expect(map['width'], 1920);
       expect(map['height'], 1080);
     });
+
+    test('parses the second camera file of a dual-camera take', () {
+      final result = VideoRecordingResult.fromMap(const {
+        'filePath': '/path/to/main.mp4',
+        'durationMs': 4000,
+        'lens': 'back',
+        'secondary': {
+          'filePath': '/path/to/second.mp4',
+          'durationMs': 3990,
+          'width': 720,
+          'height': 1280,
+          'lens': 'front',
+          'startOffsetMs': 80,
+        },
+      });
+
+      expect(result.lens, DivineCameraLens.back);
+      expect(
+        result.secondary,
+        equals(
+          const VideoRecordingResult(
+            filePath: '/path/to/second.mp4',
+            durationMs: 3990,
+            width: 720,
+            height: 1280,
+            lens: DivineCameraLens.front,
+            startOffsetMs: 80,
+          ),
+        ),
+      );
+      expect(
+        result.secondary?.startOffset,
+        const Duration(milliseconds: 80),
+      );
+      expect(result.startOffset, Duration.zero);
+    });
+
+    test('ignores a second camera entry without a file', () {
+      final result = VideoRecordingResult.fromMap(const {
+        'filePath': '/path/to/main.mp4',
+        'secondary': <String, Object?>{},
+      });
+
+      expect(result.secondary, isNull);
+      expect(result.lens, isNull);
+    });
+
+    test('round-trips the second camera file through toMap', () {
+      const result = VideoRecordingResult(
+        filePath: '/path/to/main.mp4',
+        lens: DivineCameraLens.front,
+        secondary: VideoRecordingResult(
+          filePath: '/path/to/second.mp4',
+          lens: DivineCameraLens.back,
+        ),
+      );
+
+      expect(VideoRecordingResult.fromMap(result.toMap()), equals(result));
+      expect(result.toString(), contains('/path/to/second.mp4'));
+    });
+  });
+
+  group(SecondaryCameraState, () {
+    test('round-trips through toMap', () {
+      const state = SecondaryCameraState(
+        lens: DivineCameraLens.back,
+        textureId: 7,
+        aspectRatio: 0.75,
+        previewRotationDegrees: 90,
+        previewHandlesTransform: true,
+      );
+
+      expect(SecondaryCameraState.fromMap(state.toMap()), equals(state));
+    });
+
+    test('defaults missing platform fields', () {
+      final state = SecondaryCameraState.fromMap(const {'lens': 'front'});
+
+      expect(
+        state,
+        equals(const SecondaryCameraState(lens: DivineCameraLens.front)),
+      );
+      expect(state.aspectRatio, closeTo(9 / 16, 1e-9));
+    });
+  });
+
+  group('CameraState dual camera', () {
+    test('parses support and the second camera from a map', () {
+      final state = CameraState.fromMap(const {
+        'isDualCameraSupported': true,
+        'secondaryCamera': {'lens': 'front', 'textureId': 3},
+      });
+
+      expect(state.isDualCameraSupported, isTrue);
+      expect(state.isDualCameraEnabled, isTrue);
+      expect(state.secondaryCamera?.textureId, equals(3));
+    });
+
+    test('round-trips the second camera through toMap', () {
+      const state = CameraState(
+        isDualCameraSupported: true,
+        secondaryCamera: SecondaryCameraState(
+          lens: DivineCameraLens.front,
+          textureId: 3,
+        ),
+      );
+
+      expect(CameraState.fromMap(state.toMap()), equals(state));
+      expect(state.toString(), contains('isDualCameraSupported: true'));
+    });
+
+    test('copyWith keeps, replaces and clears the second camera', () {
+      const state = CameraState(
+        secondaryCamera: SecondaryCameraState(lens: DivineCameraLens.front),
+      );
+      const back = SecondaryCameraState(lens: DivineCameraLens.back);
+
+      expect(state.copyWith().secondaryCamera, equals(state.secondaryCamera));
+      expect(state.copyWith(secondaryCamera: back).secondaryCamera, back);
+      expect(
+        state.copyWith(clearSecondaryCamera: true).isDualCameraEnabled,
+        isFalse,
+      );
+      expect(
+        state.copyWith(isDualCameraSupported: true).isDualCameraSupported,
+        isTrue,
+      );
+    });
   });
 
   group('DivineCameraFlashMode', () {
@@ -1386,7 +1680,7 @@ void main() {
 
       final props = state.props;
 
-      expect(props.length, 22);
+      expect(props.length, 24);
       expect(props[0], isTrue); // isInitialized
       expect(props[1], isFalse); // isRecording
       expect(props[4], DivineCameraLens.back); // lens
@@ -1493,7 +1787,7 @@ void main() {
 
       final props = result.props;
 
-      expect(props.length, 4);
+      expect(props.length, 7);
       expect(props[0], '/test.mp4');
       expect(props[1], 1000);
       expect(props[2], 1280);

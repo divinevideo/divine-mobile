@@ -729,6 +729,7 @@ void main() {
           initialState: const ClipEditorState(),
         );
         when(() => mockEditor.stateManager).thenReturn(mockStateManager);
+        when(() => mockEditor.activeLayers).thenReturn(const []);
         when(() => mockStateManager.activeMeta).thenReturn({
           VideoEditorConstants.timelineMarkersStateHistoryKey: [1250],
         });
@@ -1144,6 +1145,7 @@ void main() {
           initialState: const ClipEditorState(),
         );
         when(() => mockEditor.stateManager).thenReturn(mockStateManager);
+        when(() => mockEditor.activeLayers).thenReturn(const []);
         when(() => mockStateManager.activeMeta).thenReturn(const {});
         when(
           () => mockEditor.addHistory(

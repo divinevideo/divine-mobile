@@ -5377,6 +5377,8 @@
   "videoRecorderTapToStartLabel": "రికార్డింగ్ ప్రారంభించడానికి ఎక్కడైనా నొక్కండి",
   "videoRecorderDeleteLastClipLabel": "చివరి క్లిప్‌ను తొలగించండి",
   "videoRecorderSwitchCameraLabel": "కెమెరాను మార్చండి",
+  "videoRecorderToggleDualCameraLabel": "రెండు కెమెరాలతో రికార్డ్ చేయండి",
+  "videoRecorderDualCameraSwapLabel": "కెమెరాలను మార్చుకోండి",
   "videoRecorderZoomLevelLabel": "దీనికి జూమ్ చేయండి {zoom}×",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",

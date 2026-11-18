@@ -2851,6 +2851,8 @@
   "videoRecorderTapToStartLabel": "Докосни произволно място, за да започнете да записвате",
   "videoRecorderDeleteLastClipLabel": "Изтрий последния клип",
   "videoRecorderSwitchCameraLabel": "Смени камерата",
+  "videoRecorderToggleDualCameraLabel": "Запис с двете камери",
+  "videoRecorderDualCameraSwapLabel": "Размени камерите",
   "videoRecorderZoomLevelLabel": "Мащабиране до {zoom}×",
   "videoRecorderToggleGridLabel": "Превключване на мрежата",
   "videoRecorderToggleGhostFrameLabel": "Превключване на призрачна рамка",

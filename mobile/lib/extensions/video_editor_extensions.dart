@@ -16,7 +16,9 @@ import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
+import 'package:openvine/widgets/video_editor/secondary_camera_layers.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:pro_image_editor/features/main_editor/services/layer_copy_manager.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' hide AudioTrack;
 import 'package:uuid/uuid.dart';
 
@@ -518,7 +520,7 @@ extension VideoEditorExtensions on ProImageEditorState {
     List<Layer>? layers,
   }) {
     addHistory(
-      layers: layers,
+      layers: _layersFollowing(clips, layers: layers),
       meta: {
         ..._clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
         VideoEditorConstants.audioStateHistoryKey: audioTracks
@@ -638,8 +640,10 @@ extension VideoEditorExtensions on ProImageEditorState {
     required Layer layer,
     List<Duration>? timelineMarkers,
   }) {
+    final followed = _layersFollowing(clips);
     addHistory(
-      newLayer: layer,
+      layers: followed == null ? null : [...followed, layer],
+      newLayer: followed == null ? layer : null,
       meta: _clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
     );
     setState(() {});
@@ -658,9 +662,20 @@ extension VideoEditorExtensions on ProImageEditorState {
     List<Duration>? timelineMarkers,
   }) {
     addHistory(
-      layers: layers,
+      layers: _layersFollowing(clips, layers: layers),
       meta: _clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
     );
+    setState(() {});
+  }
+
+  /// Places [layers], the picture-in-picture layers of the dual-camera takes
+  /// [takeIds], in the session's starting state and shows them; see
+  /// [VideoEditorHistoryExtensions.adoptSecondaryCameraLayers].
+  void placeSecondaryCameraLayers(
+    List<Layer> layers,
+    Iterable<String> takeIds,
+  ) {
+    stateManager.adoptSecondaryCameraLayers(layers, takeIds);
     setState(() {});
   }
 
@@ -685,13 +700,16 @@ extension VideoEditorExtensions on ProImageEditorState {
     );
 
     addHistory(
-      layers: growLayersToCompositionEnd(
-        [
-          for (final layer in activeLayers)
-            if (layer.id != layerId) layer,
-        ],
-        previousDuration: compositionDuration(previousClips),
-        duration: compositionDuration(clips),
+      layers: _layersFollowing(
+        clips,
+        layers: growLayersToCompositionEnd(
+          [
+            for (final layer in activeLayers)
+              if (layer.id != layerId) layer,
+          ],
+          previousDuration: compositionDuration(previousClips),
+          duration: compositionDuration(clips),
+        ),
       ),
       meta: _clipHistoryMeta(
         clips,
@@ -713,12 +731,14 @@ extension VideoEditorExtensions on ProImageEditorState {
   ///
   /// [replacedClipIds] are clips the edit rendered into new files under the
   /// same ids; sounds anchored to them are released rather than rebased (see
-  /// [releaseAudioAnchors]).
+  /// [releaseAudioAnchors]). [removedClipIds] are clips the edit deleted; the
+  /// picture-in-picture layers following them go with them.
   void setClipState(
     List<DivineVideoClip> clips, {
     bool skipUpdateHistory = false,
     List<Duration>? timelineMarkers,
     Set<String> replacedClipIds = const {},
+    Set<String> removedClipIds = const {},
   }) {
     final serialized = clips.map((c) => c.toJson()).toList();
 
@@ -745,7 +765,10 @@ extension VideoEditorExtensions on ProImageEditorState {
     );
 
     if (!skipUpdateHistory) {
-      addHistory(meta: meta);
+      addHistory(
+        layers: _layersFollowing(clips, removedClipIds: removedClipIds),
+        meta: meta,
+      );
     } else {
       stateManager.activeMeta[VideoEditorConstants.clipsStateHistoryKey] =
           serialized;
@@ -758,6 +781,31 @@ extension VideoEditorExtensions on ProImageEditorState {
           meta[VideoEditorConstants.timelineMarkersStateHistoryKey];
     }
     setState(() {});
+  }
+
+  /// [layers], or the active ones when `null`, with the picture-in-picture
+  /// layers moved along with their clips in [clips]; see
+  /// [secondaryCameraLayersFollowingClips].
+  ///
+  /// Returns [layers] unchanged when no layer moved, so an entry written
+  /// without layers keeps the active ones. `addHistory` stores the layers it
+  /// is handed as they are, so the active ones are copied: the entry before
+  /// must not share them.
+  List<Layer>? _layersFollowing(
+    List<DivineVideoClip> clips, {
+    List<Layer>? layers,
+    Set<String> removedClipIds = const {},
+  }) {
+    final source = layers ?? activeLayers;
+    final followed = secondaryCameraLayersFollowingClips(
+      source,
+      clips: clips,
+      removedClipIds: removedClipIds,
+    );
+    if (identical(followed, source)) return layers;
+    return layers == null
+        ? LayerCopyManager().copyLayerList(followed)
+        : followed;
   }
 
   Map<String, dynamic> _clipHistoryMeta(

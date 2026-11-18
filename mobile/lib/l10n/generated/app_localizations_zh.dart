@@ -8511,6 +8511,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => '切换摄像头';
 
   @override
+  String get videoRecorderToggleDualCameraLabel => '用前后两个摄像头录制';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => '交换摄像头';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '变焦到 $zoom×';
   }

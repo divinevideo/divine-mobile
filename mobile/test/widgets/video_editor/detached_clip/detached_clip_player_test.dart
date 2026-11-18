@@ -1,6 +1,8 @@
 // ABOUTME: Tests how a detached clip's companion player follows the editor
 // ABOUTME: playhead, driven by notifiers against a mocked native controller.
 
+import 'dart:async';
+
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +89,162 @@ void main() {
 
         verify(() => controller.seekTo(Duration.zero)).called(1);
         verifyNever(() => controller.play());
+      });
+    });
+
+    group('while the editor is paused', () {
+      late _MockDivineVideoPlayerController controller;
+      late ValueNotifier<Duration> playhead;
+      late ValueNotifier<bool> advancing;
+      late DetachedClipPlayer player;
+      late Duration companionPosition;
+
+      setUp(() {
+        controller = _MockDivineVideoPlayerController();
+        when(
+          () => controller.setLooping(looping: any(named: 'looping')),
+        ).thenAnswer((_) async {});
+        when(() => controller.seekTo(any())).thenAnswer((_) async {});
+        when(() => controller.play()).thenAnswer((_) async {});
+        when(() => controller.pause()).thenAnswer((_) async {});
+        companionPosition = const Duration(milliseconds: 1000);
+        when(() => controller.state).thenAnswer(
+          (_) => DivineVideoPlayerState(
+            status: PlaybackStatus.paused,
+            position: companionPosition,
+          ),
+        );
+        playhead = ValueNotifier(const Duration(milliseconds: 1000));
+        advancing = ValueNotifier(true);
+        player = DetachedClipPlayer.withController(controller, _clip());
+      });
+
+      tearDown(() {
+        player.detach();
+        playhead.dispose();
+        advancing.dispose();
+      });
+
+      void follow() => player.follow(
+        playhead: playhead,
+        advancing: advancing,
+        windowEnd: const Duration(seconds: 2),
+      );
+
+      test('puts the clip on the frame the editor paused on', () {
+        follow();
+        playhead.value = const Duration(milliseconds: 1100);
+        companionPosition = const Duration(milliseconds: 1140);
+
+        advancing.value = false;
+        playhead.value = const Duration(milliseconds: 1100);
+        playhead.value = const Duration(milliseconds: 1067);
+
+        verify(
+          () => controller.seekTo(const Duration(milliseconds: 1067)),
+        ).called(1);
+      });
+
+      test('seeks a paused clip whose reported position is only close, '
+          'since that does not say which frame shows', () {
+        follow();
+        advancing.value = false;
+        companionPosition = const Duration(milliseconds: 1503);
+
+        playhead.value = const Duration(milliseconds: 1500);
+
+        verify(
+          () => controller.seekTo(const Duration(milliseconds: 1500)),
+        ).called(1);
+      });
+
+      test('parks a clip waiting for its window exactly on its first '
+          'frame', () {
+        companionPosition = const Duration(milliseconds: 67);
+        playhead.value = const Duration(milliseconds: 2900);
+
+        player.follow(
+          playhead: playhead,
+          advancing: advancing,
+          windowStart: const Duration(seconds: 3),
+          windowEnd: const Duration(seconds: 6),
+        );
+
+        verify(() => controller.seekTo(Duration.zero)).called(1);
+        verifyNever(() => controller.play());
+      });
+
+      test(
+        'follows a scrub one seek at a time, on to where it is now',
+        () async {
+          final first = Completer<void>();
+          when(
+            () => controller.seekTo(const Duration(milliseconds: 500)),
+          ).thenAnswer((_) => first.future);
+          follow();
+          advancing.value = false;
+          companionPosition = Duration.zero;
+
+          playhead.value = const Duration(milliseconds: 500);
+          playhead.value = const Duration(milliseconds: 510);
+          playhead.value = const Duration(milliseconds: 520);
+          verify(
+            () => controller.seekTo(const Duration(milliseconds: 500)),
+          ).called(1);
+          verifyNever(
+            () => controller.seekTo(const Duration(milliseconds: 520)),
+          );
+
+          first.complete();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => controller.seekTo(const Duration(milliseconds: 510)),
+          );
+          verify(
+            () => controller.seekTo(const Duration(milliseconds: 520)),
+          ).called(1);
+        },
+      );
+
+      test(
+        'does not seek again once a scrub stops on the landed frame',
+        () async {
+          follow();
+          advancing.value = false;
+          companionPosition = Duration.zero;
+          playhead.value = const Duration(milliseconds: 500);
+          verify(
+            () => controller.seekTo(const Duration(milliseconds: 500)),
+          ).called(1);
+
+          await pumpEventQueue();
+          // The report still trails the seek; the landed frame is what counts.
+          playhead.value = const Duration(milliseconds: 503);
+
+          verifyNever(() => controller.seekTo(any()));
+        },
+      );
+
+      test('drops the rest of a scrub when playback resumes', () async {
+        final first = Completer<void>();
+        when(
+          () => controller.seekTo(const Duration(milliseconds: 500)),
+        ).thenAnswer((_) => first.future);
+        follow();
+        advancing.value = false;
+        companionPosition = Duration.zero;
+        playhead.value = const Duration(milliseconds: 500);
+        playhead.value = const Duration(milliseconds: 520);
+        clearInteractions(controller);
+
+        companionPosition = const Duration(milliseconds: 520);
+        advancing.value = true;
+        first.complete();
+        await pumpEventQueue();
+
+        verifyNever(() => controller.seekTo(any()));
+        verify(() => controller.play()).called(1);
       });
     });
 

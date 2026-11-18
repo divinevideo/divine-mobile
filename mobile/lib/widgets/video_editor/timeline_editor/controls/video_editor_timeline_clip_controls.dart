@@ -848,7 +848,12 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     bloc.add(const ClipEditorEditingStopped());
 
     overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
-    editor.setClipState(newClips, timelineMarkers: rebasedMarkers);
+    editor.setClipState(
+      newClips,
+      timelineMarkers: rebasedMarkers,
+      // A dual-camera take's second camera goes with it.
+      removedClipIds: {clipId},
+    );
   }
 
   void _duplicateClip(BuildContext context) {

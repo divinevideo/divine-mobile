@@ -52,6 +52,7 @@ class VideoEditorScope extends InheritedWidget {
     this.clipFrameTracker,
     this.previewReleasedNotifier,
     this.layerCaptureNotifier,
+    this.secondaryCameraPlacementNotifier,
     this.readyTrace,
     this.onAddAudioVisualizer,
     this.onOpenLayout,
@@ -204,6 +205,14 @@ class VideoEditorScope extends InheritedWidget {
   /// on the canvas, but its date goes into the frames, as a time left there
   /// would be wrong a second after posting. Optional, like [canvasBodyKey].
   final ValueNotifier<bool>? layerCaptureNotifier;
+
+  /// The canvas's latest placement of dual-camera takes as picture-in-picture
+  /// layers, while it may still be running.
+  ///
+  /// It waits for each take's poster and proof, a few seconds after a take.
+  /// Done waits for it, as the export captures only the layers placed by
+  /// then. Optional, like [canvasBodyKey].
+  final ValueNotifier<Future<void>?>? secondaryCameraPlacementNotifier;
 
   /// Times the editor's open until it is usable; the canvas reports how its
   /// first clip load went. Optional, like [canvasBodyKey].

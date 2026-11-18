@@ -12,6 +12,7 @@ import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
@@ -149,6 +150,72 @@ void main() {
       ]).copyWith(video: editor.EditorVideo.file(File('/rendered.mp4')));
 
       expect(copy.stopMotionFrames, hasLength(1));
+    });
+  });
+
+  group('DivineVideoClip.secondaryCamera', () {
+    SecondaryCameraTake take() => SecondaryCameraTake(
+      clip: clip('/videos/clip_second.mp4').copyWith(id: 'c1_second'),
+      pipCenter: const Offset(0.3, 0.6),
+    );
+
+    test('round-trips through JSON and is absent without one', () {
+      final withTake = clip('/videos/clip.mp4').copyWith(
+        secondaryCamera: take(),
+      );
+
+      final restored = DivineVideoClip.fromJson(withTake.toJson(), '/videos');
+
+      expect(restored.secondaryCamera?.clip.id, equals('c1_second'));
+      expect(
+        restored.secondaryCamera?.clip.video?.file?.path,
+        equals('/videos/clip_second.mp4'),
+      );
+      expect(restored.secondaryCamera?.pipCenter, const Offset(0.3, 0.6));
+      expect(
+        clip('/videos/clip.mp4').toJson().containsKey('secondaryCamera'),
+        isFalse,
+      );
+    });
+
+    test('galleries show the take with both cameras once it has that', () {
+      final withThumbnail = clip(
+        '/videos/clip.mp4',
+      ).copyWith(thumbnailPath: '/videos/clip.jpg');
+
+      expect(withThumbnail.galleryThumbnailPath, '/videos/clip.jpg');
+      expect(
+        withThumbnail.copyWith(secondaryCamera: take()).galleryThumbnailPath,
+        '/videos/clip.jpg',
+        reason: 'no composite yet',
+      );
+      expect(
+        withThumbnail
+            .copyWith(
+              secondaryCamera: take().copyWith(
+                compositeThumbnailPath: '/videos/clip_dual.jpg',
+              ),
+            )
+            .galleryThumbnailPath,
+        '/videos/clip_dual.jpg',
+      );
+    });
+
+    test('owns the second camera file while it waits for the editor', () {
+      final withTake = clip('/videos/clip.mp4').copyWith(
+        secondaryCamera: take(),
+      );
+
+      expect(withTake.ownedFilePaths, contains('/videos/clip_second.mp4'));
+    });
+
+    test('is dropped by a split or duplicate', () {
+      final withTake = clip('/videos/clip.mp4').copyWith(
+        secondaryCamera: take(),
+      );
+
+      expect(withTake.copyWith(volume: 0.5).secondaryCamera, isNotNull);
+      expect(withTake.copyWith(id: 'c2').secondaryCamera, isNull);
     });
   });
 

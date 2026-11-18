@@ -78,6 +78,56 @@ const String detachedClipLayerPlaceholderIdKey = 'placeholderClipId';
 /// [DetachedClipLayerData.withClip].
 const String detachedClipLayerBakedChromaKeyKey = 'bakedChromaKey';
 
+/// Key under which the timeline clip the layer follows is written, as
+/// [DetachedClipAnchor.toJson]. Absent for a layer that keeps its own place.
+const String detachedClipLayerAnchorKey = 'followsClip';
+
+/// The timeline clip a layer moves with, and the time window following it
+/// last gave the layer.
+///
+/// A dual-camera take's picture-in-picture belongs to the clip it was filmed
+/// with: when that clip moves along the timeline, is trimmed or plays at
+/// another speed, the layer follows, so the two cameras stay together. A
+/// layer the creator moved or trimmed on its own no longer sits in [start] to
+/// [end], and is left where it was put.
+class DetachedClipAnchor {
+  const DetachedClipAnchor({
+    required this.clipId,
+    required this.start,
+    required this.end,
+  });
+
+  /// Id of the timeline clip the layer follows.
+  final String clipId;
+
+  /// Where following last started the layer on the timeline.
+  final Duration start;
+
+  /// Where following last ended the layer on the timeline.
+  final Duration end;
+
+  Map<String, dynamic> toJson() => {
+    'clipId': clipId,
+    'startUs': start.inMicroseconds,
+    'endUs': end.inMicroseconds,
+  };
+
+  /// Reads an anchor written by [toJson], or returns `null` for anything
+  /// else: a layer whose anchor cannot be read just keeps its place.
+  static DetachedClipAnchor? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final clipId = json['clipId'];
+    final start = json['startUs'];
+    final end = json['endUs'];
+    if (clipId is! String || start is! int || end is! int) return null;
+    return DetachedClipAnchor(
+      clipId: clipId,
+      start: Duration(microseconds: start),
+      end: Duration(microseconds: end),
+    );
+  }
+}
+
 /// The green screen a timeline clip had baked into its file when it was
 /// detached, kept so putting the clip back can restore it.
 ///
@@ -363,6 +413,63 @@ class DetachedClipLayerData {
     final copy = {...meta!}..remove(detachedClipLayerOpacityKey);
     if (value < 1) copy[detachedClipLayerOpacityKey] = value;
     return copy;
+  }
+
+  /// The timeline clip the layer [meta] describes follows, or `null` for a
+  /// layer that keeps its own place.
+  static DetachedClipAnchor? anchorOf(Map<String, dynamic>? meta) {
+    if (!isDetachedClipMeta(meta)) return null;
+    return DetachedClipAnchor.fromJson(meta![detachedClipLayerAnchorKey]);
+  }
+
+  /// [meta] following [anchor], or keeping its own place when that is
+  /// `null`.
+  static Map<String, dynamic>? withAnchor(
+    Map<String, dynamic>? meta,
+    DetachedClipAnchor? anchor,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final copy = {...meta!}..remove(detachedClipLayerAnchorKey);
+    if (anchor != null) copy[detachedClipLayerAnchorKey] = anchor.toJson();
+    return copy;
+  }
+
+  /// Keys of [DivineVideoClip.toJson] that say which stretch of its file a
+  /// clip plays and how fast.
+  static const _clipTimingKeys = [
+    'trimStartMs',
+    'trimStartUs',
+    'trimEndMs',
+    'trimEndUs',
+    'playbackSpeed',
+    'speedRamp',
+  ];
+
+  /// [meta] with its clip playing the stretch [timing] plays, at its speed.
+  ///
+  /// Only the trims and the speed are taken from [timing]; the rest of the
+  /// serialized clip, such as the file a crop rendered, stays as it was.
+  static Map<String, dynamic>? withClipTiming(
+    Map<String, dynamic>? meta,
+    DivineVideoClip timing,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final clip = meta![detachedClipLayerClipKey];
+    if (clip is! Map) return null;
+    final source = timing.toJson();
+    final patched = Map<String, dynamic>.from(clip);
+    for (final key in _clipTimingKeys) {
+      if (source[key] case final value?) {
+        patched[key] = value;
+      } else {
+        patched.remove(key);
+      }
+    }
+    return {
+      ...meta,
+      detachedClipLayerClipKey: patched,
+      detachedClipLayerDurationKey: timing.playbackDuration.inMicroseconds,
+    };
   }
 
   /// Key under which [DivineVideoClip.toJson] writes the clip's volume.
@@ -726,26 +833,4 @@ class DetachedClipLayerData {
 
   static Map<String, dynamic>? _asMap(Object? value) =>
       value is Map ? Map<String, dynamic>.from(value) : null;
-
-  /// Whether serialized editor state contains at least one detached clip.
-  static bool historyContainsDetachedClip(Map<String, dynamic> history) {
-    var found = false;
-
-    void visit(Object? value) {
-      if (found) return;
-      if (value is Map) {
-        final map = Map<String, dynamic>.from(value);
-        if (isDetachedClipMeta(map)) {
-          found = true;
-          return;
-        }
-        map.values.forEach(visit);
-      } else if (value is Iterable) {
-        value.forEach(visit);
-      }
-    }
-
-    visit(history);
-    return found;
-  }
 }

@@ -29,7 +29,7 @@ DivineVideoClip _clip(String id, {int seconds = 2}) => DivineVideoClip(
   originalAspectRatio: 9 / 16,
 );
 
-/// A take recorded in chroma key mode whose key is not baked in yet.
+/// A take recorded with the color mask whose key is not baked in yet.
 DivineVideoClip _recordedWithKey(String id) =>
     _clip(id).copyWith(captureChromaKey: const ClipChromaKey(key: ChromaKey()));
 

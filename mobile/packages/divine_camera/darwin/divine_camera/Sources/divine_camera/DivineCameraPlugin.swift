@@ -142,7 +142,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         "initializeCamera", "disposeCamera", "switchCamera",
         "startRecording", "stopRecording", "pausePreview", "resumePreview",
         "setFlashMode", "setRemoteRecordControlEnabled",
-        "setVideoStabilizationMode",
+        "setVideoStabilizationMode", "setDualCameraEnabled",
     ]
 
     private static func logLifecycleCall(_ call: FlutterMethodCall) {
@@ -250,6 +250,11 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             let lens = args["lens"] as? String ?? "back"
             switchCamera(lens: lens, result: result)
             
+        case "setDualCameraEnabled":
+            let args = call.arguments as? [String: Any] ?? [:]
+            let enabled = args["enabled"] as? Bool ?? false
+            setDualCameraEnabled(enabled: enabled, result: result)
+
         case "startRecording":
             let args = call.arguments as? [String: Any] ?? [:]
             let maxDurationMs = args["maxDurationMs"] as? Int
@@ -454,6 +459,29 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         }
         let success = controller.setVideoStabilizationMode(mode)
         result(success)
+    }
+
+    private func setDualCameraEnabled(enabled: Bool, result: @escaping FlutterResult) {
+        guard let controller = cameraController else {
+            result(Self.cameraError("NOT_INITIALIZED", "Camera not initialized"))
+            return
+        }
+
+        #if os(iOS)
+        // Rebuilding the session re-evaluates audio routing like a lens
+        // switch; see switchCamera.
+        volumeKeyHandler?.suppressTemporarily(forSeconds: 3.0)
+        #endif
+
+        controller.setDualCameraEnabled(enabled) { state, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    result(Self.cameraError("DUAL_CAMERA_ERROR", error))
+                } else {
+                    result(state)
+                }
+            }
+        }
     }
 
     private func switchCamera(lens: String, result: @escaping FlutterResult) {

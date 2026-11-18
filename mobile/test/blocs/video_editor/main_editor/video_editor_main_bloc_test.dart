@@ -641,6 +641,38 @@ void main() {
         expect(bloc.state.handOverCounter, 1);
         expect(bloc.state.isFinishing, isFalse);
       });
+
+      test('waits for the layers still being placed', () async {
+        // A dual-camera take's window lands a few seconds after the take; an
+        // export captured before then would post without it.
+        final placement = Completer<void>();
+        final bloc = VideoEditorMainBloc(loadStickerFonts: (_) async {});
+        addTearDown(bloc.close);
+
+        bloc.add(VideoEditorFinishRequested(pendingLayers: placement.future));
+        await pumpEventQueue();
+        expect(bloc.state.isFinishing, isTrue);
+        expect(bloc.state.handOverCounter, 0);
+
+        placement.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.handOverCounter, 1);
+      });
+
+      test('hands over when placing the layers failed', () async {
+        final placement = Completer<void>();
+        final bloc = VideoEditorMainBloc(loadStickerFonts: (_) async {});
+        addTearDown(bloc.close);
+
+        bloc.add(VideoEditorFinishRequested(pendingLayers: placement.future));
+        await pumpEventQueue();
+        placement.completeError(StateError('placement failed'));
+        await pumpEventQueue();
+
+        expect(bloc.state.handOverCounter, 1);
+        expect(bloc.state.isFinishing, isFalse);
+      });
     });
 
     group(VideoEditorFinishCancelled, () {
