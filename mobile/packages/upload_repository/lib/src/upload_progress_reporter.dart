@@ -204,8 +204,8 @@ class UploadProgressReporter {
         return 'NETWORK_ERROR';
       }
 
-      // A resumable transfer that gave up on a 5xx arrives here as a failed
-      // result that kept the service's typed reason but not the status.
+      // A failed result can keep the service's typed reason without a status:
+      // a resumable transfer that gave up on a 5xx, or a signed-out upload.
       final category =
           _categoryForStatusCode(error.statusCode) ??
           _categoryForServerVerdict(error.failureReason);
