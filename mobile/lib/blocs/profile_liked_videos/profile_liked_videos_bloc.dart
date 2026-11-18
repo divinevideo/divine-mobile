@@ -221,7 +221,11 @@ class ProfileLikedVideosBloc
     if (_isOtherUserProfile) {
       likedEventIds = await _likesRepository.fetchUserLikes(_targetUserPubkey!);
     } else {
-      final localIds = await _likesRepository.getOrderedLikedEventIds();
+      // After a failed load the local list may hold only the one like the
+      // live subscription brought back, so a retry asks the relays (#11182).
+      final localIds = state.status == ProfileLikedVideosStatus.failure
+          ? const <String>[]
+          : await _likesRepository.getOrderedLikedEventIds();
       if (localIds.isNotEmpty) {
         _scheduleBackgroundRelaySync();
         likedEventIds = localIds;
@@ -508,7 +512,9 @@ class ProfileLikedVideosBloc
   /// Whenever the liked set changes (like or unlike), dispatches a
   /// [ProfileLikedVideosReconcileRequested] so the async handler can drop
   /// unliked videos and fetch a just-liked clip — `emit.forEach`'s callback is
-  /// synchronous and cannot await the fetch itself.
+  /// synchronous and cannot await the fetch itself. While the tab shows a
+  /// failed load it dispatches a full [ProfileLikedVideosSyncRequested]
+  /// instead, since the change may be only the newest like (#11182).
   ///
   /// Note: This only works for the current user's own profile, as the
   /// LikesRepository only tracks the authenticated user's likes.
@@ -535,6 +541,16 @@ class ProfileLikedVideosBloc
         // emitter, so a delivery in that window would dispatch into a closed
         // bloc. There is nothing left to reconcile for at that point.
         if (isClosed) return state;
+
+        // The live subscription brings back only the newest like, so after a
+        // failed load reconciling to it would show one of many (#11182).
+        if (state.status == ProfileLikedVideosStatus.failure) {
+          // A running sync emits IDs too; do not let it retry itself.
+          if (!state.isRefreshing) {
+            add(const ProfileLikedVideosSyncRequested());
+          }
+          return state;
+        }
 
         Log.info(
           'ProfileLikedVideosBloc: Liked IDs changed, reconciling list',

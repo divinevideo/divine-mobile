@@ -820,11 +820,15 @@ void main() {
         return (h, retracted, live);
       }
 
-      test('saves no like when the deletions read is refused', () async {
+      test('saves no like, and reports the sync failed, when the deletions '
+          'read is refused (#11182)', () async {
         final (h, _, _) = await seeded();
         h.relay.replies = {_Read.deletions: _Reply.closed};
 
-        await h.repo.syncUserReactions();
+        await expectLater(
+          h.repo.syncUserReactions(),
+          throwsA(isA<SyncFailedException>()),
+        );
 
         expect(await h.repo.isLiked(_target), isFalse);
         expect(await h.repo.isLiked(_otherTarget), isFalse);
@@ -1274,6 +1278,87 @@ void main() {
           expect(filter.authors, equals([h.user]));
           expect(filter.e, equals([vote.id]));
         }
+      });
+    });
+  });
+
+  group('LikesRepository when no relay answers a read (#11182)', () {
+    group('syncUserReactions', () {
+      test('returns an empty result when the relay answered with '
+          'nothing', () async {
+        final h = await _harness();
+
+        final result = await h.repo.syncUserReactions();
+
+        expect(result.orderedEventIds, isEmpty);
+      });
+
+      test('throws $SyncFailedException when the reactions read stays '
+          'silent and nothing is kept locally', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.reactions: _Reply.silent};
+
+        await expectLater(
+          h.repo.syncUserReactions(),
+          throwsA(isA<SyncFailedException>()),
+        );
+      });
+
+      test('throws $SyncFailedException when the reactions read is refused '
+          'and nothing is kept locally', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.reactions: _Reply.closed};
+
+        await expectLater(
+          h.repo.syncUserReactions(),
+          throwsA(isA<SyncFailedException>()),
+        );
+      });
+    });
+
+    group('fetchUserLikes', () {
+      test('returns the like a relay answered with', () async {
+        final h = await _harness();
+        h.relay.store.add(await h.reaction(_target, createdAt: _now - 60));
+
+        expect(await h.repo.fetchUserLikes(h.user), equals([_target]));
+      });
+
+      test('returns an empty list when the relay answered with '
+          'nothing', () async {
+        final h = await _harness();
+
+        expect(await h.repo.fetchUserLikes(h.user), isEmpty);
+      });
+
+      test('throws $FetchLikesFailedException when the relay stays '
+          'silent', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.reactions: _Reply.silent};
+
+        await expectLater(
+          h.repo.fetchUserLikes(h.user),
+          throwsA(isA<FetchLikesFailedException>()),
+        );
+      });
+
+      test('throws $FetchLikesFailedException when the relay refuses the '
+          'read', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.reactions: _Reply.closed};
+
+        await expectLater(
+          h.repo.fetchUserLikes(h.user),
+          throwsA(isA<FetchLikesFailedException>()),
+        );
       });
     });
   });

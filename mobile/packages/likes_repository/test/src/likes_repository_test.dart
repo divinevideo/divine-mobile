@@ -18,6 +18,13 @@ class MockEvent extends Mock implements Event {}
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
+/// A read one relay finished with [events]; an empty list is a real "none".
+QueryResult _answered(List<Event> events) => QueryResult(
+  events: events,
+  endedBy: QueryEnd.complete,
+  answeredNetworkRelayCount: 1,
+);
+
 void main() {
   group('LikesRepository', () {
     late MockNostrClient mockNostrClient;
@@ -121,6 +128,7 @@ void main() {
         (_) async => QueryResult(
           events: responses[callCount++ % responses.length],
           endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
         ),
       );
     }
@@ -4538,8 +4546,8 @@ void main() {
         ]);
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [mockReaction]);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer((_) async => _answered([mockReaction]));
 
         repository = createRepository();
         expect(await repository.fetchUserLikes(otherUserPubkey), [targetId]);
@@ -4562,8 +4570,8 @@ void main() {
           ]);
 
           when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => [mockReaction]);
+            () => mockNostrClient.readEvents(any()),
+          ).thenAnswer((_) async => _answered([mockReaction]));
 
           repository = createRepository();
           expect(await repository.fetchUserLikes(otherUserPubkey), [reactedTo]);
@@ -4589,8 +4597,8 @@ void main() {
         ]);
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [mockOlder, mockNewer]);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer((_) async => _answered([mockOlder, mockNewer]));
 
         repository = createRepository();
         expect(await repository.fetchUserLikes(otherUserPubkey), [
@@ -4617,8 +4625,8 @@ void main() {
         ]);
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [mockReaction1, mockReaction2]);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer((_) async => _answered([mockReaction1, mockReaction2]));
 
         repository = createRepository();
         final result = await repository.fetchUserLikes(otherUserPubkey);
@@ -4636,8 +4644,8 @@ void main() {
         ]);
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [mockReaction]);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer((_) async => _answered([mockReaction]));
 
         repository = createRepository();
         expect(await repository.fetchUserLikes(otherUserPubkey), isEmpty);
@@ -4645,7 +4653,7 @@ void main() {
 
       test('throws FetchLikesFailedException on error', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(any()),
         ).thenThrow(Exception('Network error'));
 
         repository = createRepository();

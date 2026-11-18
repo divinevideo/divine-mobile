@@ -14,6 +14,13 @@ class MockEvent extends Mock implements Event {}
 
 class FakeEvent extends Fake implements Event {}
 
+/// A read one relay finished with [events]; an empty list is a real "none".
+QueryResult _answered(List<Event> events) => QueryResult(
+  events: events,
+  endedBy: QueryEnd.complete,
+  answeredNetworkRelayCount: 1,
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeEvent());
@@ -550,8 +557,8 @@ void main() {
         when(
           () => mockLocalStorage.getAllRepostRecords(),
         ).thenThrow(storageFailure);
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
+        when(() => mockNostrClient.readEvents(any())).thenAnswer(
+          (_) async => _answered([
             createMockEvent(
               id: testRepostEventId,
               kind: EventKind.genericRepost,
@@ -561,7 +568,7 @@ void main() {
                 ['p', testAuthorPubkey],
               ],
             ),
-          ],
+          ]),
         );
 
         final repository = RepostsRepository(
@@ -578,8 +585,8 @@ void main() {
         when(
           () => mockLocalStorage.saveRepostRecordsBatch(any()),
         ).thenThrow(storageFailure);
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
+        when(() => mockNostrClient.readEvents(any())).thenAnswer(
+          (_) async => _answered([
             createMockEvent(
               id: testRepostEventId,
               kind: EventKind.genericRepost,
@@ -589,7 +596,7 @@ void main() {
                 ['p', testAuthorPubkey],
               ],
             ),
-          ],
+          ]),
         );
 
         final repository = RepostsRepository(
@@ -1627,8 +1634,10 @@ void main() {
             () => mockNostrClient.resolvePublicKey(),
           ).thenAnswer((_) async => testPubkey);
           when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => []);
+            () => mockNostrClient.readEvents(any()),
+          ).thenAnswer(
+            (_) async => _answered([]),
+          );
 
           final repository = RepostsRepository(
             nostrClient: mockNostrClient,
@@ -1637,7 +1646,7 @@ void main() {
           await repository.syncUserReposts();
 
           final captured = verify(
-            () => mockNostrClient.queryEvents(captureAny()),
+            () => mockNostrClient.readEvents(captureAny()),
           ).captured.cast<List<Filter>>();
           expect(captured, isNotEmpty);
           for (final filters in captured) {
@@ -1668,7 +1677,7 @@ void main() {
           );
           final result = await repository.syncUserReposts();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNever(() => mockNostrClient.readEvents(any()));
           expect(result.orderedAddressableIds, contains(testAddressableId));
         },
       );
@@ -1695,7 +1704,7 @@ void main() {
           );
           final result = await repository.syncUserReposts();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNever(() => mockNostrClient.readEvents(any()));
           expect(result.orderedAddressableIds, contains(testAddressableId));
         },
       );
@@ -1704,8 +1713,10 @@ void main() {
     group('syncUserReposts', () {
       test('loads from local storage first', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer(
+          (_) async => _answered([]),
+        );
 
         final repository = RepostsRepository(
           nostrClient: mockNostrClient,
@@ -1733,8 +1744,10 @@ void main() {
         ];
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => events);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer(
+          (_) async => _answered(events),
+        );
 
         final repository = RepostsRepository(
           nostrClient: mockNostrClient,
@@ -1759,7 +1772,7 @@ void main() {
           () => mockLocalStorage.getAllRepostRecords(),
         ).thenAnswer((_) async => [record]);
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(any()),
         ).thenThrow(Exception('Network error'));
 
         final repository = RepostsRepository(
@@ -1776,7 +1789,7 @@ void main() {
         'throws SyncFailedException when no local data and relay fails',
         () async {
           when(
-            () => mockNostrClient.queryEvents(any()),
+            () => mockNostrClient.readEvents(any()),
           ).thenThrow(Exception('Network error'));
 
           final repository = RepostsRepository(
@@ -1820,8 +1833,10 @@ void main() {
           );
 
           when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => [newEvent]);
+            () => mockNostrClient.readEvents(any()),
+          ).thenAnswer(
+            (_) async => _answered([newEvent]),
+          );
 
           final repository = RepostsRepository(
             nostrClient: mockNostrClient,
@@ -1873,8 +1888,10 @@ void main() {
         ];
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => events);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer(
+          (_) async => _answered(events),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1910,8 +1927,10 @@ void main() {
         ];
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => events);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer(
+          (_) async => _answered(events),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1922,7 +1941,7 @@ void main() {
 
       test('throws FetchRepostsFailedException on error', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(any()),
         ).thenThrow(Exception('Network error'));
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
@@ -1951,8 +1970,10 @@ void main() {
         ];
 
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => events);
+          () => mockNostrClient.readEvents(any()),
+        ).thenAnswer(
+          (_) async => _answered(events),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1968,7 +1989,7 @@ void main() {
 
       test('throws FetchRepostsFailedException on error', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(any()),
         ).thenThrow(Exception('Network error'));
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
