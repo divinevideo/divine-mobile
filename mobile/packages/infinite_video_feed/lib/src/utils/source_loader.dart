@@ -56,8 +56,8 @@ class SourceLoadAborted implements Exception {
 /// hand-picked alternate renditions wants. Either way, authentication errors
 /// stop the ladder immediately and media-processing errors stay eligible for
 /// fallback, because another rendition may already be ready. A B2 canary
-/// original fails closed unless the platform reports HTTP 503 or a typed
-/// connection failure; its private 404 must never bypass policy.
+/// original or Bunny source fails closed unless the platform reports HTTP 503
+/// or a typed connection failure. A private 404 must never bypass policy.
 Future<(String, int)> setSourceWithFallbacks({
   required int index,
   required DivineVideoPlayerController controller,
@@ -73,6 +73,7 @@ Future<(String, int)> setSourceWithFallbacks({
   void Function(String source)? onSourceLoadFailure,
 }) async {
   final isCanary = sources.any(isB2OriginalPlaybackSource);
+  final hasBunnySource = sources.any(isBunnyPlaybackSource);
   Object? lastError;
   StackTrace? lastStackTrace;
 
@@ -85,15 +86,19 @@ Future<(String, int)> setSourceWithFallbacks({
   for (var attemptIndex = 0; attemptIndex < sources.length; attemptIndex++) {
     final source = sources[attemptIndex];
     abortIfStale(source);
+    final isBunny = isBunnyPlaybackSource(source);
     if (isB2OriginalPlaybackSource(source)) {
       log('B2 canary attempt index $index: source=$source');
+    } else if (isBunny) {
+      log('Bunny canary attempt index $index');
     }
     try {
+      final httpHeaders = httpHeadersForSource?.call(source) ?? const {};
       await controller.setSource(
         VideoClip.network(
           source,
           end: maxPlaybackDuration,
-          httpHeaders: httpHeadersForSource?.call(source) ?? const {},
+          httpHeaders: isBunny ? const {} : httpHeaders,
           trimToCommonTrackEnd: trimToCommonTrackEnd,
         ),
       );
@@ -121,24 +126,35 @@ Future<(String, int)> setSourceWithFallbacks({
               nativeErrorCode != NativePlayerErrorCode.mediaProcessing &&
               !nativeErrorCode.shouldFailover);
       final policyDenied =
-          isCanary &&
-          (blocksB2CanaryFallback(
+          ((isCanary || hasBunnySource) &&
+              blocksB2CanaryFallback(
                 errorCode: nativeErrorCode,
                 errorMessage: error.toString(),
-              ) ||
-              (isB2OriginalPlaybackSource(source) &&
-                  !canFailOverB2Original(nativeErrorCode)));
-      final isB2SourceFailure =
-          isB2OriginalPlaybackSource(source) &&
-          canFailOverB2Original(nativeErrorCode);
-      if (policyDenied || (isTypedNonFailoverError && !isB2SourceFailure)) {
-        log(
-          'Source failed without failover index $index: '
-          'failedSource=$source '
-          'attempt=$attemptIndex '
-          'code=$nativeErrorCode '
-          'error=$lastError',
-        );
+              )) ||
+          (isB2OriginalPlaybackSource(source) &&
+              !canFailOverB2Original(nativeErrorCode)) ||
+          (isBunny &&
+              !canFailOverBunny(
+                errorCode: nativeErrorCode,
+                errorMessage: error.toString(),
+              ));
+      final canaryTransientFailure =
+          (isB2OriginalPlaybackSource(source) &&
+              canFailOverB2Original(nativeErrorCode)) ||
+          (isBunny && !policyDenied);
+      if (policyDenied ||
+          (isTypedNonFailoverError && !canaryTransientFailure)) {
+        if (hasBunnySource) {
+          log('Bunny canary stopped index $index code=$nativeErrorCode');
+        } else {
+          log(
+            'Source failed without failover index $index: '
+            'failedSource=$source '
+            'attempt=$attemptIndex '
+            'code=$nativeErrorCode '
+            'error=$lastError',
+          );
+        }
         Error.throwWithStackTrace(error, stackTrace);
       }
       // Only wait-and-retry a processing (HTTP 202) source when it is the last
@@ -188,25 +204,38 @@ Future<(String, int)> setSourceWithFallbacks({
             'retrySource=${sources[nextAttempt]} code=$nativeErrorCode',
           );
         }
-        if (_shouldRecordFailoverSourceFailure(error)) {
+        if (!isBunny && _shouldRecordFailoverSourceFailure(error)) {
           onFailoverSourceFailure?.call(source);
         }
-        log(
-          'Source failed index $index: '
-          'failedSource=$source '
-          'retrySource=${sources[nextAttempt]} '
-          'attempt=$attemptIndex '
-          'error=$lastError',
-        );
+        if (hasBunnySource) {
+          log(
+            'Bunny canary changing source index $index '
+            'attempt=$attemptIndex code=$nativeErrorCode',
+          );
+        } else {
+          log(
+            'Source failed index $index: '
+            'failedSource=$source '
+            'retrySource=${sources[nextAttempt]} '
+            'attempt=$attemptIndex '
+            'error=$lastError',
+          );
+        }
         continue;
       }
 
-      log(
-        'All sources failed index $index: '
-        'failedSource=$source '
-        'attempt=$attemptIndex '
-        'error=$lastError',
-      );
+      if (hasBunnySource) {
+        log(
+          'Bunny canary sources exhausted index $index code=$nativeErrorCode',
+        );
+      } else {
+        log(
+          'All sources failed index $index: '
+          'failedSource=$source '
+          'attempt=$attemptIndex '
+          'error=$lastError',
+        );
+      }
     }
   }
 

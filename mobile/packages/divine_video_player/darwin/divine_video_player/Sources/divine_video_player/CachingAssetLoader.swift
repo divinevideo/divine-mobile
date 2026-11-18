@@ -42,6 +42,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     private var downloadedURL: URL?
 
     private let remoteURL: URL
+    private let keepsDownload: Bool
     private static let telemetryLock = NSLock()
     private static let telemetryLoaders = NSHashTable<CachingAssetLoader>.weakObjects()
 
@@ -99,6 +100,14 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         components.scheme = Self.schemePrefix + scheme
         guard let loaderURL = components.url else { return nil }
         self.remoteURL = remoteURL
+        let requestsNoStore = headers.contains {
+            $0.key.lowercased() == "cache-control" && $0.value.lowercased() == "no-store"
+        }
+        let keepsDownload = components.host?.lowercased() != "media-bunny.divine.video" && !requestsNoStore
+        self.keepsDownload = keepsDownload
+        // Canary playback goes through fresh range requests and preserves the
+        // HTTP status for Dart's fallback policy without creating a loop file.
+        self.proxying = !keepsDownload
         self.headers = headers
         self.onPlaybackNetwork = onPlaybackNetwork
         self.asset = AVURLAsset(url: loaderURL)
@@ -280,8 +289,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         let operationQueue = OperationQueue()
         operationQueue.underlyingQueue = queue
         operationQueue.maxConcurrentOperationCount = 1
+        let configuration = keepsDownload ? URLSessionConfiguration.default : .ephemeral
+        if !keepsDownload { configuration.urlCache = nil }
         let session = URLSession(
-            configuration: .default,
+            configuration: configuration,
             delegate: self,
             delegateQueue: operationQueue
         )
@@ -364,17 +375,20 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
             info.contentLength = contentLength
             info.isByteRangeAccessSupported = true
         }
-        guard let dataRequest = request.dataRequest else {
+        var urlRequest = URLRequest(url: remoteURL)
+        for (field, value) in headers { urlRequest.setValue(value, forHTTPHeaderField: field) }
+        if let dataRequest = request.dataRequest {
+            let start = dataRequest.currentOffset
+            let range = dataRequest.requestsAllDataToEndOfResource
+                ? "bytes=\(start)-"
+                : "bytes=\(start)-\(dataRequest.requestedOffset + Int64(dataRequest.requestedLength) - 1)"
+            urlRequest.setValue(range, forHTTPHeaderField: "Range")
+        } else if !keepsDownload, contentLength == nil {
+            urlRequest.httpMethod = "HEAD"
+        } else {
             request.finishLoading()
             return
         }
-        var urlRequest = URLRequest(url: remoteURL)
-        for (field, value) in headers { urlRequest.setValue(value, forHTTPHeaderField: field) }
-        let start = dataRequest.currentOffset
-        let range = dataRequest.requestsAllDataToEndOfResource
-            ? "bytes=\(start)-"
-            : "bytes=\(start)-\(dataRequest.requestedOffset + Int64(dataRequest.requestedLength) - 1)"
-        urlRequest.setValue(range, forHTTPHeaderField: "Range")
         let task = makeSession().dataTask(with: urlRequest)
         proxied[task.taskIdentifier] = request
         observe(task)

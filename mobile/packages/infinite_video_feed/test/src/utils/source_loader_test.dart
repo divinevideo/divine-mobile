@@ -13,6 +13,74 @@ void main() {
 
     setUp(logs.clear);
 
+    group('Bunny canary', () {
+      const path =
+          '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+      const bunny = 'https://media-bunny.divine.video$path';
+      const canonical = 'https://media.divine.video$path';
+
+      for (final code in [
+        'auth_required',
+        'forbidden',
+        'not_found',
+        'http_client_error',
+        'http_server_error',
+        'unknown',
+        'media_processing',
+      ]) {
+        test('stops before canonical playback on Bunny $code', () async {
+          final clips = <VideoClip>[];
+          final failure = PlatformException(code: code);
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [failure],
+          );
+          addTearDown(controller.dispose);
+          await expectLater(
+            setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [bunny, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            ),
+            throwsA(same(failure)),
+          );
+          expect(clips.map((clip) => clip.uri), [bunny]);
+        });
+      }
+
+      for (final failure in [
+        PlatformException(code: 'network_error'),
+        PlatformException(code: 'timeout'),
+        PlatformException(code: 'service_unavailable'),
+        Exception('HTTP 503'),
+      ]) {
+        test('falls back to the same canonical asset on $failure', () async {
+          final clips = <VideoClip>[];
+          final recordedFailures = <String>[];
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [failure],
+          );
+          addTearDown(controller.dispose);
+          final result = await setSourceWithFallbacks(
+            index: 0,
+            controller: controller,
+            sources: [bunny, canonical],
+            log: logs.add,
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
+            onFailoverSourceFailure: recordedFailures.add,
+          );
+          expect(result, (canonical, 1));
+          expect(clips.map((clip) => clip.uri), [bunny, canonical]);
+          expect(recordedFailures, isEmpty);
+        });
+      }
+    });
+
     group('B2 original canary', () {
       const b2 =
           'https://media-b2.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

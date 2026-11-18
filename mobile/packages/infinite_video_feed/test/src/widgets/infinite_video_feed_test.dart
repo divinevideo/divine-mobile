@@ -219,6 +219,262 @@ void main() {
     ).thenReturn(mockCancellable);
   });
 
+  group('Bunny playback canary', () {
+    const path =
+        '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+    const canonical = 'https://media.divine.video$path';
+    const bunny = 'https://media-bunny.divine.video$path';
+    const hash =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const raw = 'https://media.divine.video/$hash';
+
+    testWidgets(
+      'flag rollback restores playback and skips Bunny disk prefetch',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install();
+        final videos = [
+          _makeVideo('current', videoUrl: raw),
+          _makeVideo('next', videoUrl: raw),
+        ];
+        when(
+          () => cache.getCachedFileSync('current'),
+        ).thenReturn(File('/cache/canonical.mp4'));
+
+        Future<void> mount(Set<String> paths) async {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                urlResolver: (_) => canonical,
+                bunnyPlaybackPaths: paths,
+                keepNextAlive: false,
+                prefetchCount: paths.isEmpty ? 0 : 2,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+        }
+
+        try {
+          await mount(const {path});
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            bunny,
+          ]);
+          verifyNever(() => cache.cacheFileCancellable(bunny, key: 'next'));
+          verifyNever(() => cache.cacheFileCancellable(canonical, key: 'next'));
+          await mount(const {});
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            bunny,
+            '/cache/canonical.mp4',
+          ]);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    for (final (code, fallsBack) in [
+      ('auth_required', false),
+      ('forbidden', false),
+      ('not_found', false),
+      ('media_processing', false),
+      ('service_unavailable', true),
+      ('timeout', true),
+      ('network_error', true),
+    ]) {
+      testWidgets('runtime Bunny $code respects the fallback policy', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const [0]);
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('current', videoUrl: raw)],
+                cache: cache,
+                urlResolver: (_) => canonical,
+                bunnyPlaybackPaths: const {path},
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          await harness.sendEvent(0, {
+            'status': 'error',
+            'errorCode': code,
+            'errorMessage': 'Synthetic playback failure',
+          });
+          await tester.pump();
+          await tester.pump();
+          expect(
+            harness.clipsHandedToPlayer.map((clip) => clip['uri']),
+            fallsBack ? [bunny, canonical] : [bunny],
+          );
+          if (fallsBack) {
+            expect(harness.clipsHandedToPlayer.last['httpHeaders'], {
+              'Cache-Control': 'no-store',
+            });
+          }
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+    }
+
+    testWidgets('a Bunny error while changing sources resumes on canonical', (
+      tester,
+    ) async {
+      const rawPath =
+          '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const hls = '$raw/hls/master.m3u8';
+      const bunnyRaw = 'https://media-bunny.divine.video$rawPath';
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => hls,
+              bunnyPlaybackPaths: const {rawPath},
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        harness.setClipsFailures[0] = [
+          PlatformException(code: 'service_unavailable'),
+        ];
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'parse_error',
+          'errorMessage': 'Synthetic canonical playback failure',
+        });
+        await tester.pump();
+        await tester.pump();
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          hls,
+          bunnyRaw,
+          raw,
+        ]);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets(
+      'a stalled Bunny source shows a retry without switching hosts',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(firstFrameRenderedOnListen: false);
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [_makeVideo('current', videoUrl: raw)],
+                cache: cache,
+                urlResolver: (_) => canonical,
+                bunnyPlaybackPaths: const {path},
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+                slowLoadThreshold: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          await harness.sendEvent(0, {'status': 'buffering'});
+          await tester.pump(const Duration(seconds: 1));
+          expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            bunny,
+          ]);
+          final retry = key.currentState!.retryAt(0);
+          await tester.pump();
+          await tester.pump();
+          await retry;
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            bunny,
+            bunny,
+          ]);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    testWidgets('an authenticated retry opens only the canonical host', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install();
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => canonical,
+              bunnyPlaybackPaths: const {path},
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final retry = key.currentState!.retryAt(
+          0,
+          httpHeaders: const {'Authorization': 'Nostr test'},
+        );
+        await tester.pump();
+        await tester.pump();
+        await retry;
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          bunny,
+          canonical,
+        ]);
+        expect(harness.clipsHandedToPlayer.last['httpHeaders'], {
+          'Authorization': 'Nostr test',
+        });
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+  });
+
   group('B2 canary cache and controller identity', () {
     const hash =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

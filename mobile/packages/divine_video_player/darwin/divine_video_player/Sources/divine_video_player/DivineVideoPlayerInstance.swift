@@ -2538,23 +2538,23 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     private func errorCode(for err: NSError) -> String {
         // HTTP errors carried inside AVFoundation errors.
-        if let httpResponse = err.userInfo["NSURLErrorFailingURLResponseErrorKey"] as? HTTPURLResponse {
-            if httpResponse.statusCode == 202 {
+        if let status = playbackHTTPStatus(in: err) {
+            if status == 202 {
                 return "media_processing"
             }
-            if httpResponse.statusCode == 401 {
+            if status == 401 {
                 return "auth_required"
             }
-            if httpResponse.statusCode == 403 {
+            if status == 403 {
                 return "forbidden"
             }
-            if httpResponse.statusCode == 404 {
+            if status == 404 {
                 return "not_found"
             }
-            if let code = httpServiceUnavailableCode(status: httpResponse.statusCode) {
+            if let code = httpServiceUnavailableCode(status: status) {
                 return code
             }
-            return httpResponse.statusCode >= 500 ? "http_server_error" : "http_client_error"
+            return status >= 500 ? "http_server_error" : "http_client_error"
         }
 
         if err.localizedDescription.contains("HTTP 202") {
