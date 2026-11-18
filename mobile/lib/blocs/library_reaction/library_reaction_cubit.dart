@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
@@ -19,7 +20,7 @@ typedef MergeReactionTakes = Future<DivineVideoClip?> Function({
 typedef ReactionPoster = ({String path, Duration timestamp});
 typedef ExtractReactionPoster = Future<ReactionPoster?> Function(String path);
 
-enum LibraryReactionStatus { idle, merging }
+enum LibraryReactionStatus { idle, merging, failure }
 
 class LibraryReactionState extends Equatable {
   LibraryReactionState({
@@ -88,6 +89,7 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
 
   /// Combines every accepted cut, retaining canvas coordinates and credits
   /// while describing the encoded pixels and a freshly extracted poster.
+  /// Returns null on preparation failure, with diagnostics and failure status.
   Future<DivineVideoClip?> combine(List<DivineVideoClip> takes) async {
     if (takes.isEmpty ||
         isClosed ||
@@ -122,8 +124,18 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
         thumbnailPath: poster.path,
         thumbnailTimestamp: poster.timestamp,
       );
+    } catch (error, stackTrace) {
+      addError(
+        asReportableError(error, context: 'LibraryReactionCubit.combine') ??
+            error,
+        stackTrace,
+      );
+      emitIfOpen(state.copyWith(status: LibraryReactionStatus.failure));
+      return null;
     } finally {
-      emitIfOpen(state.copyWith(status: LibraryReactionStatus.idle));
+      if (state.status == LibraryReactionStatus.merging) {
+        emitIfOpen(state.copyWith(status: LibraryReactionStatus.idle));
+      }
     }
   }
 

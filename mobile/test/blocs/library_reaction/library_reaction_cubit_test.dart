@@ -86,17 +86,17 @@ void main() {
         },
       );
       addTearDown(cubit.close);
-      await expectLater(
-        cubit.combine([
+      expect(
+        await cubit.combine([
           _clip('one').copyWith(
             captureChromaKey: const ClipChromaKey(key: ChromaKey()),
           ),
           _clip('two'),
         ]),
-        throwsA(same(error)),
+        isNull,
       );
       expect(merged, isFalse);
-      expect(cubit.state.status, LibraryReactionStatus.idle);
+      expect(cubit.state.status, LibraryReactionStatus.failure);
       expect(cubit.state.generatedPaths, isEmpty);
     });
 

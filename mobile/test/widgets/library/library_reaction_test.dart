@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -19,7 +20,8 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 class _Auth extends Mock implements AuthService {}
 
@@ -33,6 +35,14 @@ DivineVideoClip _clip(String id) => DivineVideoClip(
 );
 
 class _Manager extends ClipManagerNotifier {
+  Object? bakeError;
+
+  @override
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) async {
+    if (bakeError case final error?) throw error;
+    return clip;
+  }
+
   @override
   ClipManagerState build() => ClipManagerState(clips: [_clip('unfinished')]);
 
@@ -265,6 +275,48 @@ void main() {
         findsOneWidget,
       );
     });
+
+    for (final rerecord in [false, true]) {
+      testWidgets(
+        'shows preparation failure during ${rerecord ? 'layout re-record' : 'initial capture'}',
+        (tester) async {
+          manager.bakeError = Exception('capture bake unavailable');
+          var captures = 0;
+          await start(
+            tester,
+            record: (_, {required cellAspectRatio, required maxClips}) async {
+              captures++;
+              if (rerecord && captures == 1) return [_clip('initial')];
+              return [
+                for (final id in ['one', 'two'])
+                  _clip(id).copyWith(
+                    captureChromaKey: const ClipChromaKey(key: ChromaKey()),
+                  ),
+              ];
+            },
+            merge: ({required clips, required renderId}) async {
+              fail('a failed bake must not merge raw camera cuts');
+            },
+            layout: (context, _, _, recordAgain) async {
+              expect(rerecord, isTrue);
+              expect(
+                await recordAgain(context, cellAspectRatio: 0.5, maxClips: 1),
+                isNull,
+              );
+              return null;
+            },
+          );
+          final context = tester.element(find.text('react'));
+          expect(
+            find.text(context.l10n.videoEditorMergeFailed),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+          expect(manager.clips, isEmpty);
+          expect(events, ['keep draft', 'clear session']);
+        },
+      );
+    }
 
     testWidgets('cancelled recording opens no layout or editor', (
       tester,
