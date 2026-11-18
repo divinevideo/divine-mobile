@@ -2787,6 +2787,132 @@ void main() {
         );
       });
 
+      // #11181: a fresh instance whose read fails holds only what the device
+      // kept, which never includes the private items in plaintext.
+      group('when a fresh instance cannot read the list', () {
+        /// Reads a mixed list on an earlier instance, so the record the next
+        /// instance loads is the one production code wrote.
+        Future<void> keepMixedListOnDevice() async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                ['public-one'],
+                content: await encryptToSelf([
+                  ['e', privateVideo],
+                ]),
+              ),
+            ],
+          );
+          final earlier = createService();
+          expect(await earlier.syncGlobalBookmarks(), isTrue);
+          earlier.dispose();
+        }
+
+        test('still lists the private items the device kept', () async {
+          await keepMixedListOnDevice();
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+          expect(service.isVideoBookmarkedGlobally(privateVideo), isTrue);
+          expect(service.hasUnreadablePrivateItems, isFalse);
+        });
+
+        test('still lists them when no relay can be reached', () async {
+          await keepMixedListOnDevice();
+          stubRelay(events: [], noRelays: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+        });
+
+        test('reports them unreadable when they cannot be decrypted', () async {
+          await keepMixedListOnDevice();
+          final broken = _MockNostrSigner();
+          when(
+            () => broken.nip44Decrypt(any(), any()),
+          ).thenAnswer((_) async => null);
+          when(() => signer.currentIdentity).thenReturn(broken);
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(service.hasUnreadablePrivateItems, isTrue);
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one']),
+          );
+        });
+
+        test('tries the decrypt once per instance', () async {
+          await keepMixedListOnDevice();
+          final broken = _MockNostrSigner();
+          when(
+            () => broken.nip44Decrypt(any(), any()),
+          ).thenAnswer((_) async => null);
+          when(() => signer.currentIdentity).thenReturn(broken);
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+          await service.syncGlobalBookmarks();
+
+          verify(() => broken.nip44Decrypt(any(), any())).called(1);
+        });
+
+        test('leaves them alone when signed out', () async {
+          await keepMixedListOnDevice();
+          when(() => signer.isAuthenticated).thenReturn(false);
+          when(() => signer.currentPublicKeyHex).thenReturn(null);
+          when(() => signer.currentIdentity).thenReturn(null);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(service.hasUnreadablePrivateItems, isFalse);
+        });
+
+        test('lists them when the read finishes', () async {
+          await keepMixedListOnDevice();
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isTrue);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+        });
+
+        test(
+          'an instance that already read them keeps them on a failed read',
+          () async {
+            await keepMixedListOnDevice();
+            final service = createService();
+            expect(await service.syncGlobalBookmarks(), isTrue);
+            stubRelay(events: [], timedOut: true);
+
+            expect(await service.syncGlobalBookmarks(), isFalse);
+
+            expect(
+              service.globalBookmarks.map((item) => item.id),
+              equals(['public-one', privateVideo]),
+            );
+          },
+        );
+      });
+
       group('deprecated NIP-04 payloads', () {
         test('reads private items written under NIP-04', () async {
           stubRelay(
