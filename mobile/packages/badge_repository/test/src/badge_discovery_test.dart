@@ -85,7 +85,7 @@ void main() {
     nostrClient: client,
     sharedPreferences: await SharedPreferences.getInstance(),
     currentPubkey: () => null,
-    signer: () => LocalNostrSigner(key1),
+    signer: () => const UnauthenticatedSigner(),
     signEvent:
         ({required kind, required content, required tags, createdAt}) async =>
             null,
@@ -114,29 +114,6 @@ void main() {
     hidden.clear();
     requests.clear();
     when(
-      () => client.queryEventsDetailed(
-        any(),
-        tempRelays: any(named: 'tempRelays'),
-        relayTypes: any(named: 'relayTypes'),
-        useCache: false,
-        timeout: any(named: 'timeout'),
-        requireAllRelaysSettled: true,
-      ),
-    ).thenAnswer((call) async {
-      final filters = call.positionalArguments.single as List<Filter>;
-      final filter = filters.first;
-      requests.addAll(filters);
-      expect(call.namedArguments[#tempRelays], ['wss://relay.example']);
-      expect(call.namedArguments[#relayTypes], [RelayType.temp]);
-      return (
-        events: filter.kinds!.contains(EventKind.badgeDefinition)
-            ? events
-            : deletions,
-        timedOut: incomplete,
-        noRelays: false,
-      );
-    });
-    when(
       () => client.readEvents(
         any(),
         tempRelays: any(named: 'tempRelays'),
@@ -149,6 +126,18 @@ void main() {
     ).thenAnswer((call) async {
       final filters = call.positionalArguments.single as List<Filter>;
       requests.addAll(filters);
+      expect(call.namedArguments[#tempRelays], ['wss://relay.example']);
+      expect(call.namedArguments[#relayTypes], [RelayType.temp]);
+      final cap = call.namedArguments[#maxCollectedEvents];
+      if (filters.first.kinds!.single == EventKind.badgeDefinition) {
+        expect(cap, 300);
+        return QueryResult(
+          events: events.take(300).toList(),
+          endedBy: incomplete ? QueryEnd.deadline : QueryEnd.complete,
+          possiblyCapped: events.length >= 300,
+        );
+      }
+      expect(cap, 1000);
       final issuer = filters.first.authors!.single;
       return QueryResult(
         events: deletions.where((event) => event.pubkey == issuer).toList(),
@@ -183,6 +172,41 @@ void main() {
       },
     );
 
+    test(
+      'a full recency window has a physical cap and still returns badges',
+      () async {
+        events = [
+          definition(key1, at: 301),
+          for (var at = 300; at > 1; at--)
+            Event(
+              issuer1,
+              EventKind.badgeDefinition,
+              [
+                ['d', 'unverified-$at'],
+              ],
+              '',
+              createdAt: at,
+            ),
+          definition(key2, at: 1),
+        ];
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.id,
+          events.first.id,
+        );
+        verify(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: false,
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: true,
+            maxCollectedEvents: 300,
+          ),
+        ).called(1);
+      },
+    );
+
     test('catalogue outage preserves discovered communities', () async {
       await repository.dispose();
       repository = await makeRepository(pinnedIssuers: [issuer2]);
@@ -212,7 +236,10 @@ void main() {
         stopwatchFactory: _ExpiredStopwatch.new,
       );
       events = [definition(key1), definition(key2)];
-      expect(await repository.loadPublicDefinitions(), isEmpty);
+      await expectLater(
+        repository.loadPublicDefinitions(),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
       expect(requests, hasLength(1));
     });
 
@@ -270,25 +297,26 @@ void main() {
             return verifier;
           },
         );
-        final response =
-            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        final response = Completer<QueryResult>();
         when(
-          () => client.queryEventsDetailed(
+          () => client.readEvents(
             any(),
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             useCache: false,
             timeout: any(named: 'timeout'),
             requireAllRelaysSettled: true,
+            maxCollectedEvents: 300,
           ),
         ).thenAnswer((_) => response.future);
         final loading = repository.loadPublicDefinitions();
         await repository.dispose();
-        response.complete((
-          events: [definition(key1)],
-          timedOut: false,
-          noRelays: false,
-        ));
+        response.complete(
+          QueryResult(
+            events: [definition(key1)],
+            endedBy: QueryEnd.complete,
+          ),
+        );
         expect(await loading, isEmpty);
         expect(spawns, 0);
       },
@@ -309,7 +337,10 @@ void main() {
       events = [definition(key1)..markSignatureVerified()];
       // A foreign-target deletion cannot remove the issuer's badge by itself.
       deletions = [deletion(key1, definition(key2))];
-      expect(await repository.loadPublicDefinitions(), isEmpty);
+      await expectLater(
+        repository.loadPublicDefinitions(),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
     });
 
     test(
@@ -336,7 +367,7 @@ void main() {
         when(() => verifier.verify(any())).thenAnswer((_) => verified.future);
         events = [definition(key1)..markSignatureVerified()];
         deletions = [deletion(key1, definition(key2))];
-        List<Nip58BadgeDefinition>? result;
+        Object? failure;
         unawaited(
           makeRepository(
                 spawner: () async => verifier,
@@ -346,14 +377,15 @@ void main() {
                 repository = created;
                 return repository.loadPublicDefinitions();
               })
-              .then((value) {
-                result = value;
-              }),
+              .then<void>(
+                (_) => fail('Expected an incomplete deletion read'),
+                onError: (Object error) => failure = error,
+              ),
         );
         clock.flushMicrotasks();
-        expect(result, isNull);
+        expect(failure, isNull);
         clock.elapse(const Duration(seconds: 10));
-        expect(result, isEmpty);
+        expect(failure, isA<BadgeReadIncompleteException>());
         verified.complete(true);
         clock.flushMicrotasks();
         var disposed = false;
@@ -489,6 +521,41 @@ void main() {
       final result = await repository.loadPublicDefinitions();
       expect(result.map((d) => d.coordinate), ['30009:$issuer1:shared']);
     });
+    test(
+      'all deletion windows unknown cannot establish an empty gallery',
+      () async {
+        events = [definition(key1), definition(key2)];
+        incompleteIssuers.add(issuer1);
+        cappedIssuers.add(issuer2);
+        await expectLater(
+          repository.loadPublicDefinitions(),
+          throwsA(isA<BadgeReadIncompleteException>()),
+        );
+      },
+    );
+
+    test('an entirely saturated deletion window needs a retry', () async {
+      events = [definition(key1)];
+      deletions = List.filled(1000, deletion(key1, events.single, at: 50));
+      await expectLater(
+        repository.loadPublicDefinitions(),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test(
+      'a deleted badge does not establish that an unknown issuer is empty',
+      () async {
+        events = [definition(key1), definition(key2)];
+        deletions = [deletion(key1, events.first)];
+        incompleteIssuers.add(issuer2);
+        await expectLater(
+          repository.loadPublicDefinitions(),
+          throwsA(isA<BadgeReadIncompleteException>()),
+        );
+      },
+    );
+
     test('a saturated issuer cannot hide another community', () async {
       events = [definition(key1), definition(key2)];
       // Backdated, so none of them deletes the badge on its own.
@@ -516,6 +583,46 @@ void main() {
         incompleteIssuers.add(issuer1);
         final result = await repository.loadPublicDefinitions();
         expect(result.map((d) => d.event.pubkey), [issuer2]);
+      },
+    );
+  });
+
+  group('independent detail reads', () {
+    final coordinate = BadgeCoordinate(pubkey: issuer1, identifier: 'shared');
+
+    test(
+      'only authenticates a definition for the exact requested coordinate',
+      () async {
+        var response = definition(key1);
+        when(
+          () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
+        ).thenAnswer((call) async {
+          final filters = call.positionalArguments.single as List<Filter>;
+          return filters.first.kinds!.single == EventKind.badgeDefinition
+              ? [response]
+              : <Event>[];
+        });
+        final valid = await repository.loadBadgeDetail(coordinate);
+        expect(valid.definition?.event.id, response.id);
+        for (final invalid in [
+          definition(key1)..sig = '0' * 128,
+          definition(key1)
+            ..markSignatureVerified()
+            ..content = 'changed after signing',
+          definition(key2),
+          definition(key1, identifier: 'other'),
+          Event(issuer1, EventKind.badgeDefinition, [
+            ['d'],
+            ['d', 'shared'],
+          ], '')..sign(key1),
+          deletion(key1, response),
+        ]) {
+          response = invalid;
+          expect(
+            (await repository.loadBadgeDetail(coordinate)).definition,
+            isNull,
+          );
+        }
       },
     );
   });

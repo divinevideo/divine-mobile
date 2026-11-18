@@ -18,9 +18,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
+import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
@@ -77,11 +79,13 @@ void main() {
     /// GoRouter extension — a bare `MaterialApp` would throw there instead of
     /// exercising the flow.
     Widget buildSubject({
+      BadgeCoordinate coordinate = _coordinate,
+      BadgeRepository? detailRepository,
       VideosRepository? videosRepository,
       List<Override> overrides = const [],
     }) {
       final router = GoRouter(
-        initialLocation: '/badges/b/badge',
+        initialLocation: BadgeDetailScreen.pathFor(coordinate),
         routes: [
           GoRoute(
             path: '/welcome/login-options',
@@ -117,9 +121,10 @@ void main() {
             builder: (_, _) => const Scaffold(body: Text('badge dashboard')),
             routes: [
               GoRoute(
-                path: 'b/badge',
-                builder: (_, _) =>
-                    const BadgeDetailScreen(coordinate: _coordinate),
+                path: 'b/:naddr',
+                builder: (context, state) => BadgeDetailRouteData(
+                  naddr: state.pathParameters['naddr']!,
+                ).build(context, state),
               ),
             ],
           ),
@@ -129,7 +134,9 @@ void main() {
 
       return testProviderScope(
         additionalOverrides: [
-          badgeRepositoryProvider.overrideWithValue(repository),
+          badgeRepositoryProvider.overrideWithValue(
+            detailRepository ?? repository,
+          ),
           contentBlocklistRepositoryProvider.overrideWithValue(
             contentBlocklistRepository,
           ),
@@ -178,6 +185,69 @@ void main() {
       );
       expect(find.text(l10n.badgeDetailNoRecipients), findsOneWidget);
     });
+
+    testWidgets(
+      'a direct badge link requires a signed definition for Official and Report',
+      (tester) async {
+        const coordinate = BadgeCoordinate(
+          pubkey: kDivineBadgeIssuerPubkey,
+          identifier: 'shared',
+        );
+        final unsigned = Event(coordinate.pubkey, EventKind.badgeDefinition, [
+          ['d', coordinate.identifier],
+          ['name', 'Unverified name'],
+        ], '');
+        final client = MockNostrClient();
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Filter());
+        when(
+          () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
+        ).thenAnswer((call) async {
+          final filter =
+              (call.positionalArguments.single as List<Filter>).single;
+          return filter.kinds!.single == EventKind.badgeDefinition
+              ? [unsigned]
+              : <Event>[];
+        });
+        when(
+          () => client.readAllEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        final publicRepository = BadgeRepository(
+          nostrClient: client,
+          sharedPreferences: createMockSharedPreferences(),
+          currentPubkey: () => null,
+          signer: () => throw StateError('guest has no signer'),
+          signEvent: ({
+            required kind,
+            required content,
+            required tags,
+            createdAt,
+          }) async => null,
+        );
+        addTearDown(publicRepository.dispose);
+        await tester.pumpWidget(
+          buildSubject(
+            coordinate: coordinate,
+            detailRepository: publicRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.badgeDetailMissing), findsOneWidget);
+        expect(find.text('Unverified name'), findsNothing);
+        expect(find.text(l10n.badgeOfficialLabel), findsNothing);
+        expect(
+          find.bySemanticsLabel(l10n.videoActionReportLabel),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets('submits a report for the complete badge definition target', (
       tester,
