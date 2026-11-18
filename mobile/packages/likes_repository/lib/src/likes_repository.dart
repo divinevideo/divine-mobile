@@ -2756,7 +2756,10 @@ class LikesRepository {
   /// Ordinary likes may skip their target-specific relay lookup only after
   /// that proof succeeds.
   ///
-  /// Throws `SyncFailedException` if syncing fails.
+  /// Throws `SyncFailedException` if syncing fails, unless this device already
+  /// holds likes to show. That includes a reactions read no relay answered,
+  /// and one whose likes all wait on a deletions read that did not finish:
+  /// neither shows the account has none (#11182).
   Future<LikesSyncResult> syncUserReactions({
     bool requireCompleteRelaySnapshot = false,
   }) async {
@@ -2808,6 +2811,11 @@ class LikesRepository {
         requireAllRelaysSettled: true,
       );
       final reactionEvents = reactionsRead.events;
+      // Only a relay's EOSE says this account has no reactions (#11182).
+      if (reactionsRead.answeredNetworkRelayCount == 0 &&
+          reactionEvents.isEmpty) {
+        throw const _UnansweredRelayRead();
+      }
       final retractions = await _readRetractions(
         {for (final event in reactionEvents) event.id: event},
         pubkey: pubkey,
@@ -2822,6 +2830,7 @@ class LikesRepository {
       final deletedTargetIds = <String>[];
       final deletedDownvoteTargetIds = <String>[];
       var downvoteCacheChanged = false;
+      var heldBackUndecidedLike = false;
 
       for (final event in reactionEvents) {
         final targetId = _extractTargetEventId(event);
@@ -2847,7 +2856,10 @@ class LikesRepository {
 
         // The deletions read ended short, so this reaction may have been
         // taken back; saving it could restore a like the user removed.
-        if (retractions.undecided.contains(event.id)) continue;
+        if (retractions.undecided.contains(event.id)) {
+          if (_isLikeReaction(event)) heldBackUndecidedLike = true;
+          continue;
+        }
 
         if (_isLikeReaction(event)) {
           final record = LikeRecord(
@@ -2946,6 +2958,11 @@ class LikesRepository {
       if (downvoteCacheChanged) {
         _emitDownvotedIds();
       }
+      // Every like it read waits on a deletions read that did not finish,
+      // so an empty result says nothing about this account (#11182).
+      if (heldBackUndecidedLike && _likeRecords.isEmpty) {
+        throw const _UnansweredRelayRead();
+      }
       _isInitialized = true;
 
       return _buildSyncResult();
@@ -2972,7 +2989,8 @@ class LikesRepository {
   /// Parameters:
   /// - [pubkey]: The public key (hex) of the user whose likes to fetch
   ///
-  /// Throws [FetchLikesFailedException] if the fetch fails.
+  /// Throws [FetchLikesFailedException] if the fetch fails, including a read
+  /// no relay answered (#11182).
   Future<List<String>> fetchUserLikes(String pubkey) async {
     final filter = Filter(
       kinds: const [EventKind.reaction],
@@ -2981,7 +2999,7 @@ class LikesRepository {
     );
 
     try {
-      final events = await _nostrClient.queryEvents([filter]);
+      final events = await _readAnswered(filter);
       final likedEventIds = <String>[];
       final seenIds = <String>{};
 
@@ -3005,6 +3023,21 @@ class LikesRepository {
         'Failed to fetch likes for user $pubkey: $e',
       );
     }
+  }
+
+  /// Reads [filter], throwing [_UnansweredRelayRead] when no relay answered
+  /// and nothing came back.
+  ///
+  /// Only a relay's EOSE says it holds nothing (NIP-01): a read that timed
+  /// out, was refused with CLOSED or found no relay connected is not an
+  /// empty answer (#11182). Events a read did collect, from a relay or the
+  /// local event cache, are returned even when it did not finish.
+  Future<List<Event>> _readAnswered(Filter filter) async {
+    final read = await _nostrClient.readEvents([filter]);
+    if (read.answeredNetworkRelayCount == 0 && read.events.isEmpty) {
+      throw const _UnansweredRelayRead();
+    }
+    return read.events;
   }
 
   /// Fetch the list of pubkeys that liked the given video event.
@@ -4256,4 +4289,13 @@ class LikesRepository {
       addressableId: _extractAddressableId(newest) ?? addressableId,
     );
   }
+}
+
+/// A read no relay answered, which callers translate into their own
+/// failure rather than treating it as an empty answer (#11182).
+class _UnansweredRelayRead implements Exception {
+  const _UnansweredRelayRead();
+
+  @override
+  String toString() => 'no relay answered the read';
 }
