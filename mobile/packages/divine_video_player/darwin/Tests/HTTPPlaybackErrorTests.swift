@@ -92,6 +92,21 @@ enum HTTPPlaybackErrorTests {
 
         let strippedProxyError = NSError(domain: NSOSStatusErrorDomain, code: NSURLErrorBadServerResponse)
         precondition(playbackErrorCanUseProxyHTTPStatus(503, in: wrapping(strippedProxyError)))
+        let typedAuthError = NSError(domain: NSURLErrorDomain, code: NSURLErrorUserAuthenticationRequired)
+        precondition(
+            playbackNetworkErrorCode(in: responseError(url: url, status: 503, underlying: typedAuthError))
+                == "auth_required",
+            "A captured HTTP 503 must not mask a typed authentication denial"
+        )
+        let wrappedAuthError = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorBadServerResponse,
+            userInfo: [NSUnderlyingErrorKey: typedAuthError]
+        )
+        precondition(!playbackErrorCanUseProxyHTTPStatus(503, in: wrappedAuthError))
+        let proxyTimeout = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+        precondition(playbackErrorCanUseProxyHTTPStatus(404, in: proxyTimeout))
+        precondition(!playbackErrorCanUseProxyHTTPStatus(503, in: proxyTimeout))
         let cancelledProxyError = NSError(
             domain: NSURLErrorDomain,
             code: NSURLErrorCancelled,

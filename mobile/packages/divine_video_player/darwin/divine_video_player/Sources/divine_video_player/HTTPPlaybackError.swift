@@ -17,8 +17,13 @@ private func playbackHTTPStatus(in chain: [NSError]) -> Int? {
     let captured: [Int] = chain.compactMap {
         ($0.userInfo["NSURLErrorFailingURLResponseErrorKey"] as? HTTPURLResponse)?.statusCode
     }
-    let reported = chain.compactMap(coreMediaPlaybackHTTPStatus)
-    return (captured + reported).max {
+    var statuses = captured + chain.compactMap(coreMediaPlaybackHTTPStatus)
+    if chain.contains(where: {
+        $0.domain == NSURLErrorDomain && $0.code == NSURLErrorUserAuthenticationRequired
+    }) {
+        statuses.append(401)
+    }
+    return statuses.max {
         playbackHTTPStatusPriority($0) < playbackHTTPStatusPriority($1)
     }
 }
@@ -49,18 +54,18 @@ private func coreMediaPlaybackHTTPStatus(in error: NSError) -> Int? {
     return status
 }
 
-/// A resource-loader response can cross AVFoundation as just a URL or
-/// OSStatus error code. Prefer the proxy's status when it prevents failover.
+/// A proxy denial for this asset takes precedence over a transport error.
+/// Other proxy responses restore HTTP metadata stripped by AVFoundation.
 func playbackErrorCanUseProxyHTTPStatus(_ status: Int, in error: NSError) -> Bool {
     let chain = playbackErrorChain(from: error)
     let urlCodes = chain
         .filter { $0.domain == NSURLErrorDomain || $0.domain == NSOSStatusErrorDomain }
         .map(\.code)
-    guard urlCodes.contains(NSURLErrorBadServerResponse),
-          !urlCodes.contains(NSURLErrorCancelled)
-    else { return false }
-    guard let reported = playbackHTTPStatus(in: chain) else { return true }
-    return playbackHTTPStatusPriority(status) > playbackHTTPStatusPriority(reported)
+    guard !urlCodes.contains(NSURLErrorCancelled) else { return false }
+    if let reported = playbackHTTPStatus(in: chain) {
+        return playbackHTTPStatusPriority(status) > playbackHTTPStatusPriority(reported)
+    }
+    return (400...499).contains(status) || urlCodes.contains(NSURLErrorBadServerResponse)
 }
 
 /// Classifies network errors before AVFoundation's outer composition error.
@@ -81,9 +86,6 @@ func playbackNetworkErrorCode(in error: NSError) -> String? {
         return "media_processing"
     }
     let urlErrorCodes = chain.filter { $0.domain == NSURLErrorDomain }.map(\.code)
-    if urlErrorCodes.contains(NSURLErrorUserAuthenticationRequired) {
-        return "auth_required"
-    }
     for code in urlErrorCodes {
         switch code {
         case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost,

@@ -10,8 +10,8 @@ void main() {
       ).readAsStringSync();
 
       final authMapping = RegExp(
-        r'if \w+\.contains\(NSURLErrorUserAuthenticationRequired\)\s*'
-        r'\{\s*return "auth_required"\s*\}',
+        r'code == NSURLErrorUserAuthenticationRequired\s*'
+        r'\}\)\s*\{\s*statuses\.append\(401\)\s*\}',
       ).firstMatch(source);
       expect(authMapping, isNotNull);
       expect(
