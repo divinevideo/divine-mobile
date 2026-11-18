@@ -4103,6 +4103,37 @@ void main() {
           },
         );
 
+        test('stays paused for a sheet opened while the camera starts, whose '
+            'pause arrives before remote control is on', () async {
+          final cameraStarted = Completer<void>();
+          when(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
+            ),
+          ).thenAnswer((_) => cameraStarted.future);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          // The sound chip shows before the preview is live, so its sheet can
+          // open while the camera is still starting.
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          await pumpEventQueue();
+          cameraStarted.complete();
+          await pumpEventQueue();
+
+          verifyInOrder([
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+            () => cameraService.setRemoteRecordControlEnabled(enabled: false),
+          ]);
+        });
+
         test('leaves the camera alone when the recorder closes while remote '
             'control resumes', () async {
           when(
