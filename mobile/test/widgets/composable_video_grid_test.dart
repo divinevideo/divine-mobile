@@ -379,6 +379,45 @@ void main() {
       expect(refreshCount, 1);
     });
 
+    testWidgets('opens a tile without its origin under reduced motion', (
+      tester,
+    ) async {
+      int? tappedIndex;
+      VideoTileOrigin? tappedOrigin;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: ComposableVideoGrid(
+                videos: testVideos.take(2).toList(),
+                onVideoTap: (videos, index, captureOrigin) {
+                  tappedIndex = index;
+                  tappedOrigin = captureOrigin();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(GestureDetector).at(1));
+      await tester.pump();
+
+      // The video still opens, but with no tile for the player to grow out
+      // of, so the route keeps its plain page transition.
+      expect(tappedIndex, equals(1));
+      expect(tappedOrigin, isNull);
+    });
+
     testWidgets('calls onVideoTap with correct params when tile tapped', (
       tester,
     ) async {

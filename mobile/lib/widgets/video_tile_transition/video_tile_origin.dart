@@ -67,7 +67,9 @@ class VideoTileOrigin {
            : image.alignment.resolve(image.textDirection);
 
   /// The origin of the tile under [tileContext] showing [videoId], or `null`
-  /// when the tile holds no laid-out [VideoTileThumbnailBoundary].
+  /// when the tile holds no laid-out [VideoTileThumbnailBoundary], or when the
+  /// platform asks for reduced motion: without an origin the player opens
+  /// with the plain page transition instead of growing out of the tile.
   ///
   /// Also keeps what the tile shows, for [takeImage]: the decoded thumbnail
   /// when it has loaded, so the player can grow it into a frame of another
@@ -86,6 +88,7 @@ class VideoTileOrigin {
       Radius.circular(4),
     ),
   }) {
+    if (MediaQuery.maybeDisableAnimationsOf(tileContext) ?? false) return null;
     final boundaryElement = _findWidget<VideoTileThumbnailBoundary>(
       tileContext,
     );

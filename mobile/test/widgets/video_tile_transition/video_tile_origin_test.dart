@@ -126,6 +126,22 @@ void main() {
 
         expect(VideoTileOrigin.capture(tileContext, videoId: 'v'), isNull);
       });
+
+      testWidgets('returns null when the platform asks for reduced motion', (
+        tester,
+      ) async {
+        late BuildContext tileContext;
+        Widget tile({required bool disableAnimations}) => MediaQuery(
+          data: MediaQueryData(disableAnimations: disableAnimations),
+          child: _Tile(rect: _tileRect, onContext: (c) => tileContext = c),
+        );
+
+        await tester.pumpWidget(tile(disableAnimations: false));
+        expect(VideoTileOrigin.capture(tileContext, videoId: 'v'), isNotNull);
+
+        await tester.pumpWidget(tile(disableAnimations: true));
+        expect(VideoTileOrigin.capture(tileContext, videoId: 'v'), isNull);
+      });
     });
 
     group('scrim', () {
