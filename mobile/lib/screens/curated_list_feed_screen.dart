@@ -1,6 +1,7 @@
 // ABOUTME: Screen for displaying videos from a curated NIP-51 kind 30005 list
 // ABOUTME: Hero header + masonry grid, owner actions sheet, manage-posts mode
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -714,7 +715,7 @@ class _ListBody extends ConsumerWidget {
       ref
           .read(screenAnalyticsServiceProvider)
           .markDataLoaded(
-            'curated_list',
+            PageLoadObserver.screenNameOf(context),
             dataMetrics: {'video_count': videos.length},
           );
     }

@@ -1,6 +1,7 @@
 // ABOUTME: Router-driven Instagram-style profile screen implementation
 // ABOUTME: Uses CustomScrollView with slivers for smooth scrolling, URL is source of truth
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -405,7 +406,7 @@ class _ProfileContentView extends ConsumerWidget {
       return BlockedUserScreen(onBack: context.safePop, userIdHex: userIdHex);
     }
 
-    return ProfileFeedScope(
+    final profile = ProfileFeedScope(
       userIdHex: userIdHex,
       child: _ProfileDataView(
         npub: npub,
@@ -420,7 +421,50 @@ class _ProfileContentView extends ConsumerWidget {
         refreshNotifier: refreshNotifier,
       ),
     );
+
+    // Opening a video from the grid is not opening the profile.
+    if (routeContext.videoIndex != null) return profile;
+    return _OwnProfileLoadSession(child: profile);
   }
+}
+
+/// Screen-analytics session name for the own profile.
+const _ownProfileScreenName = 'own_profile';
+
+/// Starts the own profile's screen-load session.
+///
+/// The profile tab is a shell branch, and the root `PageLoadObserver` sees no
+/// branch navigation, so nothing else starts one and every `markDataLoaded`
+/// for the own profile was dropped.
+class _OwnProfileLoadSession extends ConsumerStatefulWidget {
+  const _OwnProfileLoadSession({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_OwnProfileLoadSession> createState() =>
+      _OwnProfileLoadSessionState();
+}
+
+class _OwnProfileLoadSessionState
+    extends ConsumerState<_OwnProfileLoadSession> {
+  late final ScreenAnalyticsService _screenAnalytics;
+
+  @override
+  void initState() {
+    super.initState();
+    _screenAnalytics = ref.read(screenAnalyticsServiceProvider)
+      ..startScreenLoad(_ownProfileScreenName);
+  }
+
+  @override
+  void dispose() {
+    _screenAnalytics.endScreen(_ownProfileScreenName);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Handles redirect when npub is "me".
@@ -490,7 +534,7 @@ class _ProfileDataView extends ConsumerWidget {
       ref
           .read(screenAnalyticsServiceProvider)
           .markDataLoaded(
-            'own_profile',
+            _ownProfileScreenName,
             dataMetrics: {'video_count': feedState.videos.length},
           );
     }

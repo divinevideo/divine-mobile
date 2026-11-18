@@ -122,10 +122,13 @@ class ScreenAnalyticsService {
     );
   }
 
-  /// Mark when screen data is fully loaded (async data fetched)
+  /// Mark when screen data is fully loaded (async data fetched).
+  ///
+  /// Records once per session: callers mark from `build`, and every later
+  /// rebuild would otherwise log another event measured from the same start.
   void markDataLoaded(String screenName, {Map<String, dynamic>? dataMetrics}) {
     final session = _activeSessions[screenName];
-    if (session == null) return;
+    if (session == null || session.dataLoadedTime != null) return;
 
     if (_isStale(session)) {
       _discardStaleSession(screenName);
