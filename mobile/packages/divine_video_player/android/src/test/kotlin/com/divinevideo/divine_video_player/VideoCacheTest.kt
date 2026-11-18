@@ -179,8 +179,8 @@ class VideoCacheTest {
     }
 
     @Test
-    fun `open always checks both B2 hosts instead of replaying cached bytes`() {
-        for (canaryHost in listOf("media-b2.divine.video", "media-b2-cdn.divine.video")) {
+    fun `open always checks canary hosts instead of replaying cached bytes`() {
+        for (canaryHost in listOf("media-b2.divine.video", "media-b2-cdn.divine.video", "media-bunny.divine.video")) {
             val cachedFactory = mockk<DataSource.Factory> {
                 every { createDataSource() } returns mockk(relaxed = true)
             }

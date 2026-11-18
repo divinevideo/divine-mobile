@@ -14,6 +14,9 @@ import 'package:models/models.dart';
 /// [preferB2Original] inserts the dedicated B2 original immediately before an
 /// eligible original in the normal ladder. Resolved renditions stay preferred.
 ///
+/// [bunnyPlaybackPaths] inserts only verified public MP4 paths immediately
+/// before the matching canonical source. B2 takes precedence if selected.
+///
 /// Derivative-resolved Divine blobs use the bare blob as their final fallback,
 /// after quality-specific and HLS sources have been attempted.
 List<String> resolvePlaybackSources(
@@ -21,29 +24,50 @@ List<String> resolvePlaybackSources(
   String? Function(VideoEvent video)? urlResolver,
   DerivativeFailureCache? derivativeFailureCache,
   bool preferB2Original = false,
+  Set<String> bunnyPlaybackPaths = const {},
 }) {
+  final resolvedSource = urlResolver?.call(video) ?? video.videoUrl;
   final sources = _resolveCanonicalPlaybackSources(
     video,
-    urlResolver: urlResolver,
+    resolvedSource: resolvedSource,
     derivativeFailureCache: derivativeFailureCache,
-  );
-  if (!preferB2Original || b2OriginalPlaybackUrl(video.videoUrl) == null) {
+  ).where((source) => !isBunnyPlaybackSource(source)).toList();
+
+  if (preferB2Original) {
+    if (b2OriginalPlaybackUrl(video.videoUrl) == null) return sources;
+    return orderedUniqueSources([
+      for (final source in sources) ...[b2OriginalPlaybackUrl(source), source],
+    ]);
+  }
+
+  if (bunnyPlaybackPaths.isEmpty ||
+      unsignedCanonicalMediaPath(resolvedSource) == null) {
     return sources;
   }
+  final eventPath = bunnyProgressivePath(video.videoUrl);
+  if (eventPath == null) return sources;
+
+  final hashPath = eventPath.substring(0, 65);
+  String? bunnyEquivalent(String source) {
+    final path = bunnyProgressivePath(source);
+    if (path == null ||
+        !path.startsWith(hashPath) ||
+        !bunnyPlaybackPaths.contains(path)) {
+      return null;
+    }
+    return 'https://$bunnyPlaybackHost$path';
+  }
+
   return orderedUniqueSources([
-    for (final source in sources) ...[
-      b2OriginalPlaybackUrl(source),
-      source,
-    ],
+    for (final source in sources) ...[bunnyEquivalent(source), source],
   ]);
 }
 
 List<String> _resolveCanonicalPlaybackSources(
   VideoEvent video, {
-  String? Function(VideoEvent video)? urlResolver,
+  required String? resolvedSource,
   DerivativeFailureCache? derivativeFailureCache,
 }) {
-  final resolvedSource = urlResolver?.call(video) ?? video.videoUrl;
   final originalUrl = video.videoUrl;
 
   if (resolvedSource == null || resolvedSource.isEmpty) {
@@ -178,16 +202,18 @@ bool _mentionsHttpStatus(String lower, int status) {
   return RegExp('(^|[^0-9a-f])$status([^0-9a-f]|\$)').hasMatch(lower);
 }
 
-/// Policy denials in a canary ladder apply to the asset, not the mirror.
-/// Unknown 4xx fail closed across the canary ladder. Canonical-source 404
-/// retains its normal fallback behavior; B2-source 404 is handled separately.
-bool blocksB2CanaryFallback({
+/// Blocks a canary ladder on a policy denial or unknown client error.
+/// A Bunny ladder includes canonical 404 responses because Blossom also
+/// uses that status for moderated media.
+bool blocksCanaryFallback({
+  required bool denyNotFound,
   NativePlayerErrorCode? errorCode,
   String? errorMessage,
 }) {
   if (errorCode == NativePlayerErrorCode.authRequired ||
       errorCode == NativePlayerErrorCode.forbidden ||
-      errorCode == NativePlayerErrorCode.httpClientError) {
+      errorCode == NativePlayerErrorCode.httpClientError ||
+      (denyNotFound && errorCode == NativePlayerErrorCode.notFound)) {
     return true;
   }
   final message = (errorMessage ?? '').toLowerCase();
@@ -201,7 +227,7 @@ bool blocksB2CanaryFallback({
   }
   return RegExp(
     r'(^|[^0-9a-f])(4[0-9]{2})([^0-9a-f]|$)',
-  ).allMatches(message).any((match) => match.group(2) != '404');
+  ).allMatches(message).any((match) => denyNotFound || match.group(2) != '404');
 }
 
 /// Only an explicit readiness response or a typed connection failure can
@@ -211,3 +237,21 @@ bool canFailOverB2Original(NativePlayerErrorCode? errorCode) =>
     errorCode == NativePlayerErrorCode.serviceUnavailable ||
     errorCode == NativePlayerErrorCode.networkError ||
     errorCode == NativePlayerErrorCode.timeout;
+
+/// Direct Bunny playback may fall back only on a typed transport failure
+/// or an explicit HTTP 503. An HTTP policy denial always wins over a
+/// conflicting native transport code.
+bool canFailOverBunny({
+  NativePlayerErrorCode? errorCode,
+  String? errorMessage,
+}) {
+  final message = (errorMessage ?? '').toLowerCase();
+  if (blocksCanaryFallback(
+    errorCode: errorCode,
+    errorMessage: message,
+    denyNotFound: true,
+  )) {
+    return false;
+  }
+  return canFailOverB2Original(errorCode) || _mentionsHttpStatus(message, 503);
+}

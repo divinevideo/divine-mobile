@@ -49,43 +49,61 @@ void main() {
   });
 
   group('Apple native HTTP response error contract', () {
-    test('classifies exposed 403 and 404 responses before generic 4xx', () {
-      final source = _appleSourceFile().readAsStringSync();
+    test('preserves explicit HTTP policy and readiness codes', () {
+      final player = _appleSourceFile().readAsStringSync();
+      final classifier = _appleSourceFile(
+        'HTTPPlaybackError.swift',
+      ).readAsStringSync();
 
-      final responseBranch = source.indexOf(
-        'NSURLErrorFailingURLResponseErrorKey',
+      expect(
+        player,
+        contains(
+          RegExp(
+            r'if let (\w+) = playbackNetworkErrorCode\(in: err\)\s*'
+            r'\{\s*return \1\s*\}',
+          ),
+        ),
+        reason: 'The native player must return the classifier result to Dart.',
       );
-      final genericReturn = source.indexOf(
-        'return httpResponse.statusCode >= 500',
+      expect(classifier, contains('NSURLErrorFailingURLResponseErrorKey'));
+
+      final responseBranch = classifier.indexOf(
+        'if let status = playbackHTTPStatus(in: chain)',
       );
+      final genericResponse = classifier.indexOf(
+        '"http_server_error" : "http_client_error"',
+      );
+      final transportMapping = classifier.indexOf('case NSURLErrorTimedOut:');
 
       expect(responseBranch, greaterThanOrEqualTo(0));
-      expect(genericReturn, greaterThan(responseBranch));
+      expect(genericResponse, greaterThan(responseBranch));
+      expect(
+        transportMapping,
+        greaterThan(genericResponse),
+        reason:
+            'A wrapped HTTP denial takes precedence over a transport error.',
+      );
 
-      for (final entry in const {403: 'forbidden', 404: 'not_found'}.entries) {
-        final statusCheck = source.indexOf(
-          'httpResponse.statusCode == ${entry.key}',
-        );
+      for (final entry in const {
+        401: 'auth_required',
+        403: 'forbidden',
+        404: 'not_found',
+        503: 'service_unavailable',
+      }.entries) {
+        final mapping = RegExp(
+          'case ${entry.key}:\\s*return "${entry.value}"',
+        ).firstMatch(classifier);
         expect(
-          statusCheck,
-          greaterThan(responseBranch),
-          reason:
-              'An exposed HTTP ${entry.key} response needs its own branch so '
-              'Apple platforms stay normalised with Android.',
+          mapping,
+          isNotNull,
+          reason: 'Missing HTTP ${entry.key} mapping.',
         );
-
-        final statusMapping = source.indexOf(
-          'return "${entry.value}"',
-          statusCheck,
-        );
-        expect(statusMapping, greaterThan(statusCheck));
+        expect(mapping!.start, greaterThan(responseBranch));
         expect(
-          statusMapping,
-          lessThan(genericReturn),
+          mapping.end,
+          lessThan(genericResponse),
           reason:
-              'HTTP ${entry.key} must return before the generic 4xx/5xx '
-              'return, which would otherwise swallow it as '
-              'http_client_error.',
+              'HTTP ${entry.key} must bypass generic 4xx/5xx classification.',
         );
       }
     });
@@ -99,10 +117,8 @@ File _androidSourceFile() => _resolve(
 
 /// The iOS and macOS players share a single Darwin source tree
 /// (`darwin/divine_video_player/Sources/`), so the contract is asserted once.
-File _appleSourceFile() => _resolve(
-  'darwin/divine_video_player/Sources/divine_video_player/'
-  'DivineVideoPlayerInstance.swift',
-);
+File _appleSourceFile([String name = 'DivineVideoPlayerInstance.swift']) =>
+    _resolve('darwin/divine_video_player/Sources/divine_video_player/$name');
 
 /// Resolves [packageRelativePath] whether the suite runs from the package
 /// root or from `mobile/`.

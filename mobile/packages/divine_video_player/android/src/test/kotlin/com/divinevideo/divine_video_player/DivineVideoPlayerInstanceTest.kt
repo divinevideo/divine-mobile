@@ -1195,6 +1195,37 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `Bunny errors leave clip identity and exception text out of support logs`() {
+        val listener = capturePlayerListener()
+        val source = "https://media-bunny.divine.video/${"f".repeat(64)}/720p.mp4"
+        val uri = mockk<Uri>()
+        every { uri.host } returns "media-bunny.divine.video"
+        every { uri.toString() } returns source
+        every { mockPlayer.currentMediaItem } returns MediaItem.fromUri(uri)
+        mockkObject(DivineVideoPlayerLog)
+        try {
+            val message = slot<String>()
+            every {
+                DivineVideoPlayerLog.error(capture(message), name = "DivineVideoPlayer.Playback")
+            } just runs
+            listener.onPlayerError(
+                PlaybackException(
+                    "Network error at $source",
+                    null,
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                ),
+            )
+
+            assertTrue(message.captured.contains("provider=Bunny"))
+            assertTrue(message.captured.contains("code=timeout"))
+            assertEquals(false, message.captured.contains(source))
+            assertEquals(false, message.captured.contains("Network error at"))
+        } finally {
+            unmockkObject(DivineVideoPlayerLog)
+        }
+    }
+
+    @Test
     fun `onPlayerError fails the pending result after exhausting decoder retries`() {
         val listener = capturePlayerListener()
         val result = mockk<MethodChannel.Result>(relaxed = true)
