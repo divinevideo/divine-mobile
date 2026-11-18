@@ -36,6 +36,77 @@ enum HTTPPlaybackErrorTests {
             )
             precondition(playbackNetworkErrorCode(in: timedOut) == expected)
         }
+
+        // AVURLAsset.load(.duration) reports these statuses without an HTTPURLResponse.
+        for (urlCode, mediaCode, status, expected) in [
+            (NSURLErrorUserAuthenticationRequired, -16840, "401: Unauthorized", "auth_required"),
+            (NSURLErrorNoPermissionsToReadFile, -12660, "403: Forbidden", "forbidden"),
+            (NSURLErrorFileDoesNotExist, -12938, "404: File Not Found", "not_found"),
+            (NSURLErrorResourceUnavailable, -12668, "410: Gone", "http_client_error"),
+            (NSURLErrorResourceUnavailable, -16845, "429: (unhandled)", "http_client_error"),
+            (NSURLErrorResourceUnavailable, -16848, "502: Bad Gateway", "http_server_error"),
+            (NSURLErrorResourceUnavailable, -16849, "503: Service Unavailable", "service_unavailable"),
+            (NSURLErrorResourceUnavailable, -16850, "504: Gateway Timeout", "http_server_error")
+        ] {
+            let error = NSError(
+                domain: NSURLErrorDomain,
+                code: urlCode,
+                userInfo: [NSUnderlyingErrorKey: coreMediaResponseError(code: mediaCode, status: status)]
+            )
+            let actual = playbackNetworkErrorCode(in: wrapping(error))
+            precondition(actual == expected, "HTTP \(status) classified as \(actual ?? "nil")")
+        }
+
+        let processing = coreMediaResponseError(code: -12667, status: "202: (unhandled)")
+        precondition(playbackNetworkErrorCode(in: processing) == "media_processing")
+        precondition(playbackNetworkErrorCode(in: wrapping(processing)) == "media_processing")
+        let legacyProcessing = NSError(
+            domain: "AVFoundationErrorDomain",
+            code: -11800,
+            userInfo: [NSLocalizedDescriptionKey: "The operation failed with HTTP 202"]
+        )
+        precondition(playbackNetworkErrorCode(in: legacyProcessing) == "media_processing")
+
+        let coreMediaDenial = coreMediaResponseError(code: -12660, status: "403: Forbidden")
+        let response = HTTPURLResponse(url: url, statusCode: 503, httpVersion: nil, headerFields: nil)!
+        let typedFailure = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorBadServerResponse,
+            userInfo: [
+                "NSURLErrorFailingURLResponseErrorKey": response,
+                NSUnderlyingErrorKey: coreMediaDenial
+            ]
+        )
+        precondition(playbackNetworkErrorCode(in: typedFailure) == "service_unavailable")
+        precondition(!playbackErrorLostProxyHTTPResponse(typedFailure))
+
+        let strippedProxyError = NSError(domain: NSOSStatusErrorDomain, code: NSURLErrorBadServerResponse)
+        precondition(playbackErrorLostProxyHTTPResponse(wrapping(strippedProxyError)))
+        let cancelledProxyError = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCancelled,
+            userInfo: [NSUnderlyingErrorKey: strippedProxyError]
+        )
+        precondition(!playbackErrorLostProxyHTTPResponse(cancelledProxyError))
+
+        let unrelatedDescription = NSError(
+            domain: "UnrelatedErrorDomain",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "HTTP 403: Forbidden"]
+        )
+        precondition(playbackNetworkErrorCode(in: unrelatedDescription) == nil)
+        let malformed = coreMediaResponseError(code: -12938, status: "4040: File Not Found")
+        precondition(playbackNetworkErrorCode(in: malformed) == nil)
+        let misleadingReason = coreMediaResponseError(
+            code: -16848,
+            status: "502: Bad Gateway - HTTP 503: Service Unavailable"
+        )
+        precondition(playbackNetworkErrorCode(in: misleadingReason) == "http_server_error")
+        for code in [NSURLErrorNoPermissionsToReadFile, NSURLErrorFileDoesNotExist, NSURLErrorResourceUnavailable] {
+            let urlError = NSError(domain: NSURLErrorDomain, code: code)
+            precondition(playbackNetworkErrorCode(in: urlError) == nil)
+        }
+
         var deeplyNested = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
         for _ in 0..<8 {
             deeplyNested = wrapping(deeplyNested)
@@ -60,5 +131,15 @@ private func responseError(url: URL, status: Int) -> NSError {
         domain: NSURLErrorDomain,
         code: NSURLErrorBadServerResponse,
         userInfo: ["NSURLErrorFailingURLResponseErrorKey": response]
+    )
+}
+
+private func coreMediaResponseError(code: Int, status: String) -> NSError {
+    NSError(
+        domain: "CoreMediaErrorDomain",
+        code: code,
+        userInfo: [
+            "NSDescription": "The operation couldn’t be completed. (CoreMediaErrorDomain error \(code) - HTTP \(status))"
+        ]
     )
 }

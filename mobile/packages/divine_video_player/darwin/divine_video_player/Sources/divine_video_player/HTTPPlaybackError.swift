@@ -17,7 +17,39 @@ private func playbackHTTPStatus(in chain: [NSError]) -> Int? {
     let statuses: [Int] = chain.compactMap {
         ($0.userInfo["NSURLErrorFailingURLResponseErrorKey"] as? HTTPURLResponse)?.statusCode
     }
-    return statuses.first { [401, 403, 404].contains($0) } ?? statuses.first
+    return statuses.first { [401, 403, 404].contains($0) }
+        ?? statuses.first
+        ?? coreMediaPlaybackHTTPStatus(in: chain)
+}
+
+/// AVURLAsset may expose the HTTP status only in an underlying CoreMedia
+/// error. Read the numeric status from the framework's HTTP marker.
+private func coreMediaPlaybackHTTPStatus(in chain: [NSError]) -> Int? {
+    for error in chain where error.domain == "CoreMediaErrorDomain" {
+        let description = error.localizedDescription
+        guard let marker = description.range(of: #"(^| - )HTTP "#, options: .regularExpression) else {
+            continue
+        }
+        let statusText = description[marker.upperBound...]
+        if statusText.dropFirst(3).first == ":",
+           let status = Int(statusText.prefix(3)),
+           status == 202 || (400...599).contains(status) {
+            return status
+        }
+    }
+    return nil
+}
+
+/// A resource-loader response can cross AVFoundation as just a URL or
+/// OSStatus error code. A response that survived that crossing is preferred.
+func playbackErrorLostProxyHTTPResponse(_ error: NSError) -> Bool {
+    let chain = playbackErrorChain(from: error)
+    let urlCodes = chain
+        .filter { $0.domain == NSURLErrorDomain || $0.domain == NSOSStatusErrorDomain }
+        .map(\.code)
+    return urlCodes.contains(NSURLErrorBadServerResponse)
+        && !urlCodes.contains(NSURLErrorCancelled)
+        && playbackHTTPStatus(in: chain) == nil
 }
 
 /// Classifies network errors before AVFoundation's outer composition error.

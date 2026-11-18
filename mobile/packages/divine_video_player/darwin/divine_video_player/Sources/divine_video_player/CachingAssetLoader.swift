@@ -90,6 +90,8 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     /// player makes is then fetched on its own.
     private var proxying = false
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
+    private let proxyHTTPFailureLock = NSLock()
+    private var proxyHTTPFailure: NSError?
 
     /// A loader for [remoteURL], or nil for a URL it cannot serve.
     init?(remoteURL: URL, headers: [String: String], onPlaybackNetwork: @escaping ([String: Any]) -> Void = { _ in }) {
@@ -118,11 +120,21 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         asset.resourceLoader.setDelegate(self, queue: queue)
     }
 
+    /// AVFoundation may strip the response metadata when a resource request
+    /// fails with badServerResponse. Restore it from this asset's proxy.
+    func preservedProxyHTTPFailure(for error: NSError) -> NSError? {
+        guard !keepsDownload, !Task.isCancelled, playbackErrorLostProxyHTTPResponse(error) else {
+            return nil
+        }
+        return proxyHTTPFailureLock.withLock { proxyHTTPFailure }
+    }
+
     /// Stops every fetch, fails whatever the player still waits for, and
     /// deletes the file.
     func cancel() {
         queue.async { [self] in
             cancelled = true
+            proxyHTTPFailureLock.withLock { proxyHTTPFailure = nil }
             session?.invalidateAndCancel()
             session = nil
             let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
@@ -174,16 +186,25 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     ) {
         observations[dataTask.taskIdentifier]?.headers()
         if let request = proxied[dataTask.taskIdentifier] {
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            if let http = response as? HTTPURLResponse,
+                (!keepsDownload && http.statusCode == 202) || !(200..<300).contains(http.statusCode)
+            {
                 proxied[dataTask.taskIdentifier] = nil
-                request.finishLoading(with: NSError(
+                let responseError = NSError(
                     domain: NSURLErrorDomain,
                     code: NSURLErrorBadServerResponse,
                     userInfo: [
                         NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
                         "NSURLErrorFailingURLResponseErrorKey": http
                     ]
-                ))
+                )
+                if !keepsDownload {
+                    proxyHTTPFailureLock.withLock {
+                        // Another range can finish before AVFoundation surfaces the first failure.
+                        proxyHTTPFailure = proxyHTTPFailure ?? responseError
+                    }
+                }
+                request.finishLoading(with: responseError)
                 completionHandler(.cancel)
                 return
             }

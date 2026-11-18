@@ -1203,10 +1203,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 asset = AVURLAsset(url: url, options: assetOptions)
             }
 
-            // Load duration and tracks.
-            let assetDuration = try await asset.load(.duration)
-            let assetVideoTracks = try await asset.loadTracks(withMediaType: .video)
-            let assetAudioTracks = try await asset.loadTracks(withMediaType: .audio)
+            let assetDuration: CMTime
+            let assetVideoTracks: [AVAssetTrack]
+            let assetAudioTracks: [AVAssetTrack]
+            do {
+                assetDuration = try await asset.load(.duration)
+                assetVideoTracks = try await asset.loadTracks(withMediaType: .video)
+                assetAudioTracks = try await asset.loadTracks(withMediaType: .audio)
+            } catch {
+                if let preserved = loader?.preservedProxyHTTPFailure(for: error as NSError) {
+                    throw preserved
+                }
+                throw error
+            }
 
             guard let sourceVideoTrack = assetVideoTracks.first else {
                 DivineVideoPlayerLog.shared.warning(
@@ -2317,7 +2326,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.clearSetClipsTimeout()
                     self.clearBufferingWatchdog(resetReported: true)
                     self.currentStatus = "error"
-                    if let itemError = item.error as NSError? {
+                    if let itemError = self.playbackError(for: item) {
                         let code = self.errorCode(for: itemError)
                         self.errorCode = code
                         self.errorMessage = self.playbackFailureDescription(
@@ -2539,20 +2548,22 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Maps the current player error to a canonical error code string that
     /// matches the values defined in `NativePlayerErrorCode` on the Dart side.
     private func resolvedErrorCode() -> String? {
-        let nsError: NSError?
-        if let itemError = player?.currentItem?.error as NSError? {
-            nsError = itemError
-        } else if currentStatus == "error" {
-            nsError = nil
-        } else {
-            return nil
+        if currentStatus == "error", let errorCode { return errorCode }
+        if let item = player?.currentItem, let itemError = playbackError(for: item) {
+            return errorCode(for: itemError)
         }
+        return currentStatus == "error" ? "unknown" : nil
+    }
 
-        guard let err = nsError else {
-            return currentStatus == "error" ? (errorCode ?? "unknown") : nil
+    private func playbackError(for item: AVPlayerItem) -> NSError? {
+        guard let error = item.error as NSError? else { return nil }
+        // The loader belongs to the installed template and its looping replicas.
+        guard item === templateItem
+            || playerLooper?.loopingPlayerItems.contains(where: { $0 === item }) == true
+        else {
+            return error
         }
-
-        return errorCode(for: err)
+        return remoteClipLoader?.preservedProxyHTTPFailure(for: error) ?? error
     }
 
     private func playbackFailureDescription(
