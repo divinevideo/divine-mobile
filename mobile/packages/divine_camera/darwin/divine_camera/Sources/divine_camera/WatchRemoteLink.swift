@@ -21,6 +21,11 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     private let session: WCSession?
     private let onToggleRecording: () -> Void
     private let onWatchRemoteChanged: ([String: Any]?) -> Void
+    private let onWatchAppChanged: (Bool) -> Void
+
+    /// Whether a paired Watch has the Watch app. Only touched on the main
+    /// queue.
+    private(set) var hasWatchApp = false
 
     /// What the Watch should show. Only touched on the main queue.
     private var payload: [String: Any] = [Wire.available: false]
@@ -31,13 +36,17 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     ///   - onWatchRemoteChanged: Called on the main queue with the recorder
     ///     state a Watch remote can show, or `nil` when the recorder is closed
     ///     or no paired Watch has the app.
+    ///   - onWatchAppChanged: Called on the main queue when a paired Watch
+    ///     gains or loses the Watch app.
     init(
         onToggleRecording: @escaping () -> Void,
-        onWatchRemoteChanged: @escaping ([String: Any]?) -> Void
+        onWatchRemoteChanged: @escaping ([String: Any]?) -> Void,
+        onWatchAppChanged: @escaping (Bool) -> Void
     ) {
         self.session = WCSession.isSupported() ? WCSession.default : nil
         self.onToggleRecording = onToggleRecording
         self.onWatchRemoteChanged = onWatchRemoteChanged
+        self.onWatchAppChanged = onWatchAppChanged
         super.init()
     }
 
@@ -63,7 +72,11 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     private func send() {
         guard let session, session.activationState == .activated else { return }
         let isRecorderOpen = payload[Wire.available] as? Bool == true
-        let hasWatchApp = session.isPaired && session.isWatchAppInstalled
+        let hadWatchApp = hasWatchApp
+        hasWatchApp = session.isPaired && session.isWatchAppInstalled
+        if hasWatchApp != hadWatchApp {
+            onWatchAppChanged(hasWatchApp)
+        }
         onWatchRemoteChanged(isRecorderOpen && hasWatchApp ? payload : nil)
         do {
             try session.updateApplicationContext(payload)

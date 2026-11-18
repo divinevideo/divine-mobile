@@ -236,6 +236,61 @@ final class MediaSessionScopePolicyTests: XCTestCase {
     XCTAssertTrue(policy.isMediaSessionActive)
   }
 
+  func testEnableDoesNotClaimSessionWhileWatchRemoteIsThere() {
+    var policy = MediaSessionScopePolicy()
+    _ = policy.onWatchRemoteChanged(hasWatchRemote: true, appActive: true)
+    XCTAssertFalse(
+      policy.onEnable(appActive: true),
+      "a Now Playing card on the Watch would cover the Watch remote"
+    )
+    XCTAssertTrue(policy.isEnabled)
+    XCTAssertFalse(policy.isMediaSessionActive)
+    XCTAssertFalse(policy.onBecomeActive())
+  }
+
+  func testWatchRemoteAppearingReleasesSession() {
+    var policy = MediaSessionScopePolicy()
+    _ = policy.onEnable(appActive: true)
+    XCTAssertEqual(
+      policy.onWatchRemoteChanged(hasWatchRemote: true, appActive: true),
+      .release
+    )
+    XCTAssertFalse(policy.isMediaSessionActive)
+    XCTAssertTrue(policy.isEnabled, "volume buttons keep working")
+  }
+
+  func testWatchRemoteGoingClaimsSessionWhileEnabledAndActive() {
+    var policy = MediaSessionScopePolicy()
+    _ = policy.onWatchRemoteChanged(hasWatchRemote: true, appActive: true)
+    _ = policy.onEnable(appActive: true)
+    XCTAssertEqual(
+      policy.onWatchRemoteChanged(hasWatchRemote: false, appActive: true),
+      .claim
+    )
+    XCTAssertTrue(policy.isMediaSessionActive)
+  }
+
+  func testWatchRemoteGoingWhileBackgroundedDefersClaim() {
+    var policy = MediaSessionScopePolicy()
+    _ = policy.onWatchRemoteChanged(hasWatchRemote: true, appActive: true)
+    _ = policy.onEnable(appActive: true)
+    XCTAssertEqual(
+      policy.onWatchRemoteChanged(hasWatchRemote: false, appActive: false),
+      .none
+    )
+    XCTAssertTrue(policy.onBecomeActive())
+  }
+
+  func testWatchRemoteGoingWhileDisabledClaimsNothing() {
+    var policy = MediaSessionScopePolicy()
+    _ = policy.onWatchRemoteChanged(hasWatchRemote: true, appActive: true)
+    XCTAssertEqual(
+      policy.onWatchRemoteChanged(hasWatchRemote: false, appActive: true),
+      .none
+    )
+    XCTAssertFalse(policy.isMediaSessionActive)
+  }
+
   func testBecomeActiveIsIdempotentWhenAlreadyActive() {
     var policy = MediaSessionScopePolicy()
     _ = policy.onEnable(appActive: true)

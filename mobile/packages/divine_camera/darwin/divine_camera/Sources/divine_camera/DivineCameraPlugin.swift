@@ -50,6 +50,9 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             },
             onWatchRemoteChanged: { state in
                 DivineCameraPlugin.onWatchRemoteChanged?(state)
+            },
+            onWatchAppChanged: { [weak instance] hasWatchApp in
+                instance?.volumeKeyHandler?.setWatchRemoteAvailable(hasWatchApp)
             }
         )
         watchRemoteLink.activate()
@@ -415,6 +418,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
                     }
                 }
             }
+            volumeKeyHandler?.setWatchRemoteAvailable(watchRemoteLink?.hasWatchApp ?? false)
             let success = volumeKeyHandler?.enable() ?? false
             result(success)
         } else {
