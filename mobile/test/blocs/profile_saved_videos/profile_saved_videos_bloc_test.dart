@@ -2,6 +2,7 @@
 // ABOUTME: BookmarksRepository and paginating through VideosRepository.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
@@ -11,7 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart' show NostrClient;
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
+import 'package:nostr_sdk/nostr_sdk.dart'
+    show
+        Event,
+        Filter,
+        LocalNostrSigner,
+        NostrSigner,
+        generatePrivateKey,
+        getPublicKey;
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_page_size.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_list_snapshot.dart';
@@ -25,6 +33,8 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockBookmarkSigner extends Mock implements BookmarkSigner {}
+
+class _MockNostrSigner extends Mock implements NostrSigner {}
 
 /// In-memory [CacheDao] so the bloc's [CacheSync] reads/writes are isolated
 /// per test without touching disk.
@@ -826,6 +836,210 @@ void main() {
 
             expect(bloc.state.status, ProfileSavedVideosStatus.failure);
             expect(bloc.state.savedEventIds, isEmpty);
+          },
+        );
+      });
+
+      // #11181 and #11180: a list with NIP-51 private items, read through the
+      // real repository and real NIP-44 crypto across two app launches.
+      group('over a real $BookmarksRepository with private bookmarks', () {
+        late String viewer;
+        late LocalNostrSigner identity;
+        late _MockBookmarkSigner signer;
+        late _MockNostrClient nostrClient;
+        late SharedPreferences prefs;
+        final publicVideoId = 'c' * 64;
+        final privateVideoId = 'd' * 64;
+
+        /// One event per list shape, so every read of a test sees the same
+        /// revision rather than a re-encrypted one that ties on `created_at`.
+        final lists = <bool, Event>{};
+
+        setUpAll(() => registerFallbackValue(<Filter>[]));
+
+        setUp(() async {
+          final privateKey = generatePrivateKey();
+          viewer = getPublicKey(privateKey);
+          identity = LocalNostrSigner(privateKey);
+          lists.clear();
+          signer = _MockBookmarkSigner();
+          when(() => signer.isAuthenticated).thenReturn(true);
+          when(() => signer.currentPublicKeyHex).thenReturn(viewer);
+          when(() => signer.currentIdentity).thenReturn(identity);
+          nostrClient = _MockNostrClient();
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          prefs = await SharedPreferences.getInstance();
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer(
+            (invocation) async => [
+              for (final id
+                  in invocation.positionalArguments.first as List<String>)
+                createTestVideo(id),
+            ],
+          );
+        });
+
+        /// The relay's answer to the kind-10003 read: [onlyPrivate] drops the
+        /// public item, and [timedOut] says the read ran out of time.
+        Future<void> stubRelay({
+          bool timedOut = false,
+          bool onlyPrivate = false,
+        }) async {
+          final list = lists[onlyPrivate] ??= Event(
+            viewer,
+            BookmarksRepository.globalBookmarksKind,
+            [
+              if (!onlyPrivate) ['e', publicVideoId],
+            ],
+            (await identity.nip44Encrypt(
+              viewer,
+              jsonEncode([
+                ['e', privateVideoId],
+              ]),
+            ))!,
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [list], timedOut: timedOut, noRelays: false),
+          );
+        }
+
+        Future<void> sync(ProfileSavedVideosBloc bloc) async {
+          final done = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: done));
+          await done.future.timeout(const Duration(seconds: 5));
+        }
+
+        /// One app launch: a new repository over the device's preferences
+        /// and a new bloc over it, synced once.
+        Future<(BookmarksRepository, ProfileSavedVideosBloc)> launch() async {
+          final repository = BookmarksRepository(
+            nostrClient: nostrClient,
+            signer: signer,
+            prefs: prefs,
+          );
+          addTearDown(repository.dispose);
+          final bloc = ProfileSavedVideosBloc(
+            bookmarksRepository: repository,
+            videosRepository: mockVideosRepository,
+            currentUserPubkey: viewer,
+            removedVideoIds: const Stream<String>.empty(),
+            deletedVideoFilter: (_) => false,
+          );
+          addTearDown(bloc.close);
+          await sync(bloc);
+          return (repository, bloc);
+        }
+
+        /// The first launch reads the list, then the app is closed.
+        Future<void> readListOnFirstLaunch({bool onlyPrivate = false}) async {
+          await stubRelay(onlyPrivate: onlyPrivate);
+          final (repository, bloc) = await launch();
+          expect(
+            bloc.state.videos.map((video) => video.id),
+            contains(privateVideoId),
+          );
+          await bloc.close();
+          repository.dispose();
+        }
+
+        Iterable<String> shownIds(ProfileSavedVideosBloc bloc) =>
+            bloc.state.videos.map((video) => video.id);
+
+        test(
+          'keeps a private save on screen when a later launch cannot read '
+          'the list',
+          () async {
+            await readListOnFirstLaunch();
+            await stubRelay(timedOut: true);
+
+            final (_, bloc) = await launch();
+
+            expect(shownIds(bloc), [privateVideoId, publicVideoId]);
+            expect(bloc.state.privateBookmarksLocked, isFalse);
+          },
+        );
+
+        test(
+          'says some saves may be missing when the kept private items cannot '
+          'be decrypted',
+          () async {
+            await readListOnFirstLaunch();
+            await stubRelay(timedOut: true);
+            final broken = _MockNostrSigner();
+            when(
+              () => broken.nip44Decrypt(any(), any()),
+            ).thenAnswer((_) async => null);
+            when(() => signer.currentIdentity).thenReturn(broken);
+
+            final (_, bloc) = await launch();
+
+            expect(bloc.state.privateBookmarksLocked, isTrue);
+            expect(shownIds(bloc), [publicVideoId]);
+          },
+        );
+
+        test(
+          'says some saves may be missing when the later launch reads a list '
+          'it cannot decrypt',
+          () async {
+            await readListOnFirstLaunch();
+            final broken = _MockNostrSigner();
+            when(
+              () => broken.nip44Decrypt(any(), any()),
+            ).thenAnswer((_) async => null);
+            when(() => signer.currentIdentity).thenReturn(broken);
+
+            final (_, bloc) = await launch();
+
+            expect(bloc.state.privateBookmarksLocked, isTrue);
+          },
+        );
+
+        test(
+          'shows the private save when the later launch reads the list',
+          () async {
+            await readListOnFirstLaunch();
+
+            final (_, bloc) = await launch();
+
+            expect(shownIds(bloc), [privateVideoId, publicVideoId]);
+          },
+        );
+
+        test(
+          'brings a private save back on the next read that finishes',
+          () async {
+            await readListOnFirstLaunch();
+            await stubRelay(timedOut: true);
+            final (_, bloc) = await launch();
+
+            await stubRelay();
+            await sync(bloc);
+
+            expect(shownIds(bloc), [privateVideoId, publicVideoId]);
+          },
+        );
+
+        test(
+          'keeps a private-only list on screen when a later launch cannot '
+          'read it',
+          () async {
+            await readListOnFirstLaunch(onlyPrivate: true);
+            await stubRelay(timedOut: true, onlyPrivate: true);
+
+            final (_, bloc) = await launch();
+
+            expect(shownIds(bloc), [privateVideoId]);
           },
         );
       });
