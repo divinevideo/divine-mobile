@@ -18,6 +18,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/creation_session_guard.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
@@ -96,7 +97,13 @@ Future<void> recordLibraryReaction(
     Future<T> Function() work,
   ) async {
     final ownerRoute = ModalRoute.of(progressContext);
-    final popGuard = _ReactionProgressPopEntry();
+    Future<void> leaveProgress() async {
+      if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
+      if (await Navigator.of(progressContext).maybePop()) return;
+      if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
+      GoRouter.maybeOf(progressContext)?.go(VideoFeedPage.pathForIndex(0));
+    }
+
     final overlay = OverlayEntry(
       builder: (_) => BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
         bloc: reaction,
@@ -105,12 +112,17 @@ Future<void> recordLibraryReaction(
                 label: state.status == LibraryReactionStatus.preparing
                     ? context.l10n.libraryPreparingVideo
                     : context.l10n.videoEditorMergeProgressLabel,
+                onBack: () => runDetached(
+                  leaveProgress(),
+                  'leave reaction preparation',
+                  logName: 'LibraryReaction',
+                  category: LogCategory.ui,
+                ),
               )
             : const SizedBox.shrink(),
       ),
     );
     Overlay.of(progressContext, rootOverlay: true).insert(overlay);
-    ownerRoute?.registerPopEntry(popGuard);
     StreamSubscription<Object?>? routeExit;
     var dismissed = false;
     void dismiss() {
@@ -118,8 +130,6 @@ Future<void> recordLibraryReaction(
       dismissed = true;
       overlay.remove();
       overlay.dispose();
-      ownerRoute?.unregisterPopEntry(popGuard);
-      popGuard.dispose();
       final cancellation = routeExit?.cancel();
       if (cancellation != null) {
         runDetached(
@@ -131,8 +141,8 @@ Future<void> recordLibraryReaction(
       }
     }
 
-    // System back is held while work is running. An account switch or other
-    // programmatic route removal must still dismiss this route's overlay.
+    // Back remains available while native processing finishes. Leaving the
+    // owning route removes this UI without canceling the take's library save.
     routeExit = ownerRoute?.popped.asStream().cast<Object?>().listen(
       (_) => dismiss(),
     );
@@ -325,40 +335,43 @@ Future<void> recordLibraryReaction(
   }
 }
 
-class _ReactionProgressPopEntry extends PopEntry<Object?> {
-  @override
-  final ValueNotifier<bool> canPopNotifier = ValueNotifier<bool>(false);
-
-  void dispose() => canPopNotifier.dispose();
-}
-
 class _ReactionProgress extends StatelessWidget {
-  const _ReactionProgress({required this.label});
+  const _ReactionProgress({required this.label, required this.onBack});
 
   final String label;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) => Positioned.fill(
     child: BlockSemantics(
-      child: AbsorbPointer(
-        child: Material(
-          color: context.vineColors.surface,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 16,
-              children: [
-                const DivineCircularProgressIndicator(),
-                Text(
-                  label,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.onSurface,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const AbsorbPointer(child: SizedBox.expand()),
+          Material(
+            color: context.vineColors.surface,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 16,
+                children: [
+                  const DivineCircularProgressIndicator(),
+                  Text(
+                    label,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurface,
+                    ),
                   ),
-                ),
-              ],
+                  DivineButton(
+                    label: context.l10n.commonBack,
+                    type: .secondary,
+                    onPressed: onBack,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     ),
   );

@@ -728,6 +728,99 @@ void main() {
       expect(state.totalDuration, equals(const Duration(seconds: 6)));
     });
 
+    group('extractClips', () {
+      test(
+        'same-session extraction keeps enriched metadata and unrelated clips',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          DivineVideoClip clip(String id) => DivineVideoClip(
+            id: id,
+            video: EditorVideo.file('/documents/$id.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          final take = clip('captured');
+          final keeper = clip('keeper');
+          notifier.replaceClips([take, keeper], autosave: false);
+          final gate = Completer<void>();
+          notifier.trackClipEnrichment(take.id, gate.future);
+          final extraction = notifier.extractClips({take.id});
+          final enriched = take.copyWith(duration: const Duration(seconds: 3));
+          notifier.replaceClips([enriched, keeper], autosave: false);
+          expect(notifier.clips, hasLength(2));
+          gate.complete();
+          final extracted = await extraction;
+          expect(extracted, hasLength(1));
+          expect(extracted.single, same(enriched));
+          expect(notifier.clips.single, same(keeper));
+        },
+      );
+
+      test(
+        'late extraction does not touch a rebuilt provider session',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = DivineVideoClip(
+            id: 'captured',
+            video: EditorVideo.file('/documents/captured.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          notifier.replaceClips([take], autosave: false);
+          final gate = Completer<void>();
+          notifier.trackClipEnrichment(take.id, gate.future);
+          final extraction = notifier.extractClips({take.id});
+          container.invalidate(clipManagerProvider);
+          final current = container.read(clipManagerProvider.notifier);
+          final reimported = take.copyWith(targetAspectRatio: .square);
+          current.replaceClips([reimported], autosave: false);
+          expect(current.clips.single, same(reimported));
+          gate.complete();
+          expect(await extraction, isEmpty);
+          expect(current.clips.single, same(reimported));
+        },
+      );
+
+      for (final clearWholeSession in [true, false]) {
+        test(
+          'late extraction cannot remove a reimported take after '
+          '${clearWholeSession ? 'clearSessionClips' : 'clearClips'}',
+          () async {
+            final notifier = container.read(clipManagerProvider.notifier);
+            final take = DivineVideoClip(
+              id: 'captured',
+              video: EditorVideo.file('/documents/captured.mp4'),
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            );
+            notifier.replaceClips([take], autosave: false);
+            final gate = Completer<void>();
+            notifier.trackClipEnrichment(take.id, gate.future);
+            final extraction = notifier.extractClips({take.id});
+            if (clearWholeSession) {
+              await notifier.clearSessionClips();
+            } else {
+              notifier.clearClips();
+            }
+            final reimported = take.copyWith(targetAspectRatio: .square);
+            notifier.replaceClips([reimported], autosave: false);
+            expect(notifier.clips.single, same(reimported));
+            gate.complete();
+            final extracted = await extraction;
+            expect(notifier.clips, hasLength(1));
+            expect(notifier.clips.single, same(reimported));
+            expect(extracted, isEmpty);
+          },
+        );
+      }
+    });
+
     group('clearClips', () {
       test('should remove all clips without affecting files', () {
         final notifier = container.read(clipManagerProvider.notifier);

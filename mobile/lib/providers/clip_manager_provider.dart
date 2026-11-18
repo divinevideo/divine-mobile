@@ -58,6 +58,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   Timer? _recordingDurationTimer;
   final Stopwatch _recordStopwatch = clock.stopwatch();
   final List<DivineVideoClip> _clips = [];
+  int _sessionGeneration = 0;
   Timer? _pendingDeletionTimer;
   final Map<String, Future<void>> _clipEnrichment = {};
 
@@ -112,11 +113,16 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Waits for recorded takes to finish processing, then moves them out of
   /// the timeline without deleting their saved library copies.
   Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+    final generation = _sessionGeneration;
     final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
     for (final take in takes) {
       await take.processingCompleter?.future;
       await _clipEnrichment[take.id];
     }
+    // A departed camera can finish after another project reimports the same
+    // library id. It must not remove that project's copy or touch a disposed
+    // notifier when the original take's enrichment settles.
+    if (generation != _sessionGeneration || !ref.mounted) return [];
     final finished = [
       for (final take in takes) getClipById(take.id) ?? take,
     ];
@@ -158,6 +164,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   ClipManagerState build() {
     _backgroundWork = ref.read(editorBackgroundWorkProvider);
     ref.onDispose(() {
+      _sessionGeneration++;
       _recordingDurationTimer?.cancel();
       _pendingDeletionTimer?.cancel();
       _pendingDeletionTimer = null;
@@ -1170,6 +1177,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Clear all clips without deleting files or autosave.
   void clearClips() {
+    _sessionGeneration++;
     _cancelPendingDeletionTimer();
     final clipCount = _clips.length;
     _clips.clear();
@@ -1194,6 +1202,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   }
 
   void _clearLocalClipState() {
+    _sessionGeneration++;
     final clipCount = _clips.length;
     _clips.clear();
     Log.info(

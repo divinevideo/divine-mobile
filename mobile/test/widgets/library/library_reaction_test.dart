@@ -170,7 +170,30 @@ void main() {
       LibraryReactionMerge? merge,
       NavigatorObserver? observer,
       bool reducedMotion = false,
+      bool pushed = false,
     }) async {
+      final libraryView = Scaffold(
+        body: Consumer(
+          builder: (context, ref, _) => TextButton(
+            onPressed: () async => recordLibraryReaction(
+              context,
+              ref,
+              _clip('source'),
+              recordWithCamera: record,
+              showLayout: layout,
+              mergeTakes: merge,
+              extractThumbnail: (path) async =>
+                  (path: '$path.jpg', timestamp: Duration.zero),
+              cleanupAbandoned: (paths) async => abandoned.addAll(paths),
+              openEditor: (_) async {
+                deferredWhenEditorOpened = [...editor.deferredPaths];
+                events.add('open editor');
+              },
+            ),
+            child: const Text('react'),
+          ),
+        ),
+      );
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -190,31 +213,25 @@ void main() {
                 : null,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: Consumer(
-                builder: (context, ref, _) => TextButton(
-                  onPressed: () async => recordLibraryReaction(
-                    context,
-                    ref,
-                    _clip('source'),
-                    recordWithCamera: record,
-                    showLayout: layout,
-                    mergeTakes: merge,
-                    extractThumbnail: (path) async =>
-                        (path: '$path.jpg', timestamp: Duration.zero),
-                    cleanupAbandoned: (paths) async => abandoned.addAll(paths),
-                    openEditor: (_) async {
-                      deferredWhenEditorOpened = [...editor.deferredPaths];
-                      events.add('open editor');
-                    },
-                  ),
-                  child: const Text('react'),
-                ),
-              ),
-            ),
+            home: pushed
+                ? Builder(
+                    builder: (context) => Scaffold(
+                      body: TextButton(
+                        onPressed: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(builder: (_) => libraryView),
+                        ),
+                        child: const Text('open library'),
+                      ),
+                    ),
+                  )
+                : libraryView,
           ),
         ),
       );
+      if (pushed) {
+        await tester.tap(find.text('open library'));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.text('react'));
       await tester.pumpAndSettle();
     }
@@ -311,8 +328,8 @@ void main() {
           gate.complete();
           await tester.pumpAndSettle();
           expect(showedPreparation, isTrue);
-          expect(blockedBack, isTrue);
-          expect(handledBack, isTrue);
+          expect(blockedBack, isFalse);
+          expect(handledBack, isFalse);
           expect(manager.extractedIds, {'captured'});
           expect(layouts, confirmed ? 1 : 0);
           expect(find.text(label), findsNothing);
@@ -325,6 +342,38 @@ void main() {
         },
       );
     }
+
+    testWidgets('Back leaves an unfinished preparation without a late Layout', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      manager.extractionGate = gate;
+      await start(
+        tester,
+        record: null,
+        pushed: true,
+        reducedMotion: true,
+        observer: _CameraReplyObserver((_, navigator) {
+          manager.insertClip(0, _clip('captured'));
+          navigator.pop(true);
+        }),
+        layout: (_, _, _, _) async =>
+            fail('a departed flow must not open Layout'),
+      );
+      final context = tester.element(find.text('react'));
+      final label = context.l10n.libraryPreparingVideo;
+      expect(find.text(label), findsOneWidget);
+      await tester.tap(find.text(context.l10n.commonBack));
+      await tester.pumpAndSettle();
+      // The native work is still pending, but its screen is not a trap.
+      expect(gate.isCompleted, isFalse);
+      expect(find.text('open library'), findsOneWidget);
+      expect(find.text(label), findsNothing);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(events, ['keep draft', 'clear session']);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets(
       'programmatic route replacement removes pending preparation UI',
