@@ -91,7 +91,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     private var proxying = false
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
     private let proxyHTTPFailureLock = NSLock()
-    private var proxyHTTPFailure: NSError?
+    private var proxyHTTPFailure: (status: Int, error: NSError)?
 
     /// A loader for [remoteURL], or nil for a URL it cannot serve.
     init?(remoteURL: URL, headers: [String: String], onPlaybackNetwork: @escaping ([String: Any]) -> Void = { _ in }) {
@@ -123,10 +123,13 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     /// AVFoundation may strip the response metadata when a resource request
     /// fails with badServerResponse. Restore it from this asset's proxy.
     func preservedProxyHTTPFailure(for error: NSError) -> NSError? {
-        guard !keepsDownload, !Task.isCancelled, playbackErrorLostProxyHTTPResponse(error) else {
+        guard !keepsDownload, !Task.isCancelled,
+              let failure = proxyHTTPFailureLock.withLock({ proxyHTTPFailure }),
+              playbackErrorCanUseProxyHTTPStatus(failure.status, in: error)
+        else {
             return nil
         }
-        return proxyHTTPFailureLock.withLock { proxyHTTPFailure }
+        return failure.error
     }
 
     /// Stops every fetch, fails whatever the player still waits for, and
@@ -200,8 +203,11 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
                 )
                 if !keepsDownload {
                     proxyHTTPFailureLock.withLock {
-                        // Another range can finish before AVFoundation surfaces the first failure.
-                        proxyHTTPFailure = proxyHTTPFailure ?? responseError
+                        if let previous = proxyHTTPFailure,
+                           playbackHTTPStatusPriority(previous.status) >= playbackHTTPStatusPriority(http.statusCode) {
+                            return
+                        }
+                        proxyHTTPFailure = (http.statusCode, responseError)
                     }
                 }
                 request.finishLoading(with: responseError)

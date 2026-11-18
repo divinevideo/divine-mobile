@@ -67,27 +67,37 @@ enum HTTPPlaybackErrorTests {
         )
         precondition(playbackNetworkErrorCode(in: legacyProcessing) == "media_processing")
 
-        let coreMediaDenial = coreMediaResponseError(code: -12660, status: "403: Forbidden")
-        let response = HTTPURLResponse(url: url, statusCode: 503, httpVersion: nil, headerFields: nil)!
-        let typedFailure = NSError(
-            domain: NSURLErrorDomain,
-            code: NSURLErrorBadServerResponse,
-            userInfo: [
-                "NSURLErrorFailingURLResponseErrorKey": response,
-                NSUnderlyingErrorKey: coreMediaDenial
-            ]
+        let typedFailure = responseError(
+            url: url, status: 503, underlying: responseError(url: url, status: 410)
         )
-        precondition(playbackNetworkErrorCode(in: typedFailure) == "service_unavailable")
-        precondition(!playbackErrorLostProxyHTTPResponse(typedFailure))
+        precondition(
+            playbackNetworkErrorCode(in: typedFailure) == "http_client_error",
+            "A captured HTTP 503 must not mask a later HTTP 410"
+        )
+        precondition(!playbackErrorCanUseProxyHTTPStatus(503, in: typedFailure))
+        precondition(playbackErrorCanUseProxyHTTPStatus(403, in: typedFailure))
+        precondition(playbackErrorCanUseProxyHTTPStatus(410, in: responseError(url: url, status: 503)))
+
+        let coreMediaDenial = coreMediaResponseError(code: -12660, status: "403: Forbidden")
+        for status in [410, 503] {
+            let wrapped = responseError(url: url, status: status, underlying: coreMediaDenial)
+            precondition(playbackNetworkErrorCode(in: wrapped) == "forbidden")
+        }
+        let coreMediaServiceFailure = coreMediaResponseError(
+            code: -16849, status: "503: Service Unavailable", underlying: coreMediaDenial
+        )
+        precondition(playbackNetworkErrorCode(in: coreMediaServiceFailure) == "forbidden")
+        let typedDenial = responseError(url: url, status: 404, underlying: coreMediaDenial)
+        precondition(playbackNetworkErrorCode(in: typedDenial) == "not_found")
 
         let strippedProxyError = NSError(domain: NSOSStatusErrorDomain, code: NSURLErrorBadServerResponse)
-        precondition(playbackErrorLostProxyHTTPResponse(wrapping(strippedProxyError)))
+        precondition(playbackErrorCanUseProxyHTTPStatus(503, in: wrapping(strippedProxyError)))
         let cancelledProxyError = NSError(
             domain: NSURLErrorDomain,
             code: NSURLErrorCancelled,
             userInfo: [NSUnderlyingErrorKey: strippedProxyError]
         )
-        precondition(!playbackErrorLostProxyHTTPResponse(cancelledProxyError))
+        precondition(!playbackErrorCanUseProxyHTTPStatus(403, in: cancelledProxyError))
 
         let unrelatedDescription = NSError(
             domain: "UnrelatedErrorDomain",
@@ -125,21 +135,25 @@ private func wrapping(_ error: NSError) -> NSError {
     NSError(domain: "AVFoundationErrorDomain", code: -11800, userInfo: [NSUnderlyingErrorKey: error])
 }
 
-private func responseError(url: URL, status: Int) -> NSError {
+private func responseError(url: URL, status: Int, underlying: NSError? = nil) -> NSError {
     let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)!
+    var userInfo: [String: Any] = ["NSURLErrorFailingURLResponseErrorKey": response]
+    userInfo[NSUnderlyingErrorKey] = underlying
     return NSError(
         domain: NSURLErrorDomain,
         code: NSURLErrorBadServerResponse,
-        userInfo: ["NSURLErrorFailingURLResponseErrorKey": response]
+        userInfo: userInfo
     )
 }
 
-private func coreMediaResponseError(code: Int, status: String) -> NSError {
-    NSError(
+private func coreMediaResponseError(code: Int, status: String, underlying: NSError? = nil) -> NSError {
+    var userInfo: [String: Any] = [
+        "NSDescription": "The operation couldn’t be completed. (CoreMediaErrorDomain error \(code) - HTTP \(status))"
+    ]
+    userInfo[NSUnderlyingErrorKey] = underlying
+    return NSError(
         domain: "CoreMediaErrorDomain",
         code: code,
-        userInfo: [
-            "NSDescription": "The operation couldn’t be completed. (CoreMediaErrorDomain error \(code) - HTTP \(status))"
-        ]
+        userInfo: userInfo
     )
 }
