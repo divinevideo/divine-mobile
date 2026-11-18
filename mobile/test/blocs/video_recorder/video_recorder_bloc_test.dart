@@ -4638,6 +4638,35 @@ void main() {
           ).called(1);
         });
 
+        test('is ignored while a sheet pauses remote recording', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          await pumpEventQueue();
+          trigger!();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          trigger!();
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
         test('is ignored on the Upload tab, which shows no preview', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
