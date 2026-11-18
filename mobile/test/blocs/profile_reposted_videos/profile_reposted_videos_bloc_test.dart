@@ -1305,6 +1305,61 @@ void main() {
               ]),
         ],
       );
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'syncs every repost, not just the one that arrived, when the tab '
+        'shows a failed load (#11182)',
+        setUp: () {
+          final newest = createAddressableId(currentUserPubkey, 'd2');
+          final older = createAddressableId(currentUserPubkey, 'd1');
+          // The live subscription asks for one event, so it brings only the
+          // newest repost back once the relay answers again.
+          when(
+            () => mockRepostsRepository.getOrderedRepostedAddressableIds(),
+          ).thenAnswer((_) async => [newest]);
+          when(() => mockRepostsRepository.syncUserReposts()).thenAnswer((
+            _,
+          ) async {
+            repostedIdsController.add({newest, older});
+            return RepostsSyncResult(
+              orderedAddressableIds: [newest, older],
+              addressableIdToRepostId: const {},
+            );
+          });
+          when(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer(
+            (invocation) async => [
+              for (final id
+                  in invocation.positionalArguments.first as List<String>)
+                createTestVideo(
+                  id: 'e-${id.split(':').last}',
+                  pubkey: currentUserPubkey,
+                  vineId: id.split(':').last,
+                ),
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => const ProfileRepostedVideosState(
+          status: ProfileRepostedVideosStatus.failure,
+        ),
+        act: (bloc) async {
+          bloc.add(const ProfileRepostedVideosSubscriptionRequested());
+          await pumpEventQueue();
+          repostedIdsController.add({
+            createAddressableId(currentUserPubkey, 'd2'),
+          });
+        },
+        wait: const Duration(milliseconds: 100),
+        verify: (bloc) {
+          expect(bloc.state.status, ProfileRepostedVideosStatus.success);
+          expect(bloc.state.videos.map((v) => v.vineId), equals(['d2', 'd1']));
+        },
+      );
     });
 
     group('ProfileRepostedVideosLoadMoreRequested', () {

@@ -1218,6 +1218,56 @@ void main() {
               ]),
         ],
       );
+
+      blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
+        'syncs every like, not just the one that arrived, when the tab shows '
+        'a failed load (#11182)',
+        setUp: () {
+          // The live subscription asks for one event, so it brings only the
+          // newest like back once the relay answers again.
+          when(
+            () => mockLikesRepository.getOrderedLikedEventIds(),
+          ).thenAnswer((_) async => ['event2']);
+          when(() => mockLikesRepository.syncUserReactions()).thenAnswer((
+            _,
+          ) async {
+            likedIdsController.add(['event2', 'event1']);
+            return const LikesSyncResult(
+              orderedEventIds: ['event2', 'event1'],
+              eventIdToReactionId: {},
+            );
+          });
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer(
+            (invocation) async => [
+              for (final id
+                  in invocation.positionalArguments.first as List<String>)
+                createTestVideo(id),
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => const ProfileLikedVideosState(
+          status: ProfileLikedVideosStatus.failure,
+        ),
+        act: (bloc) async {
+          bloc.add(const ProfileLikedVideosSubscriptionRequested());
+          await pumpEventQueue();
+          likedIdsController.add(['event2']);
+        },
+        wait: const Duration(milliseconds: 100),
+        verify: (bloc) {
+          expect(bloc.state.status, ProfileLikedVideosStatus.success);
+          expect(
+            bloc.state.videos.map((v) => v.id),
+            equals(['event2', 'event1']),
+          );
+        },
+      );
     });
 
     group('close', () {
