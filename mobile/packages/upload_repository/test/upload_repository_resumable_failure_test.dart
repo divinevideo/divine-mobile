@@ -17,9 +17,10 @@ class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _RecordingCrashReporter implements UploadCrashReporter {
   final recorded = <({Object error, String? reason})>[];
+  final logs = <String>[];
 
   @override
-  void log(String message) {}
+  void log(String message) => logs.add(message);
 
   @override
   Future<void> recordError(
@@ -216,6 +217,11 @@ void main() {
           ),
         );
         expect(sessionsPassed, hasLength(3), reason: '1 try + 2 retries');
+        // The failure report ran, then decided not to record the error.
+        expect(
+          crashReporter.logs.where((log) => log.startsWith('UPLOAD_FAILURE')),
+          [contains('Error Category: SERVER_ERROR')],
+        );
         expect(crashReporter.recorded, isEmpty);
       },
     );
