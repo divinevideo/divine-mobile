@@ -1157,19 +1157,26 @@ class NostrClient {
   /// a full-settlement [queryEventsDetailed] timed out; it costs one new
   /// connection per relay, so it is not a first choice.
   ///
+  /// [requiredRelays] keeps relays from an earlier read in the retry even if
+  /// their shared connections have since dropped. Every required relay and
+  /// every currently connected relay must answer for the read to complete.
+  ///
   /// The result reads like a [queryEventsDetailed] with
   /// `requireAllRelaysSettled` and no cache: `timedOut` unless every relay
   /// answered within [timeout], and `noRelays` when no relay is connected or
-  /// the client has begun disposing. Opening each connection is also bounded
-  /// by the pool's own `RelayPool.perRelaySendTimeout` (5 s), whatever
-  /// [timeout] is: a relay whose connection does not open by then is never
-  /// asked, and the read reports it as unfinished.
+  /// required, or the client has begun disposing. Opening each connection is
+  /// also bounded by the pool's own `RelayPool.perRelaySendTimeout` (5 s),
+  /// whatever [timeout] is: a relay whose connection does not open by then is
+  /// never asked, and the read reports it as unfinished.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsOnFreshConnections(
     List<Filter> filters, {
     Duration timeout = const Duration(seconds: 10),
+    List<String> requiredRelays = const [],
   }) async {
-    final relayUrls = _isClosing ? const <String>[] : connectedRelays;
+    final relayUrls = _isClosing
+        ? const <String>[]
+        : {...requiredRelays, ...connectedRelays}.toList();
     if (relayUrls.isEmpty) {
       return (events: const <Event>[], timedOut: false, noRelays: true);
     }

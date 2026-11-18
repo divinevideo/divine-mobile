@@ -817,6 +817,11 @@ class BookmarksRepository {
     final filters = [
       Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
     ];
+    // A relay that drops during the first read still owes its list. Retrying
+    // only the relays connected afterwards could replace a list we never saw.
+    final requiredRelays = requireAuthoritative
+        ? _nostrClient.connectedRelays
+        : const <String>[];
     var result = await _nostrClient.queryEventsDetailed(
       filters,
       useCache: !requireAuthoritative,
@@ -833,6 +838,7 @@ class BookmarksRepository {
       final fresh = await _nostrClient.queryEventsOnFreshConnections(
         filters,
         timeout: freshConnectionReadTimeout,
+        requiredRelays: requiredRelays,
       );
       result = (
         events: [...result.events, ...fresh.events],

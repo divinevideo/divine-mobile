@@ -35,6 +35,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<Filter>[]);
+    registerFallbackValue(<String>[]);
     registerFallbackValue(Duration.zero);
   });
 
@@ -93,6 +94,7 @@ void main() {
         () => nostrClient.queryEventsOnFreshConnections(
           any(),
           timeout: any(named: 'timeout'),
+          requiredRelays: any(named: 'requiredRelays'),
         ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
@@ -226,6 +228,7 @@ void main() {
       pubkey = getPublicKey(privateKeyHex);
       identity = LocalNostrSigner(privateKeyHex);
       nostrClient = _MockNostrClient();
+      when(() => nostrClient.connectedRelays).thenReturn(const []);
       signer = _MockBookmarkSigner();
       signedTags = null;
       signedContent = null;
@@ -312,6 +315,7 @@ void main() {
             () => nostrClient.queryEventsOnFreshConnections(
               any(),
               timeout: any(named: 'timeout'),
+              requiredRelays: any(named: 'requiredRelays'),
             ),
           );
         },

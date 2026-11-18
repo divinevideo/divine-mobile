@@ -140,15 +140,22 @@ final _list = Filter(kinds: const [10003], authors: [getPublicKey(_key)]);
   FakeAsync async,
   NostrClient client, {
   Duration timeout = const Duration(seconds: 10),
+  List<String> requiredRelays = const [],
 }) {
   ({List<Event> events, bool timedOut, bool noRelays})? result;
   Duration? took;
   final start = async.elapsed;
   unawaited(
-    client.queryEventsOnFreshConnections([_list], timeout: timeout).then((r) {
-      result = r;
-      took = async.elapsed - start;
-    }),
+    client
+        .queryEventsOnFreshConnections(
+          [_list],
+          timeout: timeout,
+          requiredRelays: requiredRelays,
+        )
+        .then((r) {
+          result = r;
+          took = async.elapsed - start;
+        }),
   );
   async.elapse(const Duration(seconds: 90));
   return (
@@ -343,6 +350,27 @@ void main() {
         expect(r.noRelays, isTrue);
         expect(r.events, isEmpty);
         expect(h.opened, isEmpty);
+      });
+    });
+
+    test('asks a required relay even after its shared connection drops', () {
+      fakeAsync((async) {
+        final h = _client(
+          async,
+          pooled: [
+            _Connection(_homeUrl, events: [list]),
+          ],
+          events: [list],
+          freshAnswerAfter: const Duration(milliseconds: 300),
+          connected: const [],
+        );
+
+        final r = _read(async, h.client, requiredRelays: [_homeUrl]);
+
+        expect(r.timedOut, isFalse);
+        expect(r.noRelays, isFalse);
+        expect(r.events.map((event) => event.id), [list.id]);
+        expect(h.opened.map(_bare), [_homeUrl]);
       });
     });
 

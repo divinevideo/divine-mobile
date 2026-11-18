@@ -140,7 +140,8 @@ Event _listEvent() => Event(
 /// other one does too unless [otherHoldsList] is false. Each relay's
 /// shared connection has [homeBacklog] or [otherBacklog] queued ahead; a new
 /// connection has [freshBacklog], and cannot send its REQ to the home relay
-/// when [homeRefusesFresh].
+/// when [homeRefusesFresh]. The home connection drops after
+/// [disconnectHomeAfter] when given.
 ({
   BookmarksRepository repo,
   _Connection home,
@@ -154,6 +155,7 @@ _harness(
   Duration freshBacklog = Duration.zero,
   bool otherHoldsList = true,
   bool homeRefusesFresh = false,
+  Duration? disconnectHomeAfter,
 }) {
   final list = _listEvent();
   final home = _Connection(_homeUrl, list: list, backlog: homeBacklog);
@@ -166,7 +168,7 @@ _harness(
   final nostr = Nostr(LocalNostrSigner(_key), [], (url) {
     final connection = _Connection(
       url,
-      list: list,
+      list: url.startsWith(_homeUrl) || otherHoldsList ? list : null,
       backlog: freshBacklog,
       takeReqs: !(homeRefusesFresh && url.startsWith(_homeUrl)),
     );
@@ -179,11 +181,19 @@ _harness(
   async.flushMicrotasks();
   final urls = [_homeUrl, _otherUrl];
   final relayManager = _MockRelayManager();
-  when(() => relayManager.connectedRelays).thenReturn(urls);
+  when(() => relayManager.connectedRelays).thenAnswer(
+    (_) => [
+      for (final relay in [home, other])
+        if (relay.relayStatus.connected == ClientConnected.connected) relay.url,
+    ],
+  );
   when(() => relayManager.configuredRelays).thenReturn(urls);
   when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
   when(() => relayManager.diagnosticsSink).thenReturn(null);
   when(relayManager.dispose).thenAnswer((_) async {});
+  if (disconnectHomeAfter != null) {
+    Timer(disconnectHomeAfter, () => unawaited(home.disconnect()));
+  }
   SharedPreferences.setMockInitialValues({});
   late SharedPreferences prefs;
   unawaited(SharedPreferences.getInstance().then((p) => prefs = p));
@@ -290,6 +300,43 @@ void main() {
 
           expect(result.succeeded, isTrue);
           expect(h.opened, isEmpty);
+        });
+      });
+
+      test('does not publish a partial list when the relay holding it '
+          'disconnects before the retry and cannot answer there', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            otherHoldsList: false,
+            homeRefusesFresh: true,
+            disconnectHomeAfter: const Duration(seconds: 2),
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isFalse);
+          expect(result.failure, BookmarkToggleFailure.timedOut);
+          expect(h.home.published, isEmpty);
+          expect(h.other.published, isEmpty);
+        });
+      });
+
+      test('reads the list from the original relay on a new connection '
+          'even after its shared connection drops', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            otherHoldsList: false,
+            disconnectHomeAfter: const Duration(seconds: 2),
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isTrue);
+          expect(_itemIds(h.repo), containsAll([_savedVideo, _newVideo]));
         });
       });
 
