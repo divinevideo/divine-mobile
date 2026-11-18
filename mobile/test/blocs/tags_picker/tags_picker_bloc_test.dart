@@ -639,6 +639,38 @@ void main() {
         expect(state.canAddQuery, isFalse);
       });
     });
+
+    group('turnsAwayAtLimit', () {
+      test('is true for a new tag at the limit', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit('News'), isTrue);
+      });
+
+      test('is false below the limit', () {
+        final state = TagsPickerState(selectedTags: ten.take(9).toSet());
+        expect(state.turnsAwayAtLimit('news'), isFalse);
+      });
+
+      test('is false for a tag the video already has', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit('TAG3'), isFalse);
+      });
+
+      test("is false for a sticker's hashtag", () {
+        final state = TagsPickerState(
+          selectedTags: ten.take(8).toSet(),
+          stickerTags: const {'summer', 'beach'},
+        );
+        expect(state.turnsAwayAtLimit('summer'), isFalse);
+      });
+
+      test('is false for input that is not a tag', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit(''), isFalse);
+        expect(state.turnsAwayAtLimit('   '), isFalse);
+        expect(state.turnsAwayAtLimit(tooLong), isFalse);
+      });
+    });
     group('sticker tags', () {
       const stickerTags = {'summer', 'beach'};
       final eight = [for (var i = 0; i < 8; i++) 'tag$i'];

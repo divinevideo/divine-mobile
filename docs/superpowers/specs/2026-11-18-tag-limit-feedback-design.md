@@ -60,8 +60,11 @@ in review.
 - If the video is already at the limit when the creator submits, keep the
   typed text in the field instead of clearing it, so it can be added once a
   tag is removed. Otherwise clear as today. The widget decides from
-  `state.isAtTagLimit` before dispatching, because the bloc answers
-  asynchronously. A pasted list that partly fits still clears; the notice
+  `TagsPickerState.turnsAwayAtLimit(raw)` before dispatching, because the
+  bloc answers asynchronously; that getter is the one rejection rule both
+  layers share, so a tag the video already has is never treated as turned
+  away. At the limit, a tag the video already has clears the field and
+  leaves any notice alone. A pasted list that partly fits still clears; the notice
   explains the drop. At the limit, pressing return on an empty field does
   nothing. Typing a tag then a space (rather than return) at the limit still
   clears the text; the warning explains it. (Claude's calls.)

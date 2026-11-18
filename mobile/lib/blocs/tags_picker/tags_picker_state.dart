@@ -67,6 +67,14 @@ final class TagsPickerState extends Equatable {
   bool get isAtTagLimit =>
       allTags.length >= HashtagExtractor.maxHashtagsPerVideo;
 
+  /// Whether committing [raw] would be turned away for the tag limit: it is a
+  /// valid tag the video does not carry yet, and the video is at the limit.
+  bool turnsAwayAtLimit(String raw) {
+    if (!isAtTagLimit) return false;
+    final tag = HashtagExtractor.normalizeVideoHashtag(raw);
+    return tag != null && !allTags.contains(tag);
+  }
+
   /// Search results in the form they would be added — normalized and
   /// deduplicated — minus anything already selected or not addable.
   List<String> get suggestions {

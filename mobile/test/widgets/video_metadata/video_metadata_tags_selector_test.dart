@@ -616,6 +616,55 @@ void main() {
         });
 
         testWidgets(
+          'after a rejection, a tag the video already has is not announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await submit(tester, 'tag3');
+
+            expect(announcements, isEmpty);
+            expect(find.text(limitWarning), findsOneWidget);
+            expect(fieldText(tester), isEmpty);
+          },
+        );
+
+        testWidgets('a repeat rejection ended with a space is announced', (
+          tester,
+        ) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+          await submit(tester, 'news');
+
+          await tester.enterText(field(), 'other ');
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(
+            announcements.where((message) => message == limitWarning),
+            hasLength(1),
+          );
+          expect(find.text(limitWarning), findsOneWidget);
+        });
+
+        testWidgets(
+          'after a rejection, a tag the video already has ended with a space '
+          'is not announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await tester.enterText(field(), 'tag3 ');
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(announcements, isEmpty);
+          },
+        );
+
+        testWidgets(
           'with an empty field after a rejection does not announce again',
           (tester) async {
             final announcements = captureAnnouncements(tester);

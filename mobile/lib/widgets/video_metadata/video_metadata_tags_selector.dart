@@ -168,7 +168,9 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
       return;
     }
 
-    context.read<TagsPickerBloc>().add(TagsPickerTagsAdded(parsed.completed));
+    final bloc = context.read<TagsPickerBloc>();
+    _announceRepeatLimitRejection(bloc.state, parsed.completed);
+    bloc.add(TagsPickerTagsAdded(parsed.completed));
     _previousText = parsed.remainder;
     _searchController.value = TextEditingValue(
       text: parsed.remainder,
@@ -182,8 +184,17 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
 
   void _addTag(String raw) {
     final bloc = context.read<TagsPickerBloc>();
+    if (bloc.state.turnsAwayAtLimit(raw)) {
+      // Kept in the field so the creator can add it once they remove a tag.
+      _announceRepeatLimitRejection(bloc.state, [raw]);
+      bloc.add(TagsPickerTagsAdded([raw]));
+      return;
+    }
     if (bloc.state.isAtTagLimit) {
-      if (raw.trim().isNotEmpty) _rejectAtTagLimit(bloc, raw);
+      // An empty return or a tag the video already has adds nothing, so it
+      // leaves any notice in place.
+      _previousText = '';
+      _searchController.clear();
       return;
     }
     bloc
@@ -193,21 +204,22 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
     _searchController.clear();
   }
 
-  /// Leaves [raw] in the field so the creator can add it once they remove a
-  /// tag. The hint's live region announces the first rejection; a repeat
-  /// leaves its text unchanged, so it is announced here.
-  void _rejectAtTagLimit(TagsPickerBloc bloc, String raw) {
-    if (bloc.state.notice == TagsPickerNotice.tagLimitReached) {
-      announceDetached(
-        context,
-        context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
-          HashtagExtractor.maxHashtagsPerVideo,
-        ),
-        description: 'announce repeated tag limit rejection',
-        logName: 'VideoMetadataTagsSelector',
-      );
-    }
-    bloc.add(TagsPickerTagsAdded([raw]));
+  /// The hint's live region announces the first limit rejection. A repeat
+  /// leaves the hint's text unchanged, so it is announced here.
+  void _announceRepeatLimitRejection(
+    TagsPickerState state,
+    List<String> tokens,
+  ) {
+    if (state.notice != TagsPickerNotice.tagLimitReached) return;
+    if (!tokens.any(state.turnsAwayAtLimit)) return;
+    announceDetached(
+      context,
+      context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
+        HashtagExtractor.maxHashtagsPerVideo,
+      ),
+      description: 'announce repeated tag limit rejection',
+      logName: 'VideoMetadataTagsSelector',
+    );
   }
 
   void _addSuggestionTag(String raw) {
