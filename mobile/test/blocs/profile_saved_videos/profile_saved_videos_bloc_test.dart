@@ -1110,6 +1110,47 @@ void main() {
         );
       });
 
+      // The snapshot is filtered after the videos load, so it must use the
+      // list as it is then, not as it was when the load began (#11180).
+      test(
+        'leaves out a save that turned private while its videos loaded',
+        () async {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(['video-1', 'video-2']));
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-1', 'video-2'});
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((invocation) async {
+            // Another client moves video-1 into the private section meanwhile.
+            when(
+              () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+            ).thenReturn({'video-2'});
+            return (invocation.positionalArguments.first as List<String>)
+                .map(createTestVideo)
+                .toList();
+          });
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future;
+
+          expect(bloc.state.savedEventIds, ['video-1', 'video-2']);
+          final persisted = ProfileVideoListSnapshot.fromJson(
+            (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+          );
+          expect(persisted.itemIds, ['video-2']);
+          expect(persisted.videos.map((v) => v.id), ['video-2']);
+        },
+      );
+
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'shows a stale snapshot while revalidating',
         setUp: () async {
