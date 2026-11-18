@@ -13,6 +13,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
@@ -40,6 +41,16 @@ DivineVideoClip _clip(String id) => DivineVideoClip(
 
 class _Manager extends ClipManagerNotifier {
   Object? bakeError;
+  bool saveSucceeds = true;
+  Completer<bool>? saveGate;
+  final savedClips = <String, DivineVideoClip>{};
+
+  @override
+  Future<bool> saveClipToLibrary(DivineVideoClip clip) async {
+    final saved = saveGate == null ? saveSucceeds : await saveGate!.future;
+    if (saved) savedClips[clip.id] = clip;
+    return saved;
+  }
 
   @override
   Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) async {
@@ -225,6 +236,91 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('persists an unedited own-source layout outside the session', (
+      tester,
+    ) async {
+      final layout = _clip('layout');
+      final autosave = DivineVideoDraft.create(
+        clips: [layout],
+        title: '',
+        description: '',
+        hashtags: {},
+        selectedApproach: 'video',
+      );
+      expect(autosave.hasBeenEdited, isFalse);
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        layout: (_, _, _, _) async => layout,
+      );
+      expect(manager.savedClips['layout'], same(layout));
+      manager.clear();
+      expect(manager.clips, isEmpty);
+      expect(manager.savedClips['layout'], same(layout));
+    });
+
+    testWidgets('waits for library persistence before opening the editor', (
+      tester,
+    ) async {
+      final gate = Completer<bool>();
+      manager.saveGate = gate;
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        layout: (_, _, _, _) async => _clip('layout'),
+      );
+      final openedBeforeSave = events.contains('open editor');
+      gate.complete(true);
+      await tester.pumpAndSettle();
+      expect(openedBeforeSave, isFalse);
+      expect(manager.savedClips, contains('layout'));
+      expect(events.last, 'open editor');
+    });
+
+    testWidgets('failed layout persistence reports failure without an editor', (
+      tester,
+    ) async {
+      manager.saveSucceeds = false;
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        layout: (_, _, _, _) async => _clip('layout'),
+      );
+      final context = tester.element(find.text('react'));
+      expect(find.text(context.l10n.videoEditorClipSaveFailed), findsOneWidget);
+      expect(events, ['keep draft', 'clear session']);
+      expect(manager.clips, isEmpty);
+      expect(manager.savedClips, isEmpty);
+      expect(abandoned, ['/documents/layout.mp4']);
+    });
+
+    testWidgets('account change during layout save does not open an editor', (
+      tester,
+    ) async {
+      final gate = Completer<bool>();
+      manager.saveGate = gate;
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        layout: (_, _, _, _) async => _clip('layout'),
+      );
+      owner =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      gate.complete(true);
+      await tester.pumpAndSettle();
+      expect(events, ['keep draft', 'clear session']);
+      expect(manager.clips, isEmpty);
+      expect(abandoned, ['/documents/layout.mp4']);
+    });
 
     testWidgets(
       'keeps the draft, records, and opens only the confirmed layout',

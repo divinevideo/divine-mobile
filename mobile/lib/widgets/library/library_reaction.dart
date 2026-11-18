@@ -216,6 +216,34 @@ Future<void> recordLibraryReaction(
       );
       return;
     }
+    // An own-source layout with no further edits is not an edited draft.
+    // Give the confirmed render its own library row before the autosave can
+    // be replaced by another session, just as the camera keeps every take.
+    final saved = await manager.saveClipToLibrary(result);
+    if (!context.mounted ||
+        !isActive() ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      await reaction.cleanupFiles(
+        result.ownedFilePaths.whereType<String>().toList(),
+      );
+      return;
+    }
+    if (!saved) {
+      await reaction.cleanupFiles(
+        result.ownedFilePaths.whereType<String>().toList(),
+      );
+      if (context.mounted &&
+          isActive() &&
+          ModalRoute.of(context)?.isCurrent != false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorClipSaveFailed,
+            error: true,
+          ),
+        );
+      }
+      return;
+    }
     manager.insertClip(0, result);
     // Queue before the editor can publish/discard and flush this session.
     reaction.adoptGeneratedFiles();

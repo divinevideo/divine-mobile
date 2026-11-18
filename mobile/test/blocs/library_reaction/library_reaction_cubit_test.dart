@@ -2,13 +2,25 @@
 // ABOUTME: Uses boundary fakes to verify rendering handoff without native plugins.
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
+
+import '../../mocks/mock_path_provider_platform.dart';
 
 Future<DivineVideoClip> _noBake(DivineVideoClip clip) async => clip;
 
@@ -24,7 +36,82 @@ DivineVideoClip _clip(String id) => DivineVideoClip(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group(LibraryReactionCubit, () {
+    test(
+      'library-owned layout survives autosave deletion and real cleanup',
+      () async {
+        final directory = Directory.systemTemp.createTempSync(
+          'reaction_layout_',
+        );
+        final database = AppDatabase.test(NativeDatabase.memory());
+        final previousPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(directory.path);
+        resetCachedDocumentsPath();
+        final deferred = <String?>[];
+        final cubit = LibraryReactionCubit(
+          deferFileCleanup: deferred.addAll,
+          bakeCapturedChromaKey: _noBake,
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        addTearDown(() async {
+          await cubit.close();
+          await database.close();
+          PathProviderPlatform.instance = previousPathProvider;
+          resetCachedDocumentsPath();
+          if (directory.existsSync()) directory.deleteSync(recursive: true);
+        });
+        final video = File(p.join(directory.path, 'layout.mp4'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final poster = File(p.join(directory.path, 'layout.jpg'))
+          ..writeAsBytesSync([4, 5, 6]);
+        final layout = _clip('layout').copyWith(
+          video: EditorVideo.file(video.path),
+          thumbnailPath: poster.path,
+        );
+        final autosave = DivineVideoDraft.create(
+          id: VideoEditorConstants.autoSaveId,
+          clips: [layout],
+          title: '',
+          description: '',
+          hashtags: {},
+          selectedApproach: 'video',
+        );
+        expect(autosave.hasBeenEdited, isFalse);
+        final drafts = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        final library = ClipLibraryService(
+          clipsDao: database.clipsDao,
+          draftsDao: database.draftsDao,
+          clipCategoriesDao: database.clipCategoriesDao,
+        );
+        await drafts.saveDraft(autosave);
+        await library.saveClip(layout);
+        await drafts.deleteDraft(VideoEditorConstants.autoSaveId);
+        expect(
+          await database.draftsDao.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+          isNull,
+        );
+        expect(await database.clipsDao.getClipById(layout.id), isNotNull);
+        final paths = [video.path, poster.path];
+        await cubit.cleanupFiles(paths);
+        expect(video.existsSync(), isTrue);
+        expect(poster.existsSync(), isTrue);
+        expect(deferred, isEmpty);
+        await database.clipsDao.deleteClip(layout.id);
+        await cubit.cleanupFiles(paths);
+        expect(video.existsSync(), isFalse);
+        expect(poster.existsSync(), isFalse);
+      },
+    );
+
     test(
       'waits for every pending capture key before merging camera cuts',
       () async {
