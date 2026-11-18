@@ -25,6 +25,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/creation_session_guard.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -36,6 +37,15 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// Whether the library is stacked above an active creation screen.
+bool _coversCreationSession(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  return router != null &&
+      hasCreationSessionInRouteStack(
+        router.routerDelegate.currentConfiguration,
+      );
+}
 
 /// Which tabs the library shows.
 enum LibraryTabsMode {
@@ -956,10 +966,12 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
-                            // Starting a reaction clears the session, so the
-                            // recorder's library must not offer it.
+                            // Any pushed library can cover a live creation
+                            // session, including an upload-failure action.
                             offersRecordReaction:
-                                widget.tabsMode == LibraryTabsMode.allTabs,
+                                !widget.selectionMode &&
+                                widget.tabsMode == LibraryTabsMode.allTabs &&
+                                !_coversCreationSession(context),
                             onCreateVideo: createVideo,
                           ),
                         ),

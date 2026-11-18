@@ -34,6 +34,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/clip_gallery_save/clip_gallery_save_warning_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/library_screen.dart';
@@ -227,6 +228,7 @@ void main() {
       ValueListenable<bool>? libraryVisible,
       List<Override> extraOverrides = const [],
       bool routed = false,
+      String? underlyingCreationRoute,
       double? cropGuideAspectRatio,
     }) {
       final library = LibraryScreen(
@@ -237,9 +239,22 @@ void main() {
         cropGuideAspectRatio: cropGuideAspectRatio,
       );
       final GoRouter? router;
-      if (routed) {
+      if (routed || underlyingCreationRoute != null) {
         router = GoRouter(
-          routes: [GoRoute(path: '/', builder: (_, _) => library)],
+          initialLocation: underlyingCreationRoute ?? RoutePaths.root,
+          routes: [
+            GoRoute(path: RoutePaths.root, builder: (_, _) => library),
+            GoRoute(path: RoutePaths.libraryDrafts, builder: (_, _) => library),
+            for (final path in [
+              RoutePaths.videoRecorder,
+              RoutePaths.videoEditor,
+              RoutePaths.videoMetadata,
+            ])
+              GoRoute(
+                path: path,
+                builder: (_, _) => const Scaffold(body: SizedBox.shrink()),
+              ),
+          ],
         );
         addTearDown(router.dispose);
       } else {
@@ -397,6 +412,64 @@ void main() {
     );
 
     group('Record reaction', () {
+      for (final creationRoute in [
+        RoutePaths.videoRecorder,
+        RoutePaths.videoEditor,
+        RoutePaths.videoMetadata,
+      ]) {
+        testWidgets('is not offered when library covers $creationRoute', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              underlyingCreationRoute: creationRoute,
+              initialTabIndex: LibraryScreen.clipsTabIndex,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final router = GoRouter.of(tester.element(find.byType(Scaffold)));
+          final library = router.push<void>(RoutePaths.libraryDrafts);
+          await tester.pumpAndSettle();
+          final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+          expect(tabs, isNotEmpty);
+          expect(
+            tabs.map((tab) => tab.offersRecordReaction),
+            everyElement(isFalse),
+          );
+          router.pop();
+          await library;
+          await tester.pumpAndSettle();
+        });
+      }
+
+      testWidgets('is not offered above an imperatively pushed editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            routed: true,
+            initialTabIndex: LibraryScreen.clipsTabIndex,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final router = GoRouter.of(tester.element(find.byType(LibraryScreen)));
+        final editor = router.push<void>(RoutePaths.videoEditor);
+        await tester.pumpAndSettle();
+        final library = router.push<void>(RoutePaths.libraryDrafts);
+        await tester.pumpAndSettle();
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isFalse),
+        );
+        router.pop();
+        await library;
+        router.pop();
+        await editor;
+        await tester.pumpAndSettle();
+      });
+
       testWidgets('is not offered in the recorder library', (tester) async {
         await tester.pumpWidget(
           buildWidget(

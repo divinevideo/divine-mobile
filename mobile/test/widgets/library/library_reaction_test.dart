@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
@@ -168,6 +170,60 @@ void main() {
       );
       await tester.tap(find.text('react'));
       await tester.pumpAndSettle();
+    }
+
+    for (final path in [
+      RoutePaths.videoRecorder,
+      RoutePaths.videoEditor,
+      RoutePaths.videoMetadata,
+    ]) {
+      testWidgets('cannot replace the active session on $path', (tester) async {
+        final router = GoRouter(
+          initialLocation: path,
+          routes: [
+            GoRoute(
+              path: path,
+              builder: (_, _) => Scaffold(
+                body: Consumer(
+                  builder: (context, ref, _) {
+                    ref.watch(clipManagerProvider);
+                    return TextButton(
+                      onPressed: () =>
+                          recordLibraryReaction(context, ref, _clip('source')),
+                      child: const Text('react'),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(auth),
+              clipManagerProvider.overrideWith(() => manager),
+              videoEditorProvider.overrideWith(() => editor),
+              videoPublishProvider.overrideWith(
+                () => _Publish(events, manager),
+              ),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(manager.clips.map((clip) => clip.id), ['unfinished']);
+        await tester.tap(find.text('react'));
+        await tester.pumpAndSettle();
+        expect(events, isEmpty);
+        expect(manager.clips.map((clip) => clip.id), ['unfinished']);
+        expect(tester.takeException(), isNull);
+      });
     }
 
     testWidgets(
