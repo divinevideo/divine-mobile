@@ -553,38 +553,40 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   );
 
   /// Generates the proof of the second camera's recording of the clip
-  /// [ownerId], writes it onto that take and saves the take to the library,
-  /// where a signed copy of the file is recognised by it.
+  /// [ownerId] and writes it onto that take.
+  ///
+  /// The take is no library clip of its own and no recording of its own in
+  /// the gallery: it travels on its clip, whose library entry and gallery
+  /// backup carry the take.
   Future<void> _generateSecondaryCameraProof(
     String ownerId,
     DivineVideoClip secondary,
   ) => _proveRecording(
     secondary,
+    isLibraryRecording: false,
     apply: (proofManifestJson, recordingSha256) {
       final current = getClipById(ownerId)?.secondaryCamera?.clip;
       if (current == null || current.id != secondary.id) return;
-      final proved = current.copyWith(
-        proofManifestJson: proofManifestJson,
-        recordingSha256: recordingSha256,
-      );
-      updateSecondaryCameraClip(ownerId, proved);
-      runDetached(
-        saveClipToLibrary(proved),
-        'save the proven second camera take ${secondary.id}',
-        logName: 'ClipManagerNotifier',
-        category: .video,
+      updateSecondaryCameraClip(
+        ownerId,
+        current.copyWith(
+          proofManifestJson: proofManifestJson,
+          recordingSha256: recordingSha256,
+        ),
       );
     },
   );
 
   /// Generates the ProofMode / C2PA attestation of [clip]'s recording and
   /// hands it to [apply] as the clip's `proofManifestJson` and
-  /// `recordingSha256`, then remembers the recording's hash and backs it up
-  /// to the gallery.
+  /// `recordingSha256`. A recording with a library entry of its own
+  /// ([isLibraryRecording]) then has its hash remembered there and is backed
+  /// up to the gallery.
   Future<void> _proveRecording(
     DivineVideoClip clip, {
     required void Function(String proofManifestJson, String? recordingSha256)
     apply,
+    bool isLibraryRecording = true,
   }) async {
     try {
       // Wait for trimming to finish before proofing the final file
@@ -619,7 +621,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         // The recorder saved the take to the clip library before its proof
         // came back, and the take can be picked from there long after it
         // left this working set.
-        if (recordingSha256 != null) {
+        if (isLibraryRecording && recordingSha256 != null) {
           await ref
               .read(clipLibraryServiceProvider)
               .rememberRecordingHash(
@@ -642,6 +644,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         );
       }
 
+      if (!isLibraryRecording) return;
       // The take's signing settled, so its gallery backup can start (#10067).
       // Detached: the gallery is no part of the editor's work.
       runDetached(

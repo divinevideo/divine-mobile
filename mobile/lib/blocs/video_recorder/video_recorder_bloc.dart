@@ -1371,38 +1371,31 @@ class VideoRecorderBloc
         }
       }),
     );
-    // The second camera's take is a recording of its own: the library lists
-    // it, and its proof is looked up there.
+    // The second camera's take travels on its clip: the library lists the
+    // clip, with both cameras on its picture.
     Future<void>? secondaryThumbnail;
     if (clip.secondaryCamera case final second?) {
       // Tracked so the editor waits for the poster before it turns the take
-      // into a layer; the library save after it is not worth waiting for.
+      // into a layer.
       secondaryThumbnail =
           _addSecondaryCameraThumbnail(
-                clipId: clip.id,
-                take: second,
-                clipManager: clipManager,
-              )
-              .then((enriched) {
-                if (enriched == null) return;
-                runDetached(
-                  _saveSecondaryCameraTake(clip.id, enriched, clipManager),
-                  'save the second camera take of ${clip.id}',
-                  logName: 'VideoRecorderBloc',
-                  category: LogCategory.video,
-                );
-              })
-              .catchError((Object error, StackTrace stackTrace) {
-                // A failure only costs the take's poster; the take itself is
-                // already on its clip.
-                Log.error(
-                  '⚠️ Second camera thumbnail failed for ${clip.id}',
-                  name: 'VideoRecorderBloc',
-                  category: LogCategory.video,
-                  error: error,
-                  stackTrace: stackTrace,
-                );
-              });
+            clipId: clip.id,
+            take: second,
+            clipManager: clipManager,
+          ).then<void>((_) {}).catchError((
+            Object error,
+            StackTrace stackTrace,
+          ) {
+            // A failure only costs the take's poster; the take itself is
+            // already on its clip.
+            Log.error(
+              '⚠️ Second camera thumbnail failed for ${clip.id}',
+              name: 'VideoRecorderBloc',
+              category: LogCategory.video,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          });
       clipManager.trackClipEnrichment(second.clip.id, secondaryThumbnail);
     }
 
@@ -1569,23 +1562,6 @@ class VideoRecorderBloc
           );
     clipManager.updateSecondaryCameraClip(clipId, enriched);
     return enriched;
-  }
-
-  /// Saves the second camera's take of the clip [clipId] to the library as a
-  /// clip of its own.
-  Future<void> _saveSecondaryCameraTake(
-    String clipId,
-    DivineVideoClip take,
-    ClipManagerNotifier clipManager,
-  ) async {
-    final saved = await clipManager.saveClipToLibrary(take);
-    if (!saved) {
-      Log.warning(
-        '⚠️ Second camera take save to library failed for $clipId',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-    }
   }
 
   /// Enriches a freshly recorded [clip] with its real duration, thumbnail and

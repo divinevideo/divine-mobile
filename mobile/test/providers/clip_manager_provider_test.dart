@@ -1058,72 +1058,74 @@ void main() {
         expect(second.trimStart, const Duration(milliseconds: 120));
       });
 
-      test('proves the second file and saves it to the library', () async {
-        const recordingHash = 'second-hash';
-        final proven = <String>[];
-        NativeProofModeService.proofFileOverride =
-            (
-              file, {
-              required enableAdvancedCawgEmbedding,
-              creatorBindingAssertion,
-              cawgIdentityAssertion,
-              verifiedIdentityBundle,
-              clips,
-              editorStateHistory,
-              derivedFrom,
-            }) async {
-              proven.add(file.path);
-              return const NativeProofData(videoHash: recordingHash);
-            };
-        when(
-          () => mockClipLibraryService.rememberRecordingHash(
-            clipId: any(named: 'clipId'),
-            fileName: any(named: 'fileName'),
-            sha256: any(named: 'sha256'),
-          ),
-        ).thenAnswer((_) async => true);
-        final saved = <DivineVideoClip>[];
-        when(() => mockClipLibraryService.saveClip(any())).thenAnswer((
-          invocation,
-        ) async {
-          saved.add(invocation.positionalArguments.single as DivineVideoClip);
-        });
-        final backgroundWork = container.read(editorBackgroundWorkProvider);
-        final notifier = container.read(clipManagerProvider.notifier);
+      test(
+        'proves the second file without a library entry of its own',
+        () async {
+          const recordingHash = 'second-hash';
+          final proven = <String>[];
+          NativeProofModeService.proofFileOverride =
+              (
+                file, {
+                required enableAdvancedCawgEmbedding,
+                creatorBindingAssertion,
+                cawgIdentityAssertion,
+                verifiedIdentityBundle,
+                clips,
+                editorStateHistory,
+                derivedFrom,
+              }) async {
+                proven.add(file.path);
+                return const NativeProofData(videoHash: recordingHash);
+              };
+          when(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: any(named: 'clipId'),
+              fileName: any(named: 'fileName'),
+              sha256: any(named: 'sha256'),
+            ),
+          ).thenAnswer((_) async => true);
+          final saved = <DivineVideoClip>[];
+          when(() => mockClipLibraryService.saveClip(any())).thenAnswer((
+            invocation,
+          ) async {
+            saved.add(invocation.positionalArguments.single as DivineVideoClip);
+          });
+          final backgroundWork = container.read(editorBackgroundWorkProvider);
+          final notifier = container.read(clipManagerProvider.notifier);
 
-        final clip = notifier.addClip(
-          limitClipDuration: false,
-          video: EditorVideo.file('/documents/VID_1.mp4'),
-          duration: const Duration(seconds: 2),
-          targetAspectRatio: .vertical,
-          originalAspectRatio: 9 / 16,
-          secondaryRecording: second,
-        );
-        await backgroundWork.settle();
-        await pumpEventQueue();
+          final clip = notifier.addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/documents/VID_1.mp4'),
+            duration: const Duration(seconds: 2),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+            secondaryRecording: second,
+          );
+          await backgroundWork.settle();
+          await pumpEventQueue();
 
-        expect(
-          proven,
-          containsAll(['/documents/VID_1.mp4', '/documents/VID_1_second.mp4']),
-        );
-        final take = notifier.getClipById(clip.id)!.secondaryCamera!;
-        expect(take.clip.recordingSha256, recordingHash);
-        expect(take.clip.proofManifestJson, isNotNull);
-        verify(
-          () => mockClipLibraryService.rememberRecordingHash(
-            clipId: '${clip.id}_second',
-            fileName: 'VID_1_second.mp4',
-            sha256: recordingHash,
-          ),
-        ).called(1);
-        expect(
-          saved
-              .where((c) => c.id == '${clip.id}_second')
-              .single
-              .proofManifestJson,
-          isNotNull,
-        );
-      });
+          expect(
+            proven,
+            containsAll([
+              '/documents/VID_1.mp4',
+              '/documents/VID_1_second.mp4',
+            ]),
+          );
+          final take = notifier.getClipById(clip.id)!.secondaryCamera!;
+          expect(take.clip.recordingSha256, recordingHash);
+          expect(take.clip.proofManifestJson, isNotNull);
+          // The take travels on its clip: the library lists the clip, not a
+          // silent second recording beside it.
+          verifyNever(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: '${clip.id}_second',
+              fileName: any(named: 'fileName'),
+              sha256: any(named: 'sha256'),
+            ),
+          );
+          expect(saved.where((c) => c.id == '${clip.id}_second'), isEmpty);
+        },
+      );
 
       test('waits for the take proof and the work tracked for it', () async {
         final secondProof = Completer<NativeProofData?>();
