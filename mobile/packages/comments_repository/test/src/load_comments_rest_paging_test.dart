@@ -216,6 +216,86 @@ void main() {
         expect(reply.replyToEventId, parentId);
         expect(reply.replyToAuthorPubkey, viewerPubkey);
       });
+
+      for (final useRest in [true, false]) {
+        group(useRest ? 'REST' : 'relay', () {
+          Future<CommentThread> loadFrom(VideoComment comment) {
+            if (useRest) {
+              stubRestPage(0, [comment]);
+            } else {
+              when(() => funnelcake.isAvailable).thenReturn(false);
+              final event = Event(
+                comment.pubkey,
+                comment.kind,
+                comment.tags,
+                comment.content,
+                createdAt: comment.createdAt,
+              )..id = comment.id;
+              when(() => nostrClient.queryEvents(any())).thenAnswer(
+                (_) async => [event],
+              );
+            }
+            return repository.loadComments(
+              rootEventId: currentId,
+              rootEventKind: _videoKind,
+              rootAddressableId: coordinate,
+            );
+          }
+
+          test(
+            'keeps a reply to a video reply attached to its parent',
+            () async {
+              final thread = await loadFrom(
+                postedBeforeEdit(
+                  'reply-to-video',
+                  parentTags: [
+                    ['A', coordinate, ''],
+                    ['e', parentId, '', viewerPubkey],
+                    ['a', '$_videoKind:$viewerPubkey:reply-video', ''],
+                    ['k', '$_videoKind'],
+                    ['p', viewerPubkey],
+                  ],
+                  replyToEventId: parentId,
+                  replyToPubkey: viewerPubkey,
+                ),
+              );
+
+              final reply = thread.commentCache['reply-to-video']!;
+              expect(reply.replyToEventId, parentId);
+              expect(reply.replyToAuthorPubkey, viewerPubkey);
+            },
+          );
+
+          test('keeps an addressable-only comment on an older revision '
+              'top-level', () async {
+            final thread = await loadFrom(
+              const VideoComment(
+                id: 'addressable-only',
+                pubkey: viewerPubkey,
+                createdAt: 1000,
+                kind: _commentKind,
+                content: 'Comment on an older revision',
+                sig: 'sig',
+                tags: [
+                  ['A', coordinate, ''],
+                  ['K', '$_videoKind'],
+                  ['P', authorPubkey],
+                  ['a', coordinate, ''],
+                  ['e', supersededId, '', authorPubkey],
+                  ['k', '$_videoKind'],
+                  ['p', authorPubkey],
+                ],
+                replyToEventId: supersededId,
+                replyToPubkey: authorPubkey,
+              ),
+            );
+
+            final comment = thread.commentCache['addressable-only']!;
+            expect(comment.replyToEventId, isNull);
+            expect(comment.replyToAuthorPubkey, isNull);
+          });
+        });
+      }
     });
 
     group('with a REST offset and a cursor', () {
