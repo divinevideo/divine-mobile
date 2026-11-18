@@ -15,6 +15,7 @@ choosing an optimization.
 | Startup readiness | `startup_milestone` | Custom **`elapsed_ms`** from startup monitor initialization to `first_frame`, `auth_shell_ready`, `ui_ready`, or `video_ready`. `video_ready` is the first rendered native frame of any fullscreen-feed video after launch, and it also ends `startup_phase` `total` |
 | Fullscreen video playback | `video_first_frame` | Custom **`ttff_ms`**, activation to rendered native first frame; `cache=hit/miss`, `position=initial/subsequent`; optional controller/source/playback milestones measured from activation |
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
+| Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached; `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
 | Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness and video generation duration/outcome |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
 
@@ -24,6 +25,18 @@ startup measurements are buffered by the existing startup service and exported
 once after Firebase initialization. The playback observer subscribes once at the
 app root and cancels with its provider container. It emits once per completed
 video activation, not once per rendered frame.
+
+**`editor_ready` is a live trace, emitted once per editor open.** It starts in
+the editor screen's first build and stops at the first terminal outcome, so its
+duration is the wait; `total_ms` is the same span measured in Dart, without the
+trace start's platform round-trip, and the phase metrics share that start. By
+the boundary the play button works, the timeline has started loading its
+thumbnails, and the preview no longer shows a still poster. A stop-motion
+composition has no preview player and is ready once its clips show, so compare
+within `preview`. `failed` is a draft that could not be restored or a first clip
+load the player rejected; `left` is a close before either, including during a
+draft load, when `clips` is still `unknown`. Reloads after the editor is ready (trim,
+reorder, speed) are not measured.
 
 The HTTP classifier has a finite vocabulary. It separates `creator_delete`,
 `creator_delete_status`, and `moderation_lookup`, plus feed/video, profiles,
@@ -75,11 +88,12 @@ public issues or PRs.
    success ratio, p50/p90/p99, and separate successful/404 p90. A historical
    catch-all URL cannot be reconstructed into a specific endpoint.
 3. **`outcomes.sql`:** one `DURATION_TRACE` row per recorded operation, grouped
-   by build, operation, outcome, and deletion reason. Outcome shares use the
-   completed trace population, not the number of custom metric rows.
-4. **`custom-metrics.sql`:** measured startup/playback/HTTP/deletion/publishing
-   metrics, with sample counts and p50/p90/p99. Millisecond metric names end in
-   `_ms`; count and byte metrics retain their own units.
+   by build, operation, editor entry and preview, outcome, and deletion reason.
+   Outcome shares use the completed trace population, not the number of custom
+   metric rows.
+4. **`custom-metrics.sql`:** measured startup/playback/HTTP/deletion/publishing/
+   editor metrics, with sample counts and p50/p90/p99. Millisecond metric names
+   end in `_ms`; count and byte metrics retain their own units.
 
 Compare candidate and previous builds over the same complete date range, within
 platform, operation, outcome, startup phase/milestone, and cache state. Do not
