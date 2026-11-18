@@ -15,6 +15,12 @@ abstract final class AnalyticsSurface {
   /// travels as [AnalyticsParam.configId], so dashboards and exports never
   /// inherit a schema per campaign.
   static const featuredTab = 'featured_tab';
+
+  /// The video editor's sound picker sheet.
+  ///
+  /// One surface for all of its list tabs; which tab loaded travels as
+  /// [AnalyticsParam.tab].
+  static const soundPicker = 'sound_picker';
   static const settings = 'settings';
   static const searchResults = 'search_results';
   static const videoRecorder = 'video_recorder';
@@ -83,6 +89,10 @@ abstract final class AnalyticsParam {
   /// Safe to export: it identifies a configuration, not a person, and carries
   /// no editorial name.
   static const configId = 'config_id';
+
+  /// Which tab of a tabbed surface loaded, from that surface's own fixed
+  /// vocabulary (e.g. the sound picker's `for_you` or `newest`).
+  static const tab = 'tab';
 }
 
 abstract final class SurfaceLoadResult {

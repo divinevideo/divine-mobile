@@ -359,7 +359,7 @@ final class SoundSearchResultsProvider
 }
 
 String _$soundSearchResultsHash() =>
-    r'98c1498fcbf58aac22e79e46029bd3ced2122758';
+    r'f839317fa714c10aa6faddf416a57e7f48f88ace';
 
 /// Community sounds matching a free-text [query].
 ///

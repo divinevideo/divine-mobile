@@ -156,13 +156,18 @@ Future<List<AudioEvent>> soundSearchResults(Ref ref, String query) async {
   // Answered before the repository is read, so a search field that is merely
   // open does not construct one — and with it a Nostr client — for a query
   // nobody has typed yet.
-  if (searchTermsOf(query).isEmpty) return const [];
-  // Text holding a private key is never sent as a search either.
-  if (NostrKeyUtils.containsPrivateKey(query)) return const [];
+  if (!soundSearchSendsQuery(query)) return const [];
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.searchSounds(query);
 }
+
+/// Whether [soundSearchResultsProvider] sends [query] to the relays.
+///
+/// A query with no search terms, or one holding a private key, is answered
+/// with no sounds before anything is asked.
+bool soundSearchSendsQuery(String query) =>
+    searchTermsOf(query).isNotEmpty && !NostrKeyUtils.containsPrivateKey(query);
 
 /// Family provider to fetch a single sound by event ID.
 ///

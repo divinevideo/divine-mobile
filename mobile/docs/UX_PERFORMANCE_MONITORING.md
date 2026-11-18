@@ -17,6 +17,13 @@ choosing an optimization.
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
 | Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness and video generation duration/outcome |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
+| Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results`, `empty`, `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
+
+`sound_search` is a live trace, so read its duration. It runs once per query the
+Newest tab sends — at most one per pause in typing — and never for the other
+tabs, which search the lists they already hold. The picker's tab loads and
+picks are Analytics events, not traces; see
+[Analytics observability](../../docs/ANALYTICS_OBSERVABILITY.md#sound-picker).
 
 **Startup and first-frame traces are snapshots of already measured intervals.**
 Select their custom millisecond metric, never the default trace duration. Early

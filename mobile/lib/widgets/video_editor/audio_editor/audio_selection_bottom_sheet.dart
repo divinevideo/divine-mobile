@@ -10,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
@@ -24,8 +25,11 @@ import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/observability/sound_picker_telemetry.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -50,6 +54,7 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
     this.localAudioImportService,
     this.pickAudioFile,
     @visibleForTesting this.audioService,
+    @visibleForTesting this.telemetry,
     super.key,
   });
 
@@ -59,6 +64,7 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   final LocalAudioImportService? localAudioImportService;
   final Future<XFile?> Function()? pickAudioFile;
   final AudioPlaybackService? audioService;
+  final SoundPickerTelemetry? telemetry;
 
   /// Presents the picker as a full-height sheet, closed by dragging it down.
   /// It has no title row, so the lists get the room.
@@ -105,6 +111,7 @@ class _AudioSelectionBottomSheetState
     extends ConsumerState<AudioSelectionBottomSheet>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
   late final AudioPlaybackService _audioService;
+  late final SoundPickerTelemetry _telemetry;
   final _searchController = TextEditingController();
   String? _loadedSoundId;
   AudioEvent? _selectedItem;
@@ -130,6 +137,18 @@ class _AudioSelectionBottomSheetState
   /// How long the field must be quiet before the relay is asked.
   static const _searchDebounceDelay = Duration(milliseconds: 350);
 
+  /// The sound picked last and where it was picked, so how the pick ends is
+  /// reported against the tab it came from.
+  _Pick? _pick;
+
+  /// Waits for the open tab's list, to report how long it took to show.
+  ProviderSubscription<AsyncValue<PagedSounds>>? _tabLoadListener;
+  StreamSubscription<SavedSoundsState>? _savedSoundsListener;
+
+  /// The relay search being timed: the query the Newest tab sends.
+  String _timedSearchQuery = '';
+  ProviderSubscription<AsyncValue<List<AudioEvent>>>? _searchListener;
+
   @override
   int get tabCount => AudioCategory.values.length;
 
@@ -141,6 +160,14 @@ class _AudioSelectionBottomSheetState
     // would also leave its row animating: the player still counts as playing
     // once it reaches the end.
     _audioService.setLooping(looping: true);
+    _telemetry =
+        widget.telemetry ??
+        SoundPickerTelemetry(
+          surfaceTracker: ref.read(surfacePerformanceTrackerProvider),
+          analytics: ref.read(analyticsEventSinkProvider),
+          performanceMonitor: ref.read(performanceMonitoringServiceProvider),
+        );
+    _timeTabLoad(_category, isFirstTab: true);
   }
 
   @override
@@ -160,6 +187,9 @@ class _AudioSelectionBottomSheetState
     _searchDebounce?.cancel();
     _searchController.dispose();
     _selectionCardHeight.dispose();
+    _stopWatchingTabLoad();
+    _searchListener?.close();
+    _telemetry.dispose();
     super.dispose();
   }
 
@@ -169,16 +199,142 @@ class _AudioSelectionBottomSheetState
     final newCategory = AudioCategory.values[tabController.index];
     if (_category != newCategory) {
       setState(() => _category = newCategory);
+      _onCategoryOpened(newCategory);
     }
   }
 
   void _selectCategory(AudioCategory category) {
+    final changed = _category != category;
     setState(() {
       _category = category;
       tabController.animateTo(
         AudioCategory.values.indexWhere((el) => el == category),
       );
     });
+    if (changed) _onCategoryOpened(category);
+  }
+
+  void _onCategoryOpened(AudioCategory category) {
+    _timeTabLoad(category, isFirstTab: false);
+    _syncSearchTiming();
+  }
+
+  /// Times [category] until its list first shows, if it has not shown yet.
+  ///
+  /// Listens to the list the build reads for the open tab, so it loads
+  /// nothing the picker would not load anyway.
+  void _timeTabLoad(AudioCategory category, {required bool isFirstTab}) {
+    _stopWatchingTabLoad();
+    final tab = _tabOf(category);
+    if (!_telemetry.startTabLoad(tab, isFirstTab: isFirstTab)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _telemetry.markTabVisible(tab);
+    });
+
+    final ProviderListenable<AsyncValue<PagedSounds>> list;
+    switch (category) {
+      case AudioCategory.forYou:
+        list = forYouSoundsProvider;
+      case AudioCategory.popular:
+        list = popularSoundsProvider;
+      case AudioCategory.newest:
+        list = trendingSoundsProvider;
+      case AudioCategory.mySounds:
+        _timeSavedSoundsLoad();
+        return;
+    }
+    _tabLoadListener = _listenUntilSettled(list, (
+      sounds, {
+      required wasSettled,
+    }) {
+      final paged = sounds.value;
+      if (paged == null) {
+        _telemetry.failTabLoad(tab);
+      } else {
+        _telemetry.completeTabLoad(
+          tab,
+          itemCount: paged.sounds.length,
+          hasMore: paged.hasMore,
+          wasLoaded: wasSettled,
+        );
+      }
+    });
+  }
+
+  /// Times My sounds, which shows the library once it has loaded from
+  /// storage.
+  void _timeSavedSoundsLoad() {
+    final bloc = context.read<SavedSoundsBloc>();
+    bool settle(SavedSoundsState state, {required bool wasLoaded}) {
+      if (state.status != SavedSoundsStatus.loaded) return false;
+      _telemetry.completeTabLoad(
+        SoundPickerTab.mySounds,
+        itemCount: state.sounds.length,
+        wasLoaded: wasLoaded,
+      );
+      return true;
+    }
+
+    if (settle(bloc.state, wasLoaded: true)) return;
+    _savedSoundsListener = bloc.stream.listen((state) {
+      if (settle(state, wasLoaded: false)) _stopWatchingTabLoad();
+    });
+  }
+
+  void _stopWatchingTabLoad() {
+    _tabLoadListener?.close();
+    _tabLoadListener = null;
+    unawaited(_savedSoundsListener?.cancel());
+    _savedSoundsListener = null;
+  }
+
+  /// Times the relay search the Newest tab sends for the debounced query.
+  ///
+  /// A search still in flight when the query or the tab changes is reported
+  /// abandoned: the picker stops listening to it.
+  void _syncSearchTiming() {
+    final query = _category == AudioCategory.newest ? _debouncedQuery : '';
+    if (query == _timedSearchQuery) return;
+    _timedSearchQuery = query;
+    _searchListener?.close();
+    _searchListener = null;
+    _telemetry.abandonSearch();
+    if (!soundSearchSendsQuery(query)) return;
+
+    _telemetry.startSearch();
+    _searchListener = _listenUntilSettled(
+      soundSearchResultsProvider(query),
+      (results, {required wasSettled}) {
+        final sounds = results.value;
+        if (sounds == null) {
+          _telemetry.failSearch();
+        } else {
+          _telemetry.completeSearch(sounds.length);
+        }
+      },
+    );
+  }
+
+  /// Hands [onSettled] the first value or error [provider] holds, with
+  /// whether it held it already when this started listening.
+  ///
+  /// The caller closes the subscription when the tab or query changes, not
+  /// once it settles: the build watches the same provider for that long, and
+  /// an auto-disposed one closed before the build watched it would be built,
+  /// and its relay query sent, a second time.
+  ProviderSubscription<AsyncValue<T>> _listenUntilSettled<T>(
+    ProviderListenable<AsyncValue<T>> provider,
+    void Function(AsyncValue<T> settled, {required bool wasSettled}) onSettled,
+  ) {
+    var isFirst = true;
+    var isSettled = false;
+    return ref.listenManual<AsyncValue<T>>(provider, (_, next) {
+      final wasSettled = isFirst;
+      isFirst = false;
+      if (isSettled || (!next.hasValue && !next.hasError)) return;
+      isSettled = true;
+      onSettled(next, wasSettled: wasSettled);
+    }, fireImmediately: true);
   }
 
   void _onSearchChanged(String query) {
@@ -190,6 +346,7 @@ class _AudioSelectionBottomSheetState
     _searchDebounce = Timer(_searchDebounceDelay, () {
       if (!mounted) return;
       setState(() => _debouncedQuery = _searchQuery);
+      _syncSearchTiming();
     });
   }
 
@@ -391,6 +548,7 @@ class _AudioSelectionBottomSheetState
         name: 'AudioSelectionBottomSheet',
         category: LogCategory.ui,
       );
+      _reportPreviewFailure(sound, e);
     } finally {
       if (_selectedItem == sound) {
         await _audioService.pause();
@@ -402,6 +560,11 @@ class _AudioSelectionBottomSheetState
   Future<void> _selectSound(AudioEvent sound) async {
     // Tapping the picked sound again unpicks it.
     if (_selectedItem?.id == sound.id) return _deselectSound();
+    _pick = _Pick(
+      soundId: sound.id,
+      source: _pickSourceOf(_category),
+      searched: _searchQuery.isNotEmpty,
+    );
 
     // Bundled / imported / provider-catalog sounds carry their own terms and
     // never reach the resolver. Everything else — including the creator's own
@@ -453,6 +616,7 @@ class _AudioSelectionBottomSheetState
   /// Leaves no sound picked and stops the preview. A reuse check or a file
   /// still loading for the sound finds it unpicked and stops there.
   Future<void> _deselectSound() async {
+    _pick = null;
     setState(() {
       _selectedItem = null;
       _isLoadingAudio = false;
@@ -463,6 +627,8 @@ class _AudioSelectionBottomSheetState
 
   /// Unpicks [sound], whose creator does not allow reusing it, and says so.
   Future<void> _refuseReuse(AudioEvent sound) async {
+    _reportPick(SoundPickOutcome.reuseBlocked);
+    _pick = null;
     await _audioService.stop();
     if (!mounted) return;
     setState(() {
@@ -509,6 +675,11 @@ class _AudioSelectionBottomSheetState
               );
 
       if (!mounted) return;
+      _pick = _Pick(
+        soundId: imported.id,
+        source: SoundPickSource.imported,
+        searched: _searchQuery.isNotEmpty,
+      );
       setState(() => _selectedItem = imported);
       await _togglePlayPause(enforcePlay: true);
     } on LocalAudioImportException catch (e) {
@@ -517,6 +688,7 @@ class _AudioSelectionBottomSheetState
         name: 'AudioSelectionBottomSheet',
         category: LogCategory.ui,
       );
+      _reportImportFailure();
       if (!mounted) return;
       final l10n = context.l10n;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -539,6 +711,7 @@ class _AudioSelectionBottomSheetState
         error: e,
         stackTrace: s,
       );
+      _reportImportFailure();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.videoEditorAudioImportFailed)),
@@ -595,7 +768,63 @@ class _AudioSelectionBottomSheetState
     }
   }
 
-  void _complete(AudioEvent sound) => context.pop(sound);
+  void _complete(AudioEvent sound) {
+    _reportPick(SoundPickOutcome.attached);
+    context.pop(sound);
+  }
+
+  /// Reports how the current pick ended, against where it was picked.
+  void _reportPick(SoundPickOutcome outcome) {
+    final pick = _pick;
+    if (pick == null) return;
+    _telemetry.reportPick(
+      source: pick.source,
+      outcome: outcome,
+      searched: pick.searched,
+    );
+  }
+
+  /// Reports a preview of [sound] that failed with [error], once per pick.
+  ///
+  /// A failure after the user moved on to another sound is theirs to ignore:
+  /// the later pick interrupted this one's download.
+  void _reportPreviewFailure(AudioEvent sound, Object error) {
+    final pick = _pick;
+    if (!mounted ||
+        pick == null ||
+        pick.soundId != sound.id ||
+        _selectedItem?.id != sound.id ||
+        pick.failureReported) {
+      return;
+    }
+    pick.failureReported = true;
+    _reportPick(
+      error is RemoteAudioDownloadException
+          ? SoundPickOutcome.downloadFailed
+          : SoundPickOutcome.failed,
+    );
+  }
+
+  void _reportImportFailure() => _telemetry.reportPick(
+    source: SoundPickSource.imported,
+    outcome: SoundPickOutcome.failed,
+    searched: _searchQuery.isNotEmpty,
+  );
+
+  static SoundPickerTab _tabOf(AudioCategory category) => switch (category) {
+    AudioCategory.forYou => SoundPickerTab.forYou,
+    AudioCategory.popular => SoundPickerTab.popular,
+    AudioCategory.newest => SoundPickerTab.newest,
+    AudioCategory.mySounds => SoundPickerTab.mySounds,
+  };
+
+  static SoundPickSource _pickSourceOf(AudioCategory category) =>
+      switch (category) {
+        AudioCategory.forYou => SoundPickSource.forYou,
+        AudioCategory.popular => SoundPickSource.popular,
+        AudioCategory.newest => SoundPickSource.newest,
+        AudioCategory.mySounds => SoundPickSource.mySounds,
+      };
 
   /// Resolves the audio duration in seconds via [ProVideoEditor.getMetadata].
   /// Returns `null` if no source is available or metadata extraction fails.
@@ -988,6 +1217,20 @@ class _AudioSelectionBottomSheetState
 
     return _KeyboardClearance(child: picker);
   }
+}
+
+/// A sound the user picked, where they picked it, and whether its failure
+/// has been reported.
+class _Pick {
+  _Pick({required this.soundId, required this.source, required this.searched});
+
+  final String soundId;
+  final SoundPickSource source;
+
+  /// Whether a search narrowed the list the sound was picked from.
+  final bool searched;
+
+  bool failureReported = false;
 }
 
 /// Keeps [child] clear of the software keyboard by padding its bottom with

@@ -13,7 +13,8 @@ WITH samples AS (
     AND DATE(event_timestamp, 'America/Los_Angeles') BETWEEN @start_date AND @end_date
     AND event_type = 'DURATION_TRACE'
     AND (event_name IN ('http_operation', 'creator_delete_enforcement',
-      '_app_start', 'video_publish', 'video_generation', 'camera_startup', 'video_upload', 'video_upload_enqueue')
+      '_app_start', 'video_publish', 'video_generation', 'camera_startup', 'video_upload', 'video_upload_enqueue',
+      'sound_search')
       OR STARTS_WITH(event_name, 'feed_load_'))
 )
 SELECT platform, app_display_version, app_build_version, trace, operation,
