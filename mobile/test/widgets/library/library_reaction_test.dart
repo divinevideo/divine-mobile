@@ -17,6 +17,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -367,7 +368,17 @@ void main() {
         pushed: true,
         reducedMotion: true,
         observer: _CameraReplyObserver((_, navigator) {
-          manager.insertClip(0, _clip('captured'));
+          manager.insertClip(
+            0,
+            _clip('captured').copyWith(
+              secondaryCamera: SecondaryCameraTake(
+                clip: _clip('secondary').copyWith(
+                  thumbnailPath: '/documents/secondary.jpg',
+                ),
+                compositeThumbnailPath: '/documents/composite.jpg',
+              ),
+            ),
+          );
           navigator.pop(true);
         }),
         layout: (_, _, _, _) async =>
@@ -383,12 +394,22 @@ void main() {
       expect(find.text('open library'), findsOneWidget);
       expect(find.text(label), findsNothing);
       final releasedImmediately = manager.clips.isEmpty;
+      expect(abandoned, isEmpty);
       manager.insertClip(0, _clip('new-session'));
       gate.complete();
       await tester.pumpAndSettle();
       expect(events, ['keep draft', 'clear session']);
       expect(releasedImmediately, isTrue);
       expect(manager.clips.map((clip) => clip.id), ['new-session']);
+      expect(
+        abandoned,
+        containsAll([
+          '/documents/secondary.jpg',
+          '/documents/composite.jpg',
+        ]),
+      );
+      expect(abandoned, isNot(contains('/documents/secondary.mp4')));
+      expect(abandoned, isNot(contains('/documents/captured.mp4')));
       expect(tester.takeException(), isNull);
     });
 

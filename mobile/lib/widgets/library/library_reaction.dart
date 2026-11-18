@@ -205,7 +205,12 @@ Future<void> recordLibraryReaction(
       );
       final paths = [
         for (final clip in removed)
-          if (!clip.isStopMotion) ...[clip.thumbnailPath, clip.ghostFramePath],
+          if (!clip.isStopMotion) ...[
+            clip.thumbnailPath,
+            clip.ghostFramePath,
+            clip.secondaryCamera?.clip.thumbnailPath,
+            clip.secondaryCamera?.compositeThumbnailPath,
+          ],
       ].whereType<String>().toList();
       if (paths.isEmpty) return;
       final settled = extraction;
