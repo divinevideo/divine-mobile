@@ -1,5 +1,5 @@
 // ABOUTME: The second camera's file of a dual-camera take, carried on its clip
-// ABOUTME: until the editor turns it into a picture-in-picture layer
+// ABOUTME: for good and placed as a picture-in-picture layer over it
 
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -10,8 +10,10 @@ import 'package:path/path.dart' as p;
 ///
 /// While dual-camera capture is on, every take records the front and the back
 /// camera. The camera that filled the viewfinder becomes the clip; the other
-/// one travels on it as this take, a clip of its own with its own proof, and
-/// becomes a picture-in-picture layer over that clip when the editor opens.
+/// one travels on it as this take, a clip of its own with its own proof but
+/// no library entry, and becomes a picture-in-picture layer over that clip.
+/// The take stays on the clip after that, so a draft opened again or posted
+/// from the library places the layer once more if its history lost it.
 @immutable
 class SecondaryCameraTake {
   /// Creates the second camera's take.
@@ -48,8 +50,8 @@ class SecondaryCameraTake {
   /// keeps, in the viewfinder and as the editor places the layer.
   static const pipWidthFraction = 0.3;
 
-  /// How round the window's corners are, as a fraction of half its width
-  /// (how a rectangle `LayerMask` measures it). The viewfinder rounds the
+  /// How round the window's corners are, as a fraction of half its shorter
+  /// side (how a rectangle `LayerMask` measures it). The viewfinder rounds the
   /// window by it and the editor masks the layer by it, so the take looks
   /// the same in both.
   static const pipCornerRadius = 0.2;

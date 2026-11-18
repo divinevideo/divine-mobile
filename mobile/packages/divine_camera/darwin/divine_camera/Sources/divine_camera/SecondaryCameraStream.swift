@@ -11,8 +11,9 @@ import FlutterMacOS
 /// The second camera of a dual-camera session: its preview texture and the
 /// silent video file it records next to every take.
 ///
-/// `CameraController` owns the session and feeds every frame of the second
-/// camera's video data output through `handle(_:)`. The recording opens on
+/// `CameraController` owns the session and hands every frame of the second
+/// camera's video data output to `updatePreview(_:)` and, while a take
+/// records, to `append(_:at:anchor:stop:)`. The recording opens on
 /// the main camera's writer anchor, so both files of a take start at the
 /// same capture time, and it ends on the main file's last frame.
 ///

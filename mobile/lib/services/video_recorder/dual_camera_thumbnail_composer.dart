@@ -10,7 +10,9 @@ import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping;
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 
-/// JPEG quality of the composite, the same as the recorder's thumbnails.
+/// JPEG quality of the composite. Above the recorder's own thumbnails (75):
+/// the composite re-encodes one of them, and a second pass at 75 would stack
+/// its artifacts.
 const _jpegQuality = 90;
 
 /// Draws [secondaryThumbnailPath] over [mainThumbnailPath] the way the
@@ -81,8 +83,11 @@ String? _compose({
       .clamp(kept.top, kept.bottom - height)
       .round();
   // A rectangle mask measures its corner radius as a fraction of half its
-  // width, so the window matches the viewfinder and the editor layer.
-  final radius = width / 2 * SecondaryCameraTake.pipCornerRadius;
+  // shorter side, so the window matches the viewfinder and the editor layer.
+  final radius =
+      (width < height ? width : height) /
+      2 *
+      SecondaryCameraTake.pipCornerRadius;
 
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {

@@ -446,11 +446,13 @@ class DivineVideoClip {
   /// set only on a final render, from the layers it was rendered with.
   final List<model.VideoStickerRegion> stickerRegions;
 
-  /// The second camera's recording of a dual-camera take, waiting to become
-  /// a picture-in-picture layer over this clip when the editor opens.
+  /// The second camera's recording of a dual-camera take.
   ///
-  /// A take, not a look: a split or duplicate is another clip and drops it,
-  /// and the editor clears it once the layer exists.
+  /// It stays on this clip for good: each editor session, and a post made
+  /// without one, turns it into a picture-in-picture layer over this clip
+  /// unless the history records that layer as placed, and the layer follows
+  /// this clip on the timeline. A take, not a look: a split or duplicate is
+  /// another clip and drops it.
   final SecondaryCameraTake? secondaryCamera;
 
   /// The files to name as this clip's sources when an edit of it is signed:
@@ -811,7 +813,7 @@ class DivineVideoClip {
     yield* (derivedFrom ?? const <C2paEditSource>[]).map(
       (source) => source.path,
     );
-    // The second camera's file, until the editor lifts it into a layer.
+    // The second camera's file, which stays on its take for good.
     yield* secondaryCamera?.ownedFilePaths ?? const <String?>[];
   }
 

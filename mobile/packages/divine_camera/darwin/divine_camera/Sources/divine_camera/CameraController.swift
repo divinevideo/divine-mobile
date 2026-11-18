@@ -2160,8 +2160,9 @@ class CameraController: NSObject {
     }
 
     /// Adds both cameras, their video data outputs and explicit connections
-    /// to `session` inside its configuration block, and picks formats the
-    /// hardware can run together. `sessionQueue` only.
+    /// to `session` inside its configuration block. The formats the hardware
+    /// can run together are picked after the commit, by
+    /// `finishDualCameraSetup`. `sessionQueue` only.
     private func configureDualCameraSession(_ session: AVCaptureMultiCamSession) -> String? {
         let mainPosition: AVCaptureDevice.Position = currentLens == .front ? .front : .back
         let otherPosition: AVCaptureDevice.Position = mainPosition == .front ? .back : .front
