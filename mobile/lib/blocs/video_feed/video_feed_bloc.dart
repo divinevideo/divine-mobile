@@ -327,21 +327,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
-  /// For You, Following, New and archive-only Classics are served from and
-  /// written to the cache so cold start shows the last feed instantly.
-  /// Adaptive Classics (a [ClassicFeedSession] is attached) is not: the session
-  /// owns that queue. The
-  /// `forYou` staleness concern from #3861 is handled differently now: the
-  /// cached feed is positioned at the user's last index and everything past
-  /// the active video is replaced with fresh server data on every load
-  /// (via [HomeFeedResumeManager]), so the feed is never stale beyond the
-  /// current video. Subscribed curated lists are excluded — they are derived
-  /// from locally held list IDs, not a server feed — and so are followed
-  /// people lists, whose members can change between launches.
+  /// For You, Following and archive-only Classics resume beyond the last
+  /// active video, then splice in fresh results. Adaptive Classics keeps its
+  /// own queue in [ClassicFeedSession]. New loads from the top in publication
+  /// order. Curated and people lists load their current membership.
   bool _usesHomeFeedCache(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
-      source.type == VideoFeedSourceType.newVideos ||
       (source.type == VideoFeedSourceType.classic && _classicSession == null);
 
   /// Whether [source] can paginate via an opaque server cursor rather than a
@@ -1341,6 +1333,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       state.source,
       emit,
       feedLoad: feedLoad,
+      // New bypasses the repository cache without requesting its
+      // pull-to-refresh relay merge.
       skipCache: state.source.type != VideoFeedSourceType.newVideos,
       revalidate: state.source.type == VideoFeedSourceType.newVideos,
       startsNewFeedSession: true,
@@ -2103,24 +2097,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final survivingVideos = _withoutRemovedVideos(cachedValid);
     if (survivingVideos.isEmpty) return false;
     final mode = source.mode.name;
-    final displayedVideos = source.type == VideoFeedSourceType.newVideos
-        ? filterNewFeedVideos(survivingVideos)
-        : survivingVideos;
-
     // The cached window already starts at the resume position (already-watched
     // videos were dropped on write), so it is served at index 0.
     if (feedLoad != null) {
-      _feedTracker?.markFirstVideosReceived(feedLoad, displayedVideos.length);
+      _feedTracker?.markFirstVideosReceived(feedLoad, survivingVideos.length);
     }
     emit(
       (baseState ?? state).copyWith(
         status: VideoFeedStatus.success,
-        videos: displayedVideos,
-        coordination: state.coordination.copyWith(
-          newVideosUntil: source.type == VideoFeedSourceType.newVideos
-              ? _oldestTimestamp(cachedValid)
-              : null,
-        ),
+        videos: survivingVideos,
+        coordination: state.coordination.copyWith(newVideosUntil: null),
         currentIndex: 0,
         hasMore: true,
         clearPaginationCursor: true,
@@ -2131,7 +2117,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (feedLoad != null) {
       _feedTracker?.markFirstVisibleContent(
         feedLoad,
-        displayedVideos.length,
+        survivingVideos.length,
         servedFromCache: true,
       );
     }
@@ -2141,7 +2127,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _resumeManager.persistNow(
       pubkey: _userPubkey,
       mode: mode,
-      videos: displayedVideos,
+      videos: survivingVideos,
       activeIndex: 0,
     );
     return true;
