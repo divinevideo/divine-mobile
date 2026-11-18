@@ -7849,5 +7849,9 @@
   "badgeDiscoveryBody": "任何人都可以创建和颁发徽章。你可以选择在个人资料中展示哪些徽章。探索一个徽章，了解它的社区，并关注其中的人。",
   "badgeDiscoveryMyBadges": "我的徽章",
   "badgeDiscoveryEmpty": "暂未找到社区。下拉重试。",
-  "badgeCommunityFollowHint": "将社区视频添加到你的关注动态中。关注个人需要单独操作。"
+  "badgeCommunityFollowHint": "将社区视频添加到你的关注动态中。关注个人需要单独操作。",
+  "badgeOfficialLabel": "官方",
+  "badgeDiscoveryCardLabel": "{badgeName}，{issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}，{issuerName}，{officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "前往{website}了解更多"
 }

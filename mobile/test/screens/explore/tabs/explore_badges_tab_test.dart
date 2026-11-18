@@ -13,6 +13,7 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -55,6 +56,9 @@ void main() {
             testProviderScope(
               additionalOverrides: [
                 badgeRepositoryProvider.overrideWithValue(repository),
+                vanishedProfilePubkeysProvider.overrideWith(
+                  (_) => Stream.value(const {}),
+                ),
                 authServiceProvider.overrideWithValue(auth),
               ],
               child: const MaterialApp(
@@ -90,6 +94,165 @@ void main() {
       );
     }
 
+    testWidgets('waits for local visibility when discovery finishes first', (
+      tester,
+    ) async {
+      final repository = _MockBadgeRepository();
+      final vanishes = StreamController<Set<String>>();
+      addTearDown(vanishes.close);
+      when(repository.loadPublicDefinitions)
+          .thenAnswer((_) async => [_definition]);
+      when(() => repository.loadHolderPreview(any()))
+          .thenAnswer((_) async => []);
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            badgeRepositoryProvider.overrideWithValue(repository),
+            vanishedProfilePubkeysProvider.overrideWith((_) => vanishes.stream),
+          ],
+          home: const Scaffold(body: ExploreBadgesTab()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final cubit = tester
+          .element(find.byType(ExploreBadgesView))
+          .read<ExploreBadgesCubit>();
+      expect(cubit.state.status, ExploreBadgesStatus.loaded);
+      expect(find.byType(BadgeCommunityCard), findsNothing);
+      verifyNever(() => repository.loadHolderPreview(any()));
+
+      vanishes.add({_issuer});
+      await tester.pumpAndSettle();
+      expect(find.byType(BadgeCommunityCard), findsNothing);
+      verifyNever(() => repository.loadHolderPreview(any()));
+
+      vanishes.add({});
+      await tester.pumpAndSettle();
+      expect(find.text('Loop makers'), findsOneWidget);
+      expect(
+        tester
+            .element(find.byType(ExploreBadgesView))
+            .read<ExploreBadgesCubit>(),
+        same(cubit),
+      );
+      verify(
+        () => repository.loadHolderPreview(
+          BadgeCoordinate.parse(_definition.coordinate)!,
+        ),
+      ).called(1);
+      verify(repository.loadPublicDefinitions).called(1);
+    });
+
+    testWidgets('a failed visibility lookup stays hidden and offers retry', (
+      tester,
+    ) async {
+      final repository = _MockBadgeRepository();
+      final vanishes = StreamController<Set<String>>();
+      addTearDown(vanishes.close);
+      var lookups = 0;
+      when(repository.loadPublicDefinitions)
+          .thenAnswer((_) async => [_definition]);
+      when(() => repository.loadHolderPreview(any()))
+          .thenAnswer((_) async => []);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            badgeRepositoryProvider.overrideWithValue(repository),
+            vanishedProfilePubkeysProvider.overrideWith(
+              (_) => lookups++ == 0 ? vanishes.stream : Stream.value(const {}),
+            ),
+          ],
+          home: const Scaffold(body: ExploreBadgesTab()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      vanishes.addError(StateError('visibility unavailable'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      expect(find.byType(BadgeCommunityCard), findsNothing);
+      verifyNever(() => repository.loadHolderPreview(any()));
+
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pumpAndSettle();
+      expect(find.text('Loop makers'), findsOneWidget);
+      expect(lookups, 2);
+      verify(repository.loadPublicDefinitions).called(1);
+    });
+
+    testWidgets('filters vanished issuers before laying out the first page', (
+      tester,
+    ) async {
+      final repository = _MockBadgeRepository();
+      final vanishes = StreamController<Set<String>>();
+      addTearDown(vanishes.close);
+      final pendingDefinitions = Completer<List<Nip58BadgeDefinition>>();
+      final otherIssuer = '7'.padLeft(64, '0');
+      final otherDefinitions = [
+        for (var i = 0; i < ExploreBadgesState.pageSize; i++)
+          Nip58BadgeDefinition(
+            event: Event(otherIssuer, EventKind.badgeDefinition, const [], ''),
+            coordinate: '30009:$otherIssuer:group-$i',
+            dTag: 'group-$i',
+            name: 'Group $i',
+          ),
+      ];
+      when(repository.loadPublicDefinitions)
+          .thenAnswer((_) => pendingDefinitions.future);
+      when(() => repository.loadHolderPreview(any()))
+          .thenAnswer((_) async => []);
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            badgeRepositoryProvider.overrideWithValue(repository),
+            vanishedProfilePubkeysProvider.overrideWith((_) => vanishes.stream),
+          ],
+          home: const Scaffold(body: ExploreBadgesTab()),
+        ),
+      );
+      vanishes.add({_issuer});
+      await tester.pump();
+      pendingDefinitions.complete([_definition, ...otherDefinitions]);
+      await tester.pumpAndSettle();
+
+      final cards = find.byType(BadgeCommunityCard);
+      expect(find.text('Loop makers'), findsNothing);
+      expect(
+        tester.widget<BadgeCommunityCard>(cards.first).definition,
+        otherDefinitions.first,
+      );
+      final cubit = tester
+          .element(find.byType(ExploreBadgesView))
+          .read<ExploreBadgesCubit>();
+      expect(cubit.state.visibleDefinitions, otherDefinitions);
+      verify(
+        () => repository.loadHolderPreview(
+          BadgeCoordinate.parse(otherDefinitions.first.coordinate)!,
+        ),
+      ).called(1);
+      verifyNever(
+        () => repository.loadHolderPreview(
+          BadgeCoordinate.parse(_definition.coordinate)!,
+        ),
+      );
+
+      vanishes.add({otherIssuer});
+      await tester.pumpAndSettle();
+      expect(find.text('Loop makers'), findsOneWidget);
+      expect(find.text('Group 0'), findsNothing);
+      expect(
+        tester
+            .element(find.byType(ExploreBadgesView))
+            .read<ExploreBadgesCubit>(),
+        same(cubit),
+      );
+      verify(repository.loadPublicDefinitions).called(1);
+    });
+
     testWidgets('loads community badges when the actual tab mounts', (
       tester,
     ) async {
@@ -102,6 +265,9 @@ void main() {
         testProviderScope(
           additionalOverrides: [
             badgeRepositoryProvider.overrideWithValue(repository),
+            vanishedProfilePubkeysProvider.overrideWith(
+              (_) => Stream.value(const {}),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -141,10 +307,44 @@ void main() {
         await tester.pumpWidget(buildSubject());
         expect(find.text(l10n.badgeDiscoveryTitle), findsOneWidget);
         expect(find.text('badges.divine.video'), findsOneWidget);
+        final semantics = tester.ensureSemantics();
+        await tester.pump();
+        expect(
+          find.bySemanticsLabel(
+            l10n.badgeDiscoveryWebsiteLabel('badges.divine.video'),
+          ),
+          findsOneWidget,
+        );
+        semantics.dispose();
         expect(find.text(l10n.badgeDiscoveryBody), findsOneWidget);
         expect(find.text(l10n.badgeDiscoveryMyBadges), findsOneWidget);
       },
     );
+
+    testWidgets('an empty gallery offers a mouse-accessible retry', (
+      tester,
+    ) async {
+      when(() => cubit.state).thenReturn(
+        const ExploreBadgesState(status: ExploreBadgesStatus.loaded),
+      );
+      when(cubit.load).thenAnswer((_) async {});
+      await tester.pumpWidget(buildSubject());
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+      await tester.tap(find.text(l10n.commonRetry));
+      verify(cubit.load).called(1);
+    });
+
+    testWidgets('loading announces once for the entire gallery', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      when(() => cubit.state).thenReturn(
+        const ExploreBadgesState(status: ExploreBadgesStatus.loading),
+      );
+      await tester.pumpWidget(buildSubject());
+      expect(find.bySemanticsLabel(l10n.commonLoading), findsOneWidget);
+      semantics.dispose();
+    });
 
     testWidgets('the explainer opens the exact external badges website', (
       tester,
@@ -314,6 +514,58 @@ void main() {
               .map((face) => face.placeholderSeed),
           [holder],
         );
+      });
+
+      testWidgets('preview updates rebuild only the matching card', (
+        tester,
+      ) async {
+        final updates = StreamController<ExploreBadgesState>();
+        addTearDown(updates.close);
+        final otherDefinition = Nip58BadgeDefinition(
+          event: _definition.event,
+          coordinate: '30009:$_issuer:other',
+          dTag: 'other',
+          name: 'Other group',
+        );
+        final initial = ExploreBadgesState(
+          status: ExploreBadgesStatus.loaded,
+          definitions: [_definition, otherDefinition],
+        );
+        whenListen(cubit, updates.stream, initialState: initial);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        final unchangedCard = find.byWidgetPredicate(
+          (w) => w is BadgeCommunityCard && w.definition == otherDefinition,
+        );
+        final before = tester.widget<BadgeCommunityCard>(unchangedCard);
+        verify(() => cubit.loadPreview(_definition.coordinate)).called(1);
+        verify(() => cubit.loadPreview(otherDefinition.coordinate)).called(1);
+
+        final holder = '3'.padLeft(64, '0');
+        updates.add(
+          initial.copyWith(
+            previews: {
+              _definition.coordinate: [holder],
+            },
+            activePreviews: 1,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<BadgeCommunityCard>(unchangedCard), same(before));
+        expect(
+          tester
+              .widget<BadgeCommunityCard>(
+                find.byWidgetPredicate(
+                  (w) => w is BadgeCommunityCard && w.definition == _definition,
+                ),
+              )
+              .memberPubkeys,
+          [holder],
+        );
+        verifyNever(() => cubit.loadPreview(_definition.coordinate));
+        verifyNever(() => cubit.loadPreview(otherDefinition.coordinate));
       });
 
       testWidgets('does not request previews for cards that are not built', (

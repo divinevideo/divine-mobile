@@ -6548,5 +6548,9 @@
   "badgeDiscoveryBody": "Każdy może tworzyć i przyznawać odznaki. Ty wybierasz, które pojawią się na twoim profilu. Odkryj odznakę, poznaj jej społeczność i obserwuj jej członków.",
   "badgeDiscoveryMyBadges": "Moje odznaki",
   "badgeDiscoveryEmpty": "Nie znaleziono jeszcze społeczności. Przeciągnij w dół, aby spróbować ponownie.",
-  "badgeCommunityFollowHint": "Dodaje filmy społeczności do aktualności Obserwowani. Osoby obserwujesz osobno."
+  "badgeCommunityFollowHint": "Dodaje filmy społeczności do aktualności Obserwowani. Osoby obserwujesz osobno.",
+  "badgeOfficialLabel": "Oficjalna",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Dowiedz się więcej na {website}"
 }

@@ -6548,5 +6548,9 @@
   "badgeDiscoveryBody": "Herkes rozet oluşturup verebilir. Profilinde hangilerinin görüneceğini sen seçersin. Bir rozeti keşfederek topluluğunu tanı ve içindeki insanları takip et.",
   "badgeDiscoveryMyBadges": "Rozetlerim",
   "badgeDiscoveryEmpty": "Henüz topluluk bulunamadı. Tekrar denemek için aşağı çek.",
-  "badgeCommunityFollowHint": "Topluluk videolarını Takip Edilenler akışına ekler. İnsanları ayrı ayrı takip et."
+  "badgeCommunityFollowHint": "Topluluk videolarını Takip Edilenler akışına ekler. İnsanları ayrı ayrı takip et.",
+  "badgeOfficialLabel": "Resmî",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website} adresinde daha fazla bilgi edinin"
 }

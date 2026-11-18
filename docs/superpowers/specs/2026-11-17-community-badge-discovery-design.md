@@ -46,12 +46,13 @@ The user has approved the community-discovery direction and Lists inspiration. T
 
 - Add a public discovery read to the owning badge_repository package. Remove Explore's exclusive dependency on the official issuer allowlist. Preserve the existing issuer-specific catalogue API for callers that genuinely need it.
 - Use existing Nostr kind 30009 definitions and the app's configured relay client, including its anonymous primary-relay read capability. No new backend endpoint, deployment, protocol kind, or new package is required.
-- Start with a bounded recent window of 300 definition events. Deduplicate by full issuer+d-tag coordinate, select the newest valid definition with deterministic ties, and order cards by definition recency. This is a discovery window, not a promise to enumerate the entire network.
+- Start with a bounded recent window of 300 definition events and merge the pinned official issuer’s catalogue independently. Limit each community issuer to three active displayed definitions after deletion filtering. Deduplicate by full issuer+d-tag coordinate, select the newest valid definition with deterministic ties, and order cards by definition recency. This is a discovery window, not a promise to enumerate the entire network.
 - Reveal 24 cards initially and another 24 through “Show more” until the loaded window is exhausted. Build card contents lazily. Do not add a search field that only pretends to search beyond the loaded window; global directory search is outside this change.
-- Verify each event's hash and signature, reusing the relay pool's recorded check, and honor issuer-signed NIP-09 deletions by address or event ID. Reject malformed/unsigned/spoofed definitions; never merge identical d-tags from different issuers. Full IDs stay intact in protocol data and logs.
+- Verify each event's hash and signature, reusing the relay pool's recorded check, and honor issuer-signed NIP-09 deletions by address or event ID. Isolate deletion completeness per issuer, honor relay cap signals, and bound both query and verification work; omit only issuers whose deletion state remains unknown. Address deletions use the oldest candidate timestamp; event-ID deletions have no timestamp lower bound. Reject malformed/unsigned/spoofed definitions; never merge identical d-tags from different issuers. Full IDs stay intact in protocol data and logs.
 - Respect blocked, muted and vanished issuers and people before exposing their cards or previews, using the existing policy boundaries. Refresh policy-dependent state after an account or block-list change. User-created badges never acquire an official endorsement merely by appearing.
 - The repository owns relay/API composition, filtering, sorting, deduplication and preview sourcing. Cubits own UI state and superseded-load/disposal behavior. Widgets only render and dispatch actions.
 - Reuse the existing indexed accepted-holder preview for visible cards, filtered through the same viewer policy as detail. At most three faces per card, at most four in-flight preview reads, and at most one read per coordinate per discovery generation. No per-card complete relay holder walk on the gallery. Preview errors leave artwork/title/description usable.
+- Refresh preserves revealed pages and loaded faces for unchanged definitions; failed refresh preserves deduplication. Vanished issuers are removed before pagination and preview scheduling.
 - A preview never proves complete membership. The existing detail page reconciles with relays before treating its member set as final.
 - Reuse shared image eligibility rules and current avatar/image components; never request invalid, insecure or known-dead image origins. Keep reduced-motion support and bounded image decoding.
 
@@ -59,14 +60,14 @@ The user has approved the community-discovery direction and Lists inspiration. T
 
 Use VineTheme and adaptive context.vineColors tokens in both appearances. Keep Bricolage Grotesque and Inter, Phosphor/Divine icons, and shared buttons. No gradients, fabricated communities, invented statistics, real-user fixtures or AI-generated community artwork.
 
-Each community card is one named accessible navigation target. Member follow controls remain separately named and sized for touch. Check large text, narrow screens, light/dark appearances, missing artwork, long names and descriptions, refresh failure, and signed-out access.
+Each community card is one named accessible navigation target, including its issuer through a localized template. Show an Official label only for the pinned issuer pubkey, never by display name. Keep original artwork for community badges; discovery does not imply moderation or endorsement. Badge detail offers the existing content-report flow targeting the signed definition and full addressable coordinate. Rabble explicitly chose original artwork rather than neutral placeholders after the review raised hypothetical abuse, with no reported bad-badge evidence. Member follow controls remain separately named and sized for touch. Check large text, narrow screens, light/dark appearances, missing artwork, long names and descriptions, refresh failure, and signed-out access.
 
 The accompanying SVG is a layout sketch with synthetic communities and placeholder people, not an app screenshot or a proposal to publish seeded content.
 
 ## Acceptance evidence
 
 1. A signed definition from a non-official issuer appears; two issuers sharing a d-tag stay distinct; official definitions still appear.
-2. Newer revisions, valid deletions, malformed signatures and blocked/muted/vanished accounts follow current repository rules. A missing relay answer is not shown as a proven empty directory.
+2. Newer revisions, valid deletions, malformed signatures and blocked/muted/vanished accounts follow current repository rules. A missing definition-read answer is not shown as a proven empty directory; an incomplete deletion read excludes its issuer without failing other communities.
 3. Public discovery works signed out and does not depend on the issuer-only HTTP catalogue.
 4. Cards remain useful when holder previews fail, do not invent counts, and preview requests obey visibility, concurrency and deduplication bounds.
 5. A card opens the right issuer-scoped detail; individual Follow affects only the selected person; the existing community subscription remains distinct and publicly disclosed.

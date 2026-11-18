@@ -6548,5 +6548,9 @@
   "badgeDiscoveryBody": "يمكن لأي شخص إنشاء شارات ومنحها. اختيار الشارات التي تظهر في الملف الشخصي متروك لك. استكشاف شارة يتيح التعرّف على مجتمعها ومتابعة أفراده.",
   "badgeDiscoveryMyBadges": "شاراتي",
   "badgeDiscoveryEmpty": "لم يتم العثور على مجتمعات بعد. السحب للأسفل للمحاولة مجددًا.",
-  "badgeCommunityFollowHint": "تُضاف فيديوهات المجتمع إلى موجز المتابَعين. متابعة الأشخاص تتم بشكل منفصل."
+  "badgeCommunityFollowHint": "تُضاف فيديوهات المجتمع إلى موجز المتابَعين. متابعة الأشخاص تتم بشكل منفصل.",
+  "badgeOfficialLabel": "رسمي",
+  "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "تعرّف على المزيد على {website}"
 }

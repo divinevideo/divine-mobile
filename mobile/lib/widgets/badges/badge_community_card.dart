@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
+import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
@@ -31,9 +32,8 @@ class BadgeCommunityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final issuer = definition.event.pubkey;
-    if (ref.watch(profileVanishedProvider(issuer))) {
-      return const SizedBox.shrink();
-    }
+    final isOfficial = issuer == kDivineBadgeIssuerPubkey;
+    final l10n = context.l10n;
     final suppliedName = definition.name;
     final identifier = sanitizeUtf16(definition.dTag);
     final name = suppliedName != null && suppliedName.trim().isNotEmpty
@@ -58,14 +58,20 @@ class BadgeCommunityCard extends ConsumerWidget {
     final fallback = _BadgeMonogram(name: name);
     return Semantics(
       // The issuer goes in the label: Android reads a value before the label.
-      label: '$name, $issuerName',
+      label: isOfficial
+          ? l10n.badgeDiscoveryOfficialCardLabel(
+              name,
+              issuerName,
+              l10n.badgeOfficialLabel,
+            )
+          : l10n.badgeDiscoveryCardLabel(name, issuerName),
       hint: definition.description,
       button: true,
       container: true,
       excludeSemantics: true,
       onTap: onTap,
       child: Material(
-        color: context.vineColors.background,
+        type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
@@ -169,6 +175,16 @@ class BadgeCommunityCard extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (isOfficial)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.badgeOfficialLabel,
+                    style: VineTheme.labelSmallFont(
+                      color: context.vineColors.onSurface,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

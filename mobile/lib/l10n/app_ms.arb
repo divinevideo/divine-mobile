@@ -7849,5 +7849,9 @@
   "badgeDiscoveryBody": "Sesiapa sahaja boleh mencipta dan menganugerahkan lencana. Anda memilih lencana yang muncul pada profil anda. Terokai lencana untuk mengenali komunitinya dan mengikuti ahlinya.",
   "badgeDiscoveryMyBadges": "Lencana saya",
   "badgeDiscoveryEmpty": "Belum ada komuniti ditemui. Tarik ke bawah untuk mencuba lagi.",
-  "badgeCommunityFollowHint": "Menambahkan video komuniti pada suapan Mengikuti anda. Ikuti orang secara individu."
+  "badgeCommunityFollowHint": "Menambahkan video komuniti pada suapan Mengikuti anda. Ikuti orang secara individu.",
+  "badgeOfficialLabel": "Rasmi",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Ketahui lebih lanjut di {website}"
 }

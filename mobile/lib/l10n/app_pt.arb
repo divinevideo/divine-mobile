@@ -6548,5 +6548,9 @@
   "badgeDiscoveryBody": "Qualquer pessoa pode criar e conceder emblemas. Você escolhe quais aparecem no seu perfil. Explore um emblema para conhecer sua comunidade e seguir as pessoas dela.",
   "badgeDiscoveryMyBadges": "Meus emblemas",
   "badgeDiscoveryEmpty": "Nenhuma comunidade encontrada ainda. Puxe para baixo para tentar de novo.",
-  "badgeCommunityFollowHint": "Adiciona vídeos da comunidade ao seu feed Seguindo. Siga as pessoas individualmente."
+  "badgeCommunityFollowHint": "Adiciona vídeos da comunidade ao seu feed Seguindo. Siga as pessoas individualmente.",
+  "badgeOfficialLabel": "Oficial",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Saiba mais em {website}"
 }

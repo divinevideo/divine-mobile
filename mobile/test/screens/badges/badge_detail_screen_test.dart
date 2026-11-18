@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -24,7 +25,11 @@ import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
+import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -32,6 +37,9 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
+
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 class _MockFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
@@ -75,6 +83,11 @@ void main() {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
+          GoRoute(
+            path: '/welcome/login-options',
+            builder: (_, _) =>
+                const Scaffold(body: Text('Sign-in destination')),
+          ),
           GoRoute(
             path: OtherProfileScreen.pathWithNpub,
             builder: (_, state) => Scaffold(
@@ -164,6 +177,94 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text(l10n.badgeDetailNoRecipients), findsOneWidget);
+    });
+
+    testWidgets('submits a report for the complete badge definition target', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final definition = _definition();
+      final reporting = _MockContentReportingService();
+      Future<ReportResult> reportBadge() => reporting.reportContent(
+        eventId: definition.event.id,
+        authorPubkey: definition.event.pubkey,
+        reason: ContentFilterReason.spam,
+        details: any(named: 'details'),
+        moderationContent: any(named: 'moderationContent'),
+        moderationTags: any(named: 'moderationTags'),
+        additionalContext:
+            'Reported badge: "${definition.name}" (${_coordinate.value})',
+        addressableCoordinate: _coordinate.value,
+      );
+      when(reportBadge).thenAnswer(
+        (_) async => ReportResult.createSuccess(
+          'report-id',
+          delivery: ReportDelivery.queued,
+        ),
+      );
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: definition, isOwner: false),
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            contentReportingServiceProvider.overrideWith(
+              (_) async => reporting,
+            ),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: _pubkey(2),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoActionReportLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      final form = tester.widget<ReportContentDialog>(
+        find.byType(ReportContentDialog),
+      );
+      expect(form.eventId, definition.event.id);
+      expect(form.authorPubkey, definition.event.pubkey);
+      expect(form.addressableCoordinate, _coordinate.value);
+      expect(form.additionalContext, contains(definition.name));
+      expect(form.publishesPublicReport, isTrue);
+
+      await tester.tap(find.text(l10n.reportReasonSpam));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+      verify(reportBadge).called(1);
+    });
+
+    testWidgets('asks signed-out viewers to sign in before reporting', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoActionReportLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign-in destination'), findsOneWidget);
+      expect(find.byType(ReportContentDialog), findsNothing);
     });
 
     testWidgets('offers accepting to a recipient who has not accepted', (

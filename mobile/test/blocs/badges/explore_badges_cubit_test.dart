@@ -63,27 +63,44 @@ void main() {
       expect(cubit.state.definitions, isEmpty);
     });
 
-    test('a preview from before refresh cannot append people to the replacement snapshot', () async {
-      final old = Completer<List<String>>();
-      var previewCalls = 0;
-      when(repository.loadPublicDefinitions)
-          .thenAnswer((_) async => [_definition]);
-      when(
-        () => repository.loadHolderPreview(any()),
-      ).thenAnswer((_) => previewCalls++ == 0 ? old.future : Future.value([]));
-      final cubit = ExploreBadgesCubit(repository: repository);
-      addTearDown(cubit.close);
-      await cubit.load();
-      cubit.loadPreview(_definition.coordinate);
-      await cubit.refresh();
-      old.complete(['3'.padLeft(64, '0')]);
-      await pumpEventQueue();
-      expect(cubit.state.previews, isEmpty);
-      cubit.loadPreview(_definition.coordinate);
-      await pumpEventQueue();
-      expect(cubit.state.previews[_definition.coordinate], isEmpty);
-      verify(() => repository.loadHolderPreview(any())).called(2);
-    });
+    test(
+      'an old preview cannot overwrite newer people for a changed definition',
+      () async {
+        final old = Completer<List<String>>();
+        final changed = Nip58BadgeDefinition(
+          event: Event.fromJson({
+            ..._definition.event.toJson(),
+            'id': '2'.padLeft(64, '0'),
+          }),
+          coordinate: _definition.coordinate,
+          dTag: _definition.dTag,
+        );
+        final currentHolder = '4'.padLeft(64, '0');
+        var loads = 0;
+        var previewCalls = 0;
+        when(repository.loadPublicDefinitions).thenAnswer(
+          (_) async => loads++ == 0 ? [_definition] : [changed],
+        );
+        when(() => repository.loadHolderPreview(any())).thenAnswer(
+          (_) =>
+              previewCalls++ == 0 ? old.future : Future.value([currentHolder]),
+        );
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+        cubit.loadPreview(_definition.coordinate);
+        await cubit.refresh();
+        cubit.loadPreview(changed.coordinate);
+        await pumpEventQueue();
+        expect(cubit.state.previews[changed.coordinate], [currentHolder]);
+
+        old.complete(['3'.padLeft(64, '0')]);
+        await pumpEventQueue();
+
+        expect(cubit.state.previews[changed.coordinate], [currentHolder]);
+        verify(() => repository.loadHolderPreview(any())).called(2);
+      },
+    );
 
     test(
       'only four preview reads run and closed cubits discard late results',
@@ -127,6 +144,96 @@ void main() {
       },
     );
 
+    test(
+      'hides issuers before paging and restores them without a read',
+      () async {
+        final otherIssuer = '4'.padLeft(64, '0');
+        final definitions = [
+          _definition,
+          ...List.generate(
+            25,
+            (i) => Nip58BadgeDefinition(
+              event: Event.fromJson({
+                ..._definition.event.toJson(),
+                'pubkey': otherIssuer,
+              }),
+              coordinate: '30009:$otherIssuer:group-$i',
+              dTag: 'group-$i',
+            ),
+          ),
+        ];
+        when(repository.loadPublicDefinitions)
+            .thenAnswer((_) async => definitions);
+        when(() => repository.loadHolderPreview(any()))
+            .thenAnswer((_) async => []);
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+        expect(cubit.state.visibleDefinitions.first, _definition);
+
+        cubit.updateHiddenIssuers({_issuer});
+
+        expect(cubit.state.visibleDefinitions, definitions.skip(1).take(24));
+        expect(cubit.state.hasMore, isTrue);
+        cubit.loadPreview(_definition.coordinate);
+        verifyNever(() => repository.loadHolderPreview(any()));
+        cubit.showMore();
+        expect(cubit.state.visibleDefinitions, definitions.skip(1));
+        expect(cubit.state.hasMore, isFalse);
+
+        cubit.updateHiddenIssuers({});
+        expect(cubit.state.visibleDefinitions, definitions);
+        verify(repository.loadPublicDefinitions).called(1);
+      },
+    );
+
+    test(
+      'successful refresh does not release physically busy preview slots',
+      () async {
+        final definitions = List.generate(
+          6,
+          (i) => Nip58BadgeDefinition(
+            event: _definition.event,
+            coordinate: '30009:$_issuer:group-$i',
+            dTag: 'group-$i',
+          ),
+        );
+        when(repository.loadPublicDefinitions)
+            .thenAnswer((_) async => definitions);
+        final pending = <Completer<List<String>>>[];
+        when(() => repository.loadHolderPreview(any())).thenAnswer((_) {
+          final result = Completer<List<String>>();
+          pending.add(result);
+          return result.future;
+        });
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+        for (final definition in definitions.take(5)) {
+          cubit.loadPreview(definition.coordinate);
+        }
+        expect(pending, hasLength(4));
+
+        await cubit.refresh();
+        cubit.loadPreview(definitions.last.coordinate);
+        expect(pending, hasLength(4));
+        pending.first.complete(['3'.padLeft(64, '0')]);
+        await pumpEventQueue();
+        expect(pending, hasLength(5));
+        expect(cubit.state.previews, isEmpty);
+        for (final result in pending.skip(1)) {
+          result.complete([]);
+        }
+        await pumpEventQueue();
+        expect(cubit.state.previews, {definitions.last.coordinate: <String>[]});
+        verifyNever(
+          () => repository.loadHolderPreview(
+            BadgeCoordinate(pubkey: _issuer, identifier: definitions[4].dTag),
+          ),
+        );
+      },
+    );
+
     group('loadPreview', () {
       final definitions = List.generate(
         5,
@@ -164,15 +271,14 @@ void main() {
           }
           await pumpEventQueue();
         },
-        skip: 2,
-        expect: () => [
-          isA<ExploreBadgesState>()
-              .having((s) => s.status, 'status', ExploreBadgesStatus.loaded)
-              .having((s) => s.definitions, 'definitions', hasLength(5))
-              .having((s) => s.previews, 'previews', {
-                definitions.last.coordinate: [holder],
-              }),
-        ],
+        verify: (cubit) {
+          expect(cubit.state.status, ExploreBadgesStatus.loaded);
+          expect(cubit.state.definitions, hasLength(5));
+          expect(cubit.state.activePreviews, 0);
+          expect(cubit.state.previews, {
+            definitions.last.coordinate: [holder],
+          });
+        },
         errors: () => List.filled(4, isA<Exception>()),
       );
 
@@ -258,10 +364,16 @@ void main() {
         build: () => ExploreBadgesCubit(repository: repository),
         act: (cubit) => cubit.load(),
         expect: () => [
-          const ExploreBadgesState(status: ExploreBadgesStatus.loading),
+          const ExploreBadgesState(
+            status: ExploreBadgesStatus.loading,
+            isRefreshing: true,
+            refreshGeneration: 1,
+          ),
           ExploreBadgesState(
             status: ExploreBadgesStatus.loaded,
             definitions: [_definition],
+            refreshGeneration: 1,
+            previewGeneration: 1,
           ),
         ],
       );
@@ -281,13 +393,118 @@ void main() {
         act: (cubit) => cubit.load(),
         errors: () => [isA<BadgeReadIncompleteException>()],
         expect: () => const [
-          ExploreBadgesState(status: ExploreBadgesStatus.loading),
-          ExploreBadgesState(status: ExploreBadgesStatus.failure),
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loading,
+            isRefreshing: true,
+            refreshGeneration: 1,
+          ),
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.failure,
+            refreshGeneration: 1,
+          ),
         ],
       );
     });
 
     group('refresh', () {
+      test(
+        'retains revealed cards and previews for unchanged definitions',
+        () async {
+          final definitions = List.generate(
+            30,
+            (i) => Nip58BadgeDefinition(
+              event: _definition.event,
+              coordinate: '30009:$_issuer:group-$i',
+              dTag: 'group-$i',
+            ),
+          );
+          final changed = Nip58BadgeDefinition(
+            event: Event.fromJson({
+              ..._definition.event.toJson(),
+              'id': '2'.padLeft(64, '0'),
+            }),
+            coordinate: definitions[1].coordinate,
+            dTag: definitions[1].dTag,
+          );
+          var loads = 0;
+          when(repository.loadPublicDefinitions).thenAnswer(
+            (_) async => loads++ == 0
+                ? definitions
+                : [definitions.first, changed, ...definitions.skip(3)],
+          );
+          final holder = '3'.padLeft(64, '0');
+          when(() => repository.loadHolderPreview(any())).thenAnswer(
+            (_) async => [holder],
+          );
+          final cubit = ExploreBadgesCubit(repository: repository);
+          addTearDown(cubit.close);
+          await cubit.load();
+          cubit.showMore();
+          for (final definition in definitions.take(3)) {
+            cubit.loadPreview(definition.coordinate);
+          }
+          await pumpEventQueue();
+          expect(cubit.state.previews, hasLength(3));
+
+          await cubit.refresh();
+
+          expect(cubit.state.visibleDefinitions, hasLength(29));
+          expect(cubit.state.previews, {
+            definitions.first.coordinate: [holder],
+          });
+          cubit.loadPreview(definitions.first.coordinate);
+          await pumpEventQueue();
+          verify(() => repository.loadHolderPreview(any())).called(3);
+        },
+      );
+
+      test(
+        'failed refresh keeps loaded previews and attempted reads deduplicated',
+        () async {
+          final second = Nip58BadgeDefinition(
+            event: _definition.event,
+            coordinate: '30009:$_issuer:second',
+            dTag: 'second',
+          );
+          final holder = '3'.padLeft(64, '0');
+          var loads = 0;
+          when(repository.loadPublicDefinitions).thenAnswer((_) async {
+            if (loads++ == 0) return [_definition, second];
+            throw const BadgeReadIncompleteException('incomplete read');
+          });
+          when(() => repository.loadHolderPreview(any())).thenAnswer(
+            (invocation) async {
+              final coordinate =
+                  invocation.positionalArguments.single as BadgeCoordinate;
+              if (coordinate.identifier == 'second') {
+                throw Exception('holder index unavailable');
+              }
+              return [holder];
+            },
+          );
+          final cubit = ExploreBadgesCubit(repository: repository);
+          addTearDown(cubit.close);
+          await cubit.load();
+          cubit.loadPreview(_definition.coordinate);
+          cubit.loadPreview(second.coordinate);
+          await pumpEventQueue();
+          expect(cubit.state.previews, {
+            _definition.coordinate: [holder],
+          });
+          await cubit.refresh();
+          expect(cubit.state.refreshFailures, 1);
+
+          cubit.loadPreview(_definition.coordinate);
+          cubit.loadPreview(second.coordinate);
+          await pumpEventQueue();
+
+          expect(cubit.state.previews, {
+            _definition.coordinate: [holder],
+          });
+          verify(() => repository.loadHolderPreview(any())).called(2);
+        },
+      );
+
       blocTest<ExploreBadgesCubit, ExploreBadgesState>(
         'failed refresh retains previously loaded definitions',
         setUp: () {
@@ -302,11 +519,18 @@ void main() {
         act: (cubit) => cubit.refresh(),
         errors: () => [isA<BadgeReadIncompleteException>()],
         expect: () => [
-          isA<ExploreBadgesState>()
-              .having((s) => s.status, 'status', ExploreBadgesStatus.loaded)
-              .having((s) => s.definitions, 'retained definitions', [
-                _definition,
-              ]),
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            refreshGeneration: 1,
+            isRefreshing: true,
+          ),
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            refreshGeneration: 1,
+            refreshFailures: 1,
+          ),
         ],
       );
 
@@ -323,9 +547,16 @@ void main() {
         build: () => ExploreBadgesCubit(repository: repository),
         act: (cubit) => cubit.refresh(),
         expect: () => [
+          const ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            refreshGeneration: 1,
+            isRefreshing: true,
+          ),
           ExploreBadgesState(
             status: ExploreBadgesStatus.loaded,
             definitions: [_definition],
+            refreshGeneration: 1,
+            previewGeneration: 1,
           ),
         ],
       );
