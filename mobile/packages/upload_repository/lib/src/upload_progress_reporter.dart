@@ -204,7 +204,11 @@ class UploadProgressReporter {
         return 'NETWORK_ERROR';
       }
 
-      final category = _categoryForStatusCode(error.statusCode);
+      // A resumable transfer that gave up on a 5xx arrives here as a failed
+      // result that kept the service's typed reason but not the status.
+      final category =
+          _categoryForStatusCode(error.statusCode) ??
+          _categoryForServerVerdict(error.failureReason);
       if (category != null) return category;
     }
 
@@ -229,6 +233,12 @@ class UploadProgressReporter {
     if (errorStr.contains('cannot connect') ||
         errorStr.contains('network error') ||
         errorStr.contains('connection')) {
+      return 'NETWORK_ERROR';
+    }
+
+    // The service classed it as a dropped connection, though the message
+    // names none of the above: a broken pipe, say.
+    if (_blossomFailureReason(error) == BlossomUploadFailureReason.network) {
       return 'NETWORK_ERROR';
     }
 
@@ -265,15 +275,28 @@ class UploadProgressReporter {
         reason == BlossomUploadFailureReason.authUnavailable) {
       return 'NETWORK_ERROR';
     }
-    final byStatus = _categoryForStatusCode(error.statusCode);
-    if (byStatus != null) return byStatus;
-    return switch (reason) {
-      BlossomUploadFailureReason.auth => 'AUTHENTICATION',
-      BlossomUploadFailureReason.fileTooLarge => 'FILE_TOO_LARGE',
-      BlossomUploadFailureReason.server => 'SERVER_ERROR',
-      _ => null,
-    };
+    return _categoryForStatusCode(error.statusCode) ??
+        _categoryForServerVerdict(reason);
   }
+
+  /// The category for a server rejection the Blossom service classified
+  /// without an HTTP status, or null when [reason] is not one.
+  static String? _categoryForServerVerdict(
+    BlossomUploadFailureReason? reason,
+  ) => switch (reason) {
+    BlossomUploadFailureReason.auth => 'AUTHENTICATION',
+    BlossomUploadFailureReason.fileTooLarge => 'FILE_TOO_LARGE',
+    BlossomUploadFailureReason.server => 'SERVER_ERROR',
+    _ => null,
+  };
+
+  /// The typed reason the Blossom service gave for a video upload failure.
+  static BlossomUploadFailureReason? _blossomFailureReason(Object? error) =>
+      switch (error) {
+        BlossomUploadFailureException(:final failureReason) => failureReason,
+        BlossomResumableUploadException(:final failureReason) => failureReason,
+        _ => null,
+      };
 
   /// Return a user-friendly error message for the given [category].
   static String userFriendlyErrorMessage(

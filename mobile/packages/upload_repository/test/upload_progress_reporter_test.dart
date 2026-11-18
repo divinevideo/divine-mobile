@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:upload_repository/upload_repository.dart';
@@ -260,6 +261,77 @@ void main() {
         );
         final result = await reporter.categorizeError(error);
         expect(result, equals('AUTHENTICATION'));
+      },
+    );
+
+    group('$BlossomUploadFailureException', () {
+      test('a 503 the resumable transfer gave up on → SERVER_ERROR', () async {
+        final requestOptions = RequestOptions(path: '/upload/session-1');
+        final dioException = DioException.badResponse(
+          statusCode: 503,
+          requestOptions: requestOptions,
+          response: Response<void>(
+            requestOptions: requestOptions,
+            statusCode: 503,
+          ),
+        );
+
+        final result = await reporter.categorizeError(
+          BlossomUploadFailureException(
+            'Recoverable resumable upload failure: $dioException',
+            failureReason: BlossomUploadFailureReason.server,
+          ),
+        );
+
+        expect(result, equals('SERVER_ERROR'));
+      });
+
+      test('an oversized file without a status → FILE_TOO_LARGE', () async {
+        final result = await reporter.categorizeError(
+          const BlossomUploadFailureException(
+            'Upload failed',
+            failureReason: BlossomUploadFailureReason.fileTooLarge,
+          ),
+        );
+        expect(result, equals('FILE_TOO_LARGE'));
+      });
+
+      test('a broken pipe → NETWORK_ERROR', () async {
+        final result = await reporter.categorizeError(
+          const BlossomUploadFailureException(
+            'Recoverable resumable upload failure: DioException [unknown]: '
+            'null\nError: SocketException: Broken pipe '
+            '(OS Error: Broken pipe, errno = 32)',
+            failureReason: BlossomUploadFailureReason.network,
+          ),
+        );
+        expect(result, equals('NETWORK_ERROR'));
+      });
+
+      test('an unclassified failure stays UNKNOWN', () async {
+        final result = await reporter.categorizeError(
+          const BlossomUploadFailureException(
+            'Upload response missing URL field',
+            failureReason: BlossomUploadFailureReason.unknown,
+          ),
+        );
+        expect(result, equals('UNKNOWN'));
+      });
+    });
+
+    test(
+      'a $BlossomResumableUploadException for a broken pipe → NETWORK_ERROR',
+      () async {
+        final result = await reporter.categorizeError(
+          const BlossomResumableUploadException(
+            'Recoverable resumable upload failure: DioException [unknown]: '
+            'null\nError: SocketException: Broken pipe '
+            '(OS Error: Broken pipe, errno = 32)',
+            failureReason: BlossomUploadFailureReason.network,
+            isRecoverableResumableFailure: true,
+          ),
+        );
+        expect(result, equals('NETWORK_ERROR'));
       },
     );
 
