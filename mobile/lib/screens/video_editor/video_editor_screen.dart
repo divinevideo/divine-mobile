@@ -50,12 +50,14 @@ import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
@@ -195,6 +197,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   late final TimelineOverlayBloc _timelineOverlayBloc;
   late final CreationAnalyticsTracker _creationAnalyticsTracker;
 
+  /// Times this open until the editor is usable; the canvas reports its
+  /// preview through [VideoEditorScope.readyTrace].
+  late final EditorReadyTrace _readyTrace;
+
   /// Body size notifier, updated by [_CanvasFitter].
   final _bodySizeNotifier = ValueNotifier<Size>(Size.zero);
 
@@ -268,6 +274,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   @override
   void initState() {
     super.initState();
+    _readyTrace = EditorReadyTrace(
+      ref.read(performanceMonitoringServiceProvider),
+      entry: EditorEntry.of(
+        hasDraft: widget.draftId != null,
+        fromLibrary: widget.fromLibrary,
+      ),
+    );
     _creationAnalyticsTracker = ref.read(creationAnalyticsTrackerProvider);
     Log.info(
       '🎬 Initialized (draftId: ${widget.draftId}, fromLibrary: ${widget.fromLibrary})',
@@ -349,9 +362,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     if (initialClips.isNotEmpty) {
       _clipEditorBloc.add(ClipEditorInitialized(initialClips));
     }
+    // Without a draft the canvas starts on these clips at once.
+    if (!_isLoadingDraft.value) _reportClipsLoaded(initialClips);
 
     addPostFrameCallbackIfMounted(() {
-      _runDetached(_initializeEditor(), 'initialize video editor');
+      _runDetached(
+        _initializeEditor().onError<Object>((error, stackTrace) {
+          // Only a draft's canvas waits for this; it never shows now.
+          if (_isLoadingDraft.value) _readyTrace.failed();
+          Error.throwWithStackTrace(error, stackTrace);
+        }),
+        'initialize video editor',
+      );
       AudioSelectionBottomSheet.preload(ref);
     });
   }
@@ -408,7 +430,15 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       _clipEditorBloc.add(ClipEditorInitialized(clips));
 
       _isLoadingDraft.value = false;
+      _reportClipsLoaded(clips);
     }
+  }
+
+  void _reportClipsLoaded(List<DivineVideoClip> clips) {
+    _readyTrace.clipsLoaded(
+      clipCount: clips.length,
+      stopMotion: isStopMotionComposition(clips),
+    );
   }
 
   @override
@@ -447,6 +477,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   @override
   void dispose() {
+    _readyTrace.left();
     if (widget.fromLibrary || widget.draftId != null) {
       _runDetached(
         _creationAnalyticsTracker.creationAbandoned(),
@@ -1621,6 +1652,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               previewReleasedNotifier: _previewReleasedNotifier,
               layerCaptureNotifier: _layerCaptureNotifier,
               fromLibrary: widget.fromLibrary,
+              readyTrace: _readyTrace,
               onOpenCamera: () => _runDetached(
                 _openCamera(
                   clipEditorBloc: context.read<ClipEditorBloc>(),
