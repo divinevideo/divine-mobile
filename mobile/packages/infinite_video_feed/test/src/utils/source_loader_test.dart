@@ -79,6 +79,35 @@ void main() {
           expect(recordedFailures, isEmpty);
         });
       }
+
+      test('reports exhausted sources without logging pilot URLs', () async {
+        final clips = <VideoClip>[];
+        final lastFailure = Exception('Connection ended for $canonical');
+        final controller = _RecordingControllerWithFailures(
+          clips.add,
+          failures: [
+            PlatformException(code: 'network_error'),
+            lastFailure,
+          ],
+        );
+        addTearDown(controller.dispose);
+
+        await expectLater(
+          setSourceWithFallbacks(
+            index: 0,
+            controller: controller,
+            sources: [bunny, canonical],
+            log: logs.add,
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
+          ),
+          throwsA(same(lastFailure)),
+        );
+
+        expect(clips.map((clip) => clip.uri), [bunny, canonical]);
+        expect(logs, contains(contains('Bunny canary sources exhausted')));
+        expect(logs, everyElement(isNot(contains(path))));
+      });
     });
 
     group('B2 original canary', () {
