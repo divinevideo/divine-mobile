@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/widgets/library/clip_category_chips.dart';
 import 'package:openvine/widgets/library/clip_gallery_save.dart';
 import 'package:openvine/widgets/library/drag_select_region.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
+import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/library/trashed_clips_list.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
@@ -238,7 +240,7 @@ class _ClipsBody extends StatelessWidget {
 
 /// The clip content for one filter: the grid, the trash list, or the state
 /// that stands in for them.
-class _FilterContent extends StatelessWidget {
+class _FilterContent extends ConsumerWidget {
   const _FilterContent({
     required this.state,
     required this.clips,
@@ -264,7 +266,7 @@ class _FilterContent extends StatelessWidget {
   final double gridTopPadding;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // The trash bin has its own list, loading, and empty states — the
     // grid below only ever renders active clips.
     if (state.isShowingTrash) {
@@ -311,7 +313,7 @@ class _FilterContent extends StatelessWidget {
           return;
         }
         runDetached(
-          _showClipPreview(context, clip),
+          _showClipPreview(context, ref, clip),
           'open saved clip preview',
           logName: 'ClipsTab',
           category: LogCategory.ui,
@@ -322,19 +324,28 @@ class _FilterContent extends StatelessWidget {
 
   Future<void> _showClipPreview(
     BuildContext context,
+    WidgetRef ref,
     DivineVideoClip clip,
   ) async {
-    await Navigator.push(
-      context,
-      videoClipPreviewRoute(
-        clip: clip,
-        // Saved like a selection, so a copy without proof is named too.
-        onSaveToGallery: () async {
-          await saveClipsToGallery(context, [clip]);
-        },
-        onDelete: () => _confirmDeleteClip(context, clip),
-      ),
+    var recordReaction = false;
+    final route = videoClipPreviewRoute(
+      clip: clip,
+      // Saved like a selection, so a copy without proof is named too.
+      onSaveToGallery: () async {
+        await saveClipsToGallery(context, [clip]);
+      },
+      onDelete: () => _confirmDeleteClip(context, clip),
+      onRecordReaction: () {
+        recordReaction = true;
+        Navigator.of(context).pop();
+      },
     );
+    await Navigator.of(context).push(route);
+    // Release the looping preview decoder before opening the camera.
+    await route.completed;
+    if (recordReaction && context.mounted) {
+      await recordLibraryReaction(context, ref, clip);
+    }
   }
 
   Future<void> _confirmDeleteClip(

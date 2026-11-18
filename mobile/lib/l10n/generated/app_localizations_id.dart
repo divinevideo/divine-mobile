@@ -6722,6 +6722,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryTabClips => 'Klip';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Dari orang lain';
 
   @override

@@ -6980,6 +6980,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryTabClips => 'Clipuri';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'De la alții';
 
   @override

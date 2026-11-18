@@ -8,6 +8,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -89,6 +90,36 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
     }
+
+    testWidgets('opens with the original left and the reaction right', (
+      tester,
+    ) async {
+      final original = _clip('original');
+      final reaction = _clip('reaction');
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: VideoEditorSplitScreenLayoutScreen(
+            aspectRatio: model.AspectRatio.square,
+            initialClips: [original, reaction],
+            pickFromLibrary: pickFromLibrary,
+            recordWithCamera: recordNothing,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final state = tester
+          .element(find.byType(VideoEditorSplitScreenLayoutView))
+          .read<SplitScreenLayoutCubit>()
+          .state;
+      expect(state.preset, SplitScreenLayoutPreset.sideBySide);
+      expect(state.activeCells.map((cell) => cell?.clip.id), [
+        'original',
+        'reaction',
+      ]);
+      expect(state.canApply, isTrue);
+    });
 
     testWidgets('fills the selected cell with what the library picks', (
       tester,

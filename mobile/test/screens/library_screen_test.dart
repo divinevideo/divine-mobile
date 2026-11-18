@@ -2494,6 +2494,65 @@ void main() {
             .selectedClipIds;
       }
 
+      testWidgets(
+        'editor picker selects a square Classic beside a vertical recording',
+        (tester) async {
+          final recording = shaped('recording', models.AspectRatio.vertical);
+          final classic =
+              shaped('classic_vine_source', models.AspectRatio.square).copyWith(
+                importedSource: true,
+                sourceCredits: const [
+                  models.ClipSourceCredit(
+                    authorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    eventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                  ),
+                ],
+              );
+          when(() => mockClipLibraryService.getAllClips())
+              .thenAnswer((_) async => [recording, classic]);
+          when(() => mockClipLibraryService.recoverMissingAssets(any()))
+              .thenAnswer((_) async => [recording, classic]);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+                clipLibraryServiceProvider.overrideWithValue(
+                  mockClipLibraryService,
+                ),
+                draftStorageServiceProvider.overrideWithValue(
+                  mockDraftStorageService,
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: LibraryScreen.editorPicker(editorClips: [recording]),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(en.libraryTabFromOthers));
+          await tester.pumpAndSettle();
+          final card = find.byWidgetPredicate(
+            (widget) =>
+                widget is VideoClipThumbnailCard &&
+                widget.clip.id == classic.id,
+          );
+          expect(tester.widget<VideoClipThumbnailCard>(card).disabled, isFalse);
+          await tester.tap(card);
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .element(find.byType(ClipsTab))
+                .read<ClipsLibraryBloc>()
+                .state
+                .selectedClipIds,
+            {recording.id, classic.id},
+          );
+          expect(classic.targetAspectRatio, models.AspectRatio.square);
+        },
+      );
+
       testWidgets('lets a picker with a crop guide pick two shapes', (
         tester,
       ) async {

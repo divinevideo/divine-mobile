@@ -103,7 +103,6 @@ import 'package:unified_logger/unified_logger.dart';
 /// screen, and a non-opaque route kept the editor — its video textures,
 /// colour filter and live icons — composited under every camera frame. A
 /// transition route still paints the editor while the fade runs.
-@visibleForTesting
 PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
   return PageRouteBuilder<bool>(
     settings: const RouteSettings(name: 'video_recorder'),
@@ -682,10 +681,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       maxChildSize: 1,
       initialChildSize: 0.9,
       minChildSize: VineTheme.bottomSheetDismissFloor,
-      buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: LibraryScreen.clipsTabIndex,
-        selectionMode: true,
-        allowsMixedClipTypes: true,
+      buildScrollBody: (scrollController) => LibraryScreen.editorPicker(
         editorClips: currentClips,
         scrollController: scrollController,
       ),

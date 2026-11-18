@@ -116,6 +116,7 @@ void main() {
       DivineVideoClip? clip,
       Future<void> Function()? onSaveToGallery = _noSave,
       VoidCallback? onDelete,
+      VoidCallback? onRecordReaction,
       Widget? home,
     }) {
       return ProviderScope(
@@ -131,12 +132,26 @@ void main() {
                     clip: clip ?? testClip,
                     onSaveToGallery: onSaveToGallery,
                     onDelete: onDelete,
+                    onRecordReaction: onRecordReaction,
                   ),
                 ),
           ),
         ),
       );
     }
+
+    testWidgets('offers Record reaction and invokes it when tapped', (
+      tester,
+    ) async {
+      installMockDivineVideoPlayer();
+      var reactions = 0;
+      await tester.pumpWidget(
+        buildTestWidget(onRecordReaction: () => reactions++),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Record reaction'));
+      expect(reactions, 1);
+    });
 
     test('can be instantiated', () {
       expect(VideoClipPreview(clip: testClip), isA<VideoClipPreview>());

@@ -6865,6 +6865,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryTabClips => 'Клипове';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'От други';
 
   @override

@@ -82,6 +82,8 @@ class VideoRecorderRoute extends ConsumerWidget {
     this.autoRecord = false,
     this.initialSound,
     this.challengeRecordingId,
+    this.fromEditor = false,
+    this.cropGuideAspectRatio,
   });
 
   final String entryPoint;
@@ -89,18 +91,25 @@ class VideoRecorderRoute extends ConsumerWidget {
   final RecorderSoundSelection? initialSound;
   final String? challengeRecordingId;
 
+  /// Uses the return-to-caller controls for a library reaction capture.
+  final bool fromEditor;
+  final double? cropGuideAspectRatio;
+
   /// See [VideoRecorderView.autoRecord].
   final bool autoRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Widget view = VideoRecorderView(
+      entryPoint: entryPoint,
+      autoRecord: autoRecord,
+      fromEditor: fromEditor,
+    );
+    if (cropGuideAspectRatio case final ratio?) {
+      view = ClipCropGuide(aspectRatio: ratio, child: view);
+    }
     Widget recorder = _VideoRecorderBlocScope(
-      child: CameraPermissionGate(
-        child: VideoRecorderView(
-          entryPoint: entryPoint,
-          autoRecord: autoRecord,
-        ),
-      ),
+      child: CameraPermissionGate(child: view),
     );
     final recordingId = challengeRecordingId;
     {

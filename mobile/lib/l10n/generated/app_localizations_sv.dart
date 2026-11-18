@@ -6796,6 +6796,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryTabClips => 'Klipp';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Från andra';
 
   @override

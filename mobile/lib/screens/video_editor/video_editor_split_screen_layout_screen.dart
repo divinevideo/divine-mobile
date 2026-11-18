@@ -37,6 +37,7 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
     required this.aspectRatio,
     required this.pickFromLibrary,
     required this.recordWithCamera,
+    this.initialClips = const [],
     this.bakeCapturedChromaKey,
     this.deferFileCleanup,
     super.key,
@@ -44,6 +45,9 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
 
   /// The shape of the video the layout splits.
   final model.AspectRatio aspectRatio;
+
+  /// Clips placed left to right when a library reaction opens this screen.
+  final List<DivineVideoClip> initialClips;
 
   final SplitScreenCellPicker pickFromLibrary;
   final SplitScreenCellPicker recordWithCamera;
@@ -56,6 +60,7 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
     required model.AspectRatio aspectRatio,
     required SplitScreenCellPicker pickFromLibrary,
     required SplitScreenCellPicker recordWithCamera,
+    List<DivineVideoClip> initialClips = const [],
     SplitScreenBakeChromaKeyFn? bakeCapturedChromaKey,
     SplitScreenDeferFileCleanupFn? deferFileCleanup,
   }) {
@@ -64,6 +69,7 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
         settings: const RouteSettings(name: 'split_screen_layout'),
         pageBuilder: (_, _, _) => VideoEditorSplitScreenLayoutScreen(
           aspectRatio: aspectRatio,
+          initialClips: initialClips,
           pickFromLibrary: pickFromLibrary,
           recordWithCamera: recordWithCamera,
           bakeCapturedChromaKey: bakeCapturedChromaKey,
@@ -83,7 +89,7 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
         borderColor: VineTheme.backgroundColor,
         bakeCapturedChromaKey: bakeCapturedChromaKey,
         deferFileCleanup: deferFileCleanup,
-      ),
+      )..clipsPicked(initialClips),
       child: VideoEditorSplitScreenLayoutView(
         pickFromLibrary: pickFromLibrary,
         recordWithCamera: recordWithCamera,

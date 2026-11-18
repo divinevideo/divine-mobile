@@ -7,7 +7,8 @@ import 'dart:io';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show ClipSourceCredit, EqualizerSettings;
+import 'package:models/models.dart'
+    show AspectRatio, ClipSourceCredit, EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -516,6 +517,29 @@ void main() {
     });
 
     group('into a video composition', () {
+      test('fits a square Classic to the composition without changing its saved source', () async {
+        final source = _videoClip('classic_vine_source').copyWith(
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 1,
+          importedSource: true,
+          sourceCredits: const [
+            ClipSourceCredit(
+              authorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              eventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            ),
+          ],
+        );
+        final bloc = await seeded([_videoClip('recording')]);
+        bloc.add(ClipEditorLibraryClipsImportRequested([source]));
+        final state = await bloc.stream.first;
+        final imported = state.clips.last;
+        expect(imported.targetAspectRatio, AspectRatio.vertical);
+        expect(imported.sourceCredits, source.sourceCredits);
+        expect(imported.video, source.video);
+        expect(source.targetAspectRatio, AspectRatio.square);
+        expect(source.originalAspectRatio, 1);
+      });
+
       test('appends a picked video clip as it is', () async {
         final bloc = await seeded([_videoClip('a')]);
 

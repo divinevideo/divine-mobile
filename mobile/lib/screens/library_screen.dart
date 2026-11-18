@@ -146,6 +146,20 @@ class LibraryScreen extends ConsumerWidget {
     this.maxSelectedClips,
   });
 
+  /// The timeline picker accepts every shape and previews the composition's
+  /// crop. Import fits a copy to that shape; the library source stays intact.
+  factory LibraryScreen.editorPicker({
+    required List<DivineVideoClip> editorClips,
+    ScrollController? scrollController,
+  }) => LibraryScreen(
+    initialTabIndex: clipsTabIndex,
+    selectionMode: true,
+    allowsMixedClipTypes: true,
+    editorClips: editorClips,
+    scrollController: scrollController,
+    cropGuideAspectRatio: editorClips.firstOrNull?.targetAspectRatio.value,
+  );
+
   /// Index of the tab to show when the screen opens: [draftsTabIndex],
   /// [clipsTabIndex], [fromOthersTabIndex] or [soundsTabIndex]. A tab the
   /// current mode does not show opens Clips instead.

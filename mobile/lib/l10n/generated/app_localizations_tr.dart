@@ -6735,6 +6735,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryTabClips => 'Klipler';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Başkalarından';
 
   @override

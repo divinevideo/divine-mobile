@@ -6404,6 +6404,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryTabClips => '片段';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => '来自他人';
 
   @override
