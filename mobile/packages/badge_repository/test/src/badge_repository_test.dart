@@ -117,7 +117,7 @@ void main() {
               required tags,
               createdAt,
             }) async {
-              return signedEvent = _event(
+              final event = _event(
                 id: _eventId(900 + kind),
                 pubkey: _pubkey(1),
                 kind: kind,
@@ -125,6 +125,9 @@ void main() {
                 content: content,
                 createdAt: createdAt ?? 1000,
               );
+              return signedEvent = kind == EventKind.badgeDefinition
+                  ? _signed(event)
+                  : event;
             },
       );
     });
@@ -5874,21 +5877,25 @@ void main() {
       void stubStaleDefinition() {
         _stubQueries(nostrClient, {
           'created:${_pubkey(1)}': [
-            _definitionEvent(
-              id: _eventId(60),
-              pubkey: _pubkey(1),
-              dTag: 'scene-stealer',
-              name: 'Old Name',
-              createdAt: 500,
+            _signed(
+              _definitionEvent(
+                id: _eventId(60),
+                pubkey: _pubkey(1),
+                dTag: 'scene-stealer',
+                name: 'Old Name',
+                createdAt: 500,
+              ),
             ),
           ],
           'definition:${coordinate.value}': [
-            _definitionEvent(
-              id: _eventId(61),
-              pubkey: _pubkey(1),
-              dTag: 'scene-stealer',
-              name: 'Old Name',
-              createdAt: 500,
+            _signed(
+              _definitionEvent(
+                id: _eventId(61),
+                pubkey: _pubkey(1),
+                dTag: 'scene-stealer',
+                name: 'Old Name',
+                createdAt: 500,
+              ),
             ),
           ],
         });
@@ -5930,13 +5937,15 @@ void main() {
         await publishEdit();
         _stubQueries(nostrClient, {
           'definition:${coordinate.value}': [
-            _definitionEvent(
-              id: _eventId(62),
-              pubkey: _pubkey(1),
-              dTag: 'scene-stealer',
-              name: 'Newer Elsewhere',
-              // The signer stamps the published event with createdAt 1000.
-              createdAt: 4000,
+            _signed(
+              _definitionEvent(
+                id: _eventId(62),
+                pubkey: _pubkey(1),
+                dTag: 'scene-stealer',
+                name: 'Newer Elsewhere',
+                // The signer stamps the published event with createdAt 1000.
+                createdAt: 4000,
+              ),
             ),
           ],
         });
@@ -6125,10 +6134,12 @@ void main() {
       test('resolves definition, awardees, and viewer acceptance', () async {
         _stubQueries(nostrClient, {
           'definition:${coordinate.value}': [
-            _definitionEvent(
-              pubkey: _pubkey(2),
-              dTag: 'scene-stealer',
-              name: 'Scene Stealer',
+            _signed(
+              _definitionEvent(
+                pubkey: _pubkey(2),
+                dTag: 'scene-stealer',
+                name: 'Scene Stealer',
+              ),
             ),
           ],
           'awardsFor:${coordinate.value}': [
@@ -6194,10 +6205,12 @@ void main() {
       test('marks a newer viewer re-award accepted by coordinate', () async {
         _stubQueries(nostrClient, {
           'definition:${coordinate.value}': [
-            _definitionEvent(
-              pubkey: _pubkey(2),
-              dTag: 'scene-stealer',
-              name: 'Scene Stealer',
+            _signed(
+              _definitionEvent(
+                pubkey: _pubkey(2),
+                dTag: 'scene-stealer',
+                name: 'Scene Stealer',
+              ),
             ),
           ],
           'awardsFor:${coordinate.value}': [

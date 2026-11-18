@@ -436,9 +436,11 @@ class BadgeRepository {
   /// repository wants — there is no blocklist to consult.
   final BadgeHiddenPubkeyReader? _isHiddenPubkey;
 
-  /// Relay used by every public definition read, including before sign-in;
-  /// discovery reads query it alone.
+  /// Primary relay for public reads, including before sign-in.
   final String? _definitionRelayUrl;
+
+  List<String>? get _publicReadRelays =>
+      _definitionRelayUrl == null ? null : [_definitionRelayUrl];
 
   /// The profile badge list this repository last published, and whose it is.
   ///
@@ -568,7 +570,8 @@ class BadgeRepository {
   /// Without a worker, verification runs on the calling isolate.
   ///
   /// Throws [BadgeReadIncompleteException] when discovery goes unanswered.
-  /// Omits only the issuers whose deletion reads are incomplete or capped.
+  /// Omits issuers with inconclusive deletion reads. If none can be shown
+  /// and a deletion read was inconclusive, the caller must retry.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
     final recentEvents = await _readDiscoveryWindow(
       [
@@ -600,7 +603,7 @@ class BadgeRepository {
     }
     final definitions = <String, Nip58BadgeDefinition>{};
     for (final event in events) {
-      if (!await _isVerifiedDiscoveryEvent(event) ||
+      if (!await _isVerifiedBadgeEvent(event) ||
           (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
         continue;
       }
@@ -627,14 +630,20 @@ class BadgeRepository {
     }
     final pending = byIssuer.entries.iterator;
     final elapsed = _stopwatchFactory()..start();
+    var hasUnknownDeletions = false;
+    void excludeUnsettledIssuer(List<Nip58BadgeDefinition> candidates) {
+      hasUnknownDeletions = true;
+      for (final definition in candidates) {
+        definitions.remove(definition.coordinate);
+      }
+    }
+
     Future<void> readIssuerDeletions() async {
       while (pending.moveNext()) {
         final issuer = pending.current;
         final remaining = _discoveryReadTimeout - elapsed.elapsed;
         if (remaining <= Duration.zero) {
-          for (final definition in issuer.value) {
-            definitions.remove(definition.coordinate);
-          }
+          excludeUnsettledIssuer(issuer.value);
           continue;
         }
         final deletions = await _nostrClient.readEvents(
@@ -658,9 +667,7 @@ class BadgeRepository {
               limit: _discoveryDeletionLimit,
             ),
           ],
-          tempRelays: _definitionRelayUrl == null
-              ? null
-              : [_definitionRelayUrl],
+          tempRelays: _publicReadRelays,
           relayTypes: _definitionRelayUrl == null
               ? RelayType.all
               : [RelayType.temp],
@@ -672,23 +679,19 @@ class BadgeRepository {
         if (!deletions.isComplete ||
             deletions.possiblyCapped ||
             deletions.events.length >= _discoveryDeletionLimit) {
-          for (final definition in issuer.value) {
-            definitions.remove(definition.coordinate);
-          }
+          excludeUnsettledIssuer(issuer.value);
           continue;
         }
         for (final deletion in deletions.events) {
           final verificationBudget = _discoveryReadTimeout - elapsed.elapsed;
           final valid =
               verificationBudget > Duration.zero &&
-              await _isVerifiedDiscoveryEvent(deletion).timeout(
+              await _isVerifiedBadgeEvent(deletion).timeout(
                 verificationBudget,
                 onTimeout: () => false,
               );
           if (elapsed.elapsed >= _discoveryReadTimeout) {
-            for (final definition in issuer.value) {
-              definitions.remove(definition.coordinate);
-            }
+            excludeUnsettledIssuer(issuer.value);
             break;
           }
           if (!valid ||
@@ -717,6 +720,11 @@ class BadgeRepository {
 
     // Both fan-out and the whole phase are bounded, including queued issuers.
     await Future.wait(List.generate(4, (_) => readIssuerDeletions()));
+    if (definitions.isEmpty && hasUnknownDeletions) {
+      throw const BadgeReadIncompleteException(
+        'Public badge deletions could not be confirmed',
+      );
+    }
     final newest = definitions.values.toList()
       ..sort((a, b) {
         final recency = b.event.createdAt.compareTo(a.event.createdAt);
@@ -741,16 +749,19 @@ class BadgeRepository {
   }
 
   Future<List<Event>> _readDiscoveryWindow(List<Filter> filters) async {
-    final relay = _definitionRelayUrl;
-    final result = await _nostrClient.queryEventsDetailed(
+    final result = await _nostrClient.readEvents(
       filters,
-      tempRelays: relay == null ? null : [relay],
-      relayTypes: relay == null ? RelayType.all : [RelayType.temp],
+      tempRelays: _publicReadRelays,
+      relayTypes: _definitionRelayUrl == null
+          ? RelayType.all
+          : [RelayType.temp],
       useCache: false,
       timeout: _discoveryReadTimeout,
       requireAllRelaysSettled: true,
+      maxCollectedEvents: _discoveryWindowSize,
     );
-    if (result.timedOut || result.noRelays) {
+    // A settled, capped recency window is expected for a busy directory.
+    if (!result.isComplete) {
       throw const BadgeReadIncompleteException(
         'Public badges could not be completely loaded',
       );
@@ -758,7 +769,7 @@ class BadgeRepository {
     return result.events;
   }
 
-  Future<bool> _isVerifiedDiscoveryEvent(Event event) async {
+  Future<bool> _isVerifiedBadgeEvent(Event event) async {
     if (_disposed || !event.isValid) return false;
     if (event.hasVerifiedSignature) return true;
     final spawner = _discoveryVerifierSpawner;
@@ -850,7 +861,7 @@ class BadgeRepository {
     final result = await _nostrClient.readAllEvents(
       Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
       timeout: const Duration(seconds: 10),
-      tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
+      tempRelays: _publicReadRelays,
     );
     if (!result.isComplete) {
       throw const BadgeReadIncompleteException(
@@ -913,10 +924,11 @@ class BadgeRepository {
   /// [BadgeReadIncompleteException] when awards, revocations or profiles
   /// cannot be completely read.
   Future<Set<String>> loadAcceptedHolders(BadgeCoordinate coordinate) =>
-      _loadAcceptedHolders(coordinate);
+      _loadAcceptedHolders(coordinate, tempRelays: _publicReadRelays);
 
   Future<Set<String>> _loadAcceptedHolders(
     BadgeCoordinate coordinate, {
+    List<String>? tempRelays,
     void Function()? ensureCurrent,
     Duration Function()? remainingBudget,
   }) async {
@@ -927,6 +939,7 @@ class BadgeRepository {
         kinds: [EventKind.badgeAward],
         a: [coordinate.value],
       ),
+      tempRelays: tempRelays,
       timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
     );
     ensureCurrent?.call();
@@ -945,6 +958,7 @@ class BadgeRepository {
           kinds: [EventKind.eventDeletion],
           e: awardIds.skip(i).take(100).toList(),
         ),
+        tempRelays: tempRelays,
         timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
@@ -978,6 +992,7 @@ class BadgeRepository {
     if (awarded.isEmpty) return const {};
     final profiles = await _completeProfileBadgesByPubkeyChunked(
       awarded,
+      tempRelays: tempRelays,
       ensureCurrent: ensureCurrent,
       remainingBudget: remainingBudget,
     );
@@ -1638,11 +1653,8 @@ class BadgeRepository {
     final viewerPubkey = _currentPubkey();
     final memo = _DashboardLookupMemo();
     final results = await Future.wait<Object?>([
-      memo.definition(
-        coordinate.value,
-        () => _loadDefinition(coordinate.value),
-      ),
-      _queryAwardsForCoordinate(coordinate),
+      _loadDetailDefinition(coordinate),
+      _queryAwardsForCoordinate(coordinate, tempRelays: _publicReadRelays),
     ]);
     final definition = results[0] as Nip58BadgeDefinition?;
     final awards = results[1]! as List<Nip58BadgeAward>;
@@ -1665,7 +1677,11 @@ class BadgeRepository {
       if (viewerPubkey != null && awardByRecipient.containsKey(viewerPubkey))
         viewerPubkey,
     };
-    final profileBadges = await _profileBadgesByPubkey(memo, checked);
+    final profileBadges = await _profileBadgesByPubkey(
+      memo,
+      checked,
+      tempRelays: _publicReadRelays,
+    );
 
     final recipients = [
       for (final entry in awardByRecipient.entries)
@@ -2041,6 +2057,7 @@ class BadgeRepository {
   Future<List<Nip58BadgeAward>> _queryAwardsForCoordinate(
     BadgeCoordinate coordinate, {
     int limit = 200,
+    List<String>? tempRelays,
   }) async {
     final events = await _nostrClient.queryEvents([
       Filter(
@@ -2049,7 +2066,7 @@ class BadgeRepository {
         a: [coordinate.value],
         limit: limit,
       ),
-    ]);
+    ], tempRelays: tempRelays);
 
     final awards =
         events
@@ -2144,6 +2161,7 @@ class BadgeRepository {
   Future<Map<String, Nip58ProfileBadges?>>
   _completeProfileBadgesByPubkeyChunked(
     Iterable<String> pubkeys, {
+    List<String>? tempRelays,
     void Function()? ensureCurrent,
     Duration Function()? remainingBudget,
   }) async {
@@ -2154,6 +2172,7 @@ class BadgeRepository {
       ensureCurrent?.call();
       final current = await _nostrClient.readAllEvents(
         Filter(authors: chunk, kinds: [EventKind.profileBadges]),
+        tempRelays: tempRelays,
         timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
@@ -2163,6 +2182,7 @@ class BadgeRepository {
           kinds: [EventKind.badgeSet],
           d: ['profile_badges'],
         ),
+        tempRelays: tempRelays,
         timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
@@ -2188,12 +2208,16 @@ class BadgeRepository {
 
   Future<Map<String, Nip58ProfileBadges?>> _profileBadgesByPubkey(
     _DashboardLookupMemo memo,
-    Iterable<String> pubkeys,
-  ) async {
+    Iterable<String> pubkeys, {
+    List<String>? tempRelays,
+  }) async {
     final unique = pubkeys.toSet().toList(growable: false);
     final loaded = await Future.wait([
       for (final pubkey in unique)
-        memo.profileBadges(pubkey, () => _latestProfileBadges(pubkey)),
+        memo.profileBadges(
+          pubkey,
+          () => _latestProfileBadges(pubkey, tempRelays: tempRelays),
+        ),
     ]);
     return {for (var i = 0; i < unique.length; i++) unique[i]: loaded[i]};
   }
@@ -2439,11 +2463,14 @@ class BadgeRepository {
     );
   }
 
-  Future<Nip58ProfileBadges?> _latestProfileBadges(String pubkey) async {
+  Future<Nip58ProfileBadges?> _latestProfileBadges(
+    String pubkey, {
+    List<String>? tempRelays,
+  }) async {
     final results = await Future.wait([
       _nostrClient.queryEvents([
         Filter(authors: [pubkey], kinds: [EventKind.profileBadges], limit: 10),
-      ]),
+      ], tempRelays: tempRelays),
       _nostrClient.queryEvents([
         Filter(
           authors: [pubkey],
@@ -2451,7 +2478,7 @@ class BadgeRepository {
           d: ['profile_badges'],
           limit: 10,
         ),
-      ]),
+      ], tempRelays: tempRelays),
     ]);
     // NIP-58 treats legacy 30008/d=profile_badges as equivalent to 10008,
     // so resolve both encodings as one newest-wins profile badge list.
@@ -2511,7 +2538,28 @@ class BadgeRepository {
     ]);
   }
 
-  Future<Nip58BadgeDefinition?> _loadDefinition(String coordinate) async {
+  /// Detail routes carry a coordinate. Authenticate the actual event that will
+  /// supply its attribution and report target, including a pending local edit.
+  Future<Nip58BadgeDefinition?> _loadDetailDefinition(
+    BadgeCoordinate coordinate,
+  ) async {
+    final definition = await _loadDefinition(
+      coordinate.value,
+      tempRelays: _publicReadRelays,
+    );
+    if (definition == null ||
+        definition.event.pubkey != coordinate.pubkey ||
+        definition.event.dTagValue != coordinate.identifier ||
+        !await _isVerifiedBadgeEvent(definition.event)) {
+      return null;
+    }
+    return definition;
+  }
+
+  Future<Nip58BadgeDefinition?> _loadDefinition(
+    String coordinate, {
+    List<String>? tempRelays,
+  }) async {
     final parts = _parseCoordinate(coordinate);
     if (parts == null || parts.kind != EventKind.badgeDefinition) {
       return null;
@@ -2524,7 +2572,7 @@ class BadgeRepository {
         d: [parts.dTag],
         limit: 1,
       ),
-    ]);
+    ], tempRelays: tempRelays);
 
     final sorted = events.toList()
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
