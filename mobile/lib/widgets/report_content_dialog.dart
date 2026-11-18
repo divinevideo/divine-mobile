@@ -120,7 +120,7 @@ class ReportContentDialog extends ConsumerWidget {
   final String moderationEventLabel;
 
   /// The reasons offered, in display order. Every reason by default; a list
-  /// offers [listReportReasons].
+  /// offers [listReportReasons] and a badge offers [badgeReportReasons].
   final List<ContentFilterReason> reasons;
 
   /// Extra text for the report, such as a reported list's title.
@@ -336,6 +336,7 @@ class ReportContentDialog extends ConsumerWidget {
             authorPubkey: authorPubkey,
             moderationKindLabel: 'Badge Report',
             moderationEventLabel: 'Badge Event',
+            reasons: badgeReportReasons,
             additionalContext: 'Reported badge: "$name" ($coordinate)',
             addressableCoordinate: coordinate,
             draggableController: controller,

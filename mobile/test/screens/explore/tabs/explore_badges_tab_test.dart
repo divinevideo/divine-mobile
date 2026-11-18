@@ -21,6 +21,7 @@ import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -169,12 +170,20 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      vanishes.addError(StateError('visibility unavailable'));
+      final failure = StateError('visibility unavailable');
+      final trace = StackTrace.fromString('visibility lookup stack');
+      vanishes.addError(failure, trace);
       await tester.pump();
       await tester.pump();
       expect(find.text(l10n.badgesLoadError), findsOneWidget);
       expect(find.byType(BadgeCommunityCard), findsNothing);
       verifyNever(() => repository.loadHolderPreview(any()));
+      final logs = LogCaptureService().getRecentLogs().where(
+        (entry) =>
+            entry.name == 'ExploreBadgesTab' &&
+            entry.error == failure.toString(),
+      );
+      expect(logs.single.stackTrace, trace.toString());
 
       await tester.tap(find.text(l10n.commonRetry));
       await tester.pumpAndSettle();
