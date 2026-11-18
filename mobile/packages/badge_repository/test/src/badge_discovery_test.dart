@@ -59,6 +59,17 @@ void main() {
     createdAt: at,
   )..sign(key);
 
+  Event ambiguousDefinition({String? firstIdentifier}) => Event(
+    issuer1,
+    EventKind.badgeDefinition,
+    [
+      ['d', ?firstIdentifier],
+      ['d', 'shared'],
+    ],
+    '',
+    createdAt: 200,
+  )..sign(key1);
+
   Event deletion(
     String key,
     Event target, {
@@ -204,6 +215,40 @@ void main() {
             maxCollectedEvents: 300,
           ),
         ).called(1);
+      },
+    );
+
+    test(
+      'gallery compares only revisions with a canonical first identifier',
+      () async {
+        final genuine = definition(key1);
+        events = [ambiguousDefinition(), genuine];
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.id,
+          genuine.id,
+        );
+      },
+    );
+
+    test(
+      'the pinned catalogue also validates candidates before choosing a revision',
+      () async {
+        await repository.dispose();
+        repository = await makeRepository(pinnedIssuers: [issuer1]);
+        final genuine = definition(key1);
+        when(() => api.getBadgeDefinitions(issuer: issuer1)).thenAnswer(
+          (_) async => BadgeDefinitionsResponse(
+            badges: [
+              ambiguousDefinition(),
+              definition(key1, at: 300)..sig = '0' * 128,
+              genuine,
+            ],
+          ),
+        );
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.id,
+          genuine.id,
+        );
       },
     );
 
@@ -591,17 +636,65 @@ void main() {
     final coordinate = BadgeCoordinate(pubkey: issuer1, identifier: 'shared');
 
     test(
+      'detail selects the newest authentic canonical revision within its read window',
+      () async {
+        final genuine = definition(key1, name: 'First');
+        final sameSecond = definition(key1, name: 'Second');
+        final candidates = [
+          definition(key1, at: 400)..sig = '0' * 128,
+          ambiguousDefinition(),
+          ambiguousDefinition(firstIdentifier: 'another'),
+          sameSecond,
+          genuine,
+          definition(key1, at: 10),
+        ];
+        QueryResult answer(Invocation call) {
+          final filter =
+              (call.positionalArguments.single as List<Filter>).single;
+          expect(call.namedArguments[#maxCollectedEvents], filter.limit);
+          final matches = candidates
+              .where(filter.checkEvent)
+              .take(filter.limit!);
+          return QueryResult(
+            events: matches.toList(),
+            endedBy: QueryEnd.complete,
+          );
+        }
+
+        when(
+          () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
+        ).thenAnswer((_) async => []);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            maxCollectedEvents: any(named: 'maxCollectedEvents'),
+          ),
+        ).thenAnswer((call) async => answer(call));
+        expect(
+          (await repository.loadBadgeDetail(coordinate)).definition?.event.id,
+          genuine.id,
+        );
+      },
+    );
+
+    test(
       'only authenticates a definition for the exact requested coordinate',
       () async {
         var response = definition(key1);
         when(
           () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
-        ).thenAnswer((call) async {
-          final filters = call.positionalArguments.single as List<Filter>;
-          return filters.first.kinds!.single == EventKind.badgeDefinition
-              ? [response]
-              : <Event>[];
-        });
+        ).thenAnswer((_) async => []);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            maxCollectedEvents: any(named: 'maxCollectedEvents'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              QueryResult(events: [response], endedBy: QueryEnd.complete),
+        );
         final valid = await repository.loadBadgeDetail(coordinate);
         expect(valid.definition?.event.id, response.id);
         for (final invalid in [
