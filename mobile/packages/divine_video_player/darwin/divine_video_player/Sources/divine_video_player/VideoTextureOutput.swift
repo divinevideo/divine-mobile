@@ -69,6 +69,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// `player.currentTime()` because a newer seek may already be in flight.
     private var pendingSeekTime: CMTime = .invalid
 
+    /// Where a paused picture belongs; see `PausedFramePull`.
+    private var pausedFramePull = PausedFramePull()
+
     /// Window during which the display link bypasses `hasNewPixelBuffer`
     /// and tries `copyPixelBuffer` on every tick. Covers the GOP-decode
     /// stall after an exact seek (up to ~500 ms on long-GOP clips).
@@ -230,6 +233,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             // path has no other way to clear Flutter's loader.
             hasDeliveredFirstFrame = false
             pendingSeekTime = .invalid
+            pausedFramePull.reset()
             mediaDataRearmCount = 0
             lastDeliveredItemTime = .invalid
             nextStallRecoveryTime = 0
@@ -251,6 +255,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         frameEffects.playerItem = item
         hasDeliveredFirstFrame = false
         pendingSeekTime = .invalid
+        pausedFramePull.reset()
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         nextStallRecoveryTime = 0
@@ -294,6 +299,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     func forceRefresh(for seekTime: CMTime, isRetry: Bool = false) {
         mediaDataRearmCount = 0
         pendingSeekTime = seekTime
+        pausedFramePull.hold(at: seekTime)
         forceRefreshDeadline = CACurrentMediaTime() + 0.6
         forceWindowFailCount = 0
         forceWindowIsRetry = isRetry
@@ -312,9 +318,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     @discardableResult
     func tryPullFrameNow(at time: CMTime) -> Bool {
         guard let output = videoOutput else { return false }
+        var frameTime = CMTime.invalid
         guard let pixelBuffer = output.copyPixelBuffer(
             forItemTime: time,
-            itemTimeForDisplay: nil
+            itemTimeForDisplay: &frameTime
         ) else {
             return false
         }
@@ -322,7 +329,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         forceRefreshDeadline = 0
         forceWindowFailCount = 0
         mediaDataRearmCount = 0
-        deliverFrame(pixelBuffer, at: time)
+        deliverFrame(pixelBuffer, at: time, frameTime: frameTime)
         return true
     }
 
@@ -360,13 +367,14 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         if pendingSeekTime.isValid {
             targetTime = pendingSeekTime
         } else if let p = player {
-            targetTime = p.currentTime()
+            targetTime = pausedFramePull.time(playing: p.rate != 0, clock: p.currentTime())
         } else {
             return
         }
+        var frameTime = CMTime.invalid
         let pb = videoOutput.copyPixelBuffer(
             forItemTime: targetTime,
-            itemTimeForDisplay: nil
+            itemTimeForDisplay: &frameTime
         )
         guard let pixelBuffer = pb else {
             mediaDataRearmCount += 1
@@ -379,7 +387,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         pendingSeekTime = .invalid
         forceRefreshDeadline = 0
         forceWindowFailCount = 0
-        deliverFrame(pixelBuffer, at: targetTime)
+        deliverFrame(pixelBuffer, at: targetTime, frameTime: frameTime)
     }
 
     // MARK: - App lifecycle
@@ -538,6 +546,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
     ) {
         let time = frameTime.isValid ? frameTime : itemTime
+        guard pausedFramePull.accepts(
+            frameAt: frameTime, playing: (player?.rate ?? 0) != 0)
+        else { return }
         // What was drawn before this frame, so read ahead of the updates below.
         let drawnUs = lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil
         let drawTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime, drawnUs: drawnUs)
@@ -569,7 +580,8 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
               let output = videoOutput,
               let player else { return }
 
-        let itemTime = player.currentTime()
+        let itemTime = pausedFramePull.time(
+            playing: player.rate != 0, clock: player.currentTime())
 
         var frameTime = CMTime.invalid
         if CACurrentMediaTime() < forceRefreshDeadline {
