@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EA5C0A29E349A99263035489 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		FF91BCB20397A7944304CBE4 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
+		48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
+		381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
+		60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
+		06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		38FD4E59291C9572AF216296 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3B2A13AD2D9A576685353158 /* Pods_Runner.framework */; };
@@ -129,6 +136,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		992F75580C42A8A09950DC34 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplay.swift; sourceTree = "<group>"; };
+		9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityAttributes.swift; sourceTree = "<group>"; };
+		792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplayTests.swift; sourceTree = "<group>"; };
 		029BDD854485FA62BC5A9C26 /* Pods-RunnerTests.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		037A7FC0D83198C29E787FD1 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		06671AD11C80317FA3B1799D /* NostrBridgeAttestationPlugin.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NostrBridgeAttestationPlugin.swift; sourceTree = "<group>"; };
@@ -256,6 +267,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FF91BCB20397A7944304CBE4 /* ActivityKit.framework in Frameworks */,
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
 				6FDAD046102CCA6028B8B9A3 /* BuildFile in Frameworks */,
 				38FD4E59291C9572AF216296 /* Pods_Runner.framework in Frameworks */,
@@ -273,12 +285,30 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA5C0A29E349A99263035489 /* ActivityKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		812A562A34344CD10B451E08 /* PostLiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */,
+				9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */,
+			);
+			path = PostLiveActivity;
+			sourceTree = "<group>";
+		};
+		DC11BE9D462D5DF537321AAB /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				812A562A34344CD10B451E08 /* PostLiveActivity */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		27D5A01E0DFB594EB489DDCD /* iOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -290,6 +320,7 @@
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
+				792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
 			path = RunnerTests;
@@ -322,6 +353,7 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
+				DC11BE9D462D5DF537321AAB /* Shared */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -816,6 +848,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */,
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -824,6 +857,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */,
+				60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				3EB13B9046685257BDD640FB /* NostrBridgeAttestationPlugin.swift in Sources */,
 				D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */,
@@ -874,6 +909,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */,
+				381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */,
 				D1A000000000000000000001 /* CameraQuickActionWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
