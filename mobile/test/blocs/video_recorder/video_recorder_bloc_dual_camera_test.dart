@@ -107,10 +107,11 @@ void main() {
       VideoRecorderMode mode = VideoRecorderMode.capture,
       VideoRecorderState recordingState = VideoRecorderState.idle,
       bool liveChromaKeySupported = false,
+      VideoEditorNotifier? videoEditor,
     }) =>
         VideoRecorderBloc(
           readClipManager: () => clipManager,
-          readVideoEditor: _MockVideoEditor.new,
+          readVideoEditor: () => videoEditor ?? _MockVideoEditor(),
           readVideoEditorState: VideoEditorProviderState.new,
           readSharedPreferences: () => prefs,
           cameraService: camera,
@@ -306,6 +307,105 @@ void main() {
           bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: false));
         },
         verify: (bloc) {
+          verify(() => camera.setDualCameraEnabled(enabled: true)).called(2);
+          expect(bloc.state.isDualCameraEnabled, isTrue);
+        },
+      );
+    });
+
+    group('a change landing while the session rebuilds', () {
+      late _MockVideoEditor videoEditor;
+
+      /// The next rebuild, held until the test lets it return.
+      late Completer<void> rebuild;
+
+      setUp(() {
+        stubCamera();
+        registerFallbackValue(DivineVideoStabilizationMode.off);
+        when(
+          () => camera.setVideoStabilizationMode(any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => clipManager.clearAll(
+            keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+          ),
+        ).thenAnswer((_) async {});
+        videoEditor = _MockVideoEditor();
+        when(
+          () => videoEditor.resetForRecorderMode(
+            keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+          ),
+        ).thenAnswer((_) async {});
+        rebuild = Completer<void>()..complete();
+        when(
+          () => camera.setDualCameraEnabled(enabled: any(named: 'enabled')),
+        ).thenAnswer((invocation) async {
+          await rebuild.future;
+          dualEnabled = invocation.namedArguments[#enabled] as bool;
+          return true;
+        });
+      });
+
+      test('turns dual capture back off when the color mask goes on', () async {
+        final bloc = buildBloc(liveChromaKeySupported: true);
+        addTearDown(bloc.close);
+        rebuild = Completer<void>();
+        bloc.add(const VideoRecorderDualCameraToggled());
+        await pumpEventQueue();
+
+        bloc.add(const VideoRecorderChromaKeyEnabledSet(enabled: true));
+        await pumpEventQueue();
+        expect(bloc.state.isChromaKeyEnabled, isTrue);
+        rebuild.complete();
+        await pumpEventQueue();
+
+        verify(() => camera.setDualCameraEnabled(enabled: true)).called(1);
+        verify(() => camera.setDualCameraEnabled(enabled: false)).called(1);
+        expect(bloc.state.isDualCameraEnabled, isFalse);
+      });
+
+      test('turns dual capture back off in a mode without it', () async {
+        final bloc = buildBloc(videoEditor: videoEditor);
+        addTearDown(bloc.close);
+        rebuild = Completer<void>();
+        bloc.add(const VideoRecorderDualCameraToggled());
+        await pumpEventQueue();
+
+        bloc.add(
+          const VideoRecorderRecorderModeSet(VideoRecorderMode.stopMotion),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.recorderMode, VideoRecorderMode.stopMotion);
+        rebuild.complete();
+        await pumpEventQueue();
+
+        verify(() => camera.setDualCameraEnabled(enabled: false)).called(1);
+        expect(bloc.state.isDualCameraEnabled, isFalse);
+      });
+
+      test(
+        'turns dual capture back on after a switch there and back',
+        () async {
+          final bloc = buildBloc(videoEditor: videoEditor);
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderDualCameraToggled());
+          await pumpEventQueue();
+          expect(bloc.state.isDualCameraEnabled, isTrue);
+
+          rebuild = Completer<void>();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.stopMotion),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          rebuild.complete();
+          await pumpEventQueue();
+
+          verify(() => camera.setDualCameraEnabled(enabled: false)).called(1);
           verify(() => camera.setDualCameraEnabled(enabled: true)).called(2);
           expect(bloc.state.isDualCameraEnabled, isTrue);
         },

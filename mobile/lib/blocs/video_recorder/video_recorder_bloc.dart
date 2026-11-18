@@ -381,6 +381,10 @@ class VideoRecorderBloc
   /// take a new hold then: nothing would release it. Nor may an event
   /// handler resuming then reconfigure the camera close is disposing.
   bool _isClosing = false;
+
+  /// Set while [_reconcileDualCamera] runs. A second caller leaves the work
+  /// to it, since it checks the mode and mask again after every rebuild.
+  bool _isReconcilingDualCamera = false;
   AudioPlaybackService? _audioPlaybackService;
   CountdownSoundService? _countdownSoundService;
   Timer? _focusPointTimer;
@@ -2181,9 +2185,8 @@ class VideoRecorderBloc
     final enable = !dualCamera.isDualCameraEnabled;
     if (enable && !dualCamera.isDualCameraSupported) return;
 
-    if (await _setDualCameraEnabled(emit, enabled: enable)) {
-      await _readSharedPreferences().setBool(_kDualCameraEnabledKey, enable);
-    }
+    await _readSharedPreferences().setBool(_kDualCameraEnabledKey, enable);
+    await _reconcileDualCamera(emit, dualCamera);
   }
 
   /// Turns dual-camera capture on or off and re-syncs the state. Returns
@@ -3109,18 +3112,45 @@ class VideoRecorderBloc
     // Where dual capture is not offered — another mode, or the color mask,
     // which keys one camera's footage — one camera runs.
     final dualCamera = _dualCamera;
-    if (!state.supportsDualCamera &&
-        (dualCamera?.isDualCameraEnabled ?? false)) {
-      await _setDualCameraEnabled(emit, enabled: false);
+    if (dualCamera != null && !state.supportsDualCamera) {
+      await _reconcileDualCamera(emit, dualCamera);
     }
     await _applyStabilizationForRecorderMode(
       clearRetainedRequest: clearRetainedRequest,
     );
     if (emit.isDone || dualCamera == null) return;
-    if (state.supportsDualCamera &&
-        !dualCamera.isDualCameraEnabled &&
-        (_readSharedPreferences().getBool(_kDualCameraEnabledKey) ?? false)) {
-      await _setDualCameraEnabled(emit, enabled: true);
+    await _reconcileDualCamera(emit, dualCamera);
+  }
+
+  /// Rebuilds the session until dual-camera capture is on exactly where the
+  /// mode and color mask offer it and the user last left it on.
+  ///
+  /// A rebuild takes a moment, and the camera reports the old state until it
+  /// returns. A toggle, mode switch or color mask landing meanwhile only
+  /// changes what is wanted: it neither undoes the rebuild in flight nor
+  /// starts a second one, and the running loop applies it next.
+  Future<void> _reconcileDualCamera(
+    Emitter<VideoRecorderBlocState> emit,
+    DualCameraCapture dualCamera,
+  ) async {
+    if (_isReconcilingDualCamera) return;
+    _isReconcilingDualCamera = true;
+    try {
+      while (!emit.isDone && !_isClosing) {
+        // The camera's own answer: the state's copy is synced only once the
+        // camera has opened.
+        final wanted =
+            dualCamera.isDualCameraSupported &&
+            state.recorderMode.supportsDualCamera &&
+            !state.isChromaKeyActive &&
+            (_readSharedPreferences().getBool(_kDualCameraEnabledKey) ?? false);
+        if (dualCamera.isDualCameraEnabled == wanted) return;
+        if (!await _setDualCameraEnabled(emit, enabled: wanted)) return;
+        // Stabilization was set while two cameras ran, which take none.
+        if (!wanted) await _applyStabilizationForRecorderMode();
+      }
+    } finally {
+      _isReconcilingDualCamera = false;
     }
   }
 
