@@ -505,4 +505,28 @@ void main() {
       );
     });
   });
+
+  group('canFailOverBunny', () {
+    for (final (code, message) in [
+      (NativePlayerErrorCode.networkError, 'HTTP 401 from media host'),
+      (NativePlayerErrorCode.timeout, 'HTTP 403 from media host'),
+      (NativePlayerErrorCode.serviceUnavailable, 'HTTP 404 from media host'),
+      (NativePlayerErrorCode.notFound, 'Synthetic failure'),
+    ]) {
+      test('a policy denial beats transport code $code', () {
+        expect(
+          canFailOverBunny(errorCode: code, errorMessage: message),
+          isFalse,
+        );
+      });
+    }
+
+    test('falls back on a typed transport failure or HTTP 503', () {
+      expect(
+        canFailOverBunny(errorCode: NativePlayerErrorCode.timeout),
+        isTrue,
+      );
+      expect(canFailOverBunny(errorMessage: 'HTTP 503'), isTrue);
+    });
+  });
 }

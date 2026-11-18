@@ -80,6 +80,29 @@ void main() {
         });
       }
 
+      test('never sends viewer headers to Bunny', () async {
+        final clips = <VideoClip>[];
+        final controller = _RecordingControllerWithFailures(
+          clips.add,
+          failures: [PlatformException(code: 'service_unavailable')],
+        );
+        addTearDown(controller.dispose);
+
+        await setSourceWithFallbacks(
+          index: 0,
+          controller: controller,
+          sources: [bunny, canonical],
+          log: logs.add,
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
+          httpHeadersForSource: (_) => {'Authorization': 'Nostr viewer'},
+        );
+
+        expect(clips.map((clip) => clip.uri), [bunny, canonical]);
+        expect(clips.first.httpHeaders, isEmpty);
+        expect(clips.last.httpHeaders, {'Authorization': 'Nostr viewer'});
+      });
+
       test('reports exhausted sources without logging pilot URLs', () async {
         final clips = <VideoClip>[];
         final lastFailure = Exception('Connection ended for $canonical');
