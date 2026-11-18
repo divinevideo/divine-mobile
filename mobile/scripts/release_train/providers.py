@@ -92,6 +92,19 @@ def request_json(method, url, headers=None, body=None, *, timeout=60):
             }
         except (ValueError, TypeError, AttributeError):
             reasons = []
+        if (
+            status == 400
+            and urllib.parse.urlsplit(url).hostname == "androidpublisher.googleapis.com"
+            and diagnostic
+            and "Changes cannot be sent for review automatically." in diagnostic["message"]
+            and "changesNotSentForReview" in diagnostic["message"]
+        ):
+            raise ProviderError(
+                "Google Play requires review submission from Play Console; "
+                "inspect pending or rejected changes before retrying. "
+                "Its required commit parameter is changesNotSentForReview=true.",
+                diagnostic=diagnostic,
+            ) from None
         if "CHANGES_ALREADY_IN_REVIEW" in reasons:
             raise DeferredReview("CHANGES_ALREADY_IN_REVIEW", diagnostic=diagnostic) from None
         if status == 404:
@@ -239,14 +252,29 @@ class Play:
                 f"Google Play {operation} failed: {error}", diagnostic=error.diagnostic
             ) from None
 
+    def release_states(self):
+        """Return successful review reads and per-track errors without an edit."""
+        states, errors = {}, {}
+        for track in ["internal", "production"]:
+            try:
+                result = self.call("GET", f"/tracks/{track}/releases")
+                if not isinstance(result, dict) or not isinstance(result.get("releases", []), list):
+                    raise ProviderError("Malformed Google Play release-state response")
+                states[track] = result.get("releases", [])
+            except ProviderError as error:
+                errors[track] = error.diagnostic or {"message": str(error)}
+        return states, errors
+
     def diagnose_upload(self, *, notes):
         """Validate retained notes against an existing bundle; never commit/upload."""
         from release_train.release_notes import PLAY_LOCALES, validate_localizations
 
         notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
-        report = {"stage": "create temporary edit"}
+        report = {"stage": "inventory review states"}
         edit = None
         try:
+            report["release_states"], report["release_state_errors"] = self.release_states()
+            report["stage"] = "create temporary edit"
             edit = self.edit()
             report["stage"] = "inventory tracks"
             tracks = self.call("GET", f"/edits/{edit}/tracks")["tracks"]
