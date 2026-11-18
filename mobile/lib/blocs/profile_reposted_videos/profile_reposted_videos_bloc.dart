@@ -487,6 +487,12 @@ class ProfileRepostedVideosBloc
             state.status == ProfileRepostedVideosStatus.syncing) {
           return state;
         }
+        // The live subscription brings back only the newest repost, so after
+        // a failed load reconciling to it would show one of many (#11182).
+        if (state.status == ProfileRepostedVideosStatus.failure) {
+          addIfOpen(const ProfileRepostedVideosSyncRequested());
+          return state;
+        }
         Log.info(
           'ProfileRepostedVideosBloc: Reposted IDs changed, reconciling list',
           name: 'ProfileRepostedVideosBloc',

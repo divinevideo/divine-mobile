@@ -536,6 +536,13 @@ class ProfileLikedVideosBloc
         // bloc. There is nothing left to reconcile for at that point.
         if (isClosed) return state;
 
+        // The live subscription brings back only the newest like, so after a
+        // failed load reconciling to it would show one of many (#11182).
+        if (state.status == ProfileLikedVideosStatus.failure) {
+          add(const ProfileLikedVideosSyncRequested());
+          return state;
+        }
+
         Log.info(
           'ProfileLikedVideosBloc: Liked IDs changed, reconciling list',
           name: 'ProfileLikedVideosBloc',
