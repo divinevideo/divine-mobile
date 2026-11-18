@@ -231,6 +231,7 @@ class VideosRepository {
     FunnelcakeApiClient? funnelcakeApiClient,
     InMemoryFeedCache? inMemoryFeedCache,
     SeenVideoLookup? seenVideoLookup,
+    String? Function()? viewerPubkey,
     Random? random,
   }) : _nostrClient = nostrClient,
        _localStorage = localStorage,
@@ -242,6 +243,7 @@ class VideosRepository {
        _funnelcakeApiClient = funnelcakeApiClient,
        _inMemoryFeedCache = inMemoryFeedCache,
        _seenVideoLookup = seenVideoLookup,
+       _viewerPubkey = viewerPubkey,
        _random = random ?? Random();
 
   final NostrClient _nostrClient;
@@ -260,6 +262,13 @@ class VideosRepository {
   // Bound variable hashtag keys to at most 1,000 videos (20 first pages).
   final _cachedHashtagKeys = <String>{};
   final SeenVideoLookup? _seenVideoLookup;
+
+  // Read on each filter pass so sign-in and account switches take effect.
+  // The app can supply its auth identity while the Nostr signer warms up.
+  final String? Function()? _viewerPubkey;
+
+  String? get _currentViewerPubkey =>
+      _viewerPubkey == null ? _nostrClient.publicKey : _viewerPubkey();
 
   /// Randomness behind the Classics feed's per-session slice and shuffle.
   /// Injectable so tests can pin an order.
@@ -4040,10 +4049,17 @@ class VideosRepository {
   bool _hasNotRecentlySeenCandidate(List<VideoEvent> videos) =>
       videos.any((video) => !_wasSeen(video));
 
-  /// Whether the viewer has seen [video] within [seenVideoExclusionWindow].
+  /// Whether a video by someone else was seen within
+  /// [seenVideoExclusionWindow].
   bool _wasSeen(VideoEvent video) {
     final lookup = _seenVideoLookup;
-    return lookup != null &&
+    final viewerPubkey = _currentViewerPubkey;
+    final isOwnVideo =
+        viewerPubkey != null &&
+        viewerPubkey.isNotEmpty &&
+        video.pubkey == viewerPubkey;
+    return !isOwnVideo &&
+        lookup != null &&
         video.id.isNotEmpty &&
         lookup.wasSeenRecently(video.id, within: seenVideoExclusionWindow);
   }
@@ -4053,6 +4069,7 @@ class VideosRepository {
       filterOutRecentlySeenVideos(
         videos,
         seenVideoLookup: _seenVideoLookup,
+        viewerPubkey: _currentViewerPubkey,
         retainAllWhenAllSeen: false,
       );
 

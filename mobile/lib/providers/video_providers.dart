@@ -1027,6 +1027,8 @@ VideosRepository videosRepository(Ref ref) {
     ),
     funnelcakeApiClient: funnelcakeClient,
     inMemoryFeedCache: InMemoryFeedCache(),
+    viewerPubkey: () =>
+        authService.currentPublicKeyHex ?? nostrClient.publicKey,
     seenVideoLookup: clientSeenFilteringEnabled
         ? SeenVideoLookup(
             wasSeenRecently: seenVideosService.wasSeenRecently,
