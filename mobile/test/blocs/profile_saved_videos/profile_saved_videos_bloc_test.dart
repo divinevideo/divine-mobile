@@ -1072,6 +1072,27 @@ void main() {
           },
         );
 
+        // The kept list is decrypted in memory only; the snapshot it feeds
+        // lives in unencrypted storage (#11180).
+        test(
+          'keeps a private save read from the kept list out of the snapshot',
+          () async {
+            await readListOnFirstLaunch();
+            final snapshotKey = '$viewer:profile_saved_videos_v4';
+            await cacheDao.delete(snapshotKey);
+            expect(await cacheDao.readEntry(snapshotKey), isNull);
+            await stubRelay(timedOut: true);
+
+            final (_, bloc) = await launch();
+
+            expect(shownIds(bloc), [privateVideoId, publicVideoId]);
+            final persisted = await cacheDao.readEntry(snapshotKey);
+            expect(persisted, isNotNull);
+            expect(persisted!.payload, contains(publicVideoId));
+            expect(persisted.payload, isNot(contains(privateVideoId)));
+          },
+        );
+
         test(
           'says some saves may be missing when the kept private items cannot '
           'be decrypted',
