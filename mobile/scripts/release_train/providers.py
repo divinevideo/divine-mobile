@@ -253,11 +253,17 @@ class Play:
             ) from None
 
     def release_states(self):
-        """Read review/publication states without opening an edit."""
-        return {
-            track: self.call("GET", f"/tracks/{track}/releases").get("releases", [])
-            for track in ["internal", "production"]
-        }
+        """Return successful review reads and per-track errors without an edit."""
+        states, errors = {}, {}
+        for track in ["internal", "production"]:
+            try:
+                result = self.call("GET", f"/tracks/{track}/releases")
+                if not isinstance(result, dict) or not isinstance(result.get("releases", []), list):
+                    raise ProviderError("Malformed Google Play release-state response")
+                states[track] = result.get("releases", [])
+            except ProviderError as error:
+                errors[track] = error.diagnostic or {"message": str(error)}
+        return states, errors
 
     def diagnose_upload(self, *, notes):
         """Validate retained notes against an existing bundle; never commit/upload."""
@@ -267,7 +273,7 @@ class Play:
         report = {"stage": "inventory review states"}
         edit = None
         try:
-            report["release_states"] = self.release_states()
+            report["release_states"], report["release_state_errors"] = self.release_states()
             report["stage"] = "create temporary edit"
             edit = self.edit()
             report["stage"] = "inventory tracks"

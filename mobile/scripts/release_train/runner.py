@@ -1272,7 +1272,9 @@ def diagnose_android_upload(runtime, number):
     # Provider messages may contain private metadata. Only the ledger gets them.
     print("Android upload diagnostic recorded privately at " + path)
     print("No binary upload, edit commit, release acknowledgement or build dispatch performed.")
-    return 1 if report.get("error") or report.get("cleanup_error") else 0
+    return 1 if any(report.get(key) for key in [
+        "error", "cleanup_error", "release_state_errors"
+    ]) else 0
 
 
 def main(env=os.environ):
