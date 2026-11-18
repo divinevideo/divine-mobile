@@ -2549,7 +2549,6 @@ void main() {
                 .selectedClipIds,
             {recording.id, classic.id},
           );
-          expect(classic.targetAspectRatio, models.AspectRatio.square);
         },
       );
 

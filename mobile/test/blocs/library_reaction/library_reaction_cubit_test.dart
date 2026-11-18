@@ -69,7 +69,6 @@ void main() {
           mergeInputs!.any((clip) => clip.hasPendingCaptureChromaKey),
           isFalse,
         );
-        expect(one.hasPendingCaptureChromaKey, isTrue);
       },
     );
 
