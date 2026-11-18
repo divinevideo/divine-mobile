@@ -202,16 +202,18 @@ bool _mentionsHttpStatus(String lower, int status) {
   return RegExp('(^|[^0-9a-f])$status([^0-9a-f]|\$)').hasMatch(lower);
 }
 
-/// Policy denials in a canary ladder apply to the asset, not the mirror.
-/// Unknown 4xx fail closed across the canary ladder. Canonical-source 404
-/// retains its normal fallback behavior; B2-source 404 is handled separately.
-bool blocksB2CanaryFallback({
+/// Blocks a canary ladder on a policy denial or unknown client error.
+/// A Bunny ladder includes canonical 404 responses because Blossom also
+/// uses that status for moderated media.
+bool blocksCanaryFallback({
+  required bool denyNotFound,
   NativePlayerErrorCode? errorCode,
   String? errorMessage,
 }) {
   if (errorCode == NativePlayerErrorCode.authRequired ||
       errorCode == NativePlayerErrorCode.forbidden ||
-      errorCode == NativePlayerErrorCode.httpClientError) {
+      errorCode == NativePlayerErrorCode.httpClientError ||
+      (denyNotFound && errorCode == NativePlayerErrorCode.notFound)) {
     return true;
   }
   final message = (errorMessage ?? '').toLowerCase();
@@ -225,7 +227,7 @@ bool blocksB2CanaryFallback({
   }
   return RegExp(
     r'(^|[^0-9a-f])(4[0-9]{2})([^0-9a-f]|$)',
-  ).allMatches(message).any((match) => match.group(2) != '404');
+  ).allMatches(message).any((match) => denyNotFound || match.group(2) != '404');
 }
 
 /// Only an explicit readiness response or a typed connection failure can
@@ -244,9 +246,11 @@ bool canFailOverBunny({
   String? errorMessage,
 }) {
   final message = (errorMessage ?? '').toLowerCase();
-  if (blocksB2CanaryFallback(errorCode: errorCode, errorMessage: message) ||
-      errorCode == NativePlayerErrorCode.notFound ||
-      _mentionsHttpStatus(message, 404)) {
+  if (blocksCanaryFallback(
+    errorCode: errorCode,
+    errorMessage: message,
+    denyNotFound: true,
+  )) {
     return false;
   }
   return canFailOverB2Original(errorCode) || _mentionsHttpStatus(message, 503);

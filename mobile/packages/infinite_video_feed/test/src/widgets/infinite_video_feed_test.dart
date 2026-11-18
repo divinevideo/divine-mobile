@@ -335,6 +335,44 @@ void main() {
       });
     }
 
+    testWidgets('a canonical 404 stops runtime failover before Bunny', (
+      tester,
+    ) async {
+      const hls = '$raw/hls/master.m3u8';
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => hls,
+              bunnyPlaybackPaths: const {'/$hash'},
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'not_found',
+          'errorMessage': 'HTTP 404',
+        });
+        await tester.pump();
+        await tester.pump();
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [hls]);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets('a Bunny error while changing sources resumes on canonical', (
       tester,
     ) async {

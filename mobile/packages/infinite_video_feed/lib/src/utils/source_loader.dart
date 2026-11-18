@@ -127,9 +127,10 @@ Future<(String, int)> setSourceWithFallbacks({
               !nativeErrorCode.shouldFailover);
       final policyDenied =
           ((isCanary || hasBunnySource) &&
-              blocksB2CanaryFallback(
+              blocksCanaryFallback(
                 errorCode: nativeErrorCode,
                 errorMessage: error.toString(),
+                denyNotFound: hasBunnySource,
               )) ||
           (isB2OriginalPlaybackSource(source) &&
               !canFailOverB2Original(nativeErrorCode)) ||

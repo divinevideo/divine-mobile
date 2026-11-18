@@ -103,6 +103,55 @@ void main() {
         expect(clips.last.httpHeaders, {'Authorization': 'Nostr viewer'});
       });
 
+      for (final failure in [
+        PlatformException(code: 'not_found'),
+        Exception('HTTP 404'),
+      ]) {
+        test('stops before Bunny after a canonical denial: $failure', () async {
+          final clips = <VideoClip>[];
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [failure],
+          );
+          addTearDown(controller.dispose);
+          final hls = canonical.replaceFirst('/720p.mp4', '/hls/master.m3u8');
+
+          await expectLater(
+            setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [hls, bunny, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            ),
+            throwsA(same(failure)),
+          );
+          expect(clips.map((clip) => clip.uri), [hls]);
+        });
+      }
+
+      test('retains rendition fallback without a Bunny source', () async {
+        final clips = <VideoClip>[];
+        final hls = canonical.replaceFirst('/720p.mp4', '/hls/master.m3u8');
+        final controller = _RecordingControllerWithFailures(
+          clips.add,
+          failures: [PlatformException(code: 'not_found')],
+        );
+        addTearDown(controller.dispose);
+
+        final result = await setSourceWithFallbacks(
+          index: 0,
+          controller: controller,
+          sources: [hls, canonical],
+          log: logs.add,
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
+        );
+        expect(result, (canonical, 1));
+        expect(clips.map((clip) => clip.uri), [hls, canonical]);
+      });
+
       test('reports exhausted sources without logging pilot URLs', () async {
         final clips = <VideoClip>[];
         final lastFailure = Exception('Connection ended for $canonical');

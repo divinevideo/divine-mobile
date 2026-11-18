@@ -1018,12 +1018,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
     final isB2Source = isB2OriginalPlaybackSource(source ?? '');
     if (isB2Source && !canFailOverB2Original(code)) return true;
-    return blocksB2CanaryFallback(errorCode: code, errorMessage: message) &&
-        (isB2Source ||
-            _playbackSources(widget.videos[index], index: index).any(
-              (url) =>
-                  isB2OriginalPlaybackSource(url) || isBunnyPlaybackSource(url),
-            ));
+    final sources = _playbackSources(widget.videos[index], index: index);
+    final hasBunnySource = sources.any(isBunnyPlaybackSource);
+    return (hasBunnySource ||
+            isB2Source ||
+            sources.any(isB2OriginalPlaybackSource)) &&
+        blocksCanaryFallback(
+          errorCode: code,
+          errorMessage: message,
+          denyNotFound: hasBunnySource,
+        );
   }
 
   // coverage:ignore-start
@@ -2167,7 +2171,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
                 errorCode: errorCode,
                 errorMessage: errorMessage,
               );
-          if (!isBunny &&
+          final canaryPolicyDenied = _canaryStopsFallback(
+            index,
+            activeSource,
+            errorCode,
+            errorMessage,
+          );
+          if (!canaryPolicyDenied &&
+              !isBunny &&
               (errorCode == NativePlayerErrorCode.mediaProcessing ||
                   isMediaProcessingError(errorMessage))) {
             unawaited(_retryCurrentProcessingSource(index, errorMessage));
@@ -2177,12 +2188,6 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           // Use the typed error code for a reliable failover decision.
           // Fall back to attempting failover for unknown errors so we
           // don't give up prematurely on unclassified failures.
-          final canaryPolicyDenied = _canaryStopsFallback(
-            index,
-            activeSource,
-            errorCode,
-            errorMessage,
-          );
           final shouldFailover =
               !canaryPolicyDenied &&
               (bunnyTransientFailure ||
