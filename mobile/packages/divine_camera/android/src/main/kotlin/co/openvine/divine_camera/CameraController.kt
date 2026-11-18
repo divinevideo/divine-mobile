@@ -199,6 +199,10 @@ class CameraController(
                     completion()
                 }
             }
+            onNextMainFrame?.let { action ->
+                onNextMainFrame = null
+                action()
+            }
         }
     }
 
@@ -273,6 +277,11 @@ class CameraController(
     @Volatile
     private var switchSettleFramesRemaining: Int = 0
 
+    // Fires on the main camera's next frame; see [whenMainCameraStreams].
+    // Written on the main thread, read on the Camera2 capture thread.
+    @Volatile
+    private var onNextMainFrame: (() -> Unit)? = null
+
     // Quality fallback: when the hardware encoder rejects the requested quality
     // (e.g. device falsely reports FHD support), retry with lower quality.
     private var encoderRetryCount: Int = 0
@@ -319,6 +328,10 @@ class CameraController(
         // reports a frame (rare device quirk), so `await switchCamera` on the
         // Dart side can't hang forever.
         private const val SWITCH_FIRST_FRAME_TIMEOUT_MS = 1200L
+
+        // How long turning dual capture on waits for the main camera to
+        // stream before it binds both cameras anyway.
+        private const val STREAM_WAIT_TIMEOUT_MS = 600L
 
         // Preview frames to let pass after a lens switch before resolving it.
         // The incoming camera renders onto a fresh texture; its capture result
@@ -1649,6 +1662,28 @@ class CameraController(
             return
         }
 
+        // A camera that has just opened is still configuring its session.
+        // Rebinding it then leaves the main camera of the pair without frames
+        // (the S26, when the recorder reopens with dual capture on), so wait
+        // for its next frame. One that is already streaming sends it within a
+        // frame.
+        whenMainCameraStreams { bindDualCamerasNow(callback) }
+    }
+
+    /** Binds both cameras, once [setDualCameraEnabled] has waited. */
+    private fun bindDualCamerasNow(callback: (Map<String, Any?>?, String?) -> Unit) {
+        if (isReleased || isDualCameraEnabled) {
+            callback(getCameraState(), null)
+            return
+        }
+        if (isRecording || recording != null) {
+            callback(null, "Cannot change dual camera while recording")
+            return
+        }
+        val provider = cameraProvider ?: run {
+            callback(null, "Camera provider not available")
+            return
+        }
         val pair = concurrentCameraPair(provider) ?: run {
             callback(null, "Dual camera is not supported on this device")
             return
@@ -1668,6 +1703,27 @@ class CameraController(
             return
         }
         completeOnSettledFrames(callback)
+    }
+
+    /**
+     * Runs [action] on the main thread once the main camera delivers its next
+     * frame, or after [STREAM_WAIT_TIMEOUT_MS] when none comes, such as from
+     * a paused camera.
+     */
+    private fun whenMainCameraStreams(action: () -> Unit) {
+        val run = object : Runnable {
+            private var hasRun = false
+
+            override fun run() {
+                if (hasRun) return
+                hasRun = true
+                mainHandler.removeCallbacks(this)
+                onNextMainFrame = null
+                action()
+            }
+        }
+        onNextMainFrame = { mainHandler.post(run) }
+        mainHandler.postDelayed(run, STREAM_WAIT_TIMEOUT_MS)
     }
 
     /**
