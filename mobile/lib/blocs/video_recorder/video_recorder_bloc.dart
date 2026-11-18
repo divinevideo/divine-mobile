@@ -1278,7 +1278,12 @@ class VideoRecorderBloc
       _readClipManager().stopRecording();
       await _stopSoundPlayback();
       videoResult = event.result ?? await _cameraService.stopRecording();
-      secondaryRecording = _dualCamera?.takeSecondaryRecording();
+      // The camera parks a second file only beside a main one. A stop that
+      // got none lost the race to an auto-stop, which is queued behind this
+      // stop with its own file and takes the second one itself.
+      if (videoResult != null) {
+        secondaryRecording = _dualCamera?.takeSecondaryRecording();
+      }
       // Best-effort: a wakelock teardown failure must not abort the stop and
       // discard an already-captured clip (videoResult is assigned above), so
       // it is swallowed rather than thrown into the recovery catch.
@@ -1325,10 +1330,6 @@ class VideoRecorderBloc
       ),
     );
     if (videoResult == null) {
-      // A second camera file alone is no clip.
-      if (secondaryRecording case final second?) {
-        _deleteFileQuietly(second.filePath);
-      }
       Log.warning(
         '⚠️ Recording stopped but no video file returned from '
         'camera service',
@@ -1747,7 +1748,13 @@ class VideoRecorderBloc
     required bool sessionStarted,
   }) async {
     if (sessionStarted) {
-      await _discardAbortedRecording(await _cameraService.stopRecording());
+      final video = await _cameraService.stopRecording();
+      if (video != null) {
+        if (_dualCamera?.takeSecondaryRecording() case final second?) {
+          _deleteFileQuietly(second.filePath);
+        }
+      }
+      await _discardAbortedRecording(video);
     }
     emit(
       state.copyWith(

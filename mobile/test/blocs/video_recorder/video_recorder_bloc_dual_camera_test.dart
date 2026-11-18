@@ -675,14 +675,63 @@ void main() {
         });
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-          'deletes the second camera file: alone it is no clip',
+          'leaves the second file to the auto-stop that parked it',
           build: () => buildBloc(recordingState: VideoRecorderState.recording),
           act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
           errors: () => [isA<RecordingProducedNoVideoException>()],
           verify: (_) {
-            expect(secondFile.existsSync(), isFalse);
+            verifyNever(() => camera.takeSecondaryRecording());
+            expect(secondFile.existsSync(), isTrue);
           },
         );
+      });
+    });
+
+    group('a take started as navigation takes the camera', () {
+      late Directory dir;
+      late File mainFile;
+      late File secondFile;
+      late Completer<bool> started;
+
+      setUp(() {
+        stubCamera();
+        dir = Directory.systemTemp.createTempSync('dual_camera_abort');
+        mainFile = File('${dir.path}/VID_3.mp4')..writeAsStringSync('mp4');
+        secondFile = File('${dir.path}/VID_3_second.mp4')
+          ..writeAsStringSync('mp4');
+        started = Completer<bool>();
+        when(
+          () => clipManager.remainingDuration,
+        ).thenReturn(const Duration(seconds: 60));
+        when(
+          () => camera.startRecording(maxDuration: any(named: 'maxDuration')),
+        ).thenAnswer((_) => started.future);
+        when(
+          () => camera.stopRecording(),
+        ).thenAnswer((_) async => EditorVideo.file(mainFile.path));
+        when(
+          () => camera.takeSecondaryRecording(),
+        ).thenReturn(VideoRecordingResult(filePath: secondFile.path));
+      });
+
+      tearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+
+      test("deletes both cameras' files", () async {
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoRecorderRecordingStartRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoRecorderRecordingLockedForNavigation());
+        await pumpEventQueue();
+
+        started.complete(true);
+        await pumpEventQueue();
+
+        expect(bloc.state.isRecording, isFalse);
+        expect(mainFile.existsSync(), isFalse);
+        expect(secondFile.existsSync(), isFalse);
       });
     });
   });
