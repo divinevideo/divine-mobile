@@ -21,6 +21,11 @@ struct RecorderSnapshot: Equatable {
   /// (`VideoRecorderMode.label`, English in every locale).
   var modeName = "Capture"
 
+  /// Whether a tap stops what is running: a take, its countdown, or
+  /// stop-motion capturing on its interval. The last two add no recorded time.
+  var isShutterActive = false
+
+  /// Whether recorded time is counting.
   var isRecording: Bool { activeTakeStartedAt != nil }
 
   /// Recorded time at `date` as `mm:ss`, the format of the iPhone recorder's

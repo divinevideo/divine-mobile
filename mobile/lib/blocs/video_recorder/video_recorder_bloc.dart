@@ -519,6 +519,10 @@ class VideoRecorderBloc
       final clipManager = _readClipManager();
       final isTakeRunning =
           recorder.isCapturingFootage && !recorder.isStoppingRecording;
+      // What the recorder's own shutter shows: a countdown and stop-motion's
+      // interval are stopped by the next press too.
+      final isShutterActive =
+          recorder.showsActiveRecording || recorder.isIntervalCaptureRunning;
       final takeDuration = clipManager.activeRecordingDuration;
       // A take being finalized is not in the clips yet, but its time is
       // already spent.
@@ -532,8 +536,14 @@ class VideoRecorderBloc
             : null,
         budget: VideoEditorConstants.maxDuration,
         modeName: recorder.recorderMode.label,
+        isShutterActive: isShutterActive,
       );
-      signature = (isTakeRunning, recorded, recorder.recorderMode);
+      signature = (
+        isTakeRunning,
+        isShutterActive,
+        recorded,
+        recorder.recorderMode,
+      );
     }
     if (signature == _publishedRemoteRecorder) return;
     _publishedRemoteRecorder = signature;

@@ -1154,6 +1154,7 @@ void main() {
             recorded: Duration(seconds: 2),
             budget: Duration(milliseconds: 6300),
             modeName: 'Capture',
+            isShutterActive: false,
           );
 
           await DivineCamera.instance.updateRemoteRecorderState(state);
@@ -2542,6 +2543,7 @@ void _runMethodChannelTests() {
           activeTakeStartedAt: DateTime.fromMillisecondsSinceEpoch(1700),
           budget: const Duration(milliseconds: 6300),
           modeName: 'Capture',
+          isShutterActive: true,
         ),
       );
 
@@ -2552,6 +2554,7 @@ void _runMethodChannelTests() {
         'activeTakeStartedAtMs': 1700,
         'budgetMs': 6300,
         'modeName': 'Capture',
+        'shutterActive': true,
       });
     });
 

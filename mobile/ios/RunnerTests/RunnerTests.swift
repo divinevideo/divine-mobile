@@ -5435,4 +5435,30 @@ final class RecorderActivityContentStateTests: XCTestCase {
 
     XCTAssertFalse(state.isRecording)
   }
+
+  func testAnIntervalCaptureShowsAsActiveWithoutCountingTime() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 0, "shutterActive": true]
+    )
+
+    XCTAssertTrue(state.isShutterActive)
+    XCTAssertFalse(state.isRecording)
+    XCTAssertNil(state.timerStart)
+  }
+
+  func testAnIdleShutterIsReadFromTheRecorder() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 1000, "shutterActive": false]
+    )
+
+    XCTAssertFalse(state.isShutterActive)
+  }
+
+  func testARunningTakeShowsAsActiveWhenTheRecorderSendsNoShutterState() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 0, "activeTakeStartedAtMs": 1_800_000_000_000.0]
+    )
+
+    XCTAssertTrue(state.isShutterActive)
+  }
 }
