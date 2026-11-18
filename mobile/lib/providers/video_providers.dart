@@ -1093,10 +1093,10 @@ videosRepositoryIdentityStreamProvider = identityStreamOf<VideosRepository>(
 ///
 /// An empty result from `syncUserReactions()` is still not proof of emptiness:
 /// a read only some relays answered returns whatever arrived, and
-/// `ProfileLikedVideosBloc` renders an empty sync as `success`. A read no relay
-/// answered throws instead (#11182). The guards are pinned by
-/// `likes_repository_test.dart`'s `signer readiness (#6813)` and `initialize`
-/// groups.
+/// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
+/// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
+/// `initialize` groups. A read no relay answered throws instead, pinned by
+/// `likes_repository_short_read_test.dart` (#11182).
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)

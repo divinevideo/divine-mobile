@@ -512,7 +512,9 @@ class ProfileLikedVideosBloc
   /// Whenever the liked set changes (like or unlike), dispatches a
   /// [ProfileLikedVideosReconcileRequested] so the async handler can drop
   /// unliked videos and fetch a just-liked clip — `emit.forEach`'s callback is
-  /// synchronous and cannot await the fetch itself.
+  /// synchronous and cannot await the fetch itself. While the tab shows a
+  /// failed load it dispatches a full [ProfileLikedVideosSyncRequested]
+  /// instead, since the change may be only the newest like (#11182).
   ///
   /// Note: This only works for the current user's own profile, as the
   /// LikesRepository only tracks the authenticated user's likes.

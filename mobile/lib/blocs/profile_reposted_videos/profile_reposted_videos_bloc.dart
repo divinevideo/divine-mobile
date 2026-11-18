@@ -474,7 +474,9 @@ class ProfileRepostedVideosBloc
   ///
   /// Dispatches [ProfileRepostedVideosReconcileRequested] on change so the
   /// async handler can fetch a newly-reposted clip — `emit.forEach`'s callback
-  /// is synchronous and cannot await. Own profile only.
+  /// is synchronous and cannot await. While the tab shows a failed load it
+  /// dispatches a full [ProfileRepostedVideosSyncRequested] instead, since the
+  /// change may be only the newest repost (#11182). Own profile only.
   Future<void> _onSubscriptionRequested(
     ProfileRepostedVideosSubscriptionRequested event,
     Emitter<ProfileRepostedVideosState> emit,
