@@ -6,7 +6,11 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
+
+Future<DivineVideoClip> _noBake(DivineVideoClip clip) async => clip;
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
   id: id,
@@ -22,6 +26,81 @@ DivineVideoClip _clip(String id) => DivineVideoClip(
 void main() {
   group(LibraryReactionCubit, () {
     test(
+      'waits for every pending capture key before merging camera cuts',
+      () async {
+        const key = ClipChromaKey(key: ChromaKey());
+        final gate = Completer<DivineVideoClip>();
+        final baked = <String>[];
+        List<DivineVideoClip>? mergeInputs;
+        final one = _clip('one').copyWith(captureChromaKey: key);
+        final two = _clip('two').copyWith(captureChromaKey: key);
+        DivineVideoClip keyed(DivineVideoClip clip) => clip.copyWith(
+          video: EditorVideo.file('/documents/${clip.id}-keyed.mp4'),
+          chromaKey: key,
+          chromaKeySourcePath: clip.video!.file!.path,
+          clearCaptureChromaKey: true,
+        );
+        final cubit = LibraryReactionCubit(
+          deferFileCleanup: (_) {},
+          cleanupFiles: (_) async {},
+          bakeCapturedChromaKey: (clip) {
+            baked.add(clip.id);
+            return clip.id == one.id ? gate.future : Future.value(keyed(clip));
+          },
+          mergeTakes: ({required clips, required renderId}) async {
+            mergeInputs = clips;
+            return _clip('merged');
+          },
+          extractThumbnail: (path) async =>
+              (path: '$path.jpg', timestamp: Duration.zero),
+        );
+        addTearDown(cubit.close);
+        final result = cubit.combine([one, two]);
+        final waitingForBake = mergeInputs == null;
+        gate.complete(keyed(one));
+        expect(await result, isNotNull);
+        expect(waitingForBake, isTrue);
+        expect(baked, ['one', 'two']);
+        expect(mergeInputs!.map((clip) => clip.video!.file!.path), [
+          '/documents/one-keyed.mp4',
+          '/documents/two-keyed.mp4',
+        ]);
+        expect(
+          mergeInputs!.any((clip) => clip.hasPendingCaptureChromaKey),
+          isFalse,
+        );
+        expect(one.hasPendingCaptureChromaKey, isTrue);
+      },
+    );
+
+    test('does not merge raw cuts when a capture-key bake fails', () async {
+      var merged = false;
+      final error = StateError('capture bake failed');
+      final cubit = LibraryReactionCubit(
+        deferFileCleanup: (_) {},
+        cleanupFiles: (_) async {},
+        bakeCapturedChromaKey: (_) async => throw error,
+        mergeTakes: ({required clips, required renderId}) async {
+          merged = true;
+          return _clip('merged');
+        },
+      );
+      addTearDown(cubit.close);
+      await expectLater(
+        cubit.combine([
+          _clip('one').copyWith(
+            captureChromaKey: const ClipChromaKey(key: ChromaKey()),
+          ),
+          _clip('two'),
+        ]),
+        throwsA(same(error)),
+      );
+      expect(merged, isFalse);
+      expect(cubit.state.status, LibraryReactionStatus.idle);
+      expect(cubit.state.generatedPaths, isEmpty);
+    });
+
+    test(
       'combines in order and publishes progress with correct encoded geometry',
       () async {
         final gate = Completer<DivineVideoClip?>();
@@ -29,6 +108,7 @@ void main() {
         final states = <LibraryReactionStatus>[];
         final cubit = LibraryReactionCubit(
           deferFileCleanup: (_) {},
+          bakeCapturedChromaKey: _noBake,
           cleanupFiles: (_) async {},
           mergeTakes: ({required clips, required renderId}) {
             requested.addAll(clips.map((clip) => clip.id));
@@ -65,6 +145,7 @@ void main() {
       final cleaned = <String>[];
       final cubit = LibraryReactionCubit(
         deferFileCleanup: (_) {},
+        bakeCapturedChromaKey: _noBake,
         cleanupFiles: (paths) async => cleaned.addAll(paths),
         mergeTakes: ({required clips, required renderId}) async =>
             _clip('merged'),
@@ -86,6 +167,7 @@ void main() {
         final cleaned = <String>[];
         final cubit = LibraryReactionCubit(
           deferFileCleanup: deferred.addAll,
+          bakeCapturedChromaKey: _noBake,
           cleanupFiles: (paths) async => cleaned.addAll(paths),
           mergeTakes: ({required clips, required renderId}) async =>
               _clip('merged'),
@@ -111,6 +193,7 @@ void main() {
         final cleaned = <String>[];
         final cubit = LibraryReactionCubit(
           deferFileCleanup: (_) {},
+          bakeCapturedChromaKey: _noBake,
           cleanupFiles: (paths) async => cleaned.addAll(paths),
           mergeTakes: ({required clips, required renderId}) async =>
               _clip('merged'),

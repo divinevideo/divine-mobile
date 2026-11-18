@@ -69,6 +69,7 @@ Future<void> recordLibraryReaction(
   if (!context.mounted || !isActive() || manager.clips.isNotEmpty) return;
   final reaction = LibraryReactionCubit(
     deferFileCleanup: editor.deferFileCleanup,
+    bakeCapturedChromaKey: manager.bakeCapturedChromaKey,
     draftsDao: database?.draftsDao,
     clipsDao: database?.clipsDao,
     mergeTakes: mergeTakes,

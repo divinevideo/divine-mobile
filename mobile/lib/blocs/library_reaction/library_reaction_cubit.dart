@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 
@@ -47,6 +48,8 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
     with CloseGuardedEmit<LibraryReactionState> {
   LibraryReactionCubit({
     required void Function(Iterable<String?> paths) deferFileCleanup,
+    required Future<DivineVideoClip> Function(DivineVideoClip clip)
+    bakeCapturedChromaKey,
     DraftsDao? draftsDao,
     ClipsDao? clipsDao,
     MergeReactionTakes? mergeTakes,
@@ -57,6 +60,7 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
          'Provide cleanupFiles or both database DAOs',
        ),
        _deferFileCleanup = deferFileCleanup,
+       _bakeCapturedChromaKey = bakeCapturedChromaKey,
        _draftsDao = draftsDao,
        _clipsDao = clipsDao,
        _mergeTakes = mergeTakes ?? VideoEditorMergeService.mergeClips,
@@ -65,6 +69,8 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
        super(LibraryReactionState());
 
   final void Function(Iterable<String?> paths) _deferFileCleanup;
+  final Future<DivineVideoClip> Function(DivineVideoClip clip)
+  _bakeCapturedChromaKey;
   final DraftsDao? _draftsDao;
   final ClipsDao? _clipsDao;
   final MergeReactionTakes _mergeTakes;
@@ -91,8 +97,14 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
     if (takes.length == 1) return takes.single;
     emit(state.copyWith(status: LibraryReactionStatus.merging));
     try {
+      // Recorder enrichment starts keying in the background. A merge reads
+      // pixels directly and drops the pending key, so join its bake first.
+      final ready = await bakePendingCapturedChromaKeys(
+        takes,
+        _bakeCapturedChromaKey,
+      );
       final rendered = await _mergeTakes(
-        clips: takes,
+        clips: ready,
         renderId: 'reaction_${DateTime.now().microsecondsSinceEpoch}',
       );
       final path = rendered?.video?.file?.path;
