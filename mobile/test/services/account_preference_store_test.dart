@@ -410,4 +410,36 @@ void main() {
       expect(notifications, 0);
     });
   });
+
+  // The outgoing account's store stays bound while its container outlives a
+  // switch; it must stop writing the device keys the next account owns.
+  group('account switch (#8313)', () {
+    test(
+      'a suspended store keeps account changes out of the device keys',
+      () async {
+        repository.receive({'app_locale': 'de'});
+        await pumpEventQueue();
+        expect(preferences.getString('app_locale'), 'de');
+
+        await store.suspendProjection();
+        repository.receive({'app_locale': 'fr'});
+        await pumpEventQueue();
+
+        expect(preferences.getString('app_locale'), 'de');
+        expect(store.read('app_locale'), 'fr');
+      },
+    );
+
+    test('resuming projects the values held while suspended', () async {
+      await store.suspendProjection();
+      repository.receive({'app_locale': 'fr'});
+      await pumpEventQueue();
+      expect(preferences.getString('app_locale'), isNull);
+
+      store.resumeProjection();
+      await pumpEventQueue();
+
+      expect(preferences.getString('app_locale'), 'fr');
+    });
+  });
 }

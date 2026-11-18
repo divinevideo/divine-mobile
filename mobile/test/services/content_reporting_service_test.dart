@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for ContentReportingService
 // ABOUTME: Tests NIP-56 content reporting including AI-generated content reports
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -2916,6 +2917,89 @@ void main() {
         expect(content, contains('Details: '));
         expect(content, isNot(contains('someone@example.com')));
       });
+    });
+  });
+
+  // The outgoing account's service outlives an account switch. A report still
+  // waiting on its delivery saves the history when it finishes, and must not
+  // write the next account's keys.
+  group('account switch (#8313)', () {
+    late SharedPreferences prefs;
+    late ContentReportingService outgoing;
+    late Completer<PublishResult> delivery;
+    late Event reportEvent;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      final nostr = _MockNostrClient();
+      final auth = _MockAuthService();
+      final pubkey = getPublicKey(generatePrivateKey());
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(() => auth.currentPublicKeyHex).thenReturn(pubkey);
+      when(() => nostr.isInitialized).thenReturn(true);
+      reportEvent = Event(pubkey, 1984, [
+        ['e', _validEventId('b')],
+      ], 'late report');
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => reportEvent);
+      delivery = Completer<PublishResult>();
+      when(
+        () =>
+            nostr.publishEvent(any(), targetRelays: any(named: 'targetRelays')),
+      ).thenAnswer((_) => delivery.future);
+      outgoing = ContentReportingService(
+        nostrService: nostr,
+        authService: auth,
+        prefs: prefs,
+        moderationRelayUrl: 'wss://relay.divine.video',
+      );
+      await outgoing.initialize();
+    });
+
+    Future<ReportResult> report() => outgoing.reportContent(
+      eventId: _validEventId('b'),
+      authorPubkey: 'reported_author',
+      reason: ContentFilterReason.other,
+      details: 'late report',
+    );
+
+    test(
+      'a suspended service keeps a report that finishes later out of the '
+      'device history',
+      () async {
+        final reporting = report();
+        await pumpEventQueue();
+        outgoing.suspend();
+        delivery.complete(PublishSuccess(event: reportEvent));
+        final result = await reporting;
+
+        expect(result.success, isTrue);
+        expect(outgoing.reportHistory, hasLength(1));
+        expect(
+          prefs.getString(ContentReportingService.reportsStorageKey),
+          isNull,
+        );
+      },
+    );
+
+    test('a resumed service saves the report history again', () async {
+      outgoing
+        ..suspend()
+        ..resume();
+      final reporting = report();
+      delivery.complete(PublishSuccess(event: reportEvent));
+      await reporting;
+
+      expect(
+        prefs.getString(ContentReportingService.reportsStorageKey),
+        contains(_validEventId('b')),
+      );
     });
   });
 }

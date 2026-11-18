@@ -711,11 +711,23 @@ String _$reportRetryServiceHash() =>
     r'580e5f54ac229632f4b5712952c1a2126660befb';
 
 /// Content deletion service for NIP-09 delete events
+///
+/// Kept alive once started, so an account switch can reach the instance a
+/// delete is still running on: every caller reads it without listening, and
+/// the switch suspends what the leaving container still holds (#8313). A
+/// service built before the relay client has started cannot delete, so it is
+/// released and the next read builds one that can.
 
 @ProviderFor(contentDeletionService)
 final contentDeletionServiceProvider = ContentDeletionServiceProvider._();
 
 /// Content deletion service for NIP-09 delete events
+///
+/// Kept alive once started, so an account switch can reach the instance a
+/// delete is still running on: every caller reads it without listening, and
+/// the switch suspends what the leaving container still holds (#8313). A
+/// service built before the relay client has started cannot delete, so it is
+/// released and the next read builds one that can.
 
 final class ContentDeletionServiceProvider
     extends
@@ -728,6 +740,12 @@ final class ContentDeletionServiceProvider
         $FutureModifier<ContentDeletionService>,
         $FutureProvider<ContentDeletionService> {
   /// Content deletion service for NIP-09 delete events
+  ///
+  /// Kept alive once started, so an account switch can reach the instance a
+  /// delete is still running on: every caller reads it without listening, and
+  /// the switch suspends what the leaving container still holds (#8313). A
+  /// service built before the relay client has started cannot delete, so it is
+  /// released and the next read builds one that can.
   ContentDeletionServiceProvider._()
     : super(
         from: null,
@@ -755,4 +773,4 @@ final class ContentDeletionServiceProvider
 }
 
 String _$contentDeletionServiceHash() =>
-    r'de8df8e0106036b306b61ef2970e6b43ce1be68f';
+    r'bd8fb5e00e4d7f8fcd7f00fc8b0a50bef92eb4c2';

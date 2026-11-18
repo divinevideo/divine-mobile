@@ -166,6 +166,9 @@ class ContentDeletionService {
   static const String deletionsStorageKey = 'content_deletions_history';
 
   final List<ContentDeletion> _deletionHistory = [];
+
+  /// Set by [suspend] for the length of an account switch.
+  bool _suspended = false;
   bool _isInitialized = false;
 
   // Getters
@@ -671,8 +674,22 @@ class ContentDeletionService {
     }
   }
 
+  /// Stops writing this account's deletion history to the device until
+  /// [resume].
+  ///
+  /// An account switch calls this on the outgoing account's service before
+  /// the incoming sign-in clears the device-wide keys. A delete still waiting
+  /// on its relay answer records the deletion when it lands, and would
+  /// otherwise write it into the keys the next account reads (#8313).
+  void suspend() => _suspended = true;
+
+  /// Undoes [suspend], for a switch that rolled back and left this account
+  /// signed in.
+  void resume() => _suspended = false;
+
   /// Save deletion history to storage
   Future<void> _saveDeletionHistory() async {
+    if (_suspended) return;
     try {
       final deletionsJson = _deletionHistory
           .map((deletion) => deletion.toJson())

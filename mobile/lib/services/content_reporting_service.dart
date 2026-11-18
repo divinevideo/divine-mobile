@@ -244,6 +244,9 @@ class ContentReportingService implements ReportChannelDriver {
   static const String reportedPubkeyTagKey = 'reported_pubkey';
 
   final List<ContentReport> _reportHistory = [];
+
+  /// Set by [suspend] for the length of an account switch.
+  bool _suspended = false;
   bool _isInitialized = false;
 
   // Getters
@@ -1219,8 +1222,23 @@ class ContentReportingService implements ReportChannelDriver {
     }
   }
 
+  /// Stops writing this account's report history to the device until
+  /// [resume].
+  ///
+  /// An account switch calls this on the outgoing account's service before
+  /// the incoming sign-in clears the device-wide keys. A report still
+  /// waiting on its relay or support delivery saves the history when it
+  /// finishes, and would otherwise land in the keys the next account reads
+  /// (#8313).
+  void suspend() => _suspended = true;
+
+  /// Undoes [suspend], for a switch that rolled back and left this account
+  /// signed in.
+  void resume() => _suspended = false;
+
   /// Save report history to storage
   Future<void> _saveReportHistory() async {
+    if (_suspended) return;
     try {
       final reportsJson = _reportHistory
           .map((report) => report.toJson())

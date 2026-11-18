@@ -1411,8 +1411,15 @@ Future<ReportRetryService?> reportRetryService(Ref ref) async {
 }
 
 /// Content deletion service for NIP-09 delete events
+///
+/// Kept alive once started, so an account switch can reach the instance a
+/// delete is still running on: every caller reads it without listening, and
+/// the switch suspends what the leaving container still holds (#8313). A
+/// service built before the relay client has started cannot delete, so it is
+/// released and the next read builds one that can.
 @riverpod
 Future<ContentDeletionService> contentDeletionService(Ref ref) async {
+  final keepAlive = ref.keepAlive();
   final nostrService = ref.watch(nostrServiceProvider);
   final authService = ref.watch(authServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
@@ -1426,6 +1433,7 @@ Future<ContentDeletionService> contentDeletionService(Ref ref) async {
 
   // Initialize the service to enable content deletion
   await service.initialize();
+  if (!service.isInitialized) keepAlive.close();
 
   return service;
 }
