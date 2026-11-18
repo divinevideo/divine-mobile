@@ -31,7 +31,15 @@ import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interfac
 
 class _MockCameraService extends Mock implements CameraService {}
 
-class _MockClipManager extends Mock implements ClipManagerNotifier {}
+class _MockClipManager extends Mock implements ClipManagerNotifier {
+  // This suite keeps one capture session. Enrichment must reach its explicit
+  // safeFilePath gate rather than fail early on an unstubbed ownership getter.
+  @override
+  int get sessionGeneration => 0;
+
+  @override
+  bool isSessionCurrent(int generation) => generation == 0;
+}
 
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
@@ -555,18 +563,21 @@ void main() {
         ).thenAnswer((_) async => true);
       });
 
-      ClipChromaKey? recordedIntent() =>
-          verify(
-                () => clipManager.addClip(
-                  video: any(named: 'video'),
-                  originalAspectRatio: any(named: 'originalAspectRatio'),
-                  targetAspectRatio: any(named: 'targetAspectRatio'),
-                  lensMetadata: any(named: 'lensMetadata'),
-                  limitClipDuration: any(named: 'limitClipDuration'),
-                  captureChromaKey: captureAny(named: 'captureChromaKey'),
-                ),
-              ).captured.single
-              as ClipChromaKey?;
+      ClipChromaKey? recordedIntent() {
+        verify(recorded.safeFilePath).called(1);
+        verifyNever(() => clipManager.bakeRecordedTake(any()));
+        return verify(
+              () => clipManager.addClip(
+                video: any(named: 'video'),
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+                captureChromaKey: captureAny(named: 'captureChromaKey'),
+              ),
+            ).captured.single
+            as ClipChromaKey?;
+      }
 
       final backdropKey = const ClipChromaKey(
         key: ChromaKey.blueScreen(),
