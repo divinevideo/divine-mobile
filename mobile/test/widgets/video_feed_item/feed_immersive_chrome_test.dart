@@ -246,6 +246,39 @@ void main() {
         expect(_ignoringPointer(tester), isTrue);
       });
 
+      testWidgets('keeps pinned chrome hidden during a cancelled back swipe', (
+        tester,
+      ) async {
+        final cubit = FeedImmersiveCubit();
+        addTearDown(cubit.close);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
+        final flight = ValueNotifier<VideoTileFlightFrame?>(null);
+        addTearDown(flight.dispose);
+        await _pumpChrome(tester, cubit: cubit, phase: phase, flight: flight);
+        cubit.pin();
+        await tester.pumpAndSettle();
+        expect(_paintedOpacityOf(tester), equals(0));
+
+        phase.value = VideoTileFlightPhase.arriving;
+        flight.value = _frame(opacity: 0.9);
+        await tester.pump();
+
+        expect(_flyingCopy, findsNothing);
+        expect(_paintedOpacityOf(tester), equals(0));
+        expect(cubit.state.isPinned, isTrue);
+
+        phase.value = VideoTileFlightPhase.landed;
+        flight.value = null;
+        await tester.pump();
+        expect(_paintedOpacityOf(tester), equals(0));
+        expect(_ignoringPointer(tester), isTrue);
+        cubit.unpin();
+        await tester.pumpAndSettle();
+        expect(_paintedOpacityOf(tester), equals(1));
+        expect(_ignoringPointer(tester), isFalse);
+      });
+
       testWidgets('flies a copy where the frame puts it', (tester) async {
         final phase = ValueNotifier(VideoTileFlightPhase.flying);
         addTearDown(phase.dispose);

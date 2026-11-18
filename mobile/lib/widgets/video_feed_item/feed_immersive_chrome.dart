@@ -90,14 +90,16 @@ class _FeedImmersiveChromeState extends State<FeedImmersiveChrome> {
     if (flight == null) return chrome;
     return OverlayPortal.overlayChildLayoutBuilder(
       controller: _flyingCopy,
-      overlayChildBuilder: (_, layout) => _FlyingChrome(
-        flight: flight,
-        layout: layout,
-        // The overlay child sees the overlay's media query, whose padding
-        // the page may have removed here.
-        mediaQuery: MediaQuery.of(context),
-        child: widget.child,
-      ),
+      overlayChildBuilder: (_, layout) => isImmersive
+          ? const SizedBox.shrink()
+          : _FlyingChrome(
+              flight: flight,
+              layout: layout,
+              // The overlay child sees the overlay's media query, whose padding
+              // the page may have removed here.
+              mediaQuery: MediaQuery.of(context),
+              child: widget.child,
+            ),
       child: chrome,
     );
   }
