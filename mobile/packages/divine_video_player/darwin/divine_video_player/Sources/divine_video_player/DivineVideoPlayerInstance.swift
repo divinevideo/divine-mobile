@@ -147,6 +147,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// keeps; see [CachingAssetLoader].
     private var remoteClipLoader: CachingAssetLoader?
     private var playbackTelemetryGeneration = 0
+    private var currentPlaybackPilotProvider: String?
 
     /// A player item and everything the instance holds for it once it is
     /// installed. Builders return this instead of writing the instance's
@@ -560,6 +561,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         armSetClipsTimeout()
         setClipsGeneration += 1
         let callGeneration = setClipsGeneration
+        let pilotProvider = clipsRaw.compactMap { clip in
+            playbackPilotProvider(
+                url: (clip["uri"] as? String).flatMap(URL.init(string:)),
+                headers: clip["httpHeaders"] as? [String: String] ?? [:]
+            )
+        }.first
         releaseClipAudioLoop()
         clipLoopSource = nil
 
@@ -632,6 +639,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 // as dropped or stuttering frames during sped-up preview.
                 playerItem.audioTimePitchAlgorithm = .timeDomain
                 self.templateItem = playerItem
+                self.currentPlaybackPilotProvider = pilotProvider
 
                 let requestedStartPositionMs = (args["startPositionMs"] as? NSNumber)?.int64Value
                 let startPositionMs = requestedStartPositionMs ?? 0
@@ -717,13 +725,17 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 // timeout.
                 guard !self.abandonsSetClips(callGeneration, result: result) else { return }
                 self.currentStatus = "error"
-                self.errorMessage = error.localizedDescription
-                self.errorCode = self.errorCode(for: error as NSError)
+                let errorCode = self.errorCode(for: error as NSError)
+                let description = self.playbackFailureDescription(
+                    error, provider: pilotProvider, code: errorCode
+                )
+                self.errorMessage = description
+                self.errorCode = errorCode
                 self.clearSetClipsTimeout()
                 self.clearBufferingWatchdog(resetReported: true)
                 let message =
                     "Player \(self.playerId) composition failed: "
-                    + "\(error.localizedDescription)"
+                    + description
                 if self.errorCode == "media_processing" {
                     DivineVideoPlayerLog.shared.warning(
                         message,
@@ -739,8 +751,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 result(
                     FlutterError(
                         code: "COMPOSITION_ERROR",
-                        message: error.localizedDescription,
-                        details: self.errorCode.map { ["errorCode": $0] }
+                        message: description,
+                        details: ["errorCode": errorCode]
                     )
                 )
             }
@@ -865,6 +877,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             throw CompositionError.noPlayableVideoTracks
         }
         let httpHeaders = clipMap["httpHeaders"] as? [String: String]
+        let pilotProvider = playbackPilotProvider(url: url, headers: httpHeaders ?? [:])
         let assetOptions: [String: Any]? = httpHeaders.map {
             [Self.avURLAssetHTTPHeaderFieldsKey: PlaybackNetworkObservation.withoutCorrelation($0)]
         }
@@ -918,7 +931,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 } catch {
                     DivineVideoPlayerLog.shared.warning(
                         "Player \(playerId) could not read track durations: "
-                            + "\(error.localizedDescription)",
+                            + playbackFailureDescription(error, provider: pilotProvider),
                         name: "DivineVideoPlayer.Load"
                     )
                 }
@@ -945,7 +958,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             } catch {
                 DivineVideoPlayerLog.shared.warning(
                     "Player \(playerId) could not load audio track for edge-declick "
-                        + "mix: \(error.localizedDescription)",
+                        + "mix: " + playbackFailureDescription(error, provider: pilotProvider),
                     name: "DivineVideoPlayer.Load"
                 )
             }
@@ -1167,6 +1180,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 continue
             }
 
+            let pilotProvider = playbackPilotProvider(url: url, headers: httpHeaders)
             let assetOptions: [String: Any] = [Self.avURLAssetHTTPHeaderFieldsKey: PlaybackNetworkObservation.withoutCorrelation(httpHeaders)]
             let asset: AVURLAsset
             // A single streamed clip loads through a download the player
@@ -1247,7 +1261,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 } catch {
                     DivineVideoPlayerLog.shared.warning(
                         "\(logTarget) could not read track durations: "
-                            + "\(error.localizedDescription)",
+                            + playbackFailureDescription(error, provider: pilotProvider),
                         name: "DivineVideoPlayer.Load"
                     )
                 }
@@ -1704,6 +1718,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         loadedClipEqualizers = []
         compositionLoopSource = nil
         player?.removeAllItems()
+        currentPlaybackPilotProvider = nil
         clipOffsets = []
         clipDurations = []
         clipCount = 0
@@ -2302,15 +2317,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.clearSetClipsTimeout()
                     self.clearBufferingWatchdog(resetReported: true)
                     self.currentStatus = "error"
-                    self.errorMessage = item.error?.localizedDescription
                     if let itemError = item.error as NSError? {
-                        self.errorCode = self.errorCode(for: itemError)
+                        let code = self.errorCode(for: itemError)
+                        self.errorCode = code
+                        self.errorMessage = self.playbackFailureDescription(
+                            itemError, provider: self.currentPlaybackPilotProvider, code: code
+                        )
                     } else {
                         self.errorCode = nil
+                        self.errorMessage = nil
                     }
                     let message =
                         "Player \(self.playerId) item failed: "
-                        + "\(item.error?.localizedDescription ?? "unknown")"
+                        + (self.errorMessage ?? "unknown")
                     if self.errorCode == "media_processing" {
                         DivineVideoPlayerLog.shared.warning(
                             message,
@@ -2536,55 +2555,28 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         return errorCode(for: err)
     }
 
+    private func playbackFailureDescription(
+        _ error: Error, provider: String?, code: String? = nil
+    ) -> String {
+        guard let provider else { return error.localizedDescription }
+        return "provider=\(provider) code=\(code ?? errorCode(for: error as NSError))"
+    }
+
     private func errorCode(for err: NSError) -> String {
-        // HTTP errors carried inside AVFoundation errors.
-        if let status = playbackHTTPStatus(in: err) {
-            if status == 202 {
-                return "media_processing"
-            }
-            if status == 401 {
-                return "auth_required"
-            }
-            if status == 403 {
-                return "forbidden"
-            }
-            if status == 404 {
-                return "not_found"
-            }
-            if let code = httpServiceUnavailableCode(status: status) {
-                return code
-            }
-            return status >= 500 ? "http_server_error" : "http_client_error"
+        if let networkCode = playbackNetworkErrorCode(in: err) {
+            return networkCode
         }
-
-        if err.localizedDescription.contains("HTTP 202") {
-            return "media_processing"
-        }
-
-        switch (err.domain, err.code) {
-        case (NSURLErrorDomain, NSURLErrorNotConnectedToInternet),
-             (NSURLErrorDomain, NSURLErrorNetworkConnectionLost),
-             (NSURLErrorDomain, NSURLErrorDataNotAllowed):
-            return "network_error"
-        case (NSURLErrorDomain, NSURLErrorTimedOut):
-            return "timeout"
-        case (NSURLErrorDomain, NSURLErrorUserAuthenticationRequired):
-            return "auth_required"
-        default:
-            // AVFoundation format / decoder errors.
-            if err.domain == AVFoundationErrorDomain {
-                let code = AVError.Code(rawValue: err.code)
-                switch code {
-                case .decodeFailed, .noCompatibleAlternatesForExternalDisplay:
-                    return "decoder_error"
-                case .fileFormatNotRecognized, .contentIsNotAuthorized:
-                    return "parse_error"
-                default:
-                    break
-                }
+        if err.domain == AVFoundationErrorDomain {
+            switch AVError.Code(rawValue: err.code) {
+            case .decodeFailed, .noCompatibleAlternatesForExternalDisplay:
+                return "decoder_error"
+            case .fileFormatNotRecognized, .contentIsNotAuthorized:
+                return "parse_error"
+            default:
+                break
             }
-            return "unknown"
         }
+        return "unknown"
     }
 
     // MARK: - FlutterStreamHandler

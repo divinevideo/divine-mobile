@@ -2335,10 +2335,14 @@ internal class DivineVideoPlayerInstance(
         )
         layout.textureCrop?.let { map["textureCrop"] = it.toFractions() }
         exoPlayer.playerError?.let { error ->
-            map["errorMessage"] = error.localizedMessage
-                ?: error.cause?.localizedMessage
-                ?: error.errorCodeName
-            map["errorCode"] = errorCodeFor(error)
+            val code = errorCodeFor(error)
+            val pilot = playbackPilotProvider(exoPlayer.currentMediaItem?.localConfiguration?.uri)
+            map["errorMessage"] = if (pilot != null) {
+                "provider=$pilot code=$code"
+            } else {
+                error.localizedMessage ?: error.cause?.localizedMessage ?: error.errorCodeName
+            }
+            map["errorCode"] = code
         }
         sink.success(map)
     }
@@ -2379,6 +2383,22 @@ internal class DivineVideoPlayerInstance(
             Player.STATE_ENDED -> "ended"
             else -> "unknown($state)"
         }
+
+    /** Pilot diagnostics identify the CDN and error class without clip URLs. */
+    private fun playbackPilotProvider(uri: Uri?): String? {
+        val host = uri?.host ?: return null
+        if (host.equals(BUNNY_PLAYBACK_HOST, ignoreCase = true)) return "Bunny"
+        // Canonical requests in the Bunny ladder carry a client-cache bypass.
+        if (host.equals("media.divine.video", ignoreCase = true) &&
+            httpHeadersForRequest(uri.toString()).any { (name, value) ->
+                name.equals("Cache-Control", ignoreCase = true) &&
+                    value.equals("no-store", ignoreCase = true)
+            }
+        ) {
+            return "canonical"
+        }
+        return null
+    }
 
     private fun errorCodeFor(error: PlaybackException): String =
         when (error.errorCode) {
@@ -2732,10 +2752,18 @@ internal class DivineVideoPlayerInstance(
         override fun onPlayerError(error: PlaybackException) {
             val currentUri = player?.currentMediaItem?.localConfiguration?.uri
             val nativeErrorCode = errorCodeFor(error)
-            val message =
+            val pilot = playbackPilotProvider(currentUri)
+            val failure = if (pilot != null) {
+                "provider=$pilot code=$nativeErrorCode"
+            } else {
+                error.message ?: "Unknown playback error"
+            }
+            val message = if (pilot != null) {
+                "$logTarget playback error: $failure"
+            } else {
                 "$logTarget playback error [${error.errorCodeName}]: " +
-                    "source=${currentUri ?: "unknown"} " +
-                    (error.message ?: "unknown")
+                    "source=${currentUri ?: "unknown"} $failure"
+            }
             if (nativeErrorCode == "media_processing") {
                 DivineVideoPlayerLog.warning(
                     message,
@@ -2756,7 +2784,7 @@ internal class DivineVideoPlayerInstance(
             mainHandler.removeCallbacks(setClipsTimeoutRunnable)
             pendingSetClipsResult?.error(
                 "PLAYER_ERROR",
-                error.message ?: "Unknown playback error",
+                failure,
                 mapOf("errorCode" to nativeErrorCode),
             )
             pendingSetClipsResult = null

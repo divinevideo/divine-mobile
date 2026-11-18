@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:divine_video_player/divine_video_player.dart'
     hide PlaybackStatus;
-import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, ValueListenable, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -468,7 +469,11 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         cache: ref.read(mediaCacheProvider),
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
         preferB2Original: preferB2Original,
-        bunnyPlaybackPaths: preferBunny && !kIsWeb
+        bunnyPlaybackPaths:
+            preferBunny &&
+                !kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.iOS)
             ? _bunnyPlaybackPaths
             : const {},
         initialIndex: widget.currentIndex,

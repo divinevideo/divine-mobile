@@ -44,6 +44,8 @@ import io.mockk.verifyOrder
 import java.io.IOException
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -996,6 +998,37 @@ class DivineVideoPlayerInstanceTest {
         // Running the queued task re-prepares the same player.
         scheduled.captured.run()
         verify(exactly = 1) { mockPlayer.prepare() }
+    }
+
+    @Test
+    fun `Bunny errors leave clip identity and exception text out of support logs`() {
+        val listener = capturePlayerListener()
+        val source = "https://media-bunny.divine.video/${"f".repeat(64)}/720p.mp4"
+        val uri = mockk<Uri>()
+        every { uri.host } returns "media-bunny.divine.video"
+        every { uri.toString() } returns source
+        every { mockPlayer.currentMediaItem } returns MediaItem.fromUri(uri)
+        mockkObject(DivineVideoPlayerLog)
+        try {
+            val message = slot<String>()
+            every {
+                DivineVideoPlayerLog.error(capture(message), name = "DivineVideoPlayer.Playback")
+            } just runs
+            listener.onPlayerError(
+                PlaybackException(
+                    "Network error at $source",
+                    null,
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                ),
+            )
+
+            assertTrue(message.captured.contains("provider=Bunny"))
+            assertTrue(message.captured.contains("code=timeout"))
+            assertFalse(message.captured.contains(source))
+            assertFalse(message.captured.contains("Network error at"))
+        } finally {
+            unmockkObject(DivineVideoPlayerLog)
+        }
     }
 
     @Test
