@@ -290,6 +290,125 @@ void main() {
       );
     });
 
+    test('a stalled pinned catalogue shares the window deadline', () async {
+      await repository.dispose();
+      fakeAsync((clock) {
+        final window = Completer<QueryResult>();
+        final catalogue = Completer<BadgeDefinitionsResponse>();
+        final community = definition(key1);
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer2),
+        ).thenAnswer((_) => catalogue.future);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: false,
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: true,
+            maxCollectedEvents: 300,
+          ),
+        ).thenAnswer((_) => window.future);
+
+        List<Nip58BadgeDefinition>? result;
+        unawaited(
+          makeRepository(
+                pinnedIssuers: [issuer2],
+                stopwatchFactory: app_clock.clock.stopwatch,
+              )
+              .then((created) {
+                repository = created;
+                return repository.loadPublicDefinitions();
+              })
+              .then((value) => result = value),
+        );
+        clock
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 6));
+        window.complete(
+          QueryResult(events: [community], endedBy: QueryEnd.complete),
+        );
+        clock.flushMicrotasks();
+        expect(result, isNull);
+
+        clock.elapse(const Duration(seconds: 4));
+        expect(result?.single.event.id, community.id);
+        verify(() => api.getBadgeDefinitions(issuer: issuer2)).called(1);
+        catalogue.complete(
+          BadgeDefinitionsResponse(badges: [definition(key2)]),
+        );
+        clock.flushMicrotasks();
+        expect(result?.single.event.id, community.id);
+        verifyNever(
+          () => client.readAllEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        );
+      });
+    });
+
+    test(
+      'pinned issuers settle before a slow community exhausts the budget',
+      () async {
+        await repository.dispose();
+        fakeAsync((clock) {
+          final pinned = definition(key2);
+          events = [
+            definition(key1),
+            for (var i = 3; i < 6; i++)
+              definition(i.toString().padLeft(64, '0')),
+          ];
+          const settled = QueryResult(events: [], endedBy: QueryEnd.complete);
+          when(
+            () => api.getBadgeDefinitions(issuer: issuer2),
+          ).thenAnswer((_) async => BadgeDefinitionsResponse(badges: [pinned]));
+          when(
+            () => client.readEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              useCache: false,
+              timeout: any(named: 'timeout'),
+              requireAllRelaysSettled: true,
+              maxCollectedEvents: 1000,
+            ),
+          ).thenAnswer((call) {
+            final filters = call.positionalArguments.single as List<Filter>;
+            requests.addAll(filters);
+            final issuer = filters.first.authors!.single;
+            if (issuer == issuer1) return Completer<QueryResult>().future;
+            return Future<QueryResult>.delayed(
+              Duration(seconds: issuer == issuer2 ? 4 : 7),
+              () => settled,
+            );
+          });
+
+          List<Nip58BadgeDefinition>? result;
+          unawaited(
+            makeRepository(
+                  pinnedIssuers: [issuer2],
+                  stopwatchFactory: app_clock.clock.stopwatch,
+                )
+                .then((created) {
+                  repository = created;
+                  return repository.loadPublicDefinitions();
+                })
+                .then((value) => result = value),
+          );
+          clock.flushMicrotasks();
+          expect(requests[1].authors, [issuer2]);
+          clock.elapse(const Duration(seconds: 10));
+          expect(result?.map((d) => d.event.id).toSet(), {
+            ...events.skip(1).take(2).map((event) => event.id),
+            pinned.id,
+          });
+        });
+      },
+    );
+
     test('the deletion phase deadline prevents queued issuer reads', () async {
       await repository.dispose();
       repository = await makeRepository(
@@ -382,6 +501,79 @@ void main() {
       },
     );
 
+    test('checks deletion targets and timestamps before verifying', () async {
+      await repository.dispose();
+      final verifier = _Verifier();
+      when(() => verifier.verify(any())).thenAnswer((_) async => true);
+      repository = await makeRepository(spawner: () async => verifier);
+      final candidate = definition(key1)..markSignatureVerified();
+      final effectiveDeletion = deletion(
+        key1,
+        candidate,
+        at: 90,
+        address: false,
+      );
+      events = [candidate];
+      deletions = [
+        deletion(key1, definition(key2)),
+        deletion(key1, candidate, at: 90),
+        effectiveDeletion,
+        deletion(key1, candidate, at: 110),
+      ];
+
+      expect(await repository.loadPublicDefinitions(), isEmpty);
+      expect(
+        verify(() => verifier.verify(captureAny())).captured,
+        [effectiveDeletion.toJson()],
+      );
+    });
+
+    test(
+      'a live repository verifies signatures locally after a worker error',
+      () async {
+        await repository.dispose();
+        final verifier = _Verifier();
+        when(() => verifier.verify(any())).thenAnswer(
+          (_) async => throw StateError('worker failed'),
+        );
+        repository = await makeRepository(spawner: () async => verifier);
+        final genuine = definition(key1);
+        events = [genuine, definition(key2)..sig = '0' * 128];
+
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.id,
+          genuine.id,
+        );
+      },
+    );
+
+    test(
+      'a worker closed during verification does not fail discovery',
+      () async {
+        await repository.dispose();
+        final verifier = _Verifier();
+        final verifying = Completer<void>();
+        final signature = Completer<bool>();
+        when(() => verifier.verify(any())).thenAnswer((_) {
+          verifying.complete();
+          return signature.future;
+        });
+        when(verifier.close).thenAnswer(
+          (_) => signature.completeError(StateError('worker closed')),
+        );
+        repository = await makeRepository(spawner: () async => verifier);
+        events = [definition(key1)];
+        final loading = repository.loadPublicDefinitions();
+        await verifying.future;
+        final checkedLoad = expectLater(loading, completion(isEmpty));
+
+        await repository.dispose();
+        repository = await makeRepository();
+        await checkedLoad;
+        verify(verifier.close).called(1);
+      },
+    );
+
     test('signature work consumes the deletion phase deadline', () async {
       await repository.dispose();
       final timer = _MutableStopwatch();
@@ -395,8 +587,7 @@ void main() {
         stopwatchFactory: () => timer,
       );
       events = [definition(key1)..markSignatureVerified()];
-      // A foreign-target deletion cannot remove the issuer's badge by itself.
-      deletions = [deletion(key1, definition(key2))];
+      deletions = [deletion(key1, events.single)];
       await expectLater(
         repository.loadPublicDefinitions(),
         throwsA(isA<BadgeReadIncompleteException>()),
@@ -426,7 +617,7 @@ void main() {
         final verifier = _Verifier();
         when(() => verifier.verify(any())).thenAnswer((_) => verified.future);
         events = [definition(key1)..markSignatureVerified()];
-        deletions = [deletion(key1, definition(key2))];
+        deletions = [deletion(key1, events.single)];
         Object? failure;
         unawaited(
           makeRepository(

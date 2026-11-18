@@ -58,6 +58,16 @@ class _BadgeVisibilityGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cubit = context.read<ExploreBadgesCubit>();
     ref.listen(vanishedProfilePubkeysProvider, (_, next) {
+      if (next case AsyncError(:final error, :final stackTrace)
+          when !next.isLoading) {
+        Log.warning(
+          'Could not load vanished badge issuers',
+          name: 'ExploreBadgesTab',
+          category: LogCategory.ui,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
       final vanished = next.value;
       if (vanished != null) cubit.updateHiddenIssuers(vanished);
     });

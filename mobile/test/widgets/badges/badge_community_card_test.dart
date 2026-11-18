@@ -57,7 +57,7 @@ void main() {
           },
         );
       }
-      testWidgets('lets the gallery surface show through in light mode', (
+      testWidgets('lets the gallery surface show through', (
         tester,
       ) async {
         final issuer = '2'.padLeft(64, '0');
