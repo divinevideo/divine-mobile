@@ -137,7 +137,10 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                           )
                         : null,
                   ),
-                if (state.supportsStabilization) const _StabilizationButton(),
+                // Dual capture runs without stabilization; the saved mode
+                // returns with one camera.
+                if (state.supportsStabilization && !state.isDualCameraEnabled)
+                  const _StabilizationButton(),
                 if (state.offersChromaKey) const _ColorMaskButton(),
               ],
             ),

@@ -376,6 +376,26 @@ void main() {
         semantics.dispose();
       });
 
+      testWidgets('hides stabilization while both cameras run', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(
+            isDualCameraSupported: true,
+            isDualCameraEnabled: true,
+            isVideoStabilizationSupported: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.cameraStabilizationButton),
+          findsNothing,
+        );
+        semantics.dispose();
+      });
+
       testWidgets('is disabled while a take is starting', (tester) async {
         await tester.pumpWidget(
           buildWidget(isDualCameraSupported: true, isStartingRecording: true),

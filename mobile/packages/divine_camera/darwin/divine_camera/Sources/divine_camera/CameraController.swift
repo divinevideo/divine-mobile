@@ -2225,7 +2225,7 @@ class CameraController: NSObject {
         }
         secondaryStream?.aspectRatio = Self.portraitAspectRatio(of: otherDevice)
         updateCameraProperties(device: mainDevice)
-        applyVideoStabilization()
+        applyDualCameraStabilization()
         DivineCameraLog.shared.info(
             "Dual camera on: main=\(currentLensType), "
                 + "hardwareCost=\(String(format: "%.2f", session.hardwareCost)), "
@@ -2401,7 +2401,7 @@ class CameraController: NSObject {
         }
         stream.aspectRatio = Self.portraitAspectRatio(of: mainDevice)
         updateCameraProperties(device: otherDevice)
-        applyVideoStabilization()
+        applyDualCameraStabilization()
         DivineCameraLog.shared.info(
             "Dual camera swapped: main=\(currentLensType), "
                 + "hardwareCost=\(String(format: "%.2f", session.hardwareCost))",
@@ -2939,6 +2939,11 @@ class CameraController: NSObject {
             )
             return false
         }
+        // Dual capture runs without stabilization and takes no other mode,
+        // as on Android.
+        if isDualCameraEnabled {
+            return parsed == requestedStabilizationMode
+        }
         let previous = requestedStabilizationMode
         requestedStabilizationMode = parsed
         let applied = applyVideoStabilization()
@@ -3022,6 +3027,22 @@ class CameraController: NSObject {
     /// preview-optimized output in sync. Returns true when the requested
     /// (recording) mode could be applied.
     @discardableResult
+    /// Turns stabilization off on the main dual camera, as Android does.
+    ///
+    /// Concurrent streams do not guarantee it, and a look-ahead mode delays
+    /// the main camera's first frame, which holds the second camera's window
+    /// on one frame at the start of every take. The requested mode is kept for
+    /// when one camera runs again.
+    private func applyDualCameraStabilization() {
+        if let connection = videoOutput?.connection(with: .video),
+            connection.isVideoStabilizationSupported
+        {
+            connection.preferredVideoStabilizationMode = .off
+        }
+        requestedStabilizationApplied = requestedStabilizationMode == .off
+        applyPreviewStabilization(recordingStabilized: false)
+    }
+
     private func applyVideoStabilization() -> Bool {
         let applied = applyRecordingStabilization()
         requestedStabilizationApplied = applied
@@ -3122,7 +3143,9 @@ class CameraController: NSObject {
     /// Returns the stabilization modes the active device/format supports.
     private func getAvailableStabilizationModes() -> [String] {
         var modes: [String] = ["off"]
-        guard
+        // Dual capture runs without stabilization; see
+        // applyDualCameraStabilization.
+        guard !isDualCameraEnabled,
             let connection = videoOutput?.connection(with: .video),
             connection.isVideoStabilizationSupported,
             let device = videoDevice
@@ -3175,6 +3198,9 @@ class CameraController: NSObject {
     /// transient `.off` before the connection has configured. A request the
     /// current lens could not take reports off, which is what it records with.
     private func reportedStabilizationString() -> String {
+        if isDualCameraEnabled {
+            return "off"
+        }
         if requestedStabilizationMode != .off && !requestedStabilizationApplied {
             return "off"
         }

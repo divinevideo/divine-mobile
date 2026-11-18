@@ -3671,7 +3671,10 @@ class CameraController(
             isDualCameraEnabled -> sensorOrientationOf(camera?.cameraInfo)
             else -> currentSensorOrientation()
         }
-        val (onSupported, previewSupported) = stabilizationSupport()
+        // Dual capture binds both cameras without stabilization and refuses a
+        // change, so it reports that rather than the mode it keeps for later.
+        val (onSupported, previewSupported) =
+            if (isDualCameraEnabled) false to false else stabilizationSupport()
         val stabilizationModes =
             buildStabilizationModeList(onSupported, previewSupported)
         return mutableMapOf(
