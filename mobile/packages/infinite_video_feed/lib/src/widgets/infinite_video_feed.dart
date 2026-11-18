@@ -587,12 +587,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // but not counted in optimized widget coverage.
     _watchdog = LoadWatchdog(
       threshold: widget.slowLoadThreshold,
-      onSlowLoad: (index) => unawaited(_retryWithNextSource(index)),
+      onSlowLoad: (index) => unawaited(
+        _retryWithNextSource(index, detectedStall: true),
+      ),
       log: _log,
     );
     _staleDetector = StalePlaybackDetector(
       onSeekRecovery: _seekKick,
-      onSourceFailover: (index) => unawaited(_retryWithNextSource(index)),
+      onSourceFailover: (index) => unawaited(
+        _retryWithNextSource(index, detectedStall: true),
+      ),
       log: _log,
     );
     // coverage:ignore-end
@@ -1720,6 +1724,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// `onFailoverSourceFailure`.
   Future<void> _retryWithNextSource(
     int index, {
+    bool detectedStall = false,
     bool recordSourceFailure = false,
     bool bunnyTransientFailure = false,
   }) async {
@@ -1732,8 +1737,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     final failedSource = _sources.activeSourceFor(index);
     final failedOnBunny = isBunnyPlaybackSource(failedSource ?? '');
-    // A stall without a response cannot authorize switching off Bunny.
-    if (failedOnBunny && !bunnyTransientFailure) {
+    final stalledBeforeBunny =
+        detectedStall &&
+        isBunnyPlaybackSource(_sources.nextSourceFor(index) ?? '');
+    // A stall alone cannot authorize a switch involving Bunny.
+    if ((failedOnBunny && !bunnyTransientFailure) || stalledBeforeBunny) {
       _onVideoStalled(index, isTerminal: true);
       return;
     }

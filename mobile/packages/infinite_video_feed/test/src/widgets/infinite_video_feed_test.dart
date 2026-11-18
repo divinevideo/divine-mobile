@@ -421,52 +421,57 @@ void main() {
       }
     });
 
-    testWidgets(
-      'a stalled Bunny source shows a retry without switching hosts',
-      (tester) async {
-        DivineVideoPlayerController.resetIdCounterForTesting();
-        final harness = _NativePlayerHarness(tester);
-        await harness.install(firstFrameRenderedOnListen: false);
-        final key = GlobalKey<InfiniteVideoFeedState>();
-        try {
-          await tester.pumpWidget(
-            _wrapFeed(
-              InfiniteVideoFeed(
-                key: key,
-                videos: [_makeVideo('current', videoUrl: raw)],
-                cache: cache,
-                urlResolver: (_) => canonical,
-                bunnyPlaybackPaths: const {path},
-                prefetchCount: 0,
-                autoRetryMaxAttempts: 0,
-                preloadGracePeriod: Duration.zero,
-                slowLoadThreshold: Duration.zero,
+    for (final (label, resolved, allowedPath, active) in [
+      ('Bunny', canonical, path, bunny),
+      ('canonical', '$raw/hls/master.m3u8', '/$hash', '$raw/hls/master.m3u8'),
+    ]) {
+      testWidgets(
+        'a stalled $label source shows a retry without switching hosts',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(firstFrameRenderedOnListen: false);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('current', videoUrl: raw)],
+                  cache: cache,
+                  urlResolver: (_) => resolved,
+                  bunnyPlaybackPaths: {allowedPath},
+                  prefetchCount: 0,
+                  autoRetryMaxAttempts: 0,
+                  preloadGracePeriod: Duration.zero,
+                  slowLoadThreshold: Duration.zero,
+                ),
               ),
-            ),
-          );
-          await tester.pump();
-          await tester.pump();
-          await harness.sendEvent(0, {'status': 'buffering'});
-          await tester.pump(const Duration(seconds: 1));
-          expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
-          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
-            bunny,
-          ]);
-          final retry = key.currentState!.retryAt(0);
-          await tester.pump();
-          await tester.pump();
-          await retry;
-          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
-            bunny,
-            bunny,
-          ]);
-        } finally {
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pump();
-          await harness.dispose();
-        }
-      },
-    );
+            );
+            await tester.pump();
+            await tester.pump();
+            await harness.sendEvent(0, {'status': 'buffering'});
+            await tester.pump(const Duration(seconds: 1));
+            expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
+            expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+              active,
+            ]);
+            final retry = key.currentState!.retryAt(0);
+            await tester.pump();
+            await tester.pump();
+            await retry;
+            expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+              active,
+              active,
+            ]);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+    }
 
     testWidgets('an authenticated retry opens only the canonical host', (
       tester,
