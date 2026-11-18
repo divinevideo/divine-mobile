@@ -67,7 +67,7 @@ class VideoClipPreview extends StatefulWidget {
   /// Called when the delete button is tapped. If null, delete button is hidden.
   final VoidCallback? onDelete;
 
-  /// Starts a reaction with this clip as the source.
+  /// Called when Record reaction is tapped. If null, the button is hidden.
   final VoidCallback? onRecordReaction;
 
   @override

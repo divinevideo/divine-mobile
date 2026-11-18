@@ -30,9 +30,10 @@ typedef LibraryReactionLayout = Future<DivineVideoClip?> Function(
   SplitScreenCellPicker recordWithCamera,
 );
 
-/// Records a take, reviews it beside [source], and opens the confirmed layout
-/// in the editor. Navigation ports also let widget tests exercise cancellation
-/// without starting a native camera or renderer.
+/// Keeps the active editor session as a draft and clears it, records a take,
+/// reviews it beside [source], and opens the confirmed layout in the editor.
+/// The optional callbacks stand in for the camera, layout, renderer, cleanup
+/// and editor in tests.
 Future<void> recordLibraryReaction(
   BuildContext context,
   WidgetRef ref,

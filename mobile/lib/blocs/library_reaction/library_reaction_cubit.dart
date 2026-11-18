@@ -87,9 +87,13 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
         : (path: poster.path, timestamp: poster.timestamp);
   }
 
-  /// Combines every accepted cut, retaining canvas coordinates and credits
-  /// while describing the encoded pixels and a freshly extracted poster.
-  /// Returns null on preparation failure, with diagnostics and failure status.
+  /// Merges [takes] in capture order into one clip whose aspect ratio and
+  /// poster describe the rendered file, keeping canvas coordinates and
+  /// credits. A single take is returned unchanged.
+  ///
+  /// Returns null when a step throws (reported through [addError], with
+  /// failure status), when the render or poster comes back empty, or when
+  /// this cubit is closed or already merging.
   Future<DivineVideoClip?> combine(List<DivineVideoClip> takes) async {
     if (takes.isEmpty ||
         isClosed ||
@@ -160,6 +164,8 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
     emit(state.copyWith(generatedPaths: []));
   }
 
+  /// Deletes the [paths] no draft or library clip references; a path whose
+  /// check fails goes to the editor's deferred cleanup instead.
   Future<void> cleanupFiles(List<String> paths) async {
     if (paths.isEmpty) return;
     final cleanup = _cleanupFiles;
