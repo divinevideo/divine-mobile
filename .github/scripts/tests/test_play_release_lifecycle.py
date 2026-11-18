@@ -24,7 +24,7 @@ def release(state, *numbers, track="production"):
 def identity(platform, number):
     return {
         "number": number,
-        "version": "1.0.29" if number == 10 else "1.0.30",
+        "version": "1.0.29" if number == 10 else "1.0.31" if number == 30 else "1.0.30",
         "sha": f"{number:040x}",
         "ci_verified": True,
     }
@@ -225,3 +225,87 @@ class PlayLifecycleTest(unittest.TestCase):
         )
         runtime.audit_observations({"android": runtime.play_snapshot()}, {})
         self.assertEqual(statuses[("android-play-production", 10)], "success")
+
+    def test_pending_internal_release_is_named_as_the_hold(self):
+        for status in ["DRAFT", "IN_REVIEW"]:
+            with self.subTest(status=status):
+                runtime, _ = runtime_for(
+                    [release("PUBLISHED", 10)], [release(status, 30, track="internal")]
+                )
+                s = snapshot()
+                s["android"] = runtime.play_snapshot()
+                self.assertIn(
+                    "android: preserve the pending Google Play internal release (draft or review)",
+                    plan_tick(s, observe(s, {}), {"android": "production"})["reasons"],
+                )
+
+    def test_old_track_exposure_is_restarted_at_first_lifecycle_publication(self):
+        # Build state with the old reader's configured-track observations.
+        old = snapshot()
+        old["now"] = NOW - 90000
+        old["android"]["internal"] = [identity("android", 30)]
+        old["android"]["production"] = [identity("android", 20)]
+        legacy = observe(old, {})
+        old["now"] += 21600
+        legacy = observe(old, legacy)
+        self.assertTrue(legacy["internal_periods"]["30"]["completed"])
+        self.assertIn("20", legacy["play_production_seen"])
+        # Actual lifecycle still says rejected / pending, then both publish.
+        runtime, _ = runtime_for(
+            [release("NOT_APPROVED", 20), release("PUBLISHED", 10)],
+            [release("IN_REVIEW", 30, track="internal")],
+        )
+        s = snapshot()
+        s["changes"]["android"] = False
+        s["android"] = runtime.play_snapshot()
+        migrated = observe(s, legacy)
+        runtime, _ = runtime_for(
+            [release("PUBLISHED", 20)], [release("PUBLISHED", 30, track="internal")]
+        )
+        s["now"] += 3600
+        s["android"] = runtime.play_snapshot()
+        state = observe(s, migrated)
+        self.assertFalse(state["internal_periods"]["30"]["completed"])
+        self.assertEqual(state["internal_periods"]["30"]["since"], s["now"])
+        self.assertEqual(state["last_play_promotion"], s["now"])
+        self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
+        s["now"] += 21600
+        state = observe(s, state)
+        self.assertTrue(state["internal_periods"]["30"]["completed"])
+        self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
+        s["now"] += 86400 - 21600
+        state = observe(s, state)
+        self.assertEqual(
+            plan_tick(s, state, {"android": "production"})["actions"][0]["kind"],
+            "play-production",
+        )
+
+    def test_first_lifecycle_read_does_not_certify_legacy_completed_exposure(self):
+        runtime, _ = runtime_for(
+            [release("PUBLISHED", 20)], [release("PUBLISHED", 30, track="internal")]
+        )
+        s = snapshot()
+        s["android"] = runtime.play_snapshot()
+        legacy = {
+            "internal_periods": {"30": {"completed": True, "since": NOW - 90000}},
+            "play_production_seen": {"20": NOW - 90000},
+            "last_play_promotion": NOW - 90000,
+        }
+        state = observe(s, legacy)
+        self.assertFalse(state["internal_periods"]["30"]["completed"])
+        self.assertEqual(state["last_play_promotion"], NOW)
+
+    def test_empty_lifecycle_read_does_not_certify_a_production_migration(self):
+        runtime, _ = runtime_for([])
+        s = snapshot()
+        s["android"] = runtime.play_snapshot()
+        legacy = {
+            "play_production_seen": {"20": NOW - 90000},
+            "last_play_promotion": NOW - 90000,
+        }
+        state = observe(s, legacy)
+        runtime, _ = runtime_for([release("PUBLISHED", 10)])
+        s["now"] += 3600
+        s["android"] = runtime.play_snapshot()
+        state = observe(s, state)
+        self.assertEqual(state["last_play_promotion"], NOW - 90000)

@@ -21,6 +21,7 @@ from start_ios_release import TEAM_ID as CM_TEAM_ID
 from release_train.allocator import reconcile
 from release_train.coordinator import (
     ACTIVE,
+    PLAY_LIFECYCLE_EVIDENCE,
     affects_app,
     consume_version_acknowledgements,
     current_acknowledgements,
@@ -763,7 +764,9 @@ class Runtime:
 
     def play_snapshot(self):
         tracks, errors = self.play.release_statuses()
-        found = {"internal": [], "production": [], "releases": []}
+        found = {"internal": [], "production": [], "releases": [],
+                 "lifecycle_evidence_version": PLAY_LIFECYCLE_EVIDENCE,
+                 "lifecycle_verified_tracks": sorted(tracks)}
         for track, releases in tracks.items():
             published = sorted({n for r in releases if r["state"] == "PUBLISHED"
                                 for n in r["numbers"]})

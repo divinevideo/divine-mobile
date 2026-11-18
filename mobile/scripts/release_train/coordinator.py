@@ -11,6 +11,7 @@ from release_train.versions import parse_version
 
 HOUR = 3600
 DAY = 24 * HOUR
+PLAY_LIFECYCLE_EVIDENCE = 1
 ACTIVE = {
     "initializing",
     "queued",
@@ -147,7 +148,10 @@ def observe(snapshot, previous):
             in STORE_WAITING | {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
         },
     )
-    internal = snapshot.get("android", {}).get("internal", [])
+    android = snapshot.get("android", {})
+    verified = (android.get("lifecycle_verified_tracks", [])
+                if android.get("lifecycle_evidence_version") == PLAY_LIFECYCLE_EVIDENCE else [])
+    internal = android.get("internal", [])
     offered = {str(b["number"]) for b in internal}
     periods = state.setdefault("internal_periods", {})
     for number, period in periods.items():
@@ -155,19 +159,42 @@ def observe(snapshot, previous):
             period["interrupted"] = True
     for b in internal:
         number = str(b["number"])
-        if number not in periods or periods[number].get("interrupted"):
+        uncertified = "internal" in verified and periods.get(number, {}).get(
+            "lifecycle_evidence_version"
+        ) != PLAY_LIFECYCLE_EVIDENCE
+        if number not in periods or periods[number].get("interrupted") or uncertified:
             periods[number] = {"since": now, "completed": False, "build": b}
         period = periods[number]
+        if "internal" in verified:
+            period["lifecycle_evidence_version"] = PLAY_LIFECYCLE_EVIDENCE
         if now - period["since"] >= 6 * HOUR:
             period["completed"] = True
     production = snapshot.get("android", {}).get("production", [])
     seen = state.setdefault("play_production_seen", {})
     highest_seen = max((int(number) for number in seen), default=0)
-    for b in production:
-        if str(b["number"]) not in seen:
-            seen[str(b["number"])] = now
-            if b["number"] > highest_seen:
-                state["last_play_promotion"] = now
+    if "production" in verified and production:
+        evidence = state.get("play_lifecycle_production", {})
+        initial = evidence.get("version") != PLAY_LIFECYCLE_EVIDENCE
+        if initial:
+            evidence = {"version": PLAY_LIFECYCLE_EVIDENCE, "seen": {}}
+            state["play_lifecycle_production"] = evidence
+        certified_seen = evidence["seen"]
+        cutoff = highest_seen if initial else max((int(n) for n in certified_seen), default=0)
+        for b in production:
+            number = str(b["number"])
+            if number not in certified_seen:
+                certified_seen[number] = now
+                # Old lower public baselines are not new promotions. A legacy
+                # observation of this same build never certifies publication.
+                if b["number"] > cutoff or (initial and b["number"] == cutoff):
+                    state["last_play_promotion"] = now
+            seen.setdefault(number, now)
+    else:
+        for b in production:
+            if str(b["number"]) not in seen:
+                seen[str(b["number"])] = now
+                if b["number"] > highest_seen:
+                    state["last_play_promotion"] = now
     return state
 
 
@@ -220,6 +247,10 @@ def plan_tick(snapshot, state, levels):
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
         interval = 6 * HOUR if platform == "ios" else 4 * HOUR
         can_replace = not (platform == "android" and data.get("internal_pending"))
+        if not can_replace:
+            reasons.append(
+                "android: preserve the pending Google Play internal release (draft or review)"
+            )
         if platform == "android":
             for b in data.get("internal", []):
                 period = state.get("internal_periods", {}).get(str(b["number"]), {})

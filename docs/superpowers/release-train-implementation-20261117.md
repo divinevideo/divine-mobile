@@ -128,6 +128,11 @@ lifecycle reads stop Android release actions. Published, pending, and rejected
 states are reflected separately in deployment audit statuses. A rejected release
 superseded by a newer published release remains in the audit without blocking it.
 
+Persisted eligibility evidence is versioned separately from legacy track reads.
+Uncertified internal exposure restarts when lifecycle publication is first observed;
+legacy production observations cannot suppress the daily clock for a newly
+published build. Discovering an older public baseline preserves the existing clock.
+
 An API error requiring review submission through Play Console is a provider
 restriction, not successful publication. The controller does not silently stage
 changes with `changesNotSentForReview=true`, acknowledge failures, or rebuild
