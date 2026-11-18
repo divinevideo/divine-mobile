@@ -13,6 +13,10 @@ on:
         description: Exact observed rejection or failed operation identity to acknowledge
         type: string
         required: false
+      diagnose_android_upload:
+        description: Inspect a retained failed Android upload and validate notes without publishing
+        type: string
+        required: false
       bootstrap:
         description: Bootstrap identities from provider state (dry_run applies)
         type: boolean
@@ -31,6 +35,7 @@ permissions:
 concurrency:
   group: store-release-train
   cancel-in-progress: false
+  queue: max
 
 jobs:
   tick:
@@ -88,6 +93,7 @@ jobs:
           RELEASE_TRAIN_ANDROID: ${{ vars.RELEASE_TRAIN_ANDROID }}
           RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
           RELEASE_ACKNOWLEDGE: ${{ inputs.acknowledge }}
+          RELEASE_DIAGNOSE_ANDROID_UPLOAD: ${{ inputs.diagnose_android_upload }}
           RELEASE_BOOTSTRAP: ${{ inputs.bootstrap || false }}
           RELEASE_SETUP_CODEMAGIC: ${{ inputs.setup_codemagic || false }}
         run: python3 mobile/scripts/run_release_train.py
