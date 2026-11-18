@@ -20,6 +20,7 @@ final class CategoriesState extends Equatable {
     this.hasMoreVideos = false,
     this.isLoadingMore = false,
     this.isRefreshing = false,
+    this.isRefreshingVideos = false,
     this.sortOrder = 'trending',
   });
 
@@ -47,6 +48,9 @@ final class CategoriesState extends Equatable {
   /// Whether cached categories are visible while a live refresh is in flight.
   final bool isRefreshing;
 
+  /// Whether a first-page refresh is running while videos remain visible.
+  final bool isRefreshingVideos;
+
   /// Current sort order for category videos.
   final String sortOrder;
 
@@ -60,6 +64,7 @@ final class CategoriesState extends Equatable {
     bool? hasMoreVideos,
     bool? isLoadingMore,
     bool? isRefreshing,
+    bool? isRefreshingVideos,
     String? sortOrder,
   }) {
     return CategoriesState(
@@ -73,6 +78,7 @@ final class CategoriesState extends Equatable {
       hasMoreVideos: hasMoreVideos ?? this.hasMoreVideos,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      isRefreshingVideos: isRefreshingVideos ?? this.isRefreshingVideos,
       sortOrder: sortOrder ?? this.sortOrder,
     );
   }
@@ -87,6 +93,7 @@ final class CategoriesState extends Equatable {
     hasMoreVideos,
     isLoadingMore,
     isRefreshing,
+    isRefreshingVideos,
     sortOrder,
   ];
 }

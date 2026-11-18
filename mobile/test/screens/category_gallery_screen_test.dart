@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the category gallery screen.
 // ABOUTME: Verifies picker-driven category navigation and gallery state handling.
 
+import 'dart:async';
+
 import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -350,6 +352,22 @@ void main() {
 
     setUp(() {
       categoriesRepository = _MockCategoriesRepository();
+      when(
+        () => categoriesRepository.watchVideosForCategoryCached(
+          category: any(named: 'category'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+          viewerPubkey: any(named: 'viewerPubkey'),
+        ),
+      ).thenAnswer((invocation) async* {
+        yield CacheResult.live(
+          await categoriesRepository.getVideosForCategory(
+            category: invocation.namedArguments[#category] as String,
+            sort: invocation.namedArguments[#sort] as String,
+            platform: invocation.namedArguments[#platform] as String?,
+          ),
+        );
+      });
       blocklistRepository = _MockContentBlocklistRepository();
       authService = createMockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_viewerPubkey);
@@ -370,7 +388,10 @@ void main() {
 
       when(
         () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
-      ).thenReturn([allowedVideo]);
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<VideoEvent>,
+      );
 
       container = ProviderContainer(
         overrides: [
@@ -408,16 +429,132 @@ void main() {
       expect(find.text('Blocked Video'), findsOneWidget);
       expect(find.text('Allowed Video'), findsOneWidget);
 
+      when(() => blocklistRepository.filterContent<VideoEvent>(any(), any()))
+          .thenReturn([allowedVideo]);
       container.read(blocklistVersionProvider.notifier).increment();
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(find.text('Blocked Video'), findsNothing);
       expect(find.text('Allowed Video'), findsOneWidget);
-      verify(
-        () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
-      ).called(1);
     });
+
+    testWidgets('shows cached gallery during refresh and keeps it on failure', (
+      tester,
+    ) async {
+      final results = StreamController<CacheResult<CategoryVideosPage>>();
+      addTearDown(results.close);
+      when(
+        () => categoriesRepository.watchVideosForCategoryCached(
+          category: 'animals',
+          viewerPubkey: _viewerPubkey,
+        ),
+      ).thenAnswer((_) => results.stream);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: CategoryGalleryScreen(category: category)),
+          ),
+        ),
+      );
+      await tester.pump();
+      results.add(
+        CacheResult.cached(
+          CategoryVideosPage(videos: [allowedVideo], hasMore: false),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Allowed Video'), findsOneWidget);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      results.addError(const FormatException('Refresh unavailable'));
+      await tester.pumpAndSettle();
+      expect(find.text('Allowed Video'), findsOneWidget);
+      expect(
+        find.text(
+          lookupAppLocalizations(const Locale('en'))
+              .categoryGalleryCouldNotLoadVideos,
+        ),
+        findsNothing,
+      );
+    });
+
+    for (final refreshFails in [false, true]) {
+      testWidgets(
+        'cached tiles wait for refresh ${refreshFails ? 'failure' : 'success'} '
+        'before opening fullscreen',
+        (tester) async {
+          final results = StreamController<CacheResult<CategoryVideosPage>>();
+          addTearDown(results.close);
+          when(
+            () => categoriesRepository.watchVideosForCategoryCached(
+              category: 'animals',
+              viewerPubkey: _viewerPubkey,
+            ),
+          ).thenAnswer((_) => results.stream);
+          PooledFullscreenVideoFeedArgs? pushedArgs;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: CategoryGalleryScreen(category: category),
+                ),
+              ),
+              GoRoute(
+                path: PooledFullscreenVideoFeedScreen.path,
+                builder: (context, state) {
+                  pushedArgs = state.extra! as PooledFullscreenVideoFeedArgs;
+                  return const Scaffold(body: SizedBox());
+                },
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pump();
+          results.add(
+            CacheResult.cached(
+              CategoryVideosPage(videos: [allowedVideo], hasMore: false),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Allowed Video'));
+          await tester.pumpAndSettle();
+          expect(pushedArgs, isNull);
+
+          if (refreshFails) {
+            results.addError(const FormatException('Refresh unavailable'));
+          } else {
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [blockedVideo], hasMore: false),
+              ),
+            );
+          }
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(refreshFails ? 'Allowed Video' : 'Blocked Video'),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            pushedArgs?.initialVideoId,
+            refreshFails ? 'allowed-id' : 'blocked-id',
+          );
+        },
+      );
+    }
 
     Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(
       WidgetTester tester,
