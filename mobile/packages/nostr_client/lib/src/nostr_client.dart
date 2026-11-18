@@ -1164,6 +1164,8 @@ class NostrClient {
   /// [requiredRelays] keeps relays from an earlier read in the retry even if
   /// their shared connections have since dropped. Every required relay and
   /// every currently connected relay must answer for the read to complete.
+  /// If any required relay is disallowed, the read reports `timedOut` and
+  /// opens no connections.
   ///
   /// The result reads like a [queryEventsDetailed] with
   /// `requireAllRelaysSettled` and no cache: `timedOut` unless every relay
@@ -1185,6 +1187,9 @@ class NostrClient {
         : {...requiredRelays, ...connectedRelays}.toList();
     if (relayUrls.isEmpty) {
       return (events: const <Event>[], timedOut: false, noRelays: true);
+    }
+    if (requiredRelays.any((url) => !_relayManager.isRelayAllowed(url))) {
+      return (events: const <Event>[], timedOut: true, noRelays: false);
     }
     final pool = _nostr.relayPool;
     // A pool of its own: one sharing [_nostr]'s pool would reuse the pooled

@@ -374,6 +374,42 @@ void main() {
       });
     });
 
+    test(
+      'opens no fresh connections if any required relay is disallowed',
+      () async {
+        final opened = <String>[];
+        final nostr = Nostr(LocalNostrSigner(_key), [], (url) {
+          opened.add(url);
+          return _Connection(url, events: [list], answerAfter: Duration.zero);
+        });
+        final relayManager = RelayManager(
+          config: const RelayManagerConfig(
+            defaultRelayUrl: _homeUrl,
+            allowedRelayHost: 'home.example',
+          ),
+          relayPool: nostr.relayPool,
+          relayFactory: (url) => _Connection(url, events: []),
+        );
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: relayManager,
+        );
+        addTearDown(client.dispose);
+        expect(await client.addRelay(_homeUrl), isTrue);
+        expect(client.connectedRelays, [_homeUrl]);
+
+        final result = await client.queryEventsOnFreshConnections(
+          [_list],
+          requiredRelays: const [_homeUrl, _otherUrl],
+        );
+
+        expect(opened, isEmpty);
+        expect(result.events, isEmpty);
+        expect(result.timedOut, isTrue);
+        expect(result.noRelays, isFalse);
+      },
+    );
+
     test('reports noRelays and opens nothing while the client is being '
         'disposed', () {
       fakeAsync((async) {
