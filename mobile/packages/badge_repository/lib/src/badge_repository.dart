@@ -547,6 +547,10 @@ class BadgeRepository {
   /// Most recent badge definitions one discovery read asks for.
   static const _discoveryWindowSize = 300;
 
+  /// A relay tag filter matches any d tag. A small window leaves room for
+  /// matching revisions alongside events whose first identifier is different.
+  static const _detailDefinitionLimit = 32;
+
   /// Keep one publisher from filling the displayed community gallery.
   static const _discoveryDefinitionsPerIssuer = 3;
 
@@ -585,14 +589,12 @@ class BadgeRepository {
     ];
     // Known issuers have their own catalogue read, so newer community events
     // cannot displace their definitions from the recency window.
-    if (_discoveryIssuerPubkeys.isNotEmpty) {
+    for (final issuer in _discoveryIssuerPubkeys) {
+      if (!isBadgePubkey(issuer) || (_isHiddenPubkey?.call(issuer) ?? false)) {
+        continue;
+      }
       try {
-        final pinned = await loadDefinitionsByIssuers(
-          _discoveryIssuerPubkeys.where(
-            (issuer) => !(_isHiddenPubkey?.call(issuer) ?? false),
-          ),
-        );
-        events.addAll(pinned.map((definition) => definition.event));
+        events.addAll(await _loadIssuerDefinitions(issuer));
       } on Exception catch (error) {
         Log.warning(
           'Pinned badge catalogue unavailable (${error.runtimeType})',
@@ -603,20 +605,14 @@ class BadgeRepository {
     }
     final definitions = <String, Nip58BadgeDefinition>{};
     for (final event in events) {
-      if (!await _isVerifiedBadgeEvent(event) ||
-          (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
-        continue;
-      }
-      final definition = Nip58BadgeParser.parseDefinition(event);
+      final definition = await _verifiedPublicDefinition(event);
       if (definition == null ||
-          BadgeCoordinate.parse(definition.coordinate) == null) {
+          (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
         continue;
       }
       final previous = definitions[definition.coordinate];
       if (previous == null ||
-          event.createdAt > previous.event.createdAt ||
-          (event.createdAt == previous.event.createdAt &&
-              event.id.compareTo(previous.event.id) < 0)) {
+          _compareReplaceableEvents(event, previous.event) < 0) {
         definitions[definition.coordinate] = definition;
       }
     }
@@ -769,6 +765,21 @@ class BadgeRepository {
     return result.events;
   }
 
+  Future<Nip58BadgeDefinition?> _verifiedPublicDefinition(
+    Event event, {
+    BadgeCoordinate? coordinate,
+  }) async {
+    final definition = Nip58BadgeParser.parseDefinition(event);
+    if (definition == null ||
+        definition.dTag != event.dTagValue ||
+        !isBadgePubkey(event.pubkey) ||
+        (coordinate != null && definition.coordinate != coordinate.value) ||
+        !await _isVerifiedBadgeEvent(event)) {
+      return null;
+    }
+    return definition;
+  }
+
   Future<bool> _isVerifiedBadgeEvent(Event event) async {
     if (_disposed || !event.isValid) return false;
     if (event.hasVerifiedSignature) return true;
@@ -834,9 +845,7 @@ class BadgeRepository {
     for (final issuer in issuerPubkeys.toSet()) {
       if (!isBadgePubkey(issuer)) continue;
       final events = await _loadIssuerDefinitions(issuer);
-      // Both sources are scoped to the issuer; retain the boundary check.
-      final signed = events.where((event) => event.pubkey == issuer).toList();
-      for (final definition in _newestDefinitionPerIdentifier(signed)) {
+      for (final definition in _newestDefinitionPerIdentifier(events)) {
         definitions[definition.coordinate] = definition;
       }
     }
@@ -868,7 +877,7 @@ class BadgeRepository {
         'Badge definitions could not be fully loaded',
       );
     }
-    return result.events;
+    return result.events.where((event) => event.pubkey == issuer).toList();
   }
 
   Future<List<Event>> _loadApiDefinitions(
@@ -1174,7 +1183,7 @@ class BadgeRepository {
                   ),
             )
             .toList()
-          ..sort(_compareSubscriptionEvents);
+          ..sort(_compareReplaceableEvents);
     var event = matching.isEmpty ? null : matching.first;
     // A missing relay result cannot erase signed state already observed in
     // this session. Only a newer replaceable event (including an empty list)
@@ -1182,7 +1191,7 @@ class BadgeRepository {
     for (final known in [_publishedSubscriptions, _observedSubscriptions]) {
       if (known != null &&
           known.pubkey == pubkey &&
-          (event == null || _compareSubscriptionEvents(known, event) < 0)) {
+          (event == null || _compareReplaceableEvents(known, event) < 0)) {
         event = known;
       }
     }
@@ -1207,7 +1216,7 @@ class BadgeRepository {
       if (tag.length >= 2 && tag[0] == 'a') ?BadgeCoordinate.parse(tag[1]),
   };
 
-  static int _compareSubscriptionEvents(Event a, Event b) {
+  static int _compareReplaceableEvents(Event a, Event b) {
     final byTime = b.createdAt.compareTo(a.createdAt);
     return byTime != 0 ? byTime : a.id.compareTo(b.id);
   }
@@ -2543,23 +2552,42 @@ class BadgeRepository {
   Future<Nip58BadgeDefinition?> _loadDetailDefinition(
     BadgeCoordinate coordinate,
   ) async {
-    final definition = await _loadDefinition(
-      coordinate.value,
+    final read = await _nostrClient.readEvents(
+      [
+        Filter(
+          authors: [coordinate.pubkey],
+          kinds: [EventKind.badgeDefinition],
+          d: [coordinate.identifier],
+          limit: _detailDefinitionLimit,
+        ),
+      ],
       tempRelays: _publicReadRelays,
+      maxCollectedEvents: _detailDefinitionLimit,
     );
-    if (definition == null ||
-        definition.event.pubkey != coordinate.pubkey ||
-        definition.event.dTagValue != coordinate.identifier ||
-        !await _isVerifiedBadgeEvent(definition.event)) {
-      return null;
+    final candidates = read.events.toList()..sort(_compareReplaceableEvents);
+    Nip58BadgeDefinition? fromRelay;
+    for (final event in candidates) {
+      fromRelay = await _verifiedPublicDefinition(
+        event,
+        coordinate: coordinate,
+      );
+      if (fromRelay != null) break;
     }
-    return definition;
+    final published = _publishedDefinitions[coordinate.value];
+    if (published == null ||
+        (fromRelay != null &&
+            fromRelay.event.createdAt > published.event.createdAt)) {
+      return fromRelay;
+    }
+    // A local edit can reach the UI before the relay returns its revision.
+    return await _verifiedPublicDefinition(
+          published.event,
+          coordinate: coordinate,
+        ) ??
+        fromRelay;
   }
 
-  Future<Nip58BadgeDefinition?> _loadDefinition(
-    String coordinate, {
-    List<String>? tempRelays,
-  }) async {
+  Future<Nip58BadgeDefinition?> _loadDefinition(String coordinate) async {
     final parts = _parseCoordinate(coordinate);
     if (parts == null || parts.kind != EventKind.badgeDefinition) {
       return null;
@@ -2572,7 +2600,7 @@ class BadgeRepository {
         d: [parts.dTag],
         limit: 1,
       ),
-    ], tempRelays: tempRelays);
+    ]);
 
     final sorted = events.toList()
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));

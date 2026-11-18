@@ -202,13 +202,17 @@ void main() {
         registerFallbackValue(Filter());
         when(
           () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
-        ).thenAnswer((call) async {
-          final filter =
-              (call.positionalArguments.single as List<Filter>).single;
-          return filter.kinds!.single == EventKind.badgeDefinition
-              ? [unsigned]
-              : <Event>[];
-        });
+        ).thenAnswer((_) async => []);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            maxCollectedEvents: any(named: 'maxCollectedEvents'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              QueryResult(events: [unsigned], endedBy: QueryEnd.complete),
+        );
         when(
           () => client.readAllEvents(
             any(),

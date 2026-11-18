@@ -5933,6 +5933,39 @@ void main() {
         expect(await repository.loadCreatedIdentifiers(), {'scene-stealer'});
       });
 
+      test(
+        'a relay revision at the same timestamp preserves the pending local edit',
+        () async {
+          await publishEdit();
+          final published = lastSignedEvent()!;
+          _stubQueries(nostrClient, {
+            'definition:${coordinate.value}': [
+              _signed(
+                _definitionEvent(
+                  pubkey: _pubkey(1),
+                  dTag: coordinate.identifier,
+                  name: 'Concurrent edit',
+                  createdAt: published.createdAt,
+                ),
+              ),
+            ],
+          });
+          final detail = await repository.loadBadgeDetail(coordinate);
+          expect(detail.definition?.event.id, published.id);
+        },
+      );
+
+      test(
+        'a local definition that fails verification leaves the authentic relay revision available',
+        () async {
+          await publishEdit();
+          lastSignedEvent()!.content = 'changed after signing';
+          stubStaleDefinition();
+          final detail = await repository.loadBadgeDetail(coordinate);
+          expect(detail.definition?.name, 'Old Name');
+        },
+      );
+
       test('an edit made on another device still wins', () async {
         await publishEdit();
         _stubQueries(nostrClient, {
@@ -7752,6 +7785,19 @@ Map<String, int> _stubQueries(
     }
     return events;
   });
+  when(
+    () => nostrClient.readEvents(
+      any(),
+      maxCollectedEvents: any(named: 'maxCollectedEvents'),
+    ),
+  ).thenAnswer(
+    (call) async => QueryResult(
+      events: await nostrClient.queryEvents(
+        call.positionalArguments.single as List<Filter>,
+      ),
+      endedBy: QueryEnd.complete,
+    ),
+  );
   return callCounts;
 }
 

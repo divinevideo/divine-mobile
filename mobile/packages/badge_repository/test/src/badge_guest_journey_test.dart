@@ -27,6 +27,16 @@ void main() {
           ['d', coordinate.identifier],
           ['name', 'Loop makers'],
         ], '')..sign(issuerKey);
+        final malformed = Event(
+          issuer,
+          EventKind.badgeDefinition,
+          [
+            ['d'],
+            ['d', coordinate.identifier],
+          ],
+          '',
+          createdAt: badge.createdAt + 1,
+        )..sign(issuerKey);
         final award = Event(issuer, EventKind.badgeAward, [
           ['a', coordinate.value],
           ['p', member],
@@ -54,6 +64,7 @@ void main() {
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
         final sockets = <WebSocket>[];
         final publicEvents = [
+          malformed,
           badge,
           award,
           profile,
@@ -118,7 +129,7 @@ void main() {
         expect(client.hasKeys, isFalse);
         expect(client.isInitialized, isFalse);
         final discovered = await repository.loadPublicDefinitions();
-        expect(discovered.single.coordinate, coordinate.value);
+        expect(discovered.single.event.id, badge.id);
         final detail = await repository.loadBadgeDetail(coordinate);
         expect(detail.definition?.event.id, badge.id);
         expect(detail.viewerAward, isNull);
