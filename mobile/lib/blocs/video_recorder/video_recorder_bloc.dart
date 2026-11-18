@@ -498,8 +498,8 @@ class VideoRecorderBloc
   /// what was last published.
   ///
   /// The recorder counts as closed while it has no live preview to trigger:
-  /// before the camera is up, on the Upload tab, and once navigation has
-  /// locked recording.
+  /// before the camera is up, on the Upload tab, while a sheet pauses remote
+  /// recording, and once navigation has locked recording.
   void _syncRemoteRecorder(VideoRecorderBlocState recorder) {
     final publish = _publishRemoteRecorderState;
     if (publish == null) return;
@@ -507,6 +507,7 @@ class VideoRecorderBloc
     final isOpen =
         !_isClosing &&
         recorder.isCameraInitialized &&
+        !recorder.isRemoteRecordPaused &&
         !recorder.recordingLockedForNavigation &&
         recorder.recorderMode != VideoRecorderMode.upload;
     RemoteRecorderState? remote;
@@ -3419,6 +3420,10 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    // WatchConnectivity can still deliver a tap after the sheet pauses the
+    // native volume and media handlers.
+    if (state.isRemoteRecordPaused) return;
+
     // The Upload tab pauses the camera and shows no preview, so a volume or
     // Bluetooth press there must not start a recording the user cannot see.
     if (!state.recorderMode.recordsVideo) {

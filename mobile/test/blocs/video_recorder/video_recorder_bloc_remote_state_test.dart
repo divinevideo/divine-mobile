@@ -161,6 +161,23 @@ void main() {
       expect(published.last, isNull);
     });
 
+    test(
+      'reports shutter availability when a sheet opens and closes',
+      () async {
+        stubClips(total: Duration.zero);
+        final bloc = buildBloc()..emit(openRecorder);
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoRecorderRemoteRecordPaused());
+        await pumpEventQueue();
+        expect(published, [isNotNull, isNull]);
+
+        bloc.add(const VideoRecorderRemoteRecordResumed());
+        await pumpEventQueue();
+        expect(published, [isNotNull, isNull, isNotNull]);
+      },
+    );
+
     test('reports the recorder closed once navigation locks recording', () {
       stubClips(total: Duration.zero);
       final bloc = buildBloc()
