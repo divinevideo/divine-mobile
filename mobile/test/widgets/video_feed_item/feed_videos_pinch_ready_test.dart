@@ -758,10 +758,8 @@ void main() {
           content: 'video reply',
           authorPubkey: _testPubkey,
           createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-          rootEventId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          rootAuthorPubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           eventKind: 34236,
           videoUrl: 'https://example.com/video.mp4',
         ).toSyntheticVideoEvent(),
@@ -790,10 +788,8 @@ void main() {
           content: 'video reply',
           authorPubkey: _testPubkey,
           createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-          rootEventId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          rootAuthorPubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           eventKind: 34236,
           addressableId: replyCoordinate,
           videoUrl: 'https://example.com/video.mp4',
