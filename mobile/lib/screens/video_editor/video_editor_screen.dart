@@ -145,8 +145,8 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
 
   /// Value of [originQueryParameter] for an entry from the Library screen.
   ///
-  /// Its only effect is the abandoned-creation analytics event when the
-  /// editor closes.
+  /// Besides the abandoned-creation analytics event when the editor closes,
+  /// it only sets the `entry` of the `editor_ready` performance trace.
   static const libraryOrigin = 'library';
 
   /// Builds the editor location, optionally for an existing [draftId].
