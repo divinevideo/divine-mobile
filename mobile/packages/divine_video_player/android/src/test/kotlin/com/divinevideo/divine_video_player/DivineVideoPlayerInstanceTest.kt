@@ -44,7 +44,6 @@ import io.mockk.verifyOrder
 import java.io.IOException
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -1024,8 +1023,8 @@ class DivineVideoPlayerInstanceTest {
 
             assertTrue(message.captured.contains("provider=Bunny"))
             assertTrue(message.captured.contains("code=timeout"))
-            assertFalse(message.captured.contains(source))
-            assertFalse(message.captured.contains("Network error at"))
+            assertEquals(false, message.captured.contains(source))
+            assertEquals(false, message.captured.contains("Network error at"))
         } finally {
             unmockkObject(DivineVideoPlayerLog)
         }
