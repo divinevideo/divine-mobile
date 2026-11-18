@@ -1101,7 +1101,7 @@ void main() {
       );
 
       testWidgets(
-        'tap → Record reaction closes the preview before the reaction starts',
+        'Record reaction closes preview before starting and refreshes after returning',
         (tester) async {
           DivineVideoPlayerController.resetIdCounterForTesting();
           final messenger =
@@ -1124,6 +1124,7 @@ void main() {
           });
 
           final previewOpenAtStart = <bool>[];
+          when(() => mockBloc.isClosed).thenReturn(false);
           final editor = _GatedEditor(
             () => previewOpenAtStart.add(
               find.byType(VideoClipPreview).evaluate().isNotEmpty,
@@ -1169,6 +1170,27 @@ void main() {
 
           expect(find.byType(VideoClipPreview), findsNothing);
           expect(previewOpenAtStart, [false]);
+          verifyNever(() => mockBloc.add(const ClipsLibraryClipsChanged()));
+
+          // Abort before native capture by covering the library while its
+          // draft-preservation step is pending. A returned flow still owes
+          // the grid a refresh, whether or not it reached the editor.
+          final navigator = Navigator.of(
+            tester.element(find.byType(ClipsTab)),
+          );
+          final coveringPage = navigator.push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: SizedBox.shrink()),
+            ),
+          );
+          await tester.pumpAndSettle();
+          editor.keepGate.complete(null);
+          await tester.pumpAndSettle();
+          verify(() => mockBloc.add(const ClipsLibraryClipsChanged()))
+              .called(1);
+          navigator.pop();
+          await coveringPage;
+          await tester.pumpAndSettle();
         },
       );
     });

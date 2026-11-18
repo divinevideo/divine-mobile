@@ -359,8 +359,15 @@ class _FilterContent extends ConsumerWidget {
     // Release the looping preview decoder before opening the camera.
     await route.completed;
     if (recordReaction && context.mounted) {
+      final clipsBloc = context.read<ClipsLibraryBloc>();
       runDetached(
-        recordLibraryReaction(context, ref, clip),
+        recordLibraryReaction(context, ref, clip).whenComplete(() {
+          // New takes need not change libraryRevision. Refresh when the
+          // camera/layout/editor returns so its saved takes appear here.
+          if (context.mounted && !clipsBloc.isClosed) {
+            clipsBloc.add(const ClipsLibraryClipsChanged());
+          }
+        }),
         'record library reaction',
         logName: 'ClipsTab',
         category: LogCategory.ui,
