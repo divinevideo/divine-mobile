@@ -265,6 +265,21 @@ void main() {
         verify(() => camera.setDualCameraEnabled(enabled: true)).called(1);
         expect(bloc.state.isDualCameraEnabled, isFalse);
       });
+
+      test('opens a new recorder with one camera', () async {
+        final previous = await toggleAndReopen(times: 1);
+        expect(previous.state.isDualCameraEnabled, isTrue);
+        await previous.close();
+
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoRecorderInitializeRequested());
+        await pumpEventQueue();
+
+        // The previous recorder's toggle and its own reopen, nothing since.
+        verify(() => camera.setDualCameraEnabled(enabled: true)).called(2);
+        expect(bloc.state.isDualCameraEnabled, isFalse);
+      });
     });
 
     group(VideoRecorderChromaKeyEnabledSet, () {

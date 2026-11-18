@@ -75,12 +75,6 @@ const DivineVideoStabilizationMode _kDefaultStabilizationMode =
 /// SharedPreferences key for the last grid-lines on/off choice.
 const _kGridLinesEnabledKey = 'camera_grid_lines_enabled';
 
-/// SharedPreferences key for the last dual-camera on/off choice.
-///
-/// Leaving the recorder for the editor or the library disposes the camera,
-/// and the next one opens with one camera, so the choice is kept here.
-const _kDualCameraEnabledKey = 'camera_dual_camera_enabled';
-
 /// Factory for creating a [CountdownSoundService].
 ///
 /// Injectable so tests can verify the wiring that protects the
@@ -406,10 +400,6 @@ class VideoRecorderBloc
 
   /// One step of the stop-motion interval countdown.
   static const _intervalCaptureTickInterval = Duration(seconds: 1);
-
-  /// Preferences about this device's camera rather than an account, so an
-  /// account switch keeps them.
-  static const List<String> deviceScopedPrefsKeys = [_kDualCameraEnabledKey];
 
   /// The current active camera lens. Delegates to the camera service.
   DivineCameraLens get currentLens => _cameraService.currentLens;
@@ -2203,7 +2193,7 @@ class VideoRecorderBloc
     final enable = !dualCamera.isDualCameraEnabled;
     if (enable && !dualCamera.isDualCameraSupported) return;
 
-    await _readSharedPreferences().setBool(_kDualCameraEnabledKey, enable);
+    emit(state.copyWith(isDualCameraChosen: enable));
     await _reconcileDualCamera(emit, dualCamera);
   }
 
@@ -2862,7 +2852,8 @@ class VideoRecorderBloc
   /// was entered from), overlay and grid toggles, the timer setting, the take
   /// in flight, the navigation lock and the editor navigation in progress, the
   /// remote record pause, the stop-motion session and interval loop, the
-  /// chroma-key setup and (while initialized) the screen flash carry over;
+  /// chroma-key setup, the dual-camera choice and window position, and (while
+  /// initialized) the screen flash carry over;
   /// flash resets to `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
@@ -2898,8 +2889,9 @@ class VideoRecorderBloc
         isDualCameraEnabled: _dualCamera?.isDualCameraEnabled ?? false,
         secondaryPreviewTextureId: _dualCamera?.secondaryCamera?.textureId,
         // Where the user dragged the window outlives a re-sync, a swap
-        // included.
+        // included, and so does the choice to film with both cameras.
         dualCameraPipCenter: state.dualCameraPipCenter,
+        isDualCameraChosen: state.isDualCameraChosen,
         videoStabilizationMode: _cameraService.videoStabilizationMode,
         availableVideoStabilizationModes:
             _cameraService.availableVideoStabilizationModes,
@@ -3124,8 +3116,8 @@ class VideoRecorderBloc
       : DivineVideoStabilizationMode.off;
 
   /// Points the live camera at the current mode and color mask: dual-camera
-  /// capture where it is offered and was last left on, and the stabilization
-  /// [_stabilizationModeFor] them.
+  /// capture where it is offered and was turned on in this recorder, and the
+  /// stabilization [_stabilizationModeFor] them.
   ///
   /// Where dual-camera capture is not offered it is turned off first, so the
   /// stabilization lands on the single-camera session. Where it is offered it
@@ -3154,7 +3146,8 @@ class VideoRecorderBloc
   }
 
   /// Rebuilds the session until dual-camera capture is on exactly where the
-  /// mode and color mask offer it and the user last left it on.
+  /// mode and color mask offer it and the creator turned it on in this
+  /// recorder.
   ///
   /// A rebuild takes a moment, and the camera reports the old state until it
   /// returns. A toggle, mode switch or color mask landing meanwhile only
@@ -3174,7 +3167,7 @@ class VideoRecorderBloc
             dualCamera.isDualCameraSupported &&
             state.recorderMode.supportsDualCamera &&
             !state.isChromaKeyActive &&
-            (_readSharedPreferences().getBool(_kDualCameraEnabledKey) ?? false);
+            state.isDualCameraChosen;
         if (dualCamera.isDualCameraEnabled == wanted) return;
         if (!await _setDualCameraEnabled(emit, enabled: wanted)) return;
         // Stabilization was set while two cameras ran, which take none.

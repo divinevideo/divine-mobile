@@ -73,6 +73,7 @@ class VideoRecorderBlocState extends Equatable {
     this.previewTextureId,
     this.isDualCameraSupported = false,
     this.isDualCameraEnabled = false,
+    this.isDualCameraChosen = false,
     this.secondaryPreviewTextureId,
     this.dualCameraPipCenter = SecondaryCameraTake.defaultPipCenter,
     this.hasFlash = true,
@@ -161,6 +162,13 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether dual-camera capture is on: every take records both cameras, and
   /// the viewfinder shows the second one in a small window.
   final bool isDualCameraEnabled;
+
+  /// Whether the creator turned dual-camera capture on in this recorder.
+  ///
+  /// A recorder opens with one camera. Leaving it for the editor or the
+  /// library disposes the camera and the next one opens with one camera too,
+  /// so this choice brings dual capture back where the mode offers it.
+  final bool isDualCameraChosen;
 
   /// Flutter texture id of the second camera's preview while dual-camera
   /// capture is on. The small window is keyed on it, so a swap remounts it on
@@ -483,6 +491,7 @@ class VideoRecorderBlocState extends Equatable {
     int? previewTextureId,
     bool? isDualCameraSupported,
     bool? isDualCameraEnabled,
+    bool? isDualCameraChosen,
     int? secondaryPreviewTextureId,
     bool clearSecondaryPreviewTextureId = false,
     Offset? dualCameraPipCenter,
@@ -545,6 +554,7 @@ class VideoRecorderBlocState extends Equatable {
       isDualCameraSupported:
           isDualCameraSupported ?? this.isDualCameraSupported,
       isDualCameraEnabled: isDualCameraEnabled ?? this.isDualCameraEnabled,
+      isDualCameraChosen: isDualCameraChosen ?? this.isDualCameraChosen,
       secondaryPreviewTextureId: clearSecondaryPreviewTextureId
           ? null
           : (secondaryPreviewTextureId ?? this.secondaryPreviewTextureId),
@@ -620,6 +630,7 @@ class VideoRecorderBlocState extends Equatable {
     previewTextureId,
     isDualCameraSupported,
     isDualCameraEnabled,
+    isDualCameraChosen,
     secondaryPreviewTextureId,
     dualCameraPipCenter,
     hasFlash,
