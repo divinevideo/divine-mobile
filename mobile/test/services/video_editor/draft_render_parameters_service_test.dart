@@ -13,14 +13,18 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
@@ -204,6 +208,109 @@ void main() {
 
     test('returns null when the draft carries no editor state', () async {
       expect(await service.buildForDraft(_draft()), isNull);
+    });
+
+    group('a dual-camera take', () {
+      final dualClip = _clip().copyWith(
+        secondaryCamera: SecondaryCameraTake(
+          clip: DivineVideoClip(
+            id: 'clip_1_second',
+            video: EditorVideo.file('/tmp/test_second.mp4'),
+            duration: const Duration(seconds: 6),
+            recordedAt: DateTime(2025),
+            originalAspectRatio: 9 / 16,
+            targetAspectRatio: .vertical,
+            volume: 0,
+          ),
+        ),
+      );
+
+      bool isTakeLayer(Layer layer) =>
+          DetachedClipLayerData.isDetachedClipLayer(layer) &&
+          (layer as WidgetLayer).widget is DetachedClipPoster;
+
+      test('gets its window when the editor never opened', () async {
+        final stub = _StubLayerRasterizer();
+        addTearDown(stub.dispose);
+
+        final parameters = await DraftRenderParametersService(
+          rasterizer: stub,
+        ).buildForDraft(_draft(clip: dualClip));
+
+        expect(
+          stub.capturedLayers,
+          [isA<WidgetLayer>().having(isTakeLayer, 'take layer', isTrue)],
+          reason:
+              'the editor places the window when a session opens, so a '
+              'draft posted straight from the library had none',
+        );
+        final layout = VideoEditorCanvasGeometry.renderSizeFor(
+          VideoEditorConstants.quality.resolutionForAspectRatio(
+            AspectRatio.vertical,
+          ),
+          9 / 16,
+        );
+        expect(stub.editorBodySize, equals(layout));
+        expect(parameters!.bodySize, equals(layout));
+        expect(parameters.capturedLayers, hasLength(1));
+      });
+
+      test(
+        'gets its window beside the layers of an unplaced session',
+        () async {
+          final stub = _StubLayerRasterizer();
+          addTearDown(stub.dispose);
+
+          await DraftRenderParametersService(rasterizer: stub).buildForDraft(
+            _draft(
+              clip: dualClip,
+              editorEditingParameters: _persistedParameters(
+                bodySize: const Size(300, 500),
+              ),
+              editorStateHistory: _historyWithTextLayer(),
+            ),
+          );
+
+          expect(stub.capturedLayers, hasLength(2));
+          expect(isTakeLayer(stub.capturedLayers!.first), isFalse);
+          expect(isTakeLayer(stub.capturedLayers!.last), isTrue);
+          expect(
+            (stub.capturedLayers!.last as WidgetLayer).width,
+            equals(300 * SecondaryCameraTake.pipWidthFraction),
+            reason: 'the window is sized against the surface the text was',
+          );
+        },
+      );
+
+      test('keeps a window the creator deleted deleted', () async {
+        final stub = _StubLayerRasterizer();
+        addTearDown(stub.dispose);
+
+        final parameters = await DraftRenderParametersService(rasterizer: stub)
+            .buildForDraft(
+              _draft(
+                clip: dualClip,
+                editorStateHistory: {
+                  'position': 0,
+                  'references': const <String, dynamic>{},
+                  'history': [
+                    {
+                      'layers': const <Object>[],
+                      'meta': {
+                        VideoEditorConstants
+                            .placedSecondaryCameraTakesStateHistoryKey: [
+                          'clip_1_second',
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ),
+            );
+
+        expect(stub.capturedLayers, isNull, reason: 'nothing to rasterize');
+        expect(parameters!.capturedLayers, isEmpty);
+      });
     });
 
     test(

@@ -23,12 +23,15 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 ///
 /// [canvasRenderSize] is the editor's render surface: layer widths and
 /// offsets are render coordinates. [now] stamps the layer ids, which must be
-/// unique per call.
+/// unique per call. A render without an editor passes [poster]: the layer
+/// then mounts the clip's poster, which opens no decoder, since the render
+/// composites the take's own video over it anyway.
 List<({String takeId, WidgetLayer layer})> secondaryCameraTakeLayers({
   required List<DivineVideoClip> clips,
   required Size canvasRenderSize,
   required DateTime now,
   Set<String> placedTakeIds = const {},
+  bool poster = false,
 }) {
   // Without a laid-out canvas there is nothing to size the layers against.
   if (canvasRenderSize.isEmpty) return const [];
@@ -49,6 +52,7 @@ List<({String takeId, WidgetLayer layer})> secondaryCameraTakeLayers({
           slotStart: slotStart,
           compositionDuration: compositionDuration,
           canvasRenderSize: canvasRenderSize,
+          poster: poster,
           layerId:
               'detached_${take.clip.id}_${now.microsecondsSinceEpoch}'
               '_${layers.length}',
@@ -66,6 +70,7 @@ WidgetLayer _layerFor({
   required Duration slotStart,
   required Duration compositionDuration,
   required Size canvasRenderSize,
+  required bool poster,
   required String layerId,
 }) {
   // The take's own trim is the lead-in before the clip's first frame; past
@@ -117,7 +122,9 @@ WidgetLayer _layerFor({
     endTime: window.end,
     width: width,
     offset: offset,
-    widget: DetachedClipLayerView(meta: meta),
+    widget: poster
+        ? DetachedClipPoster(meta: meta)
+        : DetachedClipLayerView(meta: meta),
     meta: meta,
     exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
     // Rounded like the viewfinder window, in the export too; the user can

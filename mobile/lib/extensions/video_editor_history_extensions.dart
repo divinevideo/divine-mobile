@@ -143,7 +143,8 @@ extension VideoEditorHistoryExtensions on StateManager {
   /// The ids of the dual-camera takes whose picture-in-picture layer any
   /// history entry records as placed.
   Set<String> get placedSecondaryCameraTakeIds => {
-    for (final entry in stateHistory) ..._placedTakeIdsOf(entry.meta),
+    for (final entry in stateHistory)
+      ...placedSecondaryCameraTakeIdsOf(entry.meta),
   };
 
   /// Adds [layers], the picture-in-picture layers of the dual-camera takes
@@ -173,7 +174,7 @@ extension VideoEditorHistoryExtensions on StateManager {
           meta: {
             ...entry.meta,
             VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey: {
-              ..._placedTakeIdsOf(entry.meta),
+              ...placedSecondaryCameraTakeIdsOf(entry.meta),
               ...takeIds,
             }.toList(),
           },
@@ -184,12 +185,14 @@ extension VideoEditorHistoryExtensions on StateManager {
     }
     updateActiveItems();
   }
+}
 
-  static Iterable<String> _placedTakeIdsOf(Map<String, dynamic> meta) {
-    final raw =
-        meta[VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey];
-    return raw is List ? raw.whereType<String>() : const [];
-  }
+/// The ids of the dual-camera takes a history entry's [meta] records as
+/// placed; see [VideoEditorHistoryExtensions.adoptSecondaryCameraLayers].
+Set<String> placedSecondaryCameraTakeIdsOf(Map<String, dynamic> meta) {
+  final raw =
+      meta[VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey];
+  return raw is List ? raw.whereType<String>().toSet() : const {};
 }
 
 /// Reads the video effects stored under
