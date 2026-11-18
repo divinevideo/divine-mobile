@@ -274,7 +274,9 @@ class BookmarksRepository {
   ///
   /// Never persisted. [SharedPreferences] is unencrypted, so caching these
   /// would move the user's private bookmarks into plaintext local storage —
-  /// a disclosure of its own. They are re-read on every sync instead.
+  /// a disclosure of its own. They are re-read on every sync instead, and
+  /// decrypted from the kept ciphertext when a read fails
+  /// ([_readKeptPrivateItems]).
   final List<BookmarkItem> _privateBookmarks = [];
 
   /// [_privateBookmarks]' source array, kept verbatim so a re-encryption
@@ -313,7 +315,8 @@ class BookmarksRepository {
   /// [_legacyProseContent], which is Divine's own malformed output and is
   /// dropped rather than propagated. The ciphertext (never its plaintext) is
   /// persisted with [_revision] because it is already public relay data and is
-  /// required to preserve the complete replaceable event across sheet rebuilds.
+  /// required to preserve the complete replaceable event across sheet rebuilds,
+  /// and to read the private items when the relay cannot be read.
   String _lastKnownRemoteContent = '';
 
   /// How long a full-settlement "this user has no list" answer is reused
@@ -510,9 +513,23 @@ class BookmarksRepository {
   /// addressable video, and `t` and `r` items, are not videos, and neither is
   /// an `e` item that is not a well-formed event id: fetched by id, one would
   /// close the relay query for every other video with it.
-  List<String> get bookmarkedVideoReferences {
+  List<String> get bookmarkedVideoReferences =>
+      List.unmodifiable(_videoReferencesOf(globalBookmarks));
+
+  /// The references in [bookmarkedVideoReferences] that the list holds
+  /// publicly, in its `tags`.
+  ///
+  /// The rest are private, and like the private items themselves they must
+  /// not reach unencrypted storage (#11180). A video saved both publicly and
+  /// privately is public: its reference is already in the clear.
+  Set<String> get publicBookmarkedVideoReferences =>
+      Set.unmodifiable(_videoReferencesOf(_globalBookmarks));
+
+  /// The video reference each of [items] names, in list order, each video
+  /// once at the position of its latest item.
+  Set<String> _videoReferencesOf(Iterable<BookmarkItem> items) {
     final references = <String>{};
-    for (final item in globalBookmarks) {
+    for (final item in items) {
       final reference = switch (item.type) {
         'e' when _eventIdPattern.hasMatch(item.id) =>
           _videoAddressByEventId[item.id] ?? item.id,
@@ -524,7 +541,7 @@ class BookmarksRepository {
         ..remove(reference)
         ..add(reference);
     }
-    return List.unmodifiable(references);
+    return references;
   }
 
   /// [bookmarkedVideoReferences], each time [watchGlobalBookmarks] announces a
@@ -596,21 +613,50 @@ class BookmarksRepository {
   /// window. An answer that stays unconfirmed changes nothing. A read that
   /// finds a list keeps the fast trade and pays for none of this.
   ///
+  /// On `false` the list stays as this device holds it. Its private items are
+  /// never stored in plaintext, so an instance that has not read them yet
+  /// decrypts the ciphertext the device kept (#11181). A decrypt that fails
+  /// leaves [hasUnreadablePrivateItems] true rather than reading as "no
+  /// private items".
+  ///
   /// Runs after any bookmark operation already in flight ([_serialized]), so
   /// its answer is applied to — and observed against — that operation's
   /// result rather than interleaved with it.
   Future<bool> syncGlobalBookmarks({bool requireAuthoritative = false}) =>
-      _serialized(
-        () async =>
-            // Equality to success, never `!= someFailure`: a blacklist would
-            // let any failure member added later fall through as "reconciled"
-            // and publish kind 10003 from an inconclusive read — the #6966
-            // regression.
-            await _syncGlobalBookmarks(
-              requireAuthoritative: requireAuthoritative,
-            ) ==
-            null,
-      );
+      _serialized(() async {
+        final failure = await _syncGlobalBookmarks(
+          requireAuthoritative: requireAuthoritative,
+        );
+        // Equality to success, never `!= someFailure`: a blacklist would let
+        // any failure member added later fall through as "reconciled" and
+        // publish kind 10003 from an inconclusive read — the #6966
+        // regression.
+        if (failure == null) return true;
+        if (failure != BookmarkToggleFailure.notAuthenticated) {
+          await _readKeptPrivateItems();
+        }
+        return false;
+      });
+
+  /// Decrypts the private items of the revision this device kept, when this
+  /// instance has not read the private section yet.
+  ///
+  /// At most once per instance: afterwards [_privateItemsState] is no longer
+  /// [_PrivateItemsState.none]. A Keycast decrypt is a network call, and this
+  /// runs inside the operation queue. Nothing is announced on
+  /// [watchGlobalBookmarks], because a failed read replaced no list.
+  Future<void> _readKeptPrivateItems() async {
+    if (_privateItemsState != _PrivateItemsState.none ||
+        _lastKnownRemoteContent.isEmpty) {
+      return;
+    }
+    final private = await _readPrivateItems(_lastKnownRemoteContent);
+    _privateTags = private.tags;
+    _privateBookmarks
+      ..clear()
+      ..addAll(_itemsFromTags(private.tags));
+    _privateItemsState = private.state;
+  }
 
   /// [syncGlobalBookmarks], but reporting *why* it failed.
   ///

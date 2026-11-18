@@ -237,8 +237,8 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
   });
 
   /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor.
-  /// Its only effect is the abandoned-creation analytics event when the
-  /// editor closes.
+  /// Besides the abandoned-creation analytics event when the editor closes,
+  /// it only sets the `entry` of the `editor_ready` performance trace.
   final String? from;
 
   @override
