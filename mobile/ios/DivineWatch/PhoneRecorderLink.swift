@@ -16,11 +16,19 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     static let activeTakeStartedAtMs = "activeTakeStartedAtMs"
     static let budgetMs = "budgetMs"
     static let modeName = "modeName"
+    static let shutterActive = "shutterActive"
     static let command = "command"
     static let toggleRecording = "toggleRecording"
   }
 
   @Published private(set) var recorder: RecorderSnapshot?
+
+  /// Whether a tap can reach the iPhone now. While it cannot, `recorder` is
+  /// the last state received and may be out of date.
+  @Published private(set) var isPhoneReachable = false
+
+  /// Sends a value each time a tap could not be delivered.
+  let deliveryFailures = PassthroughSubject<Void, Never>()
 
   private let session = WCSession.default
 
@@ -32,11 +40,20 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   /// Asks the iPhone to start or stop a take. What the recorder then does
   /// comes back as a new `recorder`.
   func toggleRecording() {
-    guard session.isReachable else { return }
+    guard session.isReachable else {
+      updateReachability()
+      deliveryFailures.send()
+      return
+    }
     session.sendMessage(
       [Wire.command: Wire.toggleRecording],
       replyHandler: nil,
-      errorHandler: nil
+      errorHandler: { [weak self] _ in
+        DispatchQueue.main.async {
+          self?.updateReachability()
+          self?.deliveryFailures.send()
+        }
+      }
     )
   }
 
@@ -56,6 +73,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     if let modeName = payload[Wire.modeName] as? String {
       snapshot.modeName = modeName
     }
+    snapshot.isShutterActive = payload[Wire.shutterActive] as? Bool ?? snapshot.isRecording
     return snapshot
   }
 
@@ -63,6 +81,13 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     let snapshot = Self.snapshot(from: payload)
     DispatchQueue.main.async { [weak self] in
       self?.recorder = snapshot
+    }
+  }
+
+  private func updateReachability() {
+    let isReachable = session.isReachable
+    DispatchQueue.main.async { [weak self] in
+      self?.isPhoneReachable = isReachable
     }
   }
 
@@ -74,6 +99,11 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     error: Error?
   ) {
     receive(session.receivedApplicationContext)
+    updateReachability()
+  }
+
+  func sessionReachabilityDidChange(_ session: WCSession) {
+    updateReachability()
   }
 
   func session(

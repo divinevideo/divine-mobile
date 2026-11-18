@@ -11,6 +11,7 @@ class RemoteRecorderState {
     required this.recorded,
     required this.budget,
     required this.modeName,
+    required this.isShutterActive,
     this.activeTakeStartedAt,
   });
 
@@ -26,11 +27,19 @@ class RemoteRecorderState {
   /// Name of the recorder mode in use, as the recorder shows it.
   final String modeName;
 
+  /// Whether the next shutter press stops what is running: a take, its
+  /// countdown, or stop-motion capturing on its interval.
+  ///
+  /// Separate from [activeTakeStartedAt] because a countdown and stop-motion
+  /// run without adding recorded time.
+  final bool isShutterActive;
+
   /// Converts the state to the map sent over the method channel.
   Map<String, Object?> toMap() => {
     'recordedMs': recorded.inMilliseconds,
     'activeTakeStartedAtMs': activeTakeStartedAt?.millisecondsSinceEpoch,
     'budgetMs': budget.inMilliseconds,
     'modeName': modeName,
+    'shutterActive': isShutterActive,
   };
 }

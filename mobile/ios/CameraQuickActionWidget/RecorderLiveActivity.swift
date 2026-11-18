@@ -10,7 +10,7 @@ struct RecorderLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: RecorderActivityAttributes.self) { context in
       HStack(spacing: 12) {
-        RecorderActivityIndicator(isRecording: context.state.isRecording)
+        RecorderActivityIndicator(isRecording: context.state.isShutterActive)
         Text(verbatim: "Divine")
           .font(.system(.headline, design: .rounded))
           .foregroundStyle(.white)
@@ -25,19 +25,19 @@ struct RecorderLiveActivity: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          RecorderActivityIndicator(isRecording: context.state.isRecording)
+          RecorderActivityIndicator(isRecording: context.state.isShutterActive)
         }
         DynamicIslandExpandedRegion(.trailing) {
           RecorderActivityDuration(state: context.state)
             .font(.system(.title3, design: .rounded).weight(.semibold))
         }
       } compactLeading: {
-        RecorderActivityIndicator(isRecording: context.state.isRecording)
+        RecorderActivityIndicator(isRecording: context.state.isShutterActive)
       } compactTrailing: {
         RecorderActivityDuration(state: context.state)
           .font(.system(.body, design: .rounded).weight(.semibold))
       } minimal: {
-        RecorderActivityIndicator(isRecording: context.state.isRecording)
+        RecorderActivityIndicator(isRecording: context.state.isShutterActive)
       }
     }
   }
