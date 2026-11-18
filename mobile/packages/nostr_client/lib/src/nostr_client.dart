@@ -200,6 +200,10 @@ class NostrClient {
   /// an unbounded burst could trip that relay's concurrent-REQ limit too.
   late final Pool _outsidePoolQueryPool = Pool(maxConcurrentQueries);
 
+  /// Isolated reads owned by this client, so disposal can end them before
+  /// their deadlines and close their sockets.
+  final Map<Nostr, ReadScope> _freshConnectionReads = {};
+
   /// The signer used by this client for event signing and NIP-44 encryption.
   ///
   /// Exposes the same `NostrSigner` instance that the client was created with.
@@ -1163,8 +1167,10 @@ class NostrClient {
   ///
   /// The result reads like a [queryEventsDetailed] with
   /// `requireAllRelaysSettled` and no cache: `timedOut` unless every relay
-  /// answered within [timeout], and `noRelays` when no relay is connected or
-  /// required, or the client has begun disposing. Opening each connection is
+  /// answered within [timeout], and `noRelays` when the call starts with no
+  /// relay connected or required, or with the client already disposing.
+  /// An in-flight read ends incomplete when [dispose] starts or its owning
+  /// [ReadScope] ends. Opening each connection is
   /// also bounded by the pool's own `RelayPool.perRelaySendTimeout` (5 s),
   /// whatever [timeout] is: a relay whose connection does not open by then is
   /// never asked, and the read reports it as unfinished.
@@ -1191,13 +1197,18 @@ class NostrClient {
       diagnosticsSink: pool.diagnosticsSink,
       signatureVerificationPolicy: pool.signatureVerificationPolicy,
     );
+    final scope = ReadScope();
+    final leaveParent = ReadScope.current?.onEnd(scope.end);
+    _freshConnectionReads[isolated] = scope;
     try {
-      final result = await isolated.readEvents(
-        filters.map((filter) => filter.toJson()).toList(),
-        tempRelays: relayUrls,
-        relayTypes: const [RelayType.temp],
-        timeout: timeout,
-        requireAllRelaysSettled: true,
+      final result = await scope.run(
+        () => isolated.readEvents(
+          filters.map((filter) => filter.toJson()).toList(),
+          tempRelays: relayUrls,
+          relayTypes: const [RelayType.temp],
+          timeout: timeout,
+          requireAllRelaysSettled: true,
+        ),
       );
       return (
         events: result.events,
@@ -1209,6 +1220,8 @@ class NostrClient {
         noRelays: result.endedBy == QueryEnd.noRelay,
       );
     } finally {
+      leaveParent?.call();
+      _freshConnectionReads.remove(isolated);
       // Not [Nostr.close]: that closes the signer, which is the client's own.
       isolated
         ..beginClose()
@@ -2879,6 +2892,13 @@ class NostrClient {
     // already walked past, leaving a live WebSocket and heartbeat timer nothing
     // can reach (#7367).
     _isClosing = true;
+    for (final read in _freshConnectionReads.entries.toList()) {
+      // Stop repairs before ending the query, then close its sockets without
+      // touching the shared signer. The read's finally releases its entry.
+      read.key.beginClose();
+      read.value.end();
+      read.key.relayPool.removeAll();
+    }
     _nostr.beginClose();
     await closeAllSubscriptions();
     await _relayManager.dispose();

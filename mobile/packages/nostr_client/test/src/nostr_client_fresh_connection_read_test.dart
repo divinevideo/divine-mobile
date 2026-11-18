@@ -395,6 +395,69 @@ void main() {
       });
     });
 
+    test('ends a pending fresh read and closes its sockets when disposal '
+        'starts', () {
+      fakeAsync((async) {
+        final h = _client(
+          async,
+          pooled: [
+            _Connection(_homeUrl, events: [list]),
+          ],
+          events: [list],
+        );
+        ({List<Event> events, bool timedOut, bool noRelays})? result;
+        var disposed = false;
+        unawaited(
+          h.client
+              .queryEventsOnFreshConnections([_list])
+              .then((r) => result = r),
+        );
+        async.flushMicrotasks();
+        expect(h.opened, hasLength(1));
+        expect(h.opened.single.reqs, hasLength(1));
+        expect(h.opened.single.disconnected, isFalse);
+
+        unawaited(h.client.dispose().then((_) => disposed = true));
+        async.flushMicrotasks();
+
+        expect(disposed, isTrue);
+        expect(h.opened.single.disconnected, isTrue);
+        expect(result?.timedOut, isTrue);
+      });
+    });
+
+    test('still ends a fresh read when its caller ends its read scope', () {
+      fakeAsync((async) {
+        final h = _client(
+          async,
+          pooled: [
+            _Connection(_homeUrl, events: [list]),
+          ],
+          events: [list],
+        );
+        final scope = ReadScope();
+        ({List<Event> events, bool timedOut, bool noRelays})? result;
+        scope.run(() {
+          unawaited(
+            h.client
+                .queryEventsOnFreshConnections([_list])
+                .then(
+                  (r) => result = r,
+                ),
+          );
+        });
+        async.flushMicrotasks();
+        expect(h.opened, hasLength(1));
+        expect(h.opened.single.reqs, hasLength(1));
+
+        scope.end();
+        async.flushMicrotasks();
+
+        expect(result?.timedOut, isTrue);
+        expect(h.opened.single.disconnected, isTrue);
+      });
+    });
+
     test('reports noRelays and opens nothing once the client is disposed', () {
       fakeAsync((async) {
         final h = _client(
