@@ -1962,6 +1962,37 @@ void main() {
             ),
           );
         });
+
+        // Another client can move a save into the private section without
+        // moving it in the list, so no video id changes (#11180).
+        test('drops a save that turned private from the snapshot', () async {
+          const ids = ['video-1', 'video-2'];
+          // Written while both saves were public.
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: ids.map(createTestVideo).toList(),
+              itemIds: ids,
+              nextPageOffset: ids.length,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(ids));
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-2'});
+
+          final bloc = await syncedBloc();
+
+          expect(bloc.state.videos.map((v) => v.id), ids);
+          final persisted = ProfileVideoListSnapshot.fromJson(
+            (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+          );
+          expect(persisted.itemIds, ['video-2']);
+          expect(persisted.videos.map((v) => v.id), ['video-2']);
+        });
       });
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
@@ -2203,6 +2234,40 @@ void main() {
         expect: () => [
           showing(['video-1']).copyWith(privateBookmarksLocked: true),
         ],
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'a save that turned private leaves the snapshot when no video moved',
+        setUp: () async {
+          // Written while both saves were public.
+          await CacheSync.write<ProfileVideoListSnapshot>(
+            key: snapshotCacheKey,
+            value: ProfileVideoListSnapshot(
+              videos: ['video-1', 'video-2'].map(createTestVideo).toList(),
+              itemIds: const ['video-1', 'video-2'],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ),
+            toJson: (snapshot) => snapshot.toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-2'});
+        },
+        build: createBloc,
+        seed: () => showing(['video-1', 'video-2']),
+        act: (_) => bookmarkChanges.add(
+          referencesShownAs(['video-1', 'video-2']),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) async {
+          expect(bloc.state.savedEventIds, ['video-1', 'video-2']);
+          final cached = await CacheSync.read<ProfileVideoListSnapshot>(
+            key: snapshotCacheKey,
+            fromJson: ProfileVideoListSnapshot.fromJson,
+          );
+          expect(cached?.itemIds, ['video-2']);
+        },
       );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(

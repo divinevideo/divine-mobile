@@ -380,6 +380,7 @@ class ProfileSavedVideosBloc
           privateBookmarksLocked: privateBookmarksLocked,
         ),
       );
+      await _persistShownSnapshot();
       return;
     }
 
@@ -424,10 +425,12 @@ class ProfileSavedVideosBloc
     // behind this notification did reconcile with the relay.
     if (listEquals(freshIds, state.savedEventIds) &&
         state.status != ProfileSavedVideosStatus.failure) {
-      // The private section can lock or unlock without moving a video id.
+      // The private section can lock or unlock, and a save can turn private,
+      // without moving a video id.
       emit(
         state.copyWith(privateBookmarksLocked: event.privateBookmarksLocked),
       );
+      await _persistShownSnapshot();
       return;
     }
 
@@ -656,6 +659,18 @@ class ProfileSavedVideosBloc
       hasMoreContent: pruned.nextPageOffset < pruned.itemIds.length,
     );
   }
+
+  /// Writes the grid on screen again after a sync or a bookmark change that
+  /// moved no video: a save can turn private without moving in the list, and
+  /// the snapshot must drop it (#11180).
+  Future<void> _persistShownSnapshot() => _persistSnapshot(
+    ProfileVideoListSnapshot(
+      videos: state.videos,
+      itemIds: state.savedEventIds,
+      nextPageOffset: state.nextPageOffset,
+      hasMoreContent: state.hasMoreContent,
+    ),
+  );
 
   Future<void> _persistSnapshot(ProfileVideoListSnapshot snapshot) async {
     try {
