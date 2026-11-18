@@ -228,7 +228,10 @@ void main() {
       pubkey = getPublicKey(privateKeyHex);
       identity = LocalNostrSigner(privateKeyHex);
       nostrClient = _MockNostrClient();
-      when(() => nostrClient.connectedRelays).thenReturn(const []);
+      when(() => nostrClient.configuredRelays).thenReturn(const []);
+      when(
+        () => nostrClient.relayStatusStream,
+      ).thenAnswer((_) => const Stream.empty());
       signer = _MockBookmarkSigner();
       signedTags = null;
       signedContent = null;
@@ -279,6 +282,56 @@ void main() {
         .toList();
 
     group('syncGlobalBookmarks', () {
+      test('keeps a relay added and removed during the first read in the '
+          'required retry set', () async {
+        const other = 'wss://other.example';
+        const home = 'wss://home.example';
+        final changes =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        addTearDown(changes.close);
+        when(() => nostrClient.configuredRelays).thenReturn(const [other]);
+        when(() => nostrClient.relayStatusStream).thenAnswer(
+          (_) => changes.stream,
+        );
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          changes
+            ..add({home: RelayConnectionStatus.connected(home)})
+            ..add({other: RelayConnectionStatus.connected(other)});
+          await pumpEventQueue();
+          return (events: <Event>[], timedOut: true, noRelays: false);
+        });
+        when(
+          () => nostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+            requiredRelays: any(named: 'requiredRelays'),
+          ),
+        ).thenAnswer((invocation) async {
+          final required =
+              invocation.namedArguments[#requiredRelays] as List<String>;
+          // Only the home relay holds the unseen list and cannot answer.
+          // Dropping it would let the other's empty answer permit a publish.
+          return (
+            events: <Event>[],
+            timedOut: required.contains(home),
+            noRelays: false,
+          );
+        });
+
+        final synced = await createService().syncGlobalBookmarks(
+          requireAuthoritative: true,
+        );
+
+        expect(synced, isFalse);
+        expect(changes.hasListener, isFalse);
+      });
+
       test('adopts the relay list when the local cache is empty', () async {
         stubRelay(
           events: [

@@ -17,6 +17,7 @@ class _MockRelayManager extends Mock implements RelayManager {}
 const _key = '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 const _homeUrl = 'wss://home.example';
 const _otherUrl = 'wss://other.example';
+const _offlineUrl = 'wss://offline.example';
 const _savedVideo =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _newVideo =
@@ -156,6 +157,8 @@ _harness(
   bool otherHoldsList = true,
   bool homeRefusesFresh = false,
   Duration? disconnectHomeAfter,
+  bool startDisconnected = false,
+  bool extraConfiguredRelay = false,
 }) {
   final list = _listEvent();
   final home = _Connection(_homeUrl, list: list, backlog: homeBacklog);
@@ -170,7 +173,9 @@ _harness(
       url,
       list: url.startsWith(_homeUrl) || otherHoldsList ? list : null,
       backlog: freshBacklog,
-      takeReqs: !(homeRefusesFresh && url.startsWith(_homeUrl)),
+      takeReqs:
+          !url.startsWith(_offlineUrl) &&
+          !(homeRefusesFresh && url.startsWith(_homeUrl)),
     );
     opened.add(connection);
     return connection;
@@ -179,7 +184,16 @@ _harness(
     unawaited(nostr.relayPool.add(relay));
   }
   async.flushMicrotasks();
-  final urls = [_homeUrl, _otherUrl];
+  if (startDisconnected) {
+    unawaited(home.disconnect());
+    unawaited(other.disconnect());
+    async.flushMicrotasks();
+  }
+  final urls = [
+    _homeUrl,
+    _otherUrl,
+    if (extraConfiguredRelay) _offlineUrl,
+  ];
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenAnswer(
     (_) => [
@@ -188,9 +202,15 @@ _harness(
     ],
   );
   when(() => relayManager.configuredRelays).thenReturn(urls);
+  when(
+    () => relayManager.statusStream,
+  ).thenAnswer((_) => const Stream.empty());
   when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
   when(() => relayManager.diagnosticsSink).thenReturn(null);
   when(relayManager.dispose).thenAnswer((_) async {});
+  when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {
+    await Future.wait([home.connect(), other.connect()]);
+  });
   if (disconnectHomeAfter != null) {
     Timer(disconnectHomeAfter, () => unawaited(home.disconnect()));
   }
@@ -303,6 +323,35 @@ void main() {
         });
       });
 
+      test('keeps the successful shared read even with an offline '
+          'configured relay', () {
+        fakeAsync((async) {
+          final h = _harness(async, extraConfiguredRelay: true);
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isTrue);
+          expect(h.opened, isEmpty);
+        });
+      });
+
+      test('refuses the retry when a configured relay remains unreachable', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            extraConfiguredRelay: true,
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isFalse);
+          expect(result.failure, BookmarkToggleFailure.timedOut);
+          expect(h.home.published, isEmpty);
+          expect(h.other.published, isEmpty);
+        });
+      });
+
       test('does not publish a partial list when the relay holding it '
           'disconnects before the retry and cannot answer there', () {
         fakeAsync((async) {
@@ -337,6 +386,27 @@ void main() {
 
           expect(result.succeeded, isTrue);
           expect(_itemIds(h.repo), containsAll([_savedVideo, _newVideo]));
+        });
+      });
+
+      test('does not publish a partial list when a reconnected relay '
+          'drops before answering the first read', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            otherHoldsList: false,
+            homeRefusesFresh: true,
+            disconnectHomeAfter: const Duration(seconds: 2),
+            startDisconnected: true,
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isFalse);
+          expect(result.failure, BookmarkToggleFailure.timedOut);
+          expect(h.home.published, isEmpty);
+          expect(h.other.published, isEmpty);
         });
       });
 

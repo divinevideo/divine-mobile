@@ -809,6 +809,9 @@ class BookmarksRepository {
   /// them to settle there. Divine's relay serves one connection's requests in
   /// order, so the shared connection can hold the read behind a slow request
   /// for minutes while a new one answers in a second or two (#9335).
+  /// The retry conservatively needs every relay configured during the read:
+  /// the first read can reconnect one, then lose it before it answers. A
+  /// configured relay that remains unreachable therefore blocks the retry.
   Future<({List<Event>? events, BookmarkToggleFailure? failure})>
   _readRemoteGlobalBookmarks(
     String pubkey, {
@@ -817,16 +820,32 @@ class BookmarksRepository {
     final filters = [
       Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
     ];
-    // A relay that drops during the first read still owes its list. Retrying
-    // only the relays connected afterwards could replace a list we never saw.
-    final requiredRelays = requireAuthoritative
-        ? _nostrClient.connectedRelays
-        : const <String>[];
-    var result = await _nostrClient.queryEventsDetailed(
-      filters,
-      useCache: !requireAuthoritative,
-      requireAllRelaysSettled: requireAuthoritative,
-    );
+    // Connectivity can change during reconnect or query-pool waits. Keep all
+    // configured relays so one that connected and then dropped cannot vanish
+    // from the retry and allow a replacement of a list we never saw.
+    final requiredRelays = <String>{
+      if (requireAuthoritative) ..._nostrClient.configuredRelays,
+    };
+    // Status snapshots include newly configured relays, even while connecting.
+    // Keep their identities after removal too: a list they did not answer
+    // before leaving is still unknown.
+    final relayChanges = requireAuthoritative
+        ? _nostrClient.relayStatusStream.listen(
+            (statuses) => requiredRelays.addAll(statuses.keys),
+          )
+        : null;
+    late ({List<Event> events, bool timedOut, bool noRelays}) result;
+    try {
+      result = await _nostrClient.queryEventsDetailed(
+        filters,
+        useCache: !requireAuthoritative,
+        requireAllRelaysSettled: requireAuthoritative,
+      );
+    } finally {
+      // The manager owns this broadcast source. Removing our listener is
+      // synchronous; its source cleanup must not hold the list read open.
+      relayChanges?.cancel().ignore();
+    }
 
     if (requireAuthoritative && result.timedOut && !result.noRelays) {
       Log.info(
@@ -838,7 +857,10 @@ class BookmarksRepository {
       final fresh = await _nostrClient.queryEventsOnFreshConnections(
         filters,
         timeout: freshConnectionReadTimeout,
-        requiredRelays: requiredRelays,
+        requiredRelays: {
+          ...requiredRelays,
+          ..._nostrClient.configuredRelays,
+        }.toList(),
       );
       result = (
         events: [...result.events, ...fresh.events],
