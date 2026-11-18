@@ -1358,6 +1358,127 @@ void main() {
         ],
       );
 
+      // The repository never stores private items because local storage is
+      // unencrypted, and the snapshot lives in the unencrypted cache_sync.db
+      // (#11180). A real repository decrypts a genuine NIP-44 private section.
+      group('with private bookmarks on the list', () {
+        late _MockNostrClient nostrClient;
+        late BookmarksRepository repository;
+        late String ownerPubkey;
+        late LocalNostrSigner identity;
+        final privateVideoId = 'c' * 64;
+        final publicVideoId = 'd' * 64;
+
+        setUpAll(() => registerFallbackValue(<Filter>[]));
+
+        setUp(() async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final privateKeyHex = generatePrivateKey();
+          ownerPubkey = getPublicKey(privateKeyHex);
+          identity = LocalNostrSigner(privateKeyHex);
+          nostrClient = _MockNostrClient();
+          final signer = _MockBookmarkSigner();
+          when(() => signer.isAuthenticated).thenReturn(true);
+          when(() => signer.currentPublicKeyHex).thenReturn(ownerPubkey);
+          when(() => signer.currentIdentity).thenReturn(identity);
+          repository = BookmarksRepository(
+            nostrClient: nostrClient,
+            signer: signer,
+            prefs: await SharedPreferences.getInstance(),
+          );
+          addTearDown(repository.dispose);
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((invocation) async {
+            final ids = invocation.positionalArguments.first as List<String>;
+            return ids.map(createTestVideo).toList();
+          });
+        });
+
+        /// The relay holds a kind-10003 with [publicIds] in `tags` and
+        /// [privateIds] NIP-44 encrypted to the owner in `content`.
+        Future<void> stubRelayHoldingTheList({
+          List<String> publicIds = const [],
+          required List<String> privateIds,
+        }) async {
+          final content = await identity.nip44Encrypt(
+            ownerPubkey,
+            jsonEncode([
+              for (final id in privateIds) ['e', id],
+            ]),
+          );
+          final list = Event(
+            ownerPubkey,
+            BookmarksRepository.globalBookmarksKind,
+            [
+              for (final id in publicIds) ['e', id],
+            ],
+            content!,
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [list], timedOut: false, noRelays: false),
+          );
+        }
+
+        Future<ProfileSavedVideosBloc> syncedBloc() async {
+          final bloc = ProfileSavedVideosBloc(
+            bookmarksRepository: repository,
+            videosRepository: mockVideosRepository,
+            currentUserPubkey: currentUserPubkey,
+            removedVideoIds: const Stream<String>.empty(),
+            deletedVideoFilter: (_) => false,
+          );
+          addTearDown(bloc.close);
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future.timeout(const Duration(seconds: 5));
+          return bloc;
+        }
+
+        test('keeps a private-only list out of the snapshot', () async {
+          await stubRelayHoldingTheList(privateIds: [privateVideoId]);
+
+          final bloc = await syncedBloc();
+
+          // The private save is read and shown: the snapshot check below is
+          // about storage, not about a list that never decrypted.
+          expect(bloc.state.savedEventIds, [privateVideoId]);
+          expect(bloc.state.videos.map((v) => v.id), [privateVideoId]);
+          final persisted = await cacheDao.readEntry(snapshotCacheKey);
+          expect(persisted, isNotNull);
+          expect(persisted!.payload, isNot(contains(privateVideoId)));
+        });
+
+        test(
+          'keeps the public saves of a mixed list in the snapshot',
+          () async {
+            await stubRelayHoldingTheList(
+              publicIds: [publicVideoId],
+              privateIds: [privateVideoId],
+            );
+
+            final bloc = await syncedBloc();
+
+            expect(
+              bloc.state.videos.map((v) => v.id),
+              unorderedEquals([privateVideoId, publicVideoId]),
+            );
+            final persisted = await cacheDao.readEntry(snapshotCacheKey);
+            expect(persisted!.payload, contains(publicVideoId));
+            expect(persisted.payload, isNot(contains(privateVideoId)));
+          },
+        );
+      });
+
       group('when a video saved by its address is removed', () {
         late StreamController<String> removals;
 
