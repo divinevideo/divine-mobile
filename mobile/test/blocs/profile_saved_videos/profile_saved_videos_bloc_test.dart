@@ -2,6 +2,7 @@
 // ABOUTME: BookmarksRepository and paginating through VideosRepository.
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -35,6 +36,33 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockBookmarkSigner extends Mock implements BookmarkSigner {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
+
+/// The public references of a list with no private section: whatever the
+/// mocked list names is public. The bloc only asks it [contains].
+class _EveryReferenceIsPublic extends SetBase<String> {
+  @override
+  bool contains(Object? element) => element is String;
+
+  @override
+  Iterator<String> get iterator =>
+      throw UnsupportedError('the set of every reference cannot be listed');
+
+  @override
+  int get length =>
+      throw UnsupportedError('the set of every reference has no length');
+
+  @override
+  bool add(String value) => throw UnsupportedError('read-only');
+
+  @override
+  String? lookup(Object? element) => element is String ? element : null;
+
+  @override
+  bool remove(Object? value) => throw UnsupportedError('read-only');
+
+  @override
+  Set<String> toSet() => this;
+}
 
 /// In-memory [CacheDao] so the bloc's [CacheSync] reads/writes are isolated
 /// per test without touching disk.
@@ -91,7 +119,7 @@ void main() {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     /// Where the bloc persists its snapshot.
-    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v3';
+    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v4';
 
     /// Author of every fixture video.
     final videoAuthor = '0' * 64;
@@ -123,6 +151,11 @@ void main() {
       when(
         () => mockBookmarksRepository.hasUnreadablePrivateItems,
       ).thenReturn(false);
+      // These lists have no private section; the private case runs against a
+      // real repository ('with private bookmarks on the list').
+      when(
+        () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+      ).thenReturn(_EveryReferenceIsPublic());
     });
 
     ProfileSavedVideosBloc createBloc({
@@ -365,6 +398,76 @@ void main() {
     });
 
     group('ProfileSavedVideosSyncRequested', () {
+      test('keeps displayed private saves during a failed refresh', () async {
+        const ids = ['private-video', 'public-video'];
+        when(
+          () => mockBookmarksRepository.bookmarkedVideoReferences,
+        ).thenReturn(referencesShownAs(ids));
+        when(
+          () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+        ).thenReturn({'public-video'});
+        when(
+          () => mockVideosRepository.getVideosByIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              (invocation.positionalArguments.first as List<String>)
+                  .map(createTestVideo)
+                  .toList(),
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        final firstSync = Completer<void>();
+        bloc.add(ProfileSavedVideosSyncRequested(completer: firstSync));
+        await firstSync.future;
+        expect(bloc.state.videos.map((v) => v.id), ids);
+        final snapshot = ProfileVideoListSnapshot.fromJson(
+          (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+        );
+        expect(snapshot.itemIds, ['public-video']);
+
+        final relayStarted = Completer<void>();
+        final relayResult = Completer<bool>();
+        when(
+          () => mockBookmarksRepository.syncGlobalBookmarks(),
+        ).thenAnswer((_) {
+          relayStarted.complete();
+          return relayResult.future;
+        });
+        final states = <ProfileSavedVideosState>[];
+        final subscription = bloc.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+        final refresh = Completer<void>();
+        bloc.add(ProfileSavedVideosSyncRequested(completer: refresh));
+        await relayStarted.future;
+        final duringRefresh = bloc.state;
+        // Release the handler before asserting so a regression cannot strand
+        // bloc.close() on the gated relay read.
+        relayResult.complete(false);
+        await refresh.future;
+
+        expect(duringRefresh.videos.map((v) => v.id), ids);
+        expect(bloc.state.videos.map((v) => v.id), ids);
+        expect(
+          states,
+          everyElement(
+            isA<ProfileSavedVideosState>().having(
+              (state) => state.videos.map((v) => v.id),
+              'displayed videos',
+              ids,
+            ),
+          ),
+        );
+        verify(
+          () => mockVideosRepository.getVideosByIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).called(1);
+      });
+
       group('with a private list it could not unlock', () {
         blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
           'flags it rather than settling as nothing saved',
@@ -969,6 +1072,27 @@ void main() {
           },
         );
 
+        // The kept list is decrypted in memory only; the snapshot it feeds
+        // lives in unencrypted storage (#11180).
+        test(
+          'keeps a private save read from the kept list out of the snapshot',
+          () async {
+            await readListOnFirstLaunch();
+            final snapshotKey = '$viewer:profile_saved_videos_v4';
+            await cacheDao.delete(snapshotKey);
+            expect(await cacheDao.readEntry(snapshotKey), isNull);
+            await stubRelay(timedOut: true);
+
+            final (_, bloc) = await launch();
+
+            expect(shownIds(bloc), [privateVideoId, publicVideoId]);
+            final persisted = await cacheDao.readEntry(snapshotKey);
+            expect(persisted, isNotNull);
+            expect(persisted!.payload, contains(publicVideoId));
+            expect(persisted.payload, isNot(contains(privateVideoId)));
+          },
+        );
+
         test(
           'says some saves may be missing when the kept private items cannot '
           'be decrypted',
@@ -1076,6 +1200,47 @@ void main() {
           ),
         );
       });
+
+      // The snapshot is filtered after the videos load, so it must use the
+      // list as it is then, not as it was when the load began (#11180).
+      test(
+        'leaves out a save that turned private while its videos loaded',
+        () async {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(['video-1', 'video-2']));
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-1', 'video-2'});
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((invocation) async {
+            // Another client moves video-1 into the private section meanwhile.
+            when(
+              () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+            ).thenReturn({'video-2'});
+            return (invocation.positionalArguments.first as List<String>)
+                .map(createTestVideo)
+                .toList();
+          });
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future;
+
+          expect(bloc.state.savedEventIds, ['video-1', 'video-2']);
+          final persisted = ProfileVideoListSnapshot.fromJson(
+            (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+          );
+          expect(persisted.itemIds, ['video-2']);
+          expect(persisted.videos.map((v) => v.id), ['video-2']);
+        },
+      );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'shows a stale snapshot while revalidating',
@@ -1357,6 +1522,152 @@ void main() {
               .having((s) => s.nextPageOffset, 'nextPageOffset', 1),
         ],
       );
+
+      // The repository never stores private items because local storage is
+      // unencrypted, and the snapshot lives in the unencrypted cache_sync.db
+      // (#11180). A real repository decrypts a genuine NIP-44 private section.
+      group('with private bookmarks on the list', () {
+        late _MockNostrClient nostrClient;
+        late BookmarksRepository repository;
+        late String ownerPubkey;
+        late LocalNostrSigner identity;
+        final privateVideoId = 'c' * 64;
+        final publicVideoId = 'd' * 64;
+
+        setUpAll(() => registerFallbackValue(<Filter>[]));
+
+        setUp(() async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final privateKeyHex = generatePrivateKey();
+          ownerPubkey = getPublicKey(privateKeyHex);
+          identity = LocalNostrSigner(privateKeyHex);
+          nostrClient = _MockNostrClient();
+          final signer = _MockBookmarkSigner();
+          when(() => signer.isAuthenticated).thenReturn(true);
+          when(() => signer.currentPublicKeyHex).thenReturn(ownerPubkey);
+          when(() => signer.currentIdentity).thenReturn(identity);
+          repository = BookmarksRepository(
+            nostrClient: nostrClient,
+            signer: signer,
+            prefs: await SharedPreferences.getInstance(),
+          );
+          addTearDown(repository.dispose);
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((invocation) async {
+            final ids = invocation.positionalArguments.first as List<String>;
+            return ids.map(createTestVideo).toList();
+          });
+        });
+
+        /// The relay holds a kind-10003 with [publicIds] in `tags` and
+        /// [privateIds] NIP-44 encrypted to the owner in `content`.
+        Future<void> stubRelayHoldingTheList({
+          required List<String> privateIds,
+          List<String> publicIds = const [],
+        }) async {
+          final content = await identity.nip44Encrypt(
+            ownerPubkey,
+            jsonEncode([
+              for (final id in privateIds) ['e', id],
+            ]),
+          );
+          final list = Event(
+            ownerPubkey,
+            BookmarksRepository.globalBookmarksKind,
+            [
+              for (final id in publicIds) ['e', id],
+            ],
+            content!,
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [list], timedOut: false, noRelays: false),
+          );
+        }
+
+        Future<ProfileSavedVideosBloc> syncedBloc() async {
+          final bloc = ProfileSavedVideosBloc(
+            bookmarksRepository: repository,
+            videosRepository: mockVideosRepository,
+            currentUserPubkey: currentUserPubkey,
+            removedVideoIds: const Stream<String>.empty(),
+            deletedVideoFilter: (_) => false,
+          );
+          addTearDown(bloc.close);
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future.timeout(const Duration(seconds: 5));
+          return bloc;
+        }
+
+        test('keeps a private-only list out of the snapshot', () async {
+          await stubRelayHoldingTheList(privateIds: [privateVideoId]);
+
+          final bloc = await syncedBloc();
+
+          // The private save is read and shown: the snapshot check below is
+          // about storage, not about a list that never decrypted.
+          expect(bloc.state.savedEventIds, [privateVideoId]);
+          expect(bloc.state.videos.map((v) => v.id), [privateVideoId]);
+          final persisted = await cacheDao.readEntry(snapshotCacheKey);
+          expect(persisted, isNotNull);
+          expect(persisted!.payload, isNot(contains(privateVideoId)));
+        });
+
+        test(
+          'keeps the public saves of a mixed list in the snapshot',
+          () async {
+            await stubRelayHoldingTheList(
+              publicIds: [publicVideoId],
+              privateIds: [privateVideoId],
+            );
+
+            final bloc = await syncedBloc();
+
+            expect(
+              bloc.state.videos.map((v) => v.id),
+              unorderedEquals([privateVideoId, publicVideoId]),
+            );
+            final persisted = await cacheDao.readEntry(snapshotCacheKey);
+            expect(persisted!.payload, contains(publicVideoId));
+            expect(persisted.payload, isNot(contains(privateVideoId)));
+          },
+        );
+
+        // Every earlier key could hold private bookmarks, and a new key only
+        // stopped reading the old row; nothing deleted it.
+        test('deletes the snapshots earlier versions wrote', () async {
+          await stubRelayHoldingTheList(privateIds: [privateVideoId]);
+          final legacyKeys = [
+            '$currentUserPubkey:profile_saved_videos',
+            '$currentUserPubkey:profile_saved_videos_v2',
+            '$currentUserPubkey:profile_saved_videos_v3',
+          ];
+          final otherAccountsKey = '${'f' * 64}:profile_saved_videos_v3';
+          for (final key in [...legacyKeys, otherAccountsKey]) {
+            await cacheDao.write(key: key, payload: '"$privateVideoId"');
+          }
+          for (final key in legacyKeys) {
+            expect(await cacheDao.readEntry(key), isNotNull);
+          }
+
+          await syncedBloc();
+
+          for (final key in legacyKeys) {
+            expect(await cacheDao.readEntry(key), isNull, reason: key);
+          }
+          expect(await cacheDao.readEntry(otherAccountsKey), isNotNull);
+        });
+      });
 
       group('when a video saved by its address is removed', () {
         late StreamController<String> removals;
@@ -1783,6 +2094,37 @@ void main() {
             ),
           );
         });
+
+        // Another client can move a save into the private section without
+        // moving it in the list, so no video id changes (#11180).
+        test('drops a save that turned private from the snapshot', () async {
+          const ids = ['video-1', 'video-2'];
+          // Written while both saves were public.
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: ids.map(createTestVideo).toList(),
+              itemIds: ids,
+              nextPageOffset: ids.length,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(ids));
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-2'});
+
+          final bloc = await syncedBloc();
+
+          expect(bloc.state.videos.map((v) => v.id), ids);
+          final persisted = ProfileVideoListSnapshot.fromJson(
+            (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+          );
+          expect(persisted.itemIds, ['video-2']);
+          expect(persisted.videos.map((v) => v.id), ['video-2']);
+        });
       });
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
@@ -2024,6 +2366,40 @@ void main() {
         expect: () => [
           showing(['video-1']).copyWith(privateBookmarksLocked: true),
         ],
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'a save that turned private leaves the snapshot when no video moved',
+        setUp: () async {
+          // Written while both saves were public.
+          await CacheSync.write<ProfileVideoListSnapshot>(
+            key: snapshotCacheKey,
+            value: ProfileVideoListSnapshot(
+              videos: ['video-1', 'video-2'].map(createTestVideo).toList(),
+              itemIds: const ['video-1', 'video-2'],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ),
+            toJson: (snapshot) => snapshot.toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+          ).thenReturn({'video-2'});
+        },
+        build: createBloc,
+        seed: () => showing(['video-1', 'video-2']),
+        act: (_) => bookmarkChanges.add(
+          referencesShownAs(['video-1', 'video-2']),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) async {
+          expect(bloc.state.savedEventIds, ['video-1', 'video-2']);
+          final cached = await CacheSync.read<ProfileVideoListSnapshot>(
+            key: snapshotCacheKey,
+            fromJson: ProfileVideoListSnapshot.fromJson,
+          );
+          expect(cached?.itemIds, ['video-2']);
+        },
       );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
