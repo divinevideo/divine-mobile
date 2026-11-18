@@ -1,12 +1,12 @@
 """Actual Play availability must win over configured rollout status."""
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import release_train_fakes  # noqa: F401
 from release_train import release_notes
-from release_train.coordinator import observe, plan_tick
-from release_train.providers import Play, ProviderError
+from release_train.coordinator import PLAY_PUBLICATION_VERSION, observe, plan_tick
+from release_train.providers import Play, ProviderError, request_json
 from release_train.runner import Runtime
 from test_release_train_coordinator import NOW, snapshot
 
@@ -89,7 +89,7 @@ class PlayLifecycleTest(unittest.TestCase):
         s = snapshot()
         s["android"] = runtime.play_snapshot()
         state = observe(s, {})
-        self.assertNotIn("30", state.get("internal_periods", {}))
+        self.assertNotIn("30", state["play_publication"]["internal_periods"])
         self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
 
     def test_pending_production_review_is_preserved(self):
@@ -107,7 +107,12 @@ class PlayLifecycleTest(unittest.TestCase):
                 s = snapshot()
                 s["changes"]["android"] = False
                 s["android"] = runtime.play_snapshot()
-                state = {"internal_periods": {"30": {"completed": True}}}
+                state = {
+                    "play_publication": {
+                        "version": PLAY_PUBLICATION_VERSION,
+                        "internal_periods": {"30": {"completed": True}},
+                    },
+                }
                 self.assertFalse(
                     plan_tick(s, state, {"android": "production"})["actions"]
                 )
@@ -121,11 +126,52 @@ class PlayLifecycleTest(unittest.TestCase):
         s["android"] = data
         self.assertFalse(plan_tick(s, {}, {"android": "production"})["actions"])
 
+    def test_empty_get_body_is_not_an_empty_lifecycle_object(self):
+        with patch("release_train.providers.urllib.request.build_opener") as opener:
+            response = MagicMock()
+            response.read.return_value = b""
+            opener.return_value.open.return_value.__enter__.return_value = response
+            with self.assertRaises(ProviderError):
+                request_json("GET", "https://example.com/tracks/internal/releases")
+
+    def test_unrecognized_lifecycle_object_stops_actions(self):
+        runtime, _ = runtime_for([release("PUBLISHED", 10)])
+        with patch.object(
+            runtime.play,
+            "call",
+            side_effect=[{"warning": "no lifecycle data"}, {"releases": [release("PUBLISHED", 10)]}],
+        ):
+            data = runtime.play_snapshot()
+        self.assertFalse(data["lifecycle_complete"])
+        self.assertIn("internal", data["release_state_errors"])
+        s = snapshot()
+        s["android"] = data
+        self.assertFalse(plan_tick(s, observe(s, {}), {"android": "production"})["actions"])
+
     def test_superseded_rejection_does_not_block_published_replacement(self):
         runtime, _ = runtime_for(
             [release("NOT_APPROVED", 20), release("PUBLISHED", 40)]
         )
         self.assertNotIn("error", runtime.play_snapshot())
+
+    def test_unmapped_superseded_rejection_does_not_block_published_replacement(self):
+        runtime, _ = runtime_for(
+            [release("NOT_APPROVED", 20), release("PUBLISHED", 40)]
+        )
+        runtime.identity = Runtime.identity.__get__(runtime)
+        runtime.ledger = MagicMock()
+        runtime.ledger.paths.return_value = {"releases/android/1.0.32+40.json"}
+        runtime.ledger.read_json.return_value = {
+            "release_version": "1.0.32+40",
+            "build_source_commit": f"{40:040x}",
+        }
+        data = runtime.play_snapshot()
+        self.assertTrue(data["lifecycle_complete"])
+        self.assertNotIn("error", data)
+        self.assertEqual([b["number"] for b in data["production"]], [40])
+        runtime.ledger.paths.return_value = set()
+        with self.assertRaisesRegex(ProviderError, "Unreconciled android build 40"):
+            runtime.play_snapshot()
 
     def test_malformed_or_unknown_lifecycle_fails_closed(self):
         for item in [
@@ -183,17 +229,62 @@ class PlayLifecycleTest(unittest.TestCase):
         self.assertEqual([b["number"] for b in data["production"]], [10])
         self.assertTrue(all(method == "GET" for method, _ in calls))
 
-    def test_old_published_baseline_does_not_restart_daily_promotion_clock(self):
+    def test_older_published_build_does_not_restart_daily_promotion_clock(self):
+        runtime, _ = runtime_for([release("PUBLISHED", 20)])
+        s = snapshot()
+        s["android"] = runtime.play_snapshot()
+        state = observe(s, {})
+        runtime, _ = runtime_for([release("PUBLISHED", 10), release("PUBLISHED", 20)])
+        s["now"] += 3600
+        s["android"] = runtime.play_snapshot()
+        result = observe(s, state)
+        self.assertEqual(result["last_play_promotion"], NOW)
+        self.assertEqual(result["play_publication"]["highest_production_build"], 20)
+        s["now"] += 3600
+        self.assertEqual(observe(s, result), result)
+
+    def test_first_complete_observation_preserves_later_promotion_time(self):
         runtime, _ = runtime_for([release("PUBLISHED", 10)])
         s = snapshot()
         s["android"] = runtime.play_snapshot()
-        state = {
-            "last_play_promotion": NOW - 90000,
-            "play_production_seen": {"20": NOW - 90000},
-        }
-        result = observe(s, state)
-        self.assertEqual(result["last_play_promotion"], NOW - 90000)
-        self.assertIn("10", result["play_production_seen"])
+        previous = {"last_play_promotion": NOW + 600}
+        state = observe(s, previous)
+        self.assertEqual(state["last_play_promotion"], NOW + 600)
+        self.assertEqual(state["play_publication"]["highest_production_build"], 10)
+
+    def test_timers_start_at_play_observation_after_tick_started(self):
+        runtime, _ = runtime_for(
+            [release("PUBLISHED", 10)], [release("PUBLISHED", 30, track="internal")]
+        )
+        s = snapshot()
+        s["android"] = runtime.play_snapshot() | {"observed_at": NOW + 600}
+        state = observe(s, {})
+        self.assertEqual(state["last_play_promotion"], NOW + 600)
+        self.assertEqual(
+            state["play_publication"]["internal_periods"]["30"]["since"], NOW + 600
+        )
+
+    def test_incomplete_snapshot_cannot_initialize_or_advance_publication(self):
+        s = snapshot()
+        runtime, _ = runtime_for(
+            [release("PUBLISHED", 10)], [release("PUBLISHED", 30, track="internal")]
+        )
+        s["android"] = runtime.play_snapshot()
+        certified = observe(s, {})
+        s["now"] += 21600
+        for production, internal, failures in [
+            ([release("PUBLISHED", 20)], [], ["internal"]),
+            ([], [release("PUBLISHED", 30, track="internal")], ["production"]),
+            ([release("FUTURE", 20)], [release("PUBLISHED", 30, track="internal")], []),
+            ([], [release("PUBLISHED", 30, track="internal")], []),
+        ]:
+            with self.subTest(production=production, internal=internal, failures=failures):
+                runtime, _ = runtime_for(production, internal, failures)
+                s["android"] = runtime.play_snapshot()
+                legacy = {"last_play_promotion": NOW - 90000}
+                self.assertEqual(observe(s, legacy), legacy)
+                self.assertEqual(observe(s, certified), certified)
+                self.assertFalse(plan_tick(s, certified, {"android": "production"})["actions"])
 
     def test_pending_metadata_for_published_artifact_preserves_review(self):
         runtime, _ = runtime_for([release("IN_REVIEW", 10), release("PUBLISHED", 10)])
@@ -240,16 +331,13 @@ class PlayLifecycleTest(unittest.TestCase):
                 )
 
     def test_old_track_exposure_is_restarted_at_first_lifecycle_publication(self):
-        # Build state with the old reader's configured-track observations.
-        old = snapshot()
-        old["now"] = NOW - 90000
-        old["android"]["internal"] = [identity("android", 30)]
-        old["android"]["production"] = [identity("android", 20)]
-        legacy = observe(old, {})
-        old["now"] += 21600
-        legacy = observe(old, legacy)
-        self.assertTrue(legacy["internal_periods"]["30"]["completed"])
-        self.assertIn("20", legacy["play_production_seen"])
+        # The old configured-track reader counted a pending internal build and
+        # a rejected production build as available.
+        legacy = {
+            "internal_periods": {"30": {"completed": True, "since": NOW - 90000}},
+            "play_production_seen": {"20": NOW - 90000},
+            "last_play_promotion": NOW - 90000,
+        }
         # Actual lifecycle still says rejected / pending, then both publish.
         runtime, _ = runtime_for(
             [release("NOT_APPROVED", 20), release("PUBLISHED", 10)],
@@ -259,19 +347,21 @@ class PlayLifecycleTest(unittest.TestCase):
         s["changes"]["android"] = False
         s["android"] = runtime.play_snapshot()
         migrated = observe(s, legacy)
+        self.assertEqual(migrated["last_play_promotion"], NOW)
         runtime, _ = runtime_for(
             [release("PUBLISHED", 20)], [release("PUBLISHED", 30, track="internal")]
         )
         s["now"] += 3600
         s["android"] = runtime.play_snapshot()
         state = observe(s, migrated)
-        self.assertFalse(state["internal_periods"]["30"]["completed"])
-        self.assertEqual(state["internal_periods"]["30"]["since"], s["now"])
+        period = state["play_publication"]["internal_periods"]["30"]
+        self.assertFalse(period["completed"])
+        self.assertEqual(period["since"], s["now"])
         self.assertEqual(state["last_play_promotion"], s["now"])
         self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
         s["now"] += 21600
         state = observe(s, state)
-        self.assertTrue(state["internal_periods"]["30"]["completed"])
+        self.assertTrue(state["play_publication"]["internal_periods"]["30"]["completed"])
         self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
         s["now"] += 86400 - 21600
         state = observe(s, state)
@@ -292,7 +382,7 @@ class PlayLifecycleTest(unittest.TestCase):
             "last_play_promotion": NOW - 90000,
         }
         state = observe(s, legacy)
-        self.assertFalse(state["internal_periods"]["30"]["completed"])
+        self.assertFalse(state["play_publication"]["internal_periods"]["30"]["completed"])
         self.assertEqual(state["last_play_promotion"], NOW)
 
     def test_empty_lifecycle_read_does_not_certify_a_production_migration(self):
@@ -308,4 +398,4 @@ class PlayLifecycleTest(unittest.TestCase):
         s["now"] += 3600
         s["android"] = runtime.play_snapshot()
         state = observe(s, state)
-        self.assertEqual(state["last_play_promotion"], NOW - 90000)
+        self.assertEqual(state["last_play_promotion"], s["now"])

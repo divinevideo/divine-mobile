@@ -104,9 +104,9 @@ remains immutable.
 After both complete paths have merged: observe `dry-run` for both platforms,
 then `build` and one actual internal availability on each store, then
 `testflight` and one public availability, then `app-store`/`production`.
-Record the Android rejection-email operator at activation. The accepted policy
-uses Play rejection emails and the Android kill switch; the selected API does
-not supply an automated rejection hold. There is no new QA or crash gate.
+Record the Android rejection-email operator at activation. Use the Play
+lifecycle hold, rejection emails and the Android kill switch to stop and
+investigate a rejected release.
 
 A public iOS beta submission needs four-hour spacing and fewer than six beta
 submissions in the trailing 24 hours. App Store submission has no TestFlight
@@ -125,13 +125,14 @@ Only `PUBLISHED` releases count as available or start internal testing exposure;
 a configured track's `completed` rollout status does not prove publication.
 Pending review/publication is preserved, and current rejections or incomplete
 lifecycle reads stop Android release actions. Published, pending, and rejected
-states are reflected separately in deployment audit statuses. A rejected release
-superseded by a newer published release remains in the audit without blocking it.
+states are reflected separately in deployment audit statuses. A superseded
+rejection stays in the audit when its build has a provenance record.
 
-Persisted eligibility evidence is versioned separately from legacy track reads.
-Uncertified internal exposure restarts when lifecycle publication is first observed;
-legacy production observations cannot suppress the daily clock for a newly
-published build. Discovering an older public baseline preserves the existing clock.
+The first complete lifecycle read initializes versioned publication evidence.
+Published internal builds start a fresh six-hour exposure period. The highest
+published production build starts the daily wait, preserving any later recorded
+promotion time. A later observation of the same or an older production build
+preserves that clock. Incomplete lifecycle reads leave both timers untouched.
 
 An API error requiring review submission through Play Console is a provider
 restriction, not successful publication. The controller does not silently stage

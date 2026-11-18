@@ -11,7 +11,7 @@ from release_train.versions import parse_version
 
 HOUR = 3600
 DAY = 24 * HOUR
-PLAY_LIFECYCLE_EVIDENCE = 1
+PLAY_PUBLICATION_VERSION = 1
 ACTIVE = {
     "initializing",
     "queued",
@@ -138,7 +138,6 @@ def affects_app(path):
 def observe(snapshot, previous):
     """Reconcile first observations, preserving completed continuous exposure only."""
     state = copy.deepcopy(previous)
-    now = snapshot["now"]
     consume_version_acknowledgements(
         state,
         {
@@ -149,52 +148,36 @@ def observe(snapshot, previous):
         },
     )
     android = snapshot.get("android", {})
-    verified = (android.get("lifecycle_verified_tracks", [])
-                if android.get("lifecycle_evidence_version") == PLAY_LIFECYCLE_EVIDENCE else [])
+    if not android.get("lifecycle_complete"):
+        return state
+    now = android.get("observed_at", snapshot["now"])
+
+    publication = state.get("play_publication", {})
+    if publication.get("version") != PLAY_PUBLICATION_VERSION:
+        publication = {
+            "version": PLAY_PUBLICATION_VERSION,
+            "internal_periods": {},
+            "highest_production_build": 0,
+        }
+        state["play_publication"] = publication
+
     internal = android.get("internal", [])
     offered = {str(b["number"]) for b in internal}
-    periods = state.setdefault("internal_periods", {})
+    periods = publication["internal_periods"]
     for number, period in periods.items():
         if number not in offered and not period.get("completed"):
             period["interrupted"] = True
     for b in internal:
         number = str(b["number"])
-        uncertified = "internal" in verified and periods.get(number, {}).get(
-            "lifecycle_evidence_version"
-        ) != PLAY_LIFECYCLE_EVIDENCE
-        if number not in periods or periods[number].get("interrupted") or uncertified:
-            periods[number] = {"since": now, "completed": False, "build": b}
+        if number not in periods or periods[number].get("interrupted"):
+            periods[number] = {"since": now, "completed": False}
         period = periods[number]
-        if "internal" in verified:
-            period["lifecycle_evidence_version"] = PLAY_LIFECYCLE_EVIDENCE
         if now - period["since"] >= 6 * HOUR:
             period["completed"] = True
-    production = snapshot.get("android", {}).get("production", [])
-    seen = state.setdefault("play_production_seen", {})
-    highest_seen = max((int(number) for number in seen), default=0)
-    if "production" in verified and production:
-        evidence = state.get("play_lifecycle_production", {})
-        initial = evidence.get("version") != PLAY_LIFECYCLE_EVIDENCE
-        if initial:
-            evidence = {"version": PLAY_LIFECYCLE_EVIDENCE, "seen": {}}
-            state["play_lifecycle_production"] = evidence
-        certified_seen = evidence["seen"]
-        cutoff = highest_seen if initial else max((int(n) for n in certified_seen), default=0)
-        for b in production:
-            number = str(b["number"])
-            if number not in certified_seen:
-                certified_seen[number] = now
-                # Old lower public baselines are not new promotions. A legacy
-                # observation of this same build never certifies publication.
-                if b["number"] > cutoff or (initial and b["number"] == cutoff):
-                    state["last_play_promotion"] = now
-            seen.setdefault(number, now)
-    else:
-        for b in production:
-            if str(b["number"]) not in seen:
-                seen[str(b["number"])] = now
-                if b["number"] > highest_seen:
-                    state["last_play_promotion"] = now
+    highest = max((b["number"] for b in android.get("production", [])), default=0)
+    if highest > publication["highest_production_build"]:
+        publication["highest_production_build"] = highest
+        state["last_play_promotion"] = max(now, state.get("last_play_promotion", 0))
     return state
 
 
@@ -206,6 +189,12 @@ def plan_tick(snapshot, state, levels):
     dry_platforms = {p for p, level in levels.items() if level == "dry-run"}
     now = snapshot["now"]
     ack = current_acknowledgements(snapshot, state)
+    publication = state.get("play_publication", {})
+    periods = (
+        publication.get("internal_periods", {})
+        if publication.get("version") == PLAY_PUBLICATION_VERSION
+        else {}
+    )
 
     def action(kind, platform, **values):
         (proposed if platform in dry_platforms else actions).append(
@@ -253,7 +242,7 @@ def plan_tick(snapshot, state, levels):
             )
         if platform == "android":
             for b in data.get("internal", []):
-                period = state.get("internal_periods", {}).get(str(b["number"]), {})
+                period = periods.get(str(b["number"]), {})
                 if not period.get("completed"):
                     can_replace = False
         if platform == "android" and state.get("deferred_android"):
@@ -449,9 +438,7 @@ def plan_tick(snapshot, state, levels):
                 b
                 for b in data.get("internal", [])
                 if b.get("ci_verified")
-                and state.get("internal_periods", {})
-                .get(str(b["number"]), {})
-                .get("completed")
+                and periods.get(str(b["number"]), {}).get("completed")
                 and parse_version(b["version"]) > highest
             ]
             if eligible and now - state.get("last_play_promotion", 0) >= DAY:

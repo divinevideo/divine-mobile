@@ -70,6 +70,8 @@ def request_json(method, url, headers=None, body=None, *, timeout=60):
             request, timeout=timeout
         ) as response:
             raw = response.read()
+            if not raw and method == "GET":
+                raise ProviderError("Provider returned an empty response")
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as error:
         status = error.code
@@ -258,7 +260,9 @@ class Play:
         for track in ["internal", "production"]:
             try:
                 result = self.call("GET", f"/tracks/{track}/releases")
-                if not isinstance(result, dict) or not isinstance(result.get("releases", []), list):
+                if not isinstance(result, dict) or (
+                    result and not isinstance(result.get("releases"), list)
+                ):
                     raise ProviderError("Malformed Google Play release-state response")
                 states[track] = result.get("releases", [])
             except ProviderError as error:
