@@ -712,20 +712,22 @@ String _$reportRetryServiceHash() =>
 
 /// Content deletion service for NIP-09 delete events
 ///
-/// Kept alive so an account switch can reach the instance a delete is still
-/// running on. Every caller reads it without listening, so under
-/// `autoDispose` each delete ran on an instance the leaving container no
-/// longer held, which the switch could not suspend (#8313).
+/// Kept alive once started, so an account switch can reach the instance a
+/// delete is still running on: every caller reads it without listening, and
+/// the switch suspends what the leaving container still holds (#8313). A
+/// service built before the relay client has started cannot delete, so it is
+/// released and the next read builds one that can.
 
 @ProviderFor(contentDeletionService)
 final contentDeletionServiceProvider = ContentDeletionServiceProvider._();
 
 /// Content deletion service for NIP-09 delete events
 ///
-/// Kept alive so an account switch can reach the instance a delete is still
-/// running on. Every caller reads it without listening, so under
-/// `autoDispose` each delete ran on an instance the leaving container no
-/// longer held, which the switch could not suspend (#8313).
+/// Kept alive once started, so an account switch can reach the instance a
+/// delete is still running on: every caller reads it without listening, and
+/// the switch suspends what the leaving container still holds (#8313). A
+/// service built before the relay client has started cannot delete, so it is
+/// released and the next read builds one that can.
 
 final class ContentDeletionServiceProvider
     extends
@@ -739,17 +741,18 @@ final class ContentDeletionServiceProvider
         $FutureProvider<ContentDeletionService> {
   /// Content deletion service for NIP-09 delete events
   ///
-  /// Kept alive so an account switch can reach the instance a delete is still
-  /// running on. Every caller reads it without listening, so under
-  /// `autoDispose` each delete ran on an instance the leaving container no
-  /// longer held, which the switch could not suspend (#8313).
+  /// Kept alive once started, so an account switch can reach the instance a
+  /// delete is still running on: every caller reads it without listening, and
+  /// the switch suspends what the leaving container still holds (#8313). A
+  /// service built before the relay client has started cannot delete, so it is
+  /// released and the next read builds one that can.
   ContentDeletionServiceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'contentDeletionServiceProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -770,4 +773,4 @@ final class ContentDeletionServiceProvider
 }
 
 String _$contentDeletionServiceHash() =>
-    r'7260309555cfbc0eb6c94e46e358d3d801c7e7ba';
+    r'bd8fb5e00e4d7f8fcd7f00fc8b0a50bef92eb4c2';

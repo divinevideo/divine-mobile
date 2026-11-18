@@ -2821,9 +2821,11 @@ void main() {
           seenVideosServiceProvider.overrideWithValue(seen),
           moderationLabelServiceProvider.overrideWithValue(labels),
           contentReportingServiceProvider.overrideWith((ref) async => reports),
-          contentDeletionServiceProvider.overrideWith(
-            (ref) async => deletions,
-          ),
+          // A started deletion service keeps itself alive, as here.
+          contentDeletionServiceProvider.overrideWith((ref) async {
+            ref.keepAlive();
+            return deletions;
+          }),
         ],
       );
       leaving
