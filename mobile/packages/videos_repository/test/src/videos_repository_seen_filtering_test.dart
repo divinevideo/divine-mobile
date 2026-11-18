@@ -127,14 +127,6 @@ void main() {
         (_) async => HomeFeedResponse(videos: videos, rawBody: '{}'),
       );
       when(
-        () => mockFunnelcake.getRecentVideosPage(
-          limit: any(named: 'limit'),
-          before: any(named: 'before'),
-        ),
-      ).thenAnswer(
-        (_) async => RecentVideosResponse(videos: videos, serverItemCount: 3),
-      );
-      when(
         () => mockFunnelcake.getWatchingVideos(
           limit: any(named: 'limit'),
           before: any(named: 'before'),
@@ -189,14 +181,13 @@ void main() {
       );
     });
 
-    for (final feed in ['Following', 'New', 'Classics', 'For You']) {
+    for (final feed in ['Following', 'Classics', 'For You']) {
       test('$feed keeps watched own videos and hides watched others', () async {
         final result = await switch (feed) {
           'Following' => repository.getHomeFeedVideos(
             authors: [ownPubkey, otherPubkey],
             userPubkey: ownPubkey,
           ),
-          'New' => repository.getNewVideos(),
           'Classics' => repository.getClassicVideos(),
           _ => repository.getRecommendedVideos(userPubkey: ownPubkey),
         };
@@ -226,13 +217,16 @@ void main() {
                 id == ownId || id == otherId,
           ),
         );
-        final initial = await authRepository.getNewVideos();
-        expect(initial.videos.map((video) => video.id), [ownId, freshId]);
+        final initial = await authRepository.getClassicVideos();
+        expect(
+          initial.videos.map((video) => video.id),
+          unorderedEquals([ownId, freshId]),
+        );
 
         // A stale signer key must not grant an exception after auth signs out.
         when(() => mockNostr.publicKey).thenReturn(ownPubkey);
         viewerPubkey = null;
-        final signedOut = await authRepository.getNewVideos();
+        final signedOut = await authRepository.getClassicVideos();
         expect(signedOut.videos.map((video) => video.id), [freshId]);
       },
     );
@@ -266,7 +260,7 @@ void main() {
       },
     );
 
-    test('New relay fallback keeps watched own videos', () async {
+    test('New relay fallback keeps watched posts by both authors', () async {
       when(() => mockFunnelcake.isAvailable).thenReturn(false);
       when(() => mockNostr.queryEvents(any())).thenAnswer(
         (_) async => [
@@ -276,7 +270,7 @@ void main() {
         ],
       );
       final result = await repository.getNewVideos();
-      expect(result.videos.map((video) => video.id), [ownId, freshId]);
+      expect(result.videos.map((video) => video.id), [ownId, otherId, freshId]);
     });
 
     test('Following badge pages also keep watched own videos', () async {
@@ -291,15 +285,18 @@ void main() {
     });
 
     test(
-      'New cache stops exempting videos from the previous account',
+      'Classics cache stops exempting videos from the previous account',
       () async {
-        final initial = await repository.getNewVideos();
-        expect(initial.videos.map((video) => video.id), [ownId, freshId]);
+        final initial = await repository.getClassicVideos();
+        expect(
+          initial.videos.map((video) => video.id),
+          unorderedEquals([ownId, freshId]),
+        );
         when(() => mockNostr.publicKey).thenReturn(otherPubkey);
-        final switched = await repository.getNewVideos();
+        final switched = await repository.getClassicVideos();
         expect(switched.videos.map((video) => video.id), [freshId]);
         when(() => mockNostr.publicKey).thenReturn('');
-        final signedOut = await repository.getNewVideos();
+        final signedOut = await repository.getClassicVideos();
         expect(signedOut.videos.map((video) => video.id), [freshId]);
       },
     );
