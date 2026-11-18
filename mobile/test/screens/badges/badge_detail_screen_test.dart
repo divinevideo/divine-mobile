@@ -341,6 +341,31 @@ void main() {
       expect(find.byType(ReportContentDialog), findsNothing);
     });
 
+    for (final official in [false, true]) {
+      testWidgets(
+        'labels only the pinned issuer Official (official: $official)',
+        (
+          tester,
+        ) async {
+          when(() => repository.loadBadgeDetail(any())).thenAnswer(
+            (_) async => _detail(
+              definition: _definition(
+                pubkey: official ? kDivineBadgeIssuerPubkey : null,
+              ),
+              isOwner: false,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.badgeOfficialLabel),
+            official ? findsOneWidget : findsNothing,
+          );
+        },
+      );
+    }
+
     testWidgets('offers accepting to a recipient who has not accepted', (
       tester,
     ) async {
@@ -1311,9 +1336,9 @@ BadgeRecipientViewData _recipient({bool isViewer = false}) {
   );
 }
 
-Nip58BadgeDefinition _definition() {
+Nip58BadgeDefinition _definition({String? pubkey}) {
   return Nip58BadgeDefinition(
-    event: _event(kind: EventKind.badgeDefinition),
+    event: _event(kind: EventKind.badgeDefinition, pubkey: pubkey),
     coordinate: _coordinate.value,
     dTag: _coordinate.identifier,
     name: 'Scene Stealer',
@@ -1328,10 +1353,10 @@ Nip58BadgeAward _award() {
   );
 }
 
-Event _event({required int kind}) {
+Event _event({required int kind, String? pubkey}) {
   return Event.fromJson({
     'id': '1'.padLeft(64, '0'),
-    'pubkey': _pubkey(1),
+    'pubkey': pubkey ?? _pubkey(1),
     'created_at': 1000,
     'kind': kind,
     'tags': <List<String>>[],
