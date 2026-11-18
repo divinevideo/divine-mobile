@@ -398,6 +398,76 @@ void main() {
     });
 
     group('ProfileSavedVideosSyncRequested', () {
+      test('keeps displayed private saves during a failed refresh', () async {
+        const ids = ['private-video', 'public-video'];
+        when(
+          () => mockBookmarksRepository.bookmarkedVideoReferences,
+        ).thenReturn(referencesShownAs(ids));
+        when(
+          () => mockBookmarksRepository.publicBookmarkedVideoReferences,
+        ).thenReturn({'public-video'});
+        when(
+          () => mockVideosRepository.getVideosByIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              (invocation.positionalArguments.first as List<String>)
+                  .map(createTestVideo)
+                  .toList(),
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        final firstSync = Completer<void>();
+        bloc.add(ProfileSavedVideosSyncRequested(completer: firstSync));
+        await firstSync.future;
+        expect(bloc.state.videos.map((v) => v.id), ids);
+        final snapshot = ProfileVideoListSnapshot.fromJson(
+          (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+        );
+        expect(snapshot.itemIds, ['public-video']);
+
+        final relayStarted = Completer<void>();
+        final relayResult = Completer<bool>();
+        when(
+          () => mockBookmarksRepository.syncGlobalBookmarks(),
+        ).thenAnswer((_) {
+          relayStarted.complete();
+          return relayResult.future;
+        });
+        final states = <ProfileSavedVideosState>[];
+        final subscription = bloc.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+        final refresh = Completer<void>();
+        bloc.add(ProfileSavedVideosSyncRequested(completer: refresh));
+        await relayStarted.future;
+        final duringRefresh = bloc.state;
+        // Release the handler before asserting so a regression cannot strand
+        // bloc.close() on the gated relay read.
+        relayResult.complete(false);
+        await refresh.future;
+
+        expect(duringRefresh.videos.map((v) => v.id), ids);
+        expect(bloc.state.videos.map((v) => v.id), ids);
+        expect(
+          states,
+          everyElement(
+            isA<ProfileSavedVideosState>().having(
+              (state) => state.videos.map((v) => v.id),
+              'displayed videos',
+              ids,
+            ),
+          ),
+        );
+        verify(
+          () => mockVideosRepository.getVideosByIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).called(1);
+      });
+
       group('with a private list it could not unlock', () {
         blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
           'flags it rather than settling as nothing saved',

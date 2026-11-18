@@ -196,7 +196,9 @@ class ProfileSavedVideosBloc
 
     final cached = await _readCachedSnapshot();
     if (isClosed) return;
-    if (cached != null && cached.videos.isNotEmpty) {
+    // The disk snapshot deliberately omits private saves. It can seed a cold
+    // grid, but must not replace the fuller in-memory list during refresh.
+    if (state.videos.isEmpty && cached != null && cached.videos.isNotEmpty) {
       emit(
         state.copyWith(
           status: ProfileSavedVideosStatus.success,
