@@ -38,6 +38,7 @@ import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 
 class VideoFeedPage extends ConsumerWidget {
@@ -566,69 +567,77 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                 // [_KeyboardStableBottomInset] holds that inset steady while the
                 // share sheet's keyboard is open, so the overlay does not slide
                 // when the keyboard closes (#5758 follow-up).
-                return RefreshIndicator(
-                  color: VineTheme.onPrimary,
-                  backgroundColor: VineTheme.vineGreen,
-                  onRefresh: () => _refreshFeed(context),
-                  child: _KeyboardStableBottomInset(
-                    child: Stack(
-                      children: [
-                        FeedTuningSwipeGate(
-                          enabled: feedTuningEnabled,
-                          onTuned: _onTuned,
-                          child: FeedVideos(
-                            key: _feedVideosKey,
-                            videos: state.videos,
-                            contextTitle: state.feedContextTitle,
-                            currentIndex: clampedIndex,
-                            isActive: _isNewFeedActive,
-                            // The home feed stays mounted across tab switches and
-                            // pushed routes (StatefulShellRoute keep-alive), so
-                            // release the off-screen neighbour players and pause
-                            // disk prefetch while it is backgrounded. Bottom sheets
-                            // (comments/share) only pause the current player — they
-                            // keep neighbours and prefetch warm via
-                            // shouldRetainPlayer.
-                            releaseNeighboursWhenInactive: !shouldRetainPlayer,
-                            hasMore: state.hasMore,
-                            isLoadingMore: state.isLoadingMore,
-                            trafficSource: ViewTrafficSource.home,
-                            // Every feed mode renders through this one page and
-                            // reports source=home, so without this detail the
-                            // For You, following, list, new and classic feeds
-                            // are indistinguishable in view_traffic_sources.
-                            sourceDetail: state.source.type.analyticsTag,
-                            feedSessionRevision: state.feedSessionRevision,
-                            onActiveVideoChanged: (_, index) {
-                              final isTuningAutoAdvance =
-                                  _pendingTuningAutoAdvanceIndex == index;
-                              _pendingTuningAutoAdvanceIndex = null;
-                              if (!isTuningAutoAdvance) {
-                                _dismissTuningSnackbar();
-                              }
-                              ref
-                                  .read(foregroundFeedActivityGateProvider)
-                                  .markActive();
-                              _currentIndex = index;
-                              context.read<VideoFeedBloc>().add(
-                                VideoFeedActiveIndexChanged(index),
-                              );
-                              ref
-                                  .read(lastTabPositionProvider.notifier)
-                                  .recordPosition(RouteType.home, index);
-                              _resumeAutoAdvanceAfterSwipe();
-                            },
-                            onNearEnd: () {
-                              if (state.hasMore) {
+                //
+                // In wide landscape windows comments open in a panel beside
+                // the feed. It wraps the refresh indicator, so a scroll in the
+                // panel never pulls the feed to refresh, and the mode switch,
+                // so the feed's top bar stays over the feed.
+                return FeedCommentsPanelHost(
+                  child: RefreshIndicator(
+                    color: VineTheme.onPrimary,
+                    backgroundColor: VineTheme.vineGreen,
+                    onRefresh: () => _refreshFeed(context),
+                    child: _KeyboardStableBottomInset(
+                      child: Stack(
+                        children: [
+                          FeedTuningSwipeGate(
+                            enabled: feedTuningEnabled,
+                            onTuned: _onTuned,
+                            child: FeedVideos(
+                              key: _feedVideosKey,
+                              videos: state.videos,
+                              contextTitle: state.feedContextTitle,
+                              currentIndex: clampedIndex,
+                              isActive: _isNewFeedActive,
+                              // The home feed stays mounted across tab switches and
+                              // pushed routes (StatefulShellRoute keep-alive), so
+                              // release the off-screen neighbour players and pause
+                              // disk prefetch while it is backgrounded. Bottom sheets
+                              // (comments/share) only pause the current player — they
+                              // keep neighbours and prefetch warm via
+                              // shouldRetainPlayer.
+                              releaseNeighboursWhenInactive:
+                                  !shouldRetainPlayer,
+                              hasMore: state.hasMore,
+                              isLoadingMore: state.isLoadingMore,
+                              trafficSource: ViewTrafficSource.home,
+                              // Every feed mode renders through this one page and
+                              // reports source=home, so without this detail the
+                              // For You, following, list, new and classic feeds
+                              // are indistinguishable in view_traffic_sources.
+                              sourceDetail: state.source.type.analyticsTag,
+                              feedSessionRevision: state.feedSessionRevision,
+                              onActiveVideoChanged: (_, index) {
+                                final isTuningAutoAdvance =
+                                    _pendingTuningAutoAdvanceIndex == index;
+                                _pendingTuningAutoAdvanceIndex = null;
+                                if (!isTuningAutoAdvance) {
+                                  _dismissTuningSnackbar();
+                                }
+                                ref
+                                    .read(foregroundFeedActivityGateProvider)
+                                    .markActive();
+                                _currentIndex = index;
                                 context.read<VideoFeedBloc>().add(
-                                  const VideoFeedLoadMoreRequested(),
+                                  VideoFeedActiveIndexChanged(index),
                                 );
-                              }
-                            },
+                                ref
+                                    .read(lastTabPositionProvider.notifier)
+                                    .recordPosition(RouteType.home, index);
+                                _resumeAutoAdvanceAfterSwipe();
+                              },
+                              onNearEnd: () {
+                                if (state.hasMore) {
+                                  context.read<VideoFeedBloc>().add(
+                                    const VideoFeedLoadMoreRequested(),
+                                  );
+                                }
+                              },
+                            ),
                           ),
-                        ),
-                        const FeedModeSwitch(),
-                      ],
+                          const FeedModeSwitch(),
+                        ],
+                      ),
                     ),
                   ),
                 );

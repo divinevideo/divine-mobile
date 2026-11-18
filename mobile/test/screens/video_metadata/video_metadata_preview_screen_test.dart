@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as models;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -21,6 +23,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_preview_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
@@ -222,7 +225,10 @@ void main() {
       expect(find.byType(VideoOverlayActions), findsOneWidget);
     });
 
-    Widget buildTestWidget({DivineVideoClip? clip}) {
+    Widget buildTestWidget({
+      DivineVideoClip? clip,
+      bool largeScreenLayout = false,
+    }) {
       // Use previewOnly to avoid deep Riverpod dependency chain from
       // the overlay's VideoOverlayActions widget. The overlay is unrelated
       // to the video_player → DivineVideoPlayer migration.
@@ -232,10 +238,17 @@ void main() {
           videoPublishProvider.overrideWith(
             () => _MockVideoPublishNotifier(const VideoPublishProviderState()),
           ),
+          if (largeScreenLayout)
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(true),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: largeScreenLayout
+              ? (context, child) => AdaptiveLayoutScope(child: child!)
+              : null,
           home: VideoMetadataPreviewScreen(
             clip: clip ?? _createTestClip(),
             previewOnly: true,
@@ -304,6 +317,37 @@ void main() {
       expect(fittedBox.fit, equals(BoxFit.cover));
       // A cover-fit video occludes the backdrop, so the feed never mounts it.
       expect(find.byType(BlurredVideoBackdrop), findsNothing);
+    });
+
+    testWidgets('shows the whole clip on its backdrop in a window wider than '
+        'a phone, as the feed does there', (tester) async {
+      tester.view.physicalSize = const Size(951, 669);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        buildTestWidget(
+          clip: _createTestClip(
+            targetAspectRatio: models.AspectRatio.vertical,
+            thumbnailPath: '/tmp/poster.jpg',
+          ),
+          largeScreenLayout: true,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final fittedBox = tester.widget<FittedBox>(
+        find
+            .ancestor(
+              of: find.byType(DivineVideoPlayer),
+              matching: find.byType(FittedBox),
+            )
+            .first,
+      );
+      // Cover-fitting would scale a 9:16 clip to the window's width and
+      // crop away most of it.
+      expect(fittedBox.fit, equals(BoxFit.contain));
+      expect(find.byType(BlurredVideoBackdrop), findsOneWidget);
     });
 
     testWidgets('pauses the preview once publishing changes state', (

@@ -42,7 +42,12 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// [VideoEditorMainBloc] and clip data and duration from
 /// [ClipEditorBloc].
 class VideoEditorTimelineScaffold extends StatefulWidget {
-  const VideoEditorTimelineScaffold({super.key});
+  const VideoEditorTimelineScaffold({this.fillHeight = false, super.key});
+
+  /// Whether the tracks take all the height the timeline is given, as beside
+  /// the preview of a wide window, rather than their fixed
+  /// [TimelineConstants.height].
+  final bool fillHeight;
 
   @override
   State<VideoEditorTimelineScaffold> createState() =>
@@ -216,8 +221,6 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
             _pixelsPerSecond,
             wrap: wrapDisplay,
           );
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final halfScreen = screenWidth / 2;
     final totalWidth = _contentWidth(displayDuration);
 
     final hasSelectedOverlay = context.select(
@@ -247,6 +250,78 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         !hasLoopSuggestion;
     // Sync layers from main editor to timeline overlay bloc, and
     // sync scroll to playback position while not user-scrolling.
+    final fillsHeight = widget.fillHeight && !isTimelineHiddenByUser;
+    // The tracks have fixed heights the text has to fit in. Below the preview
+    // they keep their fixed height, also while the timeline is being hidden,
+    // so their layout stays put while the height animates; beside the
+    // preview they take the height the column leaves them.
+    final tracks = MediaQuery.withClampedTextScaling(
+      maxScaleFactor: fixedRowTextScaleLimit,
+      child: OverflowBox(
+        alignment: .topCenter,
+        minHeight: fillsHeight ? null : TimelineConstants.height,
+        maxHeight: fillsHeight ? null : TimelineConstants.height,
+        // The playhead sits in the middle of the timeline, which beside the
+        // preview of a wide window is narrower than the screen.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tracksHeight = constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : TimelineConstants.height;
+            return VideoEditorTimelineInteractiveBody(
+              playheadPosition: _playheadPosition,
+              totalDuration: displayDuration,
+              formatPosition: (pos) {
+                final totalSeconds = pos.inMilliseconds / 1000.0;
+                final minutes = totalSeconds ~/ 60;
+                final seconds = (totalSeconds % 60).toStringAsFixed(
+                  1,
+                );
+                return context.l10n.videoEditorTimelinePositionFormat(
+                  minutes,
+                  seconds,
+                );
+              },
+              onStepPosition: _stepPosition,
+              onPointerDown: _onPointerDown,
+              onPointerMove: _onPointerMove,
+              onPointerUp: _onPointerUp,
+              onPointerCancel: _onPointerCancel,
+              onScrollNotification: _handleScrollNotification,
+              scrollController: _scrollController,
+              isPinching: _isPinching,
+              isTrimming: _isTrimming,
+              halfScreen: constraints.maxWidth / 2,
+              pixelsPerSecond: _pixelsPerSecond,
+              clips: clips,
+              totalWidth: totalWidth,
+              isInteracting: _isUserScrolling || _isPinching,
+              onReorder: _onClipsReordered,
+              onReorderChanged: _onReorderChanged,
+              trimmingClipId: trimmingClipId,
+              onTrimChanged: _onClipTrimChange,
+              onTrimDragChanged: _onTrimDragChanged,
+              onClipTapped: _onClipTapped,
+              isMultiSelectMode: isMultiSelectMode,
+              selectedClipIds: selectedClipIds,
+              onOverlayItemMoved: _onOverlayItemMoved,
+              onOverlayItemMoving: _onOverlayItemMoving,
+              onOverlayItemTrimmed: _onOverlayItemTrimmed,
+              onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
+              onOverlayItemTapped: _onOverlayItemTapped,
+              onOverlayDragStarted: _onOverlayDragStarted,
+              onOverlayDragEnded: _onOverlayDragEnded,
+              verticalScrollController: _verticalScrollController,
+              overlayStripsScrollController: _overlayStripsScrollController,
+              volumePreviewNotifier: _volumePreviewNotifier,
+              onVolumePreviewCancelled: _cancelVolumePreview,
+              tracksHeight: tracksHeight,
+            );
+          },
+        ),
+      ),
+    );
+
     final Widget body = MultiBlocListener(
       listeners: [
         BlocListener<ClipEditorBloc, ClipEditorState>(
@@ -403,71 +478,16 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
                     ),
                   ),
 
-                  AnimatedContainer(
-                    duration: _timelineToggleDuration,
-                    height: isTimelineHiddenByUser
-                        ? MediaQuery.viewPaddingOf(context).bottom
-                        : TimelineConstants.height,
-                    // The tracks have fixed heights the text has to fit in.
-                    child: MediaQuery.withClampedTextScaling(
-                      maxScaleFactor: fixedRowTextScaleLimit,
-                      child: OverflowBox(
-                        alignment: .topCenter,
-                        minHeight: TimelineConstants.height,
-                        maxHeight: TimelineConstants.height,
-                        child: VideoEditorTimelineInteractiveBody(
-                          playheadPosition: _playheadPosition,
-                          totalDuration: displayDuration,
-                          formatPosition: (pos) {
-                            final totalSeconds = pos.inMilliseconds / 1000.0;
-                            final minutes = totalSeconds ~/ 60;
-                            final seconds = (totalSeconds % 60).toStringAsFixed(
-                              1,
-                            );
-                            return context.l10n
-                                .videoEditorTimelinePositionFormat(
-                                  minutes,
-                                  seconds,
-                                );
-                          },
-                          onStepPosition: _stepPosition,
-                          onPointerDown: _onPointerDown,
-                          onPointerMove: _onPointerMove,
-                          onPointerUp: _onPointerUp,
-                          onPointerCancel: _onPointerCancel,
-                          onScrollNotification: _handleScrollNotification,
-                          scrollController: _scrollController,
-                          isPinching: _isPinching,
-                          isTrimming: _isTrimming,
-                          halfScreen: halfScreen,
-                          pixelsPerSecond: _pixelsPerSecond,
-                          clips: clips,
-                          totalWidth: totalWidth,
-                          isInteracting: _isUserScrolling || _isPinching,
-                          onReorder: _onClipsReordered,
-                          onReorderChanged: _onReorderChanged,
-                          trimmingClipId: trimmingClipId,
-                          onTrimChanged: _onClipTrimChange,
-                          onTrimDragChanged: _onTrimDragChanged,
-                          onClipTapped: _onClipTapped,
-                          isMultiSelectMode: isMultiSelectMode,
-                          selectedClipIds: selectedClipIds,
-                          onOverlayItemMoved: _onOverlayItemMoved,
-                          onOverlayItemMoving: _onOverlayItemMoving,
-                          onOverlayItemTrimmed: _onOverlayItemTrimmed,
-                          onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
-                          onOverlayItemTapped: _onOverlayItemTapped,
-                          onOverlayDragStarted: _onOverlayDragStarted,
-                          onOverlayDragEnded: _onOverlayDragEnded,
-                          verticalScrollController: _verticalScrollController,
-                          overlayStripsScrollController:
-                              _overlayStripsScrollController,
-                          volumePreviewNotifier: _volumePreviewNotifier,
-                          onVolumePreviewCancelled: _cancelVolumePreview,
-                        ),
-                      ),
+                  if (fillsHeight)
+                    Expanded(child: tracks)
+                  else
+                    AnimatedContainer(
+                      duration: _timelineToggleDuration,
+                      height: isTimelineHiddenByUser
+                          ? MediaQuery.viewPaddingOf(context).bottom
+                          : TimelineConstants.height,
+                      child: tracks,
                     ),
-                  ),
                 ],
               ),
             ),

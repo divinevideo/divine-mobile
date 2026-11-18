@@ -36,10 +36,12 @@ import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/screens/feed/feed_tuning_snackbar.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.dart';
@@ -918,229 +920,251 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                 style: appBarStyle,
               );
 
-              return Scaffold(
-                // Only resize for a keyboard that one of OUR OWN bottom
-                // composers opened (inline comment bar, DM reply bar). A
-                // keyboard owned by a modal on top — most importantly the
-                // share sheet's message field — must NOT shrink this Scaffold,
-                // because that re-lays-out the full-screen reel + overlay every
-                // keyboard frame and janks on older devices (#5758). See
-                // [_ownComposerFocused].
-                resizeToAvoidBottomInset: _ownComposerFocused,
-                // Paint the Scaffold with [VineTheme.surfaceBackground]
-                // (`#00150D`, the same green the comment bar uses).
-                // This is what shows wherever the Scaffold body leaks
-                // around its content — most importantly the strip
-                // below the soft keyboard (above the home indicator)
-                // and the device's curved-corner cutouts at the
-                // bottom edges. Keeping it green continues the comment
-                // bar's surface visually around the keyboard. The
-                // video item's own [ColoredBox] paints
-                // [VineTheme.surfaceContainerHigh] on top of this so
-                // the video area itself reads as a darker canvas.
-                backgroundColor: context.vineColors.surface,
-                // Always edge-to-edge: the video fills the screen and the
-                // (transparent) AppBar overlays it, matching the home feed.
-                // 1 × 1 / landscape / dimensions-less videos are rendered
-                // with `BoxFit.contain`, so their letterbox bars sit on
-                // the [VineTheme.surfaceContainerHigh] above — the
-                // transparent AppBar reads cleanly against that surface
-                // colour, no carve-out needed.
-                extendBodyBehindAppBar: true,
-                // Wrap the AppBar in a [TextFieldTapRegion] so taps on
-                // the back button / title / [FeedSettingsMenu] popover
-                // trigger don't dismiss the inline composer's keyboard.
-                // That lets users toggle playback (mute, captions, ...)
-                // mid-comment without losing what they're typing.
-                // [TapRegion] is independent of the gesture arena, so
-                // the back button and the More popover still fire their
-                // own handlers — only the "tap outside" unfocus
-                // callback is suppressed for taps inside this region.
-                // The popover's pill content is wrapped in its own
-                // [TextFieldTapRegion] inside [_FeedSettingsOverlay] so
-                // taps on the playback controls (which render outside
-                // this widget tree via [OverlayPortal]) are covered too.
-                // [FeedImmersiveChrome] fades the bar out while the chrome is
-                // hidden (a hold or a pinch), matching the per-item overlay
-                // below. The slot keeps its height either way, which is what
-                // the already-`extendBodyBehindAppBar` body expects.
-                appBar: PreferredSize(
-                  preferredSize: appBar.preferredSize,
-                  child: Semantics(
-                    sortKey: const OrdinalSortKey(0),
-                    child: FeedImmersiveChrome(
-                      child: TextFieldTapRegion(child: appBar),
+              // In wide landscape windows comments open in a panel beside the
+              // reel; it wraps the app bar too, so the bar stays over the reel.
+              return FeedCommentsPanelHost(
+                child: Scaffold(
+                  // Only resize for a keyboard that one of OUR OWN bottom
+                  // composers opened (inline comment bar, DM reply bar). A
+                  // keyboard owned by a modal on top — most importantly the
+                  // share sheet's message field — must NOT shrink this Scaffold,
+                  // because that re-lays-out the full-screen reel + overlay every
+                  // keyboard frame and janks on older devices (#5758). See
+                  // [_ownComposerFocused].
+                  resizeToAvoidBottomInset: _ownComposerFocused,
+                  // Paint the Scaffold with [VineTheme.surfaceBackground]
+                  // (`#00150D`, the same green the comment bar uses).
+                  // This is what shows wherever the Scaffold body leaks
+                  // around its content — most importantly the strip
+                  // below the soft keyboard (above the home indicator)
+                  // and the device's curved-corner cutouts at the
+                  // bottom edges. Keeping it green continues the comment
+                  // bar's surface visually around the keyboard. The
+                  // video item's own [ColoredBox] paints
+                  // [VineTheme.surfaceContainerHigh] on top of this so
+                  // the video area itself reads as a darker canvas.
+                  backgroundColor: context.vineColors.surface,
+                  // Always edge-to-edge: the video fills the screen and the
+                  // (transparent) AppBar overlays it, matching the home feed.
+                  // 1 × 1 / landscape / dimensions-less videos are rendered
+                  // with `BoxFit.contain`, so their letterbox bars sit on
+                  // the [VineTheme.surfaceContainerHigh] above — the
+                  // transparent AppBar reads cleanly against that surface
+                  // colour, no carve-out needed.
+                  extendBodyBehindAppBar: true,
+                  // Wrap the AppBar in a [TextFieldTapRegion] so taps on
+                  // the back button / title / [FeedSettingsMenu] popover
+                  // trigger don't dismiss the inline composer's keyboard.
+                  // That lets users toggle playback (mute, captions, ...)
+                  // mid-comment without losing what they're typing.
+                  // [TapRegion] is independent of the gesture arena, so
+                  // the back button and the More popover still fire their
+                  // own handlers — only the "tap outside" unfocus
+                  // callback is suppressed for taps inside this region.
+                  // The popover's pill content is wrapped in its own
+                  // [TextFieldTapRegion] inside [_FeedSettingsOverlay] so
+                  // taps on the playback controls (which render outside
+                  // this widget tree via [OverlayPortal]) are covered too.
+                  // [FeedImmersiveChrome] fades the bar out while the chrome is
+                  // hidden (a hold or a pinch), matching the per-item overlay
+                  // below. The slot keeps its height either way, which is what
+                  // the already-`extendBodyBehindAppBar` body expects.
+                  appBar: PreferredSize(
+                    preferredSize: appBar.preferredSize,
+                    child: Semantics(
+                      sortKey: const OrdinalSortKey(0),
+                      child: FeedImmersiveChrome(
+                        child: TextFieldTapRegion(child: appBar),
+                      ),
                     ),
                   ),
-                ),
-                body: Stack(
-                  children: [
-                    Semantics(
-                      sortKey: const OrdinalSortKey(2),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            // Match the home feed: when the comment bar is on
-                            // screen, the video carries the same rounded
-                            // bottom corners as `video_feed_page.dart`, so
-                            // the corners reveal the semantic nav surface (the
-                            // outer color [NavRoundedShell] paints). It
-                            // shares its hex (`#00150D`) with the comment
-                            // bar's [VineTheme.surfaceBackground], so the
-                            // rounded cutouts seam continuously into the bar.
-                            child: Stack(
-                              children: [
-                                FeedTuningSwipeGate(
-                                  enabled: feedTuningEnabled,
-                                  onTuned: _onTuned,
-                                  child: VideoTapShield(
-                                    child: _MaybeRoundFeedBottom(
-                                      roundCorners: showCommentBar,
-                                      child: NotificationListener<ScrollNotification>(
-                                        onNotification: _onDiscoveryScroll,
-                                        child: MediaQuery.removePadding(
-                                          context: context,
-                                          removeBottom: true,
-                                          child: FeedVideos(
-                                            key: _feedVideosKey,
-                                            // Pause the reel while the DM reply composer
-                                            // is focused so it doesn't play under the
-                                            // keyboard.
-                                            isActive: !_replyComposerFocused,
-                                            videos: state.videos,
-                                            contextTitle: widget.contextTitle,
-                                            currentIndex: state.currentIndex,
-                                            scrollPhysics:
-                                                widget.loadMoreOnEndSwipe
-                                                ? const AlwaysScrollableScrollPhysics()
-                                                : null,
-                                            hasMore: state.canLoadMore,
-                                            isLoadingMore: state.isLoadingMore,
-                                            trafficSource: widget.trafficSource,
-                                            trafficSourceForVideo:
-                                                _trafficSourceForVideo,
-                                            sourceDetail: widget.sourceDetail,
-                                            onActiveVideoChanged: (_, index) {
-                                              ref
-                                                  .read(
-                                                    foregroundFeedActivityGateProvider,
-                                                  )
-                                                  .markActive();
-                                              _resumeAutoAdvanceAfterSwipe();
-                                              context
-                                                  .read<FullscreenFeedBloc>()
-                                                  .add(
-                                                    FullscreenFeedIndexChanged(
-                                                      index,
-                                                    ),
+                  body: StatusBarColumnSafeArea(
+                    // Where the window runs its status bar down a side (the
+                    // iPhone Duo's outer display), the reel ends before it,
+                    // as Apple's own apps do and as the home feed does.
+                    child: Stack(
+                      children: [
+                        Semantics(
+                          sortKey: const OrdinalSortKey(2),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                // Match the home feed: when the comment bar is on
+                                // screen, the video carries the same rounded
+                                // bottom corners as `video_feed_page.dart`, so
+                                // the corners reveal the semantic nav surface (the
+                                // outer color [NavRoundedShell] paints). It
+                                // shares its hex (`#00150D`) with the comment
+                                // bar's [VineTheme.surfaceBackground], so the
+                                // rounded cutouts seam continuously into the bar.
+                                child: Stack(
+                                  children: [
+                                    FeedTuningSwipeGate(
+                                      enabled: feedTuningEnabled,
+                                      onTuned: _onTuned,
+                                      child: VideoTapShield(
+                                        child: _MaybeRoundFeedBottom(
+                                          roundCorners: showCommentBar,
+                                          child: NotificationListener<ScrollNotification>(
+                                            onNotification: _onDiscoveryScroll,
+                                            child: MediaQuery.removePadding(
+                                              context: context,
+                                              removeBottom: true,
+                                              child: FeedVideos(
+                                                key: _feedVideosKey,
+                                                // Pause the reel while the DM reply composer
+                                                // is focused so it doesn't play under the
+                                                // keyboard.
+                                                isActive:
+                                                    !_replyComposerFocused,
+                                                videos: state.videos,
+                                                contextTitle:
+                                                    widget.contextTitle,
+                                                currentIndex:
+                                                    state.currentIndex,
+                                                scrollPhysics:
+                                                    widget.loadMoreOnEndSwipe
+                                                    ? const AlwaysScrollableScrollPhysics()
+                                                    : null,
+                                                hasMore: state.canLoadMore,
+                                                isLoadingMore:
+                                                    state.isLoadingMore,
+                                                trafficSource:
+                                                    widget.trafficSource,
+                                                trafficSourceForVideo:
+                                                    _trafficSourceForVideo,
+                                                sourceDetail:
+                                                    widget.sourceDetail,
+                                                onActiveVideoChanged: (_, index) {
+                                                  ref
+                                                      .read(
+                                                        foregroundFeedActivityGateProvider,
+                                                      )
+                                                      .markActive();
+                                                  _resumeAutoAdvanceAfterSwipe();
+                                                  context
+                                                      .read<
+                                                        FullscreenFeedBloc
+                                                      >()
+                                                      .add(
+                                                        FullscreenFeedIndexChanged(
+                                                          index,
+                                                        ),
+                                                      );
+                                                  widget.onPageChanged?.call(
+                                                    index,
                                                   );
-                                              widget.onPageChanged?.call(index);
-                                            },
-                                            onNearEnd: () {
-                                              if (state.canLoadMore) {
-                                                _triggerLoadMore();
-                                              }
-                                            },
+                                                },
+                                                onNearEnd: () {
+                                                  if (state.canLoadMore) {
+                                                    _triggerLoadMore();
+                                                  }
+                                                },
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
+                                    Positioned(
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 16,
+                                      child: LoadingMorePill(
+                                        isVisible:
+                                            state.isLoadingMore &&
+                                            state.currentIndex >=
+                                                state.videos.length - 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (showCommentBar)
+                                InlineCommentComposerBar(
+                                  onFocusChanged: (focused) {
+                                    if (mounted &&
+                                        focused != _inlineComposerFocused) {
+                                      setState(
+                                        () => _inlineComposerFocused = focused,
+                                      );
+                                    }
+                                  },
+                                ),
+                              if (showDmReplyBar)
+                                ReelReplyBridge(
+                                  setComposerFocused: (focused) {
+                                    if (mounted &&
+                                        focused != _replyComposerFocused) {
+                                      setState(
+                                        () => _replyComposerFocused = focused,
+                                      );
+                                    }
+                                  },
+                                  playReaction: (emoji) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _reactionEmoji = emoji;
+                                        _reactionNonce++;
+                                      });
+                                    }
+                                  },
+                                  child: ReelDmReplyBarHost(
+                                    dmReplyContext: widget.dmReplyContext!,
                                   ),
                                 ),
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 16,
-                                  child: LoadingMorePill(
-                                    isVisible:
-                                        state.isLoadingMore &&
-                                        state.currentIndex >=
-                                            state.videos.length - 1,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
-                          if (showCommentBar)
-                            InlineCommentComposerBar(
-                              onFocusChanged: (focused) {
-                                if (mounted &&
-                                    focused != _inlineComposerFocused) {
-                                  setState(
-                                    () => _inlineComposerFocused = focused,
-                                  );
-                                }
-                              },
+                        ),
+                        // Deliberately not wrapped in [FeedImmersiveChrome]: every
+                        // other chrome layer fades while the chrome is hidden, but
+                        // a commercial disclosure has to stay up for the whole
+                        // reel. It keeps the app bar's slot height as
+                        // its offset even once that bar has faded, so the pill
+                        // does not jump when immersive mode toggles.
+                        if (widget.sponsorName case final sponsorName?)
+                          PositionedDirectional(
+                            top:
+                                MediaQuery.paddingOf(context).top +
+                                (appBar.preferredSize.height -
+                                        FullscreenSponsorDisclosure.singleLineHeight(
+                                          context,
+                                        )) /
+                                    2,
+                            start: _sponsorDisclosureStartInset(
+                              context,
+                              appBarStyle,
                             ),
-                          if (showDmReplyBar)
-                            ReelReplyBridge(
-                              setComposerFocused: (focused) {
-                                if (mounted &&
-                                    focused != _replyComposerFocused) {
-                                  setState(
-                                    () => _replyComposerFocused = focused,
-                                  );
-                                }
-                              },
-                              playReaction: (emoji) {
-                                if (mounted) {
-                                  setState(() {
-                                    _reactionEmoji = emoji;
-                                    _reactionNonce++;
-                                  });
-                                }
-                              },
-                              child: ReelDmReplyBarHost(
-                                dmReplyContext: widget.dmReplyContext!,
+                            end: _sponsorDisclosureEndInset(
+                              context,
+                              appBarStyle,
+                            ),
+                            child: IgnorePointer(
+                              child: Semantics(
+                                sortKey: const OrdinalSortKey(1),
+                                child: FullscreenSponsorDisclosure(
+                                  sponsorName: sponsorName,
+                                ),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    // Deliberately not wrapped in [FeedImmersiveChrome]: every
-                    // other chrome layer fades while the chrome is hidden, but
-                    // a commercial disclosure has to stay up for the whole
-                    // reel. It keeps the app bar's slot height as
-                    // its offset even once that bar has faded, so the pill
-                    // does not jump when immersive mode toggles.
-                    if (widget.sponsorName case final sponsorName?)
-                      PositionedDirectional(
-                        top:
-                            MediaQuery.paddingOf(context).top +
-                            (appBar.preferredSize.height -
-                                    FullscreenSponsorDisclosure.singleLineHeight(
-                                      context,
-                                    )) /
-                                2,
-                        start: _sponsorDisclosureStartInset(
-                          context,
-                          appBarStyle,
-                        ),
-                        end: _sponsorDisclosureEndInset(context, appBarStyle),
-                        child: IgnorePointer(
-                          child: Semantics(
-                            sortKey: const OrdinalSortKey(1),
-                            child: FullscreenSponsorDisclosure(
-                              sponsorName: sponsorName,
+                          ),
+                        // Full-screen TikTok/IG-style reaction pop, centered over
+                        // the reel.
+                        if (_reactionEmoji != null)
+                          Positioned.fill(
+                            child: ReactionOverlay(
+                              key: ValueKey(_reactionNonce),
+                              emoji: _reactionEmoji!,
+                              onComplete: () {
+                                if (mounted) {
+                                  setState(() => _reactionEmoji = null);
+                                }
+                              },
                             ),
                           ),
-                        ),
-                      ),
-                    // Full-screen TikTok/IG-style reaction pop, centered over
-                    // the reel.
-                    if (_reactionEmoji != null)
-                      Positioned.fill(
-                        child: ReactionOverlay(
-                          key: ValueKey(_reactionNonce),
-                          emoji: _reactionEmoji!,
-                          onComplete: () {
-                            if (mounted) {
-                              setState(() => _reactionEmoji = null);
-                            }
-                          },
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               );
             },

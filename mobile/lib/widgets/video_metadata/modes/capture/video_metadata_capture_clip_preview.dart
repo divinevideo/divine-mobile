@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,7 +19,14 @@ import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_cap
 /// while the video is being rendered.
 class VideoMetadataCaptureClipPreview extends ConsumerWidget {
   /// Creates a video metadata clip preview.
-  const VideoMetadataCaptureClipPreview({super.key});
+  const VideoMetadataCaptureClipPreview({this.maxSize, super.key});
+
+  /// The size to fit the preview into, as in the preview pane of a wide
+  /// window. Without it the preview is [defaultHeight] tall.
+  final Size? maxSize;
+
+  /// The height of the preview above the form.
+  static const double defaultHeight = 200;
 
   /// Opens the cover selection screen.
   Future<void> _openCoverEditor(
@@ -62,9 +71,14 @@ class VideoMetadataCaptureClipPreview extends ConsumerWidget {
     final clip = state.finalRenderedClip ?? clips.first;
     final isReady = state.finalRenderedClip != null;
 
+    final aspectRatio = clip.targetAspectRatio.value;
+    final maxSize = this.maxSize;
+
     return Center(
       child: SizedBox(
-        height: 200,
+        height: maxSize == null
+            ? defaultHeight
+            : math.min(maxSize.height, maxSize.width / aspectRatio),
         // Rounds the thumbnail from outside the Hero: a clip inside the Hero
         // child rides into the flight shuttle and fights the shape the
         // preview's flightShuttleBuilder is morphing towards.
@@ -76,7 +90,7 @@ class VideoMetadataCaptureClipPreview extends ConsumerWidget {
             // Use linear flight path instead of curved arc
             createRectTween: (begin, end) => RectTween(begin: begin, end: end),
             child: AspectRatio(
-              aspectRatio: clip.targetAspectRatio.value,
+              aspectRatio: aspectRatio,
               child: Semantics(
                 button: true,
                 enabled: isReady,

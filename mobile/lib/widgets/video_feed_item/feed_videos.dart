@@ -31,6 +31,7 @@ import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/playback_telemetry_provider.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/screens/comments/comments_panel_scope.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_coordinator.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_error_listener.dart';
@@ -40,6 +41,7 @@ import 'package:openvine/services/community_content_label_service.dart';
 import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/scroll_driven_opacity.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
@@ -49,6 +51,7 @@ import 'package:openvine/widgets/video_feed_item/double_tap_heart_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/double_tap_like_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
+import 'package:openvine/widgets/video_feed_item/feed_video_fit.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/paused_video_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -408,6 +411,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         .select<CodecHeavySurfaceCubit?, bool>(
           (cubit) => cubit?.state.isActive ?? false,
         );
+    // Whether the feed fills the window with each video or shows the whole
+    // video on a blurred backdrop (see feedFillsViewport).
+    final shouldPortraitExpand = feedFillsViewport(
+      shouldPortraitExpand: widget.shouldPortraitExpand,
+      largeScreenLayout: AdaptiveLayoutScope.isEnabledOf(context),
+      window: MediaQuery.sizeOf(context),
+    );
     return MultiBlocListener(
       listeners: [
         if (context.read<FeedReactionsCubit?>() case final reactionsCubit?)
@@ -467,6 +477,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .read<VideoVolumeCubit>()
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
+          // The comments panel beside the feed (wide landscape windows)
+          // follows only the video it was opened for.
+          CommentsPanelScope.maybeOf(context)?.closeUnlessShowing(video.id);
           _resumeAutoAdvanceAfterSwipe();
           if (_analyticsSessionBoundary !=
               _consumptionAnalytics.sessionBoundary) {
@@ -496,7 +509,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         // (#5544, #6421).
         maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
         onVideoLoopCompleted: _handleVideoLoopCompleted,
-        shouldPortraitExpand: widget.shouldPortraitExpand,
+        shouldPortraitExpand: shouldPortraitExpand,
         canAutoPlay: _canAutoPlayVideo,
         videoBuilder: (context, child, index, controller) {
           if (index < 0 || index >= widget.videos.length) {
@@ -518,15 +531,17 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           // contain-fit (letterboxed) case where it is actually visible.
           final coversScreen = videoCoversFeedViewport(
             aspectRatio: aspectRatio,
-            shouldPortraitExpand: widget.shouldPortraitExpand,
+            shouldPortraitExpand: shouldPortraitExpand,
           );
           // Either source can carry the backdrop: the blurhash path needs
           // no poster URL (PR #5957 review). The backdrop paints only in the
           // letterbox bars (each bar in its own RepaintBoundary), so no outer
           // boundary here — a fullscreen boundary would be composited whole
           // every frame and undo the per-bar isolation (PR #5957).
+          // A portrait video only leaves bars beside it where the feed
+          // shows whole videos instead of filling the viewport.
           final showBlurBackdrop =
-              !video.isPortrait &&
+              (!video.isPortrait || !shouldPortraitExpand) &&
               !coversScreen &&
               ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
                   (blurhash != null && blurhash.isNotEmpty));
@@ -555,7 +570,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             index: index,
             feedMode: widget.contextTitle,
             isSquare: isSquare,
-            shouldPortraitExpand: widget.shouldPortraitExpand,
+            shouldPortraitExpand: shouldPortraitExpand,
             onSkip: () => _skipPooledVideoAt(index),
           );
         },
@@ -604,7 +619,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             retryPlayback: (httpHeaders) =>
                 _retryPooledVideoAt(index, httpHeaders),
             errorType: errorType,
-            shouldPortraitExpand: widget.shouldPortraitExpand,
+            shouldPortraitExpand: shouldPortraitExpand,
             isSquare: isSquare,
           );
         },
@@ -650,7 +665,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                   onSkipToNextVideo: () => _skipPooledVideoAt(index),
                   onAutomaticSkipToNextVideo: () =>
                       unawaited(_animateToPage(index + 1)),
-                  shouldPortraitExpand: widget.shouldPortraitExpand,
+                  shouldPortraitExpand: shouldPortraitExpand,
                 ),
               ),
             ),
@@ -1455,30 +1470,43 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             ),
                           ),
                         FeedImmersiveChrome(
-                          child: _FeedItemActions(
-                            video: video,
-                            index: widget.index,
-                            contextTitle: widget.contextTitle,
-                            isOwnVideo: isOwnVideo,
-                            onSuppressAutoAdvance: widget.onSuppressAutoAdvance,
-                            // Captions fade with the rest of the chrome, by
-                            // design: the hold reveals the frame the UI
-                            // covers, and the caption is an overlay over that
-                            // same frame, so keeping it up would re-cover
-                            // exactly what the peek exposes. It is gone while
-                            // the viewer holds, returns the instant they
-                            // release, and stays gone while a pinch keeps the
-                            // chrome pinned hidden.
-                            subtitleLayer:
-                                video.hasSubtitles && widget.controller != null
-                                ? HiddenWhileTopCommentShown(
-                                    child: _SubtitleLayer(
-                                      video: video,
-                                      controller: widget.controller!,
-                                    ),
-                                  )
-                                : null,
-                            pagePositionListenable: pagePositionListenable,
+                          // Where the feed shows whole videos, the action
+                          // column and caption sit at the video's edges.
+                          // Inside the chrome, so this Stack slot keeps the
+                          // widget type it always had.
+                          child: FeedVideoFrameBounds(
+                            videoAspectRatio: backdropAspectRatio(
+                              video.width,
+                              video.height,
+                            ),
+                            shouldPortraitExpand: widget.shouldPortraitExpand,
+                            child: _FeedItemActions(
+                              video: video,
+                              index: widget.index,
+                              contextTitle: widget.contextTitle,
+                              isOwnVideo: isOwnVideo,
+                              onSuppressAutoAdvance:
+                                  widget.onSuppressAutoAdvance,
+                              // Captions fade with the rest of the chrome, by
+                              // design: the hold reveals the frame the UI
+                              // covers, and the caption is an overlay over that
+                              // same frame, so keeping it up would re-cover
+                              // exactly what the peek exposes. It is gone while
+                              // the viewer holds, returns the instant they
+                              // release, and stays gone while a pinch keeps the
+                              // chrome pinned hidden.
+                              subtitleLayer:
+                                  video.hasSubtitles &&
+                                      widget.controller != null
+                                  ? HiddenWhileTopCommentShown(
+                                      child: _SubtitleLayer(
+                                        video: video,
+                                        controller: widget.controller!,
+                                      ),
+                                    )
+                                  : null,
+                              pagePositionListenable: pagePositionListenable,
+                            ),
                           ),
                         ),
                         Positioned.fill(

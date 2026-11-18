@@ -95,6 +95,8 @@ class BuildConfiguration {
         // A preference cannot override the build's verified-deployment gate.
         return consentDeliveryVerified &&
             const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
+      case FeatureFlag.largeScreenLayout:
+        return const bool.fromEnvironment('FF_LARGE_SCREEN_LAYOUT');
     }
   }
 
@@ -147,6 +149,8 @@ class BuildConfiguration {
         return 'FF_CONCORD_CHAT';
       case FeatureFlag.minorConsentInAppRecording:
         return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
+      case FeatureFlag.largeScreenLayout:
+        return 'FF_LARGE_SCREEN_LAYOUT';
     }
   }
 }

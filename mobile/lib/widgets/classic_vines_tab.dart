@@ -19,6 +19,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/classic_viners_slider.dart';
@@ -341,7 +342,12 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
 
     // Responsive column count
     final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth >= 600 ? 3 : 2;
+    final layout = context.adaptiveLayout;
+    final crossAxisCount = layout.enabled
+        ? layout.gridColumns(compact: 2, width: screenWidth)
+        : screenWidth >= 600
+        ? 3
+        : 2;
 
     return SliverPadding(
       // Explore grids are edge-to-edge; the 4px gap between columns comes

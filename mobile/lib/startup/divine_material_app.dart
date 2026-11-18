@@ -15,6 +15,7 @@ import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/startup/database_corruption_gate.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerRasterizerHost;
@@ -40,8 +41,8 @@ class DivineMaterialApp extends ConsumerWidget {
       child: MaterialApp.router(
         title: 'Divine',
         debugShowCheckedModeBanner: false,
-        theme: VineTheme.lightTheme,
-        darkTheme: VineTheme.theme,
+        theme: _lightTheme,
+        darkTheme: _darkTheme,
         themeMode: themeMode,
         // go_router can fail to decode the route state it reported itself when
         // this router is mounted again or refreshed; unguarded, that leaves
@@ -63,12 +64,18 @@ class DivineMaterialApp extends ConsumerWidget {
         //
         // The eyedropper sources sit above the navigator, so a color sheet or
         // a screen pushed over a video view still finds what to pick from.
+        //
+        // The adaptive layout scope sits above every route too, so screens
+        // pushed over the shell (camera, editor, fullscreen feeds) lay out
+        // and lock orientation by the same rules as the tabs.
         builder: (context, child) => LayerRasterizerHost(
           rasterizer: ref.read(layerRasterizerProvider),
           child: DatabaseCorruptionGate(
             child: AppReviewCoordinator(
-              child: EyedropperSources(
-                child: child ?? const SizedBox.shrink(),
+              child: AdaptiveLayoutScope(
+                child: EyedropperSources(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
           ),
@@ -134,3 +141,18 @@ class _PlatformBrightnessStatusBarState
     );
   }
 }
+
+/// The app's themes, every page route framed against a status bar column
+/// (see [StatusBarColumnFrame]).
+final ThemeData _lightTheme = _framingStatusBarColumn(VineTheme.lightTheme);
+final ThemeData _darkTheme = _framingStatusBarColumn(VineTheme.theme);
+
+ThemeData _framingStatusBarColumn(ThemeData theme) => theme.copyWith(
+  pageTransitionsTheme: PageTransitionsTheme(
+    builders: {
+      for (final MapEntry(key: platform, value: builder)
+          in theme.pageTransitionsTheme.builders.entries)
+        platform: StatusBarColumnPageTransitionsBuilder(builder),
+    },
+  ),
+);

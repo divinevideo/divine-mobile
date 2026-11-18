@@ -24,6 +24,7 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -64,14 +65,18 @@ class VideoRecorderRouteData extends GoRouteData with $VideoRecorderRouteData {
       fadeUpwardsPage(
         state: state,
         child: ReleaseCachedImagesOnDispose(
-          child: VideoRecorderRoute(
-            initialSound: extraAs<RecorderSoundSelection>($extra),
-            challengeRecordingId: challengeRecording,
-            entryPoint: CreationEntryPoint.fromName(entryPoint),
-            // Read from the URI, not a field: the screen owns the key and its
-            // parsing, and pathForEntryPoint is the only builder that sets it.
-            autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
-              state.uri.queryParameters,
+          // The camera records in portrait whatever the window does.
+          child: PortraitOrientationLock(
+            child: VideoRecorderRoute(
+              initialSound: extraAs<RecorderSoundSelection>($extra),
+              challengeRecordingId: challengeRecording,
+              entryPoint: CreationEntryPoint.fromName(entryPoint),
+              // Read from the URI, not a field: the screen owns the key and
+              // its parsing, and pathForEntryPoint is the only builder that
+              // sets it.
+              autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
+                state.uri.queryParameters,
+              ),
             ),
           ),
         ),

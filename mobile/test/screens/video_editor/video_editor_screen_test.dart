@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 
 void main() {
   group('editorRecorderRoute', () {
@@ -45,6 +46,21 @@ void main() {
       expect(find.byKey(recorderKey), findsOneWidget);
       expect(find.byKey(editorKey), findsNothing);
       expect(find.byKey(editorKey, skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('keeps the recorder in portrait over a sideways editor', (
+      tester,
+    ) async {
+      await pushRecorder(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(
+          of: find.byKey(recorderKey),
+          matching: find.byType(PortraitOrientationLock),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

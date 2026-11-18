@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/feed/feed_mode_switch.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/caption_pill.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
@@ -23,7 +24,9 @@ import 'package:openvine/widgets/vine_bottom_nav.dart';
 /// The overlay frames the video like the feed does: the screen minus the
 /// bottom nav (or the comment bar, which is as tall) and the bottom inset.
 /// The frame is centered vertically on the video content — matching how the
-/// feed renders videos of any aspect ratio.
+/// feed renders videos of any aspect ratio. Where the editor runs in a window
+/// the feed lays out differently, wider than tall or a large screen, the
+/// overlay shows the feed of a phone held upright, where most people watch.
 ///
 /// The title, description, sound and captions are only settled when the
 /// video is published, and each line of them pushes the author row up. So
@@ -38,6 +41,12 @@ class VideoEditorFeedPreviewOverlay extends ConsumerWidget {
   });
 
   static const _animationDuration = Duration(milliseconds: 200);
+
+  /// The phone the overlay shows the feed of in a wide or large window.
+  static const Size _phoneWindow = Size(402, 874);
+
+  /// The home indicator inset of [_phoneWindow].
+  static const double _phoneBottomInset = 34;
 
   /// The target aspect ratio of the video being edited.
   final double targetAspectRatio;
@@ -55,11 +64,18 @@ class VideoEditorFeedPreviewOverlay extends ConsumerWidget {
     );
     final l10n = context.l10n;
 
-    final screenSize = MediaQuery.sizeOf(context);
+    final window = MediaQuery.sizeOf(context);
+    final layout = context.adaptiveLayout;
+    final showsPhoneFeed =
+        layout.enabled &&
+        (window.width > window.height || layout.isLargeScreen);
+    final screenSize = showsPhoneFeed ? _phoneWindow : window;
     // Read from the window: the editor's own MediaQuery has the bottom inset
     // removed already. The window reports it in physical pixels.
     final view = View.of(context);
-    final bottomInset = view.viewPadding.bottom / view.devicePixelRatio;
+    final bottomInset = showsPhoneFeed
+        ? _phoneBottomInset
+        : view.viewPadding.bottom / view.devicePixelRatio;
 
     return IgnorePointer(
       child: AnimatedOpacity(
@@ -76,40 +92,44 @@ class VideoEditorFeedPreviewOverlay extends ConsumerWidget {
               child: MediaQuery.removeViewPadding(
                 context: context,
                 removeBottom: true,
-                child: Stack(
-                  fit: .expand,
-                  children: [
-                    const FeedModeSwitch(isPreviewMode: true),
+                // The feed's overlay sizes parts of itself from the screen.
+                child: _FeedScreenSize(
+                  size: screenSize,
+                  child: Stack(
+                    fit: .expand,
+                    children: [
+                      const FeedModeSwitch(isPreviewMode: true),
 
-                    VideoOverlayActions(
-                      video: VideoEvent(
-                        id: 'preview',
-                        pubkey: publicKey,
-                        timestamp: DateTime.now(),
-                        createdAt: DateTime.now().millisecondsSinceEpoch,
-                        title: l10n.videoMetadataTitleLabel,
-                        // The line break keeps the description at its full
-                        // two lines, however short each line is.
-                        content:
-                            '${l10n.videoMetadataDescriptionLabel}\n'
-                            '${l10n.videoEditorFeedPreviewContent}',
-                      ),
-                      subtitleLayer: Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: videoOverlaySubtitleGap,
+                      VideoOverlayActions(
+                        video: VideoEvent(
+                          id: 'preview',
+                          pubkey: publicKey,
+                          timestamp: DateTime.now(),
+                          createdAt: DateTime.now().millisecondsSinceEpoch,
+                          title: l10n.videoMetadataTitleLabel,
+                          // The line break keeps the description at its full
+                          // two lines, however short each line is.
+                          content:
+                              '${l10n.videoMetadataDescriptionLabel}\n'
+                              '${l10n.videoEditorFeedPreviewContent}',
                         ),
-                        child: CaptionPill(
-                          text: captionCue ?? l10n.videoEditorCaptionsLabel,
+                        subtitleLayer: Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: videoOverlaySubtitleGap,
+                          ),
+                          child: CaptionPill(
+                            text: captionCue ?? l10n.videoEditorCaptionsLabel,
+                          ),
                         ),
+                        isVisible: true,
+                        isActive: true,
+                        isPreviewMode: true,
+                        isFullscreen: true,
+                        showBottomGradient: false,
+                        showSoundRowPlaceholder: true,
                       ),
-                      isVisible: true,
-                      isActive: true,
-                      isPreviewMode: true,
-                      isFullscreen: true,
-                      showBottomGradient: false,
-                      showSoundRowPlaceholder: true,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -118,6 +138,20 @@ class VideoEditorFeedPreviewOverlay extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Gives [child] the [size] of the screen whose feed the overlay shows.
+class _FeedScreenSize extends StatelessWidget {
+  const _FeedScreenSize({required this.size, required this.child});
+
+  final Size size;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(size: size),
+    child: child,
+  );
 }
 
 /// The longest of the edit's own caption cues the feed shows in its caption

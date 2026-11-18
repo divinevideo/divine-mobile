@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart';
 import 'package:openvine/widgets/video_editor/clip_operation_progress_overlays.dart';
@@ -98,34 +101,90 @@ class _OperationProgressOverlays extends StatelessWidget {
   }
 }
 
-class _ScaffoldBody extends StatelessWidget {
+/// The shape the preview is sized for beside the timeline: a vertical video,
+/// what the editor makes most. Other shapes fit inside it.
+const double _sidePreviewAspectRatio = 9 / 16;
+
+/// The largest share of the width the preview takes beside the timeline, so
+/// the timeline keeps room for its controls.
+const _maxSidePreviewWidthFraction = 0.5;
+
+/// Lays out the preview and the timeline: stacked, the timeline below the
+/// preview, or in a wide landscape window (see
+/// [AdaptiveLayout.isWideLandscape]) side by side, the preview at full height
+/// on the leading side and the timeline beside it. Either way it ends at a
+/// status bar column.
+class _ScaffoldBody extends StatefulWidget {
   const _ScaffoldBody({required this.isLoading});
 
   final bool isLoading;
 
   @override
+  State<_ScaffoldBody> createState() => _ScaffoldBodyState();
+}
+
+class _ScaffoldBodyState extends State<_ScaffoldBody> {
+  // Keep the preview and the timeline, the editor and the thumbnail cache
+  // with them, when a rotation or a fold moves them to the other layout.
+  final GlobalKey _previewKey = GlobalKey(debugLabel: 'video-editor-preview');
+  final GlobalKey _timelineKey = GlobalKey(
+    debugLabel: 'video-editor-timeline',
+  );
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
+    final preview = Stack(
+      key: _previewKey,
+      fit: .expand,
+      clipBehavior: .none,
       children: [
-        Expanded(
-          child: Stack(
-            fit: .expand,
-            clipBehavior: .none,
-            children: [
-              if (isLoading)
-                const BrandedLoadingScaffold()
-              else
-                const VideoEditorCanvas(),
+        if (widget.isLoading)
+          const BrandedLoadingScaffold()
+        else
+          const VideoEditorCanvas(),
 
-              const VideoEditorCaptionPreviewOverlay(),
+        const VideoEditorCaptionPreviewOverlay(),
 
-              const _OverlayControls(),
-            ],
-          ),
-        ),
-        const _TimelineSection(),
-        const _MaskEditorPanelSpace(),
+        const _OverlayControls(),
       ],
+    );
+    if (!context.adaptiveLayout.isWideLandscape) {
+      return StatusBarColumnSafeArea(
+        child: Column(
+          children: [
+            Expanded(child: preview),
+            _TimelineSection(key: _timelineKey),
+            const _MaskEditorPanelSpace(),
+          ],
+        ),
+      );
+    }
+    return StatusBarColumnSafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final previewWidth = math.min(
+            constraints.maxHeight * _sidePreviewAspectRatio,
+            constraints.maxWidth * _maxSidePreviewWidthFraction,
+          );
+          return Row(
+            children: [
+              // Takes the whole width while the timeline steps aside.
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(child: preview),
+                    const _MaskEditorPanelSpace(),
+                  ],
+                ),
+              ),
+              _TimelineSection(
+                key: _timelineKey,
+                width: constraints.maxWidth - previewWidth,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -185,7 +244,10 @@ class _MaskEditorPanelSpaceBox extends StatelessWidget {
 }
 
 class _TimelineSection extends StatefulWidget {
-  const _TimelineSection();
+  const _TimelineSection({this.width, super.key});
+
+  /// The width of the section beside the preview, or null below it.
+  final double? width;
 
   @override
   State<_TimelineSection> createState() => _TimelineSectionState();
@@ -201,6 +263,12 @@ class _TimelineSectionState extends State<_TimelineSection>
   /// recorder playing the preview behind its controls).
   late final AnimationController _collapseController;
   late final CurvedAnimation _collapseAnimation;
+
+  /// Keeps the timeline, and its thumbnail cache, when a rotation moves it
+  /// between the stacked and the side-by-side column.
+  final GlobalKey _timelineKey = GlobalKey(
+    debugLabel: 'video-editor-timeline-scaffold',
+  );
 
   static bool _shouldHide(SubEditorType? type) =>
       type == .draw || type == .filter || type == .tune || type == .effects;
@@ -231,6 +299,41 @@ class _TimelineSectionState extends State<_TimelineSection>
 
   @override
   Widget build(BuildContext context) {
+    final width = widget.width;
+    // Keep timeline always in tree to preserve thumbnail
+    // cache. SizeTransition clips without unmounting.
+    final timeline = SizeTransition(
+      sizeFactor: ReverseAnimation(_animation),
+      alignment: AlignmentDirectional.topStart,
+      child: Padding(
+        padding: const .only(top: 12),
+        child: VideoEditorTimelineScaffold(
+          key: _timelineKey,
+          fillHeight: width != null,
+        ),
+      ),
+    );
+    final bottomActions = SizeTransition(
+      sizeFactor: _animation,
+      alignment: AlignmentDirectional.topStart,
+      child: const _BottomActions(),
+    );
+    final content = width == null
+        ? Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .stretch,
+            children: [timeline, bottomActions],
+          )
+        // Beside the preview the timeline fills the column, and the tool
+        // bars that replace it sit at its bottom.
+        : Column(
+            mainAxisAlignment: .end,
+            crossAxisAlignment: .stretch,
+            children: [
+              Flexible(child: timeline),
+              bottomActions,
+            ],
+          );
     return MultiBlocListener(
       listeners: [
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
@@ -267,31 +370,23 @@ class _TimelineSectionState extends State<_TimelineSection>
           },
         ),
       ],
+      // Beside the preview the section steps aside to the trailing side,
+      // filling a column of its own.
       child: SizeTransition(
         sizeFactor: ReverseAnimation(_collapseAnimation),
-        alignment: AlignmentDirectional.topStart,
+        axis: width == null ? Axis.vertical : Axis.horizontal,
+        alignment: width == null
+            ? AlignmentDirectional.topStart
+            : AlignmentDirectional.centerEnd,
         child: ColoredBox(
           color: context.vineColors.surfaceContainerHigh,
-          child: Column(
-            mainAxisSize: .min,
-            crossAxisAlignment: .stretch,
-            children: [
-              // Keep timeline always in tree to preserve thumbnail
-              // cache. SizeTransition clips without unmounting.
-              SizeTransition(
-                sizeFactor: ReverseAnimation(_animation),
-                alignment: AlignmentDirectional.topStart,
-                child: const Padding(
-                  padding: .only(top: 12),
-                  child: VideoEditorTimelineScaffold(),
-                ),
-              ),
-              SizeTransition(
-                sizeFactor: _animation,
-                alignment: AlignmentDirectional.topStart,
-                child: const _BottomActions(),
-              ),
-            ],
+          child: SizedBox(
+            width: width,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              heightFactor: width == null ? 1 : null,
+              child: content,
+            ),
           ),
         ),
       ),

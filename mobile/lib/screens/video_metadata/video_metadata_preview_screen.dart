@@ -14,9 +14,11 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/feed/feed_mode_switch.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
+import 'package:openvine/widgets/video_feed_item/feed_video_fit.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_metadata/metadata_hero_corners.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_bottom_bar.dart';
@@ -202,50 +204,72 @@ class _VideoMetadataPreviewScreenState
         : const BorderRadius.vertical(
             bottom: Radius.circular(VineTheme.shellCornerRadius),
           );
+    // Whether the feed fills this window with the clip, as on a phone, or
+    // shows the whole clip on a blurred backdrop, as it does in windows wider
+    // than a phone with the large-screen layouts. The preview does the same.
+    final fillsViewport = feedFillsViewport(
+      shouldPortraitExpand: true,
+      largeScreenLayout: AdaptiveLayoutScope.isEnabledOf(context),
+      window: MediaQuery.sizeOf(context),
+    );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
       child: Scaffold(
         backgroundColor: context.vineColors.surfaceContainerHigh,
-        body: Column(
-          spacing: 16,
-          children: [
-            // Video preview area with close button
-            Expanded(
-              child: _PreviewStage(
-                borderRadius: stageBorderRadius,
-                child: Stack(
-                  fit: .expand,
-                  children: [
-                    _VideoPreviewContent(
-                      clip: widget.clip,
-                      controller: _controller,
-                      stageBorderRadius: stageBorderRadius,
-                    ),
-                    if (!widget.previewOnly)
-                      // The overlay offsets its caption and action column
-                      // above the system bottom inset for the feed, where it
-                      // spans the whole screen. Here the stage already ends
-                      // above the post bar's [SafeArea], so that inset would
-                      // be counted twice and float the buttons off the bottom
-                      // edge. Same removal the fullscreen feed applies around
-                      // its own [FeedVideos].
-                      MediaQuery.removePadding(
-                        context: context,
-                        removeBottom: true,
-                        child: _PreviewOverlay(isPreviewReady: _isPreviewReady),
+        // Its own route, not a page: framed against a status bar column
+        // here, as every page is.
+        body: StatusBarColumnFrame(
+          child: Column(
+            spacing: 16,
+            children: [
+              // Video preview area with close button
+              Expanded(
+                child: _PreviewStage(
+                  borderRadius: stageBorderRadius,
+                  child: Stack(
+                    fit: .expand,
+                    children: [
+                      _VideoPreviewContent(
+                        clip: widget.clip,
+                        controller: _controller,
+                        stageBorderRadius: stageBorderRadius,
+                        fillsViewport: fillsViewport,
                       ),
-                    const _CloseButton(),
-                  ],
+                      if (!widget.previewOnly)
+                        // The overlay offsets its caption and action column
+                        // above the system bottom inset for the feed, where it
+                        // spans the whole screen. Here the stage already ends
+                        // above the post bar's [SafeArea], so that inset would
+                        // be counted twice and float the buttons off the bottom
+                        // edge. Same removal the fullscreen feed applies around
+                        // its own [FeedVideos].
+                        MediaQuery.removePadding(
+                          context: context,
+                          removeBottom: true,
+                          // At the video's edges where the feed shows the
+                          // whole video, as the feed puts them there.
+                          child: FeedVideoFrameBounds(
+                            videoAspectRatio:
+                                widget.clip.targetAspectRatio.value,
+                            shouldPortraitExpand: fillsViewport,
+                            child: _PreviewOverlay(
+                              isPreviewReady: _isPreviewReady,
+                            ),
+                          ),
+                        ),
+                      const _CloseButton(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // Post button at bottom
-            if (!widget.previewOnly)
-              const SafeArea(
-                top: false,
-                child: VideoMetadataCaptureBottomBar(),
-              ),
-          ],
+              // Post button at bottom
+              if (!widget.previewOnly)
+                const SafeArea(
+                  top: false,
+                  child: VideoMetadataCaptureBottomBar(),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -293,6 +317,7 @@ class _VideoPreviewContent extends StatelessWidget {
     required this.clip,
     required this.controller,
     required this.stageBorderRadius,
+    required this.fillsViewport,
   });
 
   final DivineVideoClip clip;
@@ -301,14 +326,19 @@ class _VideoPreviewContent extends StatelessWidget {
   /// Shape the stage rests at, which the hero flight morphs into.
   final BorderRadius stageBorderRadius;
 
+  /// Whether the feed fills its viewport with the clip here (see
+  /// `feedFillsViewport`).
+  final bool fillsViewport;
+
   @override
   Widget build(BuildContext context) {
     final aspectRatio = clip.targetAspectRatio.value;
     // The feed leaves portrait expansion on (FeedVideos defaults it to true
-    // and no caller overrides it), so the preview mirrors that branch.
+    // and no caller overrides it) unless it shows whole videos in a wide
+    // window, so the preview mirrors whichever branch it takes here.
     final coversViewport = videoCoversFeedViewport(
       aspectRatio: aspectRatio,
-      shouldPortraitExpand: true,
+      shouldPortraitExpand: fillsViewport,
     );
     final fit = coversViewport ? BoxFit.cover : BoxFit.contain;
     final thumbnailPath = clip.thumbnailPath;

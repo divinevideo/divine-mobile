@@ -16,6 +16,8 @@ import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubi
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -26,6 +28,7 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
@@ -131,6 +134,7 @@ void main() {
       ProImageEditorState? editor,
       VideoEditorMainBloc? mainBloc,
       ValueNotifier<bool>? actionsVisible,
+      bool largeScreenLayout = false,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -152,12 +156,19 @@ void main() {
         overrides: [
           videoEditorProvider.overrideWith(() => fakeVideoEditorNotifier),
           videoPublishProvider.overrideWith(() => fakeVideoPublishNotifier),
+          if (largeScreenLayout)
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(true),
         ],
         child: MockGoRouterProvider(
           goRouter: mockGoRouter,
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: largeScreenLayout
+                ? (context, child) => AdaptiveLayoutScope(child: child!)
+                : null,
             home: Scaffold(
               body: VideoEditorScope(
                 editorKey: GlobalKey(),
@@ -273,6 +284,53 @@ void main() {
           find.byWidgetPredicate(
             (w) => w is DivineIcon && w.icon == DivineIconName.arrowRight,
           ),
+          findsOneWidget,
+        );
+      });
+    });
+
+    group('timeline toggle beside the timeline', () {
+      void useWideWindow(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1194, 834);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+      }
+
+      testWidgets('is hidden, as hiding the timeline frees no room', (
+        tester,
+      ) async {
+        useWideWindow(tester);
+        await tester.pumpWidget(buildWidget(largeScreenLayout: true));
+
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorHideTimelineSemanticLabel),
+          findsNothing,
+        );
+      });
+
+      testWidgets('stays to bring back a timeline hidden before a rotation', (
+        tester,
+      ) async {
+        useWideWindow(tester);
+        await tester.pumpWidget(
+          buildWidget(
+            largeScreenLayout: true,
+            state: const VideoEditorMainState(isTimelineHiddenByUser: true),
+          ),
+        );
+
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorShowTimelineSemanticLabel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('is shown below the timeline on a phone', (tester) async {
+        await tester.pumpWidget(buildWidget(largeScreenLayout: true));
+
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorHideTimelineSemanticLabel),
           findsOneWidget,
         );
       });

@@ -58,6 +58,7 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
     required this.overlayStripsScrollController,
     required this.volumePreviewNotifier,
     required this.onVolumePreviewCancelled,
+    this.tracksHeight = TimelineConstants.height,
     super.key,
   });
 
@@ -74,6 +75,10 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
   final bool isPinching;
   final bool isTrimming;
   final double halfScreen;
+
+  /// The height of the tracks: [TimelineConstants.height], or more beside
+  /// the preview of a wide window.
+  final double tracksHeight;
   final double pixelsPerSecond;
   final List<DivineVideoClip> clips;
   final double totalWidth;
@@ -127,10 +132,9 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
             ? 0
             : TimelineConstants.overlayStripGap +
                   detachedClipCount * TimelineConstants.overlayRowHeight);
-    final volumeContentHeight =
-        rawVolumeContentHeight > TimelineConstants.height
+    final volumeContentHeight = rawVolumeContentHeight > tracksHeight
         ? rawVolumeContentHeight
-        : TimelineConstants.height;
+        : tracksHeight;
 
     return Stack(
       fit: .expand,
@@ -149,9 +153,7 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
-              height: isVolumeEditMode
-                  ? volumeContentHeight
-                  : TimelineConstants.height,
+              height: isVolumeEditMode ? volumeContentHeight : tracksHeight,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [

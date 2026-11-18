@@ -126,13 +126,33 @@ extension FlutterError: @retroactive Error {}
     NSLog("✅ AppDelegate: Implicit Flutter engine initialized with UIScene lifecycle")
   }
 
-  // Force portrait orientation for entire app (including camera preview)
+  // Portrait for the entire app (including camera preview), except on a large
+  // screen — an iPad, or the iPhone Duo's inner display — once the user has
+  // turned on the Large Screen Layout experimental feature. There every
+  // orientation is allowed here and Dart narrows it through SystemChrome
+  // (AdaptiveLayoutScope), keeping the camera in portrait. Read on
+  // every rotation, so turning the flag on or off needs no restart. The Duo
+  // honors only this mask: it refuses programmatic orientation changes.
   override func application(
     _ application: UIApplication,
     supportedInterfaceOrientationsFor window: UIWindow?
   ) -> UIInterfaceOrientationMask {
-    return .portrait
+    guard UserDefaults.standard.bool(forKey: Self.largeScreenLayoutFlagKey),
+          let screen = window?.windowScene?.screen,
+          min(screen.bounds.width, screen.bounds.height)
+            >= Self.largeScreenMinShortestSide
+    else {
+      return .portrait
+    }
+    return .all
   }
+
+  /// Where shared_preferences stores FeatureFlag.largeScreenLayout.
+  private static let largeScreenLayoutFlagKey = "flutter.ff_largeScreenLayout"
+
+  /// AdaptiveBreakpoints.large: the shortest side, in points, from which a
+  /// screen counts as large.
+  private static let largeScreenMinShortestSide: CGFloat = 600
 
   private func setupProofModeChannel(with engineBridge: FlutterImplicitEngineBridge) {
     let channel = FlutterMethodChannel(

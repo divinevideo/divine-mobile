@@ -61,6 +61,7 @@ void main() {
       double navigationBarHeight = 0,
       ProImageEditorState? editor,
       List<DivineVideoClip> clips = const [],
+      double? width,
     }) {
       bloc = VideoEditorFilterBloc();
       addTearDown(bloc.close);
@@ -97,7 +98,10 @@ void main() {
                     alignment: .bottomCenter,
                     child: BlocProvider.value(
                       value: bloc,
-                      child: const VideoEditorFilterBottomBar(),
+                      child: SizedBox(
+                        width: width,
+                        child: const VideoEditorFilterBottomBar(),
+                      ),
                     ),
                   ),
                 ),
@@ -182,6 +186,25 @@ void main() {
             tester.getRect(tile(filter.name)).bottom,
         ].reduce(max);
         expect(lastRowBottom, lessThanOrEqualTo(600 - 48));
+      });
+
+      testWidgets('lays the grid out across its own width, not the screen', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1194, 834);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        // Beside the preview of a wide window the bar is narrower than the
+        // screen: 300 wide fits three 64 px tiles between its 16 px edges.
+        await tester.pumpWidget(buildWidget(width: 300));
+
+        final delegate =
+            tester
+                    .widget<SliverGrid>(find.byType(SliverGrid).first)
+                    .gridDelegate
+                as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, equals(3));
       });
     });
 

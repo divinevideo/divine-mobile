@@ -4,9 +4,12 @@
 import 'dart:async';
 
 import 'package:comments_repository/comments_repository.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:follow_repository/follow_repository.dart';
+import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
@@ -25,11 +28,13 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/comments/comments_panel_scope.dart';
 import 'package:openvine/screens/comments/widgets/widgets.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:profile_repository/profile_repository.dart';
 
 /// Maps any of the three per-bloc errors to a localized user-facing string.
 ///
@@ -185,31 +190,29 @@ abstract final class CommentsScreen {
     ValueChanged<int>? onCommentCountChanged,
     String? focusCommentId,
   }) {
+    // A feed in a wide landscape window shows comments beside the video
+    // instead of covering it with the sheet.
+    final panel = CommentsPanelScope.maybeOf(context);
+    if (panel != null) {
+      return panel.open(
+        CommentsPanelRequest(
+          video: video,
+          initialCommentCount: initialCommentCount,
+          onCommentCountChanged: onCommentCountChanged,
+          focusCommentId: focusCommentId,
+        ),
+      );
+    }
+
     final container = ProviderScope.containerOf(context, listen: false);
     final draggableController = DraggableScrollableController();
-
-    // Synchronously available repositories / services.
-    final commentsRepository = container.read(commentsRepositoryProvider);
-    final authService = container.read(authServiceProvider);
-    final likesRepository = container.read(likesRepositoryProvider);
-    final contentBlocklistRepository = container.read(
-      contentBlocklistRepositoryProvider,
-    );
-    final profileRepository = container.read(profileRepositoryProvider);
-    final followRepository = container.read(followRepositoryProvider);
-    final commentModerationRepository = container.read(
-      commentModerationRepositoryProvider,
-    );
-    final viewerPubkey = authService.currentPublicKeyHex;
-    final showVideoReplies = container.read(
-      isFeatureEnabledProvider(FeatureFlag.videoReplies),
-    );
+    final dependencies = _CommentsDependencies.read(container);
     final seedCommentCount = initialCommentCount ?? liveCommentCountSeed(video);
     final surfaceTelemetry =
         CommentsSurfacePerformanceTelemetry.withTracker(
           container.read(surfacePerformanceTrackerProvider),
         )..start(
-          videoRepliesEnabled: showVideoReplies,
+          videoRepliesEnabled: dependencies.showVideoReplies,
           initialCount: seedCommentCount,
         );
 
@@ -226,104 +229,18 @@ abstract final class CommentsScreen {
           minChildSize: _CommentsSheetSizing.min,
           maxChildSize: _CommentsSheetSizing.max,
           draggableController: draggableController,
-          // Wrap the whole sheet subtree in a MultiBlocProvider so every slot
+          // Wrap the whole sheet subtree in the comments blocs so every slot
           // (title, trailing, bottomInput, buildScrollBody) shares the same
           // three blocs. BlocProvider owns lifecycle — it closes each BLoC
           // automatically when the sheet is disposed, so we don't need a manual
           // try/finally around the await.
-          contentWrapper: (context, child) => MultiBlocProvider(
-            providers: [
-              BlocProvider<CommentsListBloc>(
-                create: (_) => CommentsListBloc(
-                  commentsRepository: commentsRepository,
-                  rootEventId: video.id,
-                  rootEventKind: video.referenceKind,
-                  rootAuthorPubkey: video.pubkey,
-                  rootAddressableId: video.addressableId,
-                  initialTotalCount: seedCommentCount,
-                  includeVideoReplies: showVideoReplies,
-                  focusCommentId: focusCommentId,
-                  commentModerationRepository: commentModerationRepository,
-                  viewerPubkey: viewerPubkey,
-                  viewerBlockedAuthorsChanges: viewerPubkey == null
-                      ? null
-                      : contentBlocklistRepository.stateStream.map(
-                          (_) => contentBlocklistRepository
-                              .blockedPubkeysForAccount(viewerPubkey),
-                        ),
-                  viewerBlockedAuthors: viewerPubkey == null
-                      ? const {}
-                      : contentBlocklistRepository.blockedPubkeysForAccount(
-                          viewerPubkey,
-                        ),
-                )..add(const CommentsLoadRequested()),
-              ),
-              BlocProvider<CommentComposerBloc>(
-                create: (innerContext) {
-                  // Captured at create-time. CommentsListBloc is provided above
-                  // in the same MultiBlocProvider so it's available here via
-                  // inheritance; the reference is stable for the sheet's life.
-                  // The callback re-reads `state.commentsById` on every search
-                  // so suggestions reflect the latest loaded comments.
-                  final listBloc = innerContext.read<CommentsListBloc>();
-                  return CommentComposerBloc(
-                    commentsRepository: commentsRepository,
-                    authService: authService,
-                    rootEventId: video.id,
-                    rootEventKind: video.referenceKind,
-                    rootAuthorPubkey: video.pubkey,
-                    rootAddressableId: video.addressableId,
-                    consumptionAnalytics: container.read(
-                      consumptionAnalyticsTrackerProvider,
-                    ),
-                    profileRepository: profileRepository,
-                    mentionCandidatePubkeysProvider: () => <String>[
-                      // Thread participants first, as the list shows them.
-                      ...listBloc.state.shownAuthorPubkeys,
-                      ...followRepository.followingPubkeys,
-                    ],
-                    // Live duplicate check against the canonical store so a
-                    // re-sent reply doesn't publish a duplicate (#5854).
-                    isDuplicateSubmission:
-                        ({
-                          required String content,
-                          required String authorPubkey,
-                          String? parentCommentId,
-                        }) {
-                          return isDuplicatePendingReplySubmission(
-                            comments: listBloc.state.commentsById.values,
-                            content: content,
-                            authorPubkey: authorPubkey,
-                            parentCommentId: parentCommentId,
-                          );
-                        },
-                  );
-                },
-              ),
-              BlocProvider<CommentReactionsBloc>(
-                create: (_) => CommentReactionsBloc(
-                  authService: authService,
-                  likesRepository: likesRepository,
-                  commentsRepository: commentsRepository,
-                  contentBlocklistRepository: contentBlocklistRepository,
-                  rootEventId: video.id,
-                  rootAddressableId: video.addressableId,
-                ),
-              ),
-            ],
-            child: OutboxBridges(
-              onCommentCountChanged: onCommentCountChanged,
-              currentUserPubkey: authService.currentPublicKeyHex,
-              // The sheet's own messenger: its error snackbars would
-              // otherwise land on the page underneath the sheet.
-              child: ScaffoldMessenger(
-                child: Scaffold(
-                  backgroundColor: VineTheme.transparent,
-                  resizeToAvoidBottomInset: false,
-                  body: child,
-                ),
-              ),
-            ),
+          contentWrapper: (context, child) => _CommentsBlocScope(
+            dependencies: dependencies,
+            video: video,
+            seedCommentCount: seedCommentCount,
+            focusCommentId: focusCommentId,
+            onCommentCountChanged: onCommentCountChanged,
+            child: child,
           ),
           title: CommentsTitle(
             initialCount: seedCommentCount ?? 0,
@@ -369,6 +286,269 @@ abstract final class CommentsScreen {
           );
           disposeCommentsSheetController(draggableController);
         });
+  }
+}
+
+/// What the comments sheet and panel read from the provider container as
+/// they open. Read once, so the blocs they create share one snapshot.
+class _CommentsDependencies {
+  _CommentsDependencies.read(this.container)
+    : commentsRepository = container.read(commentsRepositoryProvider),
+      likesRepository = container.read(likesRepositoryProvider),
+      contentBlocklistRepository = container.read(
+        contentBlocklistRepositoryProvider,
+      ),
+      profileRepository = container.read(profileRepositoryProvider),
+      followRepository = container.read(followRepositoryProvider),
+      commentModerationRepository = container.read(
+        commentModerationRepositoryProvider,
+      ),
+      showVideoReplies = container.read(
+        isFeatureEnabledProvider(FeatureFlag.videoReplies),
+      ),
+      viewerPubkey = container.read(authServiceProvider).currentPublicKeyHex;
+
+  final ProviderContainer container;
+  final CommentsRepository commentsRepository;
+  final LikesRepository likesRepository;
+  final ContentBlocklistRepository contentBlocklistRepository;
+  final ProfileRepository? profileRepository;
+  final FollowRepository followRepository;
+  final CommentModerationRepository commentModerationRepository;
+  final bool showVideoReplies;
+
+  /// The signed-in account as the comments opened.
+  final String? viewerPubkey;
+}
+
+/// Provides the three comments blocs ([CommentsListBloc],
+/// [CommentComposerBloc], [CommentReactionsBloc]) to [child], and bridges the
+/// composer and reactions outbox signals into list-bloc store mutations.
+///
+/// Shared by the sheet and the panel.
+class _CommentsBlocScope extends StatelessWidget {
+  const _CommentsBlocScope({
+    required this.dependencies,
+    required this.video,
+    required this.seedCommentCount,
+    required this.focusCommentId,
+    required this.onCommentCountChanged,
+    required this.child,
+  });
+
+  final _CommentsDependencies dependencies;
+  final VideoEvent video;
+  final int? seedCommentCount;
+  final String? focusCommentId;
+  final ValueChanged<int>? onCommentCountChanged;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final commentsRepository = dependencies.commentsRepository;
+    final authService = dependencies.container.read(authServiceProvider);
+    final contentBlocklistRepository = dependencies.contentBlocklistRepository;
+    final followRepository = dependencies.followRepository;
+    final viewerPubkey = dependencies.viewerPubkey;
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<CommentsListBloc>(
+          create: (_) => CommentsListBloc(
+            commentsRepository: commentsRepository,
+            rootEventId: video.id,
+            rootEventKind: video.referenceKind,
+            rootAuthorPubkey: video.pubkey,
+            rootAddressableId: video.addressableId,
+            initialTotalCount: seedCommentCount,
+            includeVideoReplies: dependencies.showVideoReplies,
+            focusCommentId: focusCommentId,
+            commentModerationRepository:
+                dependencies.commentModerationRepository,
+            viewerPubkey: viewerPubkey,
+            viewerBlockedAuthorsChanges: viewerPubkey == null
+                ? null
+                : contentBlocklistRepository.stateStream.map(
+                    (_) => contentBlocklistRepository.blockedPubkeysForAccount(
+                      viewerPubkey,
+                    ),
+                  ),
+            viewerBlockedAuthors: viewerPubkey == null
+                ? const {}
+                : contentBlocklistRepository.blockedPubkeysForAccount(
+                    viewerPubkey,
+                  ),
+          )..add(const CommentsLoadRequested()),
+        ),
+        BlocProvider<CommentComposerBloc>(
+          create: (innerContext) {
+            // Captured at create-time. CommentsListBloc is provided above
+            // in the same MultiBlocProvider so it's available here via
+            // inheritance; the reference is stable for the sheet's life.
+            // The callback re-reads `state.commentsById` on every search
+            // so suggestions reflect the latest loaded comments.
+            final listBloc = innerContext.read<CommentsListBloc>();
+            return CommentComposerBloc(
+              commentsRepository: commentsRepository,
+              authService: authService,
+              rootEventId: video.id,
+              rootEventKind: video.referenceKind,
+              rootAuthorPubkey: video.pubkey,
+              rootAddressableId: video.addressableId,
+              consumptionAnalytics: dependencies.container.read(
+                consumptionAnalyticsTrackerProvider,
+              ),
+              profileRepository: dependencies.profileRepository,
+              mentionCandidatePubkeysProvider: () => <String>[
+                // Thread participants first, as the list shows them.
+                ...listBloc.state.shownAuthorPubkeys,
+                ...followRepository.followingPubkeys,
+              ],
+              // Live duplicate check against the canonical store so a
+              // re-sent reply doesn't publish a duplicate (#5854).
+              isDuplicateSubmission:
+                  ({
+                    required String content,
+                    required String authorPubkey,
+                    String? parentCommentId,
+                  }) {
+                    return isDuplicatePendingReplySubmission(
+                      comments: listBloc.state.commentsById.values,
+                      content: content,
+                      authorPubkey: authorPubkey,
+                      parentCommentId: parentCommentId,
+                    );
+                  },
+            );
+          },
+        ),
+        BlocProvider<CommentReactionsBloc>(
+          create: (_) => CommentReactionsBloc(
+            authService: authService,
+            likesRepository: dependencies.likesRepository,
+            commentsRepository: commentsRepository,
+            contentBlocklistRepository: contentBlocklistRepository,
+            rootEventId: video.id,
+            rootAddressableId: video.addressableId,
+          ),
+        ),
+      ],
+      child: OutboxBridges(
+        onCommentCountChanged: onCommentCountChanged,
+        currentUserPubkey: authService.currentPublicKeyHex,
+        // The sheet's own messenger: its error snackbars would
+        // otherwise land on the page underneath the sheet.
+        child: ScaffoldMessenger(
+          child: Scaffold(
+            backgroundColor: VineTheme.transparent,
+            resizeToAvoidBottomInset: false,
+            body: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Comments on [request]'s video laid out in a panel beside the feed, for
+/// wide landscape windows, instead of the bottom sheet.
+///
+/// The video keeps playing beside it. Opened through [CommentsScreen.show]
+/// when a [CommentsPanelScope] above the caller publishes a cubit.
+class CommentsPanel extends StatefulWidget {
+  const CommentsPanel({
+    required this.request,
+    required this.onClose,
+    super.key,
+  });
+
+  /// The comments to show.
+  final CommentsPanelRequest request;
+
+  /// Closes the panel.
+  final VoidCallback onClose;
+
+  @override
+  State<CommentsPanel> createState() => _CommentsPanelState();
+}
+
+class _CommentsPanelState extends State<CommentsPanel> {
+  late final _CommentsDependencies _dependencies;
+  final _scrollController = ScrollController();
+
+  // The comment input grows the sheet to make room for the keyboard. The
+  // panel is already full height, so it hands the input a controller that is
+  // never attached, which the input leaves alone.
+  final _sheetController = DraggableScrollableController();
+
+  @override
+  void initState() {
+    super.initState();
+    _dependencies = _CommentsDependencies.read(
+      ProviderScope.containerOf(context, listen: false),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final request = widget.request;
+    final video = request.video;
+    final seedCommentCount =
+        request.initialCommentCount ?? liveCommentCountSeed(video);
+    return _CommentsBlocScope(
+      dependencies: _dependencies,
+      video: video,
+      seedCommentCount: seedCommentCount,
+      focusCommentId: request.focusCommentId,
+      onCommentCountChanged: request.onCommentCountChanged,
+      child: VineBottomSheet(
+        showDragHandle: false,
+        title: CommentsTitle(
+          initialCount: seedCommentCount ?? 0,
+          onNewCommentsPillTap: () {
+            if (!_scrollController.hasClients) return;
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          },
+        ),
+        // Close at the start, sort at the end: the title is centered on the
+        // full width and kept clear of both, so splitting the controls keeps
+        // it readable in the narrow panel.
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 4,
+          children: [
+            DivineIconButton(
+              icon: .x,
+              size: .small,
+              type: .ghost,
+              semanticLabel: context.l10n.commonClose,
+              onPressed: widget.onClose,
+            ),
+            const HiddenCommentsToggle(),
+          ],
+        ),
+        trailing: const CommentsSortToggle(),
+        bottomInput: MainCommentInput(
+          draggableController: _sheetController,
+          video: video,
+        ),
+        scrollController: _scrollController,
+        buildScrollBody: (scrollController) => _CommentsScreenBody(
+          videoEvent: video,
+          sheetScrollController: scrollController,
+        ),
+      ),
+    );
   }
 }
 

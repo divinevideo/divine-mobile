@@ -8,6 +8,7 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/visible_timeline_x.dart';
 
 /// Timeline strip for a frames-only stop-motion clip: one tile per captured
 /// still, laid out by each still's hold duration so the strip stays aligned
@@ -328,15 +329,14 @@ class _VideoEditorStopMotionFrameStripState
 
   void _updateAutoScroll(double globalX) {
     if (widget.scrollController == null) return;
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final (:x, :width) = visibleTimelineX(context, globalX);
 
-    if (globalX < _autoScrollEdgeZone) {
+    if (x < _autoScrollEdgeZone) {
       _autoScrollSpeed =
-          -(1 - globalX / _autoScrollEdgeZone) * _maxAutoScrollPxPerFrame;
-    } else if (globalX > screenWidth - _autoScrollEdgeZone) {
+          -(1 - x / _autoScrollEdgeZone) * _maxAutoScrollPxPerFrame;
+    } else if (x > width - _autoScrollEdgeZone) {
       _autoScrollSpeed =
-          (1 - (screenWidth - globalX) / _autoScrollEdgeZone) *
-          _maxAutoScrollPxPerFrame;
+          (1 - (width - x) / _autoScrollEdgeZone) * _maxAutoScrollPxPerFrame;
     } else {
       _autoScrollSpeed = 0;
     }

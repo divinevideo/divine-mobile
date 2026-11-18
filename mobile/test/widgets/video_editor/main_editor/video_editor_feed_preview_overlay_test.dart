@@ -7,8 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/caption_pill.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
@@ -47,10 +50,14 @@ void main() {
       ).thenReturn(const TimelineOverlayState());
     });
 
-    Future<void> pumpOverlay(WidgetTester tester) async {
+    Future<void> pumpOverlay(
+      WidgetTester tester, {
+      Size screenSize = _screenSize,
+      bool largeScreenLayout = false,
+    }) async {
       tester.view
         ..devicePixelRatio = _devicePixelRatio
-        ..physicalSize = _screenSize * _devicePixelRatio
+        ..physicalSize = screenSize * _devicePixelRatio
         ..viewPadding = const FakeViewPadding(
           bottom: _bottomInset * _devicePixelRatio,
         );
@@ -58,9 +65,15 @@ void main() {
 
       await tester.pumpWidget(
         testProviderScope(
+          additionalOverrides: [
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(largeScreenLayout),
+          ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => AdaptiveLayoutScope(child: child!),
             home: Scaffold(
               body: BlocProvider<TimelineOverlayBloc>.value(
                 value: timelineOverlayBloc,
@@ -97,6 +110,47 @@ void main() {
             Size(
               _screenSize.width,
               _screenSize.height - vineBottomNavBarHeight - _bottomInset,
+            ),
+          ),
+        );
+      });
+
+      testWidgets('shows the feed of a phone held upright in a landscape '
+          'window with the large-screen layouts', (tester) async {
+        await pumpOverlay(
+          tester,
+          screenSize: const Size(951, 669),
+          largeScreenLayout: true,
+        );
+
+        final frame = find.descendant(
+          of: find.byType(FittedBox),
+          matching: find.byType(Stack),
+        );
+
+        // A landscape frame would shrink to a strip across the 9:16 video.
+        expect(
+          tester.getSize(frame.first),
+          equals(const Size(402, 874 - vineBottomNavBarHeight - _bottomInset)),
+        );
+      });
+
+      testWidgets('keeps the window-shaped frame in a landscape window with '
+          'the flag off', (tester) async {
+        const window = Size(951, 669);
+        await pumpOverlay(tester, screenSize: window);
+
+        final frame = find.descendant(
+          of: find.byType(FittedBox),
+          matching: find.byType(Stack),
+        );
+
+        expect(
+          tester.getSize(frame.first),
+          equals(
+            Size(
+              window.width,
+              window.height - vineBottomNavBarHeight - _bottomInset,
             ),
           ),
         );
