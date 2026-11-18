@@ -344,7 +344,12 @@ class _FilterContent extends ConsumerWidget {
     // Release the looping preview decoder before opening the camera.
     await route.completed;
     if (recordReaction && context.mounted) {
-      await recordLibraryReaction(context, ref, clip);
+      runDetached(
+        recordLibraryReaction(context, ref, clip),
+        'record library reaction',
+        logName: 'ClipsTab',
+        category: LogCategory.ui,
+      );
     }
   }
 
