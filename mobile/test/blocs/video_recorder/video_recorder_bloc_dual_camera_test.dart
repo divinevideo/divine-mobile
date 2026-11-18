@@ -752,21 +752,28 @@ void main() {
   });
 
   group('VideoRecorderBloc without dual-camera capture', () {
-    test('reports no dual camera for a camera service without it', () {
-      final camera = _SingleCameraService();
+    late _SingleCameraService camera;
+
+    setUp(() {
+      camera = _SingleCameraService();
       when(camera.dispose).thenAnswer((_) async {});
-      final bloc = VideoRecorderBloc(
+    });
+
+    // The toggle reaches the camera only through the optional
+    // DualCameraCapture interface; a service without it must leave the
+    // recorder untouched rather than blur it for a rebuild that never comes.
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'ignores the toggle on a camera service without dual capture',
+      build: () => VideoRecorderBloc(
         readClipManager: _MockClipManager.new,
         readVideoEditor: _MockVideoEditor.new,
         readVideoEditorState: VideoEditorProviderState.new,
         readSharedPreferences: _MockSharedPreferences.new,
         cameraService: camera,
-      )..add(const VideoRecorderDualCameraToggled());
-      addTearDown(bloc.close);
-
-      expect(bloc.state.isDualCameraSupported, isFalse);
-      expect(bloc.state.isDualCameraEnabled, isFalse);
-    });
+      ),
+      act: (bloc) => bloc.add(const VideoRecorderDualCameraToggled()),
+      expect: () => const <VideoRecorderBlocState>[],
+    );
   });
 }
 

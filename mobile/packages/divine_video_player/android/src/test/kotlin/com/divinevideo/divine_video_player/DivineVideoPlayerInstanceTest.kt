@@ -675,6 +675,7 @@ class DivineVideoPlayerInstanceTest {
         listener.onIsPlayingChanged(true)
 
         // Went on screen 20 ms ago, handed over just ahead of the clock.
+        val before = System.currentTimeMillis()
         frames.onVideoFrameAboutToBeRendered(
             1_233_333L,
             System.nanoTime() - 20_000_000L,
@@ -683,11 +684,18 @@ class DivineVideoPlayerInstanceTest {
         )
 
         val state = states.last()
+        val after = System.currentTimeMillis()
         assertEquals("playing", state["status"])
         assertEquals(true, state["isPictureAdvancing"])
         assertEquals(1_033L, state["shownPositionMs"])
-        val sinceShownMs = System.currentTimeMillis() - state["shownAtEpochMs"] as Long
-        assertTrue("went up ${sinceShownMs}ms ago", sinceShownMs in 15L..60L)
+        // 20 ms before whenever the frame was converted, which happened
+        // between `before` and `after`; a slow runner only widens that span.
+        // The 5 ms allow for the monotonic and the wall clock drifting apart.
+        val shownAt = state["shownAtEpochMs"] as Long
+        assertTrue(
+            "went up at $shownAt, expected ${before - 25}..${after - 15}",
+            shownAt in (before - 25L)..(after - 15L),
+        )
     }
 
     @Test
