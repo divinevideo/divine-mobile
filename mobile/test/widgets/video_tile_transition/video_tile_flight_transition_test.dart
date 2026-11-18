@@ -34,6 +34,7 @@ class _Page extends StatelessWidget {
     this.roundedCover = false,
     this.bottomBar = false,
     this.movedOn = false,
+    this.safetyOverlay = false,
   });
 
   /// Whether the page has moved on from the tile's video to the next, which
@@ -45,6 +46,7 @@ class _Page extends StatelessWidget {
   /// Whether the target draws the video itself, in [_videoColor], rather
   /// than standing in for it.
   final bool drawsVideo;
+  final bool safetyOverlay;
 
   /// Whether the video sits above a 100 px bar, as over a comment bar.
   final bool bottomBar;
@@ -107,7 +109,24 @@ class _Page extends StatelessWidget {
         child: content,
       );
     }
-    final video = ColoredBox(color: const Color(0xFF000000), child: target);
+    final video = ColoredBox(
+      color: const Color(0xFF000000),
+      child: safetyOverlay
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                ?target,
+                const VideoTileTransitionTarget.safetyOverlay(
+                  videoId: 'video1',
+                  child: ColoredBox(
+                    key: ValueKey('warning'),
+                    color: Color(0xFF000000),
+                  ),
+                ),
+              ],
+            )
+          : target,
+    );
     if (!bottomBar) return video;
     return Column(
       children: [
@@ -132,6 +151,7 @@ class _Harness extends StatelessWidget {
     this.pageRoundedCover = false,
     this.pageBottomBar = false,
     this.pageMovedOn = false,
+    this.safetyOverlay = false,
     this.disableAnimations = false,
     this.tileAlignment = Alignment.center,
     this.tileScrim = false,
@@ -153,6 +173,7 @@ class _Harness extends StatelessWidget {
   final bool pageRoundedCover;
   final bool pageBottomBar;
   final bool pageMovedOn;
+  final bool safetyOverlay;
   final bool disableAnimations;
   final Alignment tileAlignment;
 
@@ -252,6 +273,7 @@ class _Harness extends StatelessWidget {
                     roundedCover: pageRoundedCover,
                     bottomBar: pageBottomBar,
                     movedOn: pageMovedOn,
+                    safetyOverlay: safetyOverlay,
                   ),
                 ),
               ),
@@ -1237,6 +1259,7 @@ void main() {
         WidgetTester tester, {
         ValueListenable<bool>? popGestureInProgress,
         bool thenMoveOn = false,
+        bool safetyOverlay = false,
       }) async {
         final origin = await pumpTile(tester);
         controller.forward();
@@ -1246,6 +1269,7 @@ void main() {
           origin: origin,
           pageDrawsVideo: true,
           pageMovedOn: movedOn,
+          safetyOverlay: safetyOverlay,
           popGestureInProgress: popGestureInProgress,
         );
         await tester.pumpWidget(harness(movedOn: false));
@@ -1390,6 +1414,39 @@ void main() {
           variant: _readsNoFrames,
         );
       });
+
+      for (final drag in [false, true]) {
+        testWidgets(
+          'keeps the safety overlay on the live page during '
+          '${drag ? 'a back drag' : 'a pop'}',
+          (tester) async {
+            final dragging = ValueNotifier(false);
+            addTearDown(dragging.dispose);
+            await pumpLanded(
+              tester,
+              safetyOverlay: true,
+              popGestureInProgress: dragging,
+            );
+
+            if (drag) {
+              dragging.value = true;
+              controller.value = 0.7;
+            } else {
+              controller.reverse();
+            }
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 40));
+
+            expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+            expect(snapshot, findsNothing);
+            expect(_picture, findsNothing);
+            expect(find.byType(ClipPath), findsNothing);
+            if (drag) dragging.value = false;
+            await tester.pumpAndSettle();
+          },
+          variant: _readsFrames,
+        );
+      }
 
       testWidgets(
         'flies a snapshot of the page, hiding the page beneath',

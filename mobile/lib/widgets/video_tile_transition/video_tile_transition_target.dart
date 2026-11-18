@@ -58,7 +58,18 @@ class VideoTileTransitionTarget extends StatefulWidget {
     required this.child,
     this.showsVideo = false,
     super.key,
-  });
+  }) : blocksFlight = false;
+
+  /// Marks a safety overlay that must stay with the live page. It does not
+  /// provide landing geometry or a snapshot.
+  const VideoTileTransitionTarget.safetyOverlay({
+    required this.videoId,
+    required this.child,
+    super.key,
+  }) : aspectRatio = null,
+       coversViewport = false,
+       showsVideo = false,
+       blocksFlight = true;
 
   /// The video the page shows.
   final String videoId;
@@ -76,6 +87,9 @@ class VideoTileTransitionTarget extends StatefulWidget {
   /// Whether [child] draws the video itself, rather than a poster standing in
   /// for it while it loads.
   final bool showsVideo;
+
+  /// Whether the live page must be used instead of a media image.
+  final bool blocksFlight;
 
   @override
   State<VideoTileTransitionTarget> createState() =>
@@ -114,6 +128,7 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
   /// clipped to, in [ancestor]'s coordinates, or `null` before the page is
   /// laid out.
   VideoTileLanding? landingIn(RenderBox ancestor) {
+    if (widget.blocksFlight) return null;
     final page = context.findRenderObject();
     if (page is! RenderBox || !page.attached || !page.hasSize) return null;
     if (!ancestor.attached) return null;
@@ -192,6 +207,10 @@ class VideoTileTransitionTargets {
   // layer goes, which lost the video mid-flight when only the last target
   // registered was kept.
   final _targets = <String, Set<_VideoTileTransitionTargetState>>{};
+
+  /// Whether the video is covered by a safety overlay.
+  bool blocksFlightFor(String videoId) =>
+      _targets[videoId]?.any((target) => target.widget.blocksFlight) ?? false;
 
   /// Where the page shows [videoId], in [ancestor]'s coordinates, or `null`
   /// when it does not show it yet.

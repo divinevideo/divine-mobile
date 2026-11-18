@@ -1311,46 +1311,46 @@ class __OverlayState extends ConsumerState<_Overlay> {
     }
 
     switch (mode) {
-      case _OverlayForbiddenMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
-        );
-      case _OverlayAgeRestrictedMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
-          onVerifyAge: _verifyAgeForVideo,
-          isVerifying: isVerifyingAge,
-        );
-      case _OverlayUnavailableMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
+      case _OverlayForbiddenMode() ||
+          _OverlayAgeRestrictedMode() ||
+          _OverlayUnavailableMode():
+        return VideoTileTransitionTarget.safetyOverlay(
+          videoId: video.id,
+          child: ModeratedContentOverlay(
+            status: playbackStatus,
+            onSkip: _skipToNextVideo,
+            onVerifyAge: mode is _OverlayAgeRestrictedMode
+                ? _verifyAgeForVideo
+                : null,
+            isVerifying: isVerifyingAge,
+          ),
         );
       case _OverlayContentWarningMode(:final labels):
-        return ContentWarningBlurOverlay(
-          // Display uses the merged (creator + community) labels so the blur
-          // names every warning. Hide-similar must persist ONLY the
-          // creator/trusted labels: an unverified community-only warning
-          // must never become a persisted global hide (#4771 warn-only v1).
-          labels: labels,
-          onReveal: widget.onContentWarningRevealed,
-          onHideSimilar: () {
-            runDetached(
-              hideContentWarningsLikeThese(
-                context: context,
-                ref: ref,
-                labels: contentWarningOverlayLabels(
-                  contentWarningLabels: video.contentWarningLabels,
-                  warnLabels: video.warnLabels,
+        return VideoTileTransitionTarget.safetyOverlay(
+          videoId: video.id,
+          child: ContentWarningBlurOverlay(
+            // Display uses the merged (creator + community) labels so the blur
+            // names every warning. Hide-similar must persist ONLY the
+            // creator/trusted labels: an unverified community-only warning
+            // must never become a persisted global hide (#4771 warn-only v1).
+            labels: labels,
+            onReveal: widget.onContentWarningRevealed,
+            onHideSimilar: () {
+              runDetached(
+                hideContentWarningsLikeThese(
+                  context: context,
+                  ref: ref,
+                  labels: contentWarningOverlayLabels(
+                    contentWarningLabels: video.contentWarningLabels,
+                    warnLabels: video.warnLabels,
+                  ),
                 ),
-              ),
-              'hide similar content warnings',
-              logName: 'FeedVideos',
-              category: LogCategory.ui,
-            );
-          },
+                'hide similar content warnings',
+                logName: 'FeedVideos',
+                category: LogCategory.ui,
+              );
+            },
+          ),
         );
       case _OverlayInteractiveMode(isReady: final interactiveReady):
         return FeedAutoAdvancePastErrorListener(

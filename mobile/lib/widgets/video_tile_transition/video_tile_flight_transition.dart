@@ -130,8 +130,14 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   /// The video the page showed when closing began, or `null` before then.
   String? _closingVideoId;
 
+  bool _closingFlightBlocked = false;
+
   /// The video the picture flies to or from.
   String get _videoId => _closingVideoId ?? widget.origin.videoId;
+
+  bool get _hasSafetyOverlay =>
+      _targets.blocksFlightFor(_videoId) ||
+      _targets.blocksFlightFor(widget.origin.videoId);
 
   ImageStream? _playerSizeStream;
   ImageInfo? _playerSize;
@@ -228,12 +234,18 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   /// where it lands, and, from the landed page, the video it shows and the
   /// page as it is shown.
   void _takeClosingPictures() {
+    final wasLanded = _phase.value == VideoTileFlightPhase.landed;
+    if (wasLanded) {
+      final page = _pageKey.currentContext?.findRenderObject();
+      _closingVideoId = page is RenderBox ? _targets.shownIn(page) : null;
+    }
+    // Preserve the live warning rather than copying uncomposited pixels.
+    // Keep that choice when an interactive drag becomes a normal pop.
+    _closingFlightBlocked |= _hasSafetyOverlay;
+    if (_closingFlightBlocked) return;
     _picture?.dispose();
     _picture = widget.origin.readImage();
-    if (_phase.value != VideoTileFlightPhase.landed) return;
-    final page = _pageKey.currentContext?.findRenderObject();
-    _closingVideoId = page is RenderBox ? _targets.shownIn(page) : null;
-    if (!_framesReadable) return;
+    if (!wasLanded || !_framesReadable) return;
     _frame?.dispose();
     _frame = _targets.readPageOf(
       _videoId,
@@ -287,6 +299,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     _frame?.dispose();
     _frame = null;
     _closingVideoId = null;
+    _closingFlightBlocked = false;
   }
 
   @override
@@ -379,6 +392,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         // A drag back starts from the landed page, before the animation
         // reports it is moving.
         final flying =
+            !_closingFlightBlocked &&
+            !_hasSafetyOverlay &&
             (picture != null || frame != null) &&
             (_dragged ||
                 status == AnimationStatus.forward ||

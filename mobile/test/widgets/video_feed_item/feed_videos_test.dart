@@ -955,16 +955,25 @@ void main() {
       final cubit = _MockVideoPlaybackStatusCubit()
         ..stub(PlaybackStatus.ready, video.id);
 
+      final phase = ValueNotifier(VideoTileFlightPhase.landed);
+      addTearDown(phase.dispose);
       await _pumpFeedVideos(
         tester,
         videos: [video],
         videoPlaybackStatusCubit: cubit,
+        tileTransitionPhase: phase,
       );
       await tester.pump();
 
       final feed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );
+      final targets = tester
+          .widget<VideoTileTransitionScope>(
+            find.byType(VideoTileTransitionScope),
+          )
+          .targets;
+      expect(targets.blocksFlightFor(video.id), isTrue);
       expect(feed.canAutoPlay, isNotNull);
       expect(
         feed.canAutoPlay!(video),
@@ -977,6 +986,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ContentWarningBlurOverlay), findsNothing);
+      expect(targets.blocksFlightFor(video.id), isFalse);
       final revealedFeed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );
