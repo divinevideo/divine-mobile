@@ -1473,6 +1473,7 @@ class CommentsRepository {
       String? parsedRootEventId;
       String? parsedRootAddressableId;
       String? replyToEventId;
+      String? replyToAddressableId;
       String? rootAuthorPubkey;
       String? replyToAuthorPubkey;
       String? parentKind;
@@ -1507,6 +1508,8 @@ class CommentsRepository {
             if (tag.length >= 4) {
               replyToAuthorPubkey = tag[3] as String;
             }
+          case 'a':
+            replyToAddressableId = tagValue;
           case 'k':
             // Parent kind (lowercase = parent item)
             parentKind = tagValue;
@@ -1525,10 +1528,11 @@ class CommentsRepository {
         }
       }
 
-      // Determine if this is a top-level comment or a reply
-      // If parent kind equals root kind, it's a top-level comment
+      // A video reply can share the root's kind, so compare its reference too.
       final isTopLevel =
-          parentKind == rootEventKind.toString() ||
+          (parentKind == rootEventKind.toString() &&
+              replyToAddressableId != null &&
+              replyToAddressableId == parsedRootAddressableId) ||
           replyToEventId == parsedRootEventId;
 
       final videoMetadata = _parseVideoMetadataFromImetaTags(event.tags);
@@ -1677,6 +1681,8 @@ class CommentsRepository {
       String? parsedRootEventId;
       String? parsedRootAddressableId;
       String? rootAuthorPubkey;
+      String? parentKind;
+      String? parentAddressableId;
 
       for (final tag in restComment.tags) {
         if (tag.length < 2) continue;
@@ -1690,6 +1696,10 @@ class CommentsRepository {
             parsedRootAddressableId = tag[1];
           case 'P':
             rootAuthorPubkey ??= tag[1];
+          case 'k':
+            parentKind = tag[1];
+          case 'a':
+            parentAddressableId = tag[1];
         }
       }
 
@@ -1706,9 +1716,19 @@ class CommentsRepository {
         }
       }
 
+      // REST names the parent from the lowercase `e` tag, which for a
+      // top-level comment is the video revision it was posted on. After an
+      // edit that is no longer [rootEventId], so compare the comment's own
+      // root and parent references (#11203), as for relay comments.
       final parsedReplyToEventId = restComment.replyToEventId;
       final isTopLevel =
-          parsedReplyToEventId == null || parsedReplyToEventId == rootEventId;
+          parsedReplyToEventId == null ||
+          parsedReplyToEventId == rootEventId ||
+          parsedReplyToEventId == parsedRootEventId ||
+          (parentKind == rootEventKind.toString() &&
+              parentAddressableId != null &&
+              parentAddressableId ==
+                  (parsedRootAddressableId ?? rootAddressableId));
       final videoMetadata = _parseVideoMetadataFromImetaTags(restComment.tags);
 
       return Comment(

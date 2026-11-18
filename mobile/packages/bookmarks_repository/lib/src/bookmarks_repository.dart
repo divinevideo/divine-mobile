@@ -197,6 +197,10 @@ class BookmarksRepository {
   /// device snapshot, whose keys the next account reuses.
   bool _disposed = false;
 
+  /// Set by [suspend] for the length of an account switch, with the same
+  /// effect on the device snapshot as [_disposed].
+  bool _suspended = false;
+
   /// A NIP-01 event id: 64 lowercase hex characters.
   static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 
@@ -210,7 +214,9 @@ class BookmarksRepository {
   ///
   /// `UserDataCleanupService.userSpecificKeys` references this constant, so
   /// the key is cleared on identity change. The value must not change:
-  /// devices already hold their snapshot under it.
+  /// devices already hold their snapshot under it. The snapshot names the
+  /// account it was saved for, and one saved for another account is ignored
+  /// when loading (#8313).
   static const String globalBookmarksStorageKey = 'global_bookmarks';
 
   /// Storage key for [_revision] and its complete publish source.
@@ -268,7 +274,9 @@ class BookmarksRepository {
   ///
   /// Never persisted. [SharedPreferences] is unencrypted, so caching these
   /// would move the user's private bookmarks into plaintext local storage —
-  /// a disclosure of its own. They are re-read on every sync instead.
+  /// a disclosure of its own. They are re-read on every sync instead, and
+  /// decrypted from the kept ciphertext when a read fails
+  /// ([_readKeptPrivateItems]).
   final List<BookmarkItem> _privateBookmarks = [];
 
   /// [_privateBookmarks]' source array, kept verbatim so a re-encryption
@@ -307,7 +315,8 @@ class BookmarksRepository {
   /// [_legacyProseContent], which is Divine's own malformed output and is
   /// dropped rather than propagated. The ciphertext (never its plaintext) is
   /// persisted with [_revision] because it is already public relay data and is
-  /// required to preserve the complete replaceable event across sheet rebuilds.
+  /// required to preserve the complete replaceable event across sheet rebuilds,
+  /// and to read the private items when the relay cannot be read.
   String _lastKnownRemoteContent = '';
 
   /// How long a full-settlement "this user has no list" answer is reused
@@ -504,9 +513,23 @@ class BookmarksRepository {
   /// addressable video, and `t` and `r` items, are not videos, and neither is
   /// an `e` item that is not a well-formed event id: fetched by id, one would
   /// close the relay query for every other video with it.
-  List<String> get bookmarkedVideoReferences {
+  List<String> get bookmarkedVideoReferences =>
+      List.unmodifiable(_videoReferencesOf(globalBookmarks));
+
+  /// The references in [bookmarkedVideoReferences] that the list holds
+  /// publicly, in its `tags`.
+  ///
+  /// The rest are private, and like the private items themselves they must
+  /// not reach unencrypted storage (#11180). A video saved both publicly and
+  /// privately is public: its reference is already in the clear.
+  Set<String> get publicBookmarkedVideoReferences =>
+      Set.unmodifiable(_videoReferencesOf(_globalBookmarks));
+
+  /// The video reference each of [items] names, in list order, each video
+  /// once at the position of its latest item.
+  Set<String> _videoReferencesOf(Iterable<BookmarkItem> items) {
     final references = <String>{};
-    for (final item in globalBookmarks) {
+    for (final item in items) {
       final reference = switch (item.type) {
         'e' when _eventIdPattern.hasMatch(item.id) =>
           _videoAddressByEventId[item.id] ?? item.id,
@@ -518,7 +541,7 @@ class BookmarksRepository {
         ..remove(reference)
         ..add(reference);
     }
-    return List.unmodifiable(references);
+    return references;
   }
 
   /// [bookmarkedVideoReferences], each time [watchGlobalBookmarks] announces a
@@ -542,6 +565,19 @@ class BookmarksRepository {
     _disposed = true;
     unawaited(_globalBookmarksController.close());
   }
+
+  /// Stops writing the device snapshot until [resume].
+  ///
+  /// An account switch calls this on the outgoing account's repository before
+  /// the incoming sign-in clears the device-wide keys. The outgoing container
+  /// is disposed only after the switch commits, so a sync still in flight
+  /// would otherwise save this account's list into the keys the next account
+  /// reads (#8313). The list in memory and relay publishes are unaffected.
+  void suspend() => _suspended = true;
+
+  /// Undoes [suspend], for a switch that rolled back and left this account
+  /// signed in.
+  void resume() => _suspended = false;
 
   /// Reconciles [globalBookmarks] against the user's kind-10003 on the relay.
   ///
@@ -577,21 +613,50 @@ class BookmarksRepository {
   /// window. An answer that stays unconfirmed changes nothing. A read that
   /// finds a list keeps the fast trade and pays for none of this.
   ///
+  /// On `false` the list stays as this device holds it. Its private items are
+  /// never stored in plaintext, so an instance that has not read them yet
+  /// decrypts the ciphertext the device kept (#11181). A decrypt that fails
+  /// leaves [hasUnreadablePrivateItems] true rather than reading as "no
+  /// private items".
+  ///
   /// Runs after any bookmark operation already in flight ([_serialized]), so
   /// its answer is applied to — and observed against — that operation's
   /// result rather than interleaved with it.
   Future<bool> syncGlobalBookmarks({bool requireAuthoritative = false}) =>
-      _serialized(
-        () async =>
-            // Equality to success, never `!= someFailure`: a blacklist would
-            // let any failure member added later fall through as "reconciled"
-            // and publish kind 10003 from an inconclusive read — the #6966
-            // regression.
-            await _syncGlobalBookmarks(
-              requireAuthoritative: requireAuthoritative,
-            ) ==
-            null,
-      );
+      _serialized(() async {
+        final failure = await _syncGlobalBookmarks(
+          requireAuthoritative: requireAuthoritative,
+        );
+        // Equality to success, never `!= someFailure`: a blacklist would let
+        // any failure member added later fall through as "reconciled" and
+        // publish kind 10003 from an inconclusive read — the #6966
+        // regression.
+        if (failure == null) return true;
+        if (failure != BookmarkToggleFailure.notAuthenticated) {
+          await _readKeptPrivateItems();
+        }
+        return false;
+      });
+
+  /// Decrypts the private items of the revision this device kept, when this
+  /// instance has not read the private section yet.
+  ///
+  /// At most once per instance: afterwards [_privateItemsState] is no longer
+  /// [_PrivateItemsState.none]. A Keycast decrypt is a network call, and this
+  /// runs inside the operation queue. Nothing is announced on
+  /// [watchGlobalBookmarks], because a failed read replaced no list.
+  Future<void> _readKeptPrivateItems() async {
+    if (_privateItemsState != _PrivateItemsState.none ||
+        _lastKnownRemoteContent.isEmpty) {
+      return;
+    }
+    final private = await _readPrivateItems(_lastKnownRemoteContent);
+    _privateTags = private.tags;
+    _privateBookmarks
+      ..clear()
+      ..addAll(_itemsFromTags(private.tags));
+    _privateItemsState = private.state;
+  }
 
   /// [syncGlobalBookmarks], but reporting *why* it failed.
   ///
@@ -722,7 +787,7 @@ class BookmarksRepository {
       }
 
       await _resolveEventItemAddresses();
-      await _saveBookmarksToSharedPreferences();
+      await _saveBookmarksToSharedPreferences(owner: pubkey);
       _emitGlobalBookmarks();
 
       Log.info(
@@ -1220,7 +1285,7 @@ class BookmarksRepository {
             ? _PrivateItemsState.none
             : _PrivateItemsState.readable;
       }
-      await _saveBookmarksToSharedPreferences();
+      await _saveBookmarksToSharedPreferences(owner: event.pubkey);
       _emitGlobalBookmarks();
 
       Log.debug(
@@ -1457,25 +1522,41 @@ class BookmarksRepository {
 
   // === STORAGE ===
 
-  /// Load bookmarks from SharedPreferences cache (fast startup)
+  /// Load bookmarks from SharedPreferences cache (fast startup).
+  ///
+  /// The keys are shared by every account on the device, so a snapshot or
+  /// revision saved for another account is ignored rather than adopted
+  /// (#8313). Ones saved before they carried an owner are still loaded.
   void _loadBookmarksFromSharedPreferences() {
-    // Load global bookmarks
+    final owner = _signer.currentPublicKeyHex;
     final globalBookmarksJson = _prefs.getString(globalBookmarksStorageKey);
     if (globalBookmarksJson != null) {
       try {
-        final bookmarksData = jsonDecode(globalBookmarksJson) as List<dynamic>;
-        _globalBookmarks
-          ..clear()
-          ..addAll(
-            bookmarksData.map(
-              (json) => BookmarkItem.fromJson(json as Map<String, dynamic>),
-            ),
+        final snapshot = jsonDecode(globalBookmarksJson);
+        if (_savedForAnotherAccount(snapshot, owner)) {
+          Log.warning(
+            'Ignoring the cached bookmark list: it was saved for another '
+            'account',
+            name: 'BookmarksRepository',
+            category: LogCategory.system,
           );
-        Log.debug(
-          'Loaded ${_globalBookmarks.length} global bookmarks from storage',
-          name: 'BookmarksRepository',
-          category: LogCategory.system,
-        );
+        } else {
+          // Before #8313 the snapshot was the bare item list.
+          final bookmarksData =
+              (snapshot is Map ? snapshot['items'] : snapshot) as List<dynamic>;
+          _globalBookmarks
+            ..clear()
+            ..addAll(
+              bookmarksData.map(
+                (json) => BookmarkItem.fromJson(json as Map<String, dynamic>),
+              ),
+            );
+          Log.debug(
+            'Loaded ${_globalBookmarks.length} global bookmarks from storage',
+            name: 'BookmarksRepository',
+            category: LogCategory.system,
+          );
+        }
       } on Object catch (e) {
         Log.error(
           'Failed to load global bookmarks: $e',
@@ -1489,25 +1570,17 @@ class BookmarksRepository {
     if (revisionJson != null) {
       try {
         final revision = jsonDecode(revisionJson) as Map<String, dynamic>;
-        final loadedRevision = (
-          createdAt: revision['createdAt'] as int,
-          id: revision['id'] as String,
-        );
-        final publicTags = revision['publicTags'];
-        final content = revision['content'];
-        if (publicTags is List && content is String) {
-          final parsedTags = <List<String>>[];
-          for (final entry in publicTags) {
-            if (entry is! List || entry.any((value) => value is! String)) {
-              throw const FormatException('Invalid cached bookmark tags');
-            }
-            parsedTags.add([for (final value in entry) value as String]);
-          }
-          _publicTags = parsedTags;
-          _lastKnownRemoteContent = content;
-          _publishSourceHydrated = true;
+        if (_savedForAnotherAccount(revision, owner)) {
+          // Adopting it would also make this account's own list look stale.
+          Log.warning(
+            'Ignoring the cached bookmark revision: it was saved for another '
+            'account',
+            name: 'BookmarksRepository',
+            category: LogCategory.system,
+          );
+        } else {
+          _adoptCachedRevision(revision);
         }
-        _revision = loadedRevision;
       } on Object catch (e) {
         // A corrupt watermark only costs the staleness guard, so drop it and
         // let the next read establish one rather than failing the load.
@@ -1521,6 +1594,36 @@ class BookmarksRepository {
 
     _loadVideoAddresses();
   }
+
+  /// Restores [_revision] and its publish source from a cached [revision]
+  /// record. Throws [FormatException] for a malformed tag array.
+  void _adoptCachedRevision(Map<String, dynamic> revision) {
+    final loadedRevision = (
+      createdAt: revision['createdAt'] as int,
+      id: revision['id'] as String,
+    );
+    final publicTags = revision['publicTags'];
+    final content = revision['content'];
+    if (publicTags is List && content is String) {
+      final parsedTags = <List<String>>[];
+      for (final entry in publicTags) {
+        if (entry is! List || entry.any((value) => value is! String)) {
+          throw const FormatException('Invalid cached bookmark tags');
+        }
+        parsedTags.add([for (final value in entry) value as String]);
+      }
+      _publicTags = parsedTags;
+      _lastKnownRemoteContent = content;
+      _publishSourceHydrated = true;
+    }
+    _revision = loadedRevision;
+  }
+
+  /// Whether [cached], a decoded snapshot or revision record, was saved for
+  /// an account other than [owner]. Records saved before they carried an
+  /// owner name none, and count as this account's.
+  static bool _savedForAnotherAccount(Object? cached, String? owner) =>
+      cached is Map && cached['owner'] != null && cached['owner'] != owner;
 
   void _loadVideoAddresses() {
     final json = _prefs.getString(globalBookmarksVideoAddressesStorageKey);
@@ -1541,25 +1644,28 @@ class BookmarksRepository {
     }
   }
 
-  /// Save bookmarks to SharedPreferences cache.
+  /// Saves the list to the SharedPreferences cache, stamped with [owner]: the
+  /// account whose list was read, or whose signer published it.
   ///
-  /// Skipped once [dispose] has run: an account switch disposes this
-  /// instance and clears the keys for the next account, and an operation
-  /// still in flight would otherwise refill them with this account's list.
-  Future<void> _saveBookmarksToSharedPreferences() async {
-    if (_disposed) return;
+  /// The keys are shared by every account on the device, so this is skipped
+  /// once [dispose] has run, while [suspend] holds, and once the signer has
+  /// moved to another account: the next account would otherwise find this
+  /// list in its keys (#8313).
+  Future<void> _saveBookmarksToSharedPreferences({
+    required String owner,
+  }) async {
+    if (!_maySave(owner)) return;
     try {
-      // Save global bookmarks
-      final globalBookmarksJson = _globalBookmarks
-          .map((item) => item.toJson())
-          .toList();
       await _prefs.setString(
         globalBookmarksStorageKey,
-        jsonEncode(globalBookmarksJson),
+        jsonEncode({
+          'owner': owner,
+          'items': [for (final item in _globalBookmarks) item.toJson()],
+        }),
       );
       // The revision record carries this account's watermark and ciphertext,
       // the half the next account must never inherit.
-      if (_disposed) return;
+      if (!_maySave(owner)) return;
 
       final revision = _revision;
       if (revision == null) {
@@ -1570,6 +1676,7 @@ class BookmarksRepository {
         await _prefs.setString(
           globalBookmarksRevisionStorageKey,
           jsonEncode({
+            'owner': owner,
             'createdAt': revision.createdAt,
             'id': revision.id,
             'publicTags': _publicTags,
@@ -1587,14 +1694,22 @@ class BookmarksRepository {
     await _saveVideoAddresses();
   }
 
+  /// Whether a list read or published for [owner] may still be written to
+  /// the device.
+  bool _maySave(String owner) =>
+      !_disposed && !_suspended && _signer.currentPublicKeyHex == owner;
+
   /// Saves the coordinates of the public `e` items only. Storing a private
   /// item's coordinate would put the fact that it is bookmarked into
   /// unencrypted storage, which is why [_privateBookmarks] is never persisted
   /// either.
   ///
-  /// Skipped once [dispose] has run, as the snapshot is.
+  /// Skipped once [dispose] has run or while [suspend] holds, as the snapshot
+  /// is. Not stamped with an owner: a coordinate is only ever looked up for an
+  /// item on the loading account's own list, and is dropped from the device
+  /// on that account's next save.
   Future<void> _saveVideoAddresses() async {
-    if (_disposed) return;
+    if (_disposed || _suspended) return;
     final eventIds = {
       for (final item in _globalBookmarks)
         if (item.type == 'e') item.id,

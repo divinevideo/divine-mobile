@@ -9711,6 +9711,58 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Couleur du fondu, du noir au blanc';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Douceur du bord';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Nombre de bandes';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Nombre de plis';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Intensité du flou';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Fondu d\'ouverture';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Fondu de fermeture';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Ouverture en cercle';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Fermeture en cercle';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Ouverture cinéma';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Fermeture cinéma';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Ouverture du rideau';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Fermeture du rideau';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Mise au point';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Perte de netteté';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Naturel';
 
   @override

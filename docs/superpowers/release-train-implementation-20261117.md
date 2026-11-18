@@ -5,12 +5,18 @@ Both levels default to `off`; merging this implementation does not enable it.
 Patches and livestreams remain under their existing holds.
 
 The main-only `Store release train` workflow runs hourly at :17 UTC and accepts
-manual dispatch. The coordinator uses exact-source Mobile CI results, immutable
+manual dispatch. Automatic iOS builds are spaced at least six hours apart,
+including retries, and require app-affecting changes. The hourly tick still
+observes testing exposure and store reviews; it is not an hourly native build.
+The explicit manual iOS release workflow remains an operator-triggered path.
+The coordinator uses exact-source Mobile CI results, immutable
 candidate tags, platform-specific Codemagic builds, the private allocation and
 operational ledger, and provider observations. The scheduled iOS lane uploads
 internally; manual iOS retains its four external groups. Scheduled public
 selection also retains all four existing external groups. OpenVineTesters is the
-designated public cohort used to observe the six-hour production exposure.
+designated public cohort for external TestFlight distribution. App Store
+submission uses the newest processed, CI-verified build without a mandatory
+TestFlight waiting period. New betas never replace an in-flight store review.
 
 ## Credentials and configuration
 
@@ -102,11 +108,13 @@ Record the Android rejection-email operator at activation. The accepted policy
 uses Play rejection emails and the Android kill switch; the selected API does
 not supply an automated rejection hold. There is no new QA or crash gate.
 
-A public iOS submission needs four-hour spacing and fewer than six beta
-submissions in the trailing 24 hours. Production needs six observed hours of
-availability and fewer than one submission in the trailing 24 hours. Android
-replacement also preserves the current internal candidate's full continuous
-six hours, including when a manual build supersedes a scheduled candidate.
+A public iOS beta submission needs four-hour spacing and fewer than six beta
+submissions in the trailing 24 hours. App Store submission has no TestFlight
+waiting period; it preserves the limit of one submission in the trailing
+24 hours and leaves an existing review queued unless a real bug requires
+withdrawal. Android replacement preserves the current internal candidate's
+full continuous six hours, including when a manual build supersedes a
+scheduled candidate.
 
 ## Recovery
 

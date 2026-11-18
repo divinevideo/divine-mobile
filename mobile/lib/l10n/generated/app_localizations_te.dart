@@ -9825,6 +9825,57 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'లుక్స్';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'ఇంట్రో';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'అవుట్రో';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'ఫేడ్ రంగు, నలుపు నుండి తెలుపు';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'అంచు మృదుత్వం';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'బార్‌ల సంఖ్య';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'మడతల సంఖ్య';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'బ్లర్ తీవ్రత';
+
+  @override
+  String get videoEditorEffectFadeIn => 'ఫేడ్ ఇన్';
+
+  @override
+  String get videoEditorEffectFadeOut => 'ఫేడ్ అవుట్';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'వృత్తం తెరుచుకోవడం';
+
+  @override
+  String get videoEditorEffectCircleClose => 'వృత్తం మూసుకోవడం';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'సినిమా తెరుచుకోవడం';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'సినిమా మూసుకోవడం';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'తెర తెరుచుకోవడం';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'తెర మూసుకోవడం';
+
+  @override
+  String get videoEditorEffectFocusIn => 'ఫోకస్ ఇన్';
+
+  @override
+  String get videoEditorEffectFocusOut => 'ఫోకస్ అవుట్';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'సహజం';
 
   @override

@@ -9471,6 +9471,57 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Nuansa';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Warna Fade, Hitam ke Putih';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Kelembutan Tepi';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Jumlah Bilah';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Jumlah Lipatan';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Kekuatan Blur';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Muncul Perlahan';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Hilang Perlahan';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Lingkaran Terbuka';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Lingkaran Tertutup';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Bioskop Terbuka';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Bioskop Tertutup';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Tirai Terbuka';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Tirai Tertutup';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Jadi Fokus';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Jadi Buram';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Alami';
 
   @override

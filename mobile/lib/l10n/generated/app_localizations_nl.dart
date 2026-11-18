@@ -9608,6 +9608,57 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Faderkleur, zwart tot wit';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Zachtheid van de rand';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Aantal balken';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Aantal plooien';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Sterkte van de vervaging';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Infaden';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Uitfaden';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Cirkel open';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Cirkel dicht';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Bioscoop open';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Bioscoop dicht';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Gordijn open';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Gordijn dicht';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Scherpstellen';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Vervagen';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Natuurlijk';
 
   @override

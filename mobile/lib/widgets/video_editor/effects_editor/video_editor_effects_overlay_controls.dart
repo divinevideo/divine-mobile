@@ -40,57 +40,76 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
     final hasEffect = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType != null,
     );
-    return Stack(
-      fit: .expand,
-      children: [
-        Semantics(
-          button: true,
-          label: context.l10n.videoEditorPlayPauseSemanticLabel,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => context.read<VideoEditorMainBloc>().add(
-              const VideoEditorPlaybackToggleRequested(),
-            ),
-          ),
-        ),
-        Column(
-          children: [
-            const _TopBarContent(),
-            // Everything else sits under the toolbar: the bar under the
-            // preview is tall, so nothing may reach up behind it.
-            Expanded(
-              child: _ControlsLayout(
-                dropsMinHeight: _DropsSettingsCard.minOpenHeight(
-                  MediaQuery.textScalerOf(context),
-                ),
-                notice: const _PreviewUnavailableNotice(),
-                dropsSettings: const _DropsSettingsCard(),
-                onBeatSwitch: const _OnBeatSwitch(),
-                slider: AnimatedSwitcher(
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: const Offset(1, 0),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
-                  },
-                  switchInCurve: Curves.easeInOut,
-                  duration: const Duration(milliseconds: 220),
-                  child: hasEffect
-                      ? const _IntensitySlider()
-                      : const SizedBox.shrink(),
-                ),
+    return BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+      listenWhen: (previous, current) =>
+          current.isEditing && previous.selectedType != current.selectedType,
+      listener: _showIntroOutro,
+      child: Stack(
+        fit: .expand,
+        children: [
+          Semantics(
+            button: true,
+            label: context.l10n.videoEditorPlayPauseSemanticLabel,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => context.read<VideoEditorMainBloc>().add(
+                const VideoEditorPlaybackToggleRequested(),
               ),
             ),
-          ],
-        ),
-      ],
+          ),
+          Column(
+            children: [
+              const _TopBarContent(),
+              // Everything else sits under the toolbar: the bar under the
+              // preview is tall, so nothing may reach up behind it.
+              Expanded(
+                child: _ControlsLayout(
+                  dropsMinHeight: _DropsSettingsCard.minOpenHeight(
+                    MediaQuery.textScalerOf(context),
+                  ),
+                  notice: const _PreviewUnavailableNotice(),
+                  dropsSettings: const _DropsSettingsCard(),
+                  onBeatSwitch: const _OnBeatSwitch(),
+                  slider: AnimatedSwitcher(
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: const Offset(1, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    switchInCurve: Curves.easeInOut,
+                    duration: const Duration(milliseconds: 220),
+                    child: hasEffect
+                        ? const _IntensitySlider()
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  /// Moves the playhead to where a picked intro or outro plays, which may be
+  /// seconds away from it; see
+  /// [VideoEditorEffectsState.introOutroPreviewPosition].
+  static void _showIntroOutro(
+    BuildContext context,
+    VideoEditorEffectsState state,
+  ) {
+    final mainBloc = context.read<VideoEditorMainBloc>();
+    final position = state.introOutroPreviewPosition(
+      playing: mainBloc.state.isPlaying,
+    );
+    if (position != null) mainBloc.add(VideoEditorSeekRequested(position));
   }
 }
 
@@ -298,12 +317,25 @@ class _IntensitySlider extends StatelessWidget {
     final intensity = context.select(
       (VideoEditorEffectsCubit c) => c.state.intensity,
     );
+    final look = context.select(
+      (VideoEditorEffectsCubit c) => c.state.selectedType?.introOutroLook,
+    );
+    final l10n = context.l10n;
     return Padding(
       padding: const .only(right: 16),
       child: LayoutBuilder(
         builder: (_, constraints) => VideoEditorVerticalSlider(
           height: constraints.maxHeight,
           value: intensity,
+          // An intro or outro's slider changes the structure of its look.
+          semanticLabel: switch (look) {
+            IntroOutroLook.fade => l10n.videoEditorEffectShapeFadeColor,
+            IntroOutroLook.circle => l10n.videoEditorEffectShapeCircleSoftness,
+            IntroOutroLook.cinema => l10n.videoEditorEffectShapeCinemaBars,
+            IntroOutroLook.curtain => l10n.videoEditorEffectShapeCurtainFolds,
+            IntroOutroLook.focus => l10n.videoEditorEffectShapeFocusBlur,
+            null => null,
+          },
           onChanged: context.read<VideoEditorEffectsCubit>().setIntensity,
         ),
       ),

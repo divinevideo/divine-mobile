@@ -9689,6 +9689,57 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Blendfarbe, Schwarz bis Weiß';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Kantenweichheit';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Anzahl Balken';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Anzahl Falten';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Unschärfe';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Einblenden';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Ausblenden';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Kreis auf';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Kreis zu';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Kino auf';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Kino zu';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Vorhang auf';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Vorhang zu';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Scharfstellen';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Verschwimmen';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Natürlich';
 
   @override

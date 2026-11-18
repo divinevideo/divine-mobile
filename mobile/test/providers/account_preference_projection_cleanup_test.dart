@@ -67,6 +67,51 @@ void main() {
 
   group('account preference native projection cleanup', () {
     test(
+      'suspending waits for a projection write already issued and ends that '
+      'projection (#8313)',
+      () async {
+        final originalBackend = SharedPreferencesStorePlatform.instance;
+        SharedPreferences.setMockInitialValues({});
+        final backend = _HeldNativeWrite('content_language', {})..hold = false;
+        SharedPreferencesStorePlatform.instance = backend;
+        final prefs = await SharedPreferences.getInstance();
+        final store = AccountPreferenceStore(prefs);
+        final account = FakeAccountState('a' * 64);
+        await store.bind(account);
+        addTearDown(() async {
+          if (!backend.release.isCompleted) backend.release.complete();
+          store.dispose();
+          await account.close();
+          SharedPreferences.resetStatic();
+          SharedPreferencesStorePlatform.instance = originalBackend;
+        });
+        backend.hold = true;
+        account.receive({
+          'content_language': 'ja',
+          'content_filter/violence': 'hide',
+        });
+        await backend.entered.future;
+
+        var suspended = false;
+        final suspending = store.suspendProjection().then((_) {
+          suspended = true;
+        });
+        await pumpEventQueue();
+        expect(suspended, isFalse);
+
+        backend.release.complete();
+        await suspending;
+        await pumpEventQueue();
+
+        expect(prefs.getString('content_language'), 'ja');
+        expect(
+          prefs.getString('content_filter_prefs'),
+          isNot(contains('violence')),
+        );
+      },
+    );
+
+    test(
       'stopping an old binding neither detaches nor drains the incoming owner',
       () async {
         final originalBackend = SharedPreferencesStorePlatform.instance;

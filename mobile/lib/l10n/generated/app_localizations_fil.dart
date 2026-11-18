@@ -9631,6 +9631,58 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Kulay ng fade, itim hanggang puti';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Lambot ng gilid';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Dami ng bar';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Dami ng tupi';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Lakas ng blur';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Fade In';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Fade Out';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Circle Open';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Circle Close';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Cinema Open';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Cinema Close';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Curtain Open';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Curtain Close';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Focus In';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Focus Out';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Natural';
 
   @override

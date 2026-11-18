@@ -138,13 +138,6 @@ def observe(snapshot, previous):
     """Reconcile first observations, preserving completed continuous exposure only."""
     state = copy.deepcopy(previous)
     now = snapshot["now"]
-    for b in snapshot.get("ios", {}).get("builds", []):
-        if (
-            b.get("public")
-            and b.get("valid")
-            and b.get("external") in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
-        ):
-            state.setdefault("public_available", {}).setdefault(b["id"], now)
     consume_version_acknowledgements(
         state,
         {
@@ -223,7 +216,7 @@ def plan_tick(snapshot, state, levels):
         )
         candidate = snapshot.get("candidate")
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
-        interval = HOUR if platform == "ios" else 4 * HOUR
+        interval = 6 * HOUR if platform == "ios" else 4 * HOUR
         can_replace = True
         if platform == "android":
             for b in data.get("internal", []):
@@ -357,6 +350,11 @@ def plan_tick(snapshot, state, levels):
                     and not unresolved_review_is_acknowledged(r, versions, ack)
                     for r in reviews
                 )
+                if rejected:
+                    reasons.append(
+                        "ios app-store: held by the unacknowledged beta rejection above"
+                    )
+                blocked = blocked or rejected
                 resumable = {
                     o["action"]["build"]["number"]
                     for o in state.get("operations", {}).values()
@@ -384,15 +382,10 @@ def plan_tick(snapshot, state, levels):
                 eligible = [
                     b
                     for b in builds
-                    if b.get("public")
-                    and not (b.get("version") == "1.0.30" and str(b.get("number")) == "916")
+                    if not (b.get("version") == "1.0.30" and str(b.get("number")) == "916")
                     and b.get("valid")
                     and b.get("ci_verified")
-                    and b.get("public_complete", b.get("public"))
-                    and b.get("external")
-                    in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
-                    and b["id"] in state.get("public_available", {})
-                    and now - state["public_available"][b["id"]] >= 6 * HOUR
+                    and b.get("external") not in BETA_REJECTED
                     and (
                         parse_version(b["version"]) > highest
                         or b["number"] in resumable

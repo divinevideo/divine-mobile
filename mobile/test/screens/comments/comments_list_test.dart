@@ -334,9 +334,8 @@ void main() {
           .widgetList<CommentItem>(find.byType(CommentItem))
           .map((item) => item.comment.id);
 
-      testWidgets('ranks replies with all comments by net votes', (
-        tester,
-      ) async {
+      testWidgets('ranks threads by net votes with replies nested under '
+          'their parent', (tester) async {
         when(() => mockReactionsBloc.state).thenReturn(
           CommentReactionsState(
             commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
@@ -347,7 +346,154 @@ void main() {
         await tester.pumpWidget(buildTestWidget(listState: listState()));
         await tester.pump();
 
-        expect(displayedOrder(tester), [highest.id, unvoted.id, runnerUp.id]);
+        // The upvoted reply stays under the comment it answers.
+        expect(
+          tester
+              .widgetList<CommentItem>(find.byType(CommentItem))
+              .map((item) => (item.comment.id, item.depth)),
+          [(unvoted.id, 0), (runnerUp.id, 0), (highest.id, 1)],
+        );
+      });
+
+      group('while the vote totals load', () {
+        const loading = CommentReactionsState(isLoadingVoteCounts: true);
+
+        testWidgets('shows the skeleton, then the comments ranked once the '
+            'totals land', (tester) async {
+          final updates = StreamController<CommentReactionsState>();
+          addTearDown(updates.close);
+          whenListen(mockReactionsBloc, updates.stream, initialState: loading);
+
+          // Rank roots here: an upvoted reply stays under its parent, so
+          // the shared reply fixture would not distinguish Top from dates.
+          final highestRoot = CommentBuilder()
+              .withId(highest.id)
+              .withCreatedAt(highest.createdAt)
+              .build();
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(
+                commentsById: {
+                  highestRoot.id: highestRoot,
+                  runnerUp.id: runnerUp,
+                  unvoted.id: unvoted,
+                },
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(find.byType(CommentsSkeletonLoader), findsOneWidget);
+          expect(find.byType(CommentItem), findsNothing);
+
+          updates.add(
+            CommentReactionsState(
+              commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
+              commentDownvoteCounts: {runnerUp.id: 5},
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(displayedOrder(tester), [
+            highest.id,
+            unvoted.id,
+            runnerUp.id,
+          ]);
+        });
+
+        testWidgets('lists the comments once the wait runs out', (
+          tester,
+        ) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(buildTestWidget(listState: listState()));
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNothing);
+
+          await tester.pump(const Duration(seconds: 3));
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('lists the comments at once when opened on one of them', (
+          tester,
+        ) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(scrollToCommentId: runnerUp.id),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('lists the comments at once in Recent', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(
+                sortMode: CommentsSortMode.newest,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('keeps a focused comment visible after the scroll is '
+            'acknowledged while totals still load', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+          final focused = listState().copyWith(
+            scrollToCommentId: runnerUp.id,
+          );
+          final widget = buildTestWidget(listState: focused);
+          final updates = StreamController<CommentsListState>();
+          addTearDown(updates.close);
+          whenListen(mockListBloc, updates.stream, initialState: focused);
+
+          await tester.pumpWidget(widget);
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNWidgets(3));
+
+          updates.add(listState());
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('keeps the list visible after a newly posted comment is '
+            'revealed and its scroll is acknowledged', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+          final initial = listState();
+          final widget = buildTestWidget(listState: initial);
+          final updates = StreamController<CommentsListState>();
+          addTearDown(updates.close);
+          whenListen(mockListBloc, updates.stream, initialState: initial);
+
+          await tester.pumpWidget(widget);
+          await tester.pump();
+          expect(find.byType(CommentsSkeletonLoader), findsOneWidget);
+
+          updates.add(initial.copyWith(scrollToCommentId: runnerUp.id));
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNWidgets(3));
+
+          updates.add(initial);
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
       });
 
       // Replaces "reorders when downvotes change" (#10921): once the order is
@@ -361,15 +507,22 @@ void main() {
         final updates = StreamController<CommentReactionsState>();
         addTearDown(updates.close);
         whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
-        final frozen = [highest.id, runnerUp.id, unvoted.id];
+        final frozen = [runnerUp.id, highest.id, unvoted.id];
 
         await tester.pumpWidget(
-          buildTestWidget(listState: listState(topOrder: frozen)),
+          buildTestWidget(
+            listState: listState(
+              topOrder: [highest.id, runnerUp.id, unvoted.id],
+            ),
+          ),
         );
         await tester.pump();
         expect(displayedOrder(tester), frozen);
 
-        updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
+        // Ranked live, the unvoted comment would now rise above runnerUp.
+        updates.add(
+          reactions.copyWith(commentDownvoteCounts: {runnerUp.id: 7}),
+        );
         await tester.pump();
 
         expect(displayedOrder(tester), frozen);

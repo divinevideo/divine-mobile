@@ -1749,7 +1749,8 @@ class VideosRepository {
   /// - [eventIds]: List of event IDs to fetch
   /// - [cacheResults]: If true, saves fetched events to local storage.
   ///   Defaults to false to avoid cache bloat from pagination.
-  ///   Set to true for first-page loads that should be cached.
+  ///   Set to true for first-page loads that should be cached. A save that
+  ///   fails is logged and does not fail the fetch.
   ///
   /// Returns a list of [VideoEvent] in the same order as [eventIds].
   /// Videos that couldn't be found or failed to parse are omitted.
@@ -1802,9 +1803,7 @@ class VideosRepository {
       }
 
       // 3. Optionally save fetched events to cache
-      if (cacheResults && _localStorage != null && relayEvents.isNotEmpty) {
-        await _localStorage.saveEventsBatch(relayEvents);
-      }
+      if (cacheResults) await _cacheFetchedEvents(relayEvents);
     }
 
     // Transform and filter, preserving input order
@@ -1846,7 +1845,8 @@ class VideosRepository {
   /// - [addressableIds]: List of addressable IDs in `kind:pubkey:d-tag` format
   /// - [cacheResults]: If true, saves fetched events to local storage.
   ///   Defaults to false to avoid cache bloat from pagination.
-  ///   Set to true for first-page loads that should be cached.
+  ///   Set to true for first-page loads that should be cached. A save that
+  ///   fails is logged and does not fail the fetch.
   ///
   /// [includeFeedShape] defaults to true. Profile pins opt out of feed shape
   /// filtering while retaining the other visibility policies.
@@ -1873,9 +1873,7 @@ class VideosRepository {
     final events = results.expand((e) => e).toList();
 
     // Optionally save fetched events to cache
-    if (cacheResults && _localStorage != null && events.isNotEmpty) {
-      await _localStorage.saveEventsBatch(events);
-    }
+    if (cacheResults) await _cacheFetchedEvents(events);
 
     final foundVideos = _latestVisibleVideosByAddress(
       events,
@@ -1901,6 +1899,30 @@ class VideosRepository {
     return _hydrateVideosWithBulkStats([
       for (final addressableId in addressableIds) ?foundVideos[addressableId],
     ]);
+  }
+
+  /// Saves [events] fetched from relays to local storage, best effort.
+  ///
+  /// The cache only speeds up a later read, so a write the device cannot make
+  /// must not fail a fetch that already has its videos. On a full iOS disk
+  /// SQLite cannot even create its journal and reports `unable to open
+  /// database file`. An [Error] is a defect, not a storage condition, and
+  /// still propagates.
+  Future<void> _cacheFetchedEvents(List<Event> events) async {
+    final localStorage = _localStorage;
+    if (localStorage == null || events.isEmpty) return;
+    try {
+      await localStorage.saveEventsBatch(events);
+    } on Exception catch (e) {
+      // First line only: a SqliteException goes on to quote the statement
+      // with every bound parameter, which is the event itself.
+      Log.warning(
+        'Could not cache ${events.length} fetched video event(s): '
+        '${'$e'.split('\n').first}',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// The videos at [addressableIds] as the relays alone hold them, in that

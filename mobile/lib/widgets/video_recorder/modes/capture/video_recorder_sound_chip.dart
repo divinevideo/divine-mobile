@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -32,18 +33,21 @@ class VideoRecorderSoundChip extends ConsumerWidget {
 
     if (hasClips && selectedSound == null) return const SizedBox.shrink();
 
+    // Read now rather than when the sheet closes: a take that starts while
+    // the sheet is open swaps the top bar, and with it this chip, out of the
+    // tree, so a lookup then would throw and the pause would never lift.
+    final recorderBloc = context.read<VideoRecorderBloc>();
+
     return Flexible(
       child: VideoEditorAudioChip(
         selectedSound: selectedSound,
         onSoundChanged: (sound) => ref
             .read(videoEditorProvider.notifier)
             .selectRecorderAudioTrack(sound),
-        onSelectionStarted: () => context.read<VideoRecorderBloc>().add(
-          const VideoRecorderRemoteRecordPaused(),
-        ),
-        onSelectionEnded: () => context.read<VideoRecorderBloc>().add(
-          const VideoRecorderRemoteRecordResumed(),
-        ),
+        onSelectionStarted: () =>
+            recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        onSelectionEnded: () =>
+            recorderBloc.addIfOpen(const VideoRecorderRemoteRecordResumed()),
         onLockedTap: hasClips ? () => _showLockedHint(context) : null,
       ),
     );

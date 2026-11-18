@@ -2,6 +2,7 @@
 // ABOUTME: Verifies kind 5 event creation, relay OK confirmation, and
 // ABOUTME: local history bookkeeping.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -1122,6 +1123,84 @@ void main() {
     group('getDeletionForEvent', () {
       test('returns null for an id that was never deleted', () {
         expect(service.getDeletionForEvent('non_existent_event_id'), isNull);
+      });
+    });
+
+    // The outgoing account's service outlives an account switch. A delete
+    // still waiting on its relay answer records the deletion when it lands,
+    // and must not write the history into the keys the next account reads.
+    group('account switch (#8313)', () {
+      late Completer<PublishOutcome> relayAnswer;
+      late VideoEvent video;
+      late Event deleteEvent;
+
+      setUp(() {
+        video = createTestVideoEvent(testPublicKey);
+        deleteEvent = createTestEvent(
+          pubkey: testPublicKey,
+          kind: 5,
+          tags: [
+            ['e', video.id],
+            ['a', video.addressableId!],
+            ['k', '34236'],
+          ],
+          content: 'CONTENT DELETION',
+        );
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+        relayAnswer = Completer<PublishOutcome>();
+        when(
+          () => mockNostrService.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) => relayAnswer.future);
+      });
+
+      test(
+        'a suspended service keeps a delete that lands later out of the '
+        'device history',
+        () async {
+          final deleting = service.deleteContent(
+            video: video,
+            reason: 'Personal choice',
+          );
+          await pumpEventQueue();
+          service.suspend();
+          // The incoming sign-in's identity cleanup.
+          await prefs.remove(ContentDeletionService.deletionsStorageKey);
+          relayAnswer.complete(accepted(deleteEvent.id));
+          final result = await deleting;
+
+          expect(result.success, isTrue);
+          expect(service.hasBeenDeleted(video.id), isTrue);
+          expect(
+            prefs.getString(ContentDeletionService.deletionsStorageKey),
+            isNull,
+          );
+        },
+      );
+
+      test('a resumed service saves the deletion history again', () async {
+        service
+          ..suspend()
+          ..resume();
+        final deleting = service.deleteContent(
+          video: video,
+          reason: 'Personal choice',
+        );
+        relayAnswer.complete(accepted(deleteEvent.id));
+        await deleting;
+
+        expect(
+          prefs.getString(ContentDeletionService.deletionsStorageKey),
+          contains(video.id),
+        );
       });
     });
   });

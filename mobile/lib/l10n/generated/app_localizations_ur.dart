@@ -9565,6 +9565,58 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'انداز';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'آغاز';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'اختتام';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'مدھم ہونے کا رنگ، سیاہ سے سفید';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'کنارے کی نرمی';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'پٹیوں کی تعداد';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'تہوں کی تعداد';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'دھندلاہٹ کی شدت';
+
+  @override
+  String get videoEditorEffectFadeIn => 'آہستہ ظاہر ہونا';
+
+  @override
+  String get videoEditorEffectFadeOut => 'آہستہ غائب ہونا';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'دائرہ کھلنا';
+
+  @override
+  String get videoEditorEffectCircleClose => 'دائرہ بند ہونا';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'سنیما کھلنا';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'سنیما بند ہونا';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'پردہ کھلنا';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'پردہ بند ہونا';
+
+  @override
+  String get videoEditorEffectFocusIn => 'فوکس میں آنا';
+
+  @override
+  String get videoEditorEffectFocusOut => 'فوکس سے باہر';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'قدرتی';
 
   @override

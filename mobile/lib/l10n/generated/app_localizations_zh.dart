@@ -9023,6 +9023,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => '调色';
 
   @override
+  String get videoEditorEffectCategoryIntro => '开场';
+
+  @override
+  String get videoEditorEffectCategoryOutro => '结尾';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => '淡化颜色，从黑到白';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => '边缘柔和度';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => '横条数量';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => '褶皱数量';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => '模糊强度';
+
+  @override
+  String get videoEditorEffectFadeIn => '淡入';
+
+  @override
+  String get videoEditorEffectFadeOut => '淡出';
+
+  @override
+  String get videoEditorEffectCircleOpen => '圆形展开';
+
+  @override
+  String get videoEditorEffectCircleClose => '圆形收拢';
+
+  @override
+  String get videoEditorEffectCinemaOpen => '电影开幕';
+
+  @override
+  String get videoEditorEffectCinemaClose => '电影闭幕';
+
+  @override
+  String get videoEditorEffectCurtainOpen => '拉开幕布';
+
+  @override
+  String get videoEditorEffectCurtainClose => '合上幕布';
+
+  @override
+  String get videoEditorEffectFocusIn => '对焦';
+
+  @override
+  String get videoEditorEffectFocusOut => '失焦';
+
+  @override
   String get videoEditorFilterCategoryNatural => '自然';
 
   @override

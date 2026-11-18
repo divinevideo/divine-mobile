@@ -531,9 +531,8 @@ void main() {
       test(
         'still classifies a network reason via its message (DNS not shortcut)',
         () async {
-          // Only authUnavailable is shortcut on the reason; a network reason
-          // keeps flowing through string matching so DNS_ERROR vs NETWORK_ERROR
-          // stays distinguishable.
+          // A network reason is checked only after the message words, so a
+          // failed host lookup still reads as DNS_ERROR, not NETWORK_ERROR.
           const error = BlossomUploadFailureException(
             'Failed host lookup: blossom.divine.video',
             failureReason: BlossomUploadFailureReason.network,

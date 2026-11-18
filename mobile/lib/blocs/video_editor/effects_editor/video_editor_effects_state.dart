@@ -45,12 +45,14 @@ class VideoEditorEffectsState extends Equatable {
     this.editingId,
     this.selectedType,
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
+    this.leftIntensities = const {},
     this.dropsSettings = const DropsEffectSettings(),
     this.onBeat = false,
     this.startedPlayback = false,
     this.beatInput,
     this.beats = const [],
     this.beatStatus = VideoEditorBeatStatus.idle,
+    this.timelineEnd,
   });
 
   /// The effects committed to the editor history, in the order they combine,
@@ -69,6 +71,12 @@ class VideoEditorEffectsState extends Equatable {
 
   /// The intensity of [selectedType], from 0 to 1.
   final double intensity;
+
+  /// The intensity each kind of effect was left at in the open editor when
+  /// another kind was picked, so coming back to it restores it: an intro or
+  /// outro's by its look, whose structure it sets, and the other effects'
+  /// under `null`, whose strength it sets.
+  final Map<IntroOutroLook?, double> leftIntensities;
 
   /// How the drops look when [selectedType] is [EditorEffectType.drops].
   final DropsEffectSettings dropsSettings;
@@ -90,21 +98,64 @@ class VideoEditorEffectsState extends Equatable {
   /// Where finding [beats] stands.
   final VideoEditorBeatStatus beatStatus;
 
+  /// Where the video ends and loops, on the editor timeline, which an outro
+  /// is placed against; `null` before the editor said.
+  final Duration? timelineEnd;
+
   /// Whether the picked effect fires on the beat.
   bool get selectionOnBeat =>
       onBeat && selectedType != null && selectedType!.supportsOnBeat;
 
-  /// The effect the open editor would commit, over the whole video, or `null`
-  /// for none.
-  EditorVideoEffect? get selection => selectedType == null
-      ? null
-      : EditorVideoEffect.of(
-          id: editingId ?? _pickedId,
-          type: selectedType!,
-          intensity: intensity,
-          onBeat: selectionOnBeat,
-          settings: settingsFor(selectedType!),
-        );
+  /// The effect the open editor would commit, or `null` for none.
+  ///
+  /// It lies over the whole video, except for an intro or an outro, which
+  /// only plays out right over its own window: that is the edited effect's
+  /// while it was an intro or an outro of the same kind, and otherwise where
+  /// a new one goes (see [defaultVideoEffectWindow]).
+  EditorVideoEffect? get selection {
+    final type = selectedType;
+    if (type == null) return null;
+    final window = _selectionWindow(type);
+    return EditorVideoEffect.of(
+      id: editingId ?? _pickedId,
+      type: type,
+      intensity: intensity,
+      startTime: window.startTime,
+      endTime: window.endTime,
+      onBeat: selectionOnBeat,
+      settings: settingsFor(type),
+    );
+  }
+
+  ({Duration? startTime, Duration? endTime}) _selectionWindow(
+    EditorEffectType type,
+  ) {
+    if (!type.isIntroOutro) return (startTime: null, endTime: null);
+    final edited = applied.where((e) => e.id == editingId).firstOrNull;
+    if (edited != null && edited.type.placement == type.placement) {
+      return (startTime: edited.startTime, endTime: edited.endTime);
+    }
+    return defaultVideoEffectWindow(type, timelineEnd: timelineEnd);
+  }
+
+  /// Where the preview jumps to when an intro or outro is picked, so it
+  /// shows right away, or `null` for an effect over the whole video.
+  ///
+  /// A [playing] video jumps to the start of an intro, and a second before an
+  /// outro, so the outro is seen closing over the video. A paused one jumps
+  /// to the middle of its window, the one frame that shows what it does.
+  Duration? introOutroPreviewPosition({required bool playing}) {
+    final picked = isEditing ? selection : null;
+    if (picked == null || !picked.type.isIntroOutro) return null;
+    final start = picked.startTime ?? Duration.zero;
+    if (!playing) {
+      final end = picked.endTime ?? timelineEnd ?? start;
+      return end > start ? start + (end - start) ~/ 2 : start;
+    }
+    if (picked.type.placement == EditorEffectPlacement.opening) return start;
+    final leadIn = start - introOutroEffectDuration;
+    return leadIn.isNegative ? Duration.zero : leadIn;
+  }
 
   /// The settings a picked effect of [type] stores next to its intensity.
   Map<String, Object> settingsFor(EditorEffectType type) =>
@@ -145,7 +196,8 @@ class VideoEditorEffectsState extends Equatable {
   }
 
   /// The effects Divine renders itself that the preview shows, placed like
-  /// [previewEffects]: the native player draws these.
+  /// [previewEffects], except a picked intro or outro, which shows over its
+  /// own window (see [selection]): the native player draws these.
   List<CustomVideoEffect> get previewCustomEffects {
     final picked = isEditing ? selection?.custom : null;
     final effects = <CustomVideoEffect>[];
@@ -173,12 +225,14 @@ class VideoEditorEffectsState extends Equatable {
     EditorEffectType? selectedType,
     bool clearSelectedType = false,
     double? intensity,
+    Map<IntroOutroLook?, double>? leftIntensities,
     DropsEffectSettings? dropsSettings,
     bool? onBeat,
     bool? startedPlayback,
     VideoEditorBeatInput? beatInput,
     List<Duration>? beats,
     VideoEditorBeatStatus? beatStatus,
+    Duration? timelineEnd,
   }) {
     return VideoEditorEffectsState(
       applied: applied ?? this.applied,
@@ -188,12 +242,14 @@ class VideoEditorEffectsState extends Equatable {
           ? null
           : (selectedType ?? this.selectedType),
       intensity: intensity ?? this.intensity,
+      leftIntensities: leftIntensities ?? this.leftIntensities,
       dropsSettings: dropsSettings ?? this.dropsSettings,
       onBeat: onBeat ?? this.onBeat,
       startedPlayback: startedPlayback ?? this.startedPlayback,
       beatInput: beatInput ?? this.beatInput,
       beats: beats ?? this.beats,
       beatStatus: beatStatus ?? this.beatStatus,
+      timelineEnd: timelineEnd ?? this.timelineEnd,
     );
   }
 
@@ -204,11 +260,13 @@ class VideoEditorEffectsState extends Equatable {
     editingId,
     selectedType,
     intensity,
+    leftIntensities,
     dropsSettings,
     onBeat,
     startedPlayback,
     beatInput,
     beats,
     beatStatus,
+    timelineEnd,
   ];
 }

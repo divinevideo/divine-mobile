@@ -112,6 +112,7 @@ class AccountPreferenceStore {
   bool _bound = false;
   bool _closed = false;
   bool _legacyOwnerMatches = false;
+  bool _projectionSuspended = false;
   int _generation = 0;
 
   bool get isBound => _bound;
@@ -302,6 +303,41 @@ class AccountPreferenceStore {
     );
   }
 
+  /// Stops projecting into the device-wide preference keys while this store's
+  /// account is switched away from, and waits for the writes it already
+  /// issued. Reads keep serving the account's values, so its screens do not
+  /// change while the switch runs.
+  ///
+  /// The outgoing container outlives the switch until its push cleanup
+  /// settles, and its repository keeps syncing until then; a change it
+  /// receives must not land in keys the incoming account now owns (#8313).
+  Future<void> suspendProjection() {
+    _projectionSuspended = true;
+    // Only their settling matters here: the projection that issued a write
+    // reports its failure.
+    return Future.wait<void>([
+      for (final writes in _nativeWrites.values.toList())
+        for (final write in writes.toList())
+          write.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
+    ]);
+  }
+
+  /// Projects again after a switch that rolled back, restoring the keys the
+  /// incoming account's cleanup may already have cleared.
+  void resumeProjection() {
+    if (!_projectionSuspended) return;
+    _projectionSuspended = false;
+    unawaited(
+      _project(_generation).catchError((Object error, StackTrace stack) {
+        Log.warning(
+          'Unable to restore account preference projection',
+          name: 'AccountPreferenceStore',
+          category: LogCategory.system,
+        );
+      }),
+    );
+  }
+
   Future<void> _writeOwnedProjection(
     AccountStateRepository repository,
     String key,
@@ -326,9 +362,13 @@ class AccountPreferenceStore {
     return write;
   }
 
+  /// Whether a projection started for [generation] may still write.
+  bool _projects(int generation) =>
+      !_closed && !_projectionSuspended && generation == _generation;
+
   Future<void> _project(int generation) {
     final next = _projectionQueue.tail.then((_) async {
-      if (_closed || generation != _generation) return;
+      if (!_projects(generation)) return;
       final repository = _repository;
       if (repository == null) return;
       await _writeOwnedProjection(
@@ -337,17 +377,17 @@ class AccountPreferenceStore {
         repository.pubkey,
       );
       for (final key in AccountPreferenceRegistry.keys) {
-        if (_closed || generation != _generation) return;
+        if (!_projects(generation)) return;
         if (key.contains('/')) continue;
         await _writeOwnedProjection(repository, key, read(key));
       }
-      if (_closed || generation != _generation) return;
+      if (!_projects(generation)) return;
       await _writeOwnedProjection(
         repository,
         'subscribed_labeler_pubkeys',
         (read('subscribed_labeler_pubkeys')! as List).cast<String>(),
       );
-      if (_closed || generation != _generation) return;
+      if (!_projects(generation)) return;
       final categories = <String, String>{};
       for (final label in ContentLabel.values) {
         final value = read('content_filter/${label.value}');

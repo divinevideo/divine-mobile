@@ -128,6 +128,9 @@ class SeenVideosService {
   Timer? _saveDebounceTimer;
   Completer<void>? _pendingSaveCompleter;
 
+  /// Set by [suspend] for the length of an account switch.
+  bool _suspended = false;
+
   bool get isInitialized => _isInitialized;
   int get seenVideoCount => _seenLastSeen.length;
   AppDatabase? get _effectiveDb => _database;
@@ -176,7 +179,7 @@ class SeenVideosService {
       _prefs = _prefsOverride ?? await SharedPreferences.getInstance();
       await _loadSeenVideos(trace, phases);
       phases.finishPhase();
-      if (_effectiveDb != null) {
+      if (_effectiveDb != null && !_suspended) {
         unawaited(
           _effectiveDb!.seenVideosDao.pruneExpired().then<void>(
             (_) {},
@@ -258,7 +261,9 @@ class SeenVideosService {
             initializationTrace: trace,
             initializationPhases: phases,
           );
-          await _prefs!.remove(legacySeenVideosStorageKey);
+          if (!_suspended) {
+            await _prefs!.remove(legacySeenVideosStorageKey);
+          }
         }
       }
       if (_effectiveDb != null) {
@@ -276,11 +281,15 @@ class SeenVideosService {
               _seenLastSeen[row.videoId] = lastSeen;
             }
           }
+          // Keep what was read, so a switch that rolls back keeps it, but do
+          // not migrate into the table the incoming account now owns.
+          if (_suspended) return;
           final migrated =
               _prefs!.getBool(seenVideosMigratedStorageKey) ?? false;
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
             phases.startPhase('database_migration_ms');
             await _migrateMetricsToDb(trace, phases);
+            if (_suspended) return;
             await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           } else if (dbRows.isNotEmpty && !migrated) {
             phases.startPhase('migration_marker_ms');
@@ -355,7 +364,7 @@ class SeenVideosService {
     PerformanceTrace? initializationTrace,
     PerformancePhaseTimer? initializationPhases,
   }) async {
-    if (_prefs == null) return;
+    if (_prefs == null || _suspended) return;
     try {
       final sortedVideos = _seenVideos.values.toList()
         ..sort((a, b) => b.lastSeenAt.compareTo(a.lastSeenAt));
@@ -507,7 +516,7 @@ class SeenVideosService {
     required int lastSeenAt,
   }) async {
     final database = _effectiveDb;
-    if (database == null) return;
+    if (database == null || _suspended) return;
     try {
       await database.seenVideosDao.markSeen(
         videoId,
@@ -528,7 +537,7 @@ class SeenVideosService {
     required int nowMs,
   }) async {
     final database = _effectiveDb;
-    if (database == null) return;
+    if (database == null || _suspended) return;
     try {
       await database.seenVideosDao.upsertBatch(videoIds, nowMs: nowMs);
     } catch (error) {
@@ -595,7 +604,7 @@ class SeenVideosService {
     );
     _seenLastSeen.remove(videoId);
     _seenVideos.remove(videoId);
-    if (_effectiveDb != null) {
+    if (_effectiveDb != null && !_suspended) {
       try {
         await _effectiveDb!.seenVideosDao.remove(videoId);
       } catch (_) {
@@ -627,6 +636,20 @@ class SeenVideosService {
           : (totalLoops / _seenVideos.length).toStringAsFixed(1),
     };
   }
+
+  /// Stops writing this account's history to the device until [resume].
+  ///
+  /// An account switch calls this on the outgoing account's service before
+  /// the incoming sign-in clears the device-wide history. The outgoing feed
+  /// records its last view as it is torn down, after that cleanup, and the
+  /// next account would load it as its own (#8313). A save still waiting on
+  /// its debounce is not written; the history in memory is kept, and an
+  /// initialization still running keeps loading history but writes nothing.
+  void suspend() => _suspended = true;
+
+  /// Undoes [suspend], for a switch that rolled back and left this account
+  /// signed in.
+  void resume() => _suspended = false;
 
   Future<void> dispose() => _flushPendingSeenVideosSave();
 }

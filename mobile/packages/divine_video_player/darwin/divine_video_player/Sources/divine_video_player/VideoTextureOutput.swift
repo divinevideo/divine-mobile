@@ -76,6 +76,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// Where a paused picture belongs; see `PausedFramePull`.
     private var pausedFramePull = PausedFramePull()
 
+    /// Keeps a paused display tick from handing the same frame over again;
+    /// see `PausedFrameRedelivery`.
+    private var pausedRedelivery = PausedFrameRedelivery()
+
     /// Window during which the display link bypasses `hasNewPixelBuffer`
     /// and tries `copyPixelBuffer` on every tick. Covers the GOP-decode
     /// stall after an exact seek (up to ~500 ms on long-GOP clips).
@@ -242,6 +246,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             hasDeliveredFirstFrame = false
             pendingSeekTime = .invalid
             pausedFramePull.reset()
+            pausedRedelivery.reset()
             mediaDataRearmCount = 0
             lastDeliveredItemTime = .invalid
             nextStallRecoveryTime = 0
@@ -264,6 +269,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         hasDeliveredFirstFrame = false
         pendingSeekTime = .invalid
         pausedFramePull.reset()
+        pausedRedelivery.reset()
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         nextStallRecoveryTime = 0
@@ -308,6 +314,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         mediaDataRearmCount = 0
         pendingSeekTime = seekTime
         pausedFramePull.hold(at: seekTime)
+        pausedRedelivery.reset()
         forceRefreshDeadline = CACurrentMediaTime() + 0.6
         forceWindowFailCount = 0
         forceWindowIsRetry = isRetry
@@ -420,6 +427,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     func resumeFrameDelivery() {
         guard !isDisposed else { return }
         isFrameDeliveryEnabled = true
+        // A paused texture is handed its frame again once, as before the
+        // background, in case the engine dropped the copy it held.
+        pausedRedelivery.reset()
         #if os(iOS)
         displayLink?.isPaused = false
         #endif
@@ -601,6 +611,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
                 pendingSeekTime = .invalid
                 forceRefreshDeadline = 0
                 forceWindowFailCount = 0
+                // Always delivered after a seek; noted, so later ticks skip it.
+                _ = pausedRedelivery.delivers(
+                    frameAt: frameTime, playing: player.rate != 0)
                 deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
             } else {
                 forceWindowFailCount += 1
@@ -640,6 +653,12 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             forItemTime: itemTime,
             itemTimeForDisplay: &frameTime
         ) {
+            // The paused-frame rule first, so the redelivery check only
+            // remembers a frame that reaches the texture.
+            let playing = player.rate != 0
+            guard pausedFramePull.accepts(frameAt: frameTime, playing: playing),
+                  pausedRedelivery.delivers(frameAt: frameTime, playing: playing)
+            else { return }
             deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)

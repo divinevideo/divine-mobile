@@ -1663,6 +1663,64 @@ void main() {
         );
 
         test(
+          'saves no video coordinates when suspended while the revision is '
+          'being written (#8313)',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            final suspendedPrefs = _MockPrefs();
+            final revisionWrite = Completer<bool>();
+            when(() => suspendedPrefs.getString(any())).thenReturn(null);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) => revisionWrite.future);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            final service = BookmarksRepository(
+              nostrClient: nostrClient,
+              signer: signer,
+              prefs: suspendedPrefs,
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+            service.suspend();
+            revisionWrite.complete(true);
+            await sync;
+
+            verify(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).called(1);
+            verifyNever(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            );
+          },
+        );
+
+        test(
           'saves no revision record when disposed between the two writes',
           () async {
             stubRelay(
@@ -1821,6 +1879,88 @@ void main() {
           expect(announced.first, equals([coordinate]));
           expect(announced.last, equals([coordinate, otherCoordinate]));
         });
+      });
+
+      // The Saved tab keeps a snapshot in unencrypted storage, so it may only
+      // store what this set names (#11180).
+      group('publicBookmarkedVideoReferences', () {
+        test('leaves out a video saved only privately', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                [unrelatedId],
+                content: await encryptToSelf([
+                  ['e', originalId],
+                ]),
+              ),
+            ],
+          );
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+
+          expect(
+            service.bookmarkedVideoReferences,
+            unorderedEquals([unrelatedId, originalId]),
+          );
+          expect(
+            service.publicBookmarkedVideoReferences,
+            equals({unrelatedId}),
+          );
+        });
+
+        test('keeps a video saved both publicly and privately', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                [originalId],
+                content: await encryptToSelf([
+                  ['e', originalId],
+                ]),
+              ),
+            ],
+          );
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+
+          expect(service.publicBookmarkedVideoReferences, equals({originalId}));
+        });
+
+        test(
+          'names a public video by the coordinate the list refers to it by',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEventWithTags(
+                  [
+                    ['a', coordinate],
+                  ],
+                  content: await encryptToSelf([
+                    ['e', originalId],
+                    ['a', otherCoordinate],
+                  ]),
+                ),
+              ],
+            );
+            final service = createService(
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            await service.syncGlobalBookmarks();
+
+            // The private event id resolves to the public coordinate, so the
+            // one reference the list holds for it is public.
+            expect(
+              service.bookmarkedVideoReferences,
+              unorderedEquals([coordinate, otherCoordinate]),
+            );
+            expect(
+              service.publicBookmarkedVideoReferences,
+              equals({coordinate}),
+            );
+          },
+        );
       });
 
       // A lookup a slow relay leaves unanswered finds nothing, so a launch
@@ -2062,9 +2202,12 @@ void main() {
           'video-b',
         ]);
         expect(
-          jsonDecode(
-            prefs.getString(BookmarksRepository.globalBookmarksStorageKey)!,
-          ),
+          (jsonDecode(
+                prefs.getString(
+                  BookmarksRepository.globalBookmarksStorageKey,
+                )!,
+              )
+              as Map<String, dynamic>)['items'],
           [
             {'type': 'e', 'id': 'video-a'},
             {'type': 'e', 'id': 'video-b'},
@@ -2784,6 +2927,132 @@ void main() {
           reason:
               'SharedPreferences is unencrypted, so caching private items '
               'would move them into plaintext local storage',
+        );
+      });
+
+      // #11181: a fresh instance whose read fails holds only what the device
+      // kept, which never includes the private items in plaintext.
+      group('when a fresh instance cannot read the list', () {
+        /// Reads a mixed list on an earlier instance, so the record the next
+        /// instance loads is the one production code wrote.
+        Future<void> keepMixedListOnDevice() async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                ['public-one'],
+                content: await encryptToSelf([
+                  ['e', privateVideo],
+                ]),
+              ),
+            ],
+          );
+          final earlier = createService();
+          expect(await earlier.syncGlobalBookmarks(), isTrue);
+          earlier.dispose();
+        }
+
+        test('still lists the private items the device kept', () async {
+          await keepMixedListOnDevice();
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+          expect(service.isVideoBookmarkedGlobally(privateVideo), isTrue);
+          expect(service.hasUnreadablePrivateItems, isFalse);
+        });
+
+        test('still lists them when no relay can be reached', () async {
+          await keepMixedListOnDevice();
+          stubRelay(events: [], noRelays: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+        });
+
+        test('reports them unreadable when they cannot be decrypted', () async {
+          await keepMixedListOnDevice();
+          final broken = _MockNostrSigner();
+          when(
+            () => broken.nip44Decrypt(any(), any()),
+          ).thenAnswer((_) async => null);
+          when(() => signer.currentIdentity).thenReturn(broken);
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(service.hasUnreadablePrivateItems, isTrue);
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one']),
+          );
+        });
+
+        test('tries the decrypt once per instance', () async {
+          await keepMixedListOnDevice();
+          final broken = _MockNostrSigner();
+          when(
+            () => broken.nip44Decrypt(any(), any()),
+          ).thenAnswer((_) async => null);
+          when(() => signer.currentIdentity).thenReturn(broken);
+          stubRelay(events: [], timedOut: true);
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+          await service.syncGlobalBookmarks();
+
+          verify(() => broken.nip44Decrypt(any(), any())).called(1);
+        });
+
+        test('leaves them alone when signed out', () async {
+          await keepMixedListOnDevice();
+          when(() => signer.isAuthenticated).thenReturn(false);
+          when(() => signer.currentPublicKeyHex).thenReturn(null);
+          when(() => signer.currentIdentity).thenReturn(null);
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isFalse);
+
+          expect(service.hasUnreadablePrivateItems, isFalse);
+        });
+
+        test('lists them when the read finishes', () async {
+          await keepMixedListOnDevice();
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isTrue);
+
+          expect(
+            service.globalBookmarks.map((item) => item.id),
+            equals(['public-one', privateVideo]),
+          );
+        });
+
+        test(
+          'an instance that already read them keeps them on a failed read',
+          () async {
+            await keepMixedListOnDevice();
+            final service = createService();
+            expect(await service.syncGlobalBookmarks(), isTrue);
+            stubRelay(events: [], timedOut: true);
+
+            expect(await service.syncGlobalBookmarks(), isFalse);
+
+            expect(
+              service.globalBookmarks.map((item) => item.id),
+              equals(['public-one', privateVideo]),
+            );
+          },
         );
       });
 
@@ -3768,6 +4037,176 @@ void main() {
           );
         },
       );
+    });
+
+    // An account switch keeps the outgoing account's repository alive until
+    // the switch commits, after the incoming sign-in has cleared the
+    // device-wide keys. Nothing it finishes in between may land in them, and
+    // a repository never adopts another account's snapshot (#8313).
+    group('account switch (#8313)', () {
+      const relayItemId =
+          'b831300000000000000000000000000000000000000000000000000000000001';
+      const relayItem = BookmarkItem(type: 'e', id: relayItemId);
+
+      Map<String, dynamic> savedJson(String key) =>
+          jsonDecode(prefs.getString(key)!) as Map<String, dynamic>;
+
+      group('suspend', () {
+        test(
+          'keeps a sync that settles while suspended off the device',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+            );
+            final service = createService()..suspend();
+
+            expect(await service.syncGlobalBookmarks(), isTrue);
+
+            expect(service.globalBookmarks, equals([relayItem]));
+            expect(
+              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+              isNull,
+            );
+            expect(
+              prefs.getString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+              ),
+              isNull,
+            );
+          },
+        );
+
+        test('saves to the device again once resumed', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent([relayItemId]),
+            ],
+          );
+          final service = createService()..suspend();
+          await service.syncGlobalBookmarks();
+
+          service.resume();
+          await service.syncGlobalBookmarks();
+
+          expect(createService().globalBookmarks, equals([relayItem]));
+        });
+      });
+
+      group('owner stamp', () {
+        test(
+          'stamps the saved snapshot and revision with their account',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+            );
+
+            await createService().syncGlobalBookmarks();
+
+            expect(
+              savedJson(BookmarksRepository.globalBookmarksStorageKey)['owner'],
+              equals(pubkey),
+            );
+            expect(
+              savedJson(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+              )['owner'],
+              equals(pubkey),
+            );
+          },
+        );
+
+        test('loads the snapshot it saved for its own account', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent([relayItemId]),
+            ],
+          );
+          await createService().syncGlobalBookmarks();
+
+          expect(createService().globalBookmarks, equals([relayItem]));
+        });
+
+        test(
+          "ignores another account's snapshot and revision, so its own older "
+          'list is adopted rather than treated as stale',
+          () async {
+            final otherPubkey = getPublicKey(generatePrivateKey());
+            SharedPreferences.setMockInitialValues({
+              BookmarksRepository.globalBookmarksStorageKey: jsonEncode({
+                'owner': otherPubkey,
+                'items': [
+                  {'type': 'e', 'id': 'c' * 64},
+                ],
+              }),
+              BookmarksRepository.globalBookmarksRevisionStorageKey: jsonEncode(
+                {
+                  'owner': otherPubkey,
+                  'createdAt': 2000000000,
+                  'id': 'f' * 64,
+                  'publicTags': [
+                    ['e', 'c' * 64],
+                  ],
+                  'content': '',
+                },
+              ),
+            });
+            prefs = await SharedPreferences.getInstance();
+            stubRelay(
+              events: [
+                bookmarkListEvent([relayItemId], createdAt: 1000000000),
+              ],
+            );
+            final service = createService();
+
+            expect(service.globalBookmarks, isEmpty);
+            expect(await service.syncGlobalBookmarks(), isTrue);
+            expect(service.globalBookmarks, equals([relayItem]));
+          },
+        );
+
+        test(
+          'does not save a list read for an account that is no longer '
+          'signed in',
+          () async {
+            final answer =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) => answer.future);
+            final service = createService();
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+
+            when(
+              () => signer.currentPublicKeyHex,
+            ).thenReturn(getPublicKey(generatePrivateKey()));
+            answer.complete((
+              events: [
+                bookmarkListEvent([relayItemId]),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ));
+
+            expect(await sync, isTrue);
+            expect(service.globalBookmarks, equals([relayItem]));
+            expect(
+              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+              isNull,
+            );
+          },
+        );
+      });
     });
   });
 }

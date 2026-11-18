@@ -8,7 +8,9 @@ WITH samples AS (
     (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'outcome' LIMIT 1) AS outcome,
     (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'phase' LIMIT 1) AS phase,
     (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'milestone' LIMIT 1) AS milestone,
-    (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'cache' LIMIT 1) AS cache
+    (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'cache' LIMIT 1) AS cache,
+    (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'entry' LIMIT 1) AS entry,
+    (SELECT value FROM UNNEST(custom_attributes) WHERE key = 'preview' LIMIT 1) AS preview
   FROM `openvine-co.firebase_performance.co_openvine_app_*`
   WHERE _TABLE_SUFFIX IN ('IOS', 'ANDROID')
     AND _PARTITIONDATE BETWEEN @start_date AND DATE_ADD(@end_date, INTERVAL 7 DAY)
@@ -16,15 +18,15 @@ WITH samples AS (
     AND event_type = 'TRACE_METRIC'
     AND (parent_trace_name IN ('http_operation', 'creator_delete_enforcement',
       'startup_phase', 'startup_milestone', 'video_first_frame',
-      'video_publish', 'video_generation', 'camera_startup', 'video_upload', 'video_upload_enqueue') OR STARTS_WITH(parent_trace_name, 'feed_load_'))
+      'video_publish', 'video_generation', 'camera_startup', 'editor_ready', 'video_upload', 'video_upload_enqueue') OR STARTS_WITH(parent_trace_name, 'feed_load_'))
 )
 SELECT platform, app_display_version, app_build_version, trace, metric,
-  operation, outcome, phase, milestone, cache,
+  operation, outcome, phase, milestone, cache, entry, preview,
   COUNT(*) AS samples, COUNT(*) >= 100 AS enough_samples_to_compare,
   APPROX_QUANTILES(value, 100)[OFFSET(50)] AS p50,
   APPROX_QUANTILES(value, 100)[OFFSET(90)] AS p90,
   APPROX_QUANTILES(value, 100)[OFFSET(99)] AS p99
 FROM samples
 GROUP BY platform, app_display_version, app_build_version, trace, metric,
-  operation, outcome, phase, milestone, cache
+  operation, outcome, phase, milestone, cache, entry, preview
 ORDER BY platform, trace, metric, app_build_version;

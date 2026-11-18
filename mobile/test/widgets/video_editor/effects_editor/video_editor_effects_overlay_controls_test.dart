@@ -152,6 +152,93 @@ void main() {
       });
     });
 
+    group('picking an intro or outro', () {
+      setUp(() {
+        cubit.emit(
+          cubit.state.copyWith(timelineEnd: const Duration(seconds: 6)),
+        );
+      });
+
+      testWidgets('moves the playing video to a second before the outro', (
+        tester,
+      ) async {
+        when(
+          () => mainBloc.state,
+        ).thenReturn(const VideoEditorMainState(isPlaying: true));
+        await tester.pumpWidget(buildWidget());
+
+        cubit.selectType(EditorEffectType.outroCurtain);
+        await tester.pump();
+
+        verify(
+          () => mainBloc.add(
+            const VideoEditorSeekRequested(Duration(seconds: 4)),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('moves the paused video into the middle of the intro', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+
+        cubit.selectType(EditorEffectType.introCircle);
+        await tester.pump();
+
+        verify(
+          () => mainBloc.add(
+            const VideoEditorSeekRequested(Duration(milliseconds: 500)),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('leaves the playhead where it is for an effect over the '
+          'whole video', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        cubit.selectType(EditorEffectType.snow);
+        await tester.pump();
+
+        verifyNever(
+          () => mainBloc.add(any(that: isA<VideoEditorSeekRequested>())),
+        );
+      });
+    });
+
+    group('slider of an intro or outro', () {
+      String? sliderLabel(WidgetTester tester) => tester
+          .widget<VideoEditorVerticalSlider>(
+            find.byType(VideoEditorVerticalSlider),
+          )
+          .semanticLabel;
+
+      testWidgets('names the structure it changes for each look', (
+        tester,
+      ) async {
+        final labels = {
+          EditorEffectType.introFade: l10n.videoEditorEffectShapeFadeColor,
+          EditorEffectType.outroCircle:
+              l10n.videoEditorEffectShapeCircleSoftness,
+          EditorEffectType.introCinema: l10n.videoEditorEffectShapeCinemaBars,
+          EditorEffectType.outroCurtain:
+              l10n.videoEditorEffectShapeCurtainFolds,
+          EditorEffectType.introFocus: l10n.videoEditorEffectShapeFocusBlur,
+        };
+        await tester.pumpWidget(buildWidget());
+        for (final MapEntry(key: type, value: label) in labels.entries) {
+          cubit.selectType(type);
+          await tester.pumpAndSettle();
+
+          expect(sliderLabel(tester), label);
+        }
+
+        // Any other effect keeps the slider's own label.
+        cubit.selectType(EditorEffectType.snow);
+        await tester.pumpAndSettle();
+        expect(sliderLabel(tester), isNull);
+      });
+    });
+
     group('on the beat switch', () {
       testWidgets('shows for an effect that can fire on the beat, and turns '
           'it on', (tester) async {

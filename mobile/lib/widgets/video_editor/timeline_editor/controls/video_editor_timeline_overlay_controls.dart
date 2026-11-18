@@ -634,7 +634,8 @@ class _FilterOverlayControls extends StatelessWidget {
 /// Duplicate places the copy right after it in the list, overlapping until
 /// moved, except for a flashing effect, which may not overlap another; split
 /// cuts it at the playhead, the tail becoming a new effect whose animation
-/// starts over there.
+/// starts over there. An intro or outro has no split: each half would play
+/// the whole reveal or cover again.
 class _EffectOverlayControls extends StatelessWidget {
   const _EffectOverlayControls({required this.item});
 
@@ -651,7 +652,9 @@ class _EffectOverlayControls extends StatelessWidget {
         effectId: item.id,
       ),
       onDuplicated: () => _duplicateEffect(context: context),
-      onSplit: () => _splitEffect(context: context),
+      onSplit: item.effectType?.isIntroOutro ?? false
+          ? null
+          : () => _splitEffect(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),
     );
   }

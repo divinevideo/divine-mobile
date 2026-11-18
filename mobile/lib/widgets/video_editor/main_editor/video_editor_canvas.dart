@@ -49,6 +49,7 @@ import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
@@ -705,6 +706,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ValueNotifier<Duration>? _playTimeNotifier;
   ValueNotifier<bool>? _playheadAdvancingNotifier;
 
+  /// Told how the editor's first clip load went; see [_reportClipLoad].
+  EditorReadyTrace? _readyTrace;
+
   final _isPlayerReadyNotifier = ValueNotifier<bool>(false);
 
   /// Claimed by [_beginClipLoad] so a superseded `setClips` cannot publish its
@@ -1002,6 +1006,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final scope = VideoEditorScope.of(context);
     _playTimeNotifier = scope.playTimeNotifier;
     _playheadAdvancingNotifier = scope.playheadAdvancingNotifier;
+    _readyTrace = scope.readyTrace;
     final liveVolume = scope.liveVolumeNotifier;
     if (!identical(liveVolume, _liveVolumeNotifier)) {
       _liveVolumeNotifier?.removeListener(_onLiveVolumeChanged);
@@ -1377,6 +1382,37 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       return;
     }
     _setPlayerReady(isReady);
+    _reportClipLoad(isReady: isReady);
+  }
+
+  /// Tells the editor's readiness trace how a clip load ended, until that
+  /// trace has ended.
+  ///
+  /// The preview is usable once the load succeeded and the player has shown
+  /// its first frame; until then the poster covers it.
+  void _reportClipLoad({required bool isReady}) {
+    final trace = _readyTrace;
+    if (!mounted || trace == null || !trace.isPending) return;
+    if (!isReady) {
+      trace.failed();
+      return;
+    }
+    trace.previewLoaded();
+    final player = _videoPlayer;
+    if (player == null) return;
+    _runDetached(
+      _reportFirstFrame(trace, player),
+      'report the preview first frame',
+    );
+  }
+
+  Future<void> _reportFirstFrame(
+    EditorReadyTrace trace,
+    DivineVideoPlayerController player,
+  ) async {
+    await player.firstFrameRendered;
+    if (!mounted || !identical(_videoPlayer, player)) return;
+    trace.previewFirstFrame();
   }
 
   bool _canUseVideoPlayerForUserAction(String action) {
@@ -2006,7 +2042,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     _videoPlayer = player;
 
-    await player.initialize();
+    try {
+      await player.initialize();
+    } catch (_) {
+      _endClipLoad(generation, isReady: false);
+      rethrow;
+    }
     if (!mounted || !identical(_videoPlayer, player)) return;
     late final bool loaded;
     try {

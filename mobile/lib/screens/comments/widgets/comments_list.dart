@@ -1,6 +1,8 @@
 // ABOUTME: Comments list widget with loading, error, and empty states
 // ABOUTME: Renders comments in a flat list using CommentItem widget
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,14 +47,23 @@ class _CommentsListState extends State<CommentsList> {
   /// asked for, so it is usually in before the viewer gets there.
   static const _loadMoreExtent = 600.0;
 
+  /// How long after opening Top waits for the vote totals before it lists
+  /// the comments anyway. A relay that does not settle can hold a vote read
+  /// for 20 seconds.
+  static const _maxTopRankingWait = Duration(seconds: 3);
+
+  late final Timer _topRankingWait;
+
   @override
   void initState() {
     super.initState();
     widget.scrollController.addListener(_onScroll);
+    _topRankingWait = Timer(_maxTopRankingWait, () => setState(() {}));
   }
 
   @override
   void dispose() {
+    _topRankingWait.cancel();
     widget.scrollController.removeListener(_onScroll);
     super.dispose();
   }
@@ -170,13 +181,31 @@ class _CommentsListState extends State<CommentsList> {
             return BlocSelector<
               CommentReactionsBloc,
               CommentReactionsState,
-              ({Map<String, int> upvotes, Map<String, int> downvotes})
+              ({
+                Map<String, int> upvotes,
+                Map<String, int> downvotes,
+                bool isLoading,
+              })
             >(
               selector: (s) => (
                 upvotes: s.commentUpvoteCounts,
                 downvotes: s.commentDownvoteCounts,
+                isLoading: s.isLoadingFirstVoteTotals,
               ),
               builder: (context, votes) {
+                // Focus and post reveals are one-shot signals. Once they
+                // expose the list, acknowledging the scroll must not hide
+                // it again while the initial vote read is still pending.
+                if (state.scrollToCommentId != null ||
+                    state.pendingFocusCommentId != null) {
+                  _topRankingWait.cancel();
+                }
+                if (_topRankingWait.isActive &&
+                    state.awaitsTopRanking(
+                      isLoadingVoteTotals: votes.isLoading,
+                    )) {
+                  return const _LoadingState();
+                }
                 final all = state.displayCommentsWith(
                   upvoteCounts: votes.upvotes,
                   downvoteCounts: votes.downvotes,

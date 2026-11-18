@@ -15,10 +15,10 @@ final class CommentNode {
   /// The comment this node represents.
   final Comment comment;
 
-  /// Replies nested under this comment in Recent; empty in Top.
+  /// Replies nested under this comment, in the order of the sort mode.
   final List<CommentNode> replies;
 
-  /// Nesting depth: 0 for a top-level row, which every row is in Top.
+  /// Nesting depth: 0 for a top-level row, one more per reply level.
   final int depth;
 }
 
@@ -53,7 +53,8 @@ enum CommentsSortMode {
   /// Recent threads first, with replies nested under their parent.
   newest,
 
-  /// All visible comments ranked by net votes (default).
+  /// Threads ranked by net votes, with replies nested under their parent and
+  /// ranked the same way among themselves (default).
   topEngagement,
 }
 
@@ -184,13 +185,27 @@ final class CommentsListState extends Equatable {
   final bool showHiddenComments;
 
   /// The ids of the comments Top holds in place, in display order, or `null`
-  /// until [CommentsTopOrderFrozen] fixes them.
+  /// until [CommentsTopOrderFrozen] fixes them. A reply is listed under its
+  /// parent, so its place only orders it among the parent's other replies.
   ///
   /// Held still so a vote never moves a row under the viewer's finger
   /// (#10921). Comments posted live or by the viewer go on top as they
-  /// arrive; a later page waits below, ranked by votes, until the next
-  /// freeze places it. A switch of sort mode lets Top rank again.
+  /// arrive, a reply on top of its thread; a later page waits below, ranked
+  /// by votes, until the next freeze places it. A switch of sort mode lets
+  /// Top rank again.
   final List<String>? topOrder;
+
+  /// Whether Top holds the list back until the vote totals it ranks by have
+  /// loaded, so the comments do not jump into place when they land.
+  ///
+  /// Only until Top first holds its order, and never while the list has a
+  /// comment to bring into view.
+  bool awaitsTopRanking({required bool isLoadingVoteTotals}) =>
+      isLoadingVoteTotals &&
+      sortMode == CommentsSortMode.topEngagement &&
+      topOrder == null &&
+      scrollToCommentId == null &&
+      pendingFocusCommentId == null;
 
   /// Whether this root has the coordinate required to persist moderation.
   bool get supportsModeration => rootAddressableId?.isNotEmpty ?? false;
@@ -243,36 +258,17 @@ final class CommentsListState extends Equatable {
     };
   }
 
-  /// Visible comments in display order.
+  /// Visible comments in display order, with replies nested under their
+  /// visible parent.
   ///
-  /// Top lists the comments of [topOrder] in place, then ranks the rest by
-  /// net votes below them. Recent orders threads by recency and nests
-  /// replies under visible parents.
+  /// Recent orders each level by recency. Top orders each level by
+  /// [topOrder], then ranks the comments it has not placed yet by net votes
+  /// below them, so a reply stays with the comment it answers.
   List<CommentNode> displayCommentsWith({
     Map<String, int> upvoteCounts = const {},
     Map<String, int> downvoteCounts = const {},
   }) {
     final shown = shownCommentsById;
-    if (sortMode == CommentsSortMode.topEngagement) {
-      final placed = topOrder ?? const <String>[];
-      final placedIds = placed.toSet();
-      final ranked =
-          [
-            for (final comment in shown.values)
-              if (!placedIds.contains(comment.id)) comment,
-          ]..sort(
-            commentVoteComparator(
-              upvoteCounts: upvoteCounts,
-              downvoteCounts: downvoteCounts,
-            ),
-          );
-      return [
-        for (final id in placed)
-          if (shown[id] case final comment?) CommentNode(comment: comment),
-        for (final comment in ranked) CommentNode(comment: comment),
-      ];
-    }
-
     final childrenMap = <String, List<Comment>>{};
     final rootComments = <Comment>[];
     for (final comment in shown.values) {
@@ -286,10 +282,15 @@ final class CommentsListState extends Equatable {
       }
     }
 
-    // Build the Recent tree recursively.
+    final siblingOrder = sortMode == CommentsSortMode.topEngagement
+        ? _topSiblingOrder(
+            upvoteCounts: upvoteCounts,
+            downvoteCounts: downvoteCounts,
+          )
+        : (Comment a, Comment b) => b.createdAt.compareTo(a.createdAt);
+
     List<CommentNode> buildNodes(List<Comment> comments, int depth) {
-      final sorted = List<Comment>.from(comments)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final sorted = List<Comment>.from(comments)..sort(siblingOrder);
       return sorted.map((comment) {
         final children = childrenMap[comment.id] ?? [];
         return CommentNode(
@@ -300,9 +301,6 @@ final class CommentsListState extends Equatable {
       }).toList();
     }
 
-    final roots = buildNodes(rootComments, 0);
-
-    // Flatten tree using DFS.
     final result = <CommentNode>[];
     void flatten(List<CommentNode> nodes) {
       for (final node in nodes) {
@@ -311,8 +309,30 @@ final class CommentsListState extends Equatable {
       }
     }
 
-    flatten(roots);
+    flatten(buildNodes(rootComments, 0));
     return result;
+  }
+
+  /// Orders comments that share a parent in Top: the ones [topOrder] placed
+  /// keep their place, and the rest follow, ranked by net votes.
+  Comparator<Comment> _topSiblingOrder({
+    required Map<String, int> upvoteCounts,
+    required Map<String, int> downvoteCounts,
+  }) {
+    final position = {
+      for (final (index, id) in (topOrder ?? const <String>[]).indexed)
+        id: index,
+    };
+    final byVotes = commentVoteComparator(
+      upvoteCounts: upvoteCounts,
+      downvoteCounts: downvoteCounts,
+    );
+    return (a, b) => switch ((position[a.id], position[b.id])) {
+      (final int pa, final int pb) => pa.compareTo(pb),
+      (int(), null) => -1,
+      (null, int()) => 1,
+      (null, null) => byVotes(a, b),
+    };
   }
 
   CommentsListState copyWith({

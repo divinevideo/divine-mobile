@@ -3,25 +3,33 @@
 
 import 'dart:async';
 
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/content_deletion_service.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -128,6 +136,73 @@ CuratedListService? _suspendOutgoingCuratedLists(ProviderContainer? outgoing) {
   }
   return outgoing.read(curatedListsStateProvider.notifier).service?..suspend();
 }
+
+/// Stops the outgoing account's bookmarks from saving before the incoming
+/// sign-in clears the device-wide bookmark keys.
+///
+/// For the same reason as [_suspendOutgoingCuratedLists]: a bookmark sync
+/// still in flight would otherwise save this account's list into the keys the
+/// next account reads, and its next Save would publish it (#8313).
+BookmarksRepository? _suspendOutgoingBookmarks(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(bookmarksRepositoryProvider)) {
+    return null;
+  }
+  final bookmarks = outgoing.read(bookmarksRepositoryProvider);
+  return bookmarks..suspend();
+}
+
+/// Stops the outgoing account's seen-video history from writing the shared
+/// history before the incoming sign-in clears it; see
+/// [SeenVideosService.suspend].
+SeenVideosService? _suspendOutgoingSeenVideos(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(seenVideosServiceProvider)) {
+    return null;
+  }
+  final seenVideos = outgoing.read(seenVideosServiceProvider);
+  return seenVideos..suspend();
+}
+
+/// Stops the outgoing account's moderation service from saving its labeler
+/// subscriptions; see [ModerationLabelService.suspend].
+ModerationLabelService? _suspendOutgoingModerationLabels(
+  ProviderContainer? outgoing,
+) {
+  if (outgoing == null || !outgoing.exists(moderationLabelServiceProvider)) {
+    return null;
+  }
+  final labels = outgoing.read(moderationLabelServiceProvider);
+  return labels..suspend();
+}
+
+/// Stops the outgoing account's report history from saving; see
+/// [ContentReportingService.suspend].
+ContentReportingService? _suspendOutgoingReports(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(contentReportingServiceProvider)) {
+    return null;
+  }
+  final reports = outgoing.read(contentReportingServiceProvider).value;
+  return reports?..suspend();
+}
+
+/// Stops the outgoing account's deletion history from saving; see
+/// [ContentDeletionService.suspend].
+ContentDeletionService? _suspendOutgoingDeletions(
+  ProviderContainer? outgoing,
+) {
+  if (outgoing == null || !outgoing.exists(contentDeletionServiceProvider)) {
+    return null;
+  }
+  final deletions = outgoing.read(contentDeletionServiceProvider).value;
+  return deletions?..suspend();
+}
+
+/// The outgoing account's preference store, if its container built one. The
+/// switch suspends its projection before the incoming sign-in; see
+/// [AccountPreferenceStore.suspendProjection].
+AccountPreferenceStore? _outgoingPreferenceStore(ProviderContainer? outgoing) =>
+    outgoing != null && outgoing.exists(accountPreferenceStoreProvider)
+    ? outgoing.read(accountPreferenceStoreProvider)
+    : null;
 
 Future<void> _defaultSignIn(
   ProviderContainer container,
@@ -319,6 +394,12 @@ Future<void> swapAccount({
     var targetSubmitted = false;
     final incomingAuth = container.read(authServiceProvider);
     CuratedListService? suspendedOutgoingLists;
+    BookmarksRepository? suspendedOutgoingBookmarks;
+    SeenVideosService? suspendedOutgoingSeenVideos;
+    ModerationLabelService? suspendedOutgoingLabels;
+    ContentReportingService? suspendedOutgoingReports;
+    ContentDeletionService? suspendedOutgoingDeletions;
+    AccountPreferenceStore? suspendedOutgoingPreferences;
     try {
       // Capture only while the original identity and rendered host still own
       // the device. A generated or imported account owns the primary slot, so
@@ -357,6 +438,14 @@ Future<void> swapAccount({
       await _pruneOutgoingDmVideos(current);
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
+      suspendedOutgoingBookmarks = _suspendOutgoingBookmarks(current);
+      suspendedOutgoingSeenVideos = _suspendOutgoingSeenVideos(current);
+      suspendedOutgoingLabels = _suspendOutgoingModerationLabels(current);
+      suspendedOutgoingReports = _suspendOutgoingReports(current);
+      suspendedOutgoingDeletions = _suspendOutgoingDeletions(current);
+      suspendedOutgoingPreferences = _outgoingPreferenceStore(current);
+      await suspendedOutgoingPreferences?.suspendProjection();
+      ensureOutgoingCurrent();
       await CuratedListSessionCoordinator.forPreferences(
         deviceScope.sharedPreferences,
       ).retireAndDrain();
@@ -425,6 +514,12 @@ Future<void> swapAccount({
         await _resumeOutgoingDmIngest(current);
       }
       suspendedOutgoingLists?.resume();
+      suspendedOutgoingBookmarks?.resume();
+      suspendedOutgoingSeenVideos?.resume();
+      suspendedOutgoingLabels?.resume();
+      suspendedOutgoingReports?.resume();
+      suspendedOutgoingDeletions?.resume();
+      suspendedOutgoingPreferences?.resumeProjection();
       try {
         if (failedTicket == null) {
           throw const AccountActivationRetiredException();

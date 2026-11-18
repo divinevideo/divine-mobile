@@ -9652,6 +9652,58 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Визии';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Начало';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Край';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Цвят на преливането, от черно към бяло';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Мекота на ръба';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Брой ленти';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Брой гънки';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Сила на размазването';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Плавно появяване';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Плавно изчезване';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Отваряне в кръг';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Затваряне в кръг';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Кино отваряне';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Кино затваряне';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Отваряне на завесата';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Затваряне на завесата';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Фокусиране';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Разфокусиране';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Естествени';
 
   @override

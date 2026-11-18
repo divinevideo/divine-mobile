@@ -9666,6 +9666,58 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Cierre';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Color del fundido, de negro a blanco';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Suavidad del borde';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Cantidad de barras';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Cantidad de pliegues';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Intensidad del desenfoque';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Fundido de entrada';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Fundido de salida';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Apertura en círculo';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Cierre en círculo';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Apertura de cine';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Cierre de cine';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Abrir telón';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Cerrar telón';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Enfocar';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Desenfocar';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Natural';
 
   @override

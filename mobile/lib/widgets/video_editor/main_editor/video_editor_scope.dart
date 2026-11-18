@@ -6,6 +6,7 @@ import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -51,6 +52,7 @@ class VideoEditorScope extends InheritedWidget {
     this.clipFrameTracker,
     this.previewReleasedNotifier,
     this.layerCaptureNotifier,
+    this.readyTrace,
     this.onAddAudioVisualizer,
     this.onOpenLayout,
     this.onFreshSessionReady,
@@ -203,6 +205,10 @@ class VideoEditorScope extends InheritedWidget {
   /// would be wrong a second after posting. Optional, like [canvasBodyKey].
   final ValueNotifier<bool>? layerCaptureNotifier;
 
+  /// Times the editor's open until it is usable; the canvas reports how its
+  /// first clip load went. Optional, like [canvasBodyKey].
+  final EditorReadyTrace? readyTrace;
+
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
 
@@ -340,5 +346,6 @@ class VideoEditorScope extends InheritedWidget {
           oldWidget.canvasToolPanelHeightNotifier ||
       clipFrameTracker != oldWidget.clipFrameTracker ||
       previewReleasedNotifier != oldWidget.previewReleasedNotifier ||
-      layerCaptureNotifier != oldWidget.layerCaptureNotifier;
+      layerCaptureNotifier != oldWidget.layerCaptureNotifier ||
+      readyTrace != oldWidget.readyTrace;
 }

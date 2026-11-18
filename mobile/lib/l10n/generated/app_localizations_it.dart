@@ -9681,6 +9681,58 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Look';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Colore della dissolvenza, dal nero al bianco';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Morbidezza del bordo';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Numero di bande';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Numero di pieghe';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Intensità della sfocatura';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Dissolvenza in entrata';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Dissolvenza in uscita';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Apertura a cerchio';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Chiusura a cerchio';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Apertura cinema';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Chiusura cinema';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Apertura sipario';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Chiusura sipario';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Messa a fuoco';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Sfocatura in uscita';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Naturale';
 
   @override
