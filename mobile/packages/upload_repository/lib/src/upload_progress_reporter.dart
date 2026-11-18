@@ -236,15 +236,15 @@ class UploadProgressReporter {
       return 'NETWORK_ERROR';
     }
 
+    if (errorStr.contains('file not found')) return 'FILE_NOT_FOUND';
+    if (errorStr.contains('memory')) return 'OUT_OF_MEMORY';
+    if (errorStr.contains('permission')) return 'PERMISSION_DENIED';
+
     // The service classed it as a dropped connection, though the message
     // names none of the above: a broken pipe, say.
     if (_blossomFailureReason(error) == BlossomUploadFailureReason.network) {
       return 'NETWORK_ERROR';
     }
-
-    if (errorStr.contains('file not found')) return 'FILE_NOT_FOUND';
-    if (errorStr.contains('memory')) return 'OUT_OF_MEMORY';
-    if (errorStr.contains('permission')) return 'PERMISSION_DENIED';
 
     return 'UNKNOWN';
   }
