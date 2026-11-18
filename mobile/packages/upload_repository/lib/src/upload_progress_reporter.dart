@@ -279,8 +279,8 @@ class UploadProgressReporter {
         _categoryForServerVerdict(reason);
   }
 
-  /// The category for a server rejection the Blossom service classified
-  /// without an HTTP status, or null when [reason] is not one.
+  /// The category for the Blossom service's typed [reason] when no failing
+  /// HTTP status decided it: auth, file size or server, else null.
   static String? _categoryForServerVerdict(
     BlossomUploadFailureReason? reason,
   ) => switch (reason) {
