@@ -9963,6 +9963,71 @@ void main() {
 
           verifyNever(() => mockLocalStorage.saveEventsBatch(any()));
         });
+
+        group('when saving fetched events to the cache fails', () {
+          final relayEvent = _createVideoEvent(
+            id: 'relay-id',
+            pubkey: 'test-pubkey',
+            videoUrl: 'https://example.com/relay.mp4',
+            createdAt: 1704067200,
+          );
+
+          setUp(() async {
+            await LogCaptureService().clearAllLogs();
+            when(
+              () => mockLocalStorage.getEventsByIds(any()),
+            ).thenAnswer((_) async => <Event>[]);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayEvent]);
+          });
+
+          test(
+            'still returns the fetched videos and logs the failure',
+            () async {
+              when(
+                () => mockLocalStorage.saveEventsBatch(any()),
+              ).thenAnswer((_) async => throw _journalCannotBeCreated);
+              final repositoryWithCache = VideosRepository(
+                nostrClient: mockNostrClient,
+                localStorage: mockLocalStorage,
+              );
+
+              final result = await repositoryWithCache.getVideosByIds([
+                'relay-id',
+              ], cacheResults: true);
+
+              expect(result.single.id, equals('relay-id'));
+              // One line: the statement and its parameters are the event.
+              const warning =
+                  'Could not cache 1 fetched video event(s): '
+                  'SqliteException(14): while executing statement, '
+                  'unable to open database file';
+              expect(
+                _cacheSaveWarnings().map((entry) => entry.message),
+                equals([warning]),
+              );
+            },
+          );
+
+          test('still throws a programming error', () async {
+            when(
+              () => mockLocalStorage.saveEventsBatch(any()),
+            ).thenAnswer((_) async => throw StateError('broken invariant'));
+            final repositoryWithCache = VideosRepository(
+              nostrClient: mockNostrClient,
+              localStorage: mockLocalStorage,
+            );
+
+            await expectLater(
+              repositoryWithCache.getVideosByIds([
+                'relay-id',
+              ], cacheResults: true),
+              throwsStateError,
+            );
+            expect(_cacheSaveWarnings(), isEmpty);
+          });
+        });
       });
 
       group('getVideosByAddressableIds with localStorage', () {
@@ -10038,6 +10103,38 @@ void main() {
 
           verifyNever(() => mockLocalStorage.saveEventsBatch(any()));
         });
+
+        test(
+          'still returns the fetched videos when saving them to the cache '
+          'fails',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            final relayEvent = _createVideoEvent(
+              id: 'dtag1',
+              pubkey: 'pubkey1',
+              videoUrl: 'https://example.com/video.mp4',
+              createdAt: 1704067200,
+            );
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayEvent]);
+            when(
+              () => mockLocalStorage.saveEventsBatch(any()),
+            ).thenAnswer((_) async => throw _journalCannotBeCreated);
+            final repositoryWithCache = VideosRepository(
+              nostrClient: mockNostrClient,
+              localStorage: mockLocalStorage,
+            );
+
+            final result = await repositoryWithCache.getVideosByAddressableIds(
+              ['${EventKind.videoVertical}:pubkey1:dtag1'],
+              cacheResults: true,
+            );
+
+            expect(result.single.id, equals('dtag1'));
+            expect(_cacheSaveWarnings(), hasLength(1));
+          },
+        );
       });
     });
 
@@ -17295,6 +17392,30 @@ RecentVideosResponse _recentPage(
   hasMore: hasMore,
   nextCursor: nextCursor,
 );
+
+/// How a cache save fails on a full iOS disk, where SQLite cannot create its
+/// rollback journal. Like the real `SqliteException`, it goes on to quote the
+/// statement with every bound parameter.
+const _journalCannotBeCreated = _FakeSqliteException(
+  'SqliteException(14): while executing statement, '
+  'unable to open database file\n'
+  '  Causing statement: INSERT OR REPLACE INTO event (id, content) '
+  "VALUES (?, ?), parameters: relay-id, the event's content",
+);
+
+class _FakeSqliteException implements Exception {
+  const _FakeSqliteException(this.description);
+
+  final String description;
+
+  @override
+  String toString() => description;
+}
+
+List<LogEntry> _cacheSaveWarnings() => LogCaptureService()
+    .getRecentLogs()
+    .where((entry) => entry.message.startsWith('Could not cache'))
+    .toList();
 
 /// Creates a mock video event for testing.
 Event _createVideoEvent({
