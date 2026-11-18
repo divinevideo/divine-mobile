@@ -609,6 +609,11 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// subject. Deleting that clip must not delete the file while a key still
   /// renders it: a recorded key waiting to bake, or a baked one that can be
   /// re-tuned.
+  ///
+  /// `compositeThumbnailPath` is a dual-camera take's library picture: the
+  /// main frame with the second camera's window drawn over it. The indexed
+  /// `thumbnail_path` holds the main frame alone, so this is the only
+  /// reference to it.
   static const _jsonFilePathKeys = {
     'filePath',
     'thumbnailPath',
@@ -621,6 +626,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     'boomerangSourcePath',
     'backgroundImage',
     'backgroundVideo',
+    'compositeThumbnailPath',
     'path',
   };
 
