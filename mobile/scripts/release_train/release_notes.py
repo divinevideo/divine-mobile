@@ -270,19 +270,12 @@ def _apple(env):
 
 def _production_data(platform, env, ledger):
     if platform == "android":
-        tracks = Play(play_token(env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])).tracks()
-        builds = []
-        for track in tracks:
-            if track["track"] != "production":
-                continue
-            for release in track.get("releases", []):
-                if release.get("status") not in {"completed", "inProgress", "halted"}:
-                    continue
-                builds.extend(
-                    _identity(ledger, "android", int(n))
-                    for n in release["versionCodes"]
-                )
-        return {"production": builds}
+        tracks, errors = Play(play_token(env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])).release_statuses()
+        if "production" in errors or "production" not in tracks:
+            raise ReleaseNotesError("Play published production lifecycle is unavailable")
+        numbers = sorted({n for r in tracks["production"] if r["state"] == "PUBLISHED"
+                          for n in r["numbers"]})
+        return {"production": [_identity(ledger, "android", n) for n in numbers]}
     apple = _apple(env)
     versions = []
     builds = []

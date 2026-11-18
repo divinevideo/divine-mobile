@@ -353,6 +353,10 @@ class GitHub:
                 raise ProviderError("GitHub listing exceeded safe pagination bound")
 
 
+class UnmappedBuild(ProviderError):
+    """The provider build has no allocation or release provenance record."""
+
+
 class StateStore:
     def __init__(self, github):
         self.github = github
@@ -584,7 +588,8 @@ class Runtime:
                         "legacy": True,
                     }
             if len(matches) != 1:
-                raise ProviderError(
+                error_type = ProviderError if matches else UnmappedBuild
+                raise error_type(
                     f"Unreconciled {platform} build {number}; repair private provenance mapping"
                 )
             path = matches[0]
@@ -762,23 +767,38 @@ class Runtime:
         }
 
     def play_snapshot(self):
-        tracks = self.play.tracks()
-        found = {}
-        for track in tracks:
-            if track["track"] not in {"internal", "production"}:
-                continue
-            numbers = []
-            for release in track.get("releases", []):
-                if release.get("status") == "draft":
-                    continue
-                if release.get("status") not in {"completed", "inProgress", "halted"}:
-                    raise ProviderError("Unknown Play track state")
-                numbers.extend(int(n) for n in release["versionCodes"])
-            found[track["track"]] = [
-                self.identity("android", n) for n in sorted(set(numbers))
-            ]
-        if not found.get("production"):
-            raise ProviderError("Play production state is empty")
+        tracks, errors = self.play.release_statuses()
+        found = {"internal": [], "production": [], "releases": []}
+        for track, releases in tracks.items():
+            published = sorted({n for r in releases if r["state"] == "PUBLISHED"
+                                for n in r["numbers"]})
+            identities = {n: self.identity("android", n) for n in published}
+            found[track] = list(identities.values())
+            newest = max(published, default=0)
+            for release in releases:
+                current = not release["numbers"] or max(release["numbers"]) >= newest
+                status = release["state"]
+                builds = []
+                for number in release["numbers"]:
+                    try:
+                        builds.append(identities.get(number) or self.identity("android", number))
+                    except UnmappedBuild:
+                        # An obsolete rejection without a recorded identity has no audit
+                        # target. Current releases and inconsistent provenance fail closed.
+                        if status != "NOT_APPROVED" or current:
+                            raise
+                found["releases"].append({"track": track, "state": status, "builds": builds})
+                if current and status == "NOT_APPROVED":
+                    found["error"] = "Google Play release rejected; resolve the provider rejection"
+                elif status not in {"PUBLISHED", "NOT_APPROVED"}:
+                    found[track + "_pending"] = True
+        complete = not errors and {"internal", "production"} <= tracks.keys()
+        if not complete:
+            found["release_state_errors"] = errors
+            found["error"] = "Google Play release lifecycle read incomplete; publication stopped"
+        elif not found["production"]:
+            found["error"] = "Play published production state is empty"
+        found["lifecycle_complete"] = complete and bool(found["production"])
         setting = self.env.get("PLAY_MANAGED_PUBLISHING")
         found["managed_publishing"] = (
             False if setting == "off" else True if setting == "on" else None
@@ -832,6 +852,7 @@ class Runtime:
                         play_token(self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])
                     )
                     snapshot["android"] = self.play_snapshot()
+                    snapshot["android"]["observed_at"] = int(time.time())
             except (ProviderError, KeyError, ValueError) as error:
                 snapshot[platform] = {
                     "error": str(error)
@@ -966,19 +987,25 @@ class Runtime:
                     state,
                     "in review or pending availability",
                 )
-        for build in snapshot.get("android", {}).get("internal", []):
-            if build.get("sha"):
-                self.deploy("android-play-internal", build, "success", state, "available")
-        for build in snapshot.get("android", {}).get("production", []):
-            if not build.get("sha"):
+        for track in ["internal", "production"]:
+            for build in snapshot.get("android", {}).get(track, []):
+                if build.get("sha"):
+                    self.deploy("android-play-" + track, build, "success", state, "available")
+        for release in snapshot.get("android", {}).get("releases", []):
+            status = release["state"]
+            if status == "PUBLISHED":
                 continue
-            self.deploy(
-                "android-play-production",
-                build,
-                "in_progress",
-                state,
-                "production track observed; review outcome via console/email",
-            )
+            published = {b["number"] for b in snapshot["android"].get(release["track"], [])}
+            for build in release["builds"]:
+                # A metadata review does not remove an already published binary.
+                if not build.get("sha") or build["number"] in published:
+                    continue
+                self.deploy(
+                    "android-play-" + release["track"], build,
+                    "failure" if status == "NOT_APPROVED" else "in_progress",
+                    state,
+                    "rejected" if status == "NOT_APPROVED" else status.lower().replace("_", " "),
+                )
         for key in state.get("acknowledged", []):
             operation = state.get("operations", {}).get(key)
             if (

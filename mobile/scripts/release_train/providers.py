@@ -70,6 +70,8 @@ def request_json(method, url, headers=None, body=None, *, timeout=60):
             request, timeout=timeout
         ) as response:
             raw = response.read()
+            if not raw and method == "GET":
+                raise ProviderError("Provider returned an empty response")
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as error:
         status = error.code
@@ -258,12 +260,46 @@ class Play:
         for track in ["internal", "production"]:
             try:
                 result = self.call("GET", f"/tracks/{track}/releases")
-                if not isinstance(result, dict) or not isinstance(result.get("releases", []), list):
+                if not isinstance(result, dict) or (
+                    result and not isinstance(result.get("releases"), list)
+                ):
                     raise ProviderError("Malformed Google Play release-state response")
                 states[track] = result.get("releases", [])
             except ProviderError as error:
                 errors[track] = error.diagnostic or {"message": str(error)}
         return states, errors
+
+    def release_statuses(self):
+        """Normalize actual availability, keeping independent track read failures."""
+        raw, errors = self.release_states()
+        result = {}
+        known = {"DRAFT", "NOT_SENT_FOR_REVIEW", "IN_REVIEW",
+                 "APPROVED_NOT_PUBLISHED", "NOT_APPROVED", "PUBLISHED"}
+        for track, releases in raw.items():
+            try:
+                normalized = []
+                for release in releases:
+                    if not isinstance(release, dict) or release.get("track") != track:
+                        raise ProviderError("Malformed Google Play release identity")
+                    state = release.get("releaseLifecycleState")
+                    if (not isinstance(state, str) or not state.startswith("RELEASE_LIFECYCLE_STATE_")
+                            or state.removeprefix("RELEASE_LIFECYCLE_STATE_") not in known):
+                        raise ProviderError("Unknown Google Play release lifecycle state")
+                    state = state.removeprefix("RELEASE_LIFECYCLE_STATE_")
+                    artifacts = release.get("activeArtifacts", [])
+                    if not isinstance(artifacts, list) or any(
+                        not isinstance(a, dict) or type(a.get("versionCode")) is not int
+                        or not 0 < a["versionCode"] <= 2100000000 for a in artifacts
+                    ):
+                        raise ProviderError("Malformed Google Play release artifacts")
+                    numbers = sorted({a["versionCode"] for a in artifacts})
+                    if not numbers and state in {"PUBLISHED", "NOT_APPROVED"}:
+                        raise ProviderError("Google Play release has no active artifacts")
+                    normalized.append({"state": state, "numbers": numbers})
+                result[track] = normalized
+            except ProviderError as error:
+                errors[track] = {"message": str(error)}
+        return result, errors
 
     def diagnose_upload(self, *, notes):
         """Validate retained notes against an existing bundle; never commit/upload."""
