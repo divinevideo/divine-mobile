@@ -12,11 +12,14 @@ bool _containsCreationRoute(List<RouteMatchBase> matches) {
   for (final match in matches) {
     final route = match.route;
     if (route is GoRoute &&
-        const {
-          RoutePaths.videoRecorder,
-          RoutePaths.videoEditor,
-          RoutePaths.videoMetadata,
-        }.contains(route.path)) {
+        (const {
+              RoutePaths.videoRecorder,
+              RoutePaths.videoEditor,
+              RoutePaths.videoMetadata,
+            }.contains(route.path) ||
+            // Drafts are a separate top-level editor route whose declared
+            // template includes /:draftId, not the default editor's path.
+            route.path.startsWith('${RoutePaths.videoEditor}/'))) {
       return true;
     }
     if (match is ImperativeRouteMatch &&
