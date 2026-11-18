@@ -742,12 +742,6 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final bloc = context.read<VideoRecorderBloc>();
-    // The Upload tab keeps the camera paused; coming back to the app must not
-    // restart it behind the static explainer.
-    if (state == AppLifecycleState.resumed &&
-        !bloc.state.recorderMode.recordsVideo) {
-      return;
-    }
     bloc.add(VideoRecorderAppLifecycleChanged(state));
   }
 
