@@ -4103,8 +4103,9 @@ void main() {
           },
         );
 
-        test('stays paused for a sheet opened while the camera starts, whose '
-            'pause arrives before remote control is on', () async {
+        test('stays paused until a sheet opened while the camera starts '
+            'closes, though its pause arrives before remote control is '
+            'on', () async {
           final cameraStarted = Completer<void>();
           when(
             () => cameraService.initialize(
@@ -4127,11 +4128,46 @@ void main() {
           await pumpEventQueue();
           cameraStarted.complete();
           await pumpEventQueue();
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
 
           verifyInOrder([
             () => cameraService.setRemoteRecordControlEnabled(enabled: true),
             () => cameraService.setRemoteRecordControlEnabled(enabled: false),
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
           ]);
+        });
+
+        test('leaves remote control on for a sheet opened and closed while '
+            'the camera starts', () async {
+          final cameraStarted = Completer<void>();
+          when(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
+            ),
+          ).thenAnswer((_) => cameraStarted.future);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          cameraStarted.complete();
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).called(1);
+          verifyNever(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: false),
+          );
         });
 
         test('leaves the camera alone when the recorder closes while remote '
