@@ -252,6 +252,21 @@ void main() {
       },
     );
 
+    test('the per-issuer cap never trims the pinned catalogue', () async {
+      await repository.dispose();
+      repository = await makeRepository(pinnedIssuers: [issuer2]);
+      events = [definition(key1)];
+      final pinned = [
+        for (var i = 0; i < 5; i++)
+          definition(key2, at: 10 + i, identifier: 'official-$i'),
+      ];
+      when(
+        () => api.getBadgeDefinitions(issuer: issuer2),
+      ).thenAnswer((_) async => BadgeDefinitionsResponse(badges: pinned));
+      final result = await repository.loadPublicDefinitions();
+      expect(result.where((d) => d.event.pubkey == issuer2), hasLength(5));
+    });
+
     test('catalogue outage preserves discovered communities', () async {
       await repository.dispose();
       repository = await makeRepository(pinnedIssuers: [issuer2]);
