@@ -206,9 +206,9 @@ class CategoryVisuals {
 /// placements are the Figma values. Food and dance keep the slot Figma gave
 /// their earlier sticker; music, art, nature, fitness and the categories the
 /// backend added later (animation, beauty, pets, automotive and pranks) carry
-/// stickers the reference does not show, placed in the same style. The horse turns less than
-/// in Figma so the cut edge of its neck stays below the tile. A category
-/// missing here keeps its SVG or emoji glyph.
+/// stickers the reference does not show, placed in the same style. The horse
+/// turns less than in Figma so the cut edge of its neck stays below the tile.
+/// A category missing here keeps its SVG or emoji glyph.
 const _categoryStickers = <String, CategorySticker>{
   'animals': CategorySticker(
     DivineStickerName.horse,
