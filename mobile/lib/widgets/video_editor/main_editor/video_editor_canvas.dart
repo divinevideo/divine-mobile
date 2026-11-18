@@ -741,6 +741,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// before then is lost.
   bool _isHistoryImported = false;
 
+  /// The latest run of [_placeSecondaryCameraTakes]. Runs go one after the
+  /// other: two that overlap would both see a take unplaced and both place it.
+  Future<void>? _secondaryCameraPlacement;
+
   /// See [VideoEditorCanvas.resolveInitStateHistory].
   ImportStateHistory? _initStateHistory;
 
@@ -2722,9 +2726,27 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// The layers join the session's starting state rather than arriving as an
   /// edit: undo never removes them, and leaving an untouched session does not
   /// ask to save a draft. A session that saves no edit saves no layer either;
-  /// its takes are still on their clips, so the next session places them
-  /// again.
+  /// its takes are still on their clips, so the next session, or a post
+  /// straight from the library, places them again.
+  ///
+  /// Runs when the session opens and again whenever a take joins it, from the
+  /// camera or the clip picker; see [_secondaryCameraPlacement].
   Future<void> _placeSecondaryCameraTakes(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+  ) {
+    final previous = _secondaryCameraPlacement;
+    return _secondaryCameraPlacement = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Logged by the run that failed; this one places what is left.
+      }
+      await _placeUnplacedSecondaryCameraTakes(scope, bloc);
+    }();
+  }
+
+  Future<void> _placeUnplacedSecondaryCameraTakes(
     VideoEditorScope scope,
     VideoEditorMainBloc bloc,
   ) async {
@@ -3034,6 +3056,33 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       editorStateHistory: editorStateHistory,
     );
     final targetAspectRatio = clip.targetAspectRatio;
+
+    // A dual-camera take that joins the composition mid-session, from the
+    // camera or the clip picker, gets its window like those the session
+    // opened with. Until the session can write its history, its own first
+    // placement picks the take up.
+    ref.listen<List<String>>(
+      clipManagerProvider.select(
+        (s) => [for (final c in s.clips) ?c.secondaryCamera?.clip.id],
+      ),
+      (previous, takeIds) {
+        final joined = takeIds.where((id) => !(previous ?? []).contains(id));
+        if (joined.isEmpty ||
+            !_isInitialized ||
+            !VideoEditorCanvas.canWriteHistory(
+              // The session's own start, not today's draft, which autosave
+              // fills in as soon as anything is edited.
+              startsFromHistory: _initStateHistory != null,
+              isHistoryImported: _isHistoryImported,
+            )) {
+          return;
+        }
+        _runDetached(
+          _placeSecondaryCameraTakes(scope, bloc),
+          'place joined dual-camera takes',
+        );
+      },
+    );
 
     // Reinitialize the player when clip paths change.
     // Uses a custom equality check because List uses reference equality by
