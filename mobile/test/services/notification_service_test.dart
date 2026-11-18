@@ -689,6 +689,7 @@ void main() {
           'type': 'campaign',
           'tapTargetType': 'app_route',
           'tapTargetValue': '/following/new',
+          'campaignRevisionId': '12345678-1234-4234-8234-123456789abc',
         }),
       );
       service.handleNotificationTapPayload(payload);
@@ -698,6 +699,10 @@ void main() {
       expect(events.single.notificationType, equals('campaign'));
       expect(events.single.tapTargetType, equals('app_route'));
       expect(events.single.tapTargetValue, equals('/following/new'));
+      expect(
+        events.single.campaignRevisionId,
+        equals('12345678-1234-4234-8234-123456789abc'),
+      );
     });
 
     test('no-ops gracefully when the stream has no listeners', () {
@@ -909,6 +914,14 @@ void main() {
         tapTargetType: 'app_route',
         tapTargetValue: '/following/new',
       );
+      const differsByRevision = NotificationTapEvent(
+        referencedEventId: 'abc123',
+        referencedAddress: '34236:owner:vine',
+        notificationType: 'reply',
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
+        campaignRevisionId: '12345678-1234-4234-8234-123456789abc',
+      );
 
       expect(first, equals(second));
       expect(first.hashCode, equals(second.hashCode));
@@ -916,6 +929,7 @@ void main() {
       expect(first, isNot(equals(differsByAddress)));
       expect(first, isNot(equals(differsByTarget)));
       expect(first, isNot(equals(differsByMessageId)));
+      expect(first, isNot(equals(differsByRevision)));
     });
   });
 

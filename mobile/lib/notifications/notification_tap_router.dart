@@ -159,6 +159,10 @@ Future<void> _renderBackgroundLocalPush({
 /// coordinate-over-walk precedence in the returned value keeps it out of the
 /// executor's branch order.
 ///
+/// Campaign payloads skip this: an `app_route`, `video_address` or
+/// `creator_profile` target is validated by the campaign helpers beside
+/// [campaignAppRoute], is not preloaded, and anything else opens the inbox.
+///
 /// Extracted and `@visibleForTesting` so the push-side per-kind routing can be
 /// asserted without a navigator — mirrors [resolveVideoDeepLinkNavAction].
 @visibleForTesting
@@ -180,16 +184,39 @@ pushNotificationTapTarget({
     );
   }
   if (notificationType == NotificationWireValues.campaign) {
+    final videoCoordinate = campaignVideoCoordinate(
+      type: tapTargetType,
+      value: tapTargetValue,
+    );
+    if (videoCoordinate != null) {
+      return (
+        target: const OpenVideoTarget(autoOpenComments: false),
+        targetEventId: null,
+        videoCoordinate: videoCoordinate,
+      );
+    }
+    final creatorPubkey = campaignCreatorPubkey(
+      type: tapTargetType,
+      value: tapTargetValue,
+    );
+    if (creatorPubkey != null) {
+      return (
+        target: OpenProfileTarget(creatorPubkey),
+        targetEventId: null,
+        videoCoordinate: null,
+      );
+    }
     final location = campaignAppRoute(
       type: tapTargetType,
       value: tapTargetValue,
     );
     if (location == null) {
-      // Neither value is identity-linked, so logging both is how a
-      // misconfigured campaign is told apart from an untapped notification.
+      // The type is a wire value that identifies no one; the value can be a
+      // creator pubkey, so only its presence is logged.
       Log.warning(
         'Unsupported campaign tap target; opening inbox '
-        '(tapTargetType=$tapTargetType, tapTargetValue=$tapTargetValue)',
+        '(tapTargetType=$tapTargetType, '
+        'hasTapTargetValue=${tapTargetValue?.isNotEmpty ?? false})',
         name: 'main',
         category: LogCategory.system,
       );
@@ -258,6 +285,7 @@ Future<void> routeNotificationTap({
   required String? tapTargetValue,
   required NotificationOpenSource openSource,
   String? messageId,
+  String? campaignRevisionId,
 }) async {
   // Keep provider initialization and analytics off the navigation critical path.
   scheduleMicrotask(() {
@@ -269,6 +297,7 @@ Future<void> routeNotificationTap({
               notificationType: notificationType,
               source: openSource,
               deduplicationKey: messageId ?? eventId,
+              campaignRevisionId: campaignRevisionId,
             ),
       );
     } on Object catch (error) {
@@ -304,9 +333,9 @@ Future<void> routeNotificationTap({
       _navigateToNotificationInbox(container);
     case OpenVideoTarget(:final autoOpenComments):
       if (videoCoordinate != null) {
-        // Authoritative path: the signed NIP-33 coordinate is stable across
-        // metadata replacements and resolves without a relay round-trip, so
-        // push it straight to the video route.
+        // Coordinate path: a signed NIP-33 coordinate, or a validated campaign
+        // `video_address`, is stable across metadata replacements and resolves
+        // without a relay round-trip, so push it straight to the video route.
         _pushVideoDeepLink(
           container,
           videoRef: videoCoordinate,
@@ -343,6 +372,7 @@ Future<void> routeBackgroundPushTap(
   );
   await routeNotificationTap(
     messageId: parsed.messageId,
+    campaignRevisionId: parsed.campaignRevisionId,
     openSource: NotificationOpenSource.osBackground,
     referencedAddress: parsed.referencedAddress,
     referencedEventId: parsed.referencedEventId,
