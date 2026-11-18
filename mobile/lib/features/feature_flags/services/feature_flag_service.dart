@@ -25,9 +25,14 @@ class FeatureFlagService extends ChangeNotifier {
   bool _defaultValue(FeatureFlag flag) =>
       isAvailable(flag) && _buildConfig.getDefault(flag);
 
-  bool isAvailable(FeatureFlag flag) =>
-      flag != FeatureFlag.minorConsentInAppRecording ||
-      _buildConfig.consentDeliveryVerified;
+  /// Whether this build can offer [flag] at all. A flag it cannot offer stays
+  /// off, is left off the flag screen and ignores any stored override.
+  bool isAvailable(FeatureFlag flag) => switch (flag) {
+    FeatureFlag.minorConsentInAppRecording =>
+      _buildConfig.consentDeliveryVerified,
+    FeatureFlag.songCatalog => _buildConfig.songCatalogConfigured,
+    _ => true,
+  };
 
   static bool _denyInternal() => false;
 

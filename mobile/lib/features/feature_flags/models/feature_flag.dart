@@ -109,6 +109,14 @@ enum FeatureFlag {
         'rooms. Messages are signed with your key and can be read publicly.',
     audience: FeatureFlagAudience.internal,
   ),
+  songCatalog(
+    'Songs (Apple Music previews)',
+    "Add a Songs list to the editor's sound picker: the most played songs "
+        'and a search by title or artist, played from Apple Music previews. '
+        'Internal prototype, only in builds made with a developer token. A '
+        'video posted with a song is public.',
+    audience: FeatureFlagAudience.internal,
+  ),
   // User-facing: families can start the existing Greenlight consent flow from
   // Experimental Features, or opt in while already in account review.
   minorConsentInAppRecording(

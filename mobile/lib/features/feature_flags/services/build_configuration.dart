@@ -1,6 +1,7 @@
 // ABOUTME: Build configuration service providing compile-time feature flag defaults
 // ABOUTME: Maps environment variables to feature flag defaults for build-time configuration
 
+import 'package:openvine/config/song_catalog_config.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 class BuildConfiguration {
@@ -8,10 +9,14 @@ class BuildConfiguration {
     this.consentDeliveryVerified = const bool.fromEnvironment(
       'PARENT_CONSENT_DELIVERY_VERIFIED',
     ),
+    this.songCatalogConfigured = SongCatalogConfig.isConfigured,
   });
 
   /// Enabled only in builds targeting a verified consent deployment.
   final bool consentDeliveryVerified;
+
+  /// Whether this build carries the developer token the song catalog needs.
+  final bool songCatalogConfigured;
 
   /// Get the default value for a feature flag from environment variables
   bool getDefault(FeatureFlag flag) {
@@ -84,6 +89,11 @@ class BuildConfiguration {
         // Unconfigured developer/reviewer builds retain their explicit opt-in.
         return const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
             const bool.fromEnvironment('FF_CONCORD_CHAT');
+      case FeatureFlag.songCatalog:
+        // An internal prototype: off unless a build asks for it, and a
+        // preference cannot turn it on in a build without a developer token.
+        return songCatalogConfigured &&
+            const bool.fromEnvironment('FF_SONG_CATALOG');
       case FeatureFlag.minorConsentInAppRecording:
         // A preference cannot override the build's verified-deployment gate.
         return consentDeliveryVerified &&
@@ -142,6 +152,8 @@ class BuildConfiguration {
         return 'FF_BUNNY_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
+      case FeatureFlag.songCatalog:
+        return 'FF_SONG_CATALOG';
       case FeatureFlag.minorConsentInAppRecording:
         return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
       case FeatureFlag.largeScreenLayout:

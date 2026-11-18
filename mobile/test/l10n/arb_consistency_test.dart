@@ -626,6 +626,8 @@ const _knownUntranslatedDebt = <String>{
   'messagesRoomRetiredDraft',
   'messagesRoomRestoreDraft',
   'messagesRoomDiscardDraft',
+  // The sound picker's Songs tab, an internal experiment behind a flag.
+  'videoEditorAudioCategorySongs',
   // Native challenge Lists presentation; awaiting the translation pass.
   'challengeOrganizerTime',
   'challengeLocalDeadline', 'challengeEnter', 'challengeEnterVideo',

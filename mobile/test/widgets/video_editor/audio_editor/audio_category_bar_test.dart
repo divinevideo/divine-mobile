@@ -12,9 +12,12 @@ void main() {
   group(AudioCategoryBar, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
 
-    Widget buildWidget({required ValueChanged<AudioCategory> onSelect}) {
+    Widget buildWidget({
+      required ValueChanged<AudioCategory> onSelect,
+      List<AudioCategory> categories = AudioCategory.standard,
+    }) {
       final controller = TabController(
-        length: AudioCategory.values.length,
+        length: categories.length,
         vsync: const TestVSync(),
       );
       addTearDown(controller.dispose);
@@ -22,7 +25,11 @@ void main() {
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: AudioCategoryBar(controller: controller, onSelect: onSelect),
+          body: AudioCategoryBar(
+            controller: controller,
+            categories: categories,
+            onSelect: onSelect,
+          ),
         ),
       );
     }
@@ -41,6 +48,47 @@ void main() {
           tester.getTopLeft(find.text(label)).dx,
       ];
       expect(positions, orderedEquals([...positions]..sort()));
+      expect(find.text(l10n.videoEditorAudioCategorySongs), findsNothing);
+    });
+
+    testWidgets('renders Songs before My Sounds when songs are available', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(
+          onSelect: (_) {},
+          categories: AudioCategory.available(songs: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final positions = [
+        for (final label in [
+          l10n.exploreTabForYou,
+          l10n.exploreTabPopular,
+          l10n.exploreTabNew,
+          l10n.videoEditorAudioCategorySongs,
+          l10n.videoEditorAudioCategoryMySounds,
+        ])
+          tester.getTopLeft(find.text(label)).dx,
+      ];
+      expect(positions, orderedEquals([...positions]..sort()));
+    });
+
+    testWidgets('selects songs from its tab', (tester) async {
+      AudioCategory? selected;
+      await tester.pumpWidget(
+        buildWidget(
+          onSelect: (category) => selected = category,
+          categories: AudioCategory.available(songs: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+      await tester.pumpAndSettle();
+
+      expect(selected, equals(AudioCategory.songs));
     });
 
     for (final (label, category) in [

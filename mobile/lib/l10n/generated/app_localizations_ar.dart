@@ -11629,6 +11629,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'أصواتي';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'مؤثرات صوتية';
 
   @override

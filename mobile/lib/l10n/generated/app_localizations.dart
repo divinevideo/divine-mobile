@@ -19787,6 +19787,12 @@ abstract class AppLocalizations {
   /// **'My Sounds'**
   String get videoEditorAudioCategoryMySounds;
 
+  /// Tab in the sound picker that lists songs from a music catalog: the most played ones, or the matches of a search by title or artist. Shown only in an internal experiment.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get videoEditorAudioCategorySongs;
+
   /// Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects.
   ///
   /// In en, this message translates to:

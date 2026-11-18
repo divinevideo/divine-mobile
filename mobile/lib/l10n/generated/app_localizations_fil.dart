@@ -11713,6 +11713,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Mga Sound Ko';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Sound effects';
 
   @override
