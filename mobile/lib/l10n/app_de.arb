@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Alle können Abzeichen erstellen und verleihen. Du entscheidest, welche in deinem Profil erscheinen. Entdecke ein Abzeichen, lerne seine Community kennen und folge ihren Mitgliedern.",
   "badgeDiscoveryMyBadges": "Meine Abzeichen",
   "badgeDiscoveryEmpty": "Noch keine Communitys gefunden. Zieh nach unten, um es erneut zu versuchen.",
-  "badgeCommunityFollowHint": "Fügt Community-Videos zu deinem „Folge ich“-Feed hinzu. Personen folgst du einzeln."
+  "badgeCommunityFollowHint": "Fügt Community-Videos zu deinem „Folge ich“-Feed hinzu. Personen folgst du einzeln.",
+  "badgeOfficialLabel": "Offiziell",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Mehr erfahren auf {website}"
 }

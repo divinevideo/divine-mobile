@@ -316,6 +316,35 @@ class ReportContentDialog extends ConsumerWidget {
         .whenComplete(controller.dispose);
   }
 
+  /// Shows the bottom sheet for reporting a badge definition.
+  static Future<void> showForBadge(
+    BuildContext context, {
+    required String eventId,
+    required String authorPubkey,
+    required String coordinate,
+    required String name,
+  }) {
+    final controller = DraggableScrollableController();
+    return context
+        .showVideoPausingVineBottomSheet<void>(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: VineTheme.bottomSheetDismissFloor,
+          draggableController: controller,
+          buildScrollBody: (scrollController) => ReportContentDialog(
+            eventId: eventId,
+            authorPubkey: authorPubkey,
+            moderationKindLabel: 'Badge Report',
+            moderationEventLabel: 'Badge Event',
+            additionalContext: 'Reported badge: "$name" ($coordinate)',
+            addressableCoordinate: coordinate,
+            draggableController: controller,
+            scrollController: scrollController,
+          ),
+        )
+        .whenComplete(controller.dispose);
+  }
+
   /// What this report targets, derived from the mutually exclusive
   /// constructor shapes the `show*` factories use.
   ReportTarget get _target {

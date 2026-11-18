@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Iedereen kan badges maken en uitreiken. Jij kiest welke op je profiel staan. Ontdek een badge, leer de community kennen en volg de mensen erin.",
   "badgeDiscoveryMyBadges": "Mijn badges",
   "badgeDiscoveryEmpty": "Nog geen communities gevonden. Trek omlaag om het opnieuw te proberen.",
-  "badgeCommunityFollowHint": "Voegt communityvideo’s toe aan je Volgend-feed. Volg mensen afzonderlijk."
+  "badgeCommunityFollowHint": "Voegt communityvideo’s toe aan je Volgend-feed. Volg mensen afzonderlijk.",
+  "badgeOfficialLabel": "Officieel",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Meer informatie op {website}"
 }

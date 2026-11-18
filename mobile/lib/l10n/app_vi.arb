@@ -7864,5 +7864,9 @@
   "badgeDiscoveryBody": "Ai cũng có thể tạo và trao huy hiệu. Bạn chọn huy hiệu nào xuất hiện trên hồ sơ của mình. Khám phá một huy hiệu để tìm hiểu cộng đồng và theo dõi những người trong đó.",
   "badgeDiscoveryMyBadges": "Huy hiệu của tôi",
   "badgeDiscoveryEmpty": "Chưa tìm thấy cộng đồng nào. Kéo xuống để thử lại.",
-  "badgeCommunityFollowHint": "Thêm video cộng đồng vào bảng tin Đang theo dõi. Theo dõi từng người riêng lẻ."
+  "badgeCommunityFollowHint": "Thêm video cộng đồng vào bảng tin Đang theo dõi. Theo dõi từng người riêng lẻ.",
+  "badgeOfficialLabel": "Chính thức",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Tìm hiểu thêm tại {website}"
 }

@@ -7864,5 +7864,9 @@
   "badgeDiscoveryBody": "کوئی بھی بیجز بنا سکتا ہے اور دے سکتا ہے۔ آپ منتخب کرتے ہیں کہ آپ کے پروفائل پر کون سے بیجز نظر آئیں۔ کسی بیج کو دیکھ کر اس کی کمیونٹی سے واقف ہوں اور اس کے لوگوں کو فالو کریں۔",
   "badgeDiscoveryMyBadges": "میرے بیجز",
   "badgeDiscoveryEmpty": "ابھی کوئی کمیونٹی نہیں ملی۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔",
-  "badgeCommunityFollowHint": "کمیونٹی کی ویڈیوز آپ کی فالوونگ فیڈ میں شامل کرتا ہے۔ لوگوں کو الگ الگ فالو کریں۔"
+  "badgeCommunityFollowHint": "کمیونٹی کی ویڈیوز آپ کی فالوونگ فیڈ میں شامل کرتا ہے۔ لوگوں کو الگ الگ فالو کریں۔",
+  "badgeOfficialLabel": "آفیشل",
+  "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website} پر مزید جانیں"
 }

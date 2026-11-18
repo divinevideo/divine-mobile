@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Tout le monde peut créer et décerner des badges. Tu choisis ceux qui apparaissent sur ton profil. Explore un badge pour découvrir sa communauté et suivre ses membres.",
   "badgeDiscoveryMyBadges": "Mes badges",
   "badgeDiscoveryEmpty": "Aucune communauté trouvée pour le moment. Tire vers le bas pour réessayer.",
-  "badgeCommunityFollowHint": "Ajoute les vidéos de la communauté à ton fil Abonnements. Suis les personnes individuellement."
+  "badgeCommunityFollowHint": "Ajoute les vidéos de la communauté à ton fil Abonnements. Suis les personnes individuellement.",
+  "badgeOfficialLabel": "Officiel",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "En savoir plus sur {website}"
 }

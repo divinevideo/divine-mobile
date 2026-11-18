@@ -6109,5 +6109,9 @@
   "badgeDiscoveryBody": "누구나 배지를 만들고 수여할 수 있어요. 프로필에 표시할 배지는 직접 선택해요. 배지를 둘러보며 커뮤니티를 알아보고 사람들을 팔로우해 보세요.",
   "badgeDiscoveryMyBadges": "내 배지",
   "badgeDiscoveryEmpty": "아직 커뮤니티를 찾지 못했어요. 아래로 당겨 다시 시도해 보세요.",
-  "badgeCommunityFollowHint": "커뮤니티 동영상을 팔로잉 피드에 추가해요. 사람들은 개별적으로 팔로우해요."
+  "badgeCommunityFollowHint": "커뮤니티 동영상을 팔로잉 피드에 추가해요. 사람들은 개별적으로 팔로우해요.",
+  "badgeOfficialLabel": "공식",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website}에서 자세히 알아보기"
 }

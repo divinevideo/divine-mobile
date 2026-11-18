@@ -1,7 +1,6 @@
 // ABOUTME: Public community discovery with bounded, nonblocking people previews.
 
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:equatable/equatable.dart';
@@ -16,54 +15,102 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   /// Creates the cubit.
   ExploreBadgesCubit({
     required BadgeRepository repository,
+    Set<String> hiddenIssuers = const {},
   }) : _repository = repository,
-       super(const ExploreBadgesState());
+       super(
+         ExploreBadgesState(hiddenIssuers: Set.unmodifiable(hiddenIssuers)),
+       );
 
   /// Preview reads allowed in flight at once.
   static const _maxConcurrentPreviews = 4;
 
   final BadgeRepository _repository;
-  int _generation = 0;
-  int _activePreviews = 0;
-  bool _refreshing = false;
-  final _previewQueue = Queue<({String coordinate, int generation})>();
-  final _requestedPreviews = <String>{};
 
   /// Loads the definitions, showing the loading state.
-  Future<void> load() async {
-    emit(state.copyWith(status: ExploreBadgesStatus.loading));
-    await refresh();
-  }
+  Future<void> load() => _refresh(showLoading: true);
 
-  /// Reloads without a loading state, keeping the current cards until the
-  /// read ends; a successful read starts again from the first page with no
-  /// member previews.
-  Future<void> refresh() async {
-    final generation = ++_generation;
-    _refreshing = true;
-    _previewQueue.clear();
-    _requestedPreviews.clear();
+  /// Reloads while keeping the currently revealed cards on screen.
+  Future<void> refresh() => _refresh();
+
+  Future<void> _refresh({bool showLoading = false}) async {
+    if (isClosed) return;
+    final generation = state.refreshGeneration + 1;
+    emit(
+      state.copyWith(
+        status: showLoading ? ExploreBadgesStatus.loading : state.status,
+        refreshGeneration: generation,
+        isRefreshing: true,
+      ),
+    );
     try {
       final definitions = await _repository.loadPublicDefinitions();
-      if (isClosed || generation != _generation) return;
-      _refreshing = false;
+      if (isClosed || generation != state.refreshGeneration) return;
+      final previousIds = {
+        for (final definition in state.definitions)
+          definition.coordinate: definition.event.id,
+      };
+      final previews = {
+        for (final definition in definitions)
+          if (previousIds[definition.coordinate] == definition.event.id &&
+              state.previews.containsKey(definition.coordinate))
+            definition.coordinate: state.previews[definition.coordinate]!,
+      };
       emitIfOpen(
-        ExploreBadgesState(
+        state.copyWith(
           status: ExploreBadgesStatus.loaded,
           definitions: List.unmodifiable(definitions),
+          isRefreshing: false,
+          previewGeneration: generation,
+          previews: Map.unmodifiable(previews),
+          previewQueue: const [],
+          requestedPreviews: Set.unmodifiable(previews.keys),
         ),
       );
     } catch (error, stackTrace) {
       // Log even a superseded read: its failure is still a relay symptom.
       addError(error, stackTrace);
-      if (isClosed || generation != _generation) return;
-      _refreshing = false;
+      if (isClosed || generation != state.refreshGeneration) return;
+      final hadSnapshot = state.status == ExploreBadgesStatus.loaded;
       emitIfOpen(
-        state.status == ExploreBadgesStatus.loaded
-            ? state.copyWith(refreshFailures: state.refreshFailures + 1)
-            : state.copyWith(status: ExploreBadgesStatus.failure),
+        state.copyWith(
+          status: hadSnapshot
+              ? ExploreBadgesStatus.loaded
+              : ExploreBadgesStatus.failure,
+          isRefreshing: false,
+          refreshFailures: state.refreshFailures + (hadSnapshot ? 1 : 0),
+        ),
       );
+      _drainPreviews();
     }
+  }
+
+  /// Updates local gallery visibility using the currently loaded definitions.
+  void updateHiddenIssuers(Set<String> hiddenIssuers) {
+    if (isClosed) return;
+    final updated = state.copyWith(
+      hiddenIssuers: Set.unmodifiable(hiddenIssuers),
+    );
+    if (state.previewQueue.isEmpty) {
+      emit(updated);
+      return;
+    }
+
+    final visibleCoordinates = updated.visibleDefinitions
+        .map((definition) => definition.coordinate)
+        .toSet();
+    final dropped = state.previewQueue
+        .where((coordinate) => !visibleCoordinates.contains(coordinate))
+        .toSet();
+    emit(
+      updated.copyWith(
+        previewQueue: List.unmodifiable(
+          state.previewQueue.where(visibleCoordinates.contains),
+        ),
+        requestedPreviews: Set.unmodifiable(
+          state.requestedPreviews.difference(dropped),
+        ),
+      ),
+    );
   }
 
   /// Reveals another finite page from the loaded discovery window.
@@ -80,58 +127,66 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   /// removes a badge or starts the expensive complete holder reconciliation.
   void loadPreview(String coordinate) {
     if (isClosed ||
-        _refreshing ||
-        !state.visibleDefinitions.any((d) => d.coordinate == coordinate) ||
-        !_requestedPreviews.add(coordinate)) {
+        state.isRefreshing ||
+        state.requestedPreviews.contains(coordinate) ||
+        !state.visibleDefinitions.any((d) => d.coordinate == coordinate)) {
       return;
     }
-    _previewQueue.add((coordinate: coordinate, generation: _generation));
+    emit(
+      state.copyWith(
+        previewQueue: List.unmodifiable([...state.previewQueue, coordinate]),
+        requestedPreviews: Set.unmodifiable({
+          ...state.requestedPreviews,
+          coordinate,
+        }),
+      ),
+    );
     _drainPreviews();
   }
 
   void _drainPreviews() {
     while (!isClosed &&
-        _activePreviews < _maxConcurrentPreviews &&
-        _previewQueue.isNotEmpty) {
-      final request = _previewQueue.removeFirst();
-      if (request.generation != _generation) continue;
-      _activePreviews++;
+        !state.isRefreshing &&
+        state.activePreviews < _maxConcurrentPreviews &&
+        state.previewQueue.isNotEmpty) {
+      final coordinate = state.previewQueue.first;
+      final generation = state.previewGeneration;
+      emit(
+        state.copyWith(
+          activePreviews: state.activePreviews + 1,
+          previewQueue: List.unmodifiable(state.previewQueue.skip(1)),
+        ),
+      );
       // _loadPreview handles failures and owns this request's completion.
-      unawaited(_loadPreview(request));
+      unawaited(_loadPreview(coordinate, generation));
     }
   }
 
-  Future<void> _loadPreview(
-    ({String coordinate, int generation}) request,
-  ) async {
+  Future<void> _loadPreview(String coordinate, int generation) async {
+    List<String>? preview;
     try {
-      final coordinate = BadgeCoordinate.parse(request.coordinate);
-      if (coordinate == null) return;
-      final holders = await _repository.loadHolderPreview(coordinate);
-      if (isClosed || request.generation != _generation) return;
-      emit(
-        state.copyWith(
-          previews: Map.unmodifiable({
-            ...state.previews,
-            request.coordinate: List<String>.unmodifiable(
-              holders.take(BadgeRepository.holderPreviewLimit),
-            ),
-          }),
-        ),
-      );
+      final parsed = BadgeCoordinate.parse(coordinate);
+      if (parsed != null) {
+        final holders = await _repository.loadHolderPreview(parsed);
+        preview = List.unmodifiable(
+          holders.take(BadgeRepository.holderPreviewLimit),
+        );
+      }
     } catch (error, stackTrace) {
       // The card stays usable without indexed people; log why it has none.
       addError(error, stackTrace);
     } finally {
-      _activePreviews--;
-      _drainPreviews();
+      if (!isClosed) {
+        emitIfOpen(
+          state.copyWith(
+            activePreviews: state.activePreviews - 1,
+            previews: preview != null && generation == state.previewGeneration
+                ? Map.unmodifiable({...state.previews, coordinate: preview})
+                : state.previews,
+          ),
+        );
+        _drainPreviews();
+      }
     }
-  }
-
-  @override
-  Future<void> close() {
-    _generation++;
-    _previewQueue.clear();
-    return super.close();
   }
 }

@@ -6616,5 +6616,9 @@
   "badgeDiscoveryBody": "ማንኛውም ሰው ባጆችን መፍጠር እና መሸለም ይችላል። በመገለጫዎ ላይ የሚታዩትን እርስዎ ይመርጣሉ። ማህበረሰቡን ለማወቅ እና አባላቱን ለመከተል ባጅ ያስሱ።",
   "badgeDiscoveryMyBadges": "የእኔ ባጆች",
   "badgeDiscoveryEmpty": "እስካሁን ማህበረሰቦች አልተገኙም። እንደገና ለመሞከር ወደ ታች ይጎትቱ።",
-  "badgeCommunityFollowHint": "የማህበረሰቡን ቪዲዮዎች ወደሚከተሏቸው ዝርዝር ያክላል። ሰዎችን በተናጠል ይከተሉ።"
+  "badgeCommunityFollowHint": "የማህበረሰቡን ቪዲዮዎች ወደሚከተሏቸው ዝርዝር ያክላል። ሰዎችን በተናጠል ይከተሉ።",
+  "badgeOfficialLabel": "ይፋዊ",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "በ{website} ላይ ተጨማሪ ይወቁ"
 }

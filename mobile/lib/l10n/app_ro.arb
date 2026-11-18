@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Oricine poate crea și acorda insigne. Tu alegi care apar pe profilul tău. Explorează o insignă ca să-i cunoști comunitatea și să urmărești oamenii din ea.",
   "badgeDiscoveryMyBadges": "Insignele mele",
   "badgeDiscoveryEmpty": "Nu am găsit comunități încă. Trage în jos ca să încerci din nou.",
-  "badgeCommunityFollowHint": "Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual."
+  "badgeCommunityFollowHint": "Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual.",
+  "badgeOfficialLabel": "Oficială",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Află mai multe pe {website}"
 }

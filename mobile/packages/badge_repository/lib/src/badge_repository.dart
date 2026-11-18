@@ -379,6 +379,8 @@ class BadgeRepository {
     required BadgeEventSigner signEvent,
     required NostrSigner Function() signer,
     BadgeHiddenPubkeyReader? isHiddenPubkey,
+    EventVerifyWorkerSpawner? discoveryVerifierSpawner,
+    Iterable<String> discoveryIssuerPubkeys = const [],
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
     String? definitionRelayUrl,
@@ -391,6 +393,8 @@ class BadgeRepository {
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
        _isHiddenPubkey = isHiddenPubkey,
+       _discoveryVerifierSpawner = discoveryVerifierSpawner,
+       _discoveryIssuerPubkeys = Set.unmodifiable(discoveryIssuerPubkeys),
        _dismissalSync = BadgeDismissalSync(
          client: nostrClient,
          preferences: sharedPreferences,
@@ -404,6 +408,9 @@ class BadgeRepository {
   }
 
   final NostrClient _nostrClient;
+  final EventVerifyWorkerSpawner? _discoveryVerifierSpawner;
+  Future<EventVerifyWorker?>? _discoveryVerifier;
+  final Set<String> _discoveryIssuerPubkeys;
 
   /// Trusted catalogue API that verifies signatures before serving events.
   final FunnelcakeApiClient? _funnelcakeApiClient;
@@ -538,6 +545,9 @@ class BadgeRepository {
   /// Most recent badge definitions one discovery read asks for.
   static const _discoveryWindowSize = 300;
 
+  /// Keep one publisher from filling the displayed community gallery.
+  static const _discoveryDefinitionsPerIssuer = 3;
+
   /// Per-filter deletion limit; a read that fills it is incomplete.
   static const _discoveryDeletionLimit = 1000;
 
@@ -551,22 +561,46 @@ class BadgeRepository {
   /// first.
   ///
   /// Needs no signer, but drops the viewer's hidden pubkeys. Makes one
-  /// bounded definition read and one deletion read rather than walking the
-  /// whole history. An event the relay pool already verified is not checked
-  /// again; any other event, including every Divine-relay event under the
-  /// web default policy, is verified here on the calling isolate.
+  /// bounded definition read and bounded issuer-scoped deletion reads rather
+  /// than walking the whole history. An event the relay pool already verified is not checked
+  /// again. Otherwise the injected worker verifies it; web callers use the
+  /// existing native JavaScript verifier, avoiding pure-Dart curve math.
+  /// Without a worker, verification runs on the calling isolate.
   ///
-  /// Throws [BadgeReadIncompleteException] when either read goes unanswered
-  /// or the deletion read fills its limit.
+  /// Throws [BadgeReadIncompleteException] when discovery goes unanswered.
+  /// Omits only the issuers whose deletion reads are incomplete or capped.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
-    final events = await _readDiscoveryWindow(
+    final recentEvents = await _readDiscoveryWindow(
       [
         Filter(kinds: [EventKind.badgeDefinition], limit: _discoveryWindowSize),
       ],
     );
+    final events = [
+      ...recentEvents
+          .where((event) => !(_isHiddenPubkey?.call(event.pubkey) ?? false))
+          .take(_discoveryWindowSize),
+    ];
+    // Known issuers have their own catalogue read, so newer community events
+    // cannot displace their definitions from the recency window.
+    if (_discoveryIssuerPubkeys.isNotEmpty) {
+      try {
+        final pinned = await loadDefinitionsByIssuers(
+          _discoveryIssuerPubkeys.where(
+            (issuer) => !(_isHiddenPubkey?.call(issuer) ?? false),
+          ),
+        );
+        events.addAll(pinned.map((definition) => definition.event));
+      } on Exception catch (error) {
+        Log.warning(
+          'Pinned badge catalogue unavailable (${error.runtimeType})',
+          name: 'BadgeRepository',
+          category: LogCategory.relay,
+        );
+      }
+    }
     final definitions = <String, Nip58BadgeDefinition>{};
-    for (final event in events.take(_discoveryWindowSize)) {
-      if (!_isVerifiedDiscoveryEvent(event) ||
+    for (final event in events) {
+      if (!await _isVerifiedDiscoveryEvent(event) ||
           (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
         continue;
       }
@@ -585,49 +619,117 @@ class BadgeRepository {
     }
     if (definitions.isEmpty) return const [];
 
-    // A deletion can name either an event ID or an address. Read the issuers'
-    // relevant deletions together, then enforce ownership locally. A saturated
-    // window is inconclusive rather than permission to revive deleted badges.
-    final issuers = definitions.values
-        .map((d) => d.event.pubkey)
-        .toSet()
-        .toList();
-    final deletions = await _readDiscoveryWindow([
-      Filter(
-        kinds: [EventKind.eventDeletion],
-        authors: issuers,
-        a: definitions.keys.toList(),
-        limit: _discoveryDeletionLimit,
-      ),
-      Filter(
-        kinds: [EventKind.eventDeletion],
-        authors: issuers,
-        e: definitions.values.map((d) => d.event.id).toList(),
-        limit: _discoveryDeletionLimit,
-      ),
-    ]);
-    if (deletions.length >= _discoveryDeletionLimit) {
-      throw const BadgeReadIncompleteException(
-        'Badge discovery deletion window is incomplete',
-      );
+    // Isolate each issuer's deletion window. A publisher flooding their own
+    // coordinates can suppress only their badges, never another community.
+    final byIssuer = <String, List<Nip58BadgeDefinition>>{};
+    for (final definition in definitions.values) {
+      (byIssuer[definition.event.pubkey] ??= []).add(definition);
     }
-    for (final deletion in deletions) {
-      if (deletion.kind != EventKind.eventDeletion ||
-          !_isVerifiedDiscoveryEvent(deletion)) {
-        continue;
-      }
-      definitions.removeWhere((coordinate, definition) {
-        if (deletion.pubkey != definition.event.pubkey) return false;
-        // NIP-09 bounds an address deletion by time; an event-ID deletion
-        // names one exact event, whatever either clock said.
-        final coversRevision = deletion.createdAt >= definition.event.createdAt;
-        return deletion.tags.any(
-          (tag) =>
-              tag.length > 1 &&
-              ((coversRevision && tag[0] == 'a' && tag[1] == coordinate) ||
-                  (tag[0] == 'e' && tag[1] == definition.event.id)),
+    final pending = byIssuer.entries.iterator;
+    final elapsed = _stopwatchFactory()..start();
+    Future<void> readIssuerDeletions() async {
+      while (pending.moveNext()) {
+        final issuer = pending.current;
+        final remaining = _discoveryReadTimeout - elapsed.elapsed;
+        if (remaining <= Duration.zero) {
+          for (final definition in issuer.value) {
+            definitions.remove(definition.coordinate);
+          }
+          continue;
+        }
+        final deletions = await _nostrClient.readEvents(
+          [
+            Filter(
+              kinds: [EventKind.eventDeletion],
+              authors: [issuer.key],
+              a: issuer.value.map((d) => d.coordinate).toList(),
+              since: issuer.value
+                  .map((d) => d.event.createdAt)
+                  .reduce(
+                    (a, b) => a < b ? a : b,
+                  ),
+              limit: _discoveryDeletionLimit,
+            ),
+            // NIP-09 event-ID deletions apply even with an earlier clock.
+            Filter(
+              kinds: [EventKind.eventDeletion],
+              authors: [issuer.key],
+              e: issuer.value.map((d) => d.event.id).toList(),
+              limit: _discoveryDeletionLimit,
+            ),
+          ],
+          tempRelays: _definitionRelayUrl == null
+              ? null
+              : [_definitionRelayUrl],
+          relayTypes: _definitionRelayUrl == null
+              ? RelayType.all
+              : [RelayType.temp],
+          useCache: false,
+          timeout: remaining,
+          requireAllRelaysSettled: true,
+          maxCollectedEvents: _discoveryDeletionLimit,
         );
+        if (!deletions.isComplete ||
+            deletions.possiblyCapped ||
+            deletions.events.length >= _discoveryDeletionLimit) {
+          for (final definition in issuer.value) {
+            definitions.remove(definition.coordinate);
+          }
+          continue;
+        }
+        for (final deletion in deletions.events) {
+          final verificationBudget = _discoveryReadTimeout - elapsed.elapsed;
+          final valid =
+              verificationBudget > Duration.zero &&
+              await _isVerifiedDiscoveryEvent(deletion).timeout(
+                verificationBudget,
+                onTimeout: () => false,
+              );
+          if (elapsed.elapsed >= _discoveryReadTimeout) {
+            for (final definition in issuer.value) {
+              definitions.remove(definition.coordinate);
+            }
+            break;
+          }
+          if (!valid ||
+              deletion.kind != EventKind.eventDeletion ||
+              deletion.pubkey != issuer.key) {
+            continue;
+          }
+          final deletedCoordinates = deletion.tags
+              .where((tag) => tag.length >= 2 && tag[0] == 'a')
+              .map((tag) => tag[1])
+              .toSet();
+          final deletedIds = deletion.tags
+              .where((tag) => tag.length >= 2 && tag[0] == 'e')
+              .map((tag) => tag[1])
+              .toSet();
+          definitions.removeWhere(
+            (coordinate, definition) =>
+                definition.event.pubkey == deletion.pubkey &&
+                ((deletedCoordinates.contains(coordinate) &&
+                        deletion.createdAt >= definition.event.createdAt) ||
+                    deletedIds.contains(definition.event.id)),
+          );
+        }
+      }
+    }
+
+    // Both fan-out and the whole phase are bounded, including queued issuers.
+    await Future.wait(List.generate(4, (_) => readIssuerDeletions()));
+    final newest = definitions.values.toList()
+      ..sort((a, b) {
+        final recency = b.event.createdAt.compareTo(a.event.createdAt);
+        return recency != 0 ? recency : a.coordinate.compareTo(b.coordinate);
       });
+    final counts = <String, int>{};
+    for (final definition in newest) {
+      final issuer = definition.event.pubkey;
+      counts[issuer] = (counts[issuer] ?? 0) + 1;
+      if (!_discoveryIssuerPubkeys.contains(issuer) &&
+          counts[issuer]! > _discoveryDefinitionsPerIssuer) {
+        definitions.remove(definition.coordinate);
+      }
     }
     return definitions.values
         .where((d) => !(_isHiddenPubkey?.call(d.event.pubkey) ?? false))
@@ -656,8 +758,38 @@ class BadgeRepository {
     return result.events;
   }
 
-  static bool _isVerifiedDiscoveryEvent(Event event) =>
-      event.isValid && (event.hasVerifiedSignature || event.isSigned);
+  Future<bool> _isVerifiedDiscoveryEvent(Event event) async {
+    if (_disposed || !event.isValid) return false;
+    if (event.hasVerifiedSignature) return true;
+    final spawner = _discoveryVerifierSpawner;
+    if (spawner == null) return event.isSigned;
+    final verifier = await (_discoveryVerifier ??= _spawnDiscoveryVerifier(
+      spawner,
+    ));
+    if (_disposed) return false;
+    return verifier == null ? event.isSigned : verifier.verify(event.toJson());
+  }
+
+  Future<EventVerifyWorker?> _spawnDiscoveryVerifier(
+    EventVerifyWorkerSpawner spawner,
+  ) async {
+    try {
+      final verifier = await spawner();
+      if (_disposed) {
+        verifier.close();
+        return null;
+      }
+      return verifier;
+    } on Object catch (error) {
+      Log.warning(
+        'Badge signature worker unavailable (${error.runtimeType}); '
+        'using signature verification on the calling isolate',
+        name: 'BadgeRepository',
+        category: LogCategory.relay,
+      );
+      return null;
+    }
+  }
 
   /// Up to [holderPreviewLimit] visible accepted holders from the indexed
   /// API: a preview, never the complete membership.
@@ -1158,6 +1290,10 @@ class BadgeRepository {
   /// Closes [subscriptionChanges].
   Future<void> dispose() async {
     _disposed = true;
+    final verifier = _discoveryVerifier;
+    if (verifier != null) {
+      (await verifier)?.close();
+    }
     _resetSubscriptionSession();
     await _subscriptionSessionChanges?.cancel();
     await _subscriptionChanges.close();

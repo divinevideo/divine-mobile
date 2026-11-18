@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Alla kan skapa och dela ut märken. Du väljer vilka som visas på din profil. Utforska ett märke för att lära känna gemenskapen och följa människorna där.",
   "badgeDiscoveryMyBadges": "Mina märken",
   "badgeDiscoveryEmpty": "Inga gemenskaper hittades än. Dra nedåt för att försöka igen.",
-  "badgeCommunityFollowHint": "Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig."
+  "badgeCommunityFollowHint": "Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig.",
+  "badgeOfficialLabel": "Officiellt",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Läs mer på {website}"
 }

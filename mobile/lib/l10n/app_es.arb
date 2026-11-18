@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Cualquiera puede crear y otorgar insignias. Vos elegís cuáles aparecen en tu perfil. Explorá una insignia para conocer su comunidad y seguir a sus integrantes.",
   "badgeDiscoveryMyBadges": "Mis insignias",
   "badgeDiscoveryEmpty": "Todavía no encontramos comunidades. Deslizá hacia abajo para volver a intentar.",
-  "badgeCommunityFollowHint": "Agrega videos de la comunidad a tu feed Siguiendo. Seguí a las personas por separado."
+  "badgeCommunityFollowHint": "Agrega videos de la comunidad a tu feed Siguiendo. Seguí a las personas por separado.",
+  "badgeOfficialLabel": "Oficial",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Más información en {website}"
 }

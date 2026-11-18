@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Chiunque può creare e assegnare badge. Scegli tu quali mostrare sul tuo profilo. Esplora un badge per conoscere la sua comunità e seguirne le persone.",
   "badgeDiscoveryMyBadges": "I miei badge",
   "badgeDiscoveryEmpty": "Nessuna comunità trovata per ora. Trascina verso il basso per riprovare.",
-  "badgeCommunityFollowHint": "Aggiunge i video della comunità al feed Seguiti. Segui le persone singolarmente."
+  "badgeCommunityFollowHint": "Aggiunge i video della comunità al feed Seguiti. Segui le persone singolarmente.",
+  "badgeOfficialLabel": "Ufficiale",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Scopri di più su {website}"
 }

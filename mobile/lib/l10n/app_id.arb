@@ -6563,5 +6563,9 @@
   "badgeDiscoveryBody": "Siapa pun bisa membuat dan memberikan lencana. Kamu memilih mana yang tampil di profilmu. Jelajahi lencana untuk mengenal komunitasnya dan mengikuti orang-orang di dalamnya.",
   "badgeDiscoveryMyBadges": "Lencanaku",
   "badgeDiscoveryEmpty": "Belum ada komunitas ditemukan. Tarik ke bawah untuk mencoba lagi.",
-  "badgeCommunityFollowHint": "Menambahkan video komunitas ke feed Mengikuti. Ikuti orang satu per satu."
+  "badgeCommunityFollowHint": "Menambahkan video komunitas ke feed Mengikuti. Ikuti orang satu per satu.",
+  "badgeOfficialLabel": "Resmi",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Pelajari selengkapnya di {website}"
 }

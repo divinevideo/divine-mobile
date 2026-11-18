@@ -15,7 +15,7 @@ import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:curation_repository/curation_repository.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -24,7 +24,9 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show LatestAddressableEvents, NostrClient;
 import 'package:nostr_sdk/event.dart' as nostr;
+import 'package:nostr_sdk/nostr_sdk.dart' show NativeEventVerifyWorker;
 import 'package:openvine/config/app_config.dart';
+import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
@@ -88,6 +90,8 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   var subscriptionAccount = authService.currentPublicKeyHex;
   final repository = BadgeRepository(
     funnelcakeApiClient: ref.watch(badgeCatalogueApiClientProvider),
+    discoveryVerifierSpawner: kIsWeb ? NativeEventVerifyWorker.spawn : null,
+    discoveryIssuerPubkeys: const [kDivineBadgeIssuerPubkey],
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,

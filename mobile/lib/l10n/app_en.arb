@@ -14128,5 +14128,45 @@
   "badgeCommunityFollowHint": "Adds community videos to your Following feed. Follow people individually.",
   "@badgeCommunityFollowHint": {
     "description": "Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one."
+  },
+  "badgeOfficialLabel": "Official",
+  "@badgeOfficialLabel": {
+    "description": "Label for a badge issued by the pinned official Divine badge issuer."
+  },
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "@badgeDiscoveryCardLabel": {
+    "description": "Screen reader label for a badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "@badgeDiscoveryOfficialCardLabel": {
+    "description": "Screen reader label for an official Divine badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      },
+      "officialLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryWebsiteLabel": "Learn more at {website}",
+  "@badgeDiscoveryWebsiteLabel": {
+    "description": "Screen reader label for the external badge discovery website link.",
+    "placeholders": {
+      "website": {
+        "type": "String"
+      }
+    }
   }
 }
