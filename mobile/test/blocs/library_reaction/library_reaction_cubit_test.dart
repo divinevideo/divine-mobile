@@ -39,6 +39,47 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(LibraryReactionCubit, () {
+    test('publishes preparation until extraction completes before allowing a merge', () async {
+      var merged = false;
+      final cubit = LibraryReactionCubit(
+        deferFileCleanup: (_) {},
+        bakeCapturedChromaKey: _noBake,
+        cleanupFiles: (_) async {},
+        mergeTakes: ({required clips, required renderId}) async {
+          merged = true;
+          return _clip('merged');
+        },
+        extractThumbnail: (path) async =>
+            (path: '$path.jpg', timestamp: Duration.zero),
+      );
+      addTearDown(cubit.close);
+      final gate = Completer<List<DivineVideoClip>>();
+      final result = cubit.prepareTakes(() => gate.future);
+      expect(cubit.state.status, LibraryReactionStatus.preparing);
+      expect(cubit.state.isBusy, isTrue);
+      expect(await cubit.combine([_clip('one'), _clip('two')]), isNull);
+      expect(merged, isFalse);
+      expect(cubit.state.status, LibraryReactionStatus.preparing);
+      gate.complete([_clip('one')]);
+      expect((await result)!.map((clip) => clip.id), ['one']);
+      expect(cubit.state.status, LibraryReactionStatus.idle);
+      expect(cubit.state.isBusy, isFalse);
+    });
+
+    test('a closed flow never receives a late prepared take', () async {
+      final cubit = LibraryReactionCubit(
+        deferFileCleanup: (_) {},
+        bakeCapturedChromaKey: _noBake,
+        cleanupFiles: (_) async {},
+      );
+      final gate = Completer<List<DivineVideoClip>>();
+      final result = cubit.prepareTakes(() => gate.future);
+      expect(cubit.state.status, LibraryReactionStatus.preparing);
+      await cubit.close();
+      gate.complete([_clip('one')]);
+      expect(await result, isNull);
+    });
+
     test(
       'library-owned layout survives autosave deletion and real cleanup',
       () async {

@@ -1,6 +1,8 @@
 // ABOUTME: Starts a reaction from a saved clip using the camera and layout tools.
 // ABOUTME: Keeps the unfinished draft and the source footage before a new session.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,8 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart' show LogCategory;
 
 /// Concatenates all cuts accepted from the reaction camera, in capture order.
 typedef LibraryReactionMerge = MergeReactionTakes;
@@ -87,6 +91,58 @@ Future<void> recordLibraryReaction(
     cleanupFiles: cleanupAbandoned,
   );
 
+  Future<T> withProgress<T>(
+    BuildContext progressContext,
+    Future<T> Function() work,
+  ) async {
+    final ownerRoute = ModalRoute.of(progressContext);
+    final popGuard = _ReactionProgressPopEntry();
+    final overlay = OverlayEntry(
+      builder: (_) => BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
+        bloc: reaction,
+        builder: (context, state) => state.isBusy
+            ? _ReactionProgress(
+                label: state.status == LibraryReactionStatus.preparing
+                    ? context.l10n.libraryPreparingVideo
+                    : context.l10n.videoEditorMergeProgressLabel,
+              )
+            : const SizedBox.shrink(),
+      ),
+    );
+    Overlay.of(progressContext, rootOverlay: true).insert(overlay);
+    ownerRoute?.registerPopEntry(popGuard);
+    StreamSubscription<Object?>? routeExit;
+    var dismissed = false;
+    void dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      overlay.remove();
+      overlay.dispose();
+      ownerRoute?.unregisterPopEntry(popGuard);
+      popGuard.dispose();
+      final cancellation = routeExit?.cancel();
+      if (cancellation != null) {
+        runDetached(
+          cancellation,
+          'cancel reaction progress route listener',
+          logName: 'LibraryReaction',
+          category: LogCategory.ui,
+        );
+      }
+    }
+
+    // System back is held while work is running. An account switch or other
+    // programmatic route removal must still dismiss this route's overlay.
+    routeExit = ownerRoute?.popped.asStream().cast<Object?>().listen(
+      (_) => dismiss(),
+    );
+    try {
+      return await work();
+    } finally {
+      dismiss();
+    }
+  }
+
   Future<List<DivineVideoClip>?> record(
     BuildContext cameraContext, {
     required double cellAspectRatio,
@@ -107,9 +163,30 @@ Future<void> recordLibraryReaction(
         .where((clip) => !initialIds.contains(clip.id))
         .map((clip) => clip.id)
         .toSet();
+    if (takeIds.isEmpty) return null;
     // Extraction waits for camera processing and its enriched library save.
     // Even a cancelled take stays in the library, outside this timeline.
-    final takes = await manager.extractClips(takeIds);
+    final takes =
+        cameraContext.mounted &&
+            ModalRoute.of(cameraContext)?.isCurrent != false
+        ? await withProgress(
+            cameraContext,
+            () => reaction.prepareTakes(() => manager.extractClips(takeIds)),
+          )
+        : await manager.extractClips(takeIds);
+    if (takes == null) {
+      if (cameraContext.mounted &&
+          isActive() &&
+          ModalRoute.of(cameraContext)?.isCurrent != false) {
+        ScaffoldMessenger.of(cameraContext).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            cameraContext.l10n.videoEditorClipSaveFailed,
+            error: true,
+          ),
+        );
+      }
+      return null;
+    }
     return isActive() && result == true && takes.isNotEmpty ? takes : null;
   }
 
@@ -145,6 +222,7 @@ Future<void> recordLibraryReaction(
     );
     if (!captureContext.mounted ||
         !isActive() ||
+        ModalRoute.of(captureContext)?.isCurrent == false ||
         takes == null ||
         takes.isEmpty) {
       return null;
@@ -152,22 +230,10 @@ Future<void> recordLibraryReaction(
     if (takes.length == 1) return takes;
 
     // Several stop/start cuts are one reaction, rather than extra cells.
-    final overlay = OverlayEntry(
-      builder: (_) => BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
-        bloc: reaction,
-        builder: (_, state) => state.status == LibraryReactionStatus.merging
-            ? const _ReactionMergeProgress()
-            : const SizedBox.shrink(),
-      ),
+    final merged = await withProgress(
+      captureContext,
+      () => reaction.combine(takes),
     );
-    Overlay.of(captureContext, rootOverlay: true).insert(overlay);
-    DivineVideoClip? merged;
-    try {
-      merged = await reaction.combine(takes);
-    } finally {
-      overlay.remove();
-      overlay.dispose();
-    }
     if (!captureContext.mounted || !isActive()) return null;
     if (merged == null) {
       ScaffoldMessenger.of(captureContext).showSnackBar(
@@ -259,8 +325,17 @@ Future<void> recordLibraryReaction(
   }
 }
 
-class _ReactionMergeProgress extends StatelessWidget {
-  const _ReactionMergeProgress();
+class _ReactionProgressPopEntry extends PopEntry<Object?> {
+  @override
+  final ValueNotifier<bool> canPopNotifier = ValueNotifier<bool>(false);
+
+  void dispose() => canPopNotifier.dispose();
+}
+
+class _ReactionProgress extends StatelessWidget {
+  const _ReactionProgress({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) => Positioned.fill(
@@ -275,7 +350,7 @@ class _ReactionMergeProgress extends StatelessWidget {
               children: [
                 const DivineCircularProgressIndicator(),
                 Text(
-                  context.l10n.videoEditorMergeProgressLabel,
+                  label,
                   style: VineTheme.bodyMediumFont(
                     color: context.vineColors.onSurface,
                   ),

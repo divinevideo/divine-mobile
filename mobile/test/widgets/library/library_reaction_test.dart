@@ -23,12 +23,25 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
+import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
 class _Auth extends Mock implements AuthService {}
+
+class _CameraReplyObserver extends NavigatorObserver {
+  _CameraReplyObserver(this.reply);
+  final void Function(Route<dynamic> route, NavigatorState navigator) reply;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route.settings.name == 'video_recorder') {
+      scheduleMicrotask(() => reply(route, navigator!));
+    }
+  }
+}
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
   id: id,
@@ -44,6 +57,19 @@ class _Manager extends ClipManagerNotifier {
   bool saveSucceeds = true;
   Completer<bool>? saveGate;
   final savedClips = <String, DivineVideoClip>{};
+  Completer<void>? extractionGate;
+  Set<String>? extractedIds;
+
+  @override
+  Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+    extractedIds = clipIds;
+    final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
+    await extractionGate?.future;
+    state = state.copyWith(
+      clips: clips.where((clip) => !clipIds.contains(clip.id)).toList(),
+    );
+    return takes;
+  }
 
   @override
   Future<bool> saveClipToLibrary(DivineVideoClip clip) async {
@@ -139,9 +165,11 @@ void main() {
 
     Future<void> start(
       WidgetTester tester, {
-      required SplitScreenCellPicker record,
+      required SplitScreenCellPicker? record,
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
+      NavigatorObserver? observer,
+      bool reducedMotion = false,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -152,6 +180,14 @@ void main() {
             videoPublishProvider.overrideWith(() => _Publish(events, manager)),
           ],
           child: MaterialApp(
+            navigatorObservers: [?observer],
+            builder: reducedMotion
+                ? (context, child) => MediaQuery(
+                    data: MediaQuery.of(context)
+                        .copyWith(disableAnimations: true),
+                    child: child!,
+                  )
+                : null,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -236,6 +272,128 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    for (final confirmed in [true, false]) {
+      testWidgets(
+        'shows preparation after the real camera closure returns $confirmed',
+        (tester) async {
+          final gate = Completer<void>();
+          manager.extractionGate = gate;
+          var layouts = 0;
+          await start(
+            tester,
+            record: null,
+            reducedMotion: true,
+            observer: _CameraReplyObserver((route, navigator) {
+              final recorder = (route as PageRouteBuilder<bool>).pageBuilder(
+                navigator.context,
+                const AlwaysStoppedAnimation<double>(1),
+                const AlwaysStoppedAnimation<double>(1),
+              ) as VideoRecorderRoute;
+              expect(recorder.fromEditor, isTrue);
+              expect(recorder.cropGuideAspectRatio, 0.5);
+              manager.insertClip(0, _clip('captured'));
+              navigator.pop(confirmed);
+            }),
+            layout: (_, clips, _, _) async {
+              layouts++;
+              expect(clips.map((clip) => clip.id), ['source', 'captured']);
+              return null;
+            },
+          );
+          final context = tester.element(find.text('react'));
+          final label = context.l10n.libraryPreparingVideo;
+          final showedPreparation = find.text(label).evaluate().isNotEmpty;
+          final blockedBack =
+              ModalRoute.of(context)!.popDisposition ==
+              RoutePopDisposition.doNotPop;
+          final handledBack = await Navigator.of(context).maybePop();
+          gate.complete();
+          await tester.pumpAndSettle();
+          expect(showedPreparation, isTrue);
+          expect(blockedBack, isTrue);
+          expect(handledBack, isTrue);
+          expect(manager.extractedIds, {'captured'});
+          expect(layouts, confirmed ? 1 : 0);
+          expect(find.text(label), findsNothing);
+          expect(
+            ModalRoute.of(context)!.popDisposition,
+            isNot(RoutePopDisposition.doNotPop),
+          );
+          expect(manager.clips, isEmpty);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    testWidgets(
+      'programmatic route replacement removes pending preparation UI',
+      (tester) async {
+        final gate = Completer<void>();
+        manager.extractionGate = gate;
+        await start(
+          tester,
+          record: null,
+          reducedMotion: true,
+          observer: _CameraReplyObserver((_, navigator) {
+            manager.insertClip(0, _clip('captured'));
+            navigator.pop(true);
+          }),
+          layout: (_, _, _, _) async =>
+              fail('a departed flow must not open Layout'),
+        );
+        final context = tester.element(find.text('react'));
+        final label = context.l10n.libraryPreparingVideo;
+        expect(find.text(label), findsOneWidget);
+        Navigator.of(context).pushReplacement<void, void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('moved')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('moved'), findsOneWidget);
+        expect(find.text(label), findsNothing);
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(events, ['keep draft', 'clear session']);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'preparation failure clears progress and reports the failed take',
+      (tester) async {
+        final gate = Completer<void>();
+        manager.extractionGate = gate;
+        await start(
+          tester,
+          record: null,
+          reducedMotion: true,
+          observer: _CameraReplyObserver((_, navigator) {
+            manager.insertClip(0, _clip('captured'));
+            navigator.pop(true);
+          }),
+          layout: (_, _, _, _) async =>
+              fail('failed preparation must not open Layout'),
+        );
+        final context = tester.element(find.text('react'));
+        expect(find.text(context.l10n.libraryPreparingVideo), findsOneWidget);
+        gate.completeError(Exception('take processing failed'));
+        await tester.pumpAndSettle();
+        expect(find.text(context.l10n.libraryPreparingVideo), findsNothing);
+        expect(
+          find.text(context.l10n.videoEditorClipSaveFailed),
+          findsOneWidget,
+        );
+        expect(
+          ModalRoute.of(context)!.popDisposition,
+          isNot(RoutePopDisposition.doNotPop),
+        );
+        expect(manager.clips.map((clip) => clip.id), ['captured']);
+        expect(events, ['keep draft', 'clear session']);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('persists an unedited own-source layout outside the session', (
       tester,

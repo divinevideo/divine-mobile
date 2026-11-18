@@ -20,7 +20,7 @@ typedef MergeReactionTakes = Future<DivineVideoClip?> Function({
 typedef ReactionPoster = ({String path, Duration timestamp});
 typedef ExtractReactionPoster = Future<ReactionPoster?> Function(String path);
 
-enum LibraryReactionStatus { idle, merging, failure }
+enum LibraryReactionStatus { idle, preparing, merging, failure }
 
 class LibraryReactionState extends Equatable {
   LibraryReactionState({
@@ -30,6 +30,10 @@ class LibraryReactionState extends Equatable {
 
   final LibraryReactionStatus status;
   final List<String> generatedPaths;
+
+  bool get isBusy =>
+      status == LibraryReactionStatus.preparing ||
+      status == LibraryReactionStatus.merging;
 
   LibraryReactionState copyWith({
     LibraryReactionStatus? status,
@@ -87,6 +91,34 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
         : (path: poster.path, timestamp: poster.timestamp);
   }
 
+  /// Waits for captured takes to finish processing and reach the library.
+  /// Reports a failure without letting a late completion reopen a closed flow.
+  Future<List<DivineVideoClip>?> prepareTakes(
+    Future<List<DivineVideoClip>> Function() extract,
+  ) async {
+    if (isClosed || state.isBusy) return null;
+    emit(state.copyWith(status: LibraryReactionStatus.preparing));
+    try {
+      final takes = await extract();
+      return isClosed ? null : takes;
+    } catch (error, stackTrace) {
+      addError(
+        asReportableError(
+              error,
+              context: 'LibraryReactionCubit.prepareTakes',
+            ) ??
+            error,
+        stackTrace,
+      );
+      emitIfOpen(state.copyWith(status: LibraryReactionStatus.failure));
+      return null;
+    } finally {
+      if (state.status == LibraryReactionStatus.preparing) {
+        emitIfOpen(state.copyWith(status: LibraryReactionStatus.idle));
+      }
+    }
+  }
+
   /// Merges [takes] in capture order into one clip whose aspect ratio and
   /// poster describe the rendered file, keeping canvas coordinates and
   /// credits. A single take is returned unchanged.
@@ -95,9 +127,7 @@ class LibraryReactionCubit extends Cubit<LibraryReactionState>
   /// failure status), when the render or poster comes back empty, or when
   /// this cubit is closed or already merging.
   Future<DivineVideoClip?> combine(List<DivineVideoClip> takes) async {
-    if (takes.isEmpty ||
-        isClosed ||
-        state.status == LibraryReactionStatus.merging) {
+    if (takes.isEmpty || isClosed || state.isBusy) {
       return null;
     }
     if (takes.length == 1) return takes.single;
