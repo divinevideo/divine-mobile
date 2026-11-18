@@ -1,7 +1,10 @@
 // ABOUTME: Tests for ClipsTab widget
 // ABOUTME: Verifies clips grid, selection, loading, and empty states
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
@@ -16,7 +19,16 @@ import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_category.dart';
+import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/clip_category_chips.dart';
 import 'package:openvine/widgets/library/clips_tab.dart';
@@ -33,6 +45,37 @@ import '../../helpers/go_router.dart';
 class _MockClipsLibraryBloc
     extends MockBloc<ClipsLibraryEvent, ClipsLibraryState>
     implements ClipsLibraryBloc {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _EmptyClipManager extends ClipManagerNotifier {
+  @override
+  ClipManagerState build() => ClipManagerState();
+}
+
+class _IdlePublish extends VideoPublishNotifier {
+  @override
+  VideoPublishProviderState build() => const VideoPublishProviderState();
+}
+
+/// Holds the reaction at its first step, keeping the active session as a
+/// draft, so a test can check what had happened by then.
+class _GatedEditor extends VideoEditorNotifier {
+  _GatedEditor(this.onKeep);
+  final void Function() onKeep;
+  final keepGate = Completer<String?>();
+
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  Future<String?> keepAutosaveAsDraft() {
+    onKeep();
+    return keepGate.future;
+  }
+}
 
 void main() {
   final en = AppLocalizationsEn();
@@ -1010,6 +1053,75 @@ void main() {
 
           expect(find.byType(VideoClipPreview), findsNothing);
           verify(() => mockBloc.add(ClipsLibraryDeleteClip(clip1))).called(1);
+        },
+      );
+
+      testWidgets(
+        'tap → Record reaction closes the preview before the reaction starts',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final messenger =
+              TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+          messenger.setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            (call) async {
+              if (call.method == 'create') {
+                return <String, Object?>{'textureId': 1};
+              }
+              return null;
+            },
+          );
+          installMockDivineVideoPlayer();
+          addTearDown(() {
+            messenger.setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              null,
+            );
+          });
+
+          final previewOpenAtStart = <bool>[];
+          final editor = _GatedEditor(
+            () => previewOpenAtStart.add(
+              find.byType(VideoClipPreview).evaluate().isNotEmpty,
+            ),
+          );
+          final auth = _MockAuthService();
+          when(() => auth.currentPublicKeyHex).thenReturn(
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          );
+          when(() => mockBloc.state).thenReturn(
+            ClipsLibraryState(
+              status: ClipsLibraryStatus.loaded,
+              clips: [clip1],
+              sortedClips: [clip1],
+            ),
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authServiceProvider.overrideWithValue(auth),
+                databaseProvider.overrideWithValue(_MockAppDatabase()),
+                clipManagerProvider.overrideWith(_EmptyClipManager.new),
+                videoEditorProvider.overrideWith(() => editor),
+                videoPublishProvider.overrideWith(_IdlePublish.new),
+              ],
+              child: buildWidget(selectionEnabled: false),
+            ),
+          );
+
+          await tester.tap(find.byType(VideoClipThumbnailCard).first);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byType(VideoClipPreview), findsOneWidget);
+          expect(previewOpenAtStart, isEmpty);
+
+          await tester.tap(find.text(en.libraryRecordReaction));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          expect(find.byType(VideoClipPreview), findsNothing);
+          expect(previewOpenAtStart, [false]);
         },
       );
     });
