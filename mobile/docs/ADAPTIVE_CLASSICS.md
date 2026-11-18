@@ -30,13 +30,18 @@ may retain the existing unknown-provenance compatibility during archive outages.
 
 ## Rollout controls
 
-The Flutter build define `ADAPTIVE_CLASSICS_ENABLED` defaults to `true` and covers
-Home, Explore browsing, and selected-classic playback. Set it to `false` to build
-the legacy path. The companion Funnelcake `CLASSIC_RECOMMENDATIONS_ENABLED` flag
-defaults to `false`: installing this client does not enable the backend feature.
-Deploy the additive backend before enabling its flag. Old clients keep their
-existing endpoints. No archive inference or production item-to-item index is
-enabled by this work.
+The Flutter build define `ADAPTIVE_CLASSICS_ENABLED` defaults to `false`, so
+Home, Explore browsing and selected-classic playback use the existing archive
+path. The Funnelcake `CLASSIC_RECOMMENDATIONS_ENABLED` flag also defaults to
+`false`.
+
+Keep both flags off for release until the client requires usage-data consent
+and a confirmed non-protected account status before collecting recommendation
+feedback or sending personalized requests. Protected accounts and accounts
+whose status is pending or unavailable stay on the archive path.
+
+Old clients keep their existing endpoints. This work leaves archive inference
+and production item-to-item indexing disabled.
 
 Backend ranking combines Gorse, archive popularity, current Divine engagement
 and trusted discovery facets. The starting 60/20/20 mix and immediate signal
