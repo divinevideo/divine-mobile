@@ -204,10 +204,11 @@ class CategoryVisuals {
 /// The sticker placed on each category in the Explore category list, keyed by
 /// backend slug, with its size, angle and offset for a 64 px slot. Most
 /// placements are the Figma values. Food and dance keep the slot Figma gave
-/// their earlier sticker; music, art, nature and fitness carry stickers the
-/// reference does not show, placed in the same style. The horse turns less than
-/// in Figma so the cut edge of its neck stays below the tile. A category
-/// missing here keeps its SVG or emoji glyph.
+/// their earlier sticker; music, art, nature, fitness and the categories the
+/// backend added later (animation, beauty, pets, automotive and pranks) carry
+/// stickers the reference does not show, placed in the same style. The horse
+/// turns less than in Figma so the cut edge of its neck stays below the tile.
+/// A category missing here keeps its SVG or emoji glyph.
 const _categoryStickers = <String, CategorySticker>{
   'animals': CategorySticker(
     DivineStickerName.horse,
@@ -300,6 +301,35 @@ const _categoryStickers = <String, CategorySticker>{
     size: 120,
     rotationDegrees: -12,
     offset: Offset(8, -2),
+  ),
+  'animation': CategorySticker(
+    DivineStickerName.videoClapBoard,
+    size: 118,
+    rotationDegrees: -8,
+    offset: Offset(8, -2),
+  ),
+  'beauty': CategorySticker(
+    DivineStickerName.glitterLips,
+    size: 128,
+    rotationDegrees: 6,
+    offset: Offset(10, 0),
+  ),
+  'pets': CategorySticker(
+    DivineStickerName.cat,
+    size: 116,
+    offset: Offset(8, 0),
+  ),
+  'automotive': CategorySticker(
+    DivineStickerName.flatTire,
+    size: 116,
+    rotationDegrees: -10,
+    offset: Offset(8, -2),
+  ),
+  'pranks': CategorySticker(
+    DivineStickerName.boom,
+    size: 132,
+    rotationDegrees: -6,
+    offset: Offset(10, -2),
   ),
 };
 
