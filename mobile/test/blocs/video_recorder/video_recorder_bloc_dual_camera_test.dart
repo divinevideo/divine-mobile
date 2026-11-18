@@ -63,6 +63,30 @@ class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
+class _StartObservedRecorderBloc extends VideoRecorderBloc {
+  _StartObservedRecorderBloc({
+    required super.readClipManager,
+    required super.readVideoEditor,
+    required super.readVideoEditorState,
+    required super.readSharedPreferences,
+    required super.cameraService,
+  });
+
+  final startFinished = Completer<void>();
+
+  @override
+  void onDone(
+    VideoRecorderEvent event, [
+    Object? error,
+    StackTrace? stackTrace,
+  ]) {
+    super.onDone(event, error, stackTrace);
+    if (event is VideoRecorderRecordingStartRequested) {
+      startFinished.complete();
+    }
+  }
+}
+
 class _FakeWakelockPlatform extends WakelockPlusPlatformInterface {
   @override
   Future<void> toggle({required bool enable}) async {}
@@ -1016,7 +1040,13 @@ void main() {
       });
 
       test("deletes both cameras' files", () async {
-        final bloc = buildBloc();
+        final bloc = _StartObservedRecorderBloc(
+          readClipManager: () => clipManager,
+          readVideoEditor: _MockVideoEditor.new,
+          readVideoEditorState: VideoEditorProviderState.new,
+          readSharedPreferences: () => prefs,
+          cameraService: camera,
+        );
         addTearDown(bloc.close);
         bloc.add(const VideoRecorderRecordingStartRequested());
         await pumpEventQueue();
@@ -1024,7 +1054,8 @@ void main() {
         await pumpEventQueue();
 
         started.complete(true);
-        await pumpEventQueue();
+        // Navigation resets the state to idle before async file cleanup ends.
+        await bloc.startFinished.future;
 
         expect(bloc.state.isRecording, isFalse);
         expect(mainFile.existsSync(), isFalse);
