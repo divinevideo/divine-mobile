@@ -149,7 +149,8 @@ void main() {
         buildTestWidget(onRecordReaction: () => reactions++),
       );
       await tester.pump();
-      await tester.tap(find.text('Record reaction'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.libraryRecordReaction));
       expect(reactions, 1);
     });
 

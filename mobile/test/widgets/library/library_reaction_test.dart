@@ -278,10 +278,8 @@ void main() {
       );
       expect(events, ['keep draft', 'clear session']);
       expect(manager.clips, isEmpty);
-      expect(
-        find.text('Could not merge clips. Please try again.'),
-        findsOneWidget,
-      );
+      final context = tester.element(find.text('react'));
+      expect(find.text(context.l10n.videoEditorMergeFailed), findsOneWidget);
     });
 
     for (final rerecord in [false, true]) {
