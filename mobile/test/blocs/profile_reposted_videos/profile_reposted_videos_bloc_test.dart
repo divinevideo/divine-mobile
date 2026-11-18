@@ -1375,6 +1375,58 @@ void main() {
       );
     });
 
+    blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+      'does not queue another recovery sync from its own ID emissions',
+      setUp: () {
+        var syncCount = 0;
+        when(() => mockRepostsRepository.syncUserReposts())
+            .thenAnswer((_) async {
+              // A real sync emits the local IDs before starting its relay read.
+              // One such emission is enough to detect a self-triggered retry.
+              if (++syncCount == 1) {
+                repostedIdsController.add({
+                  createAddressableId(currentUserPubkey, 'd2'),
+                });
+              }
+              return RepostsSyncResult(
+                orderedAddressableIds: [
+                  createAddressableId(currentUserPubkey, 'd2'),
+                ],
+                addressableIdToRepostId: const {},
+              );
+            });
+        when(
+          () => mockVideosRepository.getVideosByAddressableIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).thenThrow(Exception('Video lookup failed'));
+      },
+      build: createBloc,
+      seed: () => const ProfileRepostedVideosState(
+        status: ProfileRepostedVideosStatus.failure,
+      ),
+      act: (bloc) async {
+        final failed = bloc.stream.firstWhere(
+          (state) =>
+              state.status == ProfileRepostedVideosStatus.failure &&
+              !state.isRefreshing,
+        );
+        bloc.add(const ProfileRepostedVideosSubscriptionRequested());
+        await pumpEventQueue();
+        repostedIdsController.add({
+          createAddressableId(currentUserPubkey, 'd2'),
+        });
+        await failed;
+        await pumpEventQueue();
+      },
+      errors: () => [isA<Exception>()],
+      verify: (bloc) {
+        expect(bloc.state.status, ProfileRepostedVideosStatus.failure);
+        verify(() => mockRepostsRepository.syncUserReposts()).called(1);
+      },
+    );
+
     group('ProfileRepostedVideosLoadMoreRequested', () {
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
         'does nothing when status is not success',

@@ -1283,6 +1283,50 @@ void main() {
       );
     });
 
+    blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
+      'does not queue another recovery sync from its own ID emissions',
+      setUp: () {
+        var syncCount = 0;
+        when(() => mockLikesRepository.syncUserReactions())
+            .thenAnswer((_) async {
+              // A real sync emits the local IDs before starting its relay read.
+              // One such emission is enough to detect a self-triggered retry.
+              if (++syncCount == 1) likedIdsController.add(['event2']);
+              return const LikesSyncResult(
+                orderedEventIds: ['event2'],
+                eventIdToReactionId: {},
+              );
+            });
+        when(
+          () => mockVideosRepository.getVideosByIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).thenThrow(Exception('Video lookup failed'));
+      },
+      build: createBloc,
+      seed: () => const ProfileLikedVideosState(
+        status: ProfileLikedVideosStatus.failure,
+      ),
+      act: (bloc) async {
+        final failed = bloc.stream.firstWhere(
+          (state) =>
+              state.status == ProfileLikedVideosStatus.failure &&
+              !state.isRefreshing,
+        );
+        bloc.add(const ProfileLikedVideosSubscriptionRequested());
+        await pumpEventQueue();
+        likedIdsController.add(['event2']);
+        await failed;
+        await pumpEventQueue();
+      },
+      errors: () => [isA<Exception>()],
+      verify: (bloc) {
+        expect(bloc.state.status, ProfileLikedVideosStatus.failure);
+        verify(() => mockLikesRepository.syncUserReactions()).called(1);
+      },
+    );
+
     group('close', () {
       test('cancels liked IDs subscription', () async {
         final bloc = createBloc();
