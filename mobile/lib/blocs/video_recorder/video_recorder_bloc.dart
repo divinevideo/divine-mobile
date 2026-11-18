@@ -1510,13 +1510,17 @@ class VideoRecorderBloc
     final take = clip?.secondaryCamera;
     final mainThumbnail = clip?.thumbnailPath;
     final secondThumbnail = take?.clip.thumbnailPath;
-    if (take == null || mainThumbnail == null || secondThumbnail == null) {
+    if (clip == null ||
+        take == null ||
+        mainThumbnail == null ||
+        secondThumbnail == null) {
       return;
     }
     final composed = await composeDualCameraThumbnail(
       mainThumbnailPath: mainThumbnail,
       secondaryThumbnailPath: secondThumbnail,
       pipCenter: take.pipCenter,
+      targetAspectRatio: clip.targetAspectRatio.value,
       outputPath: p.join(
         p.dirname(mainThumbnail),
         '${p.basenameWithoutExtension(mainThumbnail)}_dual.jpg',

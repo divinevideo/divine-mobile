@@ -38,11 +38,17 @@ void main() {
 
     tearDown(() => dir.deleteSync(recursive: true));
 
-    Future<img.Image> compose(Offset center) async {
+    /// [targetAspectRatio] defaults to the frame's own: the take keeps it
+    /// whole.
+    Future<img.Image> compose(
+      Offset center, {
+      double targetAspectRatio = frameWidth / frameHeight,
+    }) async {
       final result = await composeDualCameraThumbnail(
         mainThumbnailPath: mainPath,
         secondaryThumbnailPath: secondPath,
         pipCenter: center,
+        targetAspectRatio: targetAspectRatio,
         outputPath: outputPath,
       );
       expect(result, outputPath);
@@ -111,11 +117,38 @@ void main() {
       },
     );
 
+    test(
+      'measures a square take against the middle square it keeps',
+      () async {
+        // The viewfinder of a square take shows the middle square, 200 to
+        // 600 here, and measured the window against it.
+        final composite = await compose(
+          const Offset(0.5, 0.3),
+          targetAspectRatio: 1,
+        );
+
+        const height =
+            frameWidth * SecondaryCameraTake.pipWidthFraction * 160 / 90;
+        const center = 200 + 0.3 * frameWidth;
+        expect(isRed(composite.getPixel(200, center.round())), isTrue);
+        expect(
+          isBlue(composite.getPixel(200, (center - height / 2).round() - 6)),
+          isTrue,
+          reason: 'measured against the whole frame, the window sat higher',
+        );
+        expect(
+          isRed(composite.getPixel(200, (center + height / 2).round() - 6)),
+          isTrue,
+        );
+      },
+    );
+
     test('writes nothing when a thumbnail is missing', () async {
       final result = await composeDualCameraThumbnail(
         mainThumbnailPath: mainPath,
         secondaryThumbnailPath: p.join(dir.path, 'missing.jpg'),
         pipCenter: SecondaryCameraTake.defaultPipCenter,
+        targetAspectRatio: 9 / 16,
         outputPath: outputPath,
       );
 

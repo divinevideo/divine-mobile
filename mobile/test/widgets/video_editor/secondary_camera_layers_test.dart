@@ -21,12 +21,13 @@ void main() {
       Duration duration = const Duration(seconds: 4),
       SecondaryCameraTake? take,
       Duration trimStart = Duration.zero,
+      model.AspectRatio targetAspectRatio = model.AspectRatio.vertical,
     }) => DivineVideoClip(
       id: id,
       video: EditorVideo.file(File('/docs/$id.mp4')),
       duration: duration,
       recordedAt: now,
-      targetAspectRatio: model.AspectRatio.vertical,
+      targetAspectRatio: targetAspectRatio,
       originalAspectRatio: 9 / 16,
       trimStart: trimStart,
       secondaryCamera: take,
@@ -167,6 +168,41 @@ void main() {
       final height = width / (9 / 16);
       expect(layer.offset.dx, closeTo((canvas.width - width) / 2, 1e-9));
       expect(layer.offset.dy, closeTo(-(canvas.height - height) / 2, 1e-9));
+    });
+
+    group('a square take', () {
+      // The viewfinder of a square take shows the middle square of the
+      // frame, 1080 wide here, and measures the window against it.
+      const kept = 1080.0;
+
+      test('places the window against the square it keeps', () {
+        final layer = layersFor([
+          clip(
+            'a',
+            targetAspectRatio: model.AspectRatio.square,
+            take: take('a_second', pipCenter: const Offset(0.5, 0.3)),
+          ),
+        ]).single;
+
+        expect(
+          layer.width,
+          closeTo(kept * SecondaryCameraTake.pipWidthFraction, 1e-9),
+        );
+        expect(layer.offset.dy, closeTo(-0.2 * kept, 1e-9));
+      });
+
+      test('keeps a window dragged to the top inside the square', () {
+        final layer = layersFor([
+          clip(
+            'a',
+            targetAspectRatio: model.AspectRatio.square,
+            take: take('a_second', pipCenter: const Offset(0.5, 0)),
+          ),
+        ]).single;
+
+        final height = layer.width! / (9 / 16);
+        expect(layer.offset.dy, closeTo(-(kept - height) / 2, 1e-9));
+      });
     });
 
     test('follows the clip trims and plays no longer than the clip', () {

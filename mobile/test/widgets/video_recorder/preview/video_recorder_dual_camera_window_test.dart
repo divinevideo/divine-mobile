@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -18,7 +19,9 @@ class _MockVideoRecorderBloc
 
 void main() {
   group(VideoRecorderDualCameraWindow, () {
-    const frame = Size(300, 500);
+    // A viewfinder of the frame's own shape: the window is measured against
+    // all of it.
+    const frame = Size(270, 480);
     late _MockVideoRecorderBloc bloc;
 
     setUpAll(() {
@@ -33,6 +36,8 @@ void main() {
       WidgetTester tester, {
       Offset center = SecondaryCameraTake.defaultPipCenter,
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      Size box = frame,
+      model.AspectRatio aspectRatio = model.AspectRatio.vertical,
     }) async {
       when(() => bloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -40,6 +45,8 @@ void main() {
           secondaryPreviewTextureId: 2,
           dualCameraPipCenter: center,
           recordingState: recordingState,
+          cameraSensorAspectRatio: 9 / 16,
+          aspectRatio: aspectRatio,
         ),
       );
       await tester.pumpWidget(
@@ -51,7 +58,7 @@ void main() {
             home: Align(
               alignment: Alignment.topLeft,
               child: SizedBox.fromSize(
-                size: frame,
+                size: box,
                 child: const VideoRecorderDualCameraWindow(),
               ),
             ),
@@ -107,6 +114,66 @@ void main() {
         final rect = tester.getRect(find.byType(SecondaryCameraPreviewWidget));
         expect(rect.right, closeTo(frame.width, 0.01));
         expect(rect.bottom, closeTo(frame.height, 0.01));
+      });
+    });
+
+    group('on a viewfinder that cuts the frame', () {
+      // A phone taller than 9:16: the preview covers it with the frame,
+      // whose sides reach past the screen.
+      const tall = Size(270, 585);
+      const frameWidth = 585 * 9 / 16;
+
+      testWidgets('sizes the window against the whole frame', (tester) async {
+        await pump(tester, center: const Offset(0.5, 0.5), box: tall);
+
+        final rect = tester.getRect(find.byType(SecondaryCameraPreviewWidget));
+        expect(
+          rect.width,
+          closeTo(frameWidth * SecondaryCameraTake.pipWidthFraction, 0.01),
+          reason:
+              'the post keeps the whole frame, so the window is as wide '
+              'as it will be there',
+        );
+        expect(rect.center.dx, closeTo(tall.width / 2, 0.01));
+      });
+
+      testWidgets('moves a position it cannot show whole to where it shows', (
+        tester,
+      ) async {
+        await pump(tester, center: const Offset(0.05, 0.5), box: tall);
+        await tester.pump();
+
+        final rect = tester.getRect(find.byType(SecondaryCameraPreviewWidget));
+        expect(rect.left, closeTo(0, 0.01));
+        final moved =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipMoved;
+        final frameLeft = (tall.width - frameWidth) / 2;
+        expect(
+          moved.center.dx,
+          closeTo((rect.center.dx - frameLeft) / frameWidth, 0.001),
+          reason: 'the take lands where the window was seen',
+        );
+      });
+    });
+
+    group('on a square take', () {
+      testWidgets('measures the window against the square it keeps', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          center: const Offset(0.5, 0.3),
+          box: const Size(300, 300),
+          aspectRatio: model.AspectRatio.square,
+        );
+
+        final rect = tester.getRect(find.byType(SecondaryCameraPreviewWidget));
+        expect(
+          rect.width,
+          closeTo(300 * SecondaryCameraTake.pipWidthFraction, 0.01),
+        );
+        expect(rect.center.dy, closeTo(0.3 * 300, 0.01));
       });
     });
 

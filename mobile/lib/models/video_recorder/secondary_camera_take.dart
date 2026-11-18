@@ -26,7 +26,10 @@ class SecondaryCameraTake {
   final DivineVideoClip clip;
 
   /// Where the viewfinder showed the second camera's window: the window's
-  /// center as fractions of the frame's width and height.
+  /// center as fractions of the width and height of the picture the post
+  /// keeps, the whole frame for a vertical take and its middle square for a
+  /// square one. The viewfinder, the editor and the library picture all
+  /// measure against that part, so the window lands where it was shown.
   final Offset pipCenter;
 
   /// The take's picture with the second camera's window drawn over it where
@@ -37,11 +40,12 @@ class SecondaryCameraTake {
 
   /// Where the viewfinder starts the window: the top-left corner, below the
   /// close button and clear of the next button and the tool rail on the
-  /// right.
-  static const defaultPipCenter = Offset(0.22, 0.3);
+  /// right. Far enough in that a phone taller than 9:16, whose viewfinder
+  /// cuts the sides off a vertical frame, still shows it whole.
+  static const defaultPipCenter = Offset(0.28, 0.3);
 
-  /// The window's width as a fraction of the frame width, in the viewfinder
-  /// and as the editor places the layer.
+  /// The window's width as a fraction of the width of the picture the post
+  /// keeps, in the viewfinder and as the editor places the layer.
   static const pipWidthFraction = 0.3;
 
   /// How round the window's corners are, as a fraction of half its width

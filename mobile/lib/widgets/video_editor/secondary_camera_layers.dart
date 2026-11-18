@@ -3,6 +3,8 @@
 
 import 'dart:ui';
 
+import 'package:openvine/extensions/layer_animation_storage.dart'
+    show ExportLayerMapping;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_window.dart';
@@ -93,24 +95,29 @@ WidgetLayer _layerFor({
     layerId: layerId,
   ).toMeta();
 
-  final width = canvasRenderSize.width * SecondaryCameraTake.pipWidthFraction;
-  final height = width / second.videoAspectRatio;
-  // A layer offset is measured from the canvas center. The window is kept
-  // whole inside the frame, as the viewfinder kept it.
-  final halfFreeWidth = ((canvasRenderSize.width - width) / 2).clamp(
-    0.0,
-    double.infinity,
+  // The take's position is measured against the part of the picture the
+  // post keeps, as the viewfinder measured it: a square take keeps the middle
+  // of the surface.
+  final kept = ExportLayerMapping.keptRect(
+    canvasRenderSize,
+    owner.targetAspectRatio.value,
   );
-  final halfFreeHeight = ((canvasRenderSize.height - height) / 2).clamp(
+  final width = kept.width * SecondaryCameraTake.pipWidthFraction;
+  final height = width / second.videoAspectRatio;
+  // A layer offset is measured from the canvas center, which is also the
+  // kept part's. The window is kept whole inside that part, as the viewfinder
+  // kept it.
+  final halfFreeWidth = ((kept.width - width) / 2).clamp(0.0, double.infinity);
+  final halfFreeHeight = ((kept.height - height) / 2).clamp(
     0.0,
     double.infinity,
   );
   final offset = Offset(
-    ((take.pipCenter.dx - 0.5) * canvasRenderSize.width).clamp(
+    ((take.pipCenter.dx - 0.5) * kept.width).clamp(
       -halfFreeWidth,
       halfFreeWidth,
     ),
-    ((take.pipCenter.dy - 0.5) * canvasRenderSize.height).clamp(
+    ((take.pipCenter.dy - 0.5) * kept.height).clamp(
       -halfFreeHeight,
       halfFreeHeight,
     ),

@@ -1,12 +1,16 @@
 // ABOUTME: The second camera's small window in the viewfinder during
 // ABOUTME: dual-camera capture: tap swaps the cameras, drag moves the window
 
+import 'dart:math' as math;
+
 import 'package:divine_camera/divine_camera.dart'
     show SecondaryCameraPreviewWidget;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/layer_animation_storage.dart'
+    show ExportLayerMapping;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 
@@ -30,9 +34,13 @@ class VideoRecorderDualCameraWindow extends StatefulWidget {
 
 class _VideoRecorderDualCameraWindowState
     extends State<VideoRecorderDualCameraWindow> {
-  /// The window's center while a drag moves it, as fractions of the frame.
-  /// Reported to the recorder when the drag ends.
+  /// The window's center while a drag moves it, as fractions of the kept
+  /// picture. Reported to the recorder when the drag ends.
   Offset? _dragCenter;
+
+  /// Whether a check of the recorder's window position is queued for after
+  /// this frame; see [_keepPositionShown].
+  bool _isPositionCheckQueued = false;
 
   @override
   Widget build(BuildContext context) {
@@ -41,19 +49,32 @@ class _VideoRecorderDualCameraWindowState
         center: b.state.dualCameraPipCenter,
         textureId: b.state.secondaryPreviewTextureId,
         canSwap: b.state.canSwitchCamera && !b.state.hasRecordingInFlight,
+        sensorAspectRatio: b.state.cameraSensorAspectRatio,
+        keptAspectRatio: b.state.aspectRatio.value,
       ),
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final frame = constraints.biggest;
-        final width = frame.width * SecondaryCameraTake.pipWidthFraction;
+        final box = Offset.zero & constraints.biggest;
+        final kept = keptPicture(
+          box: box.size,
+          sensorAspectRatio: state.sensorAspectRatio,
+          keptAspectRatio: state.keptAspectRatio,
+        );
+        final visible = kept.intersect(box);
+        final width = kept.width * SecondaryCameraTake.pipWidthFraction;
         final height = width / VideoRecorderDualCameraWindow.aspectRatio;
+        final size = Size(width, height);
         final rect = _windowRect(
           center: _dragCenter ?? state.center,
-          frame: frame,
-          size: Size(width, height),
+          kept: kept,
+          visible: visible,
+          size: size,
         );
+        if (_dragCenter == null) {
+          _keepPositionShown(kept: kept, visible: visible, size: size);
+        }
 
         return Stack(
           children: [
@@ -78,17 +99,19 @@ class _VideoRecorderDualCameraWindowState
                     // several updates can land before the next build.
                     final moved = _windowRect(
                       center: _dragCenter ?? state.center,
-                      frame: frame,
-                      size: rect.size,
+                      kept: kept,
+                      visible: visible,
+                      size: size,
                     ).shift(details.delta);
-                    _dragCenter = _windowRect(
-                      center: Offset(
-                        moved.center.dx / frame.width,
-                        moved.center.dy / frame.height,
+                    _dragCenter = _centerIn(
+                      _windowRect(
+                        center: _centerIn(moved, kept),
+                        kept: kept,
+                        visible: visible,
+                        size: size,
                       ),
-                      frame: frame,
-                      size: rect.size,
-                    ).center.scale(1 / frame.width, 1 / frame.height);
+                      kept,
+                    );
                   }),
                   onPanEnd: (_) => _endDrag(),
                   onPanCancel: _endDrag,
@@ -111,23 +134,91 @@ class _VideoRecorderDualCameraWindowState
     setState(() => _dragCenter = null);
   }
 
-  /// The window of [size] centered on [center] (fractions of [frame]), kept
-  /// inside the frame.
-  static Rect _windowRect({
-    required Offset center,
-    required Size frame,
+  /// Moves the recorder's window position to where this viewfinder shows it,
+  /// when it cannot show the stored one whole: a position kept from the
+  /// other aspect ratio, or the default on a viewfinder that cuts more of the
+  /// frame off. The take then lands where the window was seen.
+  ///
+  /// Checked after the frame, against the recorder's state then: a drag that
+  /// just ended has landed there by then, and must not be undone.
+  void _keepPositionShown({
+    required Rect kept,
+    required Rect visible,
     required Size size,
   }) {
-    final left = (center.dx * frame.width - size.width / 2).clamp(
-      0.0,
-      (frame.width - size.width).clamp(0.0, double.infinity),
+    if (_isPositionCheckQueued) return;
+    _isPositionCheckQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isPositionCheckQueued = false;
+      if (!mounted || _dragCenter != null) return;
+      final bloc = context.read<VideoRecorderBloc>();
+      final stored = bloc.state.dualCameraPipCenter;
+      final shown = _centerIn(
+        _windowRect(center: stored, kept: kept, visible: visible, size: size),
+        kept,
+      );
+      if ((shown - stored).distance > 0.001) {
+        bloc.add(VideoRecorderDualCameraPipMoved(shown));
+      }
+    });
+  }
+
+  /// The window of [size] centered on [center] (fractions of [kept]), kept
+  /// whole inside the [visible] part of the kept picture.
+  static Rect _windowRect({
+    required Offset center,
+    required Rect kept,
+    required Rect visible,
+    required Size size,
+  }) {
+    final left = (kept.left + center.dx * kept.width - size.width / 2).clamp(
+      visible.left,
+      math.max<double>(visible.left, visible.right - size.width),
     );
-    final top = (center.dy * frame.height - size.height / 2).clamp(
-      0.0,
-      (frame.height - size.height).clamp(0.0, double.infinity),
+    final top = (kept.top + center.dy * kept.height - size.height / 2).clamp(
+      visible.top,
+      math.max<double>(visible.top, visible.bottom - size.height),
     );
     return Offset(left, top) & size;
   }
+
+  /// [rect]'s center as fractions of [kept].
+  static Offset _centerIn(Rect rect, Rect kept) => Offset(
+    (rect.center.dx - kept.left) / kept.width,
+    (rect.center.dy - kept.top) / kept.height,
+  );
+}
+
+/// Where the picture a take keeps sits in a viewfinder [box].
+///
+/// The preview covers the box with the camera frame of [sensorAspectRatio]
+/// (width / height), so the frame can reach past the box; the take keeps the
+/// middle of that frame at [keptAspectRatio]. The window is measured against
+/// this rect, which is how the editor and the library picture measure it.
+/// A camera that has not reported its frame yet counts as filling the box.
+@visibleForTesting
+Rect keptPicture({
+  required Size box,
+  required double sensorAspectRatio,
+  required double keptAspectRatio,
+}) {
+  final Rect frame;
+  if (sensorAspectRatio <= 0 || box.isEmpty) {
+    frame = Offset.zero & box;
+  } else {
+    final cover = box.aspectRatio > sensorAspectRatio
+        ? Size(box.width, box.width / sensorAspectRatio)
+        : Size(box.height * sensorAspectRatio, box.height);
+    frame = Rect.fromCenter(
+      center: box.center(Offset.zero),
+      width: cover.width,
+      height: cover.height,
+    );
+  }
+  return ExportLayerMapping.keptRect(
+    frame.size,
+    keptAspectRatio,
+  ).shift(frame.topLeft);
 }
 
 class _WindowFrame extends StatelessWidget {

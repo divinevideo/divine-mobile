@@ -3,9 +3,11 @@
 
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Size;
 
 import 'package:image/image.dart' as img;
+import 'package:openvine/extensions/layer_animation_storage.dart'
+    show ExportLayerMapping;
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 
 /// JPEG quality of the composite, the same as the recorder's thumbnails.
@@ -13,10 +15,14 @@ const _jpegQuality = 90;
 
 /// Draws [secondaryThumbnailPath] over [mainThumbnailPath] the way the
 /// viewfinder showed the second camera: a window
-/// [SecondaryCameraTake.pipWidthFraction] of the frame wide, centred on
-/// [pipCenter] and kept whole inside the frame, its corners rounded by
+/// [SecondaryCameraTake.pipWidthFraction] of the kept picture wide, centred
+/// on [pipCenter] and kept whole inside it, its corners rounded by
 /// [SecondaryCameraTake.pipCornerRadius]. Writes the result as a JPEG to
 /// [outputPath].
+///
+/// The kept picture is the middle of the frame at [targetAspectRatio], the
+/// part the post keeps and the library card shows; [pipCenter] is measured
+/// against it.
 ///
 /// Runs in a background isolate. Returns [outputPath], or null when either
 /// thumbnail cannot be read.
@@ -24,6 +30,7 @@ Future<String?> composeDualCameraThumbnail({
   required String mainThumbnailPath,
   required String secondaryThumbnailPath,
   required Offset pipCenter,
+  required double targetAspectRatio,
   required String outputPath,
 }) {
   final centerX = pipCenter.dx;
@@ -34,6 +41,7 @@ Future<String?> composeDualCameraThumbnail({
       secondaryThumbnailPath: secondaryThumbnailPath,
       centerX: centerX,
       centerY: centerY,
+      targetAspectRatio: targetAspectRatio,
       outputPath: outputPath,
     ),
   );
@@ -44,16 +52,21 @@ String? _compose({
   required String secondaryThumbnailPath,
   required double centerX,
   required double centerY,
+  required double targetAspectRatio,
   required String outputPath,
 }) {
   final frame = _decode(mainThumbnailPath);
   final second = _decode(secondaryThumbnailPath);
   if (frame == null || second == null) return null;
 
-  final width = (frame.width * SecondaryCameraTake.pipWidthFraction).round();
+  final kept = ExportLayerMapping.keptRect(
+    Size(frame.width.toDouble(), frame.height.toDouble()),
+    targetAspectRatio,
+  );
+  final width = (kept.width * SecondaryCameraTake.pipWidthFraction).round();
   final height = (width * second.height / second.width).round().clamp(
     1,
-    frame.height,
+    kept.height.round(),
   );
   final window = img.copyResize(
     second,
@@ -61,11 +74,11 @@ String? _compose({
     height: height,
     interpolation: img.Interpolation.average,
   );
-  final left = (centerX * frame.width - width / 2)
-      .clamp(0, frame.width - width)
+  final left = (kept.left + centerX * kept.width - width / 2)
+      .clamp(kept.left, kept.right - width)
       .round();
-  final top = (centerY * frame.height - height / 2)
-      .clamp(0, frame.height - height)
+  final top = (kept.top + centerY * kept.height - height / 2)
+      .clamp(kept.top, kept.bottom - height)
       .round();
   // A rectangle mask measures its corner radius as a fraction of half its
   // width, so the window matches the viewfinder and the editor layer.

@@ -276,7 +276,8 @@ void main() {
           expect(isTakeLayer(stub.capturedLayers!.last), isTrue);
           expect(
             (stub.capturedLayers!.last as WidgetLayer).width,
-            equals(300 * SecondaryCameraTake.pipWidthFraction),
+            // The 9:16 part of the 300x500 surface the text was laid out on.
+            equals(500 * 9 / 16 * SecondaryCameraTake.pipWidthFraction),
             reason: 'the window is sized against the surface the text was',
           );
         },
