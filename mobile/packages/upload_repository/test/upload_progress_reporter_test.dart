@@ -296,6 +296,27 @@ void main() {
         expect(result, equals('FILE_TOO_LARGE'));
       });
 
+      test('a signed-out upload without a status → AUTHENTICATION', () async {
+        final result = await reporter.categorizeError(
+          const BlossomUploadFailureException(
+            'User not authenticated - please sign in to upload',
+            failureReason: BlossomUploadFailureReason.auth,
+          ),
+        );
+        expect(result, equals('AUTHENTICATION'));
+      });
+
+      test('a 503 that kept its status → SERVER_UNAVAILABLE', () async {
+        final result = await reporter.categorizeError(
+          const BlossomUploadFailureException(
+            'Upload failed: 503 - Service Unavailable',
+            statusCode: 503,
+            failureReason: BlossomUploadFailureReason.server,
+          ),
+        );
+        expect(result, equals('SERVER_UNAVAILABLE'));
+      });
+
       test('a broken pipe → NETWORK_ERROR', () async {
         final result = await reporter.categorizeError(
           const BlossomUploadFailureException(
