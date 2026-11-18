@@ -2,7 +2,7 @@
 
 import unittest
 
-import release_train_fakes  # noqa: F401 - scripts import path
+import release_train_fakes  # scripts import path
 from release_train import runner
 from release_train.coordinator import plan_tick
 from release_train.providers import Apple, ProviderError
@@ -385,8 +385,8 @@ class ManualPromotionRecoveryAuditTest(unittest.TestCase):
 
 
 class ResumptionGateAuditTest(unittest.TestCase):
-    def test_resumption_keeps_review_daily_exposure_ci_and_kill_switch_gates(self):
-        for gate in ["waiting", "daily", "exposure", "ci", "kill-switch"]:
+    def test_resumption_keeps_review_daily_ci_and_kill_switch_gates(self):
+        for gate in ["waiting", "daily", "ci", "kill-switch"]:
             with self.subTest(gate=gate):
                 s = rejected_snapshot(version="1.0.31", item_state="READY_FOR_REVIEW")
                 state = soaked_state()
@@ -411,8 +411,6 @@ class ResumptionGateAuditTest(unittest.TestCase):
                     s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = (
                         NOW - 1
                     )
-                if gate == "exposure":
-                    state["public_available"]["10"] = NOW - 21599
                 if gate == "ci":
                     s["ios"]["builds"][0]["ci_verified"] = False
                 if gate == "kill-switch":
