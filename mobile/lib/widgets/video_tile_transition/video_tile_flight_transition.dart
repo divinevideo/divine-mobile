@@ -119,7 +119,9 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     reverseCurve: Curves.easeInCubic,
   );
 
-  final _targets = VideoTileTransitionTargets();
+  late final _targets = VideoTileTransitionTargets(
+    onSafetyOverlaysChanged: _onSafetyOverlaysChanged,
+  );
   final GlobalKey _pageKey = GlobalKey();
 
   ui.Image? _picture;
@@ -130,7 +132,12 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   /// The video the page showed when closing began, or `null` before then.
   String? _closingVideoId;
 
+  /// Whether a safety overlay has covered the video during this close, so
+  /// nothing flies over the live page until it opens again, even once the
+  /// overlay has gone: the pictures taken for the close predate it.
   bool _closingFlightBlocked = false;
+
+  bool _safetyCheckScheduled = false;
 
   /// The video the picture flies to or from.
   String get _videoId => _closingVideoId ?? widget.origin.videoId;
@@ -251,6 +258,31 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
       _videoId,
       pixelRatio: MediaQuery.devicePixelRatioOf(context),
     );
+  }
+
+  /// A safety overlay came or went in the page, which this widget only sees
+  /// when it rebuilds, and a drag held still does not rebuild it. The page
+  /// is building below it when this is called, so it looks again once the
+  /// frame is done.
+  void _onSafetyOverlaysChanged() {
+    if (_safetyCheckScheduled) return;
+    _safetyCheckScheduled = true;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        _safetyCheckScheduled = false;
+        if (!mounted) return;
+        setState(() {
+          final closing =
+              _dragged || widget.animation.status == AnimationStatus.reverse;
+          if (!closing || !_hasSafetyOverlay) return;
+          _closingFlightBlocked = true;
+          _picture?.dispose();
+          _picture = null;
+          _frame?.dispose();
+          _frame = null;
+        });
+      })
+      ..ensureVisualUpdate();
   }
 
   /// How far through opening the page starts playing.

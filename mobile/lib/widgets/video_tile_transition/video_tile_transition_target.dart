@@ -113,6 +113,9 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
   @override
   void didUpdateWidget(VideoTileTransitionTarget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.blocksFlight != widget.blocksFlight) {
+      _targets?.onSafetyOverlaysChanged?.call();
+    }
     if (oldWidget.videoId == widget.videoId) return;
     _targets?._unregister(oldWidget.videoId, this);
     _targets?._register(widget.videoId, this);
@@ -201,6 +204,14 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
 /// The [VideoTileTransitionTarget]s below a [VideoTileTransitionScope], so a
 /// route transition can find where its page will show a video.
 class VideoTileTransitionTargets {
+  /// Creates an empty set of targets.
+  VideoTileTransitionTargets({this.onSafetyOverlaysChanged});
+
+  /// Called when a safety overlay comes or goes. That happens while the
+  /// page below is built or torn down, so a listener above it must not
+  /// rebuild from the call itself.
+  final VoidCallback? onSafetyOverlaysChanged;
+
   // More than one target can show a video at once: the feed stacks a loading
   // layer and the video layer for the same page. Unkeyed, the framework may
   // hand one's element to the other and dispose the second as the loading
@@ -264,14 +275,16 @@ class VideoTileTransitionTargets {
     return null;
   }
 
-  void _register(String videoId, _VideoTileTransitionTargetState target) =>
-      (_targets[videoId] ??= {}).add(target);
+  void _register(String videoId, _VideoTileTransitionTargetState target) {
+    (_targets[videoId] ??= {}).add(target);
+    if (target.widget.blocksFlight) onSafetyOverlaysChanged?.call();
+  }
 
   void _unregister(String videoId, _VideoTileTransitionTargetState target) {
     final targets = _targets[videoId];
-    if (targets == null) return;
-    targets.remove(target);
+    if (targets == null || !targets.remove(target)) return;
     if (targets.isEmpty) _targets.remove(videoId);
+    if (target.widget.blocksFlight) onSafetyOverlaysChanged?.call();
   }
 }
 

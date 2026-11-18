@@ -1448,6 +1448,62 @@ void main() {
         );
       }
 
+      for (final drag in [false, true]) {
+        testWidgets(
+          'stops flying for the rest of '
+          '${drag ? 'a held back drag' : 'a pop'} once a safety overlay '
+          'arrives',
+          (tester) async {
+            final dragging = ValueNotifier(false);
+            addTearDown(dragging.dispose);
+            final origin = await pumpTile(tester);
+            controller.forward();
+            Widget harness({required bool warned}) => _Harness(
+              image: image,
+              animation: controller,
+              origin: origin,
+              pageDrawsVideo: true,
+              safetyOverlay: warned,
+              popGestureInProgress: dragging,
+            );
+            await tester.pumpWidget(harness(warned: false));
+            await tester.pumpAndSettle();
+            expect(_pageHasLanded(tester), isTrue);
+
+            if (drag) {
+              dragging.value = true;
+              controller.value = 0.7;
+            } else {
+              controller.reverse();
+            }
+            await tester.pump();
+            if (!drag) await tester.pump(const Duration(milliseconds: 40));
+            expect(snapshot, findsOneWidget);
+
+            // The finger holds still: nothing moves the animation from here.
+            if (drag) controller.stop();
+            await tester.pumpWidget(harness(warned: true));
+            await tester.pump();
+
+            expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+            expect(snapshot, findsNothing);
+            expect(_picture, findsNothing);
+            expect(find.byType(ClipPath), findsNothing);
+
+            // The page snapshot predates the warning, so it stays down even
+            // once the warning has gone.
+            await tester.pumpWidget(harness(warned: false));
+            await tester.pump();
+            expect(snapshot, findsNothing);
+            expect(_picture, findsNothing);
+
+            if (drag) dragging.value = false;
+            await tester.pumpAndSettle();
+          },
+          variant: _readsFrames,
+        );
+      }
+
       testWidgets(
         'flies a snapshot of the page, hiding the page beneath',
         (tester) async {
