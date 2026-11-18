@@ -744,7 +744,8 @@ class RepostsRepository {
   ///
   /// Returns a [RepostsSyncResult] containing all synced data needed by UI.
   ///
-  /// Throws `SyncFailedException` if syncing fails.
+  /// Throws `SyncFailedException` if syncing fails, including a read no relay
+  /// answered, unless this device already holds reposts to show (#11182).
   Future<RepostsSyncResult> syncUserReposts() async {
     // First, load from local storage (fast). Best-effort and deliberately
     // outside the relay try/catch below: an unreadable cache must not skip
@@ -784,7 +785,7 @@ class RepostsRepository {
         limit: _defaultRepostFetchLimit,
       );
 
-      final events = await _nostrClient.queryEvents([filter]);
+      final events = await _readAnswered(filter);
       final newRecords = <RepostRecord>[];
 
       for (final event in events) {
@@ -847,7 +848,8 @@ class RepostsRepository {
   /// Parameters:
   /// - [pubkey]: The public key (hex) of the user whose reposts to fetch
   ///
-  /// Throws [FetchRepostsFailedException] if the fetch fails.
+  /// Throws [FetchRepostsFailedException] if the fetch fails, including a
+  /// read no relay answered (#11182).
   Future<List<String>> fetchUserReposts(String pubkey) async {
     final filter = Filter(
       kinds: const [EventKind.genericRepost],
@@ -856,7 +858,7 @@ class RepostsRepository {
     );
 
     try {
-      final events = await _nostrClient.queryEvents([filter]);
+      final events = await _readAnswered(filter);
       final repostedIds = <String>[];
       final seenIds = <String>{};
 
@@ -887,7 +889,8 @@ class RepostsRepository {
   /// Parameters:
   /// - [pubkey]: The public key (hex) of the user whose reposts to fetch
   ///
-  /// Throws [FetchRepostsFailedException] if the fetch fails.
+  /// Throws [FetchRepostsFailedException] if the fetch fails, including a
+  /// read no relay answered (#11182).
   Future<List<RepostRecord>> fetchUserRepostRecords(String pubkey) async {
     final filter = Filter(
       kinds: const [EventKind.genericRepost],
@@ -896,7 +899,7 @@ class RepostsRepository {
     );
 
     try {
-      final events = await _nostrClient.queryEvents([filter]);
+      final events = await _readAnswered(filter);
       final records = <RepostRecord>[];
       final seenIds = <String>{};
 
@@ -1323,6 +1326,21 @@ class RepostsRepository {
     _errorReporter?.call(error, stackTrace, site: site);
   }
 
+  /// Reads [filter], throwing [_UnansweredRelayRead] when no relay
+  /// answered and nothing came back.
+  ///
+  /// Only a relay's EOSE says it holds nothing (NIP-01): a read that timed
+  /// out, was refused with CLOSED or found no relay connected is not an
+  /// empty answer (#11182). Events a read did collect, from a relay or the
+  /// local event cache, are returned even when it did not finish.
+  Future<List<Event>> _readAnswered(Filter filter) async {
+    final read = await _nostrClient.readEvents([filter]);
+    if (read.answeredNetworkRelayCount == 0 && read.events.isEmpty) {
+      throw const _UnansweredRelayRead();
+    }
+    return read.events;
+  }
+
   /// Extracts the addressable ID from a repost event's 'a' tag.
   ///
   /// According to NIP-18, generic reposts use the 'a' tag to reference
@@ -1345,4 +1363,13 @@ class RepostsRepository {
     }
     return null;
   }
+}
+
+/// A read no relay answered, which callers translate into their own
+/// failure rather than treating it as an empty answer (#11182).
+class _UnansweredRelayRead implements Exception {
+  const _UnansweredRelayRead();
+
+  @override
+  String toString() => 'no relay answered the read';
 }
