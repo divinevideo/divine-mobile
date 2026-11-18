@@ -2966,9 +2966,16 @@ class LikesRepository {
       _isInitialized = true;
 
       return _buildSyncResult();
-    } catch (e) {
+    } catch (e, stackTrace) {
       // If relay sync fails but we have local data, don't throw
       if (_likeRecords.isNotEmpty) {
+        Log.warning(
+          'Reaction sync failed; showing the likes this device holds',
+          name: 'LikesRepository',
+          category: LogCategory.relay,
+          error: e,
+          stackTrace: stackTrace,
+        );
         _isInitialized = true;
         return _buildSyncResult();
       }

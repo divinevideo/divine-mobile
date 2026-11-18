@@ -825,9 +825,16 @@ class RepostsRepository {
       _isInitialized = true;
 
       return _buildSyncResult();
-    } catch (e) {
+    } catch (e, stackTrace) {
       // If relay sync fails but we have local data, don't throw
       if (_repostRecords.isNotEmpty) {
+        Log.warning(
+          'Repost sync failed; showing the reposts this device holds',
+          name: 'RepostsRepository',
+          category: LogCategory.relay,
+          error: e,
+          stackTrace: stackTrace,
+        );
         _isInitialized = true;
         return _buildSyncResult();
       }
