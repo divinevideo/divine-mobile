@@ -1689,8 +1689,12 @@ class CameraController(
 
     /**
      * Binds the main camera ([mainInfo]) and the other one ([otherInfo])
-     * concurrently, each with a preview and a video capture. Stabilization
-     * stays off: concurrent streams do not guarantee it.
+     * concurrently, each with a preview and a video capture built for its
+     * role. Stabilization stays off: concurrent streams do not guarantee it.
+     *
+     * Each camera draws into the texture already held for its role, so a
+     * rebind keeps the texture ids Dart shows; the other camera gets a new
+     * one only when dual capture turns on.
      */
     @SuppressLint("RestrictedApi")
     private fun bindDualCameras(
@@ -1702,8 +1706,10 @@ class CameraController(
         val mainProducer = surfaceProducer ?: textureRegistry.createSurfaceProducer().also {
             surfaceProducer = it
         }
-        val otherProducer = textureRegistry.createSurfaceProducer()
-        secondarySurfaceProducer = otherProducer
+        val otherProducer = secondarySurfaceProducer
+            ?: textureRegistry.createSurfaceProducer().also {
+                secondarySurfaceProducer = it
+            }
         secondaryLensType =
             if (otherInfo.lensFacing == CameraSelector.LENS_FACING_FRONT) "front" else "back"
         currentLensType =
@@ -1850,36 +1856,61 @@ class CameraController(
     }
 
     /**
-     * Swaps which camera fills the preview and records with sound. Both
-     * cameras keep running with their own use cases and textures, so this is
-     * a reference swap; Dart remounts the main preview on the other texture.
+     * Swaps which camera fills the preview and records with sound.
+     *
+     * Both cameras are bound again for their new roles: the main role's
+     * recorder carries the chosen quality and the resolved audio source, the
+     * second one's is a silent HD recorder, and only the main preview feeds
+     * the exposure monitor. Each camera keeps its texture across the rebind,
+     * so Dart remounts the main preview on the other texture without a jump.
+     * Completes once the new main camera delivers frames, like a lens switch.
      */
     private fun swapDualCameras(callback: (Map<String, Any?>?, String?) -> Unit) {
         if (isRecording || recording != null) {
             callback(null, "Cannot swap cameras while recording")
             return
         }
-        if (isTorchEnabled) {
-            camera?.cameraControl?.enableTorch(false)
+        val provider = cameraProvider ?: run {
+            callback(null, "Camera provider not available")
+            return
         }
-        camera = secondaryCamera.also { secondaryCamera = camera }
-        preview = secondaryPreview.also { secondaryPreview = preview }
-        videoCapture = secondaryVideoCapture.also { secondaryVideoCapture = videoCapture }
+        val newMain = secondaryCamera?.cameraInfo
+        val newOther = camera?.cameraInfo
+        if (newMain == null || newOther == null) {
+            callback(null, "Dual camera lost its cameras")
+            return
+        }
+        // Dart shows the flash off after any switch, and the torch belongs to
+        // the camera that leaves the main role.
+        disableAutoFlashTorch()
+        isAutoFlashMode = false
+        isTorchEnabled = false
+        currentFlashMode = ImageCapture.FLASH_MODE_OFF
+
+        val previousLensType = currentLensType
         surfaceProducer = secondarySurfaceProducer.also { secondarySurfaceProducer = surfaceProducer }
-        currentLensType = secondaryLensType.also { secondaryLensType = currentLensType }
-        videoWidth = secondaryVideoWidth.also { secondaryVideoWidth = videoWidth }
-        videoHeight = secondaryVideoHeight.also { secondaryVideoHeight = videoHeight }
-        aspectRatio = secondaryAspectRatio.also { secondaryAspectRatio = aspectRatio }
-        currentLens = getLensFacingForType(currentLensType)
-        refreshMainCameraInfo()
-        if (isTorchEnabled && currentLens != CameraSelector.LENS_FACING_FRONT) {
-            camera?.cameraControl?.enableTorch(true)
+        try {
+            provider.unbindAll()
+            bindDualCameras(provider, newMain, newOther)
+        } catch (e: Exception) {
+            DivineCameraLog.error(
+                "Dual camera swap failed, back to one camera: ${e.message}",
+                name = "DivineCamera.DualCamera"
+            )
+            // Back to the camera and texture Dart still shows.
+            surfaceProducer = secondarySurfaceProducer.also { secondarySurfaceProducer = surfaceProducer }
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
+            currentLensType = previousLensType
+            currentLens = getLensFacingForType(previousLensType)
+            switchCamera(previousLensType) { state, error -> callback(state, error) }
+            return
         }
         DivineCameraLog.info(
             "Dual camera swapped: main=$currentLensType",
             name = "DivineCamera.DualCamera"
         )
-        callback(getCameraState(), null)
+        completeOnSettledFrames(callback)
     }
 
     /** Binds both cameras again after a releasing [pausePreview]. */
