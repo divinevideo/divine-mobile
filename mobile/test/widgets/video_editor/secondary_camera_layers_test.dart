@@ -8,7 +8,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/widgets/video_editor/secondary_camera_layers.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMaskShape, WidgetLayer;
+    show Layer, LayerMaskShape, WidgetLayer;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
@@ -270,6 +270,125 @@ void main() {
         layers.map((layer) => layer.id).toSet(),
         hasLength(2),
       );
+    });
+
+    group('following its clip', () {
+      List<Layer> follow(
+        List<Layer> layers,
+        List<DivineVideoClip> clips, {
+        Set<String> removed = const {},
+      }) => secondaryCameraLayersFollowingClips(
+        layers,
+        clips: clips,
+        removedClipIds: removed,
+      );
+
+      DetachedClipLayerData? dataOf(Layer layer) =>
+          DetachedClipLayerData.fromMeta(
+            DetachedClipLayerData.metaOf(layer),
+            '/docs',
+          );
+
+      DetachedClipAnchor? anchorOf(Layer layer) =>
+          DetachedClipLayerData.anchorOf(DetachedClipLayerData.metaOf(layer));
+
+      test('follows the clip it was placed over', () {
+        final layer = layersFor([clip('a', take: take('a_second'))]).single;
+
+        expect(anchorOf(layer)?.clipId, 'a');
+      });
+
+      test('moves with its clip when an earlier clip is deleted', () {
+        final owner = clip('b', take: take('b_second'));
+        final layers = layersFor([clip('a'), owner]);
+        expect(layers.single.startTime, const Duration(seconds: 4));
+
+        final followed = follow(layers, [owner]).single;
+
+        expect(followed.startTime, Duration.zero);
+        expect(followed.endTime, const Duration(seconds: 4));
+      });
+
+      test('moves with its clip when the clips are reordered', () {
+        final owner = clip('a', take: take('a_second'));
+        final other = clip('b', duration: const Duration(seconds: 2));
+        final layers = layersFor([owner, other]);
+
+        final followed = follow(layers, [other, owner]).single;
+
+        expect(followed.startTime, const Duration(seconds: 2));
+        expect(followed.endTime, const Duration(seconds: 6));
+      });
+
+      test('plays the stretch its trimmed clip plays', () {
+        final owner = clip(
+          'a',
+          duration: const Duration(seconds: 6),
+          take: take('a_second', duration: const Duration(seconds: 6)),
+        );
+        final layers = layersFor([owner]);
+
+        final followed = follow(layers, [
+          owner.copyWith(
+            trimStart: const Duration(seconds: 1),
+            trimEnd: const Duration(seconds: 2),
+          ),
+        ]).single;
+
+        expect(followed.endTime, const Duration(seconds: 3));
+        final played = dataOf(followed)!.clip;
+        expect(played.trimStart, const Duration(seconds: 1));
+        expect(played.trimmedDuration, const Duration(seconds: 3));
+      });
+
+      test('plays at its clip speed', () {
+        final owner = clip('a', take: take('a_second'));
+        final layers = layersFor([owner]);
+
+        final followed = follow(layers, [
+          owner.copyWith(playbackSpeed: 2),
+        ]).single;
+
+        expect(followed.endTime, const Duration(seconds: 2));
+        expect(dataOf(followed)!.clip.playbackSpeed, 2);
+      });
+
+      test('goes with its clip when the clip is deleted', () {
+        final layers = layersFor([clip('a', take: take('a_second'))]);
+
+        expect(follow(layers, const [], removed: {'a'}), isEmpty);
+      });
+
+      test('keeps the place the creator moved it to', () {
+        final owner = clip('a', take: take('a_second'));
+        final layer = layersFor([owner, clip('b')]).single
+          ..startTime = const Duration(seconds: 1)
+          ..endTime = const Duration(seconds: 5);
+
+        final followed = follow([layer], [clip('b'), owner]).single;
+
+        expect(followed.startTime, const Duration(seconds: 1));
+        expect(anchorOf(followed), isNull);
+      });
+
+      test('stops following once its clip is gone, as after a split', () {
+        final layers = layersFor([clip('a', take: take('a_second'))]);
+
+        final followed = follow(layers, [
+          clip('a_start', duration: const Duration(seconds: 2)),
+        ]).single;
+
+        expect(followed.startTime, Duration.zero);
+        expect(followed.endTime, const Duration(seconds: 4));
+        expect(anchorOf(followed), isNull);
+      });
+
+      test('leaves the layers alone when nothing moved', () {
+        final clips = [clip('a', take: take('a_second')), clip('b')];
+        final layers = layersFor(clips);
+
+        expect(identical(follow(layers, clips), layers), isTrue);
+      });
     });
   });
 }
