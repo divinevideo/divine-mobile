@@ -35,6 +35,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<Filter>[]);
+    registerFallbackValue(Duration.zero);
   });
 
   group(BookmarksRepository, () {
@@ -89,7 +90,10 @@ void main() {
       bool noRelays = false,
     }) {
       when(
-        () => nostrClient.queryEventsOnFreshConnections(any()),
+        () => nostrClient.queryEventsOnFreshConnections(
+          any(),
+          timeout: any(named: 'timeout'),
+        ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
       );
@@ -304,7 +308,12 @@ void main() {
           final synced = await service.syncGlobalBookmarks();
 
           expect(synced, isFalse);
-          verifyNever(() => nostrClient.queryEventsOnFreshConnections(any()));
+          verifyNever(
+            () => nostrClient.queryEventsOnFreshConnections(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          );
         },
       );
 

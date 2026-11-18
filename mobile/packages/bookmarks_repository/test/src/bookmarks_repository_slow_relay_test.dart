@@ -292,6 +292,39 @@ void main() {
           expect(h.opened, isEmpty);
         });
       });
+
+      // The slowest new-connection read measured on a phone took 4.6 s
+      // (#9335); past the cap the save gives up rather than hold the video's
+      // actions for the full default.
+      test('saves when the new connection answers after 5 s', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            freshBacklog: const Duration(milliseconds: 4800),
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isTrue);
+        });
+      });
+
+      test('gives up when the new connection answers after 7 s', () {
+        fakeAsync((async) {
+          final h = _harness(
+            async,
+            homeBacklog: const Duration(seconds: 40),
+            freshBacklog: const Duration(milliseconds: 6800),
+          );
+
+          final result = _toggle(async, h.repo);
+
+          expect(result.succeeded, isFalse);
+          expect(result.failure, BookmarkToggleFailure.timedOut);
+          expect(h.home.published, isEmpty);
+        });
+      });
     });
 
     group('syncGlobalBookmarks with a relay late on its shared connection', () {

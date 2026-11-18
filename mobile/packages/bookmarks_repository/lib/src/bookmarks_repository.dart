@@ -188,6 +188,13 @@ class BookmarksRepository {
   /// rather than an error, so a miss is not taken as final.
   static const videoAddressRetryInterval = Duration(minutes: 10);
 
+  /// How long a save waits for the list read asked again on new connections.
+  ///
+  /// The slowest such read measured on a phone took 4.6 s (#9335). Past this
+  /// the save gives up, since the video's other actions stay locked while it
+  /// waits.
+  static const freshConnectionReadTimeout = Duration(seconds: 6);
+
   /// When a completed [_resolveVideoAddresses] call last found nothing for
   /// each event id, so an id that never resolves is not looked up on every
   /// sync.
@@ -823,7 +830,10 @@ class BookmarksRepository {
         name: 'BookmarksRepository',
         category: LogCategory.system,
       );
-      final fresh = await _nostrClient.queryEventsOnFreshConnections(filters);
+      final fresh = await _nostrClient.queryEventsOnFreshConnections(
+        filters,
+        timeout: freshConnectionReadTimeout,
+      );
       result = (
         events: [...result.events, ...fresh.events],
         timedOut: fresh.timedOut,
