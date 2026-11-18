@@ -21,7 +21,11 @@ PACKAGE = "co.openvine.app"
 
 
 class ProviderError(RuntimeError):
-    pass
+    def __init__(self, message, *, diagnostic=None):
+        super().__init__(message)
+        # Provider response details are private diagnostic data, never log text.
+        self.diagnostic = diagnostic
+
 
 
 class BeforeStoreMutationError(ProviderError):
@@ -71,19 +75,30 @@ def request_json(method, url, headers=None, body=None, *, timeout=60):
         status = error.code
         raw = error.read(100000)
         error.close()
+        diagnostic = None
         try:
+            detail = json.loads(raw).get("error", {})
             reasons = [
                 d.get("reason")
-                for d in json.loads(raw).get("error", {}).get("details", [])
+                for d in detail.get("details", []) + detail.get("errors", [])
+                if isinstance(d, dict)
             ]
+            # Retain only error fields; no headers, request bodies or metadata.
+            diagnostic = {
+                "code": status,
+                "status": str(detail.get("status", ""))[:100],
+                "message": str(detail.get("message", ""))[:2000],
+                "reasons": [r[:100] for r in reasons if isinstance(r, str)][:20],
+            }
         except (ValueError, TypeError, AttributeError):
             reasons = []
         if "CHANGES_ALREADY_IN_REVIEW" in reasons:
-            raise DeferredReview("CHANGES_ALREADY_IN_REVIEW") from None
+            raise DeferredReview("CHANGES_ALREADY_IN_REVIEW", diagnostic=diagnostic) from None
         if status == 404:
-            raise NotFound("Provider resource not found (HTTP 404)") from None
+            raise NotFound("Provider resource not found (HTTP 404)", diagnostic=diagnostic) from None
         raise ProviderError(
-            f"Provider request failed (HTTP {status}); inspect credentials, agreements, metadata or rate limits"
+            f"Provider request failed (HTTP {status}); inspect credentials, agreements, metadata or rate limits",
+            diagnostic=diagnostic,
         ) from None
     except (OSError, ValueError, urllib.error.URLError) as error:
         timed_out = isinstance(error, TimeoutError) or isinstance(
@@ -206,7 +221,65 @@ class Play:
         )
 
     def call(self, method, path, body=None):
-        return self.request(method, self.base + path, self.headers, body)
+        try:
+            return self.request(method, self.base + path, self.headers, body)
+        except DeferredReview:
+            raise
+        except ProviderError as error:
+            # Fixed operation labels locate failures without exposing edit IDs.
+            operation = (
+                "commit edit" if ":commit" in path else
+                "validate edit" if ":validate" in path else
+                "internal track" if path.endswith("/tracks/internal") else
+                "production track" if path.endswith("/tracks/production") else
+                "bundle inventory" if path.endswith("/bundles") else
+                "track inventory" if path.endswith("/tracks") else "edit"
+            )
+            raise ProviderError(
+                f"Google Play {operation} failed: {error}", diagnostic=error.diagnostic
+            ) from None
+
+    def diagnose_upload(self, *, notes):
+        """Validate retained notes against an existing bundle; never commit/upload."""
+        from release_train.release_notes import PLAY_LOCALES, validate_localizations
+
+        notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
+        report = {"stage": "create temporary edit"}
+        edit = None
+        try:
+            edit = self.edit()
+            report["stage"] = "inventory tracks"
+            tracks = self.call("GET", f"/edits/{edit}/tracks")["tracks"]
+            report["tracks"] = {
+                track["track"]: [
+                    {"status": release["status"], "versionCodes": release.get("versionCodes", [])}
+                    for release in track.get("releases", [])
+                ] for track in tracks
+            }
+            report["stage"] = "inventory bundles"
+            report["bundles"] = sorted(int(bundle["versionCode"]) for bundle in
+                                       self.call("GET", f"/edits/{edit}/bundles").get("bundles", []))
+            report["stage"] = "validate current edit"
+            self.call("POST", f"/edits/{edit}:validate")
+            internal = [int(code) for release in report["tracks"].get("internal", [])
+                        for code in release["versionCodes"]]
+            if not internal:
+                raise ProviderError("No existing internal bundle available to validate retained notes")
+            report["notes_validation_build"] = max(internal)
+            report["stage"] = "set retained notes in temporary edit"
+            self.track(edit, "internal", max(internal), notes=notes)
+            report["stage"] = "validate retained notes"
+            self.call("POST", f"/edits/{edit}:validate")
+            report["stage"] = "complete"
+        except ProviderError as error:
+            report["error"] = error.diagnostic or {"message": str(error)}
+        finally:
+            if edit is not None:
+                try:
+                    self.call("DELETE", f"/edits/{edit}")
+                except ProviderError as error:
+                    report["cleanup_error"] = str(error)
+        return report
 
     def edit(self):
         return self.call("POST", "/edits", {})["id"]
@@ -274,7 +347,7 @@ class Play:
                 timeout=300,
             )
         except ProviderError as error:
-            raise ProviderError("Google Play bundle upload failed: " + str(error)) from None
+            raise ProviderError("Google Play bundle upload failed: " + str(error), diagnostic=error.diagnostic) from None
         if str(bundle.get("versionCode")) != str(number):
             raise ProviderError(
                 "Uploaded AAB versionCode differs from authenticated release identity"

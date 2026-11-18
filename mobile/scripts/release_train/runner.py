@@ -1246,6 +1246,35 @@ def epoch(value):
     return int(datetime.fromisoformat(value).timestamp())
 
 
+def diagnose_android_upload(runtime, number):
+    """Store private Play validation evidence without changing release state."""
+    if not re.fullmatch(r"[1-9][0-9]{0,9}", number) or int(number) > 2100000000:
+        raise ProviderError("Diagnostic build number must be a positive Android version code")
+    from release_train.release_notes import bundle_from_env, notes_for
+
+    env = runtime.env
+    record = runtime.ledger.read_json(f"uploads/android/{number}.json")
+    if record.get("number") != int(number) or record.get("status") != "failed":
+        raise ProviderError("Diagnostic requires the exact retained failed upload")
+    if runtime.store.load().get("holds", {}).get("android") != f"android-upload:{number}":
+        raise ProviderError("Diagnostic requires the exact Android upload hold")
+    if any(build["platform"] == "android" and build["status"] in ACTIVE
+           for build in runtime.list_builds()):
+        raise ProviderError("Wait for active Android builds before opening a diagnostic edit")
+    bundle = bundle_from_env({"RELEASE_NOTES_BUNDLE": json.dumps(record["release_notes"])},
+                             record["sha"], "android")
+    play = Play(play_token(env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]))
+    report = play.diagnose_upload(notes=notes_for(bundle, "google_play"))
+    path = f"diagnostics/android/{number}/{env['GITHUB_RUN_ID']}-{env['GITHUB_RUN_ATTEMPT']}.json"
+    if not runtime.ledger.create_json(path, report | {"number": int(number), "sha": record["sha"]},
+                                       f"Record Android upload diagnostic {number}"):
+        raise ProviderError("Diagnostic report path already exists; inspect the retained report")
+    # Provider messages may contain private metadata. Only the ledger gets them.
+    print("Android upload diagnostic recorded privately at " + path)
+    print("No binary upload, edit commit, release acknowledgement or build dispatch performed.")
+    return 1 if report.get("error") or report.get("cleanup_error") else 0
+
+
 def main(env=os.environ):
     expected = (
         env.get("GITHUB_REPOSITORY", "")
@@ -1267,6 +1296,12 @@ def main(env=os.environ):
         "android": env.get("RELEASE_TRAIN_ANDROID") or "off",
     }
     runtime = Runtime(env)
+    if env.get("RELEASE_DIAGNOSE_ANDROID_UPLOAD"):
+        if env.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or any(
+            env.get(name) for name in ["RELEASE_ACKNOWLEDGE"]
+        ) or any(env.get(name) == "true" for name in ["RELEASE_SETUP_CODEMAGIC", "RELEASE_BOOTSTRAP"]):
+            raise ProviderError("Upload diagnostics require a standalone manual dispatch")
+        return diagnose_android_upload(runtime, env["RELEASE_DIAGNOSE_ANDROID_UPLOAD"])
     dry = env.get("RELEASE_DRY_RUN") == "true" or all(
         level in {"off", "dry-run"} for level in levels.values()
     )

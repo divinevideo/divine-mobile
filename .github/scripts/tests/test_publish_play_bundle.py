@@ -62,6 +62,19 @@ class PublishBundleTest(unittest.TestCase):
     def publish(self):
         publish_play_bundle.publish_bundle(self.env, ledger=self.ledger, play=self.play)
 
+    def test_provider_failure_retains_private_diagnostic_with_original_artifact(self):
+        from unittest.mock import Mock
+        self.play.upload = Mock(side_effect=ProviderError(
+            'Google Play internal track failed: HTTP 400',
+            diagnostic={'code': 400, 'message': 'private provider detail'}))
+        with self.assertRaises(ProviderError):
+            self.publish()
+        failure = self.ledger.files['uploads/android/123.json']
+        self.assertEqual(failure['status'], 'failed')
+        self.assertEqual(failure['diagnostic']['message'], 'private provider detail')
+        self.assertEqual(failure['digest'], self.ledger.files['artifacts/android/123.json']['digest'])
+        self.assertEqual(self.play.upload.call_count, 1)
+
     def test_native_upload_retains_complete_bundle_and_passes_every_locale(self):
         self.publish()
         bundle = json.loads(self.env['RELEASE_NOTES_BUNDLE'])
