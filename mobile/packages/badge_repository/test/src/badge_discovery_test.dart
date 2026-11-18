@@ -546,6 +546,27 @@ void main() {
       },
     );
     test(
+      'drops a validly signed definition whose pubkey is not lowercase hex',
+      () async {
+        // Signing accepts an uppercase pubkey, which would put a second,
+        // differently cased coordinate for the same key into the gallery.
+        final uppercase = Event(
+          issuer2.toUpperCase(),
+          EventKind.badgeDefinition,
+          [
+            ['d', 'uppercase'],
+          ],
+          '',
+        )..sign(key2);
+        expect(uppercase.isSigned, isTrue);
+        events = [uppercase, definition(key1)];
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.pubkey,
+          issuer1,
+        );
+      },
+    );
+    test(
       'honors issuer deletion, rejects foreign deletion and retains newer replacement',
       () async {
         final a = definition(key1);
