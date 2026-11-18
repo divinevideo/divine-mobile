@@ -37,14 +37,14 @@ it does not require another approval (see Release validation policy).
 
 Rabble confirmed that existing unit and integration tests and agent code review
 provide sufficient validation for this release cadence. Production eligibility
-requires successful required CI on the exact source, the existing build-time
-checks, and the six-hour availability period on the platform being promoted:
-public TestFlight for iOS, the internal testing track for Play. Existing code
-review and merge protections continue to apply.
+requires successful required CI on the exact source and the existing build-time
+checks. As updated November 18, 2026, App Store submission has no minimum
+TestFlight availability period and does not wait for external beta review.
+The internal-track availability period for Play remains unchanged. Existing
+code review and merge protections continue to apply.
 
-The availability period is elapsed exposure, not proof that a tester exercised
-every feature. Rabble accepts that tradeoff. No manual QA sign-off, runtime
-smoke suite, crash-rate threshold, or minimum tester-session count is required
+Elapsed availability is not proof that a tester exercised every feature. No
+manual QA sign-off, runtime smoke suite, crash-rate threshold, or minimum tester-session count is required
 before automatic submission. Improvements to those tools may be separate work;
 they must not become a prerequisite for delivering or enabling this automation.
 
@@ -145,7 +145,7 @@ replays the ticks it missed.
 |---|---|---|
 | iOS build | App-affecting changes merged since the last iOS candidate, the last iOS build attempt started at least 6 h ago, and no iOS native build is queued or running | Divine Internal, automatically |
 | Public TestFlight | The newest processed iOS build isn't public, no beta review is waiting, the last beta submission was at least 4 h ago, and there were fewer than 6 in the trailing 24 h | Public group, after beta review |
-| App Store | No App Store submission is waiting or approved but not live, none in the trailing 24 h, and a candidate has had 6 h in public TestFlight | App Store review, released automatically on approval |
+| App Store | No App Store submission is waiting or approved but not live, none in the trailing 24 h, and a processed, CI-verified candidate exists | App Store review, released automatically on approval |
 | Android build | App-affecting changes merged since the last Android candidate, the last Android build started at least 4 h ago, no `android-build` is queued or running, no upload is deferred, and replacing the current internal build would not interrupt its six-hour availability period | Play internal testing |
 | Play production | No Play production promotion in the trailing 24 h, a candidate has had 6 h on the internal track, and Play accepts the commit without cancelling a review in progress | Play review, then full rollout |
 
@@ -366,12 +366,12 @@ The coordinator checks every tick and submits only when all of these hold:
 - The latest version is not in `REJECTED`, `METADATA_REJECTED`,
   `INVALID_BINARY`, or `DEVELOPER_REJECTED`, unless a person has acknowledged
   that version.
-- A candidate exists: the newest build, with a version above the highest
-  version the App Store has claimed, that public testers have had for at least
-  six hours. The six hours start when the coordinator first saw the build
-  approved in the public group, not at upload. A first build stuck in full beta
-  review therefore can't skip the soak. Some days will have no eligible
-  candidate, and the summary says so.
+- A candidate exists: the newest processed, CI-verified build with a version
+  above the highest version the App Store has claimed. There is no minimum
+  TestFlight waiting period or dependency on external beta review. Known
+  rejected builds and the explicitly blocked build 1.0.30+916 remain excluded.
+  A submission already waiting or in review keeps its build; newer betas do
+  not withdraw or replace it. A real discovered bug requires operator action.
 
 To submit, the coordinator does the following:
 
@@ -555,8 +555,8 @@ builds add no per-minute charge. The constraint is concurrency: the plan
 includes three concurrent builds ([pricing](https://codemagic.io/pricing/)).
 
 - One `ios-build` takes roughly half an hour on `mac_mini_m2`, capped at 60
-  minutes. At the observed merge rate that is about 10 builds per weekday and 3
-  per weekend day.
+  minutes. Six-hour spacing limits automatic starts to at most four per day,
+  including retries; days with fewer app changes need fewer builds.
 - `android-build` runs on `mac_mini_m4`, at most once every four hours and
   without `build_apk`. That is about 5 builds per weekday.
 - Together they hold about one of the three slots through a busy workday.
@@ -570,7 +570,7 @@ includes three concurrent builds ([pricing](https://codemagic.io/pricing/)).
   cadence.
 - Before activation, measure real build durations and queue waits. If manual
   builds start waiting, add concurrency or lower the iOS build cadence. The
-  four-hour public TestFlight rhythm doesn't depend on hourly builds.
+  public TestFlight distribution is independent of native build frequency.
 - The coordinator itself runs on GitHub-hosted runners, which are free for this
   public repository.
 
@@ -684,15 +684,16 @@ Cases to test with fakes:
   - Setting `RELEASE_TRAIN_ANDROID` to `build` stops production promotion on
     the next tick. This is the documented response to a Play rejection email.
   - No promotion happened in the trailing 24 hours.
-- **Eligibility and soak**:
-  - No candidate has soaked, or the soak is measured from observed
-    availability.
+- **Eligibility and availability**:
+  - A ready CI-verified iOS build can be selected immediately, without public
+    TestFlight membership or a minimum elapsed availability period.
+  - A newer beta does not replace a waiting or in-review App Store build.
   - App changes arrive every four hours; an Android candidate remains offered
     for six hours before another internal upload can replace it.
   - A manual internal upload supersedes an Android candidate before six hours;
     the old candidate never becomes eligible merely by getting older.
-  - Passing CI and build checks plus the required availability period permit
-    submission without a separate runtime-smoke or manual-QA result.
+  - Passing CI and build checks permit iOS submission without an elapsed-time
+    gate or separate runtime-smoke or manual-QA result.
 - **Safety**:
   - No submission or review is ever cancelled.
   - Throttling or an unknown store state fails that queue closed.
@@ -721,7 +722,8 @@ Cases to test with fakes:
 These defaults stand unless Rabble changes them:
 
 - Skip docs-only and test-only merges.
-- A six-hour availability period before production.
+- No mandatory TestFlight waiting period before App Store submission; the
+  existing six-hour Play internal-track availability period is unchanged.
 - Release on approval.
 - Phased release off, and a full rollout on Play.
 - The generic store notes.

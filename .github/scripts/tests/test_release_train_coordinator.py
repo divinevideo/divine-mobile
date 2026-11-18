@@ -144,7 +144,34 @@ class CoordinatorTest(unittest.TestCase):
         self.assertEqual([a["platform"] for a in result["actions"]], ["android"])
         self.assertTrue(result["errors"])
 
-    def test_app_store_waiting_live_soak_rejected_and_ack(self):
+    def test_app_store_uses_newest_ready_build_without_a_testflight_wait(self):
+        s = snapshot()
+        s["changes"]["ios"] = False
+        s["ios"]["builds"] = [
+            build(),
+            build() | {"id": "20", "number": 20, "public": False,
+                       "public_complete": False, "external": "WAITING_FOR_BETA_REVIEW"},
+        ]
+        state = {"public_available": {"10": NOW - 21600}}
+        actions = plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
+        self.assertEqual([a["build"]["number"] for a in actions if a["kind"] == "app-store"], [20])
+        s["ios"]["builds"] = s["ios"]["builds"][1:]
+        actions = plan_tick(s, {}, {"ios": "app-store", "android": "off"})["actions"]
+        self.assertEqual([a["build"]["number"] for a in actions if a["kind"] == "app-store"], [20])
+
+    def test_newer_beta_does_not_replace_an_app_store_submission_in_review(self):
+        for status in ["WAITING_FOR_REVIEW", "IN_REVIEW"]:
+            with self.subTest(status=status):
+                s = snapshot()
+                s["changes"]["ios"] = False
+                s["ios"]["builds"] = [build() | {"id": "20", "number": 20,
+                    "public": False, "external": "WAITING_FOR_BETA_REVIEW"}]
+                s["ios"]["versions"] = [{"id": "v", "version": "1.0.31",
+                    "state": status, "build_id": "10"}]
+                actions = plan_tick(s, {}, {"ios": "app-store", "android": "off"})["actions"]
+                self.assertFalse(any(a["kind"] == "app-store" for a in actions))
+
+    def test_app_store_waiting_live_rejected_and_ack(self):
         s = snapshot()
         s["changes"]["ios"] = False
         s["ios"]["builds"] = [build()]

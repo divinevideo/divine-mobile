@@ -384,15 +384,10 @@ def plan_tick(snapshot, state, levels):
                 eligible = [
                     b
                     for b in builds
-                    if b.get("public")
-                    and not (b.get("version") == "1.0.30" and str(b.get("number")) == "916")
+                    if not (b.get("version") == "1.0.30" and str(b.get("number")) == "916")
                     and b.get("valid")
                     and b.get("ci_verified")
-                    and b.get("public_complete", b.get("public"))
-                    and b.get("external")
-                    in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
-                    and b["id"] in state.get("public_available", {})
-                    and now - state["public_available"][b["id"]] >= 6 * HOUR
+                    and b.get("external") not in BETA_REJECTED
                     and (
                         parse_version(b["version"]) > highest
                         or b["number"] in resumable
