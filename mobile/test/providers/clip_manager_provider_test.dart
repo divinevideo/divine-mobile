@@ -2,10 +2,13 @@
 // ABOUTME: Validates state updates and provider lifecycle
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show Color, Offset;
 
+import 'package:db_client/db_client.dart';
 import 'package:divine_camera/divine_camera.dart'
     show DivineCameraLens, VideoRecordingResult;
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,10 +18,12 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -29,8 +34,12 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/recording_gallery_backup_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../mocks/mock_path_provider_platform.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
@@ -729,6 +738,140 @@ void main() {
     });
 
     group('extractClips', () {
+      test('abandonment deletes a persisted autosave without deleting its library take', () async {
+        final directory = Directory.systemTemp.createTempSync(
+          'abandoned_reaction_',
+        );
+        final database = AppDatabase.test(NativeDatabase.memory());
+        final previous = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(directory.path);
+        resetCachedDocumentsPath();
+        final drafts = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        final library = ClipLibraryService(
+          clipsDao: database.clipsDao,
+          draftsDao: database.draftsDao,
+          clipCategoriesDao: database.clipCategoriesDao,
+        );
+        final ownContainer = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await SharedPreferences.getInstance(),
+            ),
+            databaseProvider.overrideWithValue(database),
+            draftStorageServiceProvider.overrideWithValue(drafts),
+            clipLibraryServiceProvider.overrideWithValue(library),
+          ],
+        );
+        addTearDown(() async {
+          ownContainer.dispose();
+          await database.close();
+          PathProviderPlatform.instance = previous;
+          resetCachedDocumentsPath();
+          if (directory.existsSync()) directory.deleteSync(recursive: true);
+        });
+        final file = File('${directory.path}/take.mp4')
+          ..writeAsBytesSync([1, 2, 3]);
+        final take = DivineVideoClip(
+          id: 'captured',
+          video: EditorVideo.file(file.path),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        await library.saveClip(take);
+        await drafts.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [take],
+            title: '',
+            description: '',
+            hashtags: {},
+            selectedApproach: 'video',
+          ),
+        );
+        expect(
+          await database.draftsDao.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+          isNotNull,
+        );
+        final notifier = ownContainer.read(clipManagerProvider.notifier);
+        notifier.replaceClips([take]);
+        final removed = database.draftsDao
+            .watchDraftById(VideoEditorConstants.autoSaveId)
+            .firstWhere((row) => row == null);
+        notifier.abandonExtraction({
+          take.id,
+        }, generation: notifier.sessionGeneration);
+        await removed;
+        expect(
+          await database.draftsDao.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+          isNull,
+        );
+        expect(await database.clipsDao.getClipById(take.id), isNotNull);
+        expect(file.existsSync(), isTrue);
+        expect(
+          await ownContainer
+              .read(videoEditorProvider.notifier)
+              .flushPendingAutosave(),
+          isFalse,
+        );
+      });
+
+      test('abandonment removes an existing recovery draft and cancels its debounce', () async {
+        var recoveryExists = true;
+        final deleted = Completer<void>();
+        when(
+          () => mockDraftStorageService.draftExists(
+            VideoEditorConstants.autoSaveId,
+          ),
+        ).thenAnswer((_) async => recoveryExists);
+        when(
+          () => mockDraftStorageService.deleteDraft(
+            VideoEditorConstants.autoSaveId,
+          ),
+        ).thenAnswer((_) async {
+          recoveryExists = false;
+          deleted.complete();
+        });
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = DivineVideoClip(
+          id: 'captured',
+          video: EditorVideo.file('/documents/captured.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        notifier.replaceClips([take]);
+        expect(recoveryExists, isTrue);
+        notifier.abandonExtraction({
+          take.id,
+        }, generation: notifier.sessionGeneration);
+        await pumpEventQueue();
+        expect(recoveryExists, isFalse);
+        expect(deleted.isCompleted, isTrue);
+        expect(
+          await container
+              .read(videoEditorProvider.notifier)
+              .flushPendingAutosave(),
+          isFalse,
+        );
+        verifyNever(
+          () => mockClipLibraryService.softDelete(
+            any(),
+            clearDraftId: any(named: 'clearDraftId'),
+          ),
+        );
+      });
+
       test('leaving preparation immediately releases takes and keeps a new session stable', () async {
         final notifier = container.read(clipManagerProvider.notifier);
         DivineVideoClip clip(String id) => DivineVideoClip(

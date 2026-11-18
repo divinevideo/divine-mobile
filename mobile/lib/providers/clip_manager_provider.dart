@@ -19,6 +19,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -98,7 +99,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       generation == _sessionGeneration && ref.mounted;
 
   /// Drops abandoned capture takes from the working timeline immediately.
-  /// Their library copies and any recovery draft are left intact.
+  /// Their library copies stay intact; recovery follows the remaining timeline.
   List<DivineVideoClip> abandonExtraction(
     Set<String> clipIds, {
     required int generation,
@@ -113,6 +114,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       clearMergeOutputPath: true,
       clearSelection: clipIds.contains(state.selectedClipId),
       clearPreview: clipIds.contains(state.previewingClipId),
+    );
+    // Reconcile the recovery draft now, not after an enrichment that might
+    // never finish. Flushing also cancels the old session's debounce; autosave
+    // serializes behind any write already in flight and deletes empty drafts.
+    _triggerAutosave();
+    runProviderDetached(
+      ref
+          .read(videoEditorProvider.notifier)
+          .flushPendingAutosave()
+          .then<void>((_) {}),
+      'persist the timeline after abandoning reaction takes',
+      logName: 'ClipManagerNotifier',
     );
     return removed;
   }
