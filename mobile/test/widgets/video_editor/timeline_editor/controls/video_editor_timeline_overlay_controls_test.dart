@@ -993,6 +993,22 @@ void main() {
       expect(find.text(l10n.videoEditorDoneLabel), findsOneWidget);
     });
 
+    testWidgets('offers no split for an intro or outro, whose halves would '
+        'each play it all again', (tester) async {
+      const item = TimelineOverlayItem(
+        id: 'outro',
+        type: TimelineOverlayType.effect,
+        startTime: Duration(seconds: 5),
+        endTime: Duration(seconds: 6),
+        effectType: EditorEffectType.outroCurtain,
+      );
+
+      await tester.pumpWidget(build(item));
+
+      expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorSplitLabel), findsNothing);
+    });
+
     group('behavior', () {
       late _MockProImageEditorState mockEditor;
       late _MockStateManager mockStateManager;

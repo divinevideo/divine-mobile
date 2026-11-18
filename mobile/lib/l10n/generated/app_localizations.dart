@@ -16067,6 +16067,108 @@ abstract class AppLocalizations {
   /// **'Looks'**
   String get videoEditorEffectCategoryLooks;
 
+  /// Name of a group in the video effects picker: intros, effects that reveal the picture at the start of the video, such as a fade in from black or curtains opening.
+  ///
+  /// In en, this message translates to:
+  /// **'Intro'**
+  String get videoEditorEffectCategoryIntro;
+
+  /// Name of a group in the video effects picker: outros, effects that cover the picture at the end of the video, such as a fade out to black or curtains closing.
+  ///
+  /// In en, this message translates to:
+  /// **'Outro'**
+  String get videoEditorEffectCategoryOutro;
+
+  /// Screen reader label of the slider while a fade intro or outro is picked: it sets the colour the picture fades from or to, black at the bottom of the slider, grey in between, white at the top.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade color, black to white'**
+  String get videoEditorEffectShapeFadeColor;
+
+  /// Screen reader label of the slider while a circle intro or outro is picked: it sets how soft the edge of the opening or closing circle is.
+  ///
+  /// In en, this message translates to:
+  /// **'Edge softness'**
+  String get videoEditorEffectShapeCircleSoftness;
+
+  /// Screen reader label of the slider while a cinema-bars intro or outro is picked: it sets how many black bars close over the picture, from the classic top and bottom bars to many like a blind.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of bars'**
+  String get videoEditorEffectShapeCinemaBars;
+
+  /// Screen reader label of the slider while a curtain intro or outro is picked: it sets how many folds the stage curtains have, from a few broad ones to many fine ones.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of folds'**
+  String get videoEditorEffectShapeCurtainFolds;
+
+  /// Screen reader label of the slider while a focus intro or outro is picked: it sets how blurred the picture gets.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur strength'**
+  String get videoEditorEffectShapeFocusBlur;
+
+  /// Name of an intro effect in the video effects picker: the picture fades up from black at the start of the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade In'**
+  String get videoEditorEffectFadeIn;
+
+  /// Name of an outro effect in the video effects picker: the picture fades down to black at the end of the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade Out'**
+  String get videoEditorEffectFadeOut;
+
+  /// Name of an intro effect in the video effects picker: a circle grows from the middle of a black screen until the whole picture shows, like an iris opening.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle Open'**
+  String get videoEditorEffectCircleOpen;
+
+  /// Name of an outro effect in the video effects picker: black closes in on the picture as a shrinking circle until the screen is black, like an iris closing.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle Close'**
+  String get videoEditorEffectCircleClose;
+
+  /// Name of an intro effect in the video effects picker: black bars at the top and bottom of the screen draw apart from the middle, like the opening of a film.
+  ///
+  /// In en, this message translates to:
+  /// **'Cinema Open'**
+  String get videoEditorEffectCinemaOpen;
+
+  /// Name of an outro effect in the video effects picker: black bars slide in from the top and bottom of the screen until they meet in the middle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cinema Close'**
+  String get videoEditorEffectCinemaClose;
+
+  /// Name of an intro effect in the video effects picker: red stage curtains part to the sides to reveal the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Curtain Open'**
+  String get videoEditorEffectCurtainOpen;
+
+  /// Name of an outro effect in the video effects picker: red stage curtains draw in from the sides until they cover the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Curtain Close'**
+  String get videoEditorEffectCurtainClose;
+
+  /// Name of an intro effect in the video effects picker: the picture starts blurred and comes into focus.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus In'**
+  String get videoEditorEffectFocusIn;
+
+  /// Name of an outro effect in the video effects picker: the picture goes out of focus and blurs away at the end of the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Out'**
+  String get videoEditorEffectFocusOut;
+
   /// Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life.
   ///
   /// In en, this message translates to:

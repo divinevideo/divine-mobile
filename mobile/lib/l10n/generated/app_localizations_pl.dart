@@ -9781,6 +9781,58 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looki';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Kolor przejścia, od czerni do bieli';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Miękkość krawędzi';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Liczba pasów';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Liczba fałd';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Siła rozmycia';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Pojawianie się';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Zanikanie';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Otwarcie koła';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Zamknięcie koła';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Otwarcie kinowe';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Zamknięcie kinowe';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Odsłonięcie kurtyny';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Zasłonięcie kurtyny';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Wyostrzenie';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Rozmycie';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Naturalne';
 
   @override

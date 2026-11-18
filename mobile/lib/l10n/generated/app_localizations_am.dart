@@ -9345,6 +9345,57 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'ገጽታዎች';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'መግቢያ';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'መዝጊያ';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'የመደብዘዝ ቀለም፣ ከጥቁር እስከ ነጭ';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'የጠርዝ ልስላሴ';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'የአሞሌዎች ብዛት';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'የእጥፋቶች ብዛት';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'የብዥታ መጠን';
+
+  @override
+  String get videoEditorEffectFadeIn => 'ቀስ ብሎ መታየት';
+
+  @override
+  String get videoEditorEffectFadeOut => 'ቀስ ብሎ መጥፋት';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'ክብ መክፈቻ';
+
+  @override
+  String get videoEditorEffectCircleClose => 'ክብ መዝጊያ';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'ሲኒማ መክፈቻ';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'ሲኒማ መዝጊያ';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'መጋረጃ መክፈቻ';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'መጋረጃ መዝጊያ';
+
+  @override
+  String get videoEditorEffectFocusIn => 'ወደ ጥርትነት';
+
+  @override
+  String get videoEditorEffectFocusOut => 'ወደ ብዥታ';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'ተፈጥሯዊ';
 
   @override

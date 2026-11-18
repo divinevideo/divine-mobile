@@ -50,6 +50,7 @@
 		DF861BF87BAE30D93576EFBA /* PrismVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */; };
 		ECA2AD5864375E81DEF4CC52 /* WindowLightVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B14E79AC1A35FA1E63E2F8 /* WindowLightVideoEffect.swift */; };
 		02885D3E39593577D49559CA /* SpotlightVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95099C34BC94352AFE3C8D14 /* SpotlightVideoEffect.swift */; };
+		E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */; };
 		71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */; };
 		E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */; };
 		BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */; };
@@ -143,6 +144,7 @@
 		A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrismVideoEffect.swift; path = ../ios/Runner/PrismVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		77B14E79AC1A35FA1E63E2F8 /* WindowLightVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WindowLightVideoEffect.swift; path = ../ios/Runner/WindowLightVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		95099C34BC94352AFE3C8D14 /* SpotlightVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpotlightVideoEffect.swift; path = ../ios/Runner/SpotlightVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntroOutroVideoEffect.swift; path = ../ios/Runner/IntroOutroVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EightBitVideoEffect.swift; path = ../ios/Runner/EightBitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnaglyphVideoEffect.swift; path = ../ios/Runner/AnaglyphVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RisoVideoEffect.swift; path = ../ios/Runner/RisoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
@@ -284,6 +286,7 @@
 				A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */,
 				77B14E79AC1A35FA1E63E2F8 /* WindowLightVideoEffect.swift */,
 				95099C34BC94352AFE3C8D14 /* SpotlightVideoEffect.swift */,
+				02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */,
 				5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */,
 				44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */,
 				DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */,
@@ -609,6 +612,7 @@
 				DF861BF87BAE30D93576EFBA /* PrismVideoEffect.swift in Sources */,
 				ECA2AD5864375E81DEF4CC52 /* WindowLightVideoEffect.swift in Sources */,
 				02885D3E39593577D49559CA /* SpotlightVideoEffect.swift in Sources */,
+				E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */,
 				71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */,
 				E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */,
 				BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */,

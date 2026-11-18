@@ -1963,16 +1963,16 @@ final class DropsVideoEffectTests: XCTestCase {
 }
 
 /// Light leak, light rays, anamorphic, prism, window light, spotlight,
-/// particles, tilt-shift, swirl, ripple, fluted glass, the tunnels, zoom blur,
-/// spin blur, comic, 8-bit, 3D glasses, riso print, watercolour, oil paint,
-/// pencil sketch, neon edges, stained glass, ASCII, thermal camera, night
-/// vision, X-ray, pop art, bricks, cross-stitch and paper cut are drawn with
-/// Metal kernels on iOS and macOS (`ShaderVideoEffect`), and with the same
-/// shaders in GLSL on Android and in the effects picker (`shaders/*.frag`).
-/// These tests check every pixel each kernel draws against its shader's
-/// formulas computed here on the CPU, so a change to one copy that is not made
-/// to the others fails, and so does a kernel that reads its textures upside
-/// down.
+/// particles, the intros and outros, tilt-shift, swirl, ripple, fluted glass,
+/// the tunnels, zoom blur, spin blur, comic, 8-bit, 3D glasses, riso print,
+/// watercolour, oil paint, pencil sketch, neon edges, stained glass, ASCII,
+/// thermal camera, night vision, X-ray, pop art, bricks, cross-stitch and
+/// paper cut are drawn with Metal kernels on iOS and macOS
+/// (`ShaderVideoEffect`), and with the same shaders in GLSL on Android and in
+/// the effects picker (`shaders/*.frag`). These tests check every pixel each
+/// kernel draws against its shader's formulas computed here on the CPU, so a
+/// change to one copy that is not made to the others fails, and so does a
+/// kernel that reads its textures upside down.
 ///
 /// The CPU copies spell out every type and keep each statement short: Swift
 /// type-checks a long arithmetic expression over overloaded functions such as
@@ -2092,6 +2092,74 @@ final class ShaderVideoEffectTests: XCTestCase {
       let difference = compare(effect, seconds: seconds, expected)
       XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
     }
+  }
+
+  func testIntroOutroDrawsWhatTheAndroidShaderDraws() {
+    let cases: [(Bool, Double, Double)] = [
+      (false, 0.0, 0.3), (true, 0.45, 0.6), (true, 1.0, 1.15), (false, 0.8, 0.05),
+    ]
+    for style in IntroOutroVideoEffect.Style.allCases {
+      for (ending, shape, seconds) in cases {
+        let effect = IntroOutroVideoEffect(
+          style: style, ending: ending,
+          params: ["intensity": shape, "durationUs": 1_200_000])
+        let p: Double = min(1, seconds / 1.2)
+        let eased: Double = p * p * p * (p * (6 * p - 15) + 10)
+        let amount: Double = ending ? eased : 1 - eased
+        let speed: Double = 30 * p * p * (1 - p) * (1 - p) / 1.875
+        let pull: Double = 60 * p * (1 - p) * (1 - 2 * p) / 5.7735027
+        let trail: Double = 0.6 * speed + 0.4 * pull
+        let swing: Double = ending ? trail : -trail
+        let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+          self.introOutro(
+            px, py, style: style.rawValue, amount: amount, shape: shape, swing: swing)
+        }
+        let difference = compare(effect, seconds: seconds, expected)
+        // The bars' and the curtains' edges are a pixel wide, as is the
+        // circle's at the bottom of the slider, the curtain's folds turn on
+        // sines, and the focus adds 48 filtered taps; the GPU's float and
+        // filtering move a few of them by more than 0.01, while a change to
+        // any look's shape, colour or timing moves far more.
+        XCTAssertLessThan(
+          difference.share, 0.002, "\(style), ending \(ending), shape \(shape), \(seconds) s")
+      }
+    }
+  }
+
+  func testIntroOutroOpensAndClosesAllTheWayOverItsWindow() {
+    let intro = { (us: Int64) -> Double in
+      IntroOutroProgress.amount(ending: false, durationUs: 2_000_000, effectTimeUs: us)
+    }
+    let outro = { (us: Int64) -> Double in
+      IntroOutroProgress.amount(ending: true, durationUs: 2_000_000, effectTimeUs: us)
+    }
+    XCTAssertEqual(intro(0), 1, accuracy: 1e-12)
+    XCTAssertEqual(intro(1_000_000), 0.5, accuracy: 1e-12)
+    XCTAssertEqual(intro(2_000_000), 0, accuracy: 1e-12)
+    XCTAssertEqual(outro(0), 0, accuracy: 1e-12)
+    XCTAssertEqual(outro(1_000_000), 0.5, accuracy: 1e-12)
+    XCTAssertEqual(outro(3_000_000), 1, accuracy: 1e-12)
+    // A curtain's bottom rests at both ends, trails behind while it moves, and
+    // swings a little past as it stops.
+    let swing = { (ending: Bool, us: Int64) -> Double in
+      IntroOutroProgress.swing(ending: ending, durationUs: 2_000_000, effectTimeUs: us)
+    }
+    XCTAssertEqual(swing(true, 0), 0, accuracy: 1e-12)
+    XCTAssertEqual(swing(true, 2_000_000), 0, accuracy: 1e-12)
+    XCTAssertGreaterThan(swing(true, 800_000), 0.5)
+    XCTAssertEqual(swing(false, 800_000), -swing(true, 800_000), accuracy: 1e-12)
+    XCTAssertLessThan(swing(true, 1_700_000), 0)
+    // At no intensity, the look's first structure, it still covers the frame.
+    let blackFade = IntroOutroVideoEffect(style: .fade, ending: false, params: ["intensity": 0])
+    XCTAssertEqual(blackFade.values(effectTimeUs: 0), [1, 0, 0, 0])
+    // An open intro leaves the frame as it is; without a duration, the window
+    // lasts what a new one does.
+    let output = blackFade.render(
+      frame, history: [], timeUs: 0, effectTimeUs: IntroOutroProgress.defaultDurationUs)
+    XCTAssertTrue(output === frame)
+    // It is fully open only at the end of its window: 10 ms before, it
+    // still covers a little.
+    XCTAssertNotNil(blackFade.values(effectTimeUs: 990_000))
   }
 
   func testParticlesDrawWhatTheAndroidShaderDraws() {
@@ -2746,6 +2814,111 @@ final class ShaderVideoEffectTests: XCTestCase {
     for k in 0..<3 {
       let bright: Double = 1 + intensity * warm[k]
       out[k] = clamp(base[k] * (shade + (bright - shade) * lit))
+    }
+    return out
+  }
+
+  /// An intro or outro of `style` that covers the picture by `amount`, with
+  /// the structure `shape`; a curtain's bottom trails behind by `swing`.
+  private func introOutro(
+    _ px: Double, _ py: Double, style: Double, amount k: Double, shape: Double,
+    swing: Double
+  ) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let cx: Double = 0.5 * w
+    let cy: Double = 0.5 * h
+    let s: Double = min(w, h)
+    let base: [Double] = tap(px, py)
+    var open: Double = 1
+    if style < 0.5 {
+      return base.map { $0 + (shape - $0) * k }
+    } else if style < 1.5 {
+      let soft: Double = 1 + 0.3 * s * shape
+      let reach: Double = (cx * cx + cy * cy).squareRoot() + soft
+      let r: Double = reach - (reach + soft) * k
+      let dx: Double = px - cx
+      let dy: Double = py - cy
+      let distance: Double = (dx * dx + dy * dy).squareRoot()
+      open = smoothstep(-0.5 * soft, 0.5 * soft, r - distance)
+    } else if style < 2.5 {
+      let bands: Double = 1 + (7 * shape + 0.5).rounded(.down)
+      let band: Double = h / bands
+      let y: Double = py - band * (py / band).rounded(.down)
+      let bar: Double = (0.5 * band + 1) * k
+      open = clamp(min(y, band - y) - bar + 0.5)
+    } else if style < 3.5 {
+      return curtain(px, py, base: base, amount: k, shape: shape, swing: swing)
+    } else {
+      let radius: Double = (0.01 + 0.05 * shape) * s * k
+      var sum = [Double](repeating: 0, count: 3)
+      var dirX: Double = 1
+      var dirY: Double = 0
+      for i in 0..<48 {
+        let r: Double = radius * ((Double(i) + 0.5) / 48).squareRoot()
+        let color: [Double] = tap(px + r * dirX, py + r * dirY)
+        for j in 0..<3 { sum[j] += color[j] }
+        let nextX: Double = dirX * -0.73736888 - dirY * 0.67549029
+        let nextY: Double = dirX * 0.67549029 + dirY * -0.73736888
+        dirX = nextX
+        dirY = nextY
+      }
+      return sum.map { $0 / 48 }
+    }
+    return base.map { $0 * open }
+  }
+
+  /// The curtains of an intro or outro, drawn in by `amount`, with three to
+  /// twelve folds as `shape` rises, their bottoms trailing behind by `swing`.
+  private func curtain(
+    _ px: Double, _ py: Double, base: [Double], amount k: Double, shape: Double,
+    swing: Double
+  ) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let s: Double = min(w, h)
+    let cx: Double = 0.5 * w
+    let yN: Double = py / h
+    let full: Double = cx + 1
+    let below: Double = (1 - yN) * (1 - yN)
+    let reach: Double = max(full * k - swing * 0.18 * cx * below, 0)
+    let inset: Double = reach - min(px, w - px)
+    let cloth: Double = clamp(inset + 0.5)
+    let into: Double = min(max(inset, 0), reach)
+    let along: Double = into / max(reach, 0.001)
+    let excess: Double = max(full - reach, 0)
+    let squeeze: Double = 1 + 3 * excess * along * along / max(reach, 0.001)
+    let folds: Double = 3 + 9 * shape
+    let foldWidth: Double = full / folds
+    let gathered: Double = into + excess * along * along * along
+    var fold: Double = gathered / foldWidth * (0.92 + 0.08 * yN)
+    fold += 0.12 * sin(2.3 * fold + 0.4)
+    let a: Double = 6.2831853 * fract(fold)
+    let crisp: Double = clamp(foldWidth / squeeze / (0.012 * s) - 0.5)
+    let relief: Double = crisp * (0.7 + 0.3 * sin(1.7 * fold + 0.6))
+    let bulge: Double = sin(a) + 0.3 * sin(2 * a + 1.3)
+    let ridge: Double = 0.5 + 0.5 * relief * bulge / 1.3
+    let slope: Double = cos(a) + 0.6 * cos(2 * a + 1.3)
+    let facing: Double = relief * slope / 1.6
+    let nap: Double = 1 + 0.05 * relief * sin(43.982297 * fold + 1)
+    let stack: Double = 1 - 0.35 * clamp((squeeze - 1) / 6)
+    let lit: Double = 0.12 + 0.6 * ridge + 0.4 * (0.5 + 0.5 * facing)
+    let diffuse: Double = lit * nap * stack
+    let sheen: Double = facing * facing * (0.5 + 0.5 * facing)
+    let stage: Double = 0.62 + 0.48 * yN
+    let top: Double = 1 - 0.45 * exp((yN - 1) / 0.06)
+    let edge: Double = 1 - 0.45 * exp(-max(inset, 0) / (0.006 * s))
+    let light: Double = stage * top * edge
+    let velvet: [Double] = [0.52, 0.03, 0.06]
+    let shine: [Double] = [0.4, 0.09, 0.1]
+    let near: Double = min(reach / (0.04 * s), 1)
+    let fall: Double = exp(min(inset, 0) / (0.04 * s))
+    let shade: Double = (1 - 0.55 * near * fall) * (1 - 0.2 * k)
+    var out = [Double](repeating: 0, count: 3)
+    for i in 0..<3 {
+      let fabric: Double = (velvet[i] * diffuse + shine[i] * sheen) * light
+      let picture: Double = base[i] * shade
+      out[i] = picture + (fabric - picture) * cloth
     }
     return out
   }

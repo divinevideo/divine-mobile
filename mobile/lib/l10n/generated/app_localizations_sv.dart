@@ -9556,6 +9556,57 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Toningsfärg, svart till vit';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Kantens mjukhet';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Antal band';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Antal veck';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Oskärpans styrka';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Tona in';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Tona ut';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Cirkel öppnas';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Cirkel stängs';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Bio öppnas';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Bio stängs';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Ridån öppnas';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Ridån stängs';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Skärpa in';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Skärpa ut';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Naturlig';
 
   @override

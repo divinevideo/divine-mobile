@@ -9776,6 +9776,58 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Looks';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Intro';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Outro';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'Culoarea tranziției, de la negru la alb';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Finețea marginii';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Numărul de benzi';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Numărul de pliuri';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Intensitatea estompării';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Apariție treptată';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Dispariție treptată';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Deschidere în cerc';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Închidere în cerc';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Deschidere cinema';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Închidere cinema';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Deschiderea cortinei';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Închiderea cortinei';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Focalizare';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Defocalizare';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Natural';
 
   @override

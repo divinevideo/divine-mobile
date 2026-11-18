@@ -9475,6 +9475,57 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Görünümler';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Giriş';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Çıkış';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Geçiş Rengi, Siyahtan Beyaza';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Kenar Yumuşaklığı';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Bant Sayısı';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Kıvrım Sayısı';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Bulanıklık Gücü';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Belirme';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Kararma';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Daire Açılış';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Daire Kapanış';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Sinema Açılış';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Sinema Kapanış';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Perde Açılış';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Perde Kapanış';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Netleşme';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Bulanıklaşma';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Doğal';
 
   @override

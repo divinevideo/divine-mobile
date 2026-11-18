@@ -42,6 +42,7 @@ class AppDelegate: FlutterAppDelegate {
     PaperCutVideoEffect.register()
     CrossStitchVideoEffect.register()
     BricksVideoEffect.register()
+    IntroOutroVideoEffect.register()
     LookVideoEffect.register()
     AdjustVideoEffect.register()
     // CameraMacOSPlugin removed - Flutter now has native macOS camera support
