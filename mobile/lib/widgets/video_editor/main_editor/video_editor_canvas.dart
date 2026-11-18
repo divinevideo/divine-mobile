@@ -2736,7 +2736,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     VideoEditorMainBloc bloc,
   ) {
     final previous = _secondaryCameraPlacement;
-    return _secondaryCameraPlacement = () async {
+    final placement = _secondaryCameraPlacement = () async {
       try {
         await previous;
       } catch (_) {
@@ -2744,6 +2744,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       }
       await _placeUnplacedSecondaryCameraTakes(scope, bloc);
     }();
+    // Done waits for it; see VideoEditorScope.secondaryCameraPlacementNotifier.
+    scope.secondaryCameraPlacementNotifier?.value = placement;
+    return placement;
   }
 
   Future<void> _placeUnplacedSecondaryCameraTakes(
