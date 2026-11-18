@@ -104,7 +104,11 @@ void main() {
       });
 
       for (final failure in [
-        PlatformException(code: 'not_found'),
+        PlatformException(
+          code: 'COMPOSITION_ERROR',
+          message: 'provider=canonical code=not_found',
+          details: const {'errorCode': 'not_found'},
+        ),
         Exception('HTTP 404'),
       ]) {
         test('stops before Bunny after a canonical denial: $failure', () async {
