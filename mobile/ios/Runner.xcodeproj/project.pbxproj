@@ -1876,7 +1876,7 @@
 				DEVELOPMENT_TEAM = GZCZBKH7MY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_CFBundleDisplayName = "Divine Staging";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
@@ -1907,7 +1907,7 @@
 				DEVELOPMENT_TEAM = GZCZBKH7MY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_CFBundleDisplayName = "Divine Staging";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
