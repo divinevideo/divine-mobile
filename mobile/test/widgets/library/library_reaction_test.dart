@@ -3,10 +3,12 @@
 
 import 'dart:async';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -125,7 +127,7 @@ void main() {
     Future<void> start(
       WidgetTester tester, {
       required SplitScreenCellPicker record,
-      required LibraryReactionLayout layout,
+      required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
     }) async {
       await tester.pumpWidget(
@@ -197,6 +199,32 @@ void main() {
         expect(manager.clips.map((clip) => clip.id), ['layout']);
       },
     );
+
+    testWidgets('opens its own layout with the original beside the take', (
+      tester,
+    ) async {
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async {
+          events.add('record');
+          return [_clip('reaction')];
+        },
+        layout: null,
+      );
+      final layout = tester
+          .element(find.byType(VideoEditorSplitScreenLayoutView))
+          .read<SplitScreenLayoutCubit>()
+          .state;
+      expect(layout.activeCells.map((cell) => cell?.clip.id), [
+        'source',
+        'reaction',
+      ]);
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(VideoEditorSplitScreenLayoutView), findsNothing);
+      expect(events, ['keep draft', 'clear session', 'record']);
+      expect(manager.clips, isEmpty);
+    });
 
     testWidgets('combines every recorded cut into the reaction cell', (
       tester,
