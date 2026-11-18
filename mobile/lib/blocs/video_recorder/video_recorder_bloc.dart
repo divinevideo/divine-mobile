@@ -1576,14 +1576,18 @@ class VideoRecorderBloc
     required ClipManagerNotifier clipManager,
     required Duration remainingDuration,
   }) async {
+    final generation = clipManager.sessionGeneration;
     final videoPath = await videoResult.safeFilePath();
+    if (!clipManager.isSessionCurrent(generation)) return;
     final workCopyPath = '$videoPath.work.mp4';
     await File(videoPath).copy(workCopyPath);
 
     try {
+      if (!clipManager.isSessionCurrent(generation)) return;
       final metadata = await ProVideoEditor.instance.getMetadata(
         EditorVideo.file(File(workCopyPath)),
       );
+      if (!clipManager.isSessionCurrent(generation)) return;
       final clipDuration = commonTrackEnd(metadata) ?? metadata.duration;
       clipManager.updateClipDuration(clip.id, clipDuration);
       Log.debug(
@@ -1621,6 +1625,10 @@ class VideoRecorderBloc
         videoPath: workCopyPath,
         targetTimestamp: targetTimestamp,
       );
+      if (!clipManager.isSessionCurrent(generation)) {
+        if (thumbnailResult != null) _deleteFileQuietly(thumbnailResult.path);
+        return;
+      }
 
       if (thumbnailResult != null &&
           clipManager.getClipById(clip.id)?.chromaKey != null) {
@@ -1650,6 +1658,10 @@ class VideoRecorderBloc
         videoPath: workCopyPath,
         videoDuration: metadata.duration,
       );
+      if (!clipManager.isSessionCurrent(generation)) {
+        if (ghostFramePath != null) _deleteFileQuietly(ghostFramePath);
+        return;
+      }
 
       if (ghostFramePath != null) {
         clipManager.updateGhostFrame(

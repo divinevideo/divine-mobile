@@ -94,11 +94,20 @@ Future<void> recordLibraryReaction(
 
   Future<T> withProgress<T>(
     BuildContext progressContext,
-    Future<T> Function() work,
-  ) async {
+    Future<T> Function() work, {
+    VoidCallback? onLeave,
+  }) async {
     final ownerRoute = ModalRoute.of(progressContext);
     Future<void> leaveProgress() async {
       if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
+      if (onLeave != null) {
+        runDetached(
+          Future<void>.sync(onLeave),
+          'release abandoned reaction takes',
+          logName: 'LibraryReaction',
+          category: LogCategory.ui,
+        );
+      }
       if (await Navigator.of(progressContext).maybePop()) return;
       if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
       GoRouter.maybeOf(progressContext)?.go(VideoFeedPage.pathForIndex(0));
@@ -143,9 +152,20 @@ Future<void> recordLibraryReaction(
 
     // Back remains available while native processing finishes. Leaving the
     // owning route removes this UI without canceling the take's library save.
-    routeExit = ownerRoute?.popped.asStream().cast<Object?>().listen(
-      (_) => dismiss(),
-    );
+    routeExit = ownerRoute?.popped.asStream().cast<Object?>().listen((_) {
+      runDetached(
+        Future<void>.sync(() {
+          try {
+            onLeave?.call();
+          } finally {
+            dismiss();
+          }
+        }),
+        'release reaction progress after route exit',
+        logName: 'LibraryReaction',
+        category: LogCategory.ui,
+      );
+    });
     try {
       return await work();
     } finally {
@@ -158,6 +178,7 @@ Future<void> recordLibraryReaction(
     required double cellAspectRatio,
     required int maxClips,
   }) async {
+    final generation = manager.sessionGeneration;
     final initialIds = manager.clips.map((clip) => clip.id).toSet();
     final route = editorRecorderRoute(
       VideoRecorderRoute(
@@ -168,22 +189,58 @@ Future<void> recordLibraryReaction(
     );
     final result = await Navigator.of(cameraContext).push<bool>(route);
     await route.completed;
-    if (!isActive()) return null;
+    if (!manager.isSessionCurrent(generation)) return null;
     final takeIds = manager.clips
         .where((clip) => !initialIds.contains(clip.id))
         .map((clip) => clip.id)
         .toSet();
     if (takeIds.isEmpty) return null;
+    Future<List<DivineVideoClip>>? extraction;
+    Future<List<DivineVideoClip>> extract() =>
+        extraction ??= manager.extractClips(takeIds);
+    void abandon() {
+      final removed = manager.abandonExtraction(
+        takeIds,
+        generation: generation,
+      );
+      final paths = [
+        for (final clip in removed)
+          if (!clip.isStopMotion) ...[clip.thumbnailPath, clip.ghostFramePath],
+      ].whereType<String>().toList();
+      if (paths.isEmpty) return;
+      final settled = extraction;
+      runDetached(
+        settled == null
+            ? reaction.cleanupFiles(paths)
+            : settled.then<void>(
+                (_) => reaction.cleanupFiles(paths),
+                onError: (Object _, StackTrace _) =>
+                    reaction.cleanupFiles(paths),
+              ),
+        'clean abandoned reaction metadata',
+        logName: 'LibraryReaction',
+        category: LogCategory.ui,
+      );
+    }
+
+    Future<List<DivineVideoClip>> extractWithoutOwner() {
+      final pending = extract();
+      abandon();
+      return pending;
+    }
+
     // Extraction waits for camera processing and its enriched library save.
     // Even a cancelled take stays in the library, outside this timeline.
     final takes =
-        cameraContext.mounted &&
+        isActive() &&
+            cameraContext.mounted &&
             ModalRoute.of(cameraContext)?.isCurrent != false
         ? await withProgress(
             cameraContext,
-            () => reaction.prepareTakes(() => manager.extractClips(takeIds)),
+            () => reaction.prepareTakes(extract),
+            onLeave: abandon,
           )
-        : await manager.extractClips(takeIds);
+        : await extractWithoutOwner();
     if (takes == null) {
       if (cameraContext.mounted &&
           isActive() &&

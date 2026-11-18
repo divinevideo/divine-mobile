@@ -91,6 +91,32 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Returns an unmodifiable view of all clips.
   List<DivineVideoClip> get clips => List.unmodifiable(_clips);
 
+  /// Ownership stamp for work that must not change a later capture session.
+  int get sessionGeneration => _sessionGeneration;
+
+  bool isSessionCurrent(int generation) =>
+      generation == _sessionGeneration && ref.mounted;
+
+  /// Drops abandoned capture takes from the working timeline immediately.
+  /// Their library copies and any recovery draft are left intact.
+  List<DivineVideoClip> abandonExtraction(
+    Set<String> clipIds, {
+    required int generation,
+  }) {
+    if (!isSessionCurrent(generation)) return [];
+    final removed = _clips.where((clip) => clipIds.contains(clip.id)).toList();
+    if (removed.isEmpty) return [];
+    _sessionGeneration++;
+    _clips.removeWhere((clip) => clipIds.contains(clip.id));
+    state = state.copyWith(
+      clips: List.unmodifiable(_clips),
+      clearMergeOutputPath: true,
+      clearSelection: clipIds.contains(state.selectedClipId),
+      clearPreview: clipIds.contains(state.previewingClipId),
+    );
+    return removed;
+  }
+
   /// Tracks metadata and library work without blocking the next recording.
   ///
   /// Work tracked for a clip that still has work pending joins it, so a

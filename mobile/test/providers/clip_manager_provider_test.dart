@@ -729,6 +729,40 @@ void main() {
     });
 
     group('extractClips', () {
+      test('leaving preparation immediately releases takes and keeps a new session stable', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        DivineVideoClip clip(String id) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file('/documents/$id.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final take = clip('captured');
+        notifier.replaceClips([take], autosave: false);
+        final generation = notifier.sessionGeneration;
+        final gate = Completer<void>();
+        notifier.trackClipEnrichment(take.id, gate.future);
+        final extraction = notifier.extractClips({take.id});
+        final released = notifier.abandonExtraction({
+          take.id,
+        }, generation: generation);
+        expect(released.single, same(take));
+        expect(notifier.clips, isEmpty);
+        expect(gate.isCompleted, isFalse);
+        final next = clip('new-session');
+        notifier.replaceClips([next], autosave: false);
+        gate.complete();
+        expect(await extraction, isEmpty);
+        expect(notifier.clips.single, same(next));
+        expect(
+          notifier.abandonExtraction({next.id}, generation: generation),
+          isEmpty,
+        );
+        expect(notifier.clips.single, same(next));
+      });
+
       test(
         'same-session extraction keeps enriched metadata and unrelated clips',
         () async {

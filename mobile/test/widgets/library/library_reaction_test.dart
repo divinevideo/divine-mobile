@@ -61,6 +61,19 @@ class _Manager extends ClipManagerNotifier {
   Set<String>? extractedIds;
 
   @override
+  List<DivineVideoClip> abandonExtraction(
+    Set<String> clipIds, {
+    required int generation,
+  }) {
+    if (generation != sessionGeneration) return [];
+    final removed = clips.where((clip) => clipIds.contains(clip.id)).toList();
+    state = state.copyWith(
+      clips: clips.where((clip) => !clipIds.contains(clip.id)).toList(),
+    );
+    return removed;
+  }
+
+  @override
   Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
     extractedIds = clipIds;
     final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
@@ -369,9 +382,13 @@ void main() {
       expect(gate.isCompleted, isFalse);
       expect(find.text('open library'), findsOneWidget);
       expect(find.text(label), findsNothing);
+      final releasedImmediately = manager.clips.isEmpty;
+      manager.insertClip(0, _clip('new-session'));
       gate.complete();
       await tester.pumpAndSettle();
       expect(events, ['keep draft', 'clear session']);
+      expect(releasedImmediately, isTrue);
+      expect(manager.clips.map((clip) => clip.id), ['new-session']);
       expect(tester.takeException(), isNull);
     });
 
@@ -402,9 +419,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('moved'), findsOneWidget);
         expect(find.text(label), findsNothing);
+        final releasedImmediately = manager.clips.isEmpty;
         gate.complete();
         await tester.pumpAndSettle();
         expect(events, ['keep draft', 'clear session']);
+        expect(releasedImmediately, isTrue);
+        expect(manager.clips, isEmpty);
         expect(tester.takeException(), isNull);
       },
     );
