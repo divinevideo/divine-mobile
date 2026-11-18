@@ -1,6 +1,7 @@
 // ABOUTME: Tab selection under late availability changes on Explore.
 // ABOUTME: Launch intent must land once, then stop overriding the user.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
@@ -176,6 +177,8 @@ void main() {
     String? initialTabName,
     String? initialTabSlug,
     bool classicsAvailable = false,
+    bool findPeopleEnabled = false,
+    double textScale = 1,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -202,6 +205,8 @@ void main() {
           isFeatureEnabledProvider(
             FeatureFlag.integratedApps,
           ).overrideWithValue(false),
+          isFeatureEnabledProvider(FeatureFlag.findPeople)
+              .overrideWithValue(findPeopleEnabled),
           featuredTabsRepositoryProvider.overrideWithValue(repository),
           featuredTabAgeGateProvider.overrideWith(
             (ref) => ref.watch(_testFeaturedTabAgeGateProvider),
@@ -210,6 +215,11 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: ExploreScreen(
               initialTabName: initialTabName,
@@ -229,6 +239,58 @@ void main() {
     final cubit = tester.element(find.byType(TabBar)).read<ExploreTabsCubit>();
     return cubit.state.nameForIndex(controllerOf(tester).index);
   }
+
+  group('Explore Find people entry', () {
+    testWidgets('desktop search and compact discovery action share one band', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = _StagedFeaturedTabsRepository();
+      await pumpExplore(
+        tester,
+        repository: repository,
+        findPeopleEnabled: true,
+      );
+      final search = tester.getRect(find.byType(DivineSearchBar));
+      final entry = tester.getRect(
+        find.widgetWithText(DivineButton, 'Find people'),
+      );
+      expect(entry.center.dy, closeTo(search.center.dy, 1));
+      expect(entry.left, greaterThan(search.right));
+      expect(entry.width, lessThanOrEqualTo(240));
+      expect(entry.height, greaterThanOrEqualTo(48));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'narrow large-text discovery action stays labeled and reachable',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final repository = _StagedFeaturedTabsRepository();
+        await pumpExplore(
+          tester,
+          repository: repository,
+          findPeopleEnabled: true,
+          textScale: 2,
+        );
+        final search = tester.getRect(find.byType(DivineSearchBar));
+        final entryFinder = find.widgetWithText(DivineButton, 'Find people');
+        final entry = tester.getRect(entryFinder);
+        expect(search.width, greaterThanOrEqualTo(280));
+        expect(entry.left, greaterThanOrEqualTo(0));
+        expect(entry.right, lessThanOrEqualTo(320));
+        expect(entry.height, greaterThanOrEqualTo(48));
+        expect(tester.widget<DivineButton>(entryFinder).onPressed, isNotNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
 
   group('ExploreView tab selection', () {
     testWidgets('refreshes featured tabs when 18+ verification resolves', (

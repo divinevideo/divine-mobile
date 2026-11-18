@@ -107,6 +107,10 @@ class FindPeopleSuggestionsList extends ConsumerStatefulWidget {
     this.onAvailabilityChanged,
     super.key,
   });
+
+  /// Keeps standalone grids and their page within a readable desktop width.
+  static const double maxContentWidth = 1040;
+
   final bool isActive;
   final bool showPagination;
   final FindPeopleSuggestionsLayout layout;
@@ -134,122 +138,185 @@ class _FindPeopleSuggestionsListState
   @override
   Widget build(BuildContext context) {
     final isActive = widget.isActive && ref.watch(appForegroundProvider);
-    return BlocBuilder<FindPeopleCubit, FindPeopleState>(
-      builder: (context, state) {
-        _notify(state);
-        final cubit = context.read<FindPeopleCubit>();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (state.actionFailed)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  context.l10n.commonSomethingWentWrong,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
-                ),
-              ),
-            if (state.suggestions.isNotEmpty)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final available = constraints.maxWidth > 32
-                      ? constraints.maxWidth - 32
-                      : constraints.maxWidth;
-                  final carousel =
-                      widget.layout == FindPeopleSuggestionsLayout.carousel;
-                  final largeText =
-                      MediaQuery.textScalerOf(context).scale(14) > 20;
-                  final columns = !largeText && available >= 332 ? 2 : 1;
-                  final width = carousel
-                      ? (available * .84).clamp(200.0, 340.0)
-                      : (available - (columns - 1) * 12) / columns;
-                  final cards = [
-                    for (
-                      var index = 0;
-                      index < state.suggestions.length;
-                      index++
-                    )
-                      SizedBox(
-                        key: ValueKey(state.suggestions[index].pubkey),
-                        width: width,
-                        child: _CreatorCard(
-                          key: ValueKey(
-                            'creator-card:${state.suggestions[index].pubkey}',
-                          ),
-                          suggestion: state.suggestions[index],
-                          position: index,
-                          isActive: isActive,
-                          isPending: state.pendingPubkeys.contains(
-                            state.suggestions[index].pubkey,
-                          ),
-                          onAction: widget.onAction,
-                        ),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: widget.layout == FindPeopleSuggestionsLayout.grid
+              ? FindPeopleSuggestionsList.maxContentWidth
+              : double.infinity,
+        ),
+        child: BlocBuilder<FindPeopleCubit, FindPeopleState>(
+          builder: (context, state) {
+            _notify(state);
+            final cubit = context.read<FindPeopleCubit>();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.actionFailed)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      context.l10n.commonSomethingWentWrong,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.primaryText,
                       ),
-                  ];
-                  if (carousel) {
-                    return SingleChildScrollView(
-                      key: const ValueKey('people-carousel'),
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 12,
-                        children: cards,
-                      ),
-                    );
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
                     ),
-                    child: Wrap(spacing: 12, runSpacing: 16, children: cards),
-                  );
-                },
-              ),
-            if (state.status == FindPeopleStatus.loading)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: BrandedLoadingIndicator()),
-              )
-            else if (state.status == FindPeopleStatus.failure) ...[
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(context.l10n.commonSomethingWentWrong),
-              ),
-              DivineButton(
-                label: context.l10n.commonRetry,
-                onPressed: () => unawaited(cubit.retry()),
-              ),
-            ] else if (widget.showPagination && state.nextCursor != null)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: DivineButton(
-                  label: context.l10n.findPeopleLoadMore,
-                  onPressed: () => unawaited(cubit.loadMore()),
-                ),
-              )
-            else if (state.suggestions.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  context.l10n.findPeopleEmpty,
-                  textAlign: TextAlign.center,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.secondaryText,
                   ),
-                ),
-              ),
-          ],
-        );
-      },
+                if (state.suggestions.isNotEmpty)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final available = constraints.maxWidth > 32
+                          ? constraints.maxWidth - 32
+                          : constraints.maxWidth;
+                      final carousel =
+                          widget.layout == FindPeopleSuggestionsLayout.carousel;
+                      final largeText =
+                          MediaQuery.textScalerOf(context).scale(14) > 20;
+                      // Preserve phone pairs; add columns before desktop cards
+                      // exceed 320px, with one readable column at large text.
+                      final columns = largeText || available < 332
+                          ? 1
+                          : ((available + 12) / 332).ceil().clamp(2, 4);
+                      final width = carousel
+                          ? (available * .84).clamp(200.0, 340.0)
+                          : largeText
+                          ? available.clamp(0.0, 480.0)
+                          : (available - (columns - 1) * 12) / columns;
+                      final cards = [
+                        for (
+                          var index = 0;
+                          index < state.suggestions.length;
+                          index++
+                        )
+                          SizedBox(
+                            key: ValueKey(state.suggestions[index].pubkey),
+                            width: width,
+                            child: _CreatorCard(
+                              key: ValueKey(
+                                'creator-card:${state.suggestions[index].pubkey}',
+                              ),
+                              suggestion: state.suggestions[index],
+                              position: index,
+                              isActive: isActive,
+                              isPending: state.pendingPubkeys.contains(
+                                state.suggestions[index].pubkey,
+                              ),
+                              onAction: widget.onAction,
+                            ),
+                          ),
+                      ];
+                      if (carousel) {
+                        return SingleChildScrollView(
+                          key: const ValueKey('people-carousel'),
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 12,
+                            children: cards,
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Wrap(
+                          alignment: largeText
+                              ? WrapAlignment.center
+                              : WrapAlignment.start,
+                          spacing: 12,
+                          runSpacing: 16,
+                          children: cards,
+                        ),
+                      );
+                    },
+                  ),
+                if (state.status == FindPeopleStatus.loading)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: BrandedLoadingIndicator()),
+                  )
+                else if (state.status == FindPeopleStatus.failure)
+                  _PeopleSuggestionsError(
+                    onRetry: () => unawaited(cubit.retry()),
+                  )
+                else if (widget.showPagination && state.nextCursor != null)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: DivineButton(
+                      label: context.l10n.findPeopleLoadMore,
+                      onPressed: () => unawaited(cubit.loadMore()),
+                    ),
+                  )
+                else if (state.suggestions.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      context.l10n.findPeopleEmpty,
+                      textAlign: TextAlign.center,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.secondaryText,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
+}
+
+/// Uses the existing compact search-error presentation without a new message.
+class _PeopleSuggestionsError extends StatelessWidget {
+  const _PeopleSuggestionsError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(24),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            DivineIcon(
+              icon: DivineIconName.warningCircle,
+              color: context.vineColors.secondaryText,
+              size: 48,
+            ),
+            Text(
+              context.l10n.commonSomethingWentWrong,
+              textAlign: TextAlign.center,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.primaryText,
+              ),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: DivineButton(
+                label: context.l10n.commonRetry,
+                type: DivineButtonType.secondary,
+                size: DivineButtonSize.small,
+                maxLines: 2,
+                onPressed: onRetry,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Shared image-led creator card. Keeping one keyed state per creator prevents

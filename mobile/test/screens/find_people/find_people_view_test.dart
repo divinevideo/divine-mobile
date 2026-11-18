@@ -32,6 +32,73 @@ void main() {
   });
   group('Find people interactions', () {
     testWidgets(
+      'desktop failure keeps centered search and compact retry usable',
+      (tester) async {
+        tester.view.physicalSize = const Size(1440, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        var requests = 0;
+        final owner = 'a' * 64;
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((_) async {
+              requests++;
+              return http.Response('', 404);
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+        );
+        final cubit = FindPeopleCubit(
+          repository: repository,
+          followRepository: _Follows(),
+        );
+        await cubit.load();
+        try {
+          await tester.pumpWidget(
+            ProviderScope(
+              child: MaterialApp(
+                theme: VineTheme.theme,
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: BlocProvider.value(
+                  value: cubit,
+                  child: const FindPeopleView(),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final search = tester.getRect(find.byType(DivineSearchBar));
+          expect(search.width, lessThanOrEqualTo(1040));
+          expect(search.center.dx, closeTo(720, 1));
+          final retryFinder = find.widgetWithText(DivineButton, 'Retry');
+          final retry = tester.getRect(retryFinder);
+          expect(retry.width, lessThanOrEqualTo(240));
+          expect(retry.center.dx, closeTo(720, 1));
+          expect(find.text('Something went wrong'), findsOneWidget);
+          expect(
+            tester.widget<DivineSearchBar>(find.byType(DivineSearchBar)).onTap,
+            isNotNull,
+          );
+          await tester.tap(retryFinder);
+          await tester.pumpAndSettle();
+          expect(requests, 2);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(cubit.close);
+          await repository.dispose();
+        }
+      },
+    );
+
+    testWidgets(
       'restored archives stay labeled and onboarding can skip without following',
       (tester) async {
         final owner = 'a' * 64;

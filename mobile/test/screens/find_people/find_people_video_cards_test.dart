@@ -47,7 +47,7 @@ void main() {
   late List<String> actions;
   var requests = 0;
 
-  Future<void> prepare() async {
+  Future<void> prepare({int creatorCount = 3}) async {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
     follows = _Follows();
     actions = [];
@@ -60,14 +60,15 @@ void main() {
           return http.Response(
             jsonEncode({
               'suggestions': [
-                for (var i = 0; i < 3; i++)
+                for (var i = 0; i < creatorCount; i++)
                   {
-                    'pubkey': ['b', 'c', 'e'][i] * 64,
+                    'pubkey': ['b', 'c', 'e', 'f'][i] * 64,
                     'profile': {
                       'name': [
                         'Creator one',
                         'Creator two',
                         'Creator three',
+                        'Creator four',
                       ][i],
                     },
                     'reason': 'popular',
@@ -151,6 +152,43 @@ void main() {
   }
 
   group('video-led people cards', () {
+    for (final width in [800.0, 1440.0]) {
+      testWidgets('desktop grid uses compact columns at $width pixels', (
+        tester,
+      ) async {
+        try {
+          await prepare(creatorCount: 4);
+          tester.view.physicalSize = Size(width, 1000);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(subject());
+          await tester.pumpAndSettle();
+          final first = tester.getRect(
+            find.byKey(ValueKey('creator-card:$firstKey')),
+          );
+          final third = tester.getRect(
+            find.byKey(ValueKey('creator-card:${'e' * 64}')),
+          );
+          expect(first.width, lessThanOrEqualTo(320));
+          expect(third.top, first.top);
+          if (width >= 1040) {
+            final fourth = tester.getRect(
+              find.byKey(ValueKey('creator-card:${'f' * 64}')),
+            );
+            expect(fourth.top, first.top);
+            expect(first.left, greaterThan(160));
+          }
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(cubit.close);
+          await repository.dispose();
+          container.dispose();
+        }
+      });
+    }
+
     for (final dark in [false, true]) {
       testWidgets(
         'phone grid leads with real previews in ${dark ? 'dark' : 'light'} mode',

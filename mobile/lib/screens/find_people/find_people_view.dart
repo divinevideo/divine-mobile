@@ -42,55 +42,63 @@ class FindPeopleView extends StatelessWidget {
       },
     ),
     body: SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: DivineSearchBar(
-              hintText: context.l10n.peopleListsAddPeopleSearchHint,
-              readOnly: true,
-              onTap: () => unawaited(
-                const SearchRouteData(
-                  focus: SearchResultsPage.requestFocusQueryValue,
-                ).push<void>(context),
-              ),
-            ),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: FindPeopleSuggestionsList.maxContentWidth,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              context.l10n.findPeopleDescription,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.secondaryText,
-              ),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: FindPeopleSuggestionsList(onAction: onAction),
-            ),
-          ),
-          if (source == 'onboarding')
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  DivineButton(
-                    label: context.l10n.videoErrorSkip,
-                    type: DivineButtonType.quiet,
-                    onPressed: onSkip,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: DivineSearchBar(
+                  hintText: context.l10n.peopleListsAddPeopleSearchHint,
+                  readOnly: true,
+                  onTap: () => unawaited(
+                    const SearchRouteData(
+                      focus: SearchResultsPage.requestFocusQueryValue,
+                    ).push<void>(context),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DivineButton(
-                      label: context.l10n.listContinue,
-                      onPressed: onDone,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-        ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.l10n.findPeopleDescription,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: FindPeopleSuggestionsList(onAction: onAction),
+                ),
+              ),
+              if (source == 'onboarding')
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      DivineButton(
+                        label: context.l10n.videoErrorSkip,
+                        type: DivineButtonType.quiet,
+                        onPressed: onSkip,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DivineButton(
+                          label: context.l10n.listContinue,
+                          onPressed: onDone,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     ),
   );
