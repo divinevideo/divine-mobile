@@ -162,10 +162,12 @@ def observe(snapshot, previous):
             period["completed"] = True
     production = snapshot.get("android", {}).get("production", [])
     seen = state.setdefault("play_production_seen", {})
+    highest_seen = max((int(number) for number in seen), default=0)
     for b in production:
         if str(b["number"]) not in seen:
             seen[str(b["number"])] = now
-            state["last_play_promotion"] = now
+            if b["number"] > highest_seen:
+                state["last_play_promotion"] = now
     return state
 
 
@@ -217,7 +219,7 @@ def plan_tick(snapshot, state, levels):
         candidate = snapshot.get("candidate")
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
         interval = 6 * HOUR if platform == "ios" else 4 * HOUR
-        can_replace = True
+        can_replace = not (platform == "android" and data.get("internal_pending"))
         if platform == "android":
             for b in data.get("internal", []):
                 period = state.get("internal_periods", {}).get(str(b["number"]), {})
@@ -400,6 +402,9 @@ def plan_tick(snapshot, state, levels):
                         build=max(eligible, key=lambda b: b["number"]),
                     )
         if platform == "android" and level == "production":
+            if data.get("production_pending"):
+                reasons.append("android: preserve pending Google Play production review/publication")
+                continue
             if data.get("managed_publishing") is not False:
                 errors.append(
                     "android: managed publishing is enabled or unknown; publish approved changes in Play Console or verify the setting"

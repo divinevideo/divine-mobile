@@ -116,6 +116,23 @@ withdrawal. Android replacement preserves the current internal candidate's
 full continuous six hours, including when a manual build supersedes a
 scheduled candidate.
 
+### Google Play review and availability
+
+The controller and release-note baseline reader use the documented
+`applications.tracks.releases.list` lifecycle API through protected service-account
+credentials. These observation reads do not create or invalidate publishing edits.
+Only `PUBLISHED` releases count as available or start internal testing exposure;
+a configured track's `completed` rollout status does not prove publication.
+Pending review/publication is preserved, and current rejections or incomplete
+lifecycle reads stop Android release actions. Published, pending, and rejected
+states are reflected separately in deployment audit statuses. A rejected release
+superseded by a newer published release remains in the audit without blocking it.
+
+An API error requiring review submission through Play Console is a provider
+restriction, not successful publication. The controller does not silently stage
+changes with `changesNotSentForReview=true`, acknowledge failures, or rebuild
+retained signed artifacts to conceal that restriction.
+
 ## Recovery
 
 ### Native credential expiry and partial results
