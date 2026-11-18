@@ -513,9 +513,23 @@ class BookmarksRepository {
   /// addressable video, and `t` and `r` items, are not videos, and neither is
   /// an `e` item that is not a well-formed event id: fetched by id, one would
   /// close the relay query for every other video with it.
-  List<String> get bookmarkedVideoReferences {
+  List<String> get bookmarkedVideoReferences =>
+      List.unmodifiable(_videoReferencesOf(globalBookmarks));
+
+  /// The references in [bookmarkedVideoReferences] that the list holds
+  /// publicly, in its `tags`.
+  ///
+  /// The rest are private, and like the private items themselves they must
+  /// not reach unencrypted storage (#11180). A video saved both publicly and
+  /// privately is public: its reference is already in the clear.
+  Set<String> get publicBookmarkedVideoReferences =>
+      Set.unmodifiable(_videoReferencesOf(_globalBookmarks));
+
+  /// The video reference each of [items] names, in list order, each video
+  /// once at the position of its latest item.
+  Set<String> _videoReferencesOf(Iterable<BookmarkItem> items) {
     final references = <String>{};
-    for (final item in globalBookmarks) {
+    for (final item in items) {
       final reference = switch (item.type) {
         'e' when _eventIdPattern.hasMatch(item.id) =>
           _videoAddressByEventId[item.id] ?? item.id,
@@ -527,7 +541,7 @@ class BookmarksRepository {
         ..remove(reference)
         ..add(reference);
     }
-    return List.unmodifiable(references);
+    return references;
   }
 
   /// [bookmarkedVideoReferences], each time [watchGlobalBookmarks] announces a

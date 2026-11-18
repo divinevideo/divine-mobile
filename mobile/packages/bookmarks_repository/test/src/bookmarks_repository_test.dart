@@ -1881,6 +1881,88 @@ void main() {
         });
       });
 
+      // The Saved tab keeps a snapshot in unencrypted storage, so it may only
+      // store what this set names (#11180).
+      group('publicBookmarkedVideoReferences', () {
+        test('leaves out a video saved only privately', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                [unrelatedId],
+                content: await encryptToSelf([
+                  ['e', originalId],
+                ]),
+              ),
+            ],
+          );
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+
+          expect(
+            service.bookmarkedVideoReferences,
+            unorderedEquals([unrelatedId, originalId]),
+          );
+          expect(
+            service.publicBookmarkedVideoReferences,
+            equals({unrelatedId}),
+          );
+        });
+
+        test('keeps a video saved both publicly and privately', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                [originalId],
+                content: await encryptToSelf([
+                  ['e', originalId],
+                ]),
+              ),
+            ],
+          );
+          final service = createService();
+
+          await service.syncGlobalBookmarks();
+
+          expect(service.publicBookmarkedVideoReferences, equals({originalId}));
+        });
+
+        test(
+          'names a public video by the coordinate the list refers to it by',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEventWithTags(
+                  [
+                    ['a', coordinate],
+                  ],
+                  content: await encryptToSelf([
+                    ['e', originalId],
+                    ['a', otherCoordinate],
+                  ]),
+                ),
+              ],
+            );
+            final service = createService(
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            await service.syncGlobalBookmarks();
+
+            // The private event id resolves to the public coordinate, so the
+            // one reference the list holds for it is public.
+            expect(
+              service.bookmarkedVideoReferences,
+              unorderedEquals([coordinate, otherCoordinate]),
+            );
+            expect(
+              service.publicBookmarkedVideoReferences,
+              equals({coordinate}),
+            );
+          },
+        );
+      });
+
       // A lookup a slow relay leaves unanswered finds nothing, so a launch
       // that had to ask again would name an edited video by its old event id.
       group('coordinates kept on the device', () {
