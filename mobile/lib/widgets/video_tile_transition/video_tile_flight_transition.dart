@@ -212,8 +212,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   /// Whether a snapshot of the page reads the player's frames: where the
   /// feed draws them through a texture, as on iOS, where it has been seen
-  /// to on a device, and Android. A web player is a video element, which a
-  /// snapshot leaves out, and desktop players are unchecked, so there the
+  /// to on a device, Android and macOS. A web player is a video element, which a
+  /// snapshot leaves out, and other desktop players are unchecked, so there the
   /// tile's picture flies instead.
   static bool get _framesReadable =>
       !kIsWeb &&
