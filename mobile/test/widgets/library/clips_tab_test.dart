@@ -112,6 +112,7 @@ void main() {
       bool showCategoryManagement = false,
       ScrollController? scrollController,
       ClipOwnershipScope? scope,
+      bool offersRecordReaction = false,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -128,6 +129,7 @@ void main() {
               showCategoryManagement: showCategoryManagement,
               scrollController: scrollController,
               scope: scope,
+              offersRecordReaction: offersRecordReaction,
             ),
           ),
         ),
@@ -1057,6 +1059,48 @@ void main() {
       );
 
       testWidgets(
+        'tap opens a preview without Record reaction unless offered',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final messenger =
+              TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+          messenger.setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            (call) async {
+              if (call.method == 'create') {
+                return <String, Object?>{'textureId': 1};
+              }
+              return null;
+            },
+          );
+          installMockDivineVideoPlayer();
+          addTearDown(() {
+            messenger.setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              null,
+            );
+          });
+          when(() => mockBloc.state).thenReturn(
+            ClipsLibraryState(
+              status: ClipsLibraryStatus.loaded,
+              clips: [clip1],
+              sortedClips: [clip1],
+            ),
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(child: buildWidget(selectionEnabled: false)),
+          );
+          await tester.tap(find.byType(VideoClipThumbnailCard).first);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          expect(find.byType(VideoClipPreview), findsOneWidget);
+          expect(find.text(en.libraryRecordReaction), findsNothing);
+        },
+      );
+
+      testWidgets(
         'tap → Record reaction closes the preview before the reaction starts',
         (tester) async {
           DivineVideoPlayerController.resetIdCounterForTesting();
@@ -1106,7 +1150,10 @@ void main() {
                 videoEditorProvider.overrideWith(() => editor),
                 videoPublishProvider.overrideWith(_IdlePublish.new),
               ],
-              child: buildWidget(selectionEnabled: false),
+              child: buildWidget(
+                selectionEnabled: false,
+                offersRecordReaction: true,
+              ),
             ),
           );
 

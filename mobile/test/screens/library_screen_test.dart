@@ -396,6 +396,39 @@ void main() {
       },
     );
 
+    group('Record reaction', () {
+      testWidgets('is not offered in the recorder library', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            tabsMode: LibraryTabsMode.withoutSounds,
+            initialTabIndex: LibraryScreen.clipsTabIndex,
+          ),
+        );
+        await tester.pump();
+
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isFalse),
+        );
+      });
+
+      testWidgets('is offered in the standalone library', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(initialTabIndex: LibraryScreen.clipsTabIndex),
+        );
+        await tester.pump();
+
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isTrue),
+        );
+      });
+    });
+
     group('scheduled section (#3538)', () {
       testWidgets('is off in the recorder library', (tester) async {
         await tester.pumpWidget(

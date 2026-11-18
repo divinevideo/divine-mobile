@@ -42,6 +42,7 @@ class ClipsTab extends StatelessWidget {
     this.scrollController,
     this.gridTopPadding = 0,
     this.showCategoryManagement = false,
+    this.offersRecordReaction = false,
     super.key,
   });
 
@@ -88,6 +89,12 @@ class ClipsTab extends StatelessWidget {
   /// the whole truth about where a clip appears.
   final bool showCategoryManagement;
 
+  /// Whether a clip's preview offers Record reaction.
+  ///
+  /// Only the standalone library sets this. The recorder's library sits on a
+  /// live camera session, which starting a reaction would clear.
+  final bool offersRecordReaction;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -106,6 +113,7 @@ class ClipsTab extends StatelessWidget {
             targetAspectRatio: targetAspectRatio,
             scrollController: scrollController,
             gridTopPadding: gridTopPadding,
+            offersRecordReaction: offersRecordReaction,
           ),
         ),
       ],
@@ -173,6 +181,7 @@ class _ClipsBody extends StatelessWidget {
     required this.targetAspectRatio,
     required this.scrollController,
     required this.gridTopPadding,
+    required this.offersRecordReaction,
   });
 
   final ClipOwnershipScope? scope;
@@ -182,6 +191,7 @@ class _ClipsBody extends StatelessWidget {
   final double? targetAspectRatio;
   final ScrollController? scrollController;
   final double gridTopPadding;
+  final bool offersRecordReaction;
 
   /// How long one filter's content takes to fade into the next.
   static const _filterFadeDuration = Duration(milliseconds: 180);
@@ -207,6 +217,7 @@ class _ClipsBody extends StatelessWidget {
           targetAspectRatio: targetAspectRatio,
           scrollController: scrollController,
           gridTopPadding: gridTopPadding,
+          offersRecordReaction: offersRecordReaction,
         );
 
         // A cross-fade holds the outgoing filter's grid on screen alongside
@@ -250,6 +261,7 @@ class _FilterContent extends ConsumerWidget {
     required this.targetAspectRatio,
     required this.scrollController,
     required this.gridTopPadding,
+    required this.offersRecordReaction,
   });
 
   /// Captured rather than watched, so the outgoing child of a cross-fade
@@ -264,6 +276,7 @@ class _FilterContent extends ConsumerWidget {
   final double? targetAspectRatio;
   final ScrollController? scrollController;
   final double gridTopPadding;
+  final bool offersRecordReaction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -335,10 +348,12 @@ class _FilterContent extends ConsumerWidget {
         await saveClipsToGallery(context, [clip]);
       },
       onDelete: () => _confirmDeleteClip(context, clip),
-      onRecordReaction: () {
-        recordReaction = true;
-        Navigator.of(context).pop();
-      },
+      onRecordReaction: offersRecordReaction
+          ? () {
+              recordReaction = true;
+              Navigator.of(context).pop();
+            }
+          : null,
     );
     await Navigator.of(context).push(route);
     // Release the looping preview decoder before opening the camera.

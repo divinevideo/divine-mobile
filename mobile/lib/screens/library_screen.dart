@@ -956,6 +956,10 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
+                            // Starting a reaction clears the session, so the
+                            // recorder's library must not offer it.
+                            offersRecordReaction:
+                                widget.tabsMode == LibraryTabsMode.allTabs,
                             onCreateVideo: createVideo,
                           ),
                         ),
@@ -1010,6 +1014,7 @@ double? libraryTargetAspectRatioForSelection({
 class _LibraryContent extends StatelessWidget {
   const _LibraryContent({
     required this.showScheduledSection,
+    required this.offersRecordReaction,
     required this.tabs,
     required this.tabController,
     required this.selectionMode,
@@ -1021,6 +1026,9 @@ class _LibraryContent extends StatelessWidget {
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
   final bool showScheduledSection;
+
+  /// Forwarded to [ClipsTab.offersRecordReaction].
+  final bool offersRecordReaction;
   final List<_LibraryTab> tabs;
   final TabController tabController;
   final bool selectionMode;
@@ -1081,6 +1089,7 @@ class _LibraryContent extends StatelessWidget {
                   targetAspectRatio: targetAspectRatio,
                   backgroundColor: tabBackgroundColor,
                   showScheduledSection: showScheduledSection,
+                  offersRecordReaction: offersRecordReaction,
                 ),
         ),
       ],
@@ -1339,6 +1348,7 @@ class _SelectionBody extends StatelessWidget {
 class _TabBody extends StatefulWidget {
   const _TabBody({
     required this.showScheduledSection,
+    required this.offersRecordReaction,
     required this.tabController,
     required this.tabs,
     required this.selectionEnabled,
@@ -1353,6 +1363,9 @@ class _TabBody extends StatefulWidget {
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
   final bool showScheduledSection;
+
+  /// Forwarded to [ClipsTab.offersRecordReaction].
+  final bool offersRecordReaction;
   final double? targetAspectRatio;
 
   @override
@@ -1410,6 +1423,7 @@ class _TabBodyState extends State<_TabBody> {
                 showRecordButton: false,
                 backgroundColor: widget.backgroundColor,
                 showCategoryManagement: true,
+                offersRecordReaction: widget.offersRecordReaction,
               ),
               _LibraryTab.sounds => const SoundsTab(),
             },
