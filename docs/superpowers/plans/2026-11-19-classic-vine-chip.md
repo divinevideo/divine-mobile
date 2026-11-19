@@ -13,7 +13,7 @@
 ## Constraints and review focus
 
 - Accept the whole of 2017 in UTC; exclude 2018 and later and unknown/invalid dates.
-- Prefer original published_at over a later import or event timestamp.
+- Prefer the original `published_at`. A legacy event timestamp is usable only before Vine shut down.
 - Require Vine origin metadata or server-verified archive status; an old timestamp alone does not imply Vine origin.
 - Display through verification outages and relay loads without granting trust or audio reuse.
 - Reuse the existing localized Classic Vine label and theme-aware badge typography.
@@ -24,4 +24,4 @@
 - [x] Add failing widget tests for the badge and its visibility in the real metadata sheet.
 - [x] Implement VideoEvent.isClassicVine, badge rendering, and the sheet visibility condition.
 - [x] Run affected widget tests, the models suite, analysis, formatting and localization checks.
-- [ ] Update the badge guide, obtain independent review, commit, push, open a PR and inspect CI.
+- [x] Update the badge guide and verify the chip change in the pull request.

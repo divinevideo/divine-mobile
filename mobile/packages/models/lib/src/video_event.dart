@@ -1633,15 +1633,15 @@ class VideoEvent {
 
   /// Whether to display the Classic Vine chip for a video from 2017 or earlier.
   ///
-  /// Prefer the original publish date over a later import or event date. This
-  /// display label does not grant archive verification or audio reuse.
+  /// Use the original publish date, or a legacy event date from before Vine
+  /// shut down. This display label does not grant verification or audio reuse.
   bool get isClassicVine {
     if (!isOriginalVine && !isVerifiedArchive) return false;
 
     final originalPublishedAt =
         int.tryParse(publishedAt ?? '') ??
         int.tryParse(rawTags['published_at'] ?? '') ??
-        createdAt;
+        (createdAt < _vineShutdownAtUtcSeconds ? createdAt : 0);
     return originalPublishedAt > 0 &&
         originalPublishedAt < _classicVineCutoffUtcSeconds;
   }

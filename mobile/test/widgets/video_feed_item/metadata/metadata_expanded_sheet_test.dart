@@ -1051,7 +1051,7 @@ void main() {
       'labels a Vine from late 2017 even without server verification',
       (tester) async {
         final video = _makeVideo(
-          createdAt: 1514764799,
+          publishedAt: '1514764799',
           rawTags: const {'platform': 'vine'},
         );
         await tester.pumpWidget(
@@ -1069,7 +1069,7 @@ void main() {
       tester,
     ) async {
       final video = _makeVideo(
-        createdAt: 1514764800,
+        publishedAt: '1514764800',
         rawTags: const {'platform': 'vine'},
       );
       await tester.pumpWidget(

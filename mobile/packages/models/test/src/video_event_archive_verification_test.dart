@@ -28,11 +28,11 @@ void main() {
     group('isClassicVine', () {
       test('includes Vine imports through the last second of 2017 UTC', () {
         expect(
-          _video(platformTag: true, createdAt: 1514764799).isClassicVine,
+          _video(platformTag: true, publishedAt: '1514764799').isClassicVine,
           isTrue,
         );
         expect(
-          _video(platformTag: true, createdAt: 1514764800).isClassicVine,
+          _video(platformTag: true, publishedAt: '1514764800').isClassicVine,
           isFalse,
         );
       });
@@ -74,6 +74,13 @@ void main() {
           _video(verifiedArchive: true, createdAt: 1451606400).isClassicVine,
           isTrue,
         );
+      });
+
+      test('does not use a post-shutdown import time as the original date', () {
+        final video = _video(platformTag: true, createdAt: 1514764799);
+
+        expect(video.hasUnknownOriginalDate, isTrue);
+        expect(video.isClassicVine, isFalse);
       });
 
       test('does not label Vine imports with missing or invalid dates', () {
