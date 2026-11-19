@@ -257,7 +257,7 @@ void main() {
         expect(sentMetadata!.blurhash, 'LEHV6nWB2yk8');
         expect(sentMetadata!.thumbnailUrl, isNull);
 
-        // Cleanup is detached from the sent flip; wait for actual file I/O.
+        // The delete is detached from the upload's return; wait for the I/O.
         await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
       },

@@ -39,8 +39,9 @@ String videoDmMimeTypeFor(String path) {
 ///
 /// Bounds how old a blob a retry may still point at: a retry after this
 /// uploads the video again. It does not shorten how long the upload, and its
-/// decryption key, stay in memory; that ends when the entry is retried,
-/// removed or the outbox is disposed.
+/// decryption key, stay in memory; that ends when the entry is sent or
+/// removed, when a retry finds the upload this old, or when the outbox is
+/// disposed.
 const videoDmKeptUploadMaxAge = Duration(hours: 1);
 
 /// Whether the file at `path` is the exact file of a published Vine post.
@@ -77,8 +78,8 @@ class _VideoJob extends _OutboxJob {
   final String id;
 }
 
-/// Checks the clips of one batch, then sends them in order. A retried clip
-/// runs as a batch of one.
+/// Checks the clips of one batch, except any that kept an upload, then sends
+/// them in order. A retried clip runs as a batch of one.
 class _ClipBatchJob extends _OutboxJob {
   const _ClipBatchJob(this.ids);
 
@@ -95,9 +96,8 @@ class _ClipBatchJob extends _OutboxJob {
 /// preparation and uploads; a publication already in flight keeps its result.
 ///
 /// A send whose upload finished keeps that upload in memory until the entry is
-/// sent or dropped, for at most [videoDmKeptUploadMaxAge], so a retry after a
-/// failed publication publishes it again instead of uploading the video a
-/// second time.
+/// sent or dropped, so a retry within [videoDmKeptUploadMaxAge] of the upload
+/// publishes it again instead of uploading the video a second time.
 class VideoDmOutbox {
   /// Creates a [VideoDmOutbox].
   ///
@@ -174,14 +174,15 @@ class VideoDmOutbox {
   final Set<DmVideoSendCancellation> _attempts = {};
   final Map<String, File> _ownedVideos = {};
 
-  /// Finished uploads by entry id with when each finished, kept while their
-  /// entry may be retried and for at most [videoDmKeptUploadMaxAge]. Held here
-  /// rather than on [OutgoingVideoDm] because each carries the video's
-  /// decryption key, which stays out of UI state.
+  /// Finished uploads by entry id with when each finished, kept until their
+  /// entry is sent or dropped, or a retry finds the upload too old to reuse
+  /// (see [videoDmKeptUploadMaxAge]). Held here rather than on
+  /// [OutgoingVideoDm] because each carries the video's decryption key, which
+  /// stays out of UI state.
   final Map<String, ({DmVideoUpload upload, DateTime keptAt})> _uploads = {};
 
-  /// The upload kept for entry [id], or null when there is none or it is
-  /// [videoDmKeptUploadMaxAge] old, in which case it is dropped.
+  /// The upload kept for entry [id], or null when there is none or it is at
+  /// least [videoDmKeptUploadMaxAge] old, in which case it is dropped.
   DmVideoUpload? _keptUpload(String id) {
     final kept = _uploads[id];
     if (kept == null) return null;
@@ -508,8 +509,9 @@ class VideoDmOutbox {
     reporter: _reporter,
   );
 
-  /// Checks the clips of [ids] as one batch, then sends them in order,
-  /// stopping at the first that fails. Emits one outcome for the batch.
+  /// Checks the clips of [ids] as one batch, except any that kept an upload,
+  /// then sends them in order, stopping at the first that fails. Emits one
+  /// outcome for the batch.
   Future<void> _runClipBatch(List<String> ids) async {
     final batch = ids.map(_entry).nonNulls.toList();
     if (batch.isEmpty) return;
@@ -723,7 +725,8 @@ class VideoDmOutbox {
   }
 
   /// Runs [entry] through encrypt, upload and publish, and leaves it sent or
-  /// failed. Given its [kept] upload, it skips straight to publishing that.
+  /// failed. Given its [kept] upload, it skips encryption and upload and
+  /// publishes that.
   /// Returns null when it was sent, otherwise why it failed.
   Future<OutgoingVideoDmFailure?> _sendEntry(
     OutgoingVideoDm entry, {
