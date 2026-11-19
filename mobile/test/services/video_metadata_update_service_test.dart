@@ -58,20 +58,20 @@ VideoEvent _testVideo({
   String? title = 'Test Video Title',
   String content = 'Test video content',
 }) {
-  return VideoEvent(
-    id: 'event-id',
-    pubkey: _ownerPubkey,
-    createdAt: 1757385263,
-    content: content,
-    timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-    videoUrl: 'https://cdn.example.com/video.mp4',
-    title: title,
-    vineId: 'video-d-tag',
-    eventCreatedAt: eventCreatedAt,
-    nostrEventTags: [
-      const ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
-      ...extraTags,
-    ],
+  return VideoEvent.fromNostrEvent(
+    Event.fromJson({
+      'id': 'event-id',
+      'pubkey': _ownerPubkey,
+      'kind': NIP71VideoKinds.addressableShortVideo,
+      'created_at': eventCreatedAt ?? 1757385263,
+      'content': content,
+      'tags': [
+        if (!extraTags.any((tag) => tag.first == 'd')) ['d', 'video-d-tag'],
+        if (title != null) ['title', title],
+        ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+        ...extraTags,
+      ],
+    }),
   );
 }
 
@@ -891,6 +891,52 @@ void main() {
           ),
         ).called(1);
       });
+
+      test(
+        'preserves signed tags omitted from a REST row at the same ID',
+        () async {
+          final relay = newerRevision(
+            extraTags: const [
+              ['t', 'fromrelay'],
+              ['allow_audio_reuse', 'true'],
+              ['allow_video_reuse', 'false'],
+            ],
+          );
+          relaysHold(relay);
+          final opened = VideoStats.fromJson({
+            'id': relay.id,
+            'pubkey': relay.pubkey,
+            'kind': relay.kind,
+            'created_at': relay.createdAt,
+            'd_tag': 'video-d-tag',
+            'title': 'Test Video Title',
+            'video_url': 'https://cdn.example.com/video.mp4',
+            'tags': const [
+              ['d', 'video-d-tag'],
+              ['title', 'Test Video Title'],
+            ],
+          }).toVideoEvent();
+          final seed = editorStateFromPublishedVideo(opened);
+          expect(seed.allowAudioReuse, isFalse);
+          expect(seed.allowVideoReuse, isTrue);
+          expect(seed.tags, isEmpty);
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: seed.copyWith(title: 'Edited title'),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['title', 'Edited title'])));
+          expect(capturedTags, contains(equals(['t', 'fromrelay'])));
+          expect(capturedTags, contains(equals(['allow_audio_reuse', 'true'])));
+          expect(
+            capturedTags,
+            contains(equals(['allow_video_reuse', 'false'])),
+          );
+        },
+      );
 
       test('keeps a newer title when saving details after subtitles', () async {
         final opened = _testVideo();

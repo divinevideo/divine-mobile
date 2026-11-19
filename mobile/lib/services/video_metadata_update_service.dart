@@ -338,18 +338,13 @@ class VideoMetadataUpdateService {
         if (latest == null) return const VideoUpdateOriginalUnavailable();
       }
 
-      final baseline = editorBaseline ?? originalVideo;
-      final isOpenedRevision = latest.id == baseline.id;
-      final video = latest.id == originalVideo.id
-          ? originalVideo
-          : VideoEvent.fromNostrEvent(latest, permissive: true);
-      final edits = isOpenedRevision
-          ? editorState
-          : _rebaseEdits(
-              editorState,
-              opened: editorStateFromPublishedVideo(baseline),
-              latest: editorStateFromPublishedVideo(video),
-            );
+      final video = VideoEvent.fromNostrEvent(latest, permissive: true);
+      // A REST row can omit signed tags even when its event ID matches.
+      final edits = _rebaseEdits(
+        editorState,
+        opened: editorStateFromPublishedVideo(editorBaseline ?? originalVideo),
+        latest: editorStateFromPublishedVideo(video),
+      );
       // A republish is Divine's own publish: the signer stamps attribution
       // from the current preference (#8176).
       final originalTags = Nip89ClientTag.withoutClientTag(latest.tags);
@@ -543,7 +538,7 @@ class VideoMetadataUpdateService {
         // it was published.
         initialCollaboratorPubkeys: {
           ...initialCollaboratorPubkeys,
-          if (!isOpenedRevision) ...video.collaboratorPubkeys,
+          ...video.collaboratorPubkeys,
         },
         updatedCollaboratorPubkeys: collaboratorPubkeys,
       );
