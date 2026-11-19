@@ -292,13 +292,14 @@ void main() {
   /// Builds a bloc with all dependencies wired to the mocks.
   VideoRecorderBloc buildBloc({
     ReactionRecordingOwner? reactionRecordingOwner,
+    ReadClipManager? readClipManager,
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
     ReadVideoEditorState readVideoEditorState = VideoEditorProviderState.new,
   }) {
     return VideoRecorderBloc(
-      readClipManager: () => clipManager,
+      readClipManager: readClipManager ?? () => clipManager,
       reactionRecordingOwner: reactionRecordingOwner,
       readVideoEditor: () => videoEditor,
       readVideoEditorState: readVideoEditorState,
@@ -2093,6 +2094,7 @@ void main() {
             final nativeStart = Completer<bool>();
             final startRequested = Completer<void>();
             final retained = Completer<DivineVideoClip>();
+            final releaseRetention = Completer<void>();
             final video = EditorVideo.file('/tmp/reaction_take.mp4');
             const duration = Duration(seconds: 2);
             final clip = DivineVideoClip(
@@ -2120,7 +2122,9 @@ void main() {
             when(
               () => clipManager.buildRecordedClip(
                 video: video,
-                duration: duration,
+                duration: stage == 'starting'
+                    ? any(named: 'duration')
+                    : duration,
                 originalAspectRatio: any(named: 'originalAspectRatio'),
                 targetAspectRatio: any(named: 'targetAspectRatio'),
                 lensMetadata: any(named: 'lensMetadata'),
@@ -2130,9 +2134,17 @@ void main() {
 
             var isCurrent = true;
             final bloc = buildBloc(
+              readClipManager: () {
+                if (!isCurrent) throw StateError('Account container disposed');
+                return clipManager;
+              },
               reactionRecordingOwner: (
+                clipManager: clipManager,
                 isCurrent: () => isCurrent,
-                retain: (clip) async => retained.complete(clip),
+                retain: (clip) async {
+                  retained.complete(clip);
+                  if (stage == 'stopping') await releaseRetention.future;
+                },
               ),
             );
             if (stage == 'starting') {
@@ -2150,14 +2162,26 @@ void main() {
               bloc.add(const VideoRecorderRecordingStopRequested());
               await stopRequested.future;
               isCurrent = false;
+              final closing = bloc.close();
               nativeStop.complete(video);
+              await retained.future;
+              try {
+                verifyNever(() => cameraService.dispose());
+              } finally {
+                releaseRetention.complete();
+              }
+              await closing;
             } else {
               final closing = bloc.close();
               final firstCameraAction = Future.any([
                 stopRequested.future.then((_) => 'stop'),
                 closing.then((_) => 'close'),
               ]);
-              if (stage == 'starting') nativeStart.complete(true);
+              if (stage == 'starting') {
+                isCurrent = false;
+                clipManager.generation++;
+                nativeStart.complete(true);
+              }
               final action = await firstCameraAction;
               nativeStop.complete(video);
               expect(action, 'stop');
@@ -2168,6 +2192,10 @@ void main() {
             expect(await retained.future, same(clip));
             expect(bloc.state.isRecording, isFalse);
             verify(() => cameraService.stopRecording()).called(1);
+            if (stage == 'starting') {
+              verifyNever(() => clipManager.startRecording());
+              verifyNever(() => clipManager.resetRecording());
+            }
             verifyNever(
               () => clipManager.addClip(
                 video: video,

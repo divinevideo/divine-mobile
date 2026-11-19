@@ -286,6 +286,7 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
     }
 
     return (
+      clipManager: manager,
       isCurrent: () =>
           manager.isSessionCurrent(generation) &&
           authService.currentPublicKeyHex == pubkey,

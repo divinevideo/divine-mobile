@@ -136,6 +136,38 @@ void main() {
     });
 
     group('resetRecording', () {
+      for (final clearWholeSession in [false, true]) {
+        test(
+          'clears the old recording clock with '
+          '${clearWholeSession ? 'clearSessionClips' : 'clearClips'}',
+          () {
+            fakeAsync((async) {
+              final notifier = container.read(clipManagerProvider.notifier)
+                ..startRecording();
+              async.elapse(const Duration(milliseconds: 50));
+              expect(
+                container.read(clipManagerProvider).activeRecordingDuration,
+                greaterThan(Duration.zero),
+              );
+
+              if (clearWholeSession) {
+                unawaited(notifier.clearSessionClips());
+                async.flushMicrotasks();
+              } else {
+                notifier.clearClips();
+              }
+              async.elapse(const Duration(milliseconds: 50));
+
+              expect(notifier.recordingElapsed, Duration.zero);
+              expect(
+                container.read(clipManagerProvider).activeRecordingDuration,
+                Duration.zero,
+              );
+            });
+          },
+        );
+      }
+
       test('keeps a late auto-stop take at its frozen duration', () {
         fakeAsync((async) {
           final notifier = container.read(clipManagerProvider.notifier)
@@ -298,6 +330,27 @@ void main() {
           async.flushMicrotasks();
           expect(clip.processingCompleter!.isCompleted, isTrue);
         });
+      });
+
+      test('late trim completion leaves a reimported clip alone', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = notifier.addClip(
+          video: EditorVideo.file('/takes/reaction.mp4'),
+          duration:
+              VideoEditorConstants.maxDuration + const Duration(seconds: 1),
+          originalAspectRatio: 9 / 16,
+          targetAspectRatio: .vertical,
+          limitClipDuration: true,
+        );
+        expect(take.processingCompleter!.isCompleted, isFalse);
+
+        notifier.clearClips();
+        final reimported = take.copyWith(targetAspectRatio: .square);
+        notifier.replaceClips([reimported], autosave: false);
+        completeTrim(true);
+        expect(await take.processingCompleter!.future, isTrue);
+
+        expect(notifier.clips.single, same(reimported));
       });
 
       test('settles background work when disposed during trim', () async {

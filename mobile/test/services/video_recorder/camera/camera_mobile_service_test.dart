@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart';
@@ -186,6 +187,81 @@ void main() {
         expect(platform.lastMirrorFrontCameraOutput, isTrue);
       },
     );
+
+    group('camera handoff', () {
+      test('outgoing disposal leaves the replacement running', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+        await replacement.initialize();
+        expect(DivineCamera.instance.isInitialized, isTrue);
+
+        await service.dispose();
+
+        expect(replacement.isInitialized, isTrue);
+        expect(DivineCamera.instance.isInitialized, isTrue);
+        await replacement.dispose();
+      });
+
+      test('replacement waits for an outgoing take and disposal', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+        final settleTake = Completer<void>();
+        final teardown = service.finishCaptureTeardown(() async {
+          await settleTake.future;
+          await service.dispose();
+        });
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+        final initialized = replacement.initialize();
+        await pumpEventQueue();
+        expect(replacement.isInitialized, isFalse);
+        expect(service.isInitialized, isTrue);
+
+        settleTake.complete();
+        await teardown;
+        await initialized;
+
+        expect(service.isInitialized, isFalse);
+        expect(replacement.isInitialized, isTrue);
+        expect(DivineCamera.instance.isInitialized, isTrue);
+        await replacement.dispose();
+      });
+
+      test('disposing a waiting route cancels its camera open', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+        final settleTake = Completer<void>();
+        final teardown = service.finishCaptureTeardown(() async {
+          await settleTake.future;
+          await service.dispose();
+        });
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+        final initialized = replacement.initialize();
+        await pumpEventQueue();
+        expect(service.isInitialized, isTrue);
+
+        try {
+          await replacement.dispose();
+          expect(DivineCamera.instance.isInitialized, isTrue);
+        } finally {
+          settleTake.complete();
+        }
+        await teardown;
+        await initialized;
+
+        expect(replacement.isInitialized, isFalse);
+        expect(DivineCamera.instance.isInitialized, isFalse);
+      });
+    });
 
     group('audio capture suspension', () {
       test('forwards suspend and resume once initialized', () async {

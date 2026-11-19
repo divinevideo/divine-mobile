@@ -43,6 +43,7 @@ import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_editor/clip_media_duration.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:openvine/services/video_recorder/camera/camera_mobile_service.dart';
 import 'package:openvine/services/video_recorder/dual_camera_thumbnail_composer.dart';
 import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -98,6 +99,7 @@ typedef CameraServiceFactory = CameraService Function({
 /// The original Library reaction owns any take finalized after its editor
 /// session is replaced.
 typedef ReactionRecordingOwner = ({
+  ClipManagerNotifier clipManager,
   bool Function() isCurrent,
   Future<void> Function(DivineVideoClip) retain,
 });
@@ -361,6 +363,7 @@ class VideoRecorderBloc
 
   final ReadClipManager _readClipManager;
   final ReactionRecordingOwner? _reactionRecordingOwner;
+  Stopwatch? _reactionTakeClock;
   Completer<void>? _pendingReactionStart;
   Completer<void>? _pendingReactionStop;
 
@@ -387,6 +390,7 @@ class VideoRecorderBloc
   /// take a new hold then: nothing would release it. Nor may an event
   /// handler resuming then reconfigure the camera close is disposing.
   bool _isClosing = false;
+  Future<void>? _closeFuture;
 
   /// Set while [_reconcileDualCamera] runs. A second caller leaves the work
   /// to it, since it checks the mode and mask again after every rebuild.
@@ -1191,6 +1195,8 @@ class VideoRecorderBloc
     }
 
     if (success) {
+      final owner = _reactionRecordingOwner;
+      if (owner != null) _reactionTakeClock = Stopwatch()..start();
       Log.info(
         '✅ Recording truly started',
         name: 'VideoRecorderBloc',
@@ -1206,7 +1212,7 @@ class VideoRecorderBloc
         await _abortInFlightStartForLock(emit, sessionStarted: true);
         return;
       }
-      clipManager.startRecording();
+      if (owner == null || owner.isCurrent()) clipManager.startRecording();
       if (state.pendingStopAfterStart) {
         // A stop was requested while the native start was still in-flight
         // (brief press in hold-to-record mode).  Dispatch a proper stop now
@@ -1246,6 +1252,8 @@ class VideoRecorderBloc
     VideoRecorderRecordingStopRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final pendingReactionStop = _pendingReactionStop =
+        _reactionRecordingOwner == null ? null : Completer<void>();
     try {
       await _handleRecordingStop(event, emit);
     } catch (error, stackTrace) {
@@ -1259,6 +1267,8 @@ class VideoRecorderBloc
       );
       addError(error, stackTrace);
     } finally {
+      pendingReactionStop?.complete();
+      _pendingReactionStop = null;
       event._teardown?.complete();
     }
   }
@@ -1310,12 +1320,11 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
     final owner = _reactionRecordingOwner;
-    final reactionClipManager = owner == null ? null : _readClipManager();
+    final reactionClipManager = owner?.clipManager;
     final reactionGeneration = reactionClipManager?.sessionGeneration;
-    final capturedDuration = reactionClipManager?.recordingElapsed ?? .zero;
-    final pendingReactionStop = _pendingReactionStop = owner == null
-        ? null
-        : Completer<void>();
+    final takeClock = _reactionTakeClock?..stop();
+    final capturedDuration =
+        takeClock?.elapsed ?? reactionClipManager?.recordingElapsed ?? .zero;
     bool ownsOriginalTimeline() =>
         owner == null ||
         (owner.isCurrent() &&
@@ -1386,9 +1395,6 @@ class VideoRecorderBloc
         ),
       );
       return;
-    } finally {
-      pendingReactionStop?.complete();
-      _pendingReactionStop = null;
     }
 
     emit(
@@ -1415,6 +1421,7 @@ class VideoRecorderBloc
       return;
     }
 
+    _reactionTakeClock = null;
     // The footage is the raw camera frame. The key the viewfinder showed
     // travels with it as an intent and is baked right after the take.
     final captureChromaKey = state.isChromaKeyActive ? state.chromaKey : null;
@@ -3419,6 +3426,15 @@ class VideoRecorderBloc
 
   @override
   Future<void> close() async {
+    await (_closeFuture ??= switch (_cameraService) {
+      final CameraMobileService camera when _reactionRecordingOwner != null =>
+        camera.finishCaptureTeardown(_closeRecorder),
+      _ => _closeRecorder(),
+    });
+    if (!isClosed) await super.close();
+  }
+
+  Future<void> _closeRecorder() async {
     Log.debug(
       '🧹 Closing VideoRecorderBloc',
       name: 'VideoRecorderBloc',
@@ -3501,7 +3517,6 @@ class VideoRecorderBloc
         category: LogCategory.system,
       );
     }
-    return super.close();
   }
 }
 

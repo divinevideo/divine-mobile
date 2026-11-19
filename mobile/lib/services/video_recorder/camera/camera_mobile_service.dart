@@ -1,6 +1,7 @@
 // ABOUTME: Mobile platform implementation of camera service using the camera package
 // ABOUTME: Handles camera initialization, switching, recording, and lifecycle management on mobile devices
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart';
@@ -23,6 +24,12 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
     super.onScreenFlashChanged,
   });
 
+  // The platform has a single controller shared by all recorder routes.
+  static CameraMobileService? _cameraOwner;
+  static Future<void> _cameraTransition = Future<void>.value();
+  static Completer<void>? _captureTeardown;
+
+  int _initializationRequest = 0;
   bool _isInitialized = false;
   CameraInitializationError? _initializationError;
   final DivineCamera _camera = DivineCamera.instance;
@@ -30,6 +37,33 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
   /// The second camera's file of the last stopped take, until
   /// [takeSecondaryRecording] hands it over.
   VideoRecordingResult? _secondaryRecording;
+
+  static Future<T> _transition<T>(Future<T> Function() change) {
+    final operation = _cameraTransition.then((_) => change());
+    _cameraTransition = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {
+        // The caller receives the error. Later transitions can still run.
+      },
+    );
+    return operation;
+  }
+
+  /// Gives an outgoing recorder time to finish its take and release the
+  /// controller before a replacement route opens the same native camera.
+  Future<void> finishCaptureTeardown(Future<void> Function() teardown) async {
+    if (!identical(_cameraOwner, this) || _captureTeardown != null) {
+      await teardown();
+      return;
+    }
+    final completed = _captureTeardown = Completer<void>();
+    try {
+      await teardown();
+    } finally {
+      _captureTeardown = null;
+      completed.complete();
+    }
+  }
 
   @override
   Future<void> initialize({
@@ -40,6 +74,36 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
     DivineVideoStabilizationMode videoStabilizationMode =
         DivineVideoStabilizationMode.off,
     bool mirrorFrontCameraOutput = false,
+  }) async {
+    final request = ++_initializationRequest;
+    while (request == _initializationRequest) {
+      final outgoing = await _transition(() async {
+        if (request != _initializationRequest) return null;
+        if (_captureTeardown case final teardown?) return teardown;
+        _cameraOwner?._isInitialized = false;
+        _cameraOwner = this;
+        await _initializeCamera(
+          videoQuality: videoQuality,
+          initialLens: initialLens,
+          enableAutoLensSwitch: enableAutoLensSwitch,
+          preferUnprocessedAudio: preferUnprocessedAudio,
+          videoStabilizationMode: videoStabilizationMode,
+          mirrorFrontCameraOutput: mirrorFrontCameraOutput,
+        );
+        return null;
+      });
+      if (outgoing == null) return;
+      await outgoing.future;
+    }
+  }
+
+  Future<void> _initializeCamera({
+    required DivineVideoQuality videoQuality,
+    required DivineCameraLens initialLens,
+    required bool enableAutoLensSwitch,
+    required bool preferUnprocessedAudio,
+    required DivineVideoStabilizationMode videoStabilizationMode,
+    required bool mirrorFrontCameraOutput,
   }) async {
     _isInitialized = false;
     _initializationError = null;
@@ -67,7 +131,8 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
         );
       };
       _camera.onScreenFlashChanged = onScreenFlashChanged;
-      // Re-apply remote record trigger callback (gets cleared on dispose)
+      // Replace the previous recorder’s trigger as part of the handoff.
+      _camera.onRemoteRecordTrigger = null;
       if (_remoteRecordTriggerCallback != null) {
         final callback = _remoteRecordTriggerCallback!;
         _camera.onRemoteRecordTrigger = (trigger) {
@@ -108,9 +173,15 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
       category: .video,
     );
 
+    _initializationRequest++;
     _isInitialized = false;
     onUpdateState();
-    await _camera.dispose();
+    await _transition(() async {
+      if (!identical(_cameraOwner, this)) return;
+      _cameraOwner = null;
+      _isInitialized = false;
+      await _camera.dispose();
+    });
   }
 
   @override
@@ -470,7 +541,8 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
 
   @override
   Future<void> handleAppLifecycleState(AppLifecycleState state) async {
-    return _camera.handleAppLifecycleState(state);
+    if (!identical(_cameraOwner, this)) return;
+    await _camera.handleAppLifecycleState(state);
   }
 
   @override
@@ -575,6 +647,7 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
   @override
   void setOnRemoteRecordTrigger(void Function()? callback) {
     _remoteRecordTriggerCallback = callback;
+    if (!identical(_cameraOwner, this)) return;
     // Connect to native callback with logging
     _camera.onRemoteRecordTrigger = callback != null
         ? (trigger) {

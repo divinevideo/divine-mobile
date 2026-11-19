@@ -269,6 +269,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Start recording timer for active clip duration tracking.
   void startRecording() {
+    _recordingDurationTimer?.cancel();
     _recordStopwatch
       ..reset()
       ..start();
@@ -394,7 +395,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             // The render outlives this notifier, and this is the only signal
             // that releases proof generation waiting on the trimmed file.
             processingCompleter!.complete(success);
-            if (!ref.mounted) return;
+            if (!isSessionCurrent(generation)) return;
 
             /// If the clip exists already we use the newest thumbnail
             /// from that clip.
@@ -1274,7 +1275,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Clear all clips without deleting files or autosave.
   void clearClips() {
-    _sessionGeneration++;
+    _resetCaptureSession();
     _cancelPendingDeletionTimer();
     final clipCount = _clips.length;
     _clips.clear();
@@ -1299,7 +1300,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   }
 
   void _clearLocalClipState() {
-    _sessionGeneration++;
+    _resetCaptureSession();
     final clipCount = _clips.length;
     _clips.clear();
     Log.info(
@@ -1308,6 +1309,15 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       category: .video,
     );
     state = ClipManagerState();
+  }
+
+  void _resetCaptureSession() {
+    _sessionGeneration++;
+    _recordingDurationTimer?.cancel();
+    _recordingDurationTimer = null;
+    _recordStopwatch
+      ..stop()
+      ..reset();
   }
 
   /// Remove all clips and reset state.
