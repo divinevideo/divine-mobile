@@ -9,6 +9,7 @@ import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call.dart';
+import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
 
 const _author =
@@ -29,6 +30,18 @@ class _RefusingTransport implements CollabRoomCallTransport {
       throw const CollabRoomCallException('No relay accepted the call signal');
     }
   }
+}
+
+/// Hands the call what [incoming] carries and keeps what it sends.
+class _RelayTransport implements CollabRoomCallTransport {
+  final incoming = StreamController<Event>();
+  final sent = <Event>[];
+
+  @override
+  Stream<Event> watch(String author, {required int since}) => incoming.stream;
+
+  @override
+  Future<void> publish(Event event) async => sent.add(event);
 }
 
 class _SilentTransport implements CollabRoomCallTransport {
@@ -179,6 +192,119 @@ void main() {
           ),
         ),
       );
+    });
+
+    group('signals the relays hand over late', () {
+      late _RelayTransport transport;
+      late String callKey;
+      late String meKey;
+      late String me;
+      late String otherKey;
+      late String other;
+      late WebRtcCollabRoomCall call;
+
+      setUp(() async {
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          if (call.method != 'getUserMedia') return null;
+          return {
+            'streamId': 'microphone',
+            'audioTracks': [
+              {
+                'id': 'mic-track',
+                'label': 'Microphone',
+                'kind': 'audio',
+                'enabled': true,
+              },
+            ],
+          };
+        });
+        transport = _RelayTransport();
+        callKey = keys.generatePrivateKey();
+        // This device answers: the one with the smaller pubkey offers, and
+        // answering needs no peer connection until an offer comes.
+        final a = keys.generatePrivateKey();
+        final b = keys.generatePrivateKey();
+        final aFirst = keys.getPublicKey(a).compareTo(keys.getPublicKey(b)) < 0;
+        otherKey = aFirst ? a : b;
+        meKey = aFirst ? b : a;
+        me = keys.getPublicKey(meKey);
+        other = keys.getPublicKey(otherKey);
+        call = WebRtcCollabRoomCall(
+          me: me,
+          others: {other},
+          callKey: callKey,
+          accountSigner: LocalNostrSigner(meKey),
+          transport: transport,
+        );
+        await call.start();
+        transport.sent.clear();
+      });
+
+      tearDown(() async {
+        await call.stop();
+        await transport.incoming.close();
+      });
+
+      /// Delivers a signal from the other person, sent at [at].
+      Future<void> deliver(
+        CollabRoomCallSignalType type,
+        String session, {
+        required int at,
+      }) async {
+        final sealed =
+            await CollabRoomCallChannel(
+              callKey,
+              accountPubkey: other,
+              accountSigner: LocalNostrSigner(otherKey),
+            ).seal(
+              CollabRoomCallSignal(type: type, from: other, session: session),
+              recipient: me,
+            );
+        transport.incoming.add(
+          Event(
+            sealed.pubkey,
+            sealed.kind,
+            sealed.tags,
+            sealed.content,
+            createdAt: at,
+          )..sign(callKey),
+        );
+        await pumpEventQueue();
+      }
+
+      /// The sessions this device told the other person it is here for.
+      Future<List<String?>> repliedTo() async {
+        final channel = CollabRoomCallChannel(
+          callKey,
+          accountPubkey: other,
+          accountSigner: LocalNostrSigner(otherKey),
+        );
+        return [
+          for (final event in transport.sent)
+            (await channel.open(event, others: {me}))?.toSession,
+        ];
+      }
+
+      test('a hello after its own goodbye does not bring it back', () async {
+        await deliver(CollabRoomCallSignalType.bye, 'gone', at: 1000);
+        await deliver(CollabRoomCallSignalType.hello, 'gone', at: 999);
+
+        expect(await repliedTo(), isEmpty);
+      });
+
+      test('an older session does not replace a newer one', () async {
+        await deliver(CollabRoomCallSignalType.hello, 'newer', at: 2000);
+        await deliver(CollabRoomCallSignalType.hello, 'older', at: 1000);
+
+        expect(await repliedTo(), ['newer']);
+      });
+
+      test('a later session still replaces an earlier one', () async {
+        await deliver(CollabRoomCallSignalType.hello, 'first', at: 1000);
+        await deliver(CollabRoomCallSignalType.hello, 'second', at: 2000);
+
+        expect(await repliedTo(), ['first', 'second']);
+      });
     });
   });
 }

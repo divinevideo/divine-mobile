@@ -231,6 +231,10 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   /// delivers the same message, and an answer applied twice fails.
   final _seen = <String>{};
 
+  /// The sessions that said goodbye, by sender. A session never comes back,
+  /// so a copy of its hello the relays hand over late is ignored.
+  final _endedSessions = <(String, String)>{};
+
   /// Signals are handled one after another, so two never set up the same
   /// connection at once.
   Future<void> _queue = Future.value();
@@ -420,7 +424,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       final signal = await _channel.open(event, others: _others);
       if (_stopped || signal == null || !signal.isFor(_me)) return;
       if (!_others.contains(signal.from)) return;
-      await _onSignal(signal);
+      await _onSignal(signal, sentAt: event.createdAt);
     });
   }
 
@@ -451,9 +455,28 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     });
   }
 
-  Future<void> _onSignal(CollabRoomCallSignal signal) async {
+  /// Handles [signal], sent at [sentAt] (Unix seconds, the sender's clock).
+  ///
+  /// Relays can hand over stored messages late and newest first — on a
+  /// reconnect, or from the look-back when the call starts — so a session's
+  /// hello can arrive after its goodbye, or after the hello of the session
+  /// that replaced it. Neither may take the place of the newer session.
+  Future<void> _onSignal(
+    CollabRoomCallSignal signal, {
+    required int sentAt,
+  }) async {
     if ((signal.toSession != null && signal.toSession != _session) ||
         (signal.type == .offer && !collabRoomCallOffers(signal.from, _me))) {
+      return;
+    }
+    final sessionKey = (signal.from, signal.session);
+    if (signal.type == .bye) _endedSessions.add(sessionKey);
+    if (_endedSessions.contains(sessionKey) && signal.type != .bye) return;
+    final known = _peers[signal.from];
+    if ((signal.type == .hello || signal.type == .offer) &&
+        known?.session != null &&
+        known!.session != signal.session &&
+        sentAt < known.sessionSince) {
       return;
     }
     Log.info(
@@ -477,7 +500,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       case CollabRoomCallSignalType.hello:
         if (peer.session != signal.session) {
           await _resetPeer(peer);
-          peer.session = signal.session;
+          peer
+            ..session = signal.session
+            ..sessionSince = sentAt;
         }
         if (collabRoomCallOffers(_me, peer.pubkey)) {
           if (peer.connection == null) await _offer(peer);
@@ -498,6 +523,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       case CollabRoomCallSignalType.offer:
         if (signal.toSession != _session) return;
         await _resetPeer(peer);
+        if (peer.session != signal.session) peer.sessionSince = sentAt;
         peer.session = signal.session;
         await _answer(peer, signal.sdp!);
       case CollabRoomCallSignalType.answer:
@@ -804,6 +830,9 @@ class _Peer {
 
   final String pubkey;
   String? session;
+
+  /// When [session] first spoke, in the peer's Unix seconds.
+  int sessionSince = 0;
   RTCPeerConnection? connection;
   RTCRtpSender? videoSender;
   MediaStream? stream;
