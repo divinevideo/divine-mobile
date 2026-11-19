@@ -551,6 +551,62 @@ void main() {
         handle.dispose();
       });
 
+      testWidgets('labels the owner long-press action with the options hint', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: _createTestVideos(pubkey: _ownPubkey),
+            ),
+          );
+
+          expect(
+            tester.getSemantics(_thumbnail(1)),
+            isSemantics(onLongPressHint: l10n.videoGridOptionsTitle),
+            reason:
+                'Without a hint, assistive tech announces that a long-press '
+                'exists but cannot say what it does.',
+          );
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets(
+        "does not advertise a long-press action on another user's video",
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final handle = tester.ensureSemantics();
+          try {
+            await tester.pumpWidget(
+              buildSubject(
+                userIdHex: _otherPubkey,
+                videos: _createTestVideos(pubkey: _otherPubkey),
+              ),
+            );
+
+            expect(
+              tester
+                  .getSemantics(_thumbnail(1))
+                  .getSemanticsData()
+                  .hasAction(SemanticsAction.longPress),
+              isFalse,
+              reason:
+                  'Advertising a long-press on a video the viewer does not '
+                  'own invites assistive-tech users to perform an action that '
+                  'silently does nothing.',
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
+
       testWidgets(
         "long-pressing a tile on another user's profile shows no actions",
         (tester) async {
