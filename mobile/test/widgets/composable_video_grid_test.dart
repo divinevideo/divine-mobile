@@ -1615,34 +1615,32 @@ void main() {
         },
       );
 
-      testWidgets(
-        'advertises no long-press action on an owned video in selection mode',
-        (tester) async {
-          final handle = tester.ensureSemantics();
-          try {
-            final video = videoBy(_ownPubkey);
-            await pumpGridFor(
-              tester,
-              video: video,
-              nostrClientPubkey: _ownPubkey,
-              authServicePubkey: _ownPubkey,
-              selectedVideoIds: {video.id},
-            );
-
-            expect(
-              tileNode(
+      for (final selected in [true, false]) {
+        testWidgets(
+          'advertises no long-press action in selection mode when an owned '
+          'video is ${selected ? 'selected' : 'unselected'}',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            try {
+              final video = videoBy(_ownPubkey);
+              await pumpGridFor(
                 tester,
-              ).getSemanticsData().hasAction(SemanticsAction.longPress),
-              isFalse,
-              reason:
-                  'In selection mode a tap toggles the tile, so the owner '
-                  'menu would fight the selection gesture.',
-            );
-          } finally {
-            handle.dispose();
-          }
-        },
-      );
+                video: video,
+                nostrClientPubkey: _ownPubkey,
+                authServicePubkey: _ownPubkey,
+                selectedVideoIds: selected ? {video.id} : <String>{},
+              );
+
+              expect(
+                tileNode(tester),
+                isSemantics(isSelected: selected, hasLongPressAction: false),
+              );
+            } finally {
+              handle.dispose();
+            }
+          },
+        );
+      }
     });
 
     group('disposal', () {
