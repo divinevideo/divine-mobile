@@ -7,6 +7,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
@@ -83,6 +84,10 @@ class _ClipBatchJob extends _OutboxJob {
 /// each clip check, so every send goes through the instances current when it
 /// starts, even within one clip batch. Nothing is persisted: [dispose] cancels
 /// preparation and uploads; a publication already in flight keeps its result.
+///
+/// A send whose upload finished keeps that upload in memory until the entry is
+/// sent or dropped, so a retry after a failed publication publishes it again
+/// instead of uploading the video a second time.
 class VideoDmOutbox {
   /// Creates a [VideoDmOutbox].
   ///
@@ -158,6 +163,11 @@ class VideoDmOutbox {
   final Duration _signerReadinessTimeout;
   final Set<DmVideoSendCancellation> _attempts = {};
 
+  /// Finished uploads by entry id, kept while their entry may be retried.
+  /// Held here rather than on [OutgoingVideoDm] because each carries the
+  /// video's decryption key, which stays out of UI state.
+  final Map<String, DmVideoUpload> _uploads = {};
+
   DmVideoSendCancellation _newAttempt() {
     final attempt = DmVideoSendCancellation(
       uploadInactivityTimeout: _uploadInactivityTimeout,
@@ -217,6 +227,10 @@ class VideoDmOutbox {
         };
     });
   }
+
+  /// How many finished uploads are kept for a retry.
+  @visibleForTesting
+  int get keptUploadCount => _uploads.length;
 
   /// One event per finished request. Broadcast, with no replay.
   Stream<VideoDmSendOutcome> get outcomes => _outcomes.stream;
@@ -287,9 +301,10 @@ class VideoDmOutbox {
     _startWorker();
   }
 
-  /// Queues failed entry [id] again, at the back of the queue, to redo its
-  /// whole pipeline; a clip is checked again on its own first. Does nothing
-  /// unless the entry exists and [OutgoingVideoDm.canRetry].
+  /// Queues failed entry [id] again, at the back of the queue. When its upload
+  /// finished, only the publication is redone, with the same upload; otherwise
+  /// the whole pipeline is, and a clip is checked again on its own first. Does
+  /// nothing unless the entry exists and [OutgoingVideoDm.canRetry].
   void retry(String id) {
     if (_disposed) return;
     final entry = _entry(id);
@@ -337,6 +352,7 @@ class VideoDmOutbox {
     if (_disposed) return;
     _disposed = true;
     _queue.clear();
+    _uploads.clear();
     for (final attempt in _attempts) {
       attempt.cancel('outbox disposed');
     }
@@ -418,7 +434,13 @@ class VideoDmOutbox {
       }
     }
 
-    final missing = batch.firstWhereOrNull((e) => _clipPath(e) == null);
+    // A clip whose upload finished was checked before it was uploaded; it is
+    // neither read nor checked again.
+    final unchecked = [
+      for (final entry in batch)
+        if (!_uploads.containsKey(entry.id)) entry,
+    ];
+    final missing = unchecked.firstWhereOrNull((e) => _clipPath(e) == null);
     if (_accountChanged) {
       // The account switched away before the batch could start; sending now
       // would sign the outgoing account's clips with the incoming account's
@@ -457,9 +479,9 @@ class VideoDmOutbox {
 
     final checkingAttempt = _newAttempt();
     try {
-      final verifier = _clipVerifier?.call();
+      final verifier = unchecked.isEmpty ? null : _clipVerifier?.call();
       if (verifier != null) {
-        for (final entry in batch) {
+        for (final entry in unchecked) {
           _setPhase(entry.id, OutgoingVideoDmPhase.checking);
         }
         final OutgoingVideoDm? rejected;
@@ -472,7 +494,7 @@ class VideoDmOutbox {
           }
           checkingAttempt.throwIfCancelled();
           rejected = await checkingAttempt.waitFor(
-            _firstRejectedClip(verifier, batch, checkingAttempt),
+            _firstRejectedClip(verifier, unchecked, checkingAttempt),
           );
         } catch (error, stackTrace) {
           if (error is DmVideoSendCancelled) {
@@ -517,7 +539,7 @@ class VideoDmOutbox {
           );
           return;
         }
-        for (final entry in batch) {
+        for (final entry in unchecked) {
           _setPhase(entry.id, OutgoingVideoDmPhase.queued);
         }
       }
@@ -604,7 +626,8 @@ class VideoDmOutbox {
   }
 
   /// Runs [entry] through encrypt, upload and publish, and leaves it sent or
-  /// failed. Returns null when it was sent, otherwise why it failed.
+  /// failed. An entry with a kept upload skips straight to publishing it.
+  /// Returns null when it was sent, otherwise why it failed.
   Future<OutgoingVideoDmFailure?> _sendEntry(
     OutgoingVideoDm entry, {
     List<List<String>> extraTags = const [],
@@ -613,7 +636,8 @@ class VideoDmOutbox {
     attempt ??= _newAttempt();
     final currentAttempt = attempt;
     final id = entry.id;
-    _setPhase(id, OutgoingVideoDmPhase.encrypting);
+    final kept = _uploads[id];
+    if (kept == null) _setPhase(id, OutgoingVideoDmPhase.encrypting);
     try {
       if (_accountChanged) {
         // The account switched away while this job waited its turn (see
@@ -643,19 +667,22 @@ class VideoDmOutbox {
       }
 
       final service = _sendService();
-      final uploaded = await currentAttempt.waitFor(
-        service.uploadVideo(
-          videoFile: File(entry.localPath),
-          mimeType: videoDmMimeTypeFor(entry.localPath),
-          cancellation: currentAttempt,
-          onPhase: onPhase,
-          onUploadProgress: (fraction) {
-            if (!currentAttempt.isActive) return;
-            currentAttempt.uploadProgress(fraction);
-            _onUploadProgress(id, fraction);
-          },
-        ),
-      );
+      final uploaded =
+          kept ??
+          await currentAttempt.waitFor<DmVideoUpload>(
+            service.uploadVideo(
+              videoFile: File(entry.localPath),
+              mimeType: videoDmMimeTypeFor(entry.localPath),
+              cancellation: currentAttempt,
+              onPhase: onPhase,
+              onUploadProgress: (fraction) {
+                if (!currentAttempt.isActive) return;
+                currentAttempt.uploadProgress(fraction);
+                _onUploadProgress(id, fraction);
+              },
+            ),
+          );
+      if (!_disposed) _uploads[id] = uploaded;
       final result = await currentAttempt.waitFor(
         service.publishVideo(
           recipientPubkey: entry.recipientPubkey,
@@ -666,6 +693,7 @@ class VideoDmOutbox {
         ),
       );
       if (result case NIP17SendSuccess(:final rumorEventId)) {
+        _uploads.remove(id);
         _update(
           id,
           (e) => e.copyWith(
@@ -839,6 +867,7 @@ class VideoDmOutbox {
     if (!entries.any((entry) => entry.id == id && entry.phase == phase)) {
       return;
     }
+    _uploads.remove(id);
     _entries.add([
       for (final entry in entries)
         if (entry.id != id) entry,
