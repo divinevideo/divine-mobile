@@ -9488,6 +9488,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Прожектор';
 
   @override
+  String get videoEditorEffectDisco => 'Диско';
+
+  @override
+  String get videoEditorEffectLaser => 'Лазер';
+
+  @override
+  String get videoEditorEffectLightning => 'Мълния';
+
+  @override
   String get videoEditorEffectSnow => 'Сняг';
 
   @override

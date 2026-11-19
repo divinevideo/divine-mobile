@@ -60,7 +60,8 @@ class EditorOverlaySnapshot {
       customEffects.isEmpty &&
       blur == 0;
 
-  /// A copy without the flashing effects (see [isFlashingVideoEffect]).
+  /// A copy without the flashing effects (see [isFlashingVideoEffect] and
+  /// [isFlashingCustomVideoEffect]).
   EditorOverlaySnapshot withoutFlashingEffects() => EditorOverlaySnapshot(
     capturedLayers: capturedLayers,
     filterStates: filterStates,
@@ -69,7 +70,10 @@ class EditorOverlaySnapshot {
       for (final effect in effects)
         if (!isFlashingVideoEffect(effect.type)) effect,
     ],
-    customEffects: customEffects,
+    customEffects: [
+      for (final effect in customEffects)
+        if (!isFlashingCustomVideoEffect(effect.id)) effect,
+    ],
     blur: blur,
     bodySize: bodySize,
   );

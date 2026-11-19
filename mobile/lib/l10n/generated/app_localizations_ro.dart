@@ -9618,6 +9618,15 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Reflector';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Fulger';
+
+  @override
   String get videoEditorEffectSnow => 'Zăpadă';
 
   @override

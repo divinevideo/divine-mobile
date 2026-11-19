@@ -8959,6 +8959,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSpotlight => '스포트라이트';
 
   @override
+  String get videoEditorEffectDisco => '디스코';
+
+  @override
+  String get videoEditorEffectLaser => '레이저';
+
+  @override
+  String get videoEditorEffectLightning => '번개';
+
+  @override
   String get videoEditorEffectSnow => '눈';
 
   @override

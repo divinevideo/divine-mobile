@@ -9489,6 +9489,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Holofote';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Relâmpago';
+
+  @override
   String get videoEditorEffectSnow => 'Neve';
 
   @override

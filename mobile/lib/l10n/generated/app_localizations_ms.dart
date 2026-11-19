@@ -9405,6 +9405,15 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Lampu Sorot';
 
   @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Kilat';
+
+  @override
   String get videoEditorEffectSnow => 'Salji';
 
   @override

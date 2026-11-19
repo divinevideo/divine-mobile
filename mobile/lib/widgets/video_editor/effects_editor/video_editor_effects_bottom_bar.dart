@@ -172,6 +172,10 @@ const _particlesTileSeconds = 3.0;
 /// well inside the corner.
 const _prismTileSeconds = 6.0;
 
+/// The lightning tile: its first bolt at full brightness, with the picture
+/// half lit by the flash, as just after a strike.
+final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
+
 /// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
 ///
 /// Each shows the effect at full strength, except an intro or outro: its
@@ -179,8 +183,10 @@ const _prismTileSeconds = 6.0;
 /// covered at its look's starting structure. The fisheye's value is the
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
 /// vision shows its first noise pattern; the drops show the default settings at
-/// a moment where two of them flow into each other; the particles' last value
-/// is the style the native `ParticlesVideoEffect` draws; watercolour and oil
+/// a moment where two of them flow into each other; disco and laser show their
+/// first colours with the ball or the fan where it starts; lightning shows its
+/// first bolt (see [lightningBolt]) just after it strikes; the particles' last
+/// value is the style the native `ParticlesVideoEffect` draws; watercolour and oil
 /// paint share one shader, told apart by their last value. The looks share one
 /// shader, which reads the look's table from [lookTableAssets]; the ASCII
 /// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
@@ -211,6 +217,18 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   spotlightVideoEffectId => (
     asset: 'shaders/spotlight.frag',
     values: const [1.0, 0.0],
+  ),
+  discoVideoEffectId => (
+    asset: 'shaders/disco.frag',
+    values: const [1.0, 0.0, 1.0, 1.0],
+  ),
+  laserVideoEffectId => (
+    asset: 'shaders/laser.frag',
+    values: const [1.0, 0.0, 1.0, 1.0],
+  ),
+  lightningVideoEffectId => (
+    asset: 'shaders/lightning.frag',
+    values: _lightningTileValues,
   ),
   snowVideoEffectId => (
     asset: 'shaders/particles.frag',
@@ -634,6 +652,9 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     prismVideoEffectId => context.l10n.videoEditorEffectPrism,
     windowLightVideoEffectId => context.l10n.videoEditorEffectWindowLight,
     spotlightVideoEffectId => context.l10n.videoEditorEffectSpotlight,
+    discoVideoEffectId => context.l10n.videoEditorEffectDisco,
+    laserVideoEffectId => context.l10n.videoEditorEffectLaser,
+    lightningVideoEffectId => context.l10n.videoEditorEffectLightning,
     snowVideoEffectId => context.l10n.videoEditorEffectSnow,
     confettiVideoEffectId => context.l10n.videoEditorEffectConfetti,
     heartsVideoEffectId => context.l10n.videoEditorEffectHearts,

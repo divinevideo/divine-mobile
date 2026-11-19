@@ -9623,6 +9623,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Reflektor';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Błyskawica';
+
+  @override
   String get videoEditorEffectSnow => 'Śnieg';
 
   @override

@@ -6893,6 +6893,18 @@
   "@videoEditorEffectSpotlight": {
     "description": "Name of a video effect: the picture is dimmed and round stage spotlights wander slowly over it."
   },
+  "videoEditorEffectDisco": "Disco",
+  "@videoEditorEffectDisco": {
+    "description": "Name of a video effect: coloured spots from a mirror ball sweep over the slightly dimmed picture, changing colour."
+  },
+  "videoEditorEffectLaser": "Laser",
+  "@videoEditorEffectLaser": {
+    "description": "Name of a video effect: thin coloured laser beams fan out from the top of the picture and sweep across it."
+  },
+  "videoEditorEffectLightning": "Lightning",
+  "@videoEditorEffectLightning": {
+    "description": "Name of a video effect: the picture flashes blue-white with a lightning bolt, then fades back."
+  },
   "videoEditorEffectSnow": "Snow",
   "@videoEditorEffectSnow": {
     "description": "Name of a video effect: snowflakes fall over the picture."

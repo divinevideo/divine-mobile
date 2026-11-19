@@ -9318,6 +9318,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Spot Işık';
 
   @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Lazer';
+
+  @override
+  String get videoEditorEffectLightning => 'Şimşek';
+
+  @override
   String get videoEditorEffectSnow => 'Kar';
 
   @override

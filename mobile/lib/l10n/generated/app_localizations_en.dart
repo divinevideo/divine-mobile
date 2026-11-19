@@ -9495,6 +9495,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Spotlight';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Lightning';
+
+  @override
   String get videoEditorEffectSnow => 'Snow';
 
   @override

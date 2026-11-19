@@ -9187,6 +9187,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'ስፖትላይት';
 
   @override
+  String get videoEditorEffectDisco => 'ዲስኮ';
+
+  @override
+  String get videoEditorEffectLaser => 'ሌዘር';
+
+  @override
+  String get videoEditorEffectLightning => 'መብረቅ';
+
+  @override
   String get videoEditorEffectSnow => 'በረዶ';
 
   @override

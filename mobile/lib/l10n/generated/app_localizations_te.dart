@@ -9661,6 +9661,15 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'స్పాట్‌లైట్';
 
   @override
+  String get videoEditorEffectDisco => 'డిస్కో';
+
+  @override
+  String get videoEditorEffectLaser => 'లేజర్';
+
+  @override
+  String get videoEditorEffectLightning => 'మెరుపు';
+
+  @override
   String get videoEditorEffectSnow => 'మంచు';
 
   @override

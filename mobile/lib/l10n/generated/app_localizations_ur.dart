@@ -9401,6 +9401,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'اسپاٹ لائٹ';
 
   @override
+  String get videoEditorEffectDisco => 'ڈسکو';
+
+  @override
+  String get videoEditorEffectLaser => 'لیزر';
+
+  @override
+  String get videoEditorEffectLightning => 'بجلی';
+
+  @override
   String get videoEditorEffectSnow => 'برف';
 
   @override

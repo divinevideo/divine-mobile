@@ -172,6 +172,56 @@ void main() {
       );
 
       blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'previews picked lightning without the built-in flashing effects',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+            vignette,
+          ],
+        ),
+        act: (cubit) => cubit
+          ..startEditing()
+          ..selectType(EditorEffectType.lightning),
+        verify: (cubit) {
+          expect(cubit.state.previewEffects, const [vignette]);
+          expect(
+            [for (final e in cubit.state.previewCustomEffects) e.id],
+            [lightningVideoEffectId],
+          );
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'previews a picked strobe without committed lightning, and keeps '
+        'disco',
+        build: buildCubit,
+        seed: () => VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect.of(
+              id: 'lightning',
+              type: EditorEffectType.lightning,
+              intensity: 0.7,
+            ),
+            EditorVideoEffect.of(
+              id: 'disco',
+              type: EditorEffectType.disco,
+              intensity: 0.7,
+            ),
+          ],
+        ),
+        act: (cubit) => cubit
+          ..startEditing()
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe)),
+        verify: (cubit) {
+          expect(
+            [for (final e in cubit.state.previewCustomEffects) e.id],
+            [discoVideoEffectId],
+          );
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
         'cancel goes back to previewing the committed effects',
         build: buildCubit,
         seed: () => const VideoEditorEffectsState(applied: [vhs]),
