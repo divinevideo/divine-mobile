@@ -2326,6 +2326,32 @@ void main() {
           },
         );
 
+        test(
+          'drops an expired upload even when uploading again fails',
+          () async {
+            stubSends([unreadableInbox]);
+            outbox = createOutbox();
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            expect(outbox.keptUploadCount, equals(1));
+            clockNow = clockNow.add(videoDmKeptUploadMaxAge);
+            whenUploadVideo().thenAnswer(
+              (_) => Future.error(const DmVideoUploadFailed('server down')),
+            );
+
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            expect(
+              events.last.single.phase,
+              equals(OutgoingVideoDmPhase.failed),
+            );
+            // The expired upload, and its decryption key, are gone too.
+            expect(outbox.keptUploadCount, isZero);
+          },
+        );
+
         test('publishing a kept upload again does not renew its age', () async {
           stubSends([unreadableInbox, unreadableInbox, _success('rumor-c')]);
           outbox = createOutbox();
