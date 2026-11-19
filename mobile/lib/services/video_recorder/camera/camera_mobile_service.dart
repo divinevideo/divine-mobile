@@ -29,6 +29,7 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
   static Future<void> _cameraTransition = Future<void>.value();
   static Completer<void>? _captureTeardown;
 
+  Completer<void>? _retainedCapture;
   int _initializationRequest = 0;
   bool _isInitialized = false;
   CameraInitializationError? _initializationError;
@@ -47,6 +48,20 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
       },
     );
     return operation;
+  }
+
+  /// Protects a take before it starts on the shared native camera. A new
+  /// recorder can mount before Flutter disposes the outgoing recorder route.
+  void holdCaptureForRetention() {
+    if (!identical(_cameraOwner, this)) return;
+    _retainedCapture ??= Completer<void>();
+  }
+
+  /// Allows another recorder to open once the take has been retained.
+  void releaseRetainedCapture() {
+    final capture = _retainedCapture;
+    _retainedCapture = null;
+    capture?.complete();
   }
 
   /// Gives an outgoing recorder time to finish its take and release the
@@ -80,6 +95,9 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
       final outgoing = await _transition(() async {
         if (request != _initializationRequest) return null;
         if (_captureTeardown case final teardown?) return teardown;
+        if (_cameraOwner?._retainedCapture case final capture?) {
+          return identical(_cameraOwner, this) ? null : capture;
+        }
         _cameraOwner?._isInitialized = false;
         _cameraOwner = this;
         await _initializeCamera(
@@ -174,6 +192,7 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
     );
 
     _initializationRequest++;
+    releaseRetainedCapture();
     _isInitialized = false;
     onUpdateState();
     await _transition(() async {

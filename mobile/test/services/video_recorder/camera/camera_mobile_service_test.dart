@@ -138,6 +138,7 @@ void main() {
     });
 
     tearDown(() async {
+      await service.dispose();
       await DivineCamera.instance.dispose();
       DivineCameraPlatform.instance = initialPlatform;
     });
@@ -203,6 +204,58 @@ void main() {
 
         expect(replacement.isInitialized, isTrue);
         expect(DivineCamera.instance.isInitialized, isTrue);
+        await replacement.dispose();
+      });
+
+      test('replacement waits before outgoing teardown starts', () async {
+        platform
+          ..shouldFail = false
+          ..stopResult = const VideoRecordingResult(
+            filePath: '/clips/take.mp4',
+          );
+        await service.initialize();
+        service.holdCaptureForRetention();
+        expect(await DivineCamera.instance.startRecording(), isTrue);
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+        final initialized = replacement.initialize();
+        await pumpEventQueue();
+
+        expect(service.isInitialized, isTrue);
+        expect(replacement.isInitialized, isFalse);
+        await service.finishCaptureTeardown(() async {
+          final take = await service.stopRecording();
+          expect(take?.file?.path, '/clips/take.mp4');
+          service.releaseRetainedCapture();
+          await pumpEventQueue();
+          expect(replacement.isInitialized, isFalse);
+          await service.dispose();
+        });
+        await initialized;
+
+        expect(replacement.isInitialized, isTrue);
+        await replacement.dispose();
+      });
+
+      test('finishing a take releases a replacement camera', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+        service.holdCaptureForRetention();
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+        final initialized = replacement.initialize();
+        await pumpEventQueue();
+        expect(replacement.isInitialized, isFalse);
+
+        service.releaseRetainedCapture();
+        await initialized;
+
+        expect(replacement.isInitialized, isTrue);
+        await service.dispose();
         await replacement.dispose();
       });
 

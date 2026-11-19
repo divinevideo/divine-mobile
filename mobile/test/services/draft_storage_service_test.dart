@@ -62,7 +62,7 @@ class _GatedDocumentsPathProvider extends MockPathProviderPlatform {
 
 void main() {
   group('DraftStorageService', () {
-    const documentsPath = '/tmp/documents';
+    late String documentsPath;
     late AppDatabase database;
     late DraftStorageService service;
     late PathProviderPlatform originalPathProviderInstance;
@@ -104,6 +104,9 @@ void main() {
 
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+      documentsPath = Directory.systemTemp
+          .createTempSync('draft-storage-')
+          .path;
 
       originalPathProviderInstance = PathProviderPlatform.instance;
       final mockPlatform = MockPathProviderPlatform()

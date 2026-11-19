@@ -1030,7 +1030,11 @@ class VideoRecorderBloc
     // Stop-motion captures stills via VideoRecorderStopMotionFrameCaptured;
     // a video-record start here would be a no-op at best and corrupt the
     // session at worst.
-    if (_isClosing || state.recorderMode.capturesStills) return;
+    if (_isClosing ||
+        _pendingReactionStop != null ||
+        state.recorderMode.capturesStills) {
+      return;
+    }
 
     final clipManager = _readClipManager();
     final remainingDuration = clipManager.remainingDuration;
@@ -1156,12 +1160,15 @@ class VideoRecorderBloc
     await _prepareSoundForPlayback();
     if (_isClosing) return;
 
+    final camera = _reactionMobileCamera;
+    camera?.holdCaptureForRetention();
     final pendingStart = _pendingReactionStart = _reactionRecordingOwner == null
         ? null
         : Completer<void>();
     try {
       await _startNativeRecording(emit, clipManager, remainingDuration);
     } finally {
+      if (!state.hasRecordingInFlight) camera?.releaseRetainedCapture();
       pendingStart?.complete();
       _pendingReactionStart = null;
     }
@@ -1267,6 +1274,9 @@ class VideoRecorderBloc
       );
       addError(error, stackTrace);
     } finally {
+      if (!state.hasRecordingInFlight) {
+        _reactionMobileCamera?.releaseRetainedCapture();
+      }
       pendingReactionStop?.complete();
       _pendingReactionStop = null;
       event._teardown?.complete();
@@ -3090,6 +3100,12 @@ class VideoRecorderBloc
 
   // === Private helpers ===
 
+  CameraMobileService? get _reactionMobileCamera => switch (_cameraService) {
+    final CameraMobileService camera when _reactionRecordingOwner != null =>
+      camera,
+    _ => null,
+  };
+
   /// The camera's dual-camera capture, or null when it has none.
   DualCameraCapture? get _dualCamera => switch (_cameraService) {
     final DualCameraCapture dualCamera => dualCamera,
@@ -3426,9 +3442,8 @@ class VideoRecorderBloc
 
   @override
   Future<void> close() async {
-    await (_closeFuture ??= switch (_cameraService) {
-      final CameraMobileService camera when _reactionRecordingOwner != null =>
-        camera.finishCaptureTeardown(_closeRecorder),
+    await (_closeFuture ??= switch (_reactionMobileCamera) {
+      final camera? => camera.finishCaptureTeardown(_closeRecorder),
       _ => _closeRecorder(),
     });
     if (!isClosed) await super.close();
