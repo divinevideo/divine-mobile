@@ -190,13 +190,6 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
       bloc.add(TagsPickerTagsAdded([raw]));
       return;
     }
-    if (bloc.state.isAtTagLimit) {
-      // An empty return or a tag the video already has adds nothing, so it
-      // leaves any notice in place.
-      _previousText = '';
-      _searchController.clear();
-      return;
-    }
     bloc
       ..add(TagsPickerTagsAdded([raw]))
       ..add(const TagsPickerSearchCleared());
