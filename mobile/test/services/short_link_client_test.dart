@@ -31,6 +31,8 @@ void main() {
         'https://divine.video/video/a?q=1',
         'https://divine.video/l/Abc12345',
         'https://divine.video/profile/short',
+        // A verified username's profile URL stays readable.
+        'https://alice.divine.video',
         // Only a video link may name an author, only as lowercase hex.
         'https://divine.video/profile/${'a' * 64}?author=${'b' * 64}',
         'https://divine.video/video/a?author=${'B' * 64}',
