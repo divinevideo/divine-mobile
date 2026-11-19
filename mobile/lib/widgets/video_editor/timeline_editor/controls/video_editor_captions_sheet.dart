@@ -430,6 +430,7 @@ class _CaptionsModeControls extends StatelessWidget {
       context,
       selectedId: cubit.state.presetId,
       currentCustomStyle: cubit.state.customStyle,
+      previewCues: cubit.state.previewCues,
     );
     switch (selection) {
       case CaptionPresetSelection(:final presetId):
