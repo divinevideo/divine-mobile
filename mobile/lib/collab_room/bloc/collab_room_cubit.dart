@@ -226,7 +226,9 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     );
   }
 
-  Future<void> _publishLobby() async {
+  /// [flushing] is set by [close]: no timer can run afterwards, so a message
+  /// already on its way is waited for here instead.
+  Future<void> _publishLobby({bool flushing = false}) async {
     final room = state.room;
     if (isClosed ||
         room == null ||
@@ -243,8 +245,12 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     if (!seatsMoved && !layoutChanged) return;
     // A message already on its way would swallow this one: wait for it.
     if (state.actionStatus == .busy) {
-      _scheduleLobbyPublish();
-      return;
+      if (!flushing) {
+        _scheduleLobbyPublish();
+        return;
+      }
+      await stream.firstWhere((state) => state.actionStatus != .busy);
+      return _publishLobby(flushing: true);
     }
     await _publishNext(
       .update,
@@ -628,8 +634,13 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
 
   @override
   Future<void> close() async {
+    final lobbyPending = _lobbyPublishTimer?.isActive ?? false;
     _lobbyPublishTimer?.cancel();
     await _subscription.cancel();
+    // A swap or layout pick still waiting to batch would otherwise die with
+    // the screen: the others already saw it through the call, but the room
+    // would never record it. Send it before letting go.
+    if (lobbyPending) await _publishLobby(flushing: true);
     return super.close();
   }
 }

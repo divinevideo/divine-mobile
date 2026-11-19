@@ -434,6 +434,75 @@ void main() {
         },
       );
 
+      group('when the room screen closes', () {
+        CollabRoomCubit buildBatching() => CollabRoomCubit(
+          service: service,
+          roomId: _roomId,
+          // Longer than any test: only closing can send the swap.
+          lobbyPublishDelay: const Duration(minutes: 1),
+        );
+
+        test('sends a swap still waiting to be batched', () async {
+          final cubit = buildBatching();
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          cubit
+            ..seatTapped(0)
+            ..seatTapped(1);
+          expect(published, isEmpty);
+
+          await cubit.close();
+
+          expect(published.single.members, [
+            _member(_author, .joined, 1),
+            _member(_sam, .joined, 0),
+            _member(_kai, .invited),
+          ]);
+        });
+
+        test('sends it after the message already on its way', () async {
+          final first = Completer<void>();
+          addTearDown(() {
+            if (!first.isCompleted) first.complete();
+          });
+          var calls = 0;
+          when(() => service.publish(any(), any())).thenAnswer((
+            invocation,
+          ) async {
+            published.add(
+              invocation.positionalArguments[1] as CollabRoomSnapshot,
+            );
+            if (calls++ == 0) await first.future;
+          });
+          final cubit = buildBatching();
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          // A removal goes out at once; it stays in flight here.
+          unawaited(cubit.removeMember(_kai));
+          await pumpEventQueue();
+          expect(published, hasLength(1));
+          cubit
+            ..seatTapped(0)
+            ..seatTapped(1);
+
+          final closing = cubit.close();
+          await pumpEventQueue();
+          expect(published, hasLength(1));
+          first.complete();
+          await closing;
+
+          expect(published, hasLength(2));
+          expect(
+            published.last.revision,
+            greaterThan(published.first.revision),
+          );
+          expect(
+            published.last.members.where((m) => m.cell != null),
+            [_member(_author, .joined, 1), _member(_sam, .joined, 0)],
+          );
+        });
+      });
+
       blocTest<CollabRoomCubit, CollabRoomState>(
         'starts with a swap that is not published yet',
         build: build,
