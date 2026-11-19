@@ -1194,6 +1194,54 @@ void main() {
         expect(find.text(l10n.analyticsNa), findsWidgets);
       });
 
+      group('the ready card', () {
+        final video = analyticsVideo(id: 'video-id', views: 9);
+
+        Future<(Rect, Rect)> openPostAndCard(
+          WidgetTester tester, {
+          required bool running,
+        }) async {
+          await pumpView(
+            tester,
+            PostAnalyticsDetailState(
+              status: PostAnalyticsDetailStatus.ready,
+              performance: VideoPerformance.fromVideo(video),
+              counts: const PostCounts(views: 9),
+              coordinate: coordinate,
+              liveActivityRunning: running,
+            ),
+          );
+          final openPost = find.widgetWithText(
+            DivineButton,
+            l10n.analyticsOpenPost,
+          );
+          final cardColumn = find
+              .ancestor(of: openPost, matching: find.byType(Column))
+              .first;
+          return (tester.getRect(openPost), tester.getRect(cardColumn));
+        }
+
+        testWidgets('ends at Open post, with no gap, when Stop is hidden', (
+          tester,
+        ) async {
+          final (openPost, card) = await openPostAndCard(
+            tester,
+            running: false,
+          );
+
+          expect(openPost.bottom, equals(card.bottom));
+        });
+
+        testWidgets('puts a gap between Open post and Stop', (tester) async {
+          final (openPost, _) = await openPostAndCard(tester, running: true);
+          final stop = tester.getRect(
+            find.widgetWithText(DivineButton, l10n.analyticsStopLiveActivity),
+          );
+
+          expect(stop.top - openPost.bottom, equals(10));
+        });
+      });
+
       testWidgets('Stop only while the Lock Screen activity runs', (
         tester,
       ) async {

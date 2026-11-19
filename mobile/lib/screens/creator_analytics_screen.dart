@@ -1233,8 +1233,12 @@ class _ViewPostButton extends StatelessWidget {
 }
 
 /// Ends the post's Lock Screen Live Activity; shown only while it runs.
+///
+/// [topGap] is the space above the button, left out with it when hidden.
 class _StopLiveActivityButton extends StatelessWidget {
-  const _StopLiveActivityButton();
+  const _StopLiveActivityButton({this.topGap = 0});
+
+  final double topGap;
 
   @override
   Widget build(BuildContext context) {
@@ -1242,11 +1246,14 @@ class _StopLiveActivityButton extends StatelessWidget {
       (PostAnalyticsDetailCubit cubit) => cubit.state.liveActivityRunning,
     );
     if (!running) return const SizedBox.shrink();
-    return DivineButton(
-      label: context.l10n.analyticsStopLiveActivity,
-      type: DivineButtonType.secondary,
-      expanded: true,
-      onPressed: context.read<PostAnalyticsDetailCubit>().stop,
+    return Padding(
+      padding: EdgeInsets.only(top: topGap),
+      child: DivineButton(
+        label: context.l10n.analyticsStopLiveActivity,
+        type: DivineButtonType.secondary,
+        expanded: true,
+        onPressed: context.read<PostAnalyticsDetailCubit>().stop,
+      ),
     );
   }
 }
@@ -1371,8 +1378,7 @@ class _PostAnalyticsDetailReady extends StatelessWidget {
                               category: LogCategory.ui,
                             ),
                     ),
-                    const SizedBox(height: 10),
-                    const _StopLiveActivityButton(),
+                    const _StopLiveActivityButton(topGap: 10),
                   ],
                 ),
               ),
