@@ -780,7 +780,7 @@ void main() {
         verifyNever(() => repository.loadSettings());
       });
 
-      testWidgets('crosspost waits for the just-published source', (
+      testWidgets('crosspost retries the source after the picker closes', (
         tester,
       ) async {
         var attempts = 0;
@@ -810,14 +810,17 @@ void main() {
         await tester.tap(find.text(_l10nEn.crosspostSubmit));
         await tester.pumpAndSettle();
         await tester.tap(find.text(_l10nEn.crosspostSubmit));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
+        expect(find.text(_l10nEn.crosspostStarted), findsOneWidget);
+        expect(find.text(_l10nEn.crosspostSheetTitle), findsNothing);
         expect(find.text(_l10nEn.crosspostErrorNetwork), findsNothing);
         expect(attempts, 1);
         await tester.pump(const Duration(seconds: 2));
         await tester.pumpAndSettle();
 
-        expect(find.text(_l10nEn.crosspostStatusPosted), findsOneWidget);
+        expect(find.text(_l10nEn.crosspostSheetTitle), findsNothing);
+        expect(find.text(_l10nEn.crosspostErrorNetwork), findsNothing);
         expect(attempts, 2);
       });
 
