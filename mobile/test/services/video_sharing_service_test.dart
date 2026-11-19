@@ -861,6 +861,12 @@ void main() {
         httpClient.close();
       },
     );
+    test('external shares keep the full URL without a shortener', () async {
+      const canonical =
+          'https://divine.video/video/synthetic-video?author=$_testPubkey';
+
+      expect(await service.shortenExternalUrl(canonical), canonical);
+    });
     test('generateShareUrl uses stableId and names the author', () {
       final now = DateTime.now();
       final video = VideoEvent(
