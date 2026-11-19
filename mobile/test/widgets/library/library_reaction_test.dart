@@ -30,6 +30,7 @@ import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_s
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
+import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
@@ -207,26 +208,28 @@ void main() {
       bool reducedMotion = false,
       bool pushed = false,
     }) async {
-      final libraryView = Scaffold(
-        body: Consumer(
-          builder: (context, ref, _) => TextButton(
-            onPressed: () async => recordLibraryReaction(
-              context,
-              ref,
-              _clip('source'),
-              recordWithCamera: record,
-              showLayout: layout,
-              mergeTakes: merge,
-              extractThumbnail: (path) async =>
-                  (path: '$path.jpg', timestamp: Duration.zero),
-              cleanupAbandoned: (paths) async => abandoned.addAll(paths),
-              openEditor: (_, session) async {
-                deferredWhenEditorOpened = [...editor.deferredPaths];
-                events.add('open editor');
-                await onOpenEditor?.call(session);
-              },
+      final libraryView = LibraryReactionProgressHost(
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) => TextButton(
+              onPressed: () async => recordLibraryReaction(
+                context,
+                ref,
+                _clip('source'),
+                recordWithCamera: record,
+                showLayout: layout,
+                mergeTakes: merge,
+                extractThumbnail: (path) async =>
+                    (path: '$path.jpg', timestamp: Duration.zero),
+                cleanupAbandoned: (paths) async => abandoned.addAll(paths),
+                openEditor: (_, session) async {
+                  deferredWhenEditorOpened = [...editor.deferredPaths];
+                  events.add('open editor');
+                  await onOpenEditor?.call(session);
+                },
+              ),
+              child: const Text('react'),
             ),
-            child: const Text('react'),
           ),
         ),
       );
@@ -631,6 +634,46 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets('pending preparation leaves a newly pushed route interactive', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      manager.extractionGate = gate;
+      await start(
+        tester,
+        record: null,
+        reducedMotion: true,
+        observer: _CameraReplyObserver((_, navigator) {
+          manager.insertClip(0, _clip('captured'));
+          navigator.pop(true);
+        }),
+        layout: (_, _, _, _) async =>
+            fail('a covered reaction must not open Layout'),
+      );
+      final context = tester.element(find.text('react'));
+      expect(find.text(context.l10n.libraryPreparingVideo), findsOneWidget);
+      var tapped = false;
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => tapped = true,
+                child: const Text('new route action'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('new route action'), warnIfMissed: false);
+      final tappedWhilePreparing = tapped;
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(tappedWhilePreparing, isTrue);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets(
       'preparation failure clears progress and reports the failed take',

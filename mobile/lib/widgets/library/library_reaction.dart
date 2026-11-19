@@ -26,6 +26,7 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:unified_logger/unified_logger.dart' show Log, LogCategory;
 
 /// Concatenates all cuts accepted from the reaction camera, in capture order.
@@ -152,8 +153,9 @@ Future<void> recordLibraryReaction(
       GoRouter.maybeOf(progressContext)?.go(VideoFeedPage.pathForIndex(0));
     }
 
-    final overlay = OverlayEntry(
-      builder: (_) => BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
+    final hideProgress = LibraryReactionProgressHost.show(
+      progressContext,
+      BlocBuilder<LibraryReactionCubit, LibraryReactionState>(
         bloc: reaction,
         builder: (context, state) => state.isBusy
             ? _ReactionProgress(
@@ -170,14 +172,12 @@ Future<void> recordLibraryReaction(
             : const SizedBox.shrink(),
       ),
     );
-    Overlay.of(progressContext, rootOverlay: true).insert(overlay);
     StreamSubscription<Object?>? routeExit;
     var dismissed = false;
     void dismiss() {
       if (dismissed) return;
       dismissed = true;
-      overlay.remove();
-      overlay.dispose();
+      hideProgress?.call();
       final cancellation = routeExit?.cancel();
       if (cancellation != null) {
         runDetached(
@@ -365,7 +365,11 @@ Future<void> recordLibraryReaction(
       captureContext,
       () => reaction.combine(takes),
     );
-    if (!captureContext.mounted || !isActive()) return null;
+    if (!captureContext.mounted ||
+        !isActive() ||
+        ModalRoute.of(captureContext)?.isCurrent == false) {
+      return null;
+    }
     if (merged == null) {
       ScaffoldMessenger.of(captureContext).showSnackBar(
         DivineSnackbarContainer.snackBar(
@@ -466,7 +470,7 @@ class _ReactionProgress extends StatelessWidget {
   final VoidCallback onBack;
 
   @override
-  Widget build(BuildContext context) => Positioned.fill(
+  Widget build(BuildContext context) => SizedBox.expand(
     child: BlockSemantics(
       child: Stack(
         fit: StackFit.expand,

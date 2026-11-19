@@ -35,6 +35,7 @@ import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
+import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -294,6 +295,7 @@ class LibraryScreen extends ConsumerWidget {
           aspectRatio: aspectRatio,
           child: view,
         ),
+        null when !selectionMode => LibraryReactionProgressHost(child: view),
         null => view,
       },
     );
