@@ -1253,6 +1253,14 @@ void main() {
 
         expect(starting.isActionRailExpanded, isFalse);
       });
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'a late options tap cannot reopen the rail while a take starts',
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(isStartingRecording: true),
+        act: (bloc) => bloc.add(const VideoRecorderActionRailToggled()),
+        expect: () => <VideoRecorderBlocState>[],
+      );
     });
 
     group('VideoRecorderShowLastClipOverlayToggled', () {

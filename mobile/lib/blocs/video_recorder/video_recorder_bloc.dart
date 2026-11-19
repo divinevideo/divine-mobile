@@ -2421,6 +2421,7 @@ class VideoRecorderBloc
     VideoRecorderActionRailToggled event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    if (state.hasRecordingInFlight || state.isIntervalCaptureRunning) return;
     emit(state.copyWith(isActionRailExpanded: !state.isActionRailExpanded));
   }
 
