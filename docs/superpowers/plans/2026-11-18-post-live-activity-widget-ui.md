@@ -62,14 +62,14 @@ The `%@` takes SwiftUI's self-updating relative date text. Plural accessibility 
 - Produces:
   - `enum PostActivityPhase: String, Codable, Hashable { case posting, live, notFound, summary }`
   - `struct PostActivityContentState: Codable, Hashable`, a top-level type with no availability guard so tests and display logic don't need one, with `phase: PostActivityPhase`, `views: Int?`, `likes: Int?`, `comments: Int?`, `updatedAt: Date` and `showFirstRunNote: Bool`
-  - `@available(iOS 16.2, *) struct PostActivityAttributes: ActivityAttributes`, with `typealias ContentState = PostActivityContentState` and stored `ownerPubkey: String`, `postCoordinate: String`, `postEventId: String`, `thumbnailFileName: String?` and `postedAt: Date`
+  - `@available(iOS 16.2, *) struct PostActivityAttributes: ActivityAttributes`, with `typealias ContentState = PostActivityContentState` and stored `ownerPubkey: String`, `thumbnailFileName: String?` and `startedAt: Date`; the post's `postCoordinate` and `postEventId` are optional content-state fields, because the activity starts before the post has either
   - `enum PostActivityHeadline: Equatable { case posting, live, noViewsYet, cantFind, firstHour, noViewsFirstHour }`
   - `enum PostActivityMetric: CaseIterable { case views, likes, comments }`
   - `struct PostActivityCount: Equatable { let metric: PostActivityMetric; let value: Int }`
   - `struct PostActivityDisplay: Equatable`, with `headline`, `counts: [PostActivityCount]` (order views, likes, comments; only non-nil values), `showsFirstRunNote: Bool`, `showsUpdatedAt: Bool`, `compactCount: PostActivityCount?`, and `static func make(state: PostActivityContentState, isStale: Bool) -> PostActivityDisplay`
   - `enum PostActivityFormat { static func compact(_ value: Int, locale: Locale) -> String }`, using `value.formatted(.number.notation(.compactName).locale(locale))`
   - `enum PostActivityThumbnail { static let appGroup = "group.co.openvine.app"; static let directory = "LiveActivityThumbnails"; static func load(fileName: String?, containerURL: URL?) -> UIImage? }`, which reads `containerURL/LiveActivityThumbnails/<fileName>` and returns `nil` for a nil name or container, a missing file, or undecodable bytes. Part 2's bridge writes the file to that same path.
-  - `enum PostActivityLink { static func url(postEventId: String, postCoordinate: String) -> URL? }`, which returns `divine:///post-analytics/<postEventId>?coordinate=<percent-encoded coordinate>` (the handler arrives in part 2). The address rides along because an edited post's first event id no longer resolves
+  - `enum PostActivityLink { static func url(postEventId: String?, postCoordinate: String?) -> URL? }`, which returns nil unless both are non-empty and otherwise returns `divine:///post-analytics/<postEventId>?coordinate=<percent-encoded coordinate>` (the handler arrives in part 2). The address rides along because an edited post's first event id no longer resolves
 
 Mapping rules for `make` (the spec's state table):
 
@@ -136,11 +136,11 @@ Mapping rules for `make` (the spec's state table):
   - `@available(iOS 16.2, *) struct PostActivityLockScreenView: View`, init `(attributes: PostActivityAttributes, display: PostActivityDisplay, state: PostActivityContentState, thumbnail: UIImage?, bundle: Bundle)`
   - `PostActivityCompactLeadingView`, `PostActivityCompactTrailingView`, `PostActivityMinimalView` and `PostActivityExpandedBottomView`, taking the same inputs, each limited to what it needs
   - `enum PostActivityStrings { static let keys: [String]; static let pluralKeys: [String] }`, the single list of every key above
-  - `@available(iOS 16.2, *) struct PostLiveActivityWidget: Widget`, an `ActivityConfiguration(for: PostActivityAttributes.self)` that builds the display with `PostActivityDisplay.make(state: context.state, isStale: context.isStale)`, loads the thumbnail with `PostActivityThumbnail.load` from `FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:)`, sets `.widgetURL(PostActivityLink.url(postEventId:postCoordinate:))`, and passes `Bundle.main` as `bundle`
+  - `@available(iOS 16.2, *) struct PostLiveActivityWidget: Widget`, an `ActivityConfiguration(for: PostActivityAttributes.self)` that builds the display with `PostActivityDisplay.make(state: context.state, isStale: context.isStale)`, loads the thumbnail with `PostActivityThumbnail.load` from `FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:)`, sets `.widgetURL(PostActivityLink.url(postEventId:postCoordinate:))` from the content state (none while the post has no identity), and passes `Bundle.main` as `bundle`
   - `@main struct DivineWidgetBundle: WidgetBundle`, whose body is `CameraQuickActionWidget()` then `if #available(iOS 16.2, *) { PostLiveActivityWidget() }`
 
 Layout rules (the visual design itself is left to the builder, within these):
-- **Lock Screen:** thumbnail at left; headline on top, the counts row or note beneath, and relative "time since posting" via `Text(attributes.postedAt, style: .relative)`. When `showsUpdatedAt`, replace the time with the "Updated %@ ago" line, using `Text(state.updatedAt, style: .relative)`.
+- **Lock Screen:** thumbnail at left; headline on top, the counts row or note beneath, and relative "time since posting" via `Text(attributes.startedAt, style: .relative)`. When `showsUpdatedAt`, replace the time with the "Updated %@ ago" line, using `Text(state.updatedAt, style: .relative)`.
 - **Dynamic Island compact:** thumbnail leading; `compactCount` trailing, or nothing when it is nil. **Minimal:** thumbnail only. **Expanded:** thumbnail leading, headline centre, counts row bottom.
 - Counts render as SF Symbol and compact number pairs (`play.fill` for views, `heart.fill` for likes, `bubble.right.fill` for comments). Text uses `lineLimit(1)` and `minimumScaleFactor`.
 - Each presentation exposes **one combined VoiceOver label**: the headline, then the counts read with the plural keys. Icons are hidden from accessibility.

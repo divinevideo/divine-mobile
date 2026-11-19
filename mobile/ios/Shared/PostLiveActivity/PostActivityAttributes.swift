@@ -23,18 +23,23 @@ struct PostActivityContentState: Codable, Hashable {
     var comments: Int?
     var updatedAt: Date
     var showFirstRunNote: Bool
+    /// The post's address and first event id. The activity starts before the
+    /// post has either (the d tag is the uploaded file's hash), so they
+    /// arrive with a later update. Nil decodes from pushes that omit them.
+    var postCoordinate: String?
+    var postEventId: String?
 }
 
-/// The fixed part of a post's Live Activity: which post, whose, and when.
+/// The fixed part of a post's Live Activity: whose, and when it started.
 ///
-/// Identifiers are kept whole (full 64-character hex), never shortened.
+/// Which post it is lives in the content state, because the post has no
+/// identity when the activity starts. Identifiers are kept whole (full
+/// 64-character hex), never shortened.
 @available(iOS 16.2, *)
 struct PostActivityAttributes: ActivityAttributes {
     typealias ContentState = PostActivityContentState
 
     let ownerPubkey: String
-    let postCoordinate: String
-    let postEventId: String
     let thumbnailFileName: String?
-    let postedAt: Date
+    let startedAt: Date
 }

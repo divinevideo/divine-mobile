@@ -18,17 +18,17 @@ struct PostLiveActivityWidget: Widget {
             )
             .activityBackgroundTint(PostActivityColors.deepGreen)
             .activitySystemActionForegroundColor(.white)
-            .widgetURL(link(for: context.attributes))
+            .widgetURL(link(for: context.state))
         } dynamicIsland: { context in
             let display = PostActivityDisplay.make(state: context.state, isStale: context.isStale)
             let image = thumbnail(for: context.attributes)
-            let postedAt = context.attributes.postedAt
+            let startedAt = context.attributes.startedAt
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     PostActivityThumbnailView(image: image, size: 44, cornerRadius: 9)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    PostActivityHeadlineText(headline: display.headline, postedAt: postedAt, bundle: .main)
+                    PostActivityHeadlineText(headline: display.headline, startedAt: startedAt, bundle: .main)
                         .font(PostActivityFonts.headline)
                         .foregroundStyle(.white)
                         // The bottom region reads the whole activity, headline included.
@@ -37,7 +37,7 @@ struct PostLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     PostActivityExpandedBottomView(
                         display: display,
-                        postedAt: postedAt,
+                        startedAt: startedAt,
                         updatedAt: context.state.updatedAt,
                         bundle: .main
                     )
@@ -46,7 +46,7 @@ struct PostLiveActivityWidget: Widget {
                 PostActivityCompactLeadingView(
                     thumbnail: image,
                     display: display,
-                    postedAt: postedAt,
+                    startedAt: startedAt,
                     bundle: .main
                 )
             } compactTrailing: {
@@ -59,18 +59,18 @@ struct PostLiveActivityWidget: Widget {
                 PostActivityMinimalView(
                     thumbnail: image,
                     display: display,
-                    postedAt: postedAt,
+                    startedAt: startedAt,
                     bundle: .main
                 )
             }
-            .widgetURL(link(for: context.attributes))
+            .widgetURL(link(for: context.state))
         }
     }
 
-    private func link(for attributes: PostActivityAttributes) -> URL? {
+    private func link(for state: PostActivityContentState) -> URL? {
         PostActivityLink.url(
-            postEventId: attributes.postEventId,
-            postCoordinate: attributes.postCoordinate
+            postEventId: state.postEventId,
+            postCoordinate: state.postCoordinate
         )
     }
 

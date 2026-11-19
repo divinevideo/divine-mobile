@@ -131,7 +131,12 @@ enum PostActivityLink {
 
     /// Carries the post's address as well as its first event id: after an
     /// edit that id no longer resolves, and the address still does.
-    static func url(postEventId: String, postCoordinate: String) -> URL? {
+    ///
+    /// Nil until the post has both, so the widget sets no link before then.
+    static func url(postEventId: String?, postCoordinate: String?) -> URL? {
+        guard let postEventId, !postEventId.isEmpty,
+              let postCoordinate, !postCoordinate.isEmpty
+        else { return nil }
         var components = URLComponents()
         components.scheme = "divine"
         components.host = ""

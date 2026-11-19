@@ -61,7 +61,7 @@ struct PostActivityLockScreenView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     PostActivityHeadlineText(
                         headline: display.headline,
-                        postedAt: attributes.postedAt,
+                        startedAt: attributes.startedAt,
                         bundle: bundle
                     )
                     .font(PostActivityFonts.headline)
@@ -69,7 +69,7 @@ struct PostActivityLockScreenView: View {
                     PostActivityTimeText(
                         display: display,
                         state: state,
-                        postedAt: attributes.postedAt,
+                        startedAt: attributes.startedAt,
                         bundle: bundle
                     )
                     .font(PostActivityFonts.caption)
@@ -84,7 +84,7 @@ struct PostActivityLockScreenView: View {
         .accessibilityLabel(
             PostActivityAccessibility.label(
                 parts: display.spokenParts,
-                postedAt: attributes.postedAt,
+                startedAt: attributes.startedAt,
                 updatedAt: state.updatedAt,
                 bundle: bundle
             )
@@ -97,7 +97,7 @@ struct PostActivityLockScreenView: View {
 struct PostActivityCompactLeadingView: View {
     let thumbnail: UIImage?
     let display: PostActivityDisplay
-    let postedAt: Date
+    let startedAt: Date
     let bundle: Bundle
 
     var body: some View {
@@ -106,8 +106,8 @@ struct PostActivityCompactLeadingView: View {
             .accessibilityLabel(
                 PostActivityAccessibility.label(
                     parts: [.yourPost, .headline(display.headline)],
-                    postedAt: postedAt,
-                    updatedAt: postedAt,
+                    startedAt: startedAt,
+                    updatedAt: startedAt,
                     bundle: bundle
                 )
             )
@@ -132,7 +132,7 @@ struct PostActivityCompactTrailingView: View {
                 .accessibilityLabel(
                     PostActivityAccessibility.label(
                         parts: [.count(count)] + (display.showsUpdatedAt ? [.updated] : []),
-                        postedAt: updatedAt,
+                        startedAt: updatedAt,
                         updatedAt: updatedAt,
                         bundle: bundle
                     )
@@ -144,7 +144,7 @@ struct PostActivityCompactTrailingView: View {
 struct PostActivityMinimalView: View {
     let thumbnail: UIImage?
     let display: PostActivityDisplay
-    let postedAt: Date
+    let startedAt: Date
     let bundle: Bundle
 
     var body: some View {
@@ -153,8 +153,8 @@ struct PostActivityMinimalView: View {
             .accessibilityLabel(
                 PostActivityAccessibility.label(
                     parts: [.yourPost, .headline(display.headline)],
-                    postedAt: postedAt,
-                    updatedAt: postedAt,
+                    startedAt: startedAt,
+                    updatedAt: startedAt,
                     bundle: bundle
                 )
             )
@@ -166,7 +166,7 @@ struct PostActivityMinimalView: View {
 /// counts are never read as bare numbers.
 struct PostActivityExpandedBottomView: View {
     let display: PostActivityDisplay
-    let postedAt: Date
+    let startedAt: Date
     let updatedAt: Date
     let bundle: Bundle
 
@@ -187,7 +187,7 @@ struct PostActivityExpandedBottomView: View {
         .accessibilityLabel(
             PostActivityAccessibility.label(
                 parts: display.spokenParts,
-                postedAt: postedAt,
+                startedAt: startedAt,
                 updatedAt: updatedAt,
                 bundle: bundle
             )
@@ -199,13 +199,13 @@ struct PostActivityExpandedBottomView: View {
 
 struct PostActivityHeadlineText: View {
     let headline: PostActivityHeadline
-    let postedAt: Date
+    let startedAt: Date
     let bundle: Bundle
 
     var body: some View {
         // Two lines: the longest messages ("can't find stats", "no views yet
         // · live for …") are the ones that must not be cut off.
-        PostActivityAccessibility.headlineText(headline, postedAt: postedAt, bundle: bundle)
+        PostActivityAccessibility.headlineText(headline, startedAt: startedAt, bundle: bundle)
             .lineLimit(2)
             .minimumScaleFactor(0.85)
             .fixedSize(horizontal: false, vertical: true)
@@ -219,7 +219,7 @@ struct PostActivityHeadlineText: View {
 struct PostActivityTimeText: View {
     let display: PostActivityDisplay
     let state: PostActivityContentState
-    let postedAt: Date
+    let startedAt: Date
     let bundle: Bundle
 
     var body: some View {
@@ -228,7 +228,7 @@ struct PostActivityTimeText: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         } else if display.headline == .posting || display.headline == .live {
-            Text(postedAt, style: .relative)
+            Text(startedAt, style: .relative)
                 .lineLimit(1)
                 .monospacedDigit()
         }
@@ -314,14 +314,14 @@ extension PostActivityMetric {
 // MARK: - Accessibility and copy
 
 enum PostActivityAccessibility {
-    static func headlineText(_ headline: PostActivityHeadline, postedAt: Date, bundle: Bundle) -> Text {
+    static func headlineText(_ headline: PostActivityHeadline, startedAt: Date, bundle: Bundle) -> Text {
         switch headline {
         case .posting:
             return Text(LocalizedStringKey(PostActivityStrings.posting), bundle: bundle)
         case .live:
             return Text(LocalizedStringKey(PostActivityStrings.live), bundle: bundle)
         case .noViewsYet:
-            return Text("divine_post_activity_no_views_yet \(Text(postedAt, style: .relative))", bundle: bundle)
+            return Text("divine_post_activity_no_views_yet \(Text(startedAt, style: .relative))", bundle: bundle)
         case .cantFind:
             return Text(LocalizedStringKey(PostActivityStrings.cantFind), bundle: bundle)
         case .firstHour:
@@ -345,7 +345,7 @@ enum PostActivityAccessibility {
     /// Reads the given parts as one label, counts with their plural forms.
     static func label(
         parts: [PostActivitySpokenPart],
-        postedAt: Date,
+        startedAt: Date,
         updatedAt: Date,
         bundle: Bundle
     ) -> Text {
@@ -354,7 +354,7 @@ enum PostActivityAccessibility {
             case .yourPost:
                 return Text(LocalizedStringKey(PostActivityStrings.yourPost), bundle: bundle)
             case .headline(let headline):
-                return headlineText(headline, postedAt: postedAt, bundle: bundle)
+                return headlineText(headline, startedAt: startedAt, bundle: bundle)
             case .count(let count):
                 return countText(count, bundle: bundle)
             case .firstRunNote:

@@ -225,6 +225,44 @@ final class PostActivityDisplayTests: XCTestCase {
         XCTAssertEqual(decoded, coordinate)
     }
 
+    /// The activity starts before the post has an address or event id, so
+    /// there is nothing to open yet: no link beats a broken one.
+    func testLinkIsNilWhileThePostHasNoIdentity() {
+        let coordinate = "34236:\(String(repeating: "cd", count: 32)):my-post"
+        XCTAssertNil(PostActivityLink.url(postEventId: nil, postCoordinate: coordinate))
+        XCTAssertNil(PostActivityLink.url(postEventId: fullEventId, postCoordinate: nil))
+        XCTAssertNil(PostActivityLink.url(postEventId: nil, postCoordinate: nil))
+        XCTAssertNil(PostActivityLink.url(postEventId: "", postCoordinate: coordinate))
+        XCTAssertNil(PostActivityLink.url(postEventId: fullEventId, postCoordinate: ""))
+        XCTAssertNotNil(PostActivityLink.url(postEventId: fullEventId, postCoordinate: coordinate))
+    }
+
+    /// Pushes from before the identity moved here omit both keys.
+    func testContentStateDecodesWithoutPostIdentity() throws {
+        let json = """
+        {"phase":"live","views":3,"updatedAt":1800000000,"showFirstRunNote":false}
+        """
+        let decoded = try JSONDecoder().decode(
+            PostActivityContentState.self,
+            from: Data(json.utf8)
+        )
+        XCTAssertEqual(decoded.phase, .live)
+        XCTAssertEqual(decoded.views, 3)
+        XCTAssertNil(decoded.postCoordinate)
+        XCTAssertNil(decoded.postEventId)
+
+        let withIdentity = """
+        {"phase":"live","updatedAt":1800000000,"showFirstRunNote":false,
+         "postCoordinate":"34236:aa:p","postEventId":"bb"}
+        """
+        let full = try JSONDecoder().decode(
+            PostActivityContentState.self,
+            from: Data(withIdentity.utf8)
+        )
+        XCTAssertEqual(full.postCoordinate, "34236:aa:p")
+        XCTAssertEqual(full.postEventId, "bb")
+    }
+
     // MARK: - What VoiceOver reads
 
     func testSpokenPartsReadHeadlineThenEachKnownCountInOrder() {

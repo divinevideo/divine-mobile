@@ -17,10 +17,8 @@ final class PostActivityViewsTests: XCTestCase {
 
     private let attributes = PostActivityAttributes(
         ownerPubkey: String(repeating: "cd", count: 32),
-        postCoordinate: "34236:\(String(repeating: "cd", count: 32)):post",
-        postEventId: String(repeating: "ab", count: 32),
         thumbnailFileName: nil,
-        postedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        startedAt: Date(timeIntervalSince1970: 1_800_000_000)
     )
 
     private func state(
@@ -103,7 +101,7 @@ final class PostActivityViewsTests: XCTestCase {
     ) throws -> CGFloat {
         let view = PostActivityHeadlineText(
             headline: headline,
-            postedAt: Date(),
+            startedAt: Date(),
             bundle: widgetBundle
         )
         .font(.headline)
