@@ -1126,7 +1126,8 @@ class VideoEventPublisher {
   /// (#11250). Its caption tracks in [textTrackLang], and any that name no
   /// language, are replaced by one tag per ref ([textTrackRef] followed by
   /// each entry in [extraTextTrackRefs]) for read-time redundancy; tracks in
-  /// other languages and other kinds of track stay. Returns the updated
+  /// other languages and other kinds of track stay, unless they point at one
+  /// of those refs. Returns the updated
   /// video event after relay acceptance, or `null` if [existingEvent] is not
   /// the signed-in account's, the newest revision cannot be read, or
   /// publishing failed.
@@ -1155,9 +1156,11 @@ class VideoEventPublisher {
             logName: _logName,
           )
         : null;
+    final editedRefs = [textTrackRef, ...extraTextTrackRefs];
     final tags = [
       for (final tag in Nip89ClientTag.withoutClientTag(latest?.tags ?? []))
-        if (tag.isNotEmpty && !_isReplacedCaptionTrack(tag, textTrackLang))
+        if (tag.isNotEmpty &&
+            !_isReplacedTrack(tag, lang: textTrackLang, editedRefs: editedRefs))
           List<String>.from(tag),
     ];
 
@@ -1178,11 +1181,7 @@ class VideoEventPublisher {
     // Readers use the first text-track as the primary track. Keep the
     // edited captions ahead of retained translations and chapter tracks.
     final updatedTags = <List<String>>[];
-    addTextTrackTags(
-      updatedTags,
-      refs: [textTrackRef, ...extraTextTrackRefs],
-      lang: textTrackLang,
-    );
+    addTextTrackTags(updatedTags, refs: editedRefs, lang: textTrackLang);
     updatedTags.addAll(tags);
 
     // Sign the updated event
@@ -1225,15 +1224,21 @@ class VideoEventPublisher {
     return updatedVideo;
   }
 
-  /// Whether [tag] is a caption track a subtitle republish in [lang]
-  /// replaces: a captions or subtitles `text-track` in [lang], or one naming
-  /// no type or language.
-  static bool _isReplacedCaptionTrack(List<String> tag, String lang) {
+  /// Whether [tag] is a track a subtitle republish in [lang] replaces: a
+  /// captions or subtitles `text-track` in [lang], one naming no type or
+  /// language, or any `text-track` at one of [editedRefs]. One 39307 address
+  /// serves every language, so a kept track there would play this edit.
+  static bool _isReplacedTrack(
+    List<String> tag, {
+    required String lang,
+    required List<String> editedRefs,
+  }) {
     final type = tag.length > 3 ? tag[3] : '';
     final trackLang = tag.length > 4 ? tag[4].trim().toLowerCase() : '';
     return tag.first == 'text-track' &&
-        (type.isEmpty || type == 'captions' || type == 'subtitles') &&
-        (trackLang.isEmpty || trackLang == lang.trim().toLowerCase());
+        ((tag.length > 1 && editedRefs.contains(tag[1])) ||
+            ((type.isEmpty || type == 'captions' || type == 'subtitles') &&
+                (trackLang.isEmpty || trackLang == lang.trim().toLowerCase())));
   }
 
   /// Publishes a Kind 39307 subtitle event for [video] and returns its

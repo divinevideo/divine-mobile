@@ -766,6 +766,55 @@ void main() {
         );
       });
 
+      test('drops the subtitle address from a kept track in another '
+          'language', () async {
+        // One 39307 address serves every language, so after this edit it
+        // holds the English captions and no longer the Spanish ones.
+        final address = '39307:$testPubkey:subtitles:test-vine-id';
+        const spanishFile = [
+          'text-track',
+          'https://cdn.example.com/subs-es.vtt',
+          'wss://relay.divine.video',
+          'captions',
+          'es',
+        ];
+        final spanishAddress = [
+          'text-track',
+          address,
+          'wss://relay.divine.video',
+          'captions',
+          'es',
+        ];
+        relaysAnswer(
+          LatestVideoRevisionFound(
+            newest(extraTags: [spanishFile, spanishAddress]),
+          ),
+        );
+
+        await publisher.republishWithSubtitles(
+          existingEvent: existingEvent,
+          textTrackRef: textTrackRef,
+          extraTextTrackRefs: [address],
+        );
+
+        expect(_containsTag(capturedTags, spanishFile), isTrue);
+        expect(_containsTag(capturedTags, spanishAddress), isFalse);
+        expect(
+          capturedTags.where(
+            (tag) => tag.first == 'text-track' && tag[1] == address,
+          ),
+          [
+            [
+              'text-track',
+              address,
+              'wss://relay.divine.video',
+              'captions',
+              'en',
+            ],
+          ],
+        );
+      });
+
       test('keeps a chapters track in the edited language', () async {
         const chapters = [
           'text-track',
