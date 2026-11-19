@@ -13775,7 +13775,7 @@ class AppLocalizationsFil extends AppLocalizations {
       other:
           'Hanggang $max hashtag lang ang puwede mong idagdag. Mag-alis ng isa para magkaroon ng puwang.',
       one:
-          'Hanggang $max hashtag lang ang puwede mong idagdag. Alisin ito para magkaroon ng puwang.',
+          'Hanggang $max hashtag lang ang puwede mong idagdag. Mag-alis ng isa para magkaroon ng puwang.',
     );
     return '$_temp0';
   }

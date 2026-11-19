@@ -3413,7 +3413,7 @@
   "videoMetadataTagsPickerNoResults": "Walang tugmang tag",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hanggang {max} character lang ang hashtag.} other{Hanggang {max} character lang ang hashtag.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Hanggang {max} hashtag lang ang puwede mong idagdag.} other{Hanggang {max} hashtag lang ang puwede mong idagdag.}}",
-  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Hanggang {max} hashtag lang ang puwede mong idagdag. Alisin ito para magkaroon ng puwang.} other{Hanggang {max} hashtag lang ang puwede mong idagdag. Mag-alis ng isa para magkaroon ng puwang.}}",
+  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, one{Hanggang {max} hashtag lang ang puwede mong idagdag. Mag-alis ng isa para magkaroon ng puwang.} other{Hanggang {max} hashtag lang ang puwede mong idagdag. Mag-alis ng isa para magkaroon ng puwang.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} sa {max} character} other{{count} sa {max} character}}",
   "videoMetadataTagsPickerAddTag": "Idagdag ang \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
