@@ -156,13 +156,18 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                       : _railAnimationDuration,
                   curve: Curves.easeOutCubic,
                   alignment: .topRight,
-                  child: Padding(
+                  child: SingleChildScrollView(
+                    primary: false,
+                    hitTestBehavior: HitTestBehavior.deferToChild,
                     // Leaves room for the names' shadow, which the animation
                     // would clip otherwise.
                     padding: const .fromLTRB(16, 12, 0, 12),
                     child: Column(
                       mainAxisSize: .min,
                       crossAxisAlignment: .end,
+                      // The camera stack anchors the pill to the physical
+                      // right, including in right-to-left locales.
+                      textDirection: TextDirection.ltr,
                       spacing: 8,
                       children: [
                         _RailButton(
@@ -236,9 +241,11 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                             identifier: SemanticIds.cameraRailOptionsButton,
                             expanded: isExpanded,
                             iconTurns: isExpanded ? 0.5 : 0,
-                            onTap: () => context.read<VideoRecorderBloc>().add(
-                              const VideoRecorderActionRailToggled(),
-                            ),
+                            onTap: state.hasRecordingInFlight
+                                ? null
+                                : () => context.read<VideoRecorderBloc>().add(
+                                    const VideoRecorderActionRailToggled(),
+                                  ),
                           ),
                       ],
                     ),
@@ -510,6 +517,7 @@ class _RailButton extends StatelessWidget {
           onTap: onTap,
           child: Row(
             mainAxisSize: .min,
+            textDirection: TextDirection.ltr,
             spacing: 8,
             children: [
               if (caption != null)
@@ -551,7 +559,7 @@ class _RailCaption extends StatelessWidget {
           Opacity(opacity: opacity, child: child),
       child: Text(
         text,
-        textAlign: .end,
+        textAlign: .right,
         style: VineTheme.labelLargeFont(
           color: VineTheme.whiteText.withAlpha(alpha),
         ).copyWith(shadows: _railCaptionShadows),

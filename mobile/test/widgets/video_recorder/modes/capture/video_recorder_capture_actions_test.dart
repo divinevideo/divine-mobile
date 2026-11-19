@@ -70,6 +70,7 @@ void main() {
       // Unfolded by default: most groups below drive a control that only the
       // unfolded rail lists.
       bool isActionRailExpanded = true,
+      Locale locale = const Locale('en'),
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -107,10 +108,16 @@ void main() {
         ],
         child: BlocProvider<VideoRecorderBloc>.value(
           value: recorderBloc,
-          child: const MaterialApp(
+          child: MaterialApp(
+            locale: locale,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: VideoRecorderCaptureActions()),
+            home: const Scaffold(
+              body: Align(
+                alignment: Alignment.centerRight,
+                child: VideoRecorderCaptureActions(),
+              ),
+            ),
           ),
         ),
       );
@@ -156,6 +163,53 @@ void main() {
 
       double top(WidgetTester tester, Finder finder) =>
           tester.getCenter(finder).dy;
+
+      testWidgets('can reach the fold control on a short viewfinder', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(360, 320));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        await tester.ensureVisible(optionsButton());
+        await tester.pumpAndSettle();
+        await tester.tap(optionsButton());
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderActionRailToggled()),
+        ).called(1);
+      });
+
+      testWidgets('keeps the icons on the right of RTL captions', (
+        tester,
+      ) async {
+        const locale = Locale('ar');
+        final arabic = lookupAppLocalizations(locale);
+        await tester.pumpWidget(buildWidget(locale: locale));
+        await tester.pumpAndSettle();
+
+        final flash = findByTooltip(arabic.videoRecorderToggleFlashLabel);
+        final icon = find.descendant(
+          of: flash,
+          matching: find.byType(ShadowedDivineIcon),
+        );
+        expect(
+          tester.getCenter(icon).dx,
+          greaterThan(
+            tester.getCenter(find.text(arabic.videoRecorderRailFlashLabel)).dx,
+          ),
+        );
+        expect(
+          tester.getCenter(icon).dx,
+          tester
+              .getCenter(
+                findByTooltip(arabic.videoRecorderRailMoreOptionsLabel),
+              )
+              .dx,
+        );
+      });
 
       testWidgets(
         'folded, offers flash, lens and aspect ratio, then the options button',
