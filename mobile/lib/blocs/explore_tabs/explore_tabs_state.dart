@@ -59,17 +59,19 @@ class ExploreTabsState extends Equatable {
   final bool appsAvailable;
   final bool challengesAvailable;
 
-  /// Server-configured featured tab, or `null` when none should render.
+  /// Server-configured featured tab, or `null` when there is no feed to show.
   final FeaturedTabConfig? featuredTab;
 
-  /// Keeps the featured tab addressable while a campaign lookup resolves.
+  /// Keeps the featured tab in the bar for a campaign link, even when no feed
+  /// resolves, so its lookup status has a tab to render in.
   final bool reserveFeaturedSlot;
 
   /// Ordered tab names based on current availability.
   ///
   /// Canonical order: `classics?`, `new`, `popular`, `categories`,
-  /// `for_you?`, `lists`, `badges`, `apps?`, with the configured `featured?` tab
-  /// always between `new` and `popular`.
+  /// `for_you?`, `lists`, `badges`, `apps?`, `challenges?`, with `featured?`
+  /// between `new` and `popular` when a tab is configured or
+  /// [reserveFeaturedSlot] holds it.
   List<String> get tabNames {
     final names = [
       if (classicsAvailable) exploreClassicsTabName,

@@ -1,5 +1,5 @@
 // ABOUTME: State for FeaturedTabsCubit: the resolved featured tab, if any.
-// ABOUTME: Absence is the normal case — no placeholder, no error surface.
+// ABOUTME: Absence hides the tab; a campaign link shows its lookup status.
 
 part of 'featured_tabs_cubit.dart';
 
@@ -11,7 +11,8 @@ enum FeaturedTabsStatus {
   /// A fetch or verification check is in progress.
   loading,
 
-  /// Eligibility has resolved against a usable catalog.
+  /// [FeaturedTabsState.tab] is authoritative: a usable catalog decided it,
+  /// now or on an earlier refresh, or its window has ended.
   resolved,
 
   /// The catalog or verification could not be loaded.

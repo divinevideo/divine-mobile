@@ -1,11 +1,11 @@
 // ABOUTME: Fetches, caches, and gates the server-driven featured Explore tab.
-// ABOUTME: Owns TTL/staleness policy so the BLoC consumes a resolved answer.
+// ABOUTME: Owns TTL/staleness policy; reports when no catalog backs an answer.
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Resolved featured-tab answer for one refresh.
+/// Featured-tab answer for one refresh, with whether a catalog backs it.
 class FeaturedTabsSnapshot {
   /// Creates a snapshot carrying the renderable tab, if any.
   const FeaturedTabsSnapshot({
@@ -14,7 +14,8 @@ class FeaturedTabsSnapshot {
     this.pollInterval = FeaturedTabsResponse.defaultPollInterval,
   });
 
-  /// The single tab that should render, or `null` when none is eligible.
+  /// The single tab that should render, or `null` when none is eligible or
+  /// [hasResolvedCatalog] is false.
   final FeaturedTabConfig? tab;
 
   /// Whether this answer came from a successful fetch or a usable cache.
@@ -97,7 +98,8 @@ class FeaturedTabsRepository {
   /// Fetches and resolves the featured tab for the current viewer.
   ///
   /// Never throws: a failed fetch degrades to the cached config while it is
-  /// fresher than [cacheTtl]. Otherwise, the snapshot has no resolved catalog.
+  /// fresher than [cacheTtl], and otherwise returns a snapshot whose
+  /// [FeaturedTabsSnapshot.hasResolvedCatalog] is false.
   ///
   /// [gateAgeRestrictedContent] hides tabs whose dashboard configuration does
   /// not allow viewers under 18. The public config endpoint is shared-cacheable

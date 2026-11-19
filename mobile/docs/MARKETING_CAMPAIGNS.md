@@ -16,8 +16,13 @@ Announcement targets carry the announcement's catalog UUID. Featured-feed
 targets carry the Funnelcake featured-tab id (`ft_` followed by eight lowercase
 letters or digits).
 Announcements resolve through the trusted catalog. Featured feeds preserve the
-requested identity through repository selection and caching, and show an
-unavailable state when the feed is ineligible or withdrawn.
+requested identity through repository selection and caching. A campaign's
+featured tab shows an unavailable state when the feed is ineligible or
+withdrawn, and an error state when the catalog or the viewer's 18+ check cannot
+be loaded, retried on the next poll or foreground. Announcement details show
+unavailable only once the endpoint has answered without the announcement, or it
+expired while shown; a lookup the endpoint did not answer shows an error with a
+retry.
 Campaigns reuse normal video/profile navigation. Malformed or unsupported targets
 open the inbox. HTTPS push destinations remain unsupported. Validated
 announcement actions can open canonical store links or approved contest details.

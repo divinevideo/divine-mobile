@@ -1,5 +1,5 @@
 // ABOUTME: Full-screen official announcement, with plain selectable body text.
-// ABOUTME: Withdrawn or missing announcements render a safe unavailable state.
+// ABOUTME: Withdrawn announcements render unavailable; failed lookups retry.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,7 +9,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
 import 'package:openvine/router/route_paths.dart';
 
-/// Displays a current, validated catalog announcement.
+/// Displays a current, validated catalog announcement, or its lookup [status]
+/// while there is none.
 class AnnouncementDetailScreen extends StatelessWidget {
   const AnnouncementDetailScreen({
     this.announcement,
@@ -25,6 +26,8 @@ class AnnouncementDetailScreen extends StatelessWidget {
   static const path = '${RoutePaths.announcementDetailBase}/:id';
 
   final AnnouncementNotification? announcement;
+
+  /// Lookup state, shown only while [announcement] is null.
   final AnnouncementDetailStatus status;
   final Future<void> Function()? onRetry;
   final Future<void> Function(Uri url)? onLearnMore;

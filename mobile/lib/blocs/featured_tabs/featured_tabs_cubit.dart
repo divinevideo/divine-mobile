@@ -1,5 +1,6 @@
 // ABOUTME: Cubit polling the featured Explore tab configuration.
-// ABOUTME: Repository owns caching and gating; this owns cadence and lifecycle.
+// ABOUTME: Repository owns caching and eligibility; this owns cadence,
+// ABOUTME: expiry and lookup status.
 
 import 'dart:async';
 
@@ -13,10 +14,19 @@ import 'package:unified_logger/unified_logger.dart';
 part 'featured_tabs_state.dart';
 
 /// Eligibility to see featured content reserved for verified adults.
+///
+/// Every value but [adult] keeps that content hidden.
 enum FeaturedTabAudience {
+  /// Auth or 18+ verification is still being checked.
   loading,
+
+  /// The 18+ verification check failed.
   failed,
+
+  /// Signed out, or signed in without 18+ verification.
   unverified,
+
+  /// Signed in with 18+ verification.
   adult;
 
   bool get gatesAdultContent => this != adult;
@@ -25,9 +35,10 @@ enum FeaturedTabAudience {
 /// Keeps the featured Explore tab in sync with its server configuration.
 ///
 /// Polls at the server-supplied cadence and refetches on app foreground so a
-/// backend kill switch takes effect without an app update. Eligibility and
-/// cache staleness are the repository's job — this cubit only decides *when*
-/// to ask and republishes the answer.
+/// backend kill switch takes effect without an app update. The repository
+/// decides eligibility and staleness; this cubit decides when to ask, drops a
+/// held tab as soon as the audience or its window rules it out, and tells a
+/// failed lookup apart from a confirmed absence.
 class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   /// Creates the cubit over [repository].
   ///
@@ -62,14 +73,13 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
 
   /// Fetches the configuration and reschedules the poll timer.
   ///
-  /// Safe to call repeatedly; the UI calls it on mount and on app foreground.
-  ///
-  /// Three callers can overlap — the poll timer, the foreground listener, and
-  /// the minor-status listener — so a slower earlier request must not publish
-  /// after a faster later one. Without that ordering the kill switch is
-  /// defeatable: a request issued before the kill can land after the refresh
-  /// that resolved the tab away and put it back on screen until the next poll.
-  /// Only the newest generation may emit.
+  /// Safe to call repeatedly. Refreshes overlap — the poll and expiry timers
+  /// and the foreground and audience listeners — so a slower earlier request
+  /// must not publish after a faster later one. Without that ordering the kill
+  /// switch is defeatable: a request issued before the kill can land after the
+  /// refresh that resolved the tab away and put it back on screen until the
+  /// next poll. Only the newest generation, read for an unchanged audience,
+  /// publishes its result.
   Future<void> refresh() async {
     if (isClosed) return;
     final generation = ++_refreshGeneration;
@@ -128,6 +138,8 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
     final endsAt = tab?.endsAt;
     if (endsAt == null) return;
     final remaining = endsAt.difference(_now());
+    // Browser timers overflow for long windows; recheck daily, as announcement
+    // expiry does.
     const maximumDelay = Duration(days: 1);
     _expiryTimer = Timer(
       remaining > maximumDelay ? maximumDelay : remaining,

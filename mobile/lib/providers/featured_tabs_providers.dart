@@ -46,9 +46,11 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
   return service.isAdultContentVerified;
 });
 
-/// Whether featured tabs marked unavailable to under-18 viewers stay hidden.
+/// The viewer's audience for featured tabs reserved for verified adults.
 ///
-/// Loading and unverified states fail closed. Protected-minor accounts also
+/// Everything but [FeaturedTabAudience.adult] fails closed: a pending auth or
+/// verification check is `loading`, a failed check is `failed`, and a
+/// signed-out viewer is `unverified`. Protected-minor accounts also
 /// stay gated because [AgeVerificationService] prevents them from completing
 /// adult-content verification.
 final featuredTabAgeGateProvider = Provider<FeaturedTabAudience>((ref) {
@@ -60,6 +62,8 @@ final featuredTabAgeGateProvider = Provider<FeaturedTabAudience>((ref) {
   return ref
       .watch(featuredTabViewerIsAdultProvider)
       .when(
+        // Report loading while the next account's answer is pending; the
+        // default would keep showing the previous answer during the refresh.
         skipLoadingOnRefresh: false,
         data: (isAdult) => isAdult
             ? FeaturedTabAudience.adult
