@@ -151,6 +151,11 @@ void main() {
           ),
         );
         expect(find.text(l10n.collabRoomCallFailed), findsOneWidget);
+        // Announced, since nothing on screen moves when it happens.
+        expect(
+          tester.getSemantics(find.text(l10n.collabRoomCallFailed)),
+          isSemantics(label: l10n.collabRoomCallFailed, isLiveRegion: true),
+        );
       });
     });
 

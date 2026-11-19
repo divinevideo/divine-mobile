@@ -193,10 +193,15 @@ class CollabRoomCallControls extends StatelessWidget {
             ],
           ),
           if (notice != null)
-            Text(
-              notice,
-              textAlign: .center,
-              style: VineTheme.bodySmallFont(color: colors.secondaryText),
+            // Read out when it changes: a call that failed or a camera that
+            // would not turn on happens out of sight of a screen reader.
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                notice,
+                textAlign: .center,
+                style: VineTheme.bodySmallFont(color: colors.secondaryText),
+              ),
             ),
         ],
       ),
