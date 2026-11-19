@@ -39,8 +39,7 @@ class RemoteRecorderState {
   /// Whether a shutter press can act on the recorder's current state.
   final bool isShutterEnabled;
 
-  /// How often the shutter has fired for a still, such as a stop-motion
-  /// frame.
+  /// How many single-frame capture attempts have finished in stop-motion mode.
   ///
   /// A still leaves [isShutterActive] unchanged, so this count is what tells
   /// a remote that its press was handled.
