@@ -209,9 +209,24 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       );
       if (!_isActiveSession(sessionId)) return;
 
+      // An API page can include a video already returned by cache or relay
+      // search. Keep its position while taking the API's archive verdict.
+      final apiVideosById = {
+        for (final video in result.videos) video.id: video,
+      };
+      final hydratedVideos = currentVideos.map((video) {
+        final apiVideo = apiVideosById.remove(video.id);
+        if (apiVideo == null) return video;
+
+        return video.copyWith(
+          isVerifiedArchive: apiVideo.isVerifiedArchive,
+          isArchiveVerificationUnknown: apiVideo.isArchiveVerificationUnknown,
+          archiveAudioReuseEnabled: apiVideo.archiveAudioReuseEnabled,
+        );
+      }).toList();
       final merged = _videosRepository.deduplicateVideosPreservingOrder([
-        ...currentVideos,
-        ...result.videos,
+        ...hydratedVideos,
+        ...apiVideosById.values,
       ]);
       final newOffset = apiOffset + _pageSize;
 

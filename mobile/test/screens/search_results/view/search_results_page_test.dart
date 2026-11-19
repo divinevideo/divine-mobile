@@ -222,9 +222,11 @@ void main() {
         );
         when(
           () => mockVideosRepository.deduplicateVideosPreservingOrder(any()),
-        ).thenAnswer(
-          (call) => call.positionalArguments.single as List<VideoEvent>,
-        );
+        ).thenAnswer((call) {
+          final videos = call.positionalArguments.single as List<VideoEvent>;
+          final seen = <String>{};
+          return videos.where((video) => seen.add(video.feedDedupKey)).toList();
+        });
         await tester.pumpWidget(
           createTestWidget(
             flagOverrides: [
@@ -316,6 +318,52 @@ void main() {
         expect(find.byType(SearchVideoTile), findsNWidgets(2));
         expect(badgeFor(second), findsOneWidget);
         expect(cache.isOgViner(second.pubkey), isTrue);
+      });
+
+      testWidgets('hydrates a cached result found again on the next API page', (
+        tester,
+      ) async {
+        final first = archiveVideo('a', verified: true);
+        final cached = archiveVideo('b').copyWith(audioEventId: 'd' * 64);
+        final verified = archiveVideo('b', verified: true).copyWith(
+          addressableDTag: 'archived-clip',
+        );
+        final newResult = archiveVideo('c');
+        final nextPage =
+            Completer<
+              ({List<VideoEvent> videos, int totalCount, bool hasMore})
+            >();
+        final cache = await mountSearch(
+          tester,
+          [first, cached],
+          nextPage: nextPage.future,
+        );
+        expect(badgeFor(cached), findsNothing);
+
+        tester
+            .element(find.byType(SearchResultsView))
+            .read<VideoSearchBloc>()
+            .add(const VideoSearchLoadMore());
+        await tester.pump();
+        nextPage.complete((
+          videos: [newResult, verified],
+          totalCount: 3,
+          hasMore: false,
+        ));
+        await tester.pump();
+        await tester.pump();
+
+        final tiles = tester.widgetList<SearchVideoTile>(
+          find.byType(SearchVideoTile),
+        );
+        expect(tiles.map((tile) => tile.video.id), [
+          first.id,
+          cached.id,
+          newResult.id,
+        ]);
+        expect(tiles.elementAt(1).video.audioEventId, cached.audioEventId);
+        expect(badgeFor(cached), findsOneWidget);
+        expect(cache.isOgViner(cached.pubkey), isTrue);
       });
 
       testWidgets(
