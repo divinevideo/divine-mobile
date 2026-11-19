@@ -892,6 +892,80 @@ void main() {
         ).called(1);
       });
 
+      test('preserves separate imeta variants and their metadata', () async {
+        const hls = [
+          'imeta',
+          'url',
+          'https://cdn.example.com/video.m3u8',
+          'm',
+          'application/vnd.apple.mpegurl',
+          'dim',
+          '1080x1920',
+        ];
+        relaysHold(newerRevision(extraTags: const [hls]));
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened)
+              .copyWith(title: 'Edited title'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags.where((tag) => tag.first == 'imeta'), [
+          ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+          hls,
+        ]);
+      });
+
+      test('updates thumbnails without flattening media variants', () async {
+        const thumbnailUrl = 'https://cdn.example.com/new-thumbnail.jpg';
+        const hls = [
+          'imeta',
+          'url',
+          'https://cdn.example.com/video.m3u8',
+          'thumb',
+          'https://cdn.example.com/old-thumbnail.jpg',
+          'm',
+          'application/vnd.apple.mpegurl',
+        ];
+        relaysHold(newerRevision(extraTags: const [hls]));
+        when(
+          () => mockBlossomUploadService.uploadImage(
+            imageFile: any(named: 'imageFile'),
+            nostrPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const BlossomUploadResult(success: true, url: thumbnailUrl),
+        );
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened),
+          initialCollaboratorPubkeys: const {},
+          newThumbnailFile: File('new-thumbnail.jpg'),
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags.where((tag) => tag.first == 'imeta'), [
+          [
+            'imeta',
+            'url https://cdn.example.com/video.mp4',
+            'm video/mp4',
+            'image $thumbnailUrl',
+          ],
+          [
+            'imeta',
+            'url https://cdn.example.com/video.m3u8',
+            'm application/vnd.apple.mpegurl',
+            'image $thumbnailUrl',
+          ],
+        ]);
+      });
+
       test('keeps the subtitles and sound another device added', () async {
         relaysHold(
           newerRevision(
