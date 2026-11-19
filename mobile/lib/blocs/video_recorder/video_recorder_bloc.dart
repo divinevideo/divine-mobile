@@ -483,7 +483,9 @@ class VideoRecorderBloc
   ///
   /// The recorder counts as closed while it has no live preview to trigger:
   /// before the camera is up, on the Upload tab, while a sheet pauses remote
-  /// recording, and once navigation has locked recording.
+  /// recording, and once navigation has locked recording. It also counts as
+  /// closed while a sound is selected, because remote presses are ignored
+  /// then and the Watch should not show a shutter that does nothing.
   void _syncRemoteRecorder(VideoRecorderBlocState recorder) {
     final publish = _publishRemoteRecorderState;
     if (publish == null) return;
@@ -493,6 +495,7 @@ class VideoRecorderBloc
         _remotePreviewReady &&
         recorder.isCameraInitialized &&
         !recorder.isRemoteRecordPaused &&
+        !_remoteRecordPausedForSound &&
         !recorder.recordingLockedForNavigation &&
         recorder.recorderMode != VideoRecorderMode.upload;
     RemoteRecorderState? remote;

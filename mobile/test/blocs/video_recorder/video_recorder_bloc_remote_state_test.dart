@@ -8,6 +8,7 @@ import 'package:divine_camera/divine_camera.dart' show RemoteRecorderState;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
@@ -46,12 +47,14 @@ void main() {
     late _MockCameraService camera;
     late _MockClipManager clipManager;
     late List<RemoteRecorderState?> published;
+    late VideoEditorProviderState editorState;
     late WakelockPlusPlatformInterface previousWakelock;
 
     setUp(() {
       camera = _MockCameraService();
       clipManager = _MockClipManager();
       published = [];
+      editorState = VideoEditorProviderState();
       previousWakelock = wakelockPlusPlatformInstance;
       wakelockPlusPlatformInstance = _FakeWakelockPlatform();
       when(camera.dispose).thenAnswer((_) async {});
@@ -71,7 +74,7 @@ void main() {
     VideoRecorderBloc buildBloc() => VideoRecorderBloc(
       readClipManager: () => clipManager,
       readVideoEditor: _MockVideoEditor.new,
-      readVideoEditorState: VideoEditorProviderState.new,
+      readVideoEditorState: () => editorState,
       readSharedPreferences: _MockSharedPreferences.new,
       cameraService: camera,
       publishRemoteRecorderState: (state) async => published.add(state),
@@ -227,6 +230,30 @@ void main() {
         expect(published, [isNotNull, isNull, isNotNull]);
       },
     );
+
+    test('reports the recorder closed while a sound is selected', () async {
+      stubClips(total: Duration.zero);
+      final bloc = buildBloc()..emit(openRecorder);
+      addTearDown(bloc.close);
+      expect(published, [isNotNull]);
+
+      editorState = VideoEditorProviderState(
+        selectedSound: AudioEvent(
+          id: 'sound',
+          pubkey: 'a' * 64,
+          createdAt: 0,
+          url: 'https://example.com/audio.mp3',
+        ),
+      );
+      bloc.add(const VideoRecorderRemoteStateRefreshRequested());
+      await pumpEventQueue();
+      expect(published, [isNotNull, isNull]);
+
+      editorState = VideoEditorProviderState();
+      bloc.add(const VideoRecorderRemoteStateRefreshRequested());
+      await pumpEventQueue();
+      expect(published, [isNotNull, isNull, isNotNull]);
+    });
 
     test('reports the recorder closed once navigation locks recording', () {
       stubClips(total: Duration.zero);

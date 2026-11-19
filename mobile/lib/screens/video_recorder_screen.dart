@@ -775,6 +775,14 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         const VideoRecorderRemoteStateRefreshRequested(),
       ),
     );
+    // A selected sound turns the remote off, and it can change without the
+    // recorder bloc changing state.
+    ref.listen(
+      videoEditorProvider.select((editor) => editor.selectedSound != null),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
       // drives waveform extraction. The only consumer (capture's audio
