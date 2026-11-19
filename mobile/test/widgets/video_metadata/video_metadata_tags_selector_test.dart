@@ -496,7 +496,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
       });
 
-      group('pressing return', () {
+      group('committing a tag', () {
         final tenTags = {for (var i = 0; i < 10; i++) 'tag$i'};
 
         Finder field() => find.byType(TextField).last;
