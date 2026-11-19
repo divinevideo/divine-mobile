@@ -50,6 +50,7 @@ import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/add_yours_context_provider.dart';
@@ -792,6 +793,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   Future<List<DivineVideoClip>?> _pickLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) {
     return VineBottomSheet.show<List<DivineVideoClip>>(
@@ -805,6 +807,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         allowsMixedClipTypes: true,
         scrollController: scrollController,
         cropGuideAspectRatio: cellAspectRatio,
+        cropGuideShape: cellShape,
         maxSelectedClips: maxClips,
       ),
     );
@@ -820,6 +823,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   Future<List<DivineVideoClip>?> _recordLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) async {
     await leaveCollabRoomPartCall(ref);
@@ -833,6 +837,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           fromEditor: true,
           entryPoint: CreationEntryPoint.editor,
           cropGuideAspectRatio: cellAspectRatio,
+          cropGuideShape: cellShape,
         ),
       ),
     );

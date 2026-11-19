@@ -14,6 +14,7 @@ import 'package:openvine/features/creation_analytics/creation_analytics_tracker.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -259,6 +260,7 @@ Future<void> recordLibraryReaction(
   Future<List<DivineVideoClip>?> record(
     BuildContext cameraContext, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) async {
     if (!ownsReaction()) return null;
@@ -272,6 +274,7 @@ Future<void> recordLibraryReaction(
         fromEditor: true,
         entryPoint: CreationEntryPoint.library,
         cropGuideAspectRatio: cellAspectRatio,
+        cropGuideShape: cellShape,
         analyticsSession: analyticsSession,
       ),
     );
@@ -422,6 +425,7 @@ Future<void> recordLibraryReaction(
   Future<List<DivineVideoClip>?> pick(
     BuildContext layoutContext, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) => VineBottomSheet.show<List<DivineVideoClip>>(
     context: layoutContext,
@@ -434,6 +438,7 @@ Future<void> recordLibraryReaction(
       clipTypeFilter: LibraryClipTypeFilter.reactionCompatible,
       allowsMixedClipTypes: true,
       cropGuideAspectRatio: cellAspectRatio,
+      cropGuideShape: cellShape,
       maxSelectedClips: maxClips,
       scrollController: controller,
     ),
@@ -443,12 +448,14 @@ Future<void> recordLibraryReaction(
   Future<List<DivineVideoClip>?> recordCell(
     BuildContext captureContext, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) async {
     if (!ownsReaction()) return null;
     final takes = await capture(
       captureContext,
       cellAspectRatio: cellAspectRatio,
+      cellShape: cellShape,
       maxClips: maxClips,
     );
     if (!captureContext.mounted ||
@@ -486,6 +493,7 @@ Future<void> recordLibraryReaction(
     final takes = await recordCell(
       context,
       cellAspectRatio: source.targetAspectRatio.value / 2,
+      cellShape: SplitScreenCellShape.rectangle,
       maxClips: 1,
     );
     if (!context.mounted ||

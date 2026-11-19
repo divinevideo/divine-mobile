@@ -20,6 +20,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -92,6 +93,7 @@ class VideoRecorderRoute extends ConsumerWidget {
     this.challengeRecordingId,
     this.fromEditor = false,
     this.cropGuideAspectRatio,
+    this.cropGuideShape = SplitScreenCellShape.rectangle,
     this.analyticsSession,
     this.collabRoomId,
   });
@@ -104,6 +106,9 @@ class VideoRecorderRoute extends ConsumerWidget {
   /// Uses the return-to-caller controls for a library reaction capture.
   final bool fromEditor;
   final double? cropGuideAspectRatio;
+
+  /// The shape inside [cropGuideAspectRatio] the take is cut to.
+  final SplitScreenCellShape cropGuideShape;
   final CreationAnalyticsSession? analyticsSession;
 
   /// The collaborative room whose part this recorder films, or `null`.
@@ -136,7 +141,11 @@ class VideoRecorderRoute extends ConsumerWidget {
         child: view,
       );
     } else if (cropGuideAspectRatio case final ratio?) {
-      view = ClipCropGuide(aspectRatio: ratio, child: view);
+      view = ClipCropGuide(
+        aspectRatio: ratio,
+        shape: cropGuideShape,
+        child: view,
+      );
     }
     Widget recorder = _VideoRecorderBlocScope(
       analyticsSession: analyticsSession,
@@ -199,6 +208,7 @@ class VideoRecorderScreen extends ConsumerWidget {
     this.fromEditor = false,
     this.entryPoint = CreationEntryPoint.direct,
     this.cropGuideAspectRatio,
+    this.cropGuideShape = SplitScreenCellShape.rectangle,
   });
 
   /// Whether the screen is opened from the video editor.
@@ -213,6 +223,10 @@ class VideoRecorderScreen extends ConsumerWidget {
   /// split-screen cell's, when the editor records straight into one. `null`
   /// shows the whole frame.
   final double? cropGuideAspectRatio;
+
+  /// The shape inside [cropGuideAspectRatio] the take is cut to, such as the
+  /// circle of a round window.
+  final SplitScreenCellShape cropGuideShape;
 
   /// Route name for this screen.
   static const routeName = 'video-recorder';
@@ -265,6 +279,7 @@ class VideoRecorderScreen extends ConsumerWidget {
       child: switch (cropGuideAspectRatio) {
         final aspectRatio? => ClipCropGuide(
           aspectRatio: aspectRatio,
+          shape: cropGuideShape,
           child: view,
         ),
         null when collabPart => ClipCropGuide(
