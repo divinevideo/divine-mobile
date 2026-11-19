@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -263,6 +265,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   /// Closed subscriptions in a row with nothing new heard in between.
   int _relayFailures = 0;
+
+  /// Peer connections opened so far.
+  int _connectionsMade = 0;
   MediaStream? _audio;
   MediaStream? _video;
   Future<void>? _openingAudio;
@@ -462,9 +467,31 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
         _releaseMedia(video),
         for (final pubkey in _peers.keys.toList()) _closePeer(pubkey),
       ]);
+      if (audio != null) await _handBackAndroidAudio();
     } finally {
       await _changes.close();
       if (hadSubscription) unawaited(_sayGoodbye());
+    }
+  }
+
+  /// On Android, flutter_webrtc puts the phone in call mode when it opens the
+  /// microphone, and leaves it only when the last peer connection is
+  /// disposed. A call that never connected anyone — nobody else joined —
+  /// would leave the phone in call mode, the camera's recording included. A
+  /// connection opened and disposed at once hands the audio back.
+  Future<void> _handBackAndroidAudio() async {
+    if (defaultTargetPlatform != TargetPlatform.android ||
+        _connectionsMade > 0) {
+      return;
+    }
+    try {
+      await _disposeConnection(await _createConnection(_iceServers));
+    } on Object catch (error) {
+      Log.warning(
+        'Could not hand the audio back after the call: $error',
+        name: _logName,
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -644,6 +671,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   Future<RTCPeerConnection> _connection(_Peer peer) async {
     final connection = await _createConnection(_iceServers);
+    _connectionsMade++;
     // Taken out of the call meanwhile, perhaps back already as a new peer:
     // a connection kept on the old one would never be closed.
     if (_stopped || !identical(_peers[peer.pubkey], peer)) {

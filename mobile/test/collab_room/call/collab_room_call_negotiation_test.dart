@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -279,6 +280,33 @@ void main() {
           isA<CollabRoomCallException>(),
         );
         expect(transport.subscriptions, 4);
+      });
+    });
+
+    group('on Android', () {
+      setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
+      tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      // flutter_webrtc only leaves call mode when the last peer connection
+      // is disposed.
+      test('hands the audio back after a call that connected nobody', () async {
+        await call.start();
+
+        await call.stop();
+
+        expect(connections, hasLength(1));
+        verify(connections.single.dispose).called(1);
+      });
+
+      test('needs nothing extra once a connection was made', () async {
+        await call.start();
+        final offered = nextOffer();
+        await hello();
+        await offered;
+
+        await call.stop();
+
+        expect(connections, hasLength(1));
       });
     });
   });
