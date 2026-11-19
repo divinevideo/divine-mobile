@@ -144,6 +144,10 @@ class PushNotificationService {
   static int _deviceTimeZoneOffsetMinutes() =>
       DateTime.now().timeZoneOffset.inMinutes;
 
+  /// Whether this session still publishes registrations; false once
+  /// [deactivateRegistration] ran for sign-out or an account switch.
+  bool get acceptsRegistration => _acceptsRegistration;
+
   /// Prevents future token registration publishes for this session.
   ///
   /// Teardown cleanup may still use the captured identity to deregister the

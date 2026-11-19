@@ -35,10 +35,11 @@ void main() {
     String? ownerPubkey,
     PushNotificationService? Function()? readPush,
     bool Function()? isActive,
+    Future<bool> Function()? readAuthorized,
   }) => LiveActivityAccountBinding(
     ownerPubkey: ownerPubkey ?? owner,
     readPushService: readPush ?? () => push,
-    readNotificationsAuthorized: () async => authorized,
+    readNotificationsAuthorized: readAuthorized ?? () async => authorized,
     isActiveAccount: isActive ?? () => active,
   );
 
@@ -55,6 +56,7 @@ void main() {
   setUp(() {
     registrar = PostLiveActivityRegistrar();
     push = _MockPushService();
+    when(() => push.acceptsRegistration).thenReturn(true);
     active = true;
     authorized = true;
   });
@@ -161,6 +163,46 @@ void main() {
         expect(
           await registrar.register(registration),
           LiveActivityRegistrarResult.skipped,
+        );
+      });
+
+      test('a terminal failure once sign-out stopped the push service is '
+          'skipped while the identity has not cleared yet', () async {
+        when(
+          () => push.registerLiveActivity(
+            any(),
+            any(),
+            notificationsAuthorized: any(named: 'notificationsAuthorized'),
+          ),
+        ).thenAnswer((_) async {
+          when(() => push.acceptsRegistration).thenReturn(false);
+          return PushRegistrationResult.terminalFailure;
+        });
+        registrar.attach(binding());
+
+        expect(
+          await registrar.register(registration),
+          LiveActivityRegistrarResult.skipped,
+        );
+      });
+
+      test('retries later when reading the notification permission '
+          'throws', () async {
+        stubResult(PushRegistrationResult.published);
+        registrar.attach(
+          binding(readAuthorized: () async => throw StateError('no plugin')),
+        );
+
+        expect(
+          await registrar.register(registration),
+          LiveActivityRegistrarResult.retryLater,
+        );
+        verifyNever(
+          () => push.registerLiveActivity(
+            any(),
+            any(),
+            notificationsAuthorized: any(named: 'notificationsAuthorized'),
+          ),
         );
       });
 

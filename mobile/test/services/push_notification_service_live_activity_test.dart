@@ -266,6 +266,26 @@ void main() {
     });
   });
 
+  group('acceptsRegistration', () {
+    test('turns false once registration is deactivated, and a live activity '
+        'registration then fails terminally', () async {
+      final service = buildService();
+      expect(service.acceptsRegistration, isTrue);
+
+      service.deactivateRegistration();
+
+      expect(service.acceptsRegistration, isFalse);
+      expect(
+        await service.registerLiveActivity(
+          testPubkey,
+          registration,
+          notificationsAuthorized: true,
+        ),
+        PushRegistrationResult.terminalFailure,
+      );
+    });
+  });
+
   group('notificationsAuthorizedFor', () {
     test('is true for authorized and provisional only, whatever else the platform adds', () {
       expect(

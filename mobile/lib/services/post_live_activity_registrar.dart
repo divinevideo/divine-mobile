@@ -70,7 +70,22 @@ class PostLiveActivityRegistrar implements LiveActivityRegistrar {
     final push = binding.readPushService();
     if (push == null) return LiveActivityRegistrarResult.retryLater;
 
-    final authorized = await binding.readNotificationsAuthorized();
+    final bool authorized;
+    try {
+      authorized = await binding.readNotificationsAuthorized();
+    } on Object catch (error, stack) {
+      // The permission read is the plugin's, not the push service's; a
+      // failure there is no reason to report the registration as failed.
+      Log.warning(
+        'Could not read the notification permission for a Live Activity '
+        'registration; retrying later',
+        name: _logName,
+        category: LogCategory.system,
+        error: error,
+        stackTrace: stack,
+      );
+      return LiveActivityRegistrarResult.retryLater;
+    }
     final result = await push.registerLiveActivity(
       owner,
       registration,
@@ -84,7 +99,11 @@ class PostLiveActivityRegistrar implements LiveActivityRegistrar {
       case PushRegistrationResult.uncertainFailure:
         return LiveActivityRegistrarResult.uncertain;
       case PushRegistrationResult.terminalFailure:
-        if (_latest(owner) != attached || !binding.isActiveAccount()) {
+        // Sign-out deactivates the push service before the identity clears,
+        // so a stopped service means the account is leaving, not a failure.
+        if (_latest(owner) != attached ||
+            !binding.isActiveAccount() ||
+            !push.acceptsRegistration) {
           return LiveActivityRegistrarResult.skipped;
         }
         Log.warning(
