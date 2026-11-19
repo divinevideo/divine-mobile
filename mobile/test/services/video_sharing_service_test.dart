@@ -828,7 +828,6 @@ void main() {
         );
         final shortener = ShortLinkClient(
           client: httpClient,
-          enabled: true,
         );
         service = VideoSharingService(
           authService: mockAuthService,

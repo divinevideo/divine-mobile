@@ -6,21 +6,17 @@ import 'package:http/http.dart' as http;
 import 'package:openvine/utils/short_link_url.dart';
 
 class ShortLinkClient {
-  ShortLinkClient({
-    required http.Client client,
-    this.enabled = false,
-  }) : _client = client;
+  ShortLinkClient({required http.Client client}) : _client = client;
 
   static const endpoint = 'https://gateway.divine.video/api/links';
   final http.Client _client;
-  final bool enabled;
   final _cache = <String, String>{};
   final _pending = <String, Future<String>>{};
   final _aborts = <Completer<void>>{};
   bool _closed = false;
 
   Future<String> shorten(String target) {
-    if (!enabled || _closed || !isShortLinkDestination(target)) {
+    if (_closed || !isShortLinkDestination(target)) {
       return Future.value(target);
     }
     final cached = _cache[target];

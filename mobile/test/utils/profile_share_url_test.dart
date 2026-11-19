@@ -1,4 +1,4 @@
-// ABOUTME: Verifies external profile sharing retains complete npub fallback under the creator gate.
+// ABOUTME: Verifies profile sharing shortens automatically and retains the complete fallback on failure.
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
@@ -18,8 +18,8 @@ void main() {
   final canonical =
       'https://divine.video/profile/${NostrKeyUtils.encodePubKey(pubkey)}';
   group('profile external sharing', () {
-    for (final enabled in [false, true]) {
-      testWidgets('complete profile URL with shortening enabled=$enabled', (
+    for (final succeeds in [false, true]) {
+      testWidgets('profile share shortens when available: $succeeds', (
         tester,
       ) async {
         final requests = <http.Request>[];
@@ -32,12 +32,11 @@ void main() {
               'code': 'Abc12345',
               'short_url': 'https://divine.video/l/Abc12345',
             }),
-            201,
+            succeeds ? 201 : 503,
           );
         });
         final client = ShortLinkClient(
           client: transport,
-          enabled: enabled,
         );
         addTearDown(client.close);
         addTearDown(transport.close);
@@ -46,9 +45,7 @@ void main() {
           ProviderScope(
             overrides: [
               profileReadRepositoryProvider.overrideWithValue(null),
-              shortLinkClientProvider.overrideWithValue(
-                enabled ? client : null,
-              ),
+              shortLinkClientProvider.overrideWithValue(client),
             ],
             child: Consumer(
               builder: (_, ref, _) {
@@ -64,9 +61,9 @@ void main() {
             pubkey: pubkey,
             profile: null,
           ),
-          enabled ? 'https://divine.video/l/Abc12345' : canonical,
+          succeeds ? 'https://divine.video/l/Abc12345' : canonical,
         );
-        expect(requests, hasLength(enabled ? 1 : 0));
+        expect(requests, hasLength(1));
       });
     }
   });

@@ -1,13 +1,11 @@
-// ABOUTME: Verifies build defaults, anonymous creation, disabled behavior and cache disposal.
+// ABOUTME: Verifies native sharing shortens without feature flags or login and disposes its cache.
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/short_link_provider.dart';
@@ -17,49 +15,15 @@ void main() {
   const shortened = 'https://divine.video/l/Abc12345';
 
   group('shortLinkClientProvider', () {
-    test('short-link sharing is enabled by default on native builds', () {
-      expect(
-        const BuildConfiguration(
-          isWeb: false,
-        ).getDefault(FeatureFlag.shortLinksSharing),
-        isTrue,
-      );
-    });
-
-    test('web builds retain canonical links by default', () {
-      expect(
-        const BuildConfiguration(
-          isWeb: true,
-        ).getDefault(FeatureFlag.shortLinksSharing),
-        isFalse,
-      );
-    });
-
-    test('disabled sharing does not construct auth or HTTP', () {
-      final container = ProviderContainer(
-        overrides: [
-          isFeatureEnabledProvider(FeatureFlag.shortLinksSharing)
-              .overrideWithValue(false),
-          authServiceProvider.overrideWith(
-            (ref) => throw StateError('auth must not be read'),
-          ),
-          instrumentedHttpClientFactoryProvider.overrideWith(
-            (ref) => throw StateError('HTTP must not be created'),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      expect(container.read(shortLinkClientProvider), isNull);
-    });
-
     test(
-      'creates short links without reading authentication providers',
+      'creates short links without feature flags or authentication',
       () async {
         var requests = 0;
         final container = ProviderContainer(
           overrides: [
-            isFeatureEnabledProvider(FeatureFlag.shortLinksSharing)
-                .overrideWithValue(true),
+            featureFlagServiceProvider.overrideWith(
+              (ref) => throw StateError('feature flags must not be read'),
+            ),
             authServiceProvider.overrideWith(
               (ref) => throw StateError('login must not be read'),
             ),

@@ -149,6 +149,10 @@ void main() {
       await tester.pumpWidget(buildSubject(isDeveloperMode: true));
       await initializeFeatureFlags(tester);
 
+      // Short links are normal sharing behavior, even for a device whose old
+      // developer toggle was off. They must not return as an experiment.
+      expect(find.text('Short Links'), findsNothing);
+
       expect(
         find.text(FeatureFlag.enhancedAnalytics.displayName),
         findsOneWidget,
