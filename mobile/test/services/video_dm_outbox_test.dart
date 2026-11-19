@@ -2093,10 +2093,42 @@ void main() {
           await pumpEventQueue();
           expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
           expect(outbox.keptUploadCount, isZero);
-
-          outbox.acknowledge(events.last.single.id);
-          expect(outbox.keptUploadCount, isZero);
         });
+
+        test(
+          'publishes the same upload again after the publication threw',
+          () async {
+            stubSends([_success('rumor-retried')]);
+            var publishes = 0;
+            whenPublishVideo().thenAnswer((invocation) async {
+              published.add((
+                invocation.namedArguments[#uploaded] as DmVideoUpload,
+                invocation.namedArguments[#extraTags] as List<List<String>>,
+              ));
+              if (++publishes == 1) {
+                throw const SocketException('relay socket closed');
+              }
+              return _success('rumor-retried');
+            });
+            outbox = createOutbox();
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            expect(
+              events.last.single.phase,
+              equals(OutgoingVideoDmPhase.failed),
+            );
+
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            verify(() => anyUploadVideoOn(service)).called(1);
+            expect(published, hasLength(2));
+            expect(published[1].$1, same(published[0].$1));
+            expect(published[1].$1, same(uploads.single));
+            expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+          },
+        );
 
         test('dispose drops every kept upload', () async {
           stubSends([unreadableInbox, unreadableInbox]);
