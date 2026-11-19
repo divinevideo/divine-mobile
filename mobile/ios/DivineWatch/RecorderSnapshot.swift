@@ -64,9 +64,15 @@ struct RecordingBudgetFill: Equatable {
   let overflow: Double
 
   init(elapsed: TimeInterval, budget: TimeInterval) {
-    guard budget > 0, elapsed > 0 else {
+    guard elapsed > 0 else {
       filled = 0
       overflow = 0
+      return
+    }
+    // With no shots left, every new still is past the budget.
+    guard budget > 0 else {
+      filled = 0
+      overflow = 1
       return
     }
     if elapsed <= budget {
