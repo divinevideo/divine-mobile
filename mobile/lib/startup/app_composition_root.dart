@@ -32,12 +32,15 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/providers/video_publish_provider.dart'
+    show willBeScheduled;
 import 'package:openvine/services/challenges/challenge_video_success_store.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
@@ -136,6 +139,13 @@ class AppCompositionRoot extends ConsumerWidget {
                 videoPublishServiceFactory: createPublishService,
                 draftStorageService: ref.read(draftStorageServiceProvider),
                 foregroundSession: ref.read(publishForegroundSessionProvider),
+                liveActivity: ref.read(postLiveActivityRepositoryProvider),
+                currentOwnerPubkey: () =>
+                    ref.read(authServiceProvider).currentPublicKeyHex,
+                isScheduledDraft: (draft) => willBeScheduled(
+                  draft,
+                  ref.read(scheduledPostsRepositoryProvider),
+                ),
                 challengeVideoSuccess: successfulVideos.record,
                 challengeDraftCleanup: successfulVideos.discardDrafts,
                 challengeHandoff: (draft, signedVideo) async {

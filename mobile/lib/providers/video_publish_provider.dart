@@ -43,6 +43,7 @@ import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
@@ -86,6 +87,24 @@ MentionResolutionService? createVideoPublishMentionResolutionService(
 ) {
   if (profileRepository == null) return null;
   return MentionResolutionService(profileRepository: profileRepository);
+}
+
+/// Whether publishing [draft] will hold it rather than post it now.
+///
+/// The hand-off is dispatched before its result is known, so the destination
+/// is decided here on the same rule the service applies: a time the relay
+/// would refuse as too close is posted immediately, and that post belongs on
+/// the profile like any other. Read from [repository] rather than restated,
+/// so the two cannot drift.
+bool willBeScheduled(
+  DivineVideoDraft draft,
+  ScheduledPostsRepository? repository,
+) {
+  final scheduledAt = draft.scheduledAt;
+  if (scheduledAt == null || repository == null) return false;
+  return scheduledAt.isAfter(
+    DateTime.now().add(repository.config.directPublishLead),
+  );
 }
 
 /// Manages video publish screen state including playback and position.
@@ -158,22 +177,6 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     } catch (_) {
       return true;
     }
-  }
-
-  /// Whether this publish will be held rather than posted now.
-  ///
-  /// The hand-off is dispatched before its result is known, so the
-  /// destination is decided here on the same rule the service applies: a
-  /// time the relay would refuse as too close is posted immediately, and
-  /// that post belongs on the profile like any other. Read from the
-  /// repository rather than restated, so the two cannot drift.
-  bool _willBeScheduled(DivineVideoDraft draft) {
-    final scheduledAt = draft.scheduledAt;
-    final repository = ref.read(scheduledPostsRepositoryProvider);
-    if (scheduledAt == null || repository == null) return false;
-    return scheduledAt.isAfter(
-      DateTime.now().add(repository.config.directPublishLead),
-    );
   }
 
   /// Creates the publish service with callbacks wired to this notifier.
@@ -676,7 +679,11 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       var didNavigate = false;
       final postPublishExperiment = ref.read(postPublishExperimentProvider);
 
-      if (context.mounted && _willBeScheduled(publishDraft)) {
+      if (context.mounted &&
+          willBeScheduled(
+            publishDraft,
+            ref.read(scheduledPostsRepositoryProvider),
+          )) {
         // The post is not live yet, so the profile has nothing to show; the
         // Scheduled section above the drafts is where it can be watched,
         // moved or withdrawn.

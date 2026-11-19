@@ -31,6 +31,7 @@ import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
@@ -854,6 +855,7 @@ VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
     ),
+    liveActivity: ref.watch(postLiveActivityRepositoryProvider),
   );
 }
 
