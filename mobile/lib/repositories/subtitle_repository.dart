@@ -126,7 +126,7 @@ class SubtitleRepository {
       throw SubtitleEditException('Newest revision of the video unavailable');
     }
 
-    final trackLang = lang ?? _editedTrackLanguage(video) ?? 'en';
+    final trackLang = lang ?? _editedTrackLanguage(video, newest.tags) ?? 'en';
     final vtt = SubtitleService.generateVtt(cues);
     final bytes = Uint8List.fromList(utf8.encode(vtt));
 
@@ -158,10 +158,15 @@ class SubtitleRepository {
     return updatedVideo;
   }
 
-  static String? _editedTrackLanguage(VideoEvent video) {
-    // The playback model exposes the base language for translation. Editing
-    // needs the full language of the selected reference to replace that track.
-    for (final tag in video.nostrEventTags) {
+  static String? _editedTrackLanguage(
+    VideoEvent video,
+    List<List<String>> newestTags,
+  ) {
+    // The playback model keeps only the base language, and a copy restored
+    // from a cache has no raw tags. Editing needs the full language of the
+    // selected reference to replace that track, so read it from the newest
+    // revision.
+    for (final tag in newestTags) {
       if (tag.length < 5 ||
           tag.first != 'text-track' ||
           tag[1] != video.textTrackRef) {
