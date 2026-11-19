@@ -7,6 +7,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 part 'featured_tabs_state.dart';
 
@@ -121,6 +123,7 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   }
 
   void _scheduleExpiry(FeaturedTabConfig? tab) {
+    if (requiredFeaturedFeedId == null) return;
     _expiryTimer?.cancel();
     final endsAt = tab?.endsAt;
     if (endsAt == null) return;
@@ -140,6 +143,12 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
             status: FeaturedTabsStatus.resolved,
             clearTab: true,
           ),
+        );
+        runDetached(
+          refresh(),
+          'refresh featured campaign at expiry',
+          logName: 'FeaturedTabsCubit',
+          category: LogCategory.ui,
         );
       },
     );

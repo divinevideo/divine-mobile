@@ -198,7 +198,7 @@ void main() {
       });
     });
 
-    test('clears a campaign at its configured end before the next poll', () {
+    test('clears and refreshes a campaign at its configured end', () {
       fakeAsync((async) {
         final start = DateTime.utc(2026, 11, 17, 12);
         final tab = FeaturedTabConfig(
@@ -215,7 +215,11 @@ void main() {
             gateAgeRestrictedContent: false,
             requiredFeaturedFeedId: tab.id,
           ),
-        ).thenAnswer((_) async => FeaturedTabsSnapshot(tab: tab));
+        ).thenAnswer(
+          (_) async => async.elapsed < const Duration(seconds: 1)
+              ? FeaturedTabsSnapshot(tab: tab)
+              : const FeaturedTabsSnapshot(),
+        );
         final cubit = FeaturedTabsCubit(
           repository: repository,
           audience: () => FeaturedTabAudience.adult,
@@ -230,6 +234,12 @@ void main() {
         async.elapse(const Duration(seconds: 1));
         expect(cubit.state.tab, isNull);
         expect(cubit.state.status, FeaturedTabsStatus.resolved);
+        verify(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).called(2);
 
         unawaited(cubit.close());
         async.flushMicrotasks();
