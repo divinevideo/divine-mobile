@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/config/screenshot_mode.dart';
@@ -326,6 +327,40 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   VideoRecorderMode? _lastRecorderMode;
   final Object _overlayVisibilityOwner = Object();
   bool _overlayVisibilityPageOpenAsserted = false;
+  bool? _reactionExitResult;
+
+  bool get _isLibraryReaction =>
+      widget.analyticsSession != null &&
+      widget.entryPoint == CreationEntryPoint.library;
+
+  bool _reactionTakeInFlight(VideoRecorderBlocState state) =>
+      _isLibraryReaction &&
+      (state.isRecording ||
+          state.isStartingRecording ||
+          state.isStoppingRecording);
+
+  void _onRecorderPop(bool didPop, Object? result) {
+    if (didPop) {
+      if (!widget.fromEditor) discardRecorderSession(ref);
+      return;
+    }
+    if (!_isLibraryReaction || _reactionExitResult != null) return;
+    final recorder = context.read<VideoRecorderBloc>();
+    if (!_reactionTakeInFlight(recorder.state)) return;
+    // The Library takes ownership when the camera route returns. Let native
+    // Stop hand over the file before returning, even if Back starts the stop.
+    _reactionExitResult = result == true;
+    if (!recorder.state.isStoppingRecording) {
+      recorder.addIfOpen(const VideoRecorderRecordingStopRequested());
+    }
+  }
+
+  void _leaveAfterReactionTake(BuildContext context, VideoRecorderBlocState _) {
+    final result = _reactionExitResult;
+    _reactionExitResult = null;
+    if (result == null || ModalRoute.of(context)?.isCurrent != true) return;
+    Navigator.of(context).pop(result);
+  }
 
   @override
   void initState() {
@@ -593,6 +628,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
 
   @override
   Widget build(BuildContext context) {
+    final reactionTakeInFlight =
+        _isLibraryReaction &&
+        context.select(
+          (VideoRecorderBloc bloc) => _reactionTakeInFlight(bloc.state),
+        );
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
       // drives waveform extraction. The only consumer (capture's audio
@@ -637,14 +677,17 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
             }
           }
         },
-        child: PopScope(
-          onPopInvokedWithResult: (didPop, value) {
-            if (didPop && !widget.fromEditor) {
-              discardRecorderSession(ref);
-            }
-          },
-          child: _ScreenFlashTheme(
-            child: _VideoRecorderScaffold(fromEditor: widget.fromEditor),
+        child: BlocListener<VideoRecorderBloc, VideoRecorderBlocState>(
+          listenWhen: (previous, current) =>
+              _reactionTakeInFlight(previous) &&
+              !_reactionTakeInFlight(current),
+          listener: _leaveAfterReactionTake,
+          child: PopScope<Object?>(
+            canPop: !reactionTakeInFlight,
+            onPopInvokedWithResult: _onRecorderPop,
+            child: _ScreenFlashTheme(
+              child: _VideoRecorderScaffold(fromEditor: widget.fromEditor),
+            ),
           ),
         ),
       ),

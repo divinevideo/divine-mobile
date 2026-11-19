@@ -23,6 +23,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -191,6 +192,7 @@ Widget buildNavigatorTestWidget({
   required bool fromEditor,
   required List<Override> overrides,
   ProviderContainer? container,
+  CreationAnalyticsSession? reactionSession,
 }) {
   final child = MaterialApp(
     localizationsDelegates: appLocalizationsDelegates,
@@ -200,8 +202,8 @@ Widget buildNavigatorTestWidget({
         body: Center(
           child: ElevatedButton(
             onPressed: () {
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
+              Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(
                   builder: (_) => MultiBlocProvider(
                     providers: [
                       BlocProvider<VideoRecorderBloc>.value(
@@ -211,7 +213,13 @@ Widget buildNavigatorTestWidget({
                         create: (_) => MockCameraPermissionBloc(),
                       ),
                     ],
-                    child: VideoRecorderView(fromEditor: fromEditor),
+                    child: VideoRecorderView(
+                      fromEditor: fromEditor,
+                      entryPoint: reactionSession == null
+                          ? CreationEntryPoint.direct
+                          : CreationEntryPoint.library,
+                      analyticsSession: reactionSession,
+                    ),
                   ),
                 ),
               );
@@ -797,6 +805,72 @@ void main() {
     });
 
     group('Screen Integration', () {
+      for (final alreadyStopping in [false, true]) {
+        testWidgets(
+          'reaction Back returns after native Stop (alreadyStopping=$alreadyStopping)',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final states = StreamController<VideoRecorderBlocState>();
+            addTearDown(states.close);
+            const ready = VideoRecorderBlocState(
+              isCameraInitialized: true,
+              canRecord: true,
+            );
+            when(() => recorderBloc.isClosed).thenReturn(false);
+            whenListen(recorderBloc, states.stream, initialState: ready);
+            await tester.pumpWidget(
+              buildNavigatorTestWidget(
+                fromEditor: true,
+                overrides: const [],
+                container: container,
+                reactionSession: CreationAnalyticsSession(),
+              ),
+            );
+            await tester.tap(find.text('Open recorder'));
+            await tester.pumpAndSettle();
+            states.add(
+              ready.copyWith(
+                recordingState: VideoRecorderState.recording,
+                isStoppingRecording: alreadyStopping,
+              ),
+            );
+            await tester.pump();
+
+            expect(recorderBloc.state.isRecording, isTrue);
+            await tester.pump();
+            final recorderContext = tester.element(
+              find.byType(VideoRecorderView),
+            );
+            final route = ModalRoute.of(recorderContext)!;
+            expect(route.isCurrent, isTrue);
+            expect(route.popDisposition, RoutePopDisposition.doNotPop);
+            expect(await Navigator.of(recorderContext).maybePop(), isTrue);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(find.byType(VideoRecorderView), findsOneWidget);
+            if (alreadyStopping) {
+              verifyNever(
+                () => recorderBloc.add(
+                  const VideoRecorderRecordingStopRequested(),
+                ),
+              );
+            } else {
+              verify(
+                () => recorderBloc.add(
+                  const VideoRecorderRecordingStopRequested(),
+                ),
+              ).called(1);
+            }
+            states.add(ready);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(VideoRecorderView), findsNothing);
+            expect(find.text('Open recorder'), findsOneWidget);
+          },
+        );
+      }
+
       testWidgets('can be popped from navigation stack', (tester) async {
         await tester.pumpWidget(buildTestWidget());
 
