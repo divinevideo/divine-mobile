@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:collection/collection.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show
@@ -11,20 +12,28 @@ import 'package:models/models.dart'
         VideoEvent,
         clipSourceCreditTagMarker,
         withSoundCreditLines;
+import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/video_event_tag_source.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart'
+    show
+        LatestVideoRevisionAbsent,
+        LatestVideoRevisionFound,
+        LatestVideoRevisionUnknown,
+        VideosRepository;
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
 sealed class VideoUpdateResult {
@@ -66,8 +75,9 @@ class _VideoUpdateException implements Exception {
   String toString() => 'VideoUpdateException(${reason.name}): $message';
 }
 
-/// The original event could not be loaded with the raw tags required for a
-/// lossless addressable-event replacement.
+/// The relays could not say what the newest revision of the video is: one
+/// did not answer in full, or none holds it. Replacing it now could delete a
+/// newer revision, so nothing was published.
 class VideoUpdateOriginalUnavailable extends VideoUpdateResult {
   const VideoUpdateOriginalUnavailable();
 }
@@ -92,8 +102,9 @@ const _editRebuiltTagNames = {
 /// Every other tag on the original event — audio-attribution `e` tags,
 /// engagement counts, expiration, client, relay hints, ProofMode/C2PA
 /// provenance, reply threading, subtitle text-tracks, … — is preserved
-/// unchanged so a metadata edit does not drop data it does not own. Publishing
-/// is refused unless the raw tags are available (see [_sourceOriginalTags]).
+/// unchanged so a metadata edit does not drop data it does not own. The tags
+/// come from the newest revision on the relays, so a tag another device added
+/// after the editor opened survives too.
 ///
 /// [isVideoReply] gates the inspired-by a-tag: the edit flow only rebuilds
 /// that tag for non-reply videos (see the rebuild block in `updateVideo`),
@@ -245,12 +256,14 @@ class VideoMetadataUpdateService {
     required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
+    required VideosRepository videosRepository,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
        _blossomService = blossomService,
        _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
+       _videosRepository = videosRepository,
        _collaboratorInviteService = collaboratorInviteService;
 
   final AuthService _authService;
@@ -258,9 +271,17 @@ class VideoMetadataUpdateService {
   final SignedEventRelayPublisher _relayPublisher;
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
+  final VideosRepository _videosRepository;
   final CollaboratorInviteService _collaboratorInviteService;
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
+  ///
+  /// The replacement is built from the newest revision the relays hold, not
+  /// from [originalVideo], which is the one the editor opened: another device
+  /// may have replaced it since. A field this edit left as [originalVideo]
+  /// seeded it takes the newest revision's value. When the relays cannot say
+  /// what is newest, nothing is published and the result is
+  /// [VideoUpdateOriginalUnavailable] (#11250).
   ///
   /// If [newThumbnailFile] is non-null, it is uploaded to Blossom before
   /// the event is signed; on upload failure the original thumbnail URL is
@@ -282,16 +303,28 @@ class VideoMetadataUpdateService {
         );
       }
 
-      final originalTags = _sourceOriginalTags(originalVideo);
-      if (originalTags.isEmpty) {
-        return const VideoUpdateOriginalUnavailable();
-      }
+      final latest = await _latestRevision(originalVideo);
+      if (latest == null) return const VideoUpdateOriginalUnavailable();
+      final isOpenedRevision = latest.id == originalVideo.id;
+      final video = isOpenedRevision
+          ? originalVideo
+          : VideoEvent.fromNostrEvent(latest, permissive: true);
+      final edits = isOpenedRevision
+          ? editorState
+          : _rebaseEdits(
+              editorState,
+              opened: editorStateFromPublishedVideo(originalVideo),
+              latest: editorStateFromPublishedVideo(video),
+            );
+      // A republish is Divine's own publish: the signer stamps attribution
+      // from the current preference (#8176).
+      final originalTags = Nip89ClientTag.withoutClientTag(latest.tags);
 
       // A pubkey promoted from a plain mention to a collaborator in this
       // edit changes role: drop its stale 'mention' p-tag so it is not
       // double-listed alongside the rebuilt 'collaborator' p-tag.
       final collaboratorPubkeys = canonicalCollaboratorPubkeys(
-        identifiers: editorState.collaboratorPubkeys,
+        identifiers: edits.collaboratorPubkeys,
         creatorIdentifier: _authService.currentPublicKeyHex,
       );
       bool isPromotedMentionPTag(List<String> tag) {
@@ -305,7 +338,7 @@ class VideoMetadataUpdateService {
 
       // Preserve every tag the edit flow does not own; the owned ones are
       // rebuilt from the editor state below.
-      final isVideoReply = originalVideo.isVideoReply;
+      final isVideoReply = video.isVideoReply;
       final preservedTags = originalTags
           .where(
             (tag) =>
@@ -317,9 +350,12 @@ class VideoMetadataUpdateService {
       final tags = <List<String>>[];
 
       // Required 'd' tag — must match the original to replace the event.
-      tags.add(['d', originalVideo.stableId]);
+      tags.add(['d', video.stableId]);
 
-      final videoUrls = _extractVideoUrls(originalVideo);
+      final videoUrls = _extractVideoUrls(
+        originalTags,
+        fallbackUrl: video.videoUrl,
+      );
       if (videoUrls.isEmpty) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.noPlayableVideoUrl,
@@ -346,25 +382,25 @@ class VideoMetadataUpdateService {
             name: 'VideoMetadataUpdateService',
             category: LogCategory.video,
           );
-          if (originalVideo.thumbnailUrl != null) {
-            imetaComponents.add('image ${originalVideo.thumbnailUrl!}');
+          if (video.thumbnailUrl != null) {
+            imetaComponents.add('image ${video.thumbnailUrl!}');
           }
         }
-      } else if (originalVideo.thumbnailUrl != null) {
-        imetaComponents.add('image ${originalVideo.thumbnailUrl!}');
+      } else if (video.thumbnailUrl != null) {
+        imetaComponents.add('image ${video.thumbnailUrl!}');
       }
 
-      if (originalVideo.blurhash != null) {
-        imetaComponents.add('blurhash ${originalVideo.blurhash!}');
+      if (video.blurhash != null) {
+        imetaComponents.add('blurhash ${video.blurhash!}');
       }
-      if (originalVideo.dimensions != null) {
-        imetaComponents.add('dim ${originalVideo.dimensions!}');
+      if (video.dimensions != null) {
+        imetaComponents.add('dim ${video.dimensions!}');
       }
-      if (originalVideo.sha256 != null) {
-        imetaComponents.add('x ${originalVideo.sha256!}');
+      if (video.sha256 != null) {
+        imetaComponents.add('x ${video.sha256!}');
       }
-      if (originalVideo.fileSize != null) {
-        imetaComponents.add('size ${originalVideo.fileSize!}');
+      if (video.fileSize != null) {
+        imetaComponents.add('size ${video.fileSize!}');
       }
 
       if (imetaComponents.isNotEmpty) {
@@ -374,44 +410,44 @@ class VideoMetadataUpdateService {
       // Always written, even empty: the relay rejects a video event with no
       // `title` tag, and first publish writes `["title", ""]` for untitled
       // videos.
-      tags.add(['title', editorState.title.trim()]);
+      tags.add(['title', edits.title.trim()]);
 
       // Credited like the content, for clients that show the summary.
-      final summary = editorState.description.trim();
+      final summary = edits.description.trim();
       if (summary.isNotEmpty) {
         tags.add([
           'summary',
           withSoundCreditLines(
             summary,
-            originalVideo.soundCredits.map((credit) => credit.line),
+            video.soundCredits.map((credit) => credit.line),
           ),
         ]);
       }
 
       for (final hashtag in HashtagExtractor.normalizeVideoHashtags(
-        editorState.tags,
+        edits.tags,
       )) {
         tags.add(['t', hashtag]);
       }
 
       // Mirror the NIP-36 / NIP-32 tag group written at original publish.
-      if (editorState.contentWarnings.isNotEmpty) {
+      if (edits.contentWarnings.isNotEmpty) {
         tags
-          ..add(['content-warning', editorState.contentWarnings.first.value])
+          ..add(['content-warning', edits.contentWarnings.first.value])
           ..add(['L', 'content-warning']);
-        for (final label in editorState.contentWarnings) {
+        for (final label in edits.contentWarnings) {
           tags.add(['l', label.value, 'content-warning']);
         }
       }
 
-      if (originalVideo.publishedAt != null) {
-        tags.add(['published_at', originalVideo.publishedAt!]);
+      if (video.publishedAt != null) {
+        tags.add(['published_at', video.publishedAt!]);
       }
-      if (originalVideo.duration != null) {
-        tags.add(['duration', originalVideo.duration.toString()]);
+      if (video.duration != null) {
+        tags.add(['duration', video.duration.toString()]);
       }
-      if (originalVideo.altText != null) {
-        tags.add(['alt', originalVideo.altText!]);
+      if (video.altText != null) {
+        tags.add(['alt', video.altText!]);
       }
 
       tags.addAll(buildCollaboratorPTags(collaboratorPubkeys));
@@ -419,12 +455,11 @@ class VideoMetadataUpdateService {
       // The parser exposes an unmarked lowercase reply-root a-tag through
       // inspiredByVideo too. Do not turn that parent reference into creator
       // attribution when republishing a video reply.
-      if (editorState.inspiredByVideo case final inspiredBy?
-          when !isVideoReply) {
+      if (edits.inspiredByVideo case final inspiredBy? when !isVideoReply) {
         // Publish marks the a-tag 'mention', and an Add yours answer counts
         // as joining its chain only while it does, so an edit that keeps the
         // same video keeps that marker.
-        final keepsMention = originalVideo.nostrEventTags.any(
+        final keepsMention = originalTags.any(
           (tag) =>
               tag.length >= 4 &&
               tag[0] == 'a' &&
@@ -439,10 +474,10 @@ class VideoMetadataUpdateService {
         ]);
       }
 
-      tags.add(['allow_audio_reuse', editorState.allowAudioReuse.toString()]);
+      tags.add(['allow_audio_reuse', edits.allowAudioReuse.toString()]);
       tags.add([
         'allow_video_reuse',
-        editorState.offersVideoReuse.toString(),
+        edits.offersVideoReuse.toString(),
       ]);
 
       tags.addAll(preservedTags);
@@ -465,9 +500,9 @@ class VideoMetadataUpdateService {
         tags.addAll(
           buildInspiredByPTags(
             existingTags: tags,
-            addressableId: editorState.inspiredByVideo?.addressableId,
-            npubs: editorState.inspiredByNpubs,
-            relayHint: editorState.inspiredByVideo?.relayUrl,
+            addressableId: edits.inspiredByVideo?.addressableId,
+            npubs: edits.inspiredByNpubs,
+            relayHint: edits.inspiredByVideo?.relayUrl,
             selfPubkey: _authService.currentPublicKeyHex,
           ),
         );
@@ -477,19 +512,19 @@ class VideoMetadataUpdateService {
       // published; the editor never showed them.
       final content = withInspiredByContentReference(
         withSoundCreditLines(
-          editorState.description.trim(),
-          originalVideo.soundCredits.map((credit) => credit.line),
+          edits.description.trim(),
+          video.soundCredits.map((credit) => credit.line),
         ),
-        editorState.inspiredByNpubs,
+        edits.inspiredByNpubs,
       );
 
       // Use raw Nostr created_at, not the stable NIP-71 published_at value
       // exposed through VideoEvent.createdAt, so relays accept replacements.
       final event = await _authService.createAndSignEvent(
-        kind: NIP71VideoKinds.addressableShortVideo,
+        kind: latest.kind,
         content: content,
         tags: tags,
-        createdAt: nextReplacementCreatedAt(originalVideo),
+        createdAt: nextReplacementCreatedAt(video),
       );
 
       if (event == null) {
@@ -517,7 +552,12 @@ class VideoMetadataUpdateService {
 
       final inviteFailureCount = await _sendCollaboratorInvites(
         video: updatedVideoEvent,
-        initialCollaboratorPubkeys: initialCollaboratorPubkeys,
+        // Collaborators the newest revision already credits were invited when
+        // it was published.
+        initialCollaboratorPubkeys: {
+          ...initialCollaboratorPubkeys,
+          if (!isOpenedRevision) ...video.collaboratorPubkeys,
+        },
         updatedCollaboratorPubkeys: collaboratorPubkeys,
       );
 
@@ -539,18 +579,32 @@ class VideoMetadataUpdateService {
     }
   }
 
-  /// Returns the raw tags of the event being edited, for preservation.
+  /// The newest revision at [video]'s address, or null when a relay did not
+  /// answer in full or none holds a revision there.
   ///
-  /// [VideoEvent.nostrEventTags] is empty when the in-memory event was
-  /// rehydrated from a JSON cache that omits raw tags (the own-profile grid
-  /// and cold-start feed do this). In that case, recover the raw event from
-  /// the personal cache so preservation is not silently defeated; if it is
-  /// not cached, return an empty list so [updateVideo] can refuse to publish.
-  List<List<String>> _sourceOriginalTags(VideoEvent video) {
-    return sourceOriginalVideoTags(
-      video: video,
-      personalEventCache: _personalEventCache,
-    );
+  /// Throws [ArgumentError] when [video] is not an addressable video.
+  Future<Event?> _latestRevision(VideoEvent video) async {
+    final kind = video.eventKind ?? NIP71VideoKinds.addressableShortVideo;
+    final address = '$kind:${video.pubkey}:${video.stableId}';
+    final revision = await _videosRepository.fetchLatestVideoRevision(address);
+    switch (revision) {
+      case LatestVideoRevisionFound(:final event):
+        return event;
+      case LatestVideoRevisionUnknown():
+        Log.warning(
+          'Not republishing $address: a relay did not answer in full',
+          name: 'VideoMetadataUpdateService',
+          category: LogCategory.video,
+        );
+        return null;
+      case LatestVideoRevisionAbsent():
+        Log.warning(
+          'Not republishing $address: no relay holds a revision of it',
+          name: 'VideoMetadataUpdateService',
+          category: LogCategory.video,
+        );
+        return null;
+    }
   }
 
   /// Extracts all valid HTTP video URLs from the event's imeta tags.
@@ -559,11 +613,13 @@ class VideoMetadataUpdateService {
   /// (`['imeta', 'url https://...', ...]`) and the current key-value pair
   /// format (`['imeta', 'url', 'https://...', ...]`).
   ///
-  /// Falls back to [VideoEvent.videoUrl] when the raw tags array is empty
-  /// (e.g. events loaded from a JSON cache that omits raw tags).
-  List<String> _extractVideoUrls(VideoEvent video) {
+  /// Falls back to [fallbackUrl] when no imeta tag carries an HTTP URL.
+  List<String> _extractVideoUrls(
+    List<List<String>> tags, {
+    required String? fallbackUrl,
+  }) {
     final urls = <String>[];
-    for (final tag in video.nostrEventTags) {
+    for (final tag in tags) {
       if (tag.isEmpty || tag[0] != 'imeta') continue;
       if (tag.length > 1 && tag[1].contains(' ')) {
         // Legacy space-separated format.
@@ -588,8 +644,8 @@ class VideoMetadataUpdateService {
         }
       }
     }
-    if (urls.isEmpty && _isHttpUrl(video.videoUrl)) {
-      urls.add(video.videoUrl!);
+    if (urls.isEmpty && _isHttpUrl(fallbackUrl)) {
+      urls.add(fallbackUrl!);
     }
     return urls;
   }
@@ -616,4 +672,31 @@ class VideoMetadataUpdateService {
         .where((result) => !result.success && !result.retryablePending)
         .length;
   }
+}
+
+/// [edited], moved from the revision it was seeded from onto a newer one: a
+/// field this edit left as [opened] seeded it takes [latest]'s value, so a
+/// change another device made to a field this edit did not touch survives.
+VideoEditorProviderState _rebaseEdits(
+  VideoEditorProviderState edited, {
+  required VideoEditorProviderState opened,
+  required VideoEditorProviderState latest,
+}) {
+  T pick<T>(T Function(VideoEditorProviderState state) field) =>
+      const DeepCollectionEquality().equals(field(edited), field(opened))
+      ? field(latest)
+      : field(edited);
+  final inspiredByVideo = pick((state) => state.inspiredByVideo);
+  return edited.copyWith(
+    title: pick((state) => state.title),
+    description: pick((state) => state.description),
+    tags: pick((state) => state.tags),
+    contentWarnings: pick((state) => state.contentWarnings),
+    collaboratorPubkeys: pick((state) => state.collaboratorPubkeys),
+    inspiredByVideo: inspiredByVideo,
+    clearInspiredByVideo: inspiredByVideo == null,
+    inspiredByNpubs: pick((state) => state.inspiredByNpubs),
+    allowAudioReuse: pick((state) => state.allowAudioReuse),
+    allowVideoReuse: pick((state) => state.allowVideoReuse),
+  );
 }

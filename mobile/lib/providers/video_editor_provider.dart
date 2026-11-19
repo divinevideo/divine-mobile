@@ -16,9 +16,7 @@ import 'package:models/models.dart'
         ClipSourceCredit,
         InspiredByInfo,
         NativeProofData,
-        VideoEvent,
-        stripInspiredByAttribution,
-        stripSoundCredit;
+        VideoEvent;
 import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
@@ -31,6 +29,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/ideas_transcript.dart';
+import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata/schedule_time_policy.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
@@ -54,8 +53,6 @@ import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/core/models/video/progress_model.dart';
@@ -938,49 +935,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// widget's [State.initState]).
   void initFromPublishedVideo(VideoEvent video) {
     _suppressAutosave = true;
-
-    // The sound credit line is the publisher's, not part of the caption;
-    // the update service puts it back on save.
-    final content = stripSoundCredit(stripInspiredByAttribution(video.content));
-
-    state = VideoEditorProviderState(
-      // Getter falls back to rawTags so the toggle survives a cache round-trip.
-      allowAudioReuse: video.allowAudioReuse,
-      allowVideoReuse: video.allowVideoReuse,
-      title: video.title ?? '',
-      description: content,
-      // Older events can carry mixed-case or over-long tags, and caption
-      // hashtag extraction compares against normalized ones.
-      tags: HashtagExtractor.normalizeVideoHashtags(video.hashtags).toSet(),
-      contentWarnings: video.contentWarningLabels
-          .map(ContentLabel.fromValue)
-          .whereType<ContentLabel>()
-          .toSet(),
-      collaboratorPubkeys: video.collaboratorPubkeys.toSet(),
-      inspiredByVideo: video.inspiredByVideo,
-      inspiredByNpubs: _inspiredByNpubsFor(video),
-    );
-  }
-
-  static List<String> _inspiredByNpubsFor(VideoEvent video) {
-    final npubs = <String>[];
-    final seenHex = <String>{};
-
-    void add(String? hex, String? npub) {
-      final normalizedHex = hex?.trim().toLowerCase();
-      if (normalizedHex == null || normalizedHex.isEmpty) return;
-      if (!seenHex.add(normalizedHex)) return;
-      npubs.add(npub ?? NostrKeyUtils.encodePubKey(normalizedHex));
-    }
-
-    final contentNpub = video.inspiredByNpub;
-    if (contentNpub != null) {
-      add(npubToHexOrNull(contentNpub), contentNpub);
-    }
-    for (final hex in video.inspiredByPubkeys) {
-      add(hex, null);
-    }
-    return npubs;
+    state = editorStateFromPublishedVideo(video);
   }
 
   /// Together uses the existing room or publish draft for recovery. Keep the
