@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
