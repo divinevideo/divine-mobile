@@ -189,6 +189,92 @@ void main() {
         expect(prefs.getBool('corrupted_video_repair_v1_completed'), isTrue);
       });
 
+      group('when relays hold several revisions of one video', () {
+        List<String> corruptImeta() => [
+          'imeta',
+          'url /var/mobile/Containers/Data/Application/xxx/cache/video.mp4',
+          'm video/mp4',
+          'x $_testSha256',
+        ];
+
+        test('leaves the video alone when only an older revision is '
+            'corrupted', () async {
+          final olderCorrupted = _createVideoEvent(
+            id: 'older',
+            createdAt: 1000000,
+            tags: [
+              ['d', 'video_123'],
+              corruptImeta(),
+            ],
+          );
+          final newerClean = _createVideoEvent(
+            id: 'newer',
+            createdAt: 2000000,
+            tags: [
+              ['d', 'video_123'],
+              ['imeta', 'url $_blossomBaseUrl/$_testSha256', 'm video/mp4'],
+              ['title', 'Retitled elsewhere'],
+            ],
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => _answeredScan([newerClean, olderCorrupted]),
+          );
+          stubSignAndPublishSuccess();
+
+          final result = await repairService.repairIfNeeded();
+
+          expect(result, equals(0));
+          expect(publishedEvents, isEmpty);
+        });
+
+        test('repairs only the newest revision', () async {
+          final olderCorrupted = _createVideoEvent(
+            id: 'older',
+            createdAt: 1000000,
+            tags: [
+              ['d', 'video_123'],
+              corruptImeta(),
+            ],
+          );
+          final newerCorrupted = _createVideoEvent(
+            id: 'newer',
+            createdAt: 2000000,
+            tags: [
+              ['d', 'video_123'],
+              corruptImeta(),
+              ['title', 'Retitled elsewhere'],
+            ],
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => _answeredScan([olderCorrupted, newerCorrupted]),
+          );
+          stubSignAndPublishSuccess();
+
+          final result = await repairService.repairIfNeeded();
+
+          expect(result, equals(1));
+          expect(publishedEvents, hasLength(1));
+          final repaired = publishedEvents.single;
+          expect(repaired.createdAt, equals(2000001));
+          expect(
+            repaired.tags,
+            contains(equals(['title', 'Retitled elsewhere'])),
+          );
+        });
+      });
+
       test('skips events with valid HTTP URLs', () async {
         final validEvent = _createVideoEvent(
           id: 'event1',
