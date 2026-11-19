@@ -1526,7 +1526,7 @@ class NIP17MessageService {
   /// [createdAt] is the rumor's `created_at`, the time now when omitted. A
   /// retry passes the first attempt's, so the same content and tags give the
   /// same rumor id and the recipient keeps one copy (A′ in
-  /// `docs/NIP17_RETRY_CONTRACT.md`).
+  /// `mobile/docs/NIP17_RETRY_CONTRACT.md`).
   @useResult
   Future<NIP17SendResult> sendPrivateMessage({
     required String recipientPubkey,

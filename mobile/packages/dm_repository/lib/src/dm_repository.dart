@@ -11571,7 +11571,7 @@ class DmRepository {
   /// before it is published, and is not called when no rumor is built. A
   /// caller retrying the same file passes that value back as [createdAt], so
   /// the retry keeps the first attempt's rumor id even when that attempt
-  /// threw (A′ in `docs/NIP17_RETRY_CONTRACT.md`).
+  /// threw (A′ in `mobile/docs/NIP17_RETRY_CONTRACT.md`).
   ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
