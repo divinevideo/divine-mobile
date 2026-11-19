@@ -133,6 +133,53 @@ void main() {
       expect(merged.nostrLikeCount, equals(7));
     });
 
+    test('retains archive verification for the same media digest', () {
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        sha256: 'a' * 64,
+        isVerifiedArchive: true,
+        archiveAudioReuseEnabled: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        sha256: existing.sha256,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isTrue);
+      expect(merged.archiveAudioReuseEnabled, isTrue);
+    });
+
+    test('retains archive verification for the same legacy media URL', () {
+      const videoUrl = 'https://example.com/archive.mp4';
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        videoUrl: videoUrl,
+        isVerifiedArchive: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        videoUrl: videoUrl,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isTrue);
+    });
+
+    test('does not carry archive verification to a different digest', () {
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        sha256: 'a' * 64,
+        isVerifiedArchive: true,
+        archiveAudioReuseEnabled: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        sha256: 'b' * 64,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isFalse);
+      expect(merged.archiveAudioReuseEnabled, isFalse);
+    });
+
     test('keeps a like count the republished copy already has', () {
       final merged = mergeRepublishedVideo(
         video(id: 'old', createdAt: 1000, nostrLikeCount: 7),

@@ -81,22 +81,47 @@ int? mergeNullableEngagementMax(int? primary, int? secondary) {
 /// `timestamp` values are kept so the video retains its chronological
 /// position in feeds.
 ///
-/// **Runtime like-count carry-forward** — [VideoEvent.nostrLikeCount] is
-/// injected at runtime after a relay batch query; it is never written into
-/// the Nostr event body. Without this carry-forward a metadata edit drops the
-/// displayed count to zero until the next batch re-fetch completes, which
-/// then overwrites the carried value.
+/// Keep server-derived feed metadata when swapping in the signed revision.
+/// Proof and archive status describe the media, so carry them only when its
+/// digest (or its URL on legacy events without a digest) is unchanged.
 VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
-  var merged = (existing.publishedAt == null && republished.publishedAt == null)
-      ? republished.copyWith(
-          createdAt: existing.createdAt,
-          timestamp: existing.timestamp,
-        )
-      : republished;
-
-  if (merged.nostrLikeCount == null && existing.nostrLikeCount != null) {
-    merged = merged.copyWith(nostrLikeCount: existing.nostrLikeCount);
-  }
-
-  return merged;
+  final preserveTimestamp =
+      existing.publishedAt == null && republished.publishedAt == null;
+  final sameMedia = republished.sha256 != null
+      ? republished.sha256 == existing.sha256
+      : republished.videoUrl != null &&
+            republished.videoUrl == existing.videoUrl;
+  return republished.copyWith(
+    createdAt: preserveTimestamp ? existing.createdAt : null,
+    timestamp: preserveTimestamp ? existing.timestamp : null,
+    nostrLikeCount: republished.nostrLikeCount ?? existing.nostrLikeCount,
+    nostrCommentCount:
+        republished.nostrCommentCount ?? existing.nostrCommentCount,
+    nostrRepostCount: republished.nostrRepostCount ?? existing.nostrRepostCount,
+    authorName: republished.authorName ?? existing.authorName,
+    authorAvatar: republished.authorAvatar ?? existing.authorAvatar,
+    rawTags: mergeVideoRawTagsPrimaryWins(republished.rawTags, {
+      for (final key in const ['views', 'unique_views', 'unique_viewers'])
+        if (existing.rawTags[key] case final count?) key: count,
+    }),
+    categories: republished.categories.isEmpty ? existing.categories : null,
+    moderationLabels: {
+      ...existing.moderationLabels,
+      ...republished.moderationLabels,
+    }.toList(),
+    proofSummary: sameMedia
+        ? republished.proofSummary ?? existing.proofSummary
+        : null,
+    isVerifiedArchive: sameMedia
+        ? republished.isVerifiedArchive || existing.isVerifiedArchive
+        : null,
+    isArchiveVerificationUnknown: sameMedia
+        ? republished.isArchiveVerificationUnknown ||
+              existing.isArchiveVerificationUnknown
+        : null,
+    archiveAudioReuseEnabled: sameMedia
+        ? republished.archiveAudioReuseEnabled ||
+              existing.archiveAudioReuseEnabled
+        : null,
+  );
 }

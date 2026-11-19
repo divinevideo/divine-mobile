@@ -107,7 +107,7 @@ void main() {
           _revision('2', dTag: 'other'),
         ],
         videoListSources: {
-          '1' * 64: {'list'},
+          '1' * 64: const {'list'},
         },
         listOnlyVideoIds: {'1' * 64},
       ),
@@ -185,6 +185,50 @@ void main() {
           'visible revisions',
           ['2' * 64],
         ),
+      ],
+    );
+
+    feedBlocTest(
+      'applies preferences using retained server metadata',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [
+          _revision('1').copyWith(
+            moderationLabels: const ['violence'],
+            rawTags: const {'views': '17', 'old-tag': 'stale'},
+            nostrCommentCount: 4,
+          ),
+        ],
+      ),
+      act: (_) {
+        when(() => videos.applyContentPreferences(any())).thenAnswer((call) {
+          final candidate =
+              (call.positionalArguments.single as List<VideoEvent>).single;
+          return [
+            candidate.copyWith(warnLabels: candidate.moderationLabels),
+          ];
+        });
+        replacements.add(_revision('3', createdAt: 1700000500));
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>()
+            .having(
+              (state) => state.videos.single.warnLabels,
+              'warning labels',
+              ['violence'],
+            )
+            .having(
+              (state) => state.videos.single.rawTags,
+              'runtime view counts without stale authored tags',
+              {'views': '17'},
+            )
+            .having(
+              (state) => state.videos.single.nostrCommentCount,
+              'comment count',
+              4,
+            ),
       ],
     );
 
