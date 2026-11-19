@@ -274,8 +274,9 @@ class VideoMetadataUpdateService {
   ///
   /// The replacement is built from the newest revision the relays hold, not
   /// from [originalVideo], which is the one the editor opened: another device
-  /// may have replaced it since. A field this edit left as [originalVideo]
-  /// seeded it takes the newest revision's value. When the relays cannot say
+  /// may have replaced it since. A field the editor left as it was seeded
+  /// takes the newest revision's value. Pass [editorBaseline] when the screen
+  /// has seen a newer revision since it seeded the form. When the relays cannot say
   /// what is newest, nothing is published and the result is
   /// [VideoUpdateOriginalUnavailable] (#11250).
   ///
@@ -289,6 +290,7 @@ class VideoMetadataUpdateService {
     required VideoEvent originalVideo,
     required VideoEditorProviderState editorState,
     required Set<String> initialCollaboratorPubkeys,
+    VideoEvent? editorBaseline,
     File? newThumbnailFile,
   }) async {
     try {
@@ -305,15 +307,16 @@ class VideoMetadataUpdateService {
         logName: 'VideoMetadataUpdateService',
       );
       if (latest == null) return const VideoUpdateOriginalUnavailable();
-      final isOpenedRevision = latest.id == originalVideo.id;
-      final video = isOpenedRevision
+      final baseline = editorBaseline ?? originalVideo;
+      final isOpenedRevision = latest.id == baseline.id;
+      final video = latest.id == originalVideo.id
           ? originalVideo
           : VideoEvent.fromNostrEvent(latest, permissive: true);
       final edits = isOpenedRevision
           ? editorState
           : _rebaseEdits(
               editorState,
-              opened: editorStateFromPublishedVideo(originalVideo),
+              opened: editorStateFromPublishedVideo(baseline),
               latest: editorStateFromPublishedVideo(video),
             );
       // A republish is Divine's own publish: the signer stamps attribution

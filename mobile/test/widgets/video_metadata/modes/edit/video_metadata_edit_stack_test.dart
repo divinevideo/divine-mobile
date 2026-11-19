@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_stack.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,25 @@ void main() {
         scrollView.keyboardDismissBehavior,
         ScrollViewKeyboardDismissBehavior.onDrag,
       );
+    });
+
+    testWidgets('keeps the form baseline after a subtitle republish', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      await tester.pumpWidget(_buildSubject(preferences));
+      await tester.pump();
+
+      final finder = find.byType(VideoMetadataEditBottomBar);
+      final opened = tester.widget<VideoMetadataEditBottomBar>(finder);
+      final updated = opened.video.copyWith(id: 'c' * 64, title: 'Newer title');
+      opened.onVideoUpdated!(updated);
+      await tester.pump();
+
+      final rebuilt = tester.widget<VideoMetadataEditBottomBar>(finder);
+      expect(rebuilt.video, same(updated));
+      expect(rebuilt.editorBaseline, same(opened.video));
     });
 
     testWidgets('disables caption mention autocomplete', (tester) async {
