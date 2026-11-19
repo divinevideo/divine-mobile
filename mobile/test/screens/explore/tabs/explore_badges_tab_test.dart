@@ -145,52 +145,77 @@ void main() {
       verify(repository.loadPublicDefinitions).called(1);
     });
 
-    testWidgets('a failed visibility lookup stays hidden and offers retry', (
-      tester,
-    ) async {
-      final repository = _MockBadgeRepository();
-      final vanishes = StreamController<Set<String>>();
-      addTearDown(vanishes.close);
-      var lookups = 0;
-      when(repository.loadPublicDefinitions)
-          .thenAnswer((_) async => [_definition]);
-      when(() => repository.loadHolderPreview(any()))
-          .thenAnswer((_) async => []);
-      final l10n = lookupAppLocalizations(const Locale('en'));
+    for (final failBeforeMount in [false, true]) {
+      testWidgets(
+        'a ${failBeforeMount ? 'cached' : 'live'} visibility error is logged '
+        'and offers retry',
+        (tester) async {
+          final repository = _MockBadgeRepository();
+          final vanishes = StreamController<Set<String>>();
+          final showGallery = ValueNotifier(!failBeforeMount);
+          addTearDown(vanishes.close);
+          addTearDown(showGallery.dispose);
+          var lookups = 0;
+          when(repository.loadPublicDefinitions)
+              .thenAnswer((_) async => [_definition]);
+          when(() => repository.loadHolderPreview(any()))
+              .thenAnswer((_) async => []);
+          final l10n = lookupAppLocalizations(const Locale('en'));
 
-      await tester.pumpWidget(
-        testMaterialApp(
-          additionalOverrides: [
-            badgeRepositoryProvider.overrideWithValue(repository),
-            vanishedProfilePubkeysProvider.overrideWith(
-              (_) => lookups++ == 0 ? vanishes.stream : Stream.value(const {}),
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                badgeRepositoryProvider.overrideWithValue(repository),
+                vanishedProfilePubkeysProvider.overrideWith(
+                  (_) =>
+                      lookups++ == 0 ? vanishes.stream : Stream.value(const {}),
+                ),
+              ],
+              home: Scaffold(
+                body: Consumer(
+                  builder: (context, ref, _) {
+                    ref.watch(vanishedProfilePubkeysProvider);
+                    return ValueListenableBuilder(
+                      valueListenable: showGallery,
+                      builder: (context, visible, _) =>
+                          visible ? const ExploreBadgesTab() : const SizedBox(),
+                    );
+                  },
+                ),
+              ),
             ),
-          ],
-          home: const Scaffold(body: ExploreBadgesTab()),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final failure = StateError('visibility unavailable');
-      final trace = StackTrace.fromString('visibility lookup stack');
-      vanishes.addError(failure, trace);
-      await tester.pump();
-      await tester.pump();
-      expect(find.text(l10n.badgesLoadError), findsOneWidget);
-      expect(find.byType(BadgeCommunityCard), findsNothing);
-      verifyNever(() => repository.loadHolderPreview(any()));
-      final logs = LogCaptureService().getRecentLogs().where(
-        (entry) =>
-            entry.name == 'ExploreBadgesTab' &&
-            entry.error == failure.toString(),
-      );
-      expect(logs.single.stackTrace, trace.toString());
+          );
+          await tester.pumpAndSettle();
+          final error = Exception(
+            'badge visibility unavailable ($failBeforeMount)',
+          );
+          final stack = StackTrace.fromString('badge visibility test stack');
+          vanishes.addError(error, stack);
+          await tester.pump();
+          await tester.pump();
+          if (failBeforeMount) {
+            showGallery.value = true;
+            await tester.pump();
+          }
+          expect(find.text(l10n.badgesLoadError), findsOneWidget);
+          final visibilityLog = LogCaptureService().getRecentLogs().singleWhere(
+            (entry) =>
+                entry.name == 'ExploreBadgesTab' &&
+                entry.error == error.toString(),
+          );
+          expect(visibilityLog.stackTrace, stack.toString());
+          expect(find.byType(BadgeCommunityCard), findsNothing);
+          verifyNever(() => repository.loadHolderPreview(any()));
 
-      await tester.tap(find.text(l10n.commonRetry));
-      await tester.pumpAndSettle();
-      expect(find.text('Loop makers'), findsOneWidget);
-      expect(lookups, 2);
-      verify(repository.loadPublicDefinitions).called(1);
-    });
+          await tester.tap(find.text(l10n.commonRetry));
+          await tester.pumpAndSettle();
+          expect(find.text('Loop makers'), findsOneWidget);
+          await tester.pump(const Duration(seconds: 1));
+          expect(lookups, 2);
+          verify(repository.loadPublicDefinitions).called(1);
+        },
+      );
+    }
 
     testWidgets('filters vanished issuers before laying out the first page', (
       tester,

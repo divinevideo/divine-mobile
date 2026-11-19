@@ -24,7 +24,8 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show LatestAddressableEvents, NostrClient;
 import 'package:nostr_sdk/event.dart' as nostr;
-import 'package:nostr_sdk/nostr_sdk.dart' show NativeEventVerifyWorker;
+import 'package:nostr_sdk/nostr_sdk.dart'
+    show EventVerifyIsolate, NativeEventVerifyWorker;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -90,7 +91,9 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   var subscriptionAccount = authService.currentPublicKeyHex;
   final repository = BadgeRepository(
     funnelcakeApiClient: ref.watch(badgeCatalogueApiClientProvider),
-    discoveryVerifierSpawner: kIsWeb ? NativeEventVerifyWorker.spawn : null,
+    discoveryVerifierSpawner: kIsWeb
+        ? NativeEventVerifyWorker.spawn
+        : EventVerifyIsolate.spawn,
     discoveryIssuerPubkeys: const [kDivineBadgeIssuerPubkey],
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),

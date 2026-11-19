@@ -563,30 +563,32 @@ class BadgeRepository {
   /// Most accepted holders one community preview shows.
   static const holderPreviewLimit = 3;
 
-  /// Recent public badge definitions and the pinned catalogue, newest first.
+  /// Recent public and pinned catalogue badge definitions, newest first.
   ///
-  /// Starts both definition reads together. An unavailable pinned catalogue
-  /// leaves the recent window usable. Issuer-scoped deletion reads prioritize
-  /// pinned issuers within a shared deadline.
+  /// Needs no signer and drops the viewer's hidden pubkeys. Reads the
+  /// recent relay window and pinned issuer catalogues in parallel. A failed
+  /// catalogue read leaves the recent window usable. Bounded, issuer-scoped
+  /// deletion reads settle pinned issuers first.
   ///
-  /// Needs no signer and drops the viewer's hidden pubkeys. The injected
-  /// worker checks signatures that the relay pool has yet to verify. Without
-  /// a worker, verification runs on the calling isolate.
+  /// Reuses signatures verified by the relay pool. Otherwise the injected
+  /// worker verifies them, with an inline fallback while the repository is
+  /// active.
   ///
-  /// Throws [BadgeReadIncompleteException] when the recent window goes
-  /// unanswered or inconclusive deletions leave no badges to show.
+  /// Throws [BadgeReadIncompleteException] when discovery goes unanswered.
+  /// Omits issuers with inconclusive deletion reads. If none can be shown
+  /// and a deletion read was inconclusive, the caller must retry.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
-    final reads = await Future.wait([
+    final [recentEvents, pinnedEvents] = await Future.wait([
       _readDiscoveryWindow([
         Filter(kinds: [EventKind.badgeDefinition], limit: _discoveryWindowSize),
       ]),
       _readPinnedDiscoveryCatalogues(),
     ], eagerError: true);
     final events = [
-      ...reads.first
+      ...recentEvents
           .where((event) => !(_isHiddenPubkey?.call(event.pubkey) ?? false))
           .take(_discoveryWindowSize),
-      ...reads.last,
+      ...pinnedEvents,
     ];
     final definitions = <String, Nip58BadgeDefinition>{};
     for (final event in events) {
@@ -620,42 +622,57 @@ class BadgeRepository {
     var omittedIssuers = 0;
     void excludeUnsettledIssuer(
       MapEntry<String, List<Nip58BadgeDefinition>> issuer,
-      String reason,
-    ) {
+      String reason, {
+      Object? error,
+      StackTrace? stackTrace,
+    }) {
       omittedIssuers++;
       for (final definition in issuer.value) {
         definitions.remove(definition.coordinate);
       }
       Log.warning(
-        'Omitting badge issuer ${pubkeyForLogs(issuer.key)}: $reason',
+        'Omitted badge issuer ${pubkeyForLogs(issuer.key)}: $reason',
         name: 'BadgeRepository',
         category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
       );
     }
 
     Future<void> readIssuerDeletions() async {
-      while (pending.moveNext()) {
+      while (!_disposed && pending.moveNext()) {
         final issuer = pending.current;
         final remaining = _discoveryReadTimeout - elapsed.elapsed;
         if (remaining <= Duration.zero) {
-          excludeUnsettledIssuer(issuer, 'deletion deadline before read');
+          excludeUnsettledIssuer(issuer, 'deletion phase deadline exceeded');
           continue;
         }
-        final deletions = await _readDiscoveryDeletions(
-          issuer.key,
-          issuer.value,
-          remaining,
-        );
+        final QueryResult deletions;
+        try {
+          deletions = await _readDiscoveryIssuerDeletions(
+            issuer.key,
+            issuer.value,
+            remaining,
+          ).timeout(remaining);
+        } on Exception catch (error, stackTrace) {
+          excludeUnsettledIssuer(
+            issuer,
+            'deletion read failed',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          continue;
+        }
         if (!deletions.isComplete) {
           excludeUnsettledIssuer(
             issuer,
-            'deletion read ended: ${deletions.endedBy.name}',
+            'incomplete deletion read (${deletions.endedBy.name})',
           );
           continue;
         }
         if (deletions.possiblyCapped ||
             deletions.events.length >= _discoveryDeletionLimit) {
-          excludeUnsettledIssuer(issuer, 'deletion read reached its limit');
+          excludeUnsettledIssuer(issuer, 'deletion read reached its cap');
           continue;
         }
         final coordinatesByEventId = {
@@ -687,14 +704,17 @@ class BadgeRepository {
           if (targets.isEmpty) continue;
 
           final verificationBudget = _discoveryReadTimeout - elapsed.elapsed;
-          final valid =
-              verificationBudget > Duration.zero &&
-              await _isVerifiedBadgeEvent(deletion).timeout(
-                verificationBudget,
-                onTimeout: () => false,
-              );
-          if (elapsed.elapsed >= _discoveryReadTimeout) {
-            excludeUnsettledIssuer(issuer, 'deletion verification deadline');
+          bool? valid;
+          if (verificationBudget > Duration.zero) {
+            valid = await _isVerifiedBadgeEvent(deletion)
+                .then<bool?>((verified) => verified)
+                .timeout(verificationBudget, onTimeout: () => null);
+          }
+          if (valid == null || elapsed.elapsed >= _discoveryReadTimeout) {
+            excludeUnsettledIssuer(
+              issuer,
+              'deletion verification deadline exceeded',
+            );
             break;
           }
           if (!valid) continue;
@@ -705,18 +725,13 @@ class BadgeRepository {
 
     // Both fan-out and the whole phase are bounded, including queued issuers.
     await Future.wait(List.generate(4, (_) => readIssuerDeletions()));
+    if (_disposed) return const [];
     if (omittedIssuers > 0) {
       Log.warning(
-        'Badge discovery omitted $omittedIssuers of ${byIssuer.length} '
-        'issuers with inconclusive deletion reads',
+        'Badge discovery omitted $omittedIssuers of ${byIssuer.length} issuers',
         name: 'BadgeRepository',
         category: LogCategory.relay,
       );
-      if (definitions.isEmpty) {
-        throw const BadgeReadIncompleteException(
-          'Public badge deletions could not be confirmed',
-        );
-      }
     }
     final newest = definitions.values.toList()
       ..sort((a, b) {
@@ -732,80 +747,56 @@ class BadgeRepository {
         definitions.remove(definition.coordinate);
       }
     }
-    return definitions.values
-        .where((d) => !(_isHiddenPubkey?.call(d.event.pubkey) ?? false))
-        .toList(growable: false)
-      ..sort((a, b) {
-        final recency = b.event.createdAt.compareTo(a.event.createdAt);
-        return recency != 0 ? recency : a.coordinate.compareTo(b.coordinate);
-      });
-  }
-
-  Future<List<Event>> _readPinnedDiscoveryCatalogues() async {
-    Future<List<Event>> readCatalogue(String issuer) async {
-      try {
-        return await _loadIssuerDefinitions(
-          issuer,
-          timeout: _discoveryReadTimeout,
-        ).timeout(_discoveryReadTimeout);
-      } on Exception catch (error, stackTrace) {
-        Log.warning(
-          'Pinned badge catalogue unavailable for ${pubkeyForLogs(issuer)}',
-          name: 'BadgeRepository',
-          category: LogCategory.relay,
-          error: error,
-          stackTrace: stackTrace,
-        );
-        return const [];
-      }
+    final visible =
+        definitions.values
+            .where((d) => !(_isHiddenPubkey?.call(d.event.pubkey) ?? false))
+            .toList(growable: false)
+          ..sort((a, b) {
+            final recency = b.event.createdAt.compareTo(a.event.createdAt);
+            return recency != 0
+                ? recency
+                : a.coordinate.compareTo(b.coordinate);
+          });
+    if (visible.isEmpty && omittedIssuers > 0) {
+      throw const BadgeReadIncompleteException(
+        'Public badge deletions could not be confirmed',
+      );
     }
-
-    final catalogues = await Future.wait([
-      for (final issuer in _discoveryIssuerPubkeys)
-        if (isBadgePubkey(issuer) && !(_isHiddenPubkey?.call(issuer) ?? false))
-          readCatalogue(issuer),
-    ]);
-    return catalogues.expand((events) => events).toList();
+    return visible;
   }
 
-  Future<QueryResult> _readDiscoveryDeletions(
+  Future<QueryResult> _readDiscoveryIssuerDeletions(
     String issuer,
     List<Nip58BadgeDefinition> candidates,
     Duration timeout,
-  ) => _nostrClient
-      .readEvents(
-        [
-          Filter(
-            kinds: [EventKind.eventDeletion],
-            authors: [issuer],
-            a: candidates.map((d) => d.coordinate).toList(),
-            since: candidates
-                .map((d) => d.event.createdAt)
-                .reduce((a, b) => a < b ? a : b),
-            limit: _discoveryDeletionLimit,
-          ),
-          // NIP-09 event-ID deletions apply even with an earlier clock.
-          Filter(
-            kinds: [EventKind.eventDeletion],
-            authors: [issuer],
-            e: candidates.map((d) => d.event.id).toList(),
-            limit: _discoveryDeletionLimit,
-          ),
-        ],
-        tempRelays: _publicReadRelays,
-        relayTypes: _definitionRelayUrl == null
-            ? RelayType.all
-            : [RelayType.temp],
-        useCache: false,
-        timeout: timeout,
-        requireAllRelaysSettled: true,
-        maxCollectedEvents: _discoveryDeletionLimit,
-      )
-      .timeout(
-        timeout,
-        onTimeout: () =>
-            const QueryResult(events: [], endedBy: QueryEnd.deadline),
-      );
+  ) => _nostrClient.readEvents(
+    [
+      Filter(
+        kinds: [EventKind.eventDeletion],
+        authors: [issuer],
+        a: candidates.map((d) => d.coordinate).toList(),
+        since: candidates
+            .map((d) => d.event.createdAt)
+            .reduce(
+              (a, b) => a < b ? a : b,
+            ),
+        limit: _discoveryDeletionLimit,
+      ),
+      // NIP-09 event-ID deletions apply even with an earlier clock.
+      Filter(
+        kinds: [EventKind.eventDeletion],
+        authors: [issuer],
+        e: candidates.map((d) => d.event.id).toList(),
+        limit: _discoveryDeletionLimit,
+      ),
+    ],
+    tempRelays: _publicReadRelays,
+    relayTypes: _definitionRelayUrl == null ? RelayType.all : [RelayType.temp],
+    useCache: false,
+    timeout: timeout,
+    requireAllRelaysSettled: true,
+    maxCollectedEvents: _discoveryDeletionLimit,
+  );
 
   Future<List<Event>> _readDiscoveryWindow(List<Filter> filters) async {
     final result = await _nostrClient.readEvents(
@@ -850,6 +841,7 @@ class BadgeRepository {
     if (spawner == null) return event.isSigned;
     final verifier = await (_discoveryVerifier ??= _spawnDiscoveryVerifier(
       spawner,
+      event.pubkey,
     ));
     if (_disposed) return false;
     if (verifier == null) return event.isSigned;
@@ -857,14 +849,15 @@ class BadgeRepository {
       final verified = await verifier.verify(event.toJson());
       return !_disposed && verified;
     } on Object {
-      // Closing the worker fails pending requests. A live repository can
-      // still verify locally after a worker failure.
+      // A closing worker fails its pending requests. Only a live repository
+      // can fall back to inline signature verification.
       return !_disposed && event.isSigned;
     }
   }
 
   Future<EventVerifyWorker?> _spawnDiscoveryVerifier(
     EventVerifyWorkerSpawner spawner,
+    String issuer,
   ) async {
     try {
       final verifier = await spawner();
@@ -875,7 +868,7 @@ class BadgeRepository {
       return verifier;
     } on Object catch (error, stackTrace) {
       Log.warning(
-        'Badge signature worker unavailable; '
+        'Badge signature worker unavailable for ${pubkeyForLogs(issuer)}; '
         'using signature verification on the calling isolate',
         name: 'BadgeRepository',
         category: LogCategory.relay,
@@ -926,39 +919,73 @@ class BadgeRepository {
       ..sort((a, b) => (a.name ?? a.dTag).compareTo(b.name ?? b.dTag));
   }
 
+  Future<List<Event>> _readPinnedDiscoveryCatalogues() async {
+    final reads = await Future.wait([
+      for (final issuer in _discoveryIssuerPubkeys)
+        if (isBadgePubkey(issuer) && !(_isHiddenPubkey?.call(issuer) ?? false))
+          _readPinnedDiscoveryCatalogue(issuer),
+    ]);
+    return reads.expand((events) => events).toList();
+  }
+
+  Future<List<Event>> _readPinnedDiscoveryCatalogue(String issuer) async {
+    final elapsed = _stopwatchFactory()..start();
+    try {
+      return await _loadIssuerDefinitions(
+        issuer,
+        discoveryElapsed: elapsed,
+      ).timeout(_discoveryReadTimeout);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Pinned badge catalogue unavailable for ${pubkeyForLogs(issuer)}',
+        name: 'BadgeRepository',
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    }
+  }
+
   Future<List<Event>> _loadIssuerDefinitions(
     String issuer, {
-    Duration? timeout,
+    Stopwatch? discoveryElapsed,
   }) async {
+    Duration remainingDiscoveryBudget() =>
+        _discoveryReadTimeout - (discoveryElapsed?.elapsed ?? Duration.zero);
+
     final api = _funnelcakeApiClient;
-    final stopwatch = _stopwatchFactory()..start();
+    (Exception, StackTrace)? apiFailure;
     if (api != null) {
       try {
         return await _loadApiDefinitions(
           api,
           issuer,
-          stopwatch: stopwatch,
-          budget: timeout ?? const Duration(seconds: 15),
+          budget: discoveryElapsed == null
+              ? const Duration(seconds: 15)
+              : remainingDiscoveryBudget(),
         );
       } on Exception catch (error, stackTrace) {
-        Log.warning(
-          'Badge catalogue API failed for ${pubkeyForLogs(issuer)}',
-          name: 'BadgeRepository',
-          category: LogCategory.relay,
-          error: error,
-          stackTrace: stackTrace,
-        );
+        apiFailure = (error, stackTrace);
       }
     }
-    final remaining = timeout == null
-        ? const Duration(seconds: 10)
-        : timeout - stopwatch.elapsed;
-    if (remaining <= Duration.zero) {
-      throw TimeoutException('Badge catalogue deadline exceeded');
+    final relayBudget = remainingDiscoveryBudget();
+    if (relayBudget <= Duration.zero) {
+      throw TimeoutException('Pinned badge catalogue deadline exceeded');
+    }
+    if (apiFailure case (final error, final stackTrace)) {
+      Log.warning(
+        'Badge catalogue API failed for ${pubkeyForLogs(issuer)}; '
+        'using relay fallback',
+        name: 'BadgeRepository',
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
     final result = await _nostrClient.readAllEvents(
       Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
-      timeout: remaining,
+      timeout: relayBudget,
       tempRelays: _publicReadRelays,
     );
     if (!result.isComplete) {
@@ -972,11 +999,11 @@ class BadgeRepository {
   Future<List<Event>> _loadApiDefinitions(
     FunnelcakeApiClient api,
     String issuer, {
-    required Stopwatch stopwatch,
     required Duration budget,
   }) async {
     // Bound the whole walk, rather than multiplying the client's retry budget
     // by the number of pages. A timed-out request cannot start another page.
+    final stopwatch = _stopwatchFactory()..start();
     final events = <Event>[];
     final cursors = <String>{};
     String? cursor;

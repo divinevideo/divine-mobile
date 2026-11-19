@@ -311,15 +311,13 @@ void main() {
       expect(form.addressableCoordinate, _coordinate.value);
       expect(form.additionalContext, contains(definition.name));
       expect(form.publishesPublicReport, isTrue);
-      expect(find.text(l10n.reportReasonUnderageUser), findsNothing);
       expect(
         form.reasons,
-        containsAll([
-          ContentFilterReason.copyright,
-          ContentFilterReason.aiGenerated,
-        ]),
+        ContentFilterReason.values.where(
+          (reason) => reason != ContentFilterReason.underageUser,
+        ),
       );
-      expect(form.reasons, isNot(contains(ContentFilterReason.underageUser)));
+      expect(find.text(l10n.reportReasonUnderageUser), findsNothing);
 
       await tester.tap(find.text(l10n.reportReasonSpam));
       await tester.pumpAndSettle();
