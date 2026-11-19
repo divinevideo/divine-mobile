@@ -462,13 +462,18 @@ Feature flag:
 2. Ends the account's activities on the device when it stops being the signed-in identity, so the local end does not depend on the sign-out teardown budget. The trigger is precise: the auth identity becomes null, its pubkey differs from the owner, or the session phase becomes `tearingDown` or `signedOut`. A `nostrReady` → `identityKnown` drop never ends anything.
 3. Also registers `registerBeforeSessionTeardownCallback(() => repo.endLocally(ownerPubkey: owner))` as an earlier best effort.
 4. On resume, and once after the binding attaches, runs `sweep`, via `runProviderDetached` and only while its container is `deviceScope.switchController.currentContainer`. On a signed-out cold start, a sweep with a null owner ends everything listed.
-5. Keeps `repo.featureEnabled` in sync with `FeatureFlag.postLiveActivity`. When the flag turns off, calls `endAll()`.
+5. Keeps `repo.featureEnabled` in sync with `FeatureFlag.postLiveActivity` **and the account's signer**. When either rules it out, it calls `endAll()`.
+   - Eligible: `AuthenticationSource.divineOAuth` (Keycast), `importedKeys` and `automatic`.
+   - Not eligible in v1: `bunker` (NIP-46), `amber`, `nip07` and `none`. Every Live Activity 3079 would otherwise cost a signing prompt (Matt, 2026-11-19).
+   - This is the same allow-list as crossposting (`post_publish_crosspost.dart`). Extract one shared `bool signsWithoutPrompting(AuthenticationSource source)` that both use, rather than copying the switch.
 
 Account switch:
 - In `swapAccount`, right after commit, call `endLocally(ownerPubkey: outgoing)` on the device repository directly, whether or not there is an outgoing push coordinator.
 
 **Steps:**
 - [ ] Write the failing tests:
+  - an Amber or NIP-46 account never starts an activity (`featureEnabled` false), and switching to one ends a running activity; a Keycast or local-key account does;
+  - `signsWithoutPrompting` covers every `AuthenticationSource`, and crossposting's existing tests still pass through it;
   - sign-out ends the activity locally even when the teardown budget is exhausted before the callback runs (**RF1**);
   - a switch ends the outgoing account's activities at commit with no outgoing coordinator present;
   - the incoming account's sweep ends anything left over;
@@ -494,7 +499,7 @@ Account switch:
   - Its `BlocProvider` is keyed with `ValueKey(repository)`.
 - The settings row:
   - goes after campaigns;
-  - is shown only when the flag is on and the repository is non-null;
+  - is shown only when the flag is on, the repository is non-null, and the account signs without prompting (Task 7's `signsWithoutPrompting`);
   - is a `DivineSwitchTile` whose value is `toggleOn && systemEnabled`;
   - is disabled when `!systemEnabled`, with the unavailable subtitle.
 

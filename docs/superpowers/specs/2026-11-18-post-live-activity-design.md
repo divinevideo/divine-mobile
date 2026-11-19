@@ -234,6 +234,13 @@ From Apple's Live Activities guidelines and the ActivityKit docs:
   any counts arrive. It says what this is and where to control it, for
   example: "Live stats for your first hour · turn off in Settings". Never
   shown again on that device.
+- **Accounts that sign without a prompt only, in v1** (Matt, 2026-11-19).
+  Keycast accounts and accounts whose key is on the device get the
+  activity. Amber, NIP-46 bunker and browser-extension accounts do not:
+  each registration, Stop, edit or dismissal sends a signed 3079, so they
+  would face a signing prompt for nearly every post, which fights the "tap
+  Post and pocket the phone" moment. The toggle is hidden for them. This is
+  the same allow-list the app already uses for crossposting.
 - **Independent of notification permission** (Matt, 2026-11-18). Apple
   treats Live Activities as their own permission, with their own switch in
   Settings. Someone who declined notifications still gets the activity, with
