@@ -182,6 +182,8 @@ void main() {
         recipientPubkey: any(named: 'recipientPubkey'),
         uploaded: any(named: 'uploaded'),
         extraTags: any(named: 'extraTags'),
+        createdAt: any(named: 'createdAt'),
+        onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
         onPhase: any(named: 'onPhase'),
         cancellation: any(named: 'cancellation'),
       );
@@ -288,6 +290,7 @@ void main() {
       registerFallbackValue(File('/tmp/fallback.mp4'));
       registerFallbackValue((DmVideoSendPhase _) {});
       registerFallbackValue((double _) {});
+      registerFallbackValue((int _) {});
       registerFallbackValue(DmVideoSendCancellation()..finish());
       registerFallbackValue(_uploadOf('/tmp/fallback.mp4'));
     });
@@ -679,6 +682,8 @@ void main() {
               recipientPubkey: _recipientPubkey,
               uploaded: sends.single.upload,
               extraTags: any(named: 'extraTags'),
+              createdAt: any(named: 'createdAt'),
+              onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
               onPhase: any(named: 'onPhase'),
               cancellation: any(named: 'cancellation'),
             ),
@@ -2297,6 +2302,181 @@ void main() {
             );
           },
         );
+
+        group('keeps the first rumor created_at', () {
+          late List<int?> givenCreatedAt;
+          late int nextStamp;
+
+          /// Answers each publication with the next of [answers]. A
+          /// publication given no created_at reports a fresh one, as the
+          /// repository does when it builds the rumor, unless
+          /// [buildsNoRumor] says no rumor was built. [throwAfterRumor]
+          /// makes a publication throw once its rumor is built.
+          void stubRumors(
+            List<NIP17SendResult> answers, {
+            bool Function(int publication)? buildsNoRumor,
+            bool Function(int publication)? throwAfterRumor,
+          }) {
+            stubSends(const []);
+            var publications = 0;
+            whenPublishVideo().thenAnswer((invocation) async {
+              final publication = publications++;
+              final createdAt = invocation.namedArguments[#createdAt] as int?;
+              givenCreatedAt.add(createdAt);
+              published.add((
+                invocation.namedArguments[#uploaded] as DmVideoUpload,
+                invocation.namedArguments[#extraTags] as List<List<String>>,
+              ));
+              if (!(buildsNoRumor?.call(publication) ?? false)) {
+                (invocation.namedArguments[#onRumorCreatedAt]
+                        as void Function(int)?)
+                    ?.call(createdAt ?? nextStamp++);
+              }
+              if (throwAfterRumor?.call(publication) ?? false) {
+                throw const SocketException('relay socket closed');
+              }
+              return answers.removeAt(0);
+            });
+          }
+
+          setUp(() {
+            givenCreatedAt = [];
+            nextStamp = 1700000000;
+          });
+
+          test(
+            'a retry publishes with the created_at of the first rumor',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-retried'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000]));
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.sent),
+              );
+            },
+          );
+
+          test(
+            'every later retry keeps the first rumor created_at',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-retried'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000, 1700000000]));
+            },
+          );
+
+          test(
+            'a retry after a publication that threw keeps its rumor '
+            'created_at',
+            () async {
+              stubRumors(
+                [_success('rumor-retried')],
+                throwAfterRumor: (publication) => publication == 0,
+              );
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.failed),
+              );
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000]));
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.sent),
+              );
+            },
+          );
+
+          test(
+            'a retry builds a fresh rumor when the first attempt built none',
+            () async {
+              stubRumors(
+                [unreadableInbox, _success('rumor-retried')],
+                buildsNoRumor: (publication) => publication == 0,
+              );
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, null]));
+            },
+          );
+
+          test('a retried clip keeps its first rumor created_at', () async {
+            when(
+              () => verifier.verify(any()),
+            ).thenAnswer((_) async => _verified);
+            stubRumors([
+              _success('rumor-a'),
+              const NIP17SendResult.failure('relay rejected'),
+              _success('rumor-b'),
+            ]);
+            outbox = createOutbox(clipVerifier: () => verifier);
+            final events = recordConversation('c1');
+            sendClips([_clip('clip-a'), _clip('clip-b')]);
+            await pumpEventQueue();
+
+            outbox.retry(events.last[1].id);
+            await pumpEventQueue();
+
+            expect(givenCreatedAt, equals([null, null, 1700000001]));
+          });
+
+          test(
+            'a new entry that reuses a removed id gets a fresh rumor',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-new'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              outbox.remove(events.last.single.id);
+              idCounter = 0;
+
+              sendVideo(path: '/v/new.mp4');
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, null]));
+            },
+          );
+        });
 
         test('dispose drops every kept upload', () async {
           stubSends([unreadableInbox, unreadableInbox]);

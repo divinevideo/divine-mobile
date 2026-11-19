@@ -54,6 +54,8 @@ class _Repository extends Fake implements DmRepository {
     required DmFileMetadata fileMetadata,
     String? replyToId,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
   }) async {
     publishedUrls.add(fileUrl);
     return NIP17SendResult.success(
