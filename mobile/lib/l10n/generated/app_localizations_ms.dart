@@ -9208,7 +9208,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Dwi kamera';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Pilihan kamera';
+  String get videoRecorderRailShowOptionsLabel => 'Tunjukkan pilihan kamera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Sembunyikan pilihan kamera';
 
   @override
   String get videoRecorderStabilizationLabel => 'Penstabilan';

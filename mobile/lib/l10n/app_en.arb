@@ -6696,9 +6696,13 @@
   "@videoRecorderRailDualCameraLabel": {
     "description": "Short visible name of the control that records with the front and the back camera at once, shown next to its icon while the recorder's control rail is unfolded."
   },
-  "videoRecorderRailMoreOptionsLabel": "Camera options",
-  "@videoRecorderRailMoreOptionsLabel": {
-    "description": "Screen-reader label of the button that unfolds the recorder's control rail to list every camera control, and folds it back. Announced with its expanded or collapsed state."
+  "videoRecorderRailShowOptionsLabel": "Show camera options",
+  "@videoRecorderRailShowOptionsLabel": {
+    "description": "Screen-reader label of the button that unfolds the recorder's control rail to list every camera control. Read while the rail is folded."
+  },
+  "videoRecorderRailHideOptionsLabel": "Hide camera options",
+  "@videoRecorderRailHideOptionsLabel": {
+    "description": "Screen-reader label of the same button while the rail is unfolded: tapping it folds the rail back to flash, camera switch and aspect ratio."
   },
   "videoRecorderStabilizationLabel": "Stabilization",
   "videoRecorderStabilizationModeOff": "Off",

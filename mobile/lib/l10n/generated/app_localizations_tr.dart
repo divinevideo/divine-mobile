@@ -9121,7 +9121,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Çift kamera';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Kamera seçenekleri';
+  String get videoRecorderRailShowOptionsLabel => 'Kamera seçeneklerini göster';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Kamera seçeneklerini gizle';
 
   @override
   String get videoRecorderStabilizationLabel => 'Sabitleme';

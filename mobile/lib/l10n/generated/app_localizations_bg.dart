@@ -9289,7 +9289,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Две камери';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Опции на камерата';
+  String get videoRecorderRailShowOptionsLabel => 'Покажи опциите на камерата';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Скрий опциите на камерата';
 
   @override
   String get videoRecorderStabilizationLabel => 'Стабилизация';

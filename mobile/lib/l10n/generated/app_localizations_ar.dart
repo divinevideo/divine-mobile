@@ -9222,7 +9222,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'كاميرا مزدوجة';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'خيارات الكاميرا';
+  String get videoRecorderRailShowOptionsLabel => 'إظهار خيارات الكاميرا';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'إخفاء خيارات الكاميرا';
 
   @override
   String get videoRecorderStabilizationLabel => 'تثبيت الفيديو';

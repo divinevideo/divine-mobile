@@ -9271,7 +9271,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Dalawang camera';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Mga opsyon ng camera';
+  String get videoRecorderRailShowOptionsLabel =>
+      'Ipakita ang mga opsyon ng camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel =>
+      'Itago ang mga opsyon ng camera';
 
   @override
   String get videoRecorderStabilizationLabel => 'Estabilisasyon';

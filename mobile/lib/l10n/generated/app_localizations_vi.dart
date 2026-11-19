@@ -9159,7 +9159,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Camera kép';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Tùy chọn camera';
+  String get videoRecorderRailShowOptionsLabel => 'Hiện tùy chọn camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ẩn tùy chọn camera';
 
   @override
   String get videoRecorderStabilizationLabel => 'Chống rung';

@@ -8766,7 +8766,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => '듀얼 카메라';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => '카메라 옵션';
+  String get videoRecorderRailShowOptionsLabel => '카메라 옵션 표시';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => '카메라 옵션 숨기기';
 
   @override
   String get videoRecorderStabilizationLabel => '흔들림 보정';

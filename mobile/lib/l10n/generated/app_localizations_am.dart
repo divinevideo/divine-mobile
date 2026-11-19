@@ -8992,7 +8992,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'ሁለት ካሜራ';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'የካሜራ አማራጮች';
+  String get videoRecorderRailShowOptionsLabel => 'የካሜራ አማራጮችን አሳይ';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'የካሜራ አማራጮችን ደብቅ';
 
   @override
   String get videoRecorderStabilizationLabel => 'ማረጋጊያ';

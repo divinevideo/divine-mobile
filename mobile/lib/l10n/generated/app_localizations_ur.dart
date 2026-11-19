@@ -9205,7 +9205,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'ڈوئل کیمرہ';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'کیمرہ کے اختیارات';
+  String get videoRecorderRailShowOptionsLabel => 'کیمرہ کے اختیارات دکھائیں';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'کیمرہ کے اختیارات چھپائیں';
 
   @override
   String get videoRecorderStabilizationLabel => 'استحکام';

@@ -8664,7 +8664,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => '双摄像头';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => '相机选项';
+  String get videoRecorderRailShowOptionsLabel => '显示相机选项';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => '隐藏相机选项';
 
   @override
   String get videoRecorderStabilizationLabel => '防抖';

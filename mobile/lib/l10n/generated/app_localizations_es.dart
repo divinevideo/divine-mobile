@@ -9305,7 +9305,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Doble cámara';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Opciones de cámara';
+  String get videoRecorderRailShowOptionsLabel => 'Mostrar opciones de cámara';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ocultar opciones de cámara';
 
   @override
   String get videoRecorderStabilizationLabel => 'Estabilización';

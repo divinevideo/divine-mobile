@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_camera/divine_camera.dart'
     show DivineVideoStabilizationMode;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart' show DebugSemanticsDumpOrder;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -159,7 +160,7 @@ void main() {
 
     group('folding', () {
       Finder optionsButton() =>
-          findByTooltip(l10n.videoRecorderRailMoreOptionsLabel);
+          find.byKey(const ValueKey(SemanticIds.cameraRailOptionsButton));
 
       double top(WidgetTester tester, Finder finder) =>
           tester.getCenter(finder).dy;
@@ -203,11 +204,7 @@ void main() {
         );
         expect(
           tester.getCenter(icon).dx,
-          tester
-              .getCenter(
-                findByTooltip(arabic.videoRecorderRailMoreOptionsLabel),
-              )
-              .dx,
+          tester.getCenter(optionsButton()).dx,
         );
       });
 
@@ -365,7 +362,14 @@ void main() {
           final node = tester.getSemantics(
             find.bySemanticsIdentifier(SemanticIds.cameraRailOptionsButton),
           );
-          expect(node.label, l10n.videoRecorderRailMoreOptionsLabel);
+          // VoiceOver does not speak the expanded flag, so the label carries
+          // the state as well.
+          expect(
+            node.label,
+            expanded
+                ? l10n.videoRecorderRailHideOptionsLabel
+                : l10n.videoRecorderRailShowOptionsLabel,
+          );
           expect(node.flagsCollection.isButton, isTrue);
           expect(
             node.flagsCollection.isExpanded,
@@ -375,6 +379,38 @@ void main() {
           handle.dispose();
         });
       }
+
+      testWidgets('reads the revealed controls right after the options button', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        final rail = tester
+            .getSemantics(
+              find.bySemanticsIdentifier(SemanticIds.cameraRailOptionsButton),
+            )
+            .parent!;
+        final readingOrder = rail
+            .debugListChildrenInOrder(DebugSemanticsDumpOrder.traversalOrder)
+            .map((node) => node.identifier)
+            .toList();
+
+        // Drawn above the options button, but a swipe on from it reaches them.
+        expect(readingOrder, [
+          SemanticIds.cameraFlashButton,
+          SemanticIds.cameraSwitchCameraButton,
+          SemanticIds.cameraAspectRatioButton,
+          SemanticIds.cameraRailOptionsButton,
+          SemanticIds.cameraTimerButton,
+          SemanticIds.cameraGhostFrameButton,
+          SemanticIds.cameraGridButton,
+          SemanticIds.cameraStabilizationButton,
+        ]);
+
+        handle.dispose();
+      });
 
       // The stabilization name is its label word for word, so a name leaking
       // into the semantics tree would make it read twice.

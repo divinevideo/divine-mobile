@@ -9110,7 +9110,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Kamera ganda';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Opsi kamera';
+  String get videoRecorderRailShowOptionsLabel => 'Tampilkan opsi kamera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Sembunyikan opsi kamera';
 
   @override
   String get videoRecorderStabilizationLabel => 'Stabilisasi';

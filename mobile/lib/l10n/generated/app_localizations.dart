@@ -15395,11 +15395,17 @@ abstract class AppLocalizations {
   /// **'Dual camera'**
   String get videoRecorderRailDualCameraLabel;
 
-  /// Screen-reader label of the button that unfolds the recorder's control rail to list every camera control, and folds it back. Announced with its expanded or collapsed state.
+  /// Screen-reader label of the button that unfolds the recorder's control rail to list every camera control. Read while the rail is folded.
   ///
   /// In en, this message translates to:
-  /// **'Camera options'**
-  String get videoRecorderRailMoreOptionsLabel;
+  /// **'Show camera options'**
+  String get videoRecorderRailShowOptionsLabel;
+
+  /// Screen-reader label of the same button while the rail is unfolded: tapping it folds the rail back to flash, camera switch and aspect ratio.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide camera options'**
+  String get videoRecorderRailHideOptionsLabel;
 
   /// No description provided for @videoRecorderStabilizationLabel.
   ///

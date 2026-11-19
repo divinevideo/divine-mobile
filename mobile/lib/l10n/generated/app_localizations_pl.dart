@@ -9424,7 +9424,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Dwa aparaty';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Opcje aparatu';
+  String get videoRecorderRailShowOptionsLabel => 'Pokaż opcje aparatu';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ukryj opcje aparatu';
 
   @override
   String get videoRecorderStabilizationLabel => 'Stabilizacja';

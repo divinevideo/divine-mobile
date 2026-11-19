@@ -9202,7 +9202,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Dubbelkamera';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Kameraalternativ';
+  String get videoRecorderRailShowOptionsLabel => 'Visa kameraalternativ';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Dölj kameraalternativ';
 
   @override
   String get videoRecorderStabilizationLabel => 'Stabilisering';

@@ -9463,7 +9463,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'డ్యూయల్ కెమెరా';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'కెమెరా ఎంపికలు';
+  String get videoRecorderRailShowOptionsLabel => 'కెమెరా ఎంపికలను చూపించు';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'కెమెరా ఎంపికలను దాచు';
 
   @override
   String get videoRecorderStabilizationLabel => 'స్థిరీకరణ';

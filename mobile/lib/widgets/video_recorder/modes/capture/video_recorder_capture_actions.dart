@@ -1,6 +1,7 @@
 import 'package:divine_camera/divine_camera.dart'
     show DivineCameraLens, DivineVideoStabilizationMode;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart' show OrdinalSortKey;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -19,6 +20,12 @@ const double _railPillWidth = 4 + 8 + 24 + 8 + 4;
 
 /// How long the rail takes to unfold or fold, and its names to fade in.
 const Duration _railAnimationDuration = Duration(milliseconds: 220);
+
+/// Screen readers read the rail top to bottom, except that the controls an
+/// unfolded rail reveals come right after the button that revealed them, where
+/// a swipe on from it lands, although they are drawn above it.
+const OrdinalSortKey _alwaysShownReadingOrder = OrdinalSortKey(0);
+const OrdinalSortKey _revealedReadingOrder = OrdinalSortKey(1);
 
 /// Shadow under the controls' names, so they stay readable over a bright
 /// viewfinder.
@@ -72,6 +79,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderCycleTimerLabel,
           caption: l10n.videoRecorderRailTimerLabel,
           identifier: SemanticIds.cameraTimerButton,
+          sortKey: _revealedReadingOrder,
           value: _timerDurationValue(l10n, state.timer),
           onTap: () => context.read<VideoRecorderBloc>().add(
             const VideoRecorderTimerCycled(),
@@ -88,6 +96,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderToggleGridLabel,
           caption: l10n.videoRecorderRailGridLabel,
           identifier: SemanticIds.cameraGridButton,
+          sortKey: _revealedReadingOrder,
           toggled: state.showGridLines,
           onTap: () => context.read<VideoRecorderBloc>().add(
             const VideoRecorderGridLinesToggled(),
@@ -100,6 +109,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderToggleDualCameraLabel,
           caption: l10n.videoRecorderRailDualCameraLabel,
           identifier: SemanticIds.cameraDualCameraButton,
+          sortKey: _revealedReadingOrder,
           toggled: state.isDualCameraEnabled,
           // Rebuilding the camera session ends a take, so the recorder
           // refuses it while one is in flight.
@@ -237,7 +247,11 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                               SemanticIds.cameraRailOptionsButton,
                             ),
                             icon: .caretDown,
-                            label: l10n.videoRecorderRailMoreOptionsLabel,
+                            // VoiceOver does not speak the expanded state, so
+                            // the label says what a tap does.
+                            label: isExpanded
+                                ? l10n.videoRecorderRailHideOptionsLabel
+                                : l10n.videoRecorderRailShowOptionsLabel,
                             identifier: SemanticIds.cameraRailOptionsButton,
                             expanded: isExpanded,
                             iconTurns: isExpanded ? 0.5 : 0,
@@ -275,6 +289,7 @@ class _GhostFrameButton extends StatelessWidget {
       label: context.l10n.videoRecorderToggleGhostFrameLabel,
       caption: context.l10n.videoRecorderRailGhostFrameLabel,
       identifier: SemanticIds.cameraGhostFrameButton,
+      sortKey: _revealedReadingOrder,
       toggled: isVisible,
       onTap: () {
         final willEnable = !isVisible;
@@ -312,6 +327,7 @@ class _ColorMaskButton extends StatelessWidget {
       label: context.l10n.videoEditorChromaKeyLabel,
       caption: context.l10n.videoEditorChromaKeyLabel,
       identifier: SemanticIds.cameraColorMaskButton,
+      sortKey: _revealedReadingOrder,
       toggled: isEnabled,
       highlighted: isEnabled,
       onTap: () async {
@@ -346,6 +362,7 @@ class _StabilizationButton extends StatelessWidget {
       label: context.l10n.videoRecorderStabilizationLabel,
       caption: context.l10n.videoRecorderStabilizationLabel,
       identifier: SemanticIds.cameraStabilizationButton,
+      sortKey: _revealedReadingOrder,
       value: _stabilizationModeLabel(context.l10n, mode),
       onTap: isSupported ? () => _showStabilizationMenu(context) : null,
     );
@@ -438,6 +455,7 @@ class _RailButton extends StatelessWidget {
     this.toggled,
     this.expanded,
     this.iconTurns,
+    this.sortKey = _alwaysShownReadingOrder,
     this.highlighted = false,
     super.key,
   });
@@ -471,6 +489,10 @@ class _RailButton extends StatelessWidget {
   /// Turns the icon by this fraction of a full turn, animated when it
   /// changes; `null` leaves the icon as drawn.
   final double? iconTurns;
+
+  /// Where a screen reader reads this control; controls with the same key
+  /// keep their drawn order.
+  final OrdinalSortKey sortKey;
 
   /// Draws the icon in the brand green, for a control whose effect is easy to
   /// miss in the viewfinder while it is on.
@@ -508,6 +530,7 @@ class _RailButton extends StatelessWidget {
       value: value,
       toggled: toggled,
       expanded: expanded,
+      sortKey: sortKey,
       child: Tooltip(
         message: label,
         // The label above already carries the message; without this the

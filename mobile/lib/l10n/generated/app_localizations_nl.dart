@@ -9247,7 +9247,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Twee camera\'s';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Camera-opties';
+  String get videoRecorderRailShowOptionsLabel => 'Camera-opties tonen';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Camera-opties verbergen';
 
   @override
   String get videoRecorderStabilizationLabel => 'Stabilisatie';

@@ -9418,7 +9418,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoRecorderRailDualCameraLabel => 'Cameră dublă';
 
   @override
-  String get videoRecorderRailMoreOptionsLabel => 'Opțiuni cameră';
+  String get videoRecorderRailShowOptionsLabel => 'Afișează opțiunile camerei';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ascunde opțiunile camerei';
 
   @override
   String get videoRecorderStabilizationLabel => 'Stabilizare';
