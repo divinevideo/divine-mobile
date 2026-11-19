@@ -60,6 +60,7 @@ import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
@@ -260,7 +261,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   /// Called on app startup to query only drafts with `publishing` or `failed`
   /// status and surface them to the user via [BackgroundPublishFailed].
   Future<void> resumePendingPublishes(BuildContext context) async {
-    unawaited(_resumeCollabRoomNotifications());
+    runDetached(
+      _resumeCollabRoomNotifications(),
+      'resume Together room notifications',
+      logName: 'VideoPublishNotifier',
+      category: LogCategory.video,
+    );
     final List<DivineVideoDraft> pendingDrafts;
     try {
       pendingDrafts = await _draftService.getDraftsByPublishStatuses(const {
@@ -359,13 +365,24 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         onProgressChanged: ({required draftId, required progress}) {},
       );
       for (final draft in roomDrafts) {
-        if (!ref.mounted ||
-            await storage.isDraftOwnedByAnotherAccount(draft.id)) {
-          continue;
-        }
-        final result = await publishService.publishVideo(draft: draft);
-        if (result is PublishSuccess && !result.collabRoomNotificationPending) {
-          await storage.deleteDraft(draft.id);
+        // One unreadable row must not keep the others' rooms from hearing.
+        try {
+          if (!ref.mounted ||
+              await storage.isDraftOwnedByAnotherAccount(draft.id)) {
+            continue;
+          }
+          final result = await publishService.publishVideo(draft: draft);
+          if (result is PublishSuccess &&
+              !result.collabRoomNotificationPending) {
+            await storage.deleteDraft(draft.id);
+          }
+        } on Exception catch (error, stackTrace) {
+          Log.warning(
+            'Could not recover a Together room notification',
+            category: .video,
+            error: error,
+            stackTrace: stackTrace,
+          );
         }
       }
     } on Exception catch (error, stackTrace) {
