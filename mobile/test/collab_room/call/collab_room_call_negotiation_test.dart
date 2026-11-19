@@ -83,8 +83,9 @@ class _FakePeerConnection extends Fake implements RTCPeerConnection {
   Future<void> dispose() async => disposes++;
 }
 
-/// Hands the call what [incoming] carries and keeps what it sends. Each
-/// subscription closes at once while [closes] is set.
+/// Hands the call what [incoming] carries from the time it asks for, as a
+/// relay does, and keeps what it sends. Each subscription closes at once
+/// while [closes] is set.
 class _RelayTransport implements CollabRoomCallTransport {
   final incoming = StreamController<Event>.broadcast();
   final _sent = StreamController<Event>.broadcast();
@@ -102,7 +103,9 @@ class _RelayTransport implements CollabRoomCallTransport {
   @override
   Stream<Event> watch(String author, {required int since}) {
     _watched.add(++subscriptions);
-    return closes ? const Stream.empty() : incoming.stream;
+    return closes
+        ? const Stream.empty()
+        : incoming.stream.where((event) => event.createdAt >= since);
   }
 
   @override
@@ -270,6 +273,35 @@ void main() {
           throwsA(isA<TimeoutException>()),
         );
         expect(connections, hasLength(3));
+      });
+    });
+
+    group('a peer whose clock runs behind', () {
+      test('is heard from the start', () async {
+        await call.start();
+        final offered = nextOffer();
+        final hello = await theirChannel().seal(
+          CollabRoomCallSignal(
+            type: CollabRoomCallSignalType.hello,
+            from: other,
+            session: 'theirs',
+          ),
+          recipient: me,
+        );
+        // The same hello from a phone 20 seconds slow.
+        transport.incoming.add(
+          Event(
+            hello.pubkey,
+            hello.kind,
+            hello.tags,
+            hello.content,
+            createdAt: hello.createdAt - 20,
+          )..sign(callKey),
+        );
+
+        await offered.timeout(const Duration(seconds: 5));
+
+        expect(connections, hasLength(1));
       });
     });
 

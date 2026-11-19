@@ -245,8 +245,10 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   /// closed the call's subscription. Past the last, the call has failed.
   final List<Duration> _relayRetryDelays;
 
-  /// How far back a renewed subscription reads, for what was sent while it
-  /// was down.
+  /// How far back a subscription reads (seconds): for what was sent while a
+  /// renewed one was down, and from the start for a peer whose clock runs
+  /// behind. Each message carries its sender's time, so a phone a few seconds
+  /// slow signs a hello the relays would otherwise hold back as too old.
   static const _relayLookBack = 30;
 
   final String _me;
@@ -299,7 +301,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     if (_stopped) return;
     await _device(() => Helper.setSpeakerphoneOn(true));
     if (_stopped) return;
-    _listen(since: _nowSeconds() - 5);
+    _listen(since: _nowSeconds() - _relayLookBack);
     await _hello();
     _emit();
   }
