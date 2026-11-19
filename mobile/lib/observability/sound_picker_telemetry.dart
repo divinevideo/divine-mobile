@@ -6,6 +6,8 @@ import 'dart:async';
 import 'package:analytics/analytics.dart';
 import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
+import 'package:sounds_repository/sounds_repository.dart'
+    show SoundSearchRelays;
 import 'package:unified_logger/unified_logger.dart';
 
 /// The sound picker's list tabs, as its load telemetry names them.
@@ -39,7 +41,9 @@ enum SoundPickOutcome {
 /// * `surface_load` for [AnalyticsSurface.soundPicker], once per tab: the
 ///   time from the tab opening until its list first shows.
 /// * A `sound_search` Firebase Performance trace per relay search, from the
-///   debounced query until its results arrive.
+///   debounced query until its results arrive. A search the relays did not
+///   answer, which the picker covers with cached matches, ends as
+///   `fallback`, so it never counts as a relay result.
 /// * A `sound_selected` Analytics event when a pick is attached, refused or
 ///   fails.
 ///
@@ -152,11 +156,24 @@ class SoundPickerTelemetry {
       ..start();
   }
 
-  /// Reports that the search in flight answered with [resultCount] sounds.
-  void completeSearch(int resultCount) => _finishSearch(
-    resultCount == 0 ? 'empty' : 'results',
-    resultCount: resultCount,
-  );
+  /// Reports that the search in flight answered with [resultCount] sounds,
+  /// and how the relays answered it.
+  ///
+  /// Only an answer from the relays is `results` or `empty`. Otherwise the
+  /// sounds are cached matches standing in for one, and the search ends as
+  /// `fallback`, with [relays] as its `reason`.
+  void completeSearch(int resultCount, {required SoundSearchRelays relays}) {
+    final reason = _fallbackReason(relays);
+    _finishSearch(
+      reason != null
+          ? 'fallback'
+          : resultCount == 0
+          ? 'empty'
+          : 'results',
+      reason: reason,
+      resultCount: resultCount,
+    );
+  }
 
   /// Reports that the search in flight failed.
   void failSearch() => _finishSearch('failure');
@@ -203,13 +220,14 @@ class SoundPickerTelemetry {
     );
   }
 
-  void _finishSearch(String outcome, {int? resultCount}) {
+  void _finishSearch(String outcome, {String? reason, int? resultCount}) {
     final search = _search;
     if (search == null) return;
     _search = null;
     _searchStopwatch.stop();
     Log.info(
-      'Sound search: outcome=$outcome, results=${resultCount ?? '-'}, '
+      'Sound search: outcome=$outcome, reason=${reason ?? '-'}, '
+      'results=${resultCount ?? '-'}, '
       '${_searchStopwatch.elapsedMilliseconds}ms',
       name: 'SoundPickerTelemetry',
       category: LogCategory.ui,
@@ -217,6 +235,7 @@ class SoundPickerTelemetry {
     search.finish(
       attributes: {
         'outcome': outcome,
+        'reason': ?reason,
         if (resultCount != null) 'result_bucket': _resultBucket(resultCount),
       },
       metrics: {'result_count': ?resultCount},
@@ -255,6 +274,15 @@ class SoundPickerTelemetry {
     SoundPickOutcome.reuseBlocked => 'reuse_blocked',
     SoundPickOutcome.downloadFailed => 'download_failed',
     SoundPickOutcome.failed => 'failed',
+  };
+
+  /// Why the relays did not answer a search, or null when they did.
+  static String? _fallbackReason(SoundSearchRelays relays) => switch (relays) {
+    SoundSearchRelays.answered => null,
+    SoundSearchRelays.timedOut => 'timed_out',
+    SoundSearchRelays.noRelays => 'no_relays',
+    SoundSearchRelays.failed => 'relay_error',
+    SoundSearchRelays.notAsked => 'not_asked',
   };
 
   static String _resultBucket(int count) => switch (count) {

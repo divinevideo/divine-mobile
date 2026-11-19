@@ -18,12 +18,17 @@ choosing an optimization.
 | Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached; `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
 | Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness and video generation duration/outcome |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
-| Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results`, `empty`, `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
+| Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results` or `empty` when the relays answered, `fallback` when they did not and the picker showed its cached matches instead (`reason` = `timed_out`, `no_relays` or `relay_error`), `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
 
 `sound_search` is a live trace, so read its duration. It runs once per query the
 Newest tab sends — at most one per pause in typing — and never for the other
-tabs, which search the lists they already hold. The picker's tab loads and
-picks are Analytics events, not traces; see
+tabs, which search the lists they already hold. Only a relay answer counts as
+`results` or `empty`. When the relay query times out, reaches no relay or
+throws, the picker still lists the matches it had cached, and the trace ends
+as `fallback` with the reason, so those waits stay out of the relay result
+times; `result_bucket` then counts the cached matches the user saw. A
+`timed_out` fallback can hold relay sounds that arrived before the deadline.
+The picker's tab loads and picks are Analytics events, not traces; see
 [Analytics observability](../../docs/ANALYTICS_OBSERVABILITY.md#sound-picker).
 
 **Startup and first-frame traces are snapshots of already measured intervals.**

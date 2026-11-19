@@ -134,13 +134,14 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// Community sounds matching a free-text [query].
+/// Community sounds matching a free-text [query], and how the relays
+/// answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
 /// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to an empty list without a round
-/// trip; the caller shows the trending list instead of searching.
+/// pass-through. Blank queries resolve to no sounds without a round trip;
+/// the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
@@ -152,11 +153,13 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
 /// ```
 @riverpod
-Future<List<AudioEvent>> soundSearchResults(Ref ref, String query) async {
+Future<SoundSearchResults> soundSearchResults(Ref ref, String query) async {
   // Answered before the repository is read, so a search field that is merely
   // open does not construct one — and with it a Nostr client — for a query
   // nobody has typed yet.
-  if (!soundSearchSendsQuery(query)) return const [];
+  if (!soundSearchSendsQuery(query)) {
+    return (sounds: const <AudioEvent>[], relays: SoundSearchRelays.notAsked);
+  }
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.searchSounds(query);
@@ -610,7 +613,9 @@ Future<Map<String, SoundCover?>> soundSearchCovers(
   Ref ref,
   String query,
 ) async {
-  final sounds = await ref.watch(soundSearchResultsProvider(query).future);
+  final (:sounds, relays: _) = await ref.watch(
+    soundSearchResultsProvider(query).future,
+  );
   return _coversFor(ref, [sounds]);
 }
 

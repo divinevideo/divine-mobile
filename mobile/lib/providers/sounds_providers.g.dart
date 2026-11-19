@@ -250,13 +250,14 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
   }
 }
 
-/// Community sounds matching a free-text [query].
+/// Community sounds matching a free-text [query], and how the relays
+/// answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
 /// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to an empty list without a round
-/// trip; the caller shows the trending list instead of searching.
+/// pass-through. Blank queries resolve to no sounds without a round trip;
+/// the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
@@ -271,13 +272,14 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 @ProviderFor(soundSearchResults)
 final soundSearchResultsProvider = SoundSearchResultsFamily._();
 
-/// Community sounds matching a free-text [query].
+/// Community sounds matching a free-text [query], and how the relays
+/// answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
 /// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to an empty list without a round
-/// trip; the caller shows the trending list instead of searching.
+/// pass-through. Blank queries resolve to no sounds without a round trip;
+/// the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
@@ -292,18 +294,21 @@ final soundSearchResultsProvider = SoundSearchResultsFamily._();
 final class SoundSearchResultsProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<AudioEvent>>,
-          List<AudioEvent>,
-          FutureOr<List<AudioEvent>>
+          AsyncValue<SoundSearchResults>,
+          SoundSearchResults,
+          FutureOr<SoundSearchResults>
         >
-    with $FutureModifier<List<AudioEvent>>, $FutureProvider<List<AudioEvent>> {
-  /// Community sounds matching a free-text [query].
+    with
+        $FutureModifier<SoundSearchResults>,
+        $FutureProvider<SoundSearchResults> {
+  /// Community sounds matching a free-text [query], and how the relays
+  /// answered it.
   ///
   /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
   /// queries plus the in-memory cache for partial matches, and a
   /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to an empty list without a round
-  /// trip; the caller shows the trending list instead of searching.
+  /// pass-through. Blank queries resolve to no sounds without a round trip;
+  /// the caller shows the trending list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
@@ -337,12 +342,12 @@ final class SoundSearchResultsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<AudioEvent>> $createElement(
+  $FutureProviderElement<SoundSearchResults> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<AudioEvent>> create(Ref ref) {
+  FutureOr<SoundSearchResults> create(Ref ref) {
     final argument = this.argument as String;
     return soundSearchResults(ref, argument);
   }
@@ -359,15 +364,16 @@ final class SoundSearchResultsProvider
 }
 
 String _$soundSearchResultsHash() =>
-    r'f839317fa714c10aa6faddf416a57e7f48f88ace';
+    r'9581d692eadc6ceb60bc77b533f34e8e4391a9c0';
 
-/// Community sounds matching a free-text [query].
+/// Community sounds matching a free-text [query], and how the relays
+/// answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
 /// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to an empty list without a round
-/// trip; the caller shows the trending list instead of searching.
+/// pass-through. Blank queries resolve to no sounds without a round trip;
+/// the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
@@ -380,7 +386,7 @@ String _$soundSearchResultsHash() =>
 /// ```
 
 final class SoundSearchResultsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<AudioEvent>>, String> {
+    with $FunctionalFamilyOverride<FutureOr<SoundSearchResults>, String> {
   SoundSearchResultsFamily._()
     : super(
         retry: null,
@@ -390,13 +396,14 @@ final class SoundSearchResultsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Community sounds matching a free-text [query].
+  /// Community sounds matching a free-text [query], and how the relays
+  /// answered it.
   ///
   /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
   /// queries plus the in-memory cache for partial matches, and a
   /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to an empty list without a round
-  /// trip; the caller shows the trending list instead of searching.
+  /// pass-through. Blank queries resolve to no sounds without a round trip;
+  /// the caller shows the trending list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
@@ -1437,7 +1444,7 @@ final class SoundSearchCoversProvider
   }
 }
 
-String _$soundSearchCoversHash() => r'45f3d50707281f5fd38463c3ecfae631a0fee6e2';
+String _$soundSearchCoversHash() => r'f3069cf397c4baf79fe2a9e32fe38d1e71fd510c';
 
 /// Covers for the sounds a community search reached, keyed like
 /// [trendingSoundCovers].

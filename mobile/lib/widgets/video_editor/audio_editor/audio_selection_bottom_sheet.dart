@@ -45,7 +45,11 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart'
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show linkDivineSounds, rankForYouSounds, rankSearchMatches;
+    show
+        SoundSearchResults,
+        linkDivineSounds,
+        rankForYouSounds,
+        rankSearchMatches;
 import 'package:unified_logger/unified_logger.dart';
 
 class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
@@ -147,7 +151,7 @@ class _AudioSelectionBottomSheetState
 
   /// The relay search being timed: the query the Newest tab sends.
   String _timedSearchQuery = '';
-  ProviderSubscription<AsyncValue<List<AudioEvent>>>? _searchListener;
+  ProviderSubscription<AsyncValue<SoundSearchResults>>? _searchListener;
 
   @override
   int get tabCount => AudioCategory.values.length;
@@ -305,11 +309,14 @@ class _AudioSelectionBottomSheetState
     _searchListener = _listenUntilSettled(
       soundSearchResultsProvider(query),
       (results, {required wasSettled}) {
-        final sounds = results.value;
-        if (sounds == null) {
+        final answer = results.value;
+        if (answer == null) {
           _telemetry.failSearch();
         } else {
-          _telemetry.completeSearch(sounds.length);
+          _telemetry.completeSearch(
+            answer.sounds.length,
+            relays: answer.relays,
+          );
         }
       },
     );
@@ -375,12 +382,12 @@ class _AudioSelectionBottomSheetState
   /// page — as it briefly does not while a refresh is in flight.
   List<AudioEvent> _communitySounds(
     List<AudioEvent> loaded,
-    AsyncValue<List<AudioEvent>> searchResults,
+    AsyncValue<SoundSearchResults> searchResults,
   ) {
     final matches = _filterAudioEvents(loaded);
     if (_searchQuery.isEmpty) return matches;
     if (_debouncedQuery != _searchQuery) return matches;
-    final reached = searchResults.value;
+    final reached = searchResults.value?.sounds;
     if (reached == null) return matches;
     final listed = matches.map((sound) => sound.id).toSet();
     return [

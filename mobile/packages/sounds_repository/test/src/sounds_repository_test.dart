@@ -358,9 +358,10 @@ void main() {
       }
 
       test('returns nothing and does not query for a blank query', () async {
-        final sounds = await repository.searchSounds('  #  ');
+        final (:sounds, :relays) = await repository.searchSounds('  #  ');
 
         expect(sounds, isEmpty);
+        expect(relays, SoundSearchRelays.notAsked);
         verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
       });
 
@@ -417,7 +418,7 @@ void main() {
           });
 
           expect(repository.cachedSoundCount, 0);
-          final sounds = await repository.searchSounds('still snacks');
+          final sounds = (await repository.searchSounds('still snacks')).sounds;
 
           expect(sounds.map((sound) => sound.id), [testEventId1]);
           expect(sounds.single.publicTags, isEmpty);
@@ -434,9 +435,10 @@ void main() {
           ),
         ]);
 
-        final sounds = await repository.searchSounds('hooves');
+        final (:sounds, :relays) = await repository.searchSounds('hooves');
 
         expect(sounds.map((sound) => sound.id), equals([testEventId1]));
+        expect(relays, SoundSearchRelays.answered);
         expect(repository.getSoundFromCache(testEventId1), isNotNull);
       });
 
@@ -456,7 +458,7 @@ void main() {
           ),
         ]);
 
-        final sounds = await repository.searchSounds('horses hooves');
+        final sounds = (await repository.searchSounds('horses hooves')).sounds;
 
         expect(
           sounds.map((sound) => sound.id),
@@ -477,7 +479,7 @@ void main() {
           ),
         ]);
 
-        final sounds = await repository.searchSounds('wind');
+        final sounds = (await repository.searchSounds('wind')).sounds;
 
         expect(sounds.map((sound) => sound.id), equals([testEventId1]));
       });
@@ -492,7 +494,7 @@ void main() {
         await primeCache([event]);
         answerTagQuery([event]);
 
-        final sounds = await repository.searchSounds('crowd');
+        final sounds = (await repository.searchSounds('crowd')).sounds;
 
         expect(sounds.map((sound) => sound.id), equals([testEventId1]));
       });
@@ -521,7 +523,7 @@ void main() {
           ),
         ]);
 
-        final sounds = await repository.searchSounds('crowd');
+        final sounds = (await repository.searchSounds('crowd')).sounds;
 
         expect(
           sounds.map((sound) => sound.id),
@@ -548,7 +550,7 @@ void main() {
             ),
           ]);
 
-          final sounds = await repository.searchSounds('crowd');
+          final sounds = (await repository.searchSounds('crowd')).sounds;
 
           expect(
             sounds.map((sound) => sound.id),
@@ -588,9 +590,14 @@ void main() {
           () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
         ).thenThrow(Exception('relay down'));
 
-        final sounds = await repository.searchSounds('wind');
+        final (:sounds, :relays) = await repository.searchSounds('wind');
 
         expect(sounds.map((sound) => sound.id), equals([testEventId1]));
+        expect(
+          relays,
+          SoundSearchRelays.failed,
+          reason: 'the cached matches stand in for the relays, and say so',
+        );
       });
 
       group('when the tag query does not finish', () {
@@ -610,13 +617,16 @@ void main() {
           ),
         ]);
 
-        Future<void> expectUnnamedLastWithoutLookup() async {
-          final sounds = await repository.searchSounds('wind');
+        Future<void> expectUnnamedLastWithoutLookup(
+          SoundSearchRelays expectedRelays,
+        ) async {
+          final (:sounds, :relays) = await repository.searchSounds('wind');
 
           expect(
             sounds.map((sound) => sound.id),
             equals([testEventId1, testEventId3]),
           );
+          expect(relays, expectedRelays);
           verifyNever(
             () => mockNostrClient.queryEventsDetailed(
               any(that: isNot(isTagQuery)),
@@ -631,7 +641,7 @@ void main() {
             () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
           ).thenThrow(Exception('relay down'));
 
-          await expectUnnamedLastWithoutLookup();
+          await expectUnnamedLastWithoutLookup(SoundSearchRelays.failed);
         });
 
         test('lists unnamed sounds last without a reuse lookup when it '
@@ -639,7 +649,7 @@ void main() {
           await primeUnnamedAndNamed();
           answerTagQuery(const [], timedOut: true);
 
-          await expectUnnamedLastWithoutLookup();
+          await expectUnnamedLastWithoutLookup(SoundSearchRelays.timedOut);
         });
 
         test('lists unnamed sounds last without a reuse lookup when it '
@@ -647,7 +657,31 @@ void main() {
           await primeUnnamedAndNamed();
           answerTagQuery(const [], noRelays: true);
 
-          await expectUnnamedLastWithoutLookup();
+          await expectUnnamedLastWithoutLookup(SoundSearchRelays.noRelays);
+        });
+
+        test('reports no relays when no relay took the query, even if the '
+            'read also ran out of time', () async {
+          await primeUnnamedAndNamed();
+          answerTagQuery(const [], timedOut: true, noRelays: true);
+
+          await expectUnnamedLastWithoutLookup(SoundSearchRelays.noRelays);
+        });
+
+        test('keeps what arrived before the deadline', () async {
+          answerTagQuery([
+            createAudioEvent(
+              id: testEventId2,
+              pubkey: testPubkey2,
+              title: 'Wind chimes',
+              createdAt: 3000,
+            ),
+          ], timedOut: true);
+
+          final (:sounds, :relays) = await repository.searchSounds('wind');
+
+          expect(sounds.map((sound) => sound.id), equals([testEventId2]));
+          expect(relays, SoundSearchRelays.timedOut);
         });
       });
 
@@ -1184,7 +1218,9 @@ void main() {
           ),
         );
 
-        expect(ids(await blocking.searchSounds('beat')), [testEventId1]);
+        expect(ids((await blocking.searchSounds('beat')).sounds), [
+          testEventId1,
+        ]);
       });
 
       test('keeps them in the pages callers narrow themselves', () async {

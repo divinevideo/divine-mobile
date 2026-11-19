@@ -43,7 +43,7 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show RankedSounds, SoundsRepository;
+    show RankedSounds, SoundSearchRelays, SoundsRepository;
 
 import '../../../helpers/recording_analytics_event_sink.dart';
 import '../../../helpers/recording_performance_monitor.dart';
@@ -159,6 +159,7 @@ void main() {
         usageCounts: const <String, int>{},
       ),
       Map<String, List<AudioEvent>> searchResults = const {},
+      SoundSearchRelays searchRelays = SoundSearchRelays.answered,
       List<String>? relaySearches,
       AudioEvent? consentSound,
       bool? consentResult,
@@ -295,10 +296,10 @@ void main() {
             // repository, and with it a Nostr client, inside a widget test.
             soundSearchResultsProvider.overrideWith((ref, query) async {
               if (query.isNotEmpty) relaySearches?.add(query);
-              if (pendingSearch != null && query.isNotEmpty) {
-                return pendingSearch.future;
-              }
-              return searchResults[query] ?? const [];
+              final sounds = pendingSearch != null && query.isNotEmpty
+                  ? await pendingSearch.future
+                  : searchResults[query] ?? const <AudioEvent>[];
+              return (sounds: sounds, relays: searchRelays);
             }),
           ],
           child: routed
@@ -3017,6 +3018,41 @@ void main() {
           expect(trace.metrics, {'result_count': 1});
           expect(trace.stops, 1);
         });
+
+        testWidgets(
+          'reports cached matches shown for a timed-out search as a fallback',
+          (tester) async {
+            await tester.pumpWidget(
+              buildWidget(
+                trendingSoundsAsync: AsyncValue.data(testSounds),
+                searchResults: {
+                  'rain': [
+                    _createTestAudioEvent(
+                      id: 'rain',
+                      title: 'Rain on a tin roof',
+                    ),
+                  ],
+                },
+                searchRelays: SoundSearchRelays.timedOut,
+                telemetry: telemetry,
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.exploreTabNew));
+            await tester.pumpAndSettle();
+
+            await tester.enterText(find.byType(TextField).first, 'rain');
+            await tester.pumpAndSettle(const Duration(milliseconds: 400));
+
+            // The picker still lists what it has; only the trace says so.
+            expect(find.text('Rain on a tin roof'), findsOneWidget);
+            expect(monitor.traces.single.attributes, {
+              'outcome': 'fallback',
+              'reason': 'timed_out',
+              'result_bucket': '1_10',
+            });
+          },
+        );
 
         testWidgets('does not time the local search of the other tabs', (
           tester,

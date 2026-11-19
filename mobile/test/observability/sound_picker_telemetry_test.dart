@@ -4,6 +4,8 @@
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/sound_picker_telemetry.dart';
+import 'package:sounds_repository/sounds_repository.dart'
+    show SoundSearchRelays;
 
 import '../helpers/recording_analytics_event_sink.dart';
 import '../helpers/recording_performance_monitor.dart';
@@ -216,7 +218,7 @@ void main() {
       test('times a search until its results arrive', () {
         telemetry
           ..startSearch()
-          ..completeSearch(23);
+          ..completeSearch(23, relays: SoundSearchRelays.answered);
 
         final trace = monitor.traces.single;
         expect(trace.name, 'sound_search');
@@ -232,7 +234,7 @@ void main() {
         for (final count in [0, 1, 10, 11, 50, 51]) {
           telemetry
             ..startSearch()
-            ..completeSearch(count);
+            ..completeSearch(count, relays: SoundSearchRelays.answered);
         }
 
         expect(
@@ -240,6 +242,59 @@ void main() {
           ['0', '1_10', '1_10', '11_50', '11_50', 'over_50'],
         );
         expect(monitor.traces.first.attributes['outcome'], 'empty');
+      });
+
+      test('reports cached matches standing in for the relays as a '
+          'fallback, never as results', () {
+        for (final relays in [
+          SoundSearchRelays.timedOut,
+          SoundSearchRelays.noRelays,
+          SoundSearchRelays.failed,
+          SoundSearchRelays.notAsked,
+        ]) {
+          telemetry
+            ..startSearch()
+            ..completeSearch(3, relays: relays);
+        }
+
+        expect(monitor.traces.map((trace) => trace.attributes), [
+          {
+            'outcome': 'fallback',
+            'reason': 'timed_out',
+            'result_bucket': '1_10',
+          },
+          {
+            'outcome': 'fallback',
+            'reason': 'no_relays',
+            'result_bucket': '1_10',
+          },
+          {
+            'outcome': 'fallback',
+            'reason': 'relay_error',
+            'result_bucket': '1_10',
+          },
+          {
+            'outcome': 'fallback',
+            'reason': 'not_asked',
+            'result_bucket': '1_10',
+          },
+        ]);
+        expect(
+          monitor.traces.map((trace) => trace.metrics),
+          everyElement({'result_count': 3}),
+        );
+      });
+
+      test('reports a fallback with no cached matches as a fallback', () {
+        telemetry
+          ..startSearch()
+          ..completeSearch(0, relays: SoundSearchRelays.timedOut);
+
+        expect(monitor.traces.single.attributes, {
+          'outcome': 'fallback',
+          'reason': 'timed_out',
+          'result_bucket': '0',
+        });
       });
 
       test('reports a failed search', () {
@@ -274,7 +329,7 @@ void main() {
 
       test('reports nothing while no search is in flight', () {
         telemetry
-          ..completeSearch(4)
+          ..completeSearch(4, relays: SoundSearchRelays.answered)
           ..failSearch()
           ..abandonSearch();
 
