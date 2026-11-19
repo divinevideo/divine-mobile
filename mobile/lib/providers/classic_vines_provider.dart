@@ -42,7 +42,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   Future<VideoFeedState> build() async {
     _feedGeneration++;
     _paginationCursor = null;
-    if (adaptiveClassicsEnabled) {
+    if (ref.watch(adaptiveClassicsEnabledProvider)) {
       final analytics = ref.watch(analyticsServiceProvider);
       final privacy = analytics.privacyChanges.listen((_) {
         _feedGeneration++;

@@ -13,6 +13,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -379,7 +380,10 @@ void main() {
       tester,
     ) async {
       // The shared fixture never initializes, so consent stays off.
-      final home = await _mountSafetyPolicyHome(tester);
+      final home = await _mountSafetyPolicyHome(
+        tester,
+        overrides: [adaptiveClassicsEnabledProvider.overrideWithValue(true)],
+      );
       final requests = _stubClassicRecommendations(home.videos);
       home.originalFeed.add(
         const VideoFeedSourceChanged(VideoFeedSource.classic()),
@@ -399,6 +403,7 @@ void main() {
         final home = await _mountSafetyPolicyHome(
           tester,
           overrides: [
+            adaptiveClassicsEnabledProvider.overrideWithValue(true),
             analyticsServiceProvider.overrideWith((ref) {
               final current = analytics;
               ref.onDispose(current.dispose);

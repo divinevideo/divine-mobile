@@ -9,6 +9,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
@@ -102,6 +103,7 @@ void main() {
       analytics = _ConsentAnalytics();
       container = ProviderContainer(
         overrides: [
+          adaptiveClassicsEnabledProvider.overrideWithValue(true),
           appVersionProvider.overrideWithValue('test'),
           sharedPreferencesProvider.overrideWithValue(preferences),
           nostrServiceProvider.overrideWithValue(nostr),

@@ -1027,7 +1027,7 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
-    classicRecommendationsEnabled: adaptiveClassicsEnabled,
+    classicRecommendationsEnabled: ref.watch(adaptiveClassicsEnabledProvider),
     // These run per read, after this provider may have rebuilt. A replaced
     // repository's Ref can no longer read providers, so it reports no viewer
     // and a context that never matches: its reads end as superseded.

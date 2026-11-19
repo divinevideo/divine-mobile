@@ -27,6 +27,7 @@ import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -533,6 +534,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               additionalOverrides: [
+                adaptiveClassicsEnabledProvider.overrideWithValue(true),
                 pendingActionServiceProvider.overrideWithValue(null),
                 videosRepositoryProvider.overrideWithValue(repository),
                 videoEventServiceProvider.overrideWithValue(videoService),
@@ -627,6 +629,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               additionalOverrides: [
+                adaptiveClassicsEnabledProvider.overrideWithValue(true),
                 pendingActionServiceProvider.overrideWithValue(null),
                 videosRepositoryProvider.overrideWithValue(repository),
                 videoEventServiceProvider.overrideWithValue(videoService),

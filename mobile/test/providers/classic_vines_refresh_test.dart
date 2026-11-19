@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
@@ -96,10 +97,13 @@ void main() {
 
     ProviderContainer createContainer({
       VideosRepository Function()? repository,
+      bool adaptiveClassics = false,
     }) {
       return ProviderContainer(
         overrides: [
           appReadyProvider.overrideWithValue(true),
+          if (adaptiveClassics)
+            adaptiveClassicsEnabledProvider.overrideWithValue(true),
           analyticsServiceProvider.overrideWithValue(analytics),
           currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
@@ -144,7 +148,7 @@ void main() {
             hasMore: true,
           );
         });
-        final container = createContainer();
+        final container = createContainer(adaptiveClassics: true);
         addTearDown(container.dispose);
         await container.read(funnelcakeAvailableProvider.future);
         await container.read(classicVinesFeedProvider.future);

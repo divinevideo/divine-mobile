@@ -248,7 +248,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (adaptiveClassicsEnabled) {
+    if (ref.watch(adaptiveClassicsEnabledProvider)) {
       if (source case ClassicVinesViewSource(anchor: final anchor?)) {
         return ClassicsPlaybackPage(anchor: anchor, screen: this);
       }

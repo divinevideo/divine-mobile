@@ -88,6 +88,7 @@ class VideoFeedPage extends ConsumerWidget {
       videoProvenanceFilterVersionProvider,
     );
     final videosRepository = ref.watch(videosRepositoryProvider);
+    final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -134,9 +135,9 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
-                  classicSession: !adaptiveClassicsEnabled
-                      ? null
-                      : _homeClassicSession(ref, viewerPubkey),
+                  classicSession: useAdaptiveClassics
+                      ? _homeClassicSession(ref, viewerPubkey)
+                      : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,
