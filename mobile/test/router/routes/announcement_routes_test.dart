@@ -87,6 +87,24 @@ void main() {
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets('a session without an announcement catalog reports failure', (
+      tester,
+    ) async {
+      final repository = _MockNotificationRepository();
+      when(() => repository.announcementsRepository).thenReturn(null);
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId('missing'),
+        routes: announcementRoutes(),
+      );
+      addTearDown(router.dispose);
+      await pump(tester, router, repository);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(l10n.commonSomethingWentWrong), findsOneWidget);
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+    });
+
     testWidgets('back from a cold entry falls back to notifications', (
       tester,
     ) async {
