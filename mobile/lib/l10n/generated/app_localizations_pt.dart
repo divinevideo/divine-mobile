@@ -3124,7 +3124,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationSettingsLiveActivityUnavailable =>
-      'As Atividades ao Vivo estão desativadas para o Divine em Ajustes do iPhone';
+      'As Atividades ao Vivo estão desativadas para o Divine em Configurações do iPhone';
 
   @override
   String get notificationSettingsActions => 'Ações';
