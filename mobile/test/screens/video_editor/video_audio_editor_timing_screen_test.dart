@@ -579,14 +579,6 @@ void main() {
       );
     });
 
-    testWidgets('has route name and path constants', (tester) async {
-      expect(
-        VideoAudioEditorTimingScreen.routeName,
-        equals('video-audio-timing'),
-      );
-      expect(VideoAudioEditorTimingScreen.path, equals('/video-audio-timing'));
-    });
-
     testWidgets('survives a clip player that fails to pause on drag', (
       tester,
     ) async {

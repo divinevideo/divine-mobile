@@ -308,19 +308,17 @@ void main() {
         }
       });
 
-      test('a draft editor location matches pathFor for a draft id', () {
+      test('a draft editor location carries the draft id', () {
         expect(
           const VideoEditorDraftRouteData(draftId: _draftId).location,
-          equals(VideoEditorScreen.pathFor(draftId: _draftId)),
+          equals('/video-editor/$_draftId'),
         );
         expect(
           const VideoEditorDraftRouteData(
             draftId: _draftId,
             from: VideoEditorScreen.libraryOrigin,
           ).location,
-          equals(
-            VideoEditorScreen.pathFor(draftId: _draftId, fromLibrary: true),
-          ),
+          equals('/video-editor/$_draftId?from=library'),
         );
       });
 
@@ -442,8 +440,7 @@ void main() {
           from: VideoEditorScreen.libraryOrigin,
         ).location;
 
-        expect(location, contains('from=library'));
-        expect(location, equals(VideoEditorScreen.pathFor(fromLibrary: true)));
+        expect(location, equals('/video-editor?from=library'));
       });
 
       test('the metadata screen reads mode', () {

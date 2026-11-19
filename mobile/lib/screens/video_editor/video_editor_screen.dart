@@ -161,20 +161,6 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// it only sets the `entry` of the `editor_ready` performance trace.
   static const libraryOrigin = 'library';
 
-  /// Builds the editor location, optionally for an existing [draftId].
-  ///
-  /// The origin rides in the URL rather than `extra` so a restored session
-  /// keeps the library exit behaviour instead of silently falling back to the
-  /// recorder one (#3335).
-  static String pathFor({String? draftId, bool fromLibrary = false}) {
-    return Uri(
-      path: draftId == null || draftId.isEmpty ? path : '$path/$draftId',
-      queryParameters: fromLibrary
-          ? {originQueryParameter: libraryOrigin}
-          : null,
-    ).toString();
-  }
-
   @override
   ConsumerState<VideoEditorScreen> createState() => _VideoEditorScreenState();
 }

@@ -454,13 +454,11 @@ void main() {
         // match nothing, and fall through to the RouteType.home fallback —
         // which the normalizer then "corrects" by yanking the user to /home/0.
         expect(
-          parseRoute(VideoEditorScreen.pathFor(fromLibrary: true)).type,
+          parseRoute('/video-editor?from=library').type,
           RouteType.videoEditor,
         );
         expect(
-          parseRoute(
-            VideoEditorScreen.pathFor(draftId: 'draft-1', fromLibrary: true),
-          ).type,
+          parseRoute('/video-editor/draft-1?from=library').type,
           RouteType.videoEditor,
         );
       });
