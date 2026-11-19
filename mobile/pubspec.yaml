@@ -443,6 +443,8 @@ dependencies:
   daylight: ^3.1.0
   geocoding: ^5.0.0
   flutter_timezone: ^5.1.1
+  # Peer-to-peer audio and video between the people in a Together room.
+  flutter_webrtc: ^1.6.3
 
 dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the

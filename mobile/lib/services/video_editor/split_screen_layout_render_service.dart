@@ -1,5 +1,5 @@
 // ABOUTME: Renders a split-screen layout into one clip: each cell's footage
-// ABOUTME: framed the way the user left it, a shorter cell held on its end
+// ABOUTME: framed and shaped the way the user left it, a short cell held
 
 import 'dart:convert';
 import 'dart:io';
@@ -26,10 +26,12 @@ import 'package:unified_logger/unified_logger.dart';
 const _logName = 'SplitScreenLayoutRenderService';
 
 /// One filled cell of a layout, ready to render: its clip, where the cell sits
-/// in fractions of the frame, and how the user framed the clip in it.
+/// in fractions of the frame, its shape there, and how the user framed the
+/// clip in it.
 typedef SplitScreenRenderCell = ({
   DivineVideoClip clip,
   ui.Rect rect,
+  SplitScreenCellShape shape,
   Alignment alignment,
   double zoom,
 });
@@ -41,7 +43,8 @@ typedef SplitScreenRenderCell = ({
 /// first. A cell shows exactly what the layout screen showed: where the user
 /// zoomed or slid the footage, the clip is drawn larger than its cell and an
 /// alpha matte cuts it back to the cell, since the renderer only crops the
-/// centre of a frame on its own.
+/// centre of a frame on its own. The same matte cuts a round or slanted cell
+/// to its shape.
 abstract final class SplitScreenLayoutRenderService {
   /// How far before a cell's end its last frame is read from — see
   /// `FreezeFrameRenderService`: the end itself lies past the last frame.
@@ -52,8 +55,8 @@ abstract final class SplitScreenLayoutRenderService {
   /// otherwise leave in the border colour between them.
   static const _holdOverlap = Duration(milliseconds: 34);
 
-  /// Longest side of a matte. A matte is a hard-edged rectangle, so a coarser
-  /// one costs nothing visible, while one the size of a 4× zoomed clip would
+  /// Longest side of a matte. A coarser matte costs little visible even on a
+  /// round or slanted edge, while one the size of a 4× zoomed clip would
   /// cost tens of megabytes to decode.
   static const double _maxMatteSide = 2048;
 
@@ -144,7 +147,10 @@ abstract final class SplitScreenLayoutRenderService {
             source: source,
             sourceSize: size,
             cellRect: cellRect,
-            coveredBy: pixelRects.skip(index + 1),
+            coveredBy: [
+              for (final (above, rect) in pixelRects.indexed.skip(index + 1))
+                cells[above].shape.pathIn(rect),
+            ],
             start: end > _holdOverlap ? end - _holdOverlap : Duration.zero,
           );
           if (hold != null) holds.add(hold);
@@ -267,8 +273,10 @@ abstract final class SplitScreenLayoutRenderService {
       zoom: cell.zoom,
     );
     // The renderer's own cover fit crops the centre of the frame, which is
-    // what an untouched cell shows; anything else needs the matte.
+    // what an untouched rectangular cell shows; anything else needs the
+    // matte.
     final centred =
+        cell.shape.isRectangle &&
         cell.zoom <= 1 + _epsilon &&
         (crop.center - const ui.Offset(0.5, 0.5)).distance < _epsilon;
     final footage = centred
@@ -284,7 +292,7 @@ abstract final class SplitScreenLayoutRenderService {
     // No chromaKey: a clip's key is burned into its file already, the way
     // the export never keys a timeline clip again.
     return VideoLayer(
-      mask: centred ? null : await _matte(crop, footage.size),
+      mask: centred ? null : await _matte(crop, footage.size, cell.shape),
       clips: [
         VideoSegment(
           video: source.video,
@@ -305,19 +313,26 @@ abstract final class SplitScreenLayoutRenderService {
   static const double _epsilon = 1e-6;
 
   /// An alpha matte over a clip's whole frame, opaque only over [crop] — the
-  /// part of the frame its cell shows. It is drawn at the shape of [footage],
-  /// the box the frame is stretched over, so the cut lands on whole pixels.
-  static Future<EditorLayerImage> _matte(ui.Rect crop, ui.Size footage) async {
+  /// part of the frame its cell shows — cut to the cell's [shape]. It is drawn
+  /// at the shape of [footage], the box the frame is stretched over, so the
+  /// cut lands on whole pixels.
+  static Future<EditorLayerImage> _matte(
+    ui.Rect crop,
+    ui.Size footage,
+    SplitScreenCellShape shape,
+  ) async {
     final scale = math.min(1, _maxMatteSide / footage.longestSide);
     final width = math.max(2, (footage.width * scale).round());
     final height = math.max(2, (footage.height * scale).round());
     final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawRect(
-      ui.Rect.fromLTRB(
-        (crop.left * width).roundToDouble(),
-        (crop.top * height).roundToDouble(),
-        (crop.right * width).roundToDouble(),
-        (crop.bottom * height).roundToDouble(),
+    ui.Canvas(recorder).drawPath(
+      shape.pathIn(
+        ui.Rect.fromLTRB(
+          (crop.left * width).roundToDouble(),
+          (crop.top * height).roundToDouble(),
+          (crop.right * width).roundToDouble(),
+          (crop.bottom * height).roundToDouble(),
+        ),
       ),
       // Only the matte's alpha counts, and a plain paint is opaque.
       ui.Paint(),
@@ -327,12 +342,12 @@ abstract final class SplitScreenLayoutRenderService {
     );
   }
 
-  /// The last frame of [cell]'s footage, framed like the cell, shown in it
-  /// from [start] to the end of the layout.
+  /// The last frame of [cell]'s footage, framed and shaped like the cell,
+  /// shown in it from [start] to the end of the layout.
   ///
   /// Image layers are drawn over every video layer, so wherever a cell after
-  /// this one — [coveredBy] — sits on top of it, the frame is cut out and that
-  /// cell's video keeps showing through.
+  /// this one — [coveredBy], each its outline in canvas pixels — sits on top
+  /// of it, the frame is cut out and that cell's video keeps showing through.
   ///
   /// Returns `null` when the frame cannot be read; the cell then shows the
   /// border colour once its footage ends, which beats failing the layout.
@@ -341,7 +356,7 @@ abstract final class SplitScreenLayoutRenderService {
     required ({EditorVideo video, Duration start, Duration end}) source,
     required ui.Size sourceSize,
     required ui.Rect cellRect,
-    required Iterable<ui.Rect> coveredBy,
+    required List<ui.Path> coveredBy,
     required Duration start,
   }) async {
     final lastFrame = source.end - _lastFrameLead;
@@ -384,23 +399,29 @@ abstract final class SplitScreenLayoutRenderService {
         zoom: cell.zoom,
       );
       final recorder = ui.PictureRecorder();
-      final canvas = ui.Canvas(recorder)
-        ..drawImageRect(
-          image,
-          ui.Rect.fromLTWH(
-            crop.left * image.width,
-            crop.top * image.height,
-            crop.width * image.width,
-            crop.height * image.height,
+      final canvas = ui.Canvas(recorder);
+      if (!cell.shape.isRectangle) {
+        canvas.clipPath(
+          cell.shape.pathIn(
+            ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
           ),
-          ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-          ui.Paint()..filterQuality = ui.FilterQuality.high,
         );
+      }
+      canvas.drawImageRect(
+        image,
+        ui.Rect.fromLTWH(
+          crop.left * image.width,
+          crop.top * image.height,
+          crop.width * image.width,
+          crop.height * image.height,
+        ),
+        ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
+      );
       for (final above in coveredBy) {
-        final overlap = above.intersect(cellRect);
-        if (overlap.isEmpty) continue;
-        canvas.drawRect(
-          overlap.shift(-cellRect.topLeft),
+        if (!above.getBounds().overlaps(cellRect)) continue;
+        canvas.drawPath(
+          above.shift(-cellRect.topLeft),
           ui.Paint()..blendMode = ui.BlendMode.clear,
         );
       }

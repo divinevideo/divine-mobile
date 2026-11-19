@@ -29,6 +29,7 @@ class RecordButton extends ConsumerWidget {
         canRecord: b.state.canRecord,
         isCameraInitialized: b.state.isCameraInitialized,
         recorderMode: b.state.recorderMode,
+        hasRecordingLimit: b.state.hasRecordingLimit,
       ),
     );
 
@@ -55,7 +56,7 @@ class RecordButton extends ConsumerWidget {
         ScreenshotMode.enabled ||
         (state.canRecord &&
             state.isCameraInitialized &&
-            (hasRemainingDuration || !state.recorderMode.hasRecordingLimit)) ||
+            (hasRemainingDuration || !state.hasRecordingLimit)) ||
         state.isRecording;
 
     return Semantics(

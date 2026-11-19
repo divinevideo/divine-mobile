@@ -12,9 +12,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show NativeProofData;
+import 'package:models/models.dart' show NIP71VideoKinds, NativeProofData;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
@@ -59,6 +60,7 @@ import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
@@ -227,6 +229,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       // Like the reply context: publishing leaves with go(), so the camera's
       // pushed route never pops to clear it, and the next session would join.
       ref.read(addYoursContextProvider.notifier).clear();
+      ref.read(collabRoomPostProvider.notifier).clear();
       reset();
 
       // The editor owns autosave deletion and starts deferred cleanup only
@@ -436,6 +439,13 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     final creationTracker = ref.read(creationAnalyticsTrackerProvider);
     final recorderMode =
         creationTracker.activeMode ?? VideoRecorderMode.capture;
+    // Read up front, like the rest: an account switch can dispose this
+    // notifier while the upload still runs.
+    final collabRoomId = ref.read(collabRoomPostProvider);
+    final collabRooms = collabRoomId == null
+        ? null
+        : ref.read(collabRoomServiceProvider);
+    final authorPubkey = ref.read(authServiceProvider).currentPublicKeyHex;
 
     CreationAnalyticsPublishAttempt? publishAttempt;
     try {
@@ -728,8 +738,23 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
       // Handle result
       switch (result) {
-        case PublishSuccess():
+        case PublishSuccess(:final stableId):
           await creationTracker.publishSucceeded(publishAttempt);
+          if (collabRoomId != null &&
+              collabRooms != null &&
+              stableId != null &&
+              authorPubkey != null) {
+            runDetached(
+              collabRooms.markPosted(
+                collabRoomId,
+                '${NIP71VideoKinds.addressableShortVideo}:'
+                '$authorPubkey:$stableId',
+              ),
+              'tell the collab room its video was posted',
+              logName: 'VideoPublishNotifier',
+              category: LogCategory.video,
+            );
+          }
           Log.info(
             '🎉 Video published successfully',
             name: 'VideoPublishNotifier',

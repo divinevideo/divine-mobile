@@ -15983,6 +15983,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'Picture in picture, bottom right';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Slanted side by side';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Slanted stacked';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Three slanted rows';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Four side by side';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Four rows';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Three over one';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'One beside three';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Three beside one';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => 'Round window, top left';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => 'Round window, top right';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Round window, bottom left';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Round window, bottom right';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Two round windows';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Three round windows';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return 'Cell $number';
   }
@@ -16465,4 +16509,235 @@ class AppLocalizationsEn extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Let\'s make a video together! Open Divine to join my room and film your part.';
+
+  @override
+  String get collabRoomJoinDmBody => 'I\'m in! Can\'t wait to film my part.';
+
+  @override
+  String get collabRoomDeclineDmBody => 'Can\'t make this one. Have fun!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'I left our video room.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'We\'re filming! Open Divine and film your part.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Our video is live! Thanks for being part of it.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'I called off our video room.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Our video room changed. Open Divine to see what\'s new.';
+
+  @override
+  String get collabRoomTitle => 'Make it together';
+
+  @override
+  String get collabRoomMissing => 'This room isn\'t here anymore.';
+
+  @override
+  String get collabRoomYou => 'You';
+
+  @override
+  String get collabRoomHost => 'Host';
+
+  @override
+  String get collabRoomStatusInvited => 'Invited';
+
+  @override
+  String get collabRoomStatusJoined => 'In';
+
+  @override
+  String get collabRoomStatusPartIn => 'Part\'s in';
+
+  @override
+  String get collabRoomStatusDeclined => 'Can\'t make it';
+
+  @override
+  String get collabRoomStatusLeft => 'Left';
+
+  @override
+  String get collabRoomStatusRemoved => 'Not in this one';
+
+  @override
+  String get collabRoomPickLayout => 'Pick a layout';
+
+  @override
+  String get collabRoomStartButton => 'Start filming';
+
+  @override
+  String get collabRoomStartHint =>
+      'Start once someone joins. Anyone who hasn\'t joined by then sits this one out.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'Waiting for the host to start filming.';
+
+  @override
+  String get collabRoomJoinButton => 'Join';
+
+  @override
+  String get collabRoomLeaveButton => 'Leave room';
+
+  @override
+  String get collabRoomFilmPartButton => 'Film my part';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Film it again';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Everyone films their own part. It\'s cut to the shape of your cell.';
+
+  @override
+  String get collabRoomComposeButton => 'Put it together';
+
+  @override
+  String get collabRoomComposeWaiting => 'Waiting for everyone\'s part.';
+
+  @override
+  String get collabRoomSoundHint => 'Tap a part to use its sound.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Use this part\'s sound';
+
+  @override
+  String get collabRoomRemoveMember => 'Remove';
+
+  @override
+  String get collabRoomCancelButton => 'Call it off';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Call off this video?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'The room closes for everyone.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Someone\'s out. Pick a layout for who\'s still here.';
+
+  @override
+  String get collabRoomComposing => 'Putting it together…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Couldn\'t put the video together. Try again.';
+
+  @override
+  String get collabRoomPosted => 'This video is live. Nice work, everyone!';
+
+  @override
+  String get collabRoomCancelled => 'This room was called off.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'That didn\'t go through. Check your connection and try again.';
+
+  @override
+  String get collabRoomRemovedYou => 'You\'re not in this one.';
+
+  @override
+  String get collabRoomDeclinedYou => 'You turned this one down.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Your part\'s in. The host puts it all together.';
+
+  @override
+  String get collabRoomPartTitle => 'Your part';
+
+  @override
+  String get collabRoomPartRendering => 'Getting your part ready…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Couldn\'t get your part ready.';
+
+  @override
+  String get collabRoomPartSendButton => 'Send my part';
+
+  @override
+  String get collabRoomPartSendFailed => 'Couldn\'t send your part. Try again.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Make a video together';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Invite up to 3 friends. Everyone films their own part, and it all comes together in one split-screen video.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Invite friends';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Who\'s in?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Your rooms';
+
+  @override
+  String get collabRoomTileHosting => 'Your room';
+
+  @override
+  String get collabRoomTileGuest => 'A friend\'s room';
+
+  @override
+  String get collabRoomPhaseLobby => 'Waiting for people to join';
+
+  @override
+  String get collabRoomPhaseRecording => 'Filming parts';
+
+  @override
+  String get collabRoomCreateFailed => 'Couldn\'t send the invites. Try again.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Let\'s make a video together';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Join the room, and everyone films their own part.';
+
+  @override
+  String get collabRoomOpenButton => 'Open room';
+
+  @override
+  String get collabRoomCallMute => 'Mute';
+
+  @override
+  String get collabRoomCallUnmute => 'Unmute';
+
+  @override
+  String get collabRoomCallCameraOn => 'Turn camera on';
+
+  @override
+  String get collabRoomCallCameraOff => 'Turn camera off';
+
+  @override
+  String get collabRoomCallConnecting => 'Connecting your call…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Couldn\'t start the call. Check that Divine may use your microphone.';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Couldn\'t turn your camera on.';
+
+  @override
+  String get collabRoomCallMuted => 'Muted';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Tap two places in the layout to swap who\'s where.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Swap this place';
 }

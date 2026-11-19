@@ -23,6 +23,7 @@ class VideoRecorderClassicStack extends ConsumerWidget {
         canRecord: b.state.canRecord,
         isCameraInitialized: b.state.isCameraInitialized,
         recorderMode: b.state.recorderMode,
+        hasRecordingLimit: b.state.hasRecordingLimit,
       ),
     );
 
@@ -35,7 +36,7 @@ class VideoRecorderClassicStack extends ConsumerWidget {
     final isEnabled =
         (state.canRecord &&
             state.isCameraInitialized &&
-            (hasRemainingDuration || !state.recorderMode.hasRecordingLimit)) ||
+            (hasRemainingDuration || !state.hasRecordingLimit)) ||
         state.isRecording;
 
     final startsRecordingOnPressDown = ref.watch(

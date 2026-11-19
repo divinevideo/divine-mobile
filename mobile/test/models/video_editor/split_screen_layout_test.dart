@@ -146,6 +146,244 @@ void main() {
         expect(1 - bottomRight.bottom, closeTo(topLeft.top, 1e-9));
       });
     });
+
+    group('cells', () {
+      /// The corners of [cell]'s polygon in frame units, where the frame is
+      /// [_vertical] wide and 1 high.
+      List<Offset> cornersInFrame(SplitScreenCellGeometry cell) => [
+        for (final corner in cell.shape.corners!)
+          Offset(
+            (cell.rect.left + corner.dx * cell.rect.width) * _vertical,
+            cell.rect.top + corner.dy * cell.rect.height,
+          ),
+      ];
+
+      /// [rect], in fractions of the frame, in frame units.
+      Rect inFrame(Rect rect) => Rect.fromLTRB(
+        rect.left * _vertical,
+        rect.top,
+        rect.right * _vertical,
+        rect.bottom,
+      );
+
+      test('leaves the cells of a grid as rectangles', () {
+        final cells = SplitScreenLayoutPreset.fourStacked.cells(
+          aspectRatio: _vertical,
+          gap: 0.04,
+        );
+
+        expect(cells.map((cell) => cell.shape.isRectangle), everyElement(true));
+      });
+
+      /// Matches an offset within rounding of [expected].
+      Matcher near(Offset expected) => isA<Offset>().having(
+        (offset) => (offset - expected).distance,
+        'distance from $expected',
+        lessThan(1e-9),
+      );
+
+      /// The two corners of [corners] furthest along [direction]: a slanted
+      /// cell's edge on that side.
+      List<Offset> edge(List<Offset> corners, Offset direction) {
+        double along(Offset point) =>
+            point.dx * direction.dx + point.dy * direction.dy;
+        return (List.of(
+          corners,
+        )..sort((a, b) => along(b).compareTo(along(a)))).take(2).toList();
+      }
+
+      test('splits slanted rows by a line that rises to the right', () {
+        final [top, bottom] = SplitScreenLayoutPreset.slantedStacked.cells(
+          aspectRatio: _vertical,
+          gap: 0,
+        );
+        final divider = edge(cornersInFrame(top), const Offset(0, 1))
+          ..sort((a, b) => a.dx.compareTo(b.dx));
+        final [leftEnd, rightEnd] = divider;
+
+        expect(leftEnd.dy, greaterThan(rightEnd.dy));
+        // With no gap the two cells share that edge.
+        expect(cornersInFrame(bottom), anyElement(near(leftEnd)));
+        expect(cornersInFrame(bottom), anyElement(near(rightEnd)));
+        expect(top.rect.top, 0);
+        expect(bottom.rect.bottom, closeTo(1, 1e-9));
+      });
+
+      test('keeps the gap across a slanted split square to the line', () {
+        const gap = 0.05;
+        final [top, bottom] = SplitScreenLayoutPreset.slantedStacked.cells(
+          aspectRatio: _vertical,
+          gap: gap,
+        );
+        final [a, b] = edge(cornersInFrame(top), const Offset(0, 1));
+        final across = edge(cornersInFrame(bottom), const Offset(0, -1));
+        // Distance of the bottom cell's upper edge from the top cell's lower
+        // one, measured square to them.
+        final along = b - a;
+        final normal = Offset(-along.dy, along.dx) / along.distance;
+        double distance(Offset point) =>
+            ((point - a).dx * normal.dx + (point - a).dy * normal.dy).abs();
+
+        for (final point in across) {
+          expect(distance(point), closeTo(gap * _vertical, 1e-9));
+        }
+      });
+
+      test('splits slanted columns by a line that leans right', () {
+        final [left, right] = SplitScreenLayoutPreset.slantedSideBySide.cells(
+          aspectRatio: _vertical,
+          gap: 0,
+        );
+        final divider = edge(cornersInFrame(left), const Offset(1, 0))
+          ..sort((a, b) => a.dy.compareTo(b.dy));
+        final [topEnd, bottomEnd] = divider;
+
+        expect(topEnd.dx, greaterThan(bottomEnd.dx));
+        expect(cornersInFrame(right), anyElement(near(topEnd)));
+        expect(cornersInFrame(right), anyElement(near(bottomEnd)));
+      });
+
+      test('gives three slanted rows a middle cut on both sides', () {
+        final [top, middle, bottom] = SplitScreenLayoutPreset
+            .slantedThreeStacked
+            .cells(aspectRatio: _vertical, gap: 0.02);
+
+        expect(top.shape.corners, hasLength(4));
+        expect(middle.shape.corners, hasLength(4));
+        expect(bottom.shape.corners, hasLength(4));
+        expect(top.rect.top, lessThan(middle.rect.top));
+        expect(middle.rect.bottom, lessThan(bottom.rect.bottom));
+      });
+
+      test('makes a round window a circle in the frame', () {
+        final [under, window] = SplitScreenLayoutPreset.circleTopLeft.cells(
+          aspectRatio: _vertical,
+          gap: 0,
+        );
+        final circle = inFrame(window.rect);
+
+        expect(window.shape.isOval, isTrue);
+        expect(circle.width, closeTo(circle.height, 1e-9));
+        expect(window.rect.center.dx, lessThan(0.5));
+        expect(window.rect.center.dy, lessThan(0.5));
+        expect(under.shape, SplitScreenCellShape.rectangle);
+      });
+
+      test('cuts a ring the width of the gap around each round window', () {
+        const gap = 0.03;
+        final [under, ...windows] = SplitScreenLayoutPreset.twoCircles.cells(
+          aspectRatio: _vertical,
+          gap: gap,
+        );
+        final underRect = inFrame(under.rect);
+        final holes = [
+          for (final hole in under.shape.holes)
+            Rect.fromLTRB(
+              underRect.left + hole.left * underRect.width,
+              underRect.top + hole.top * underRect.height,
+              underRect.left + hole.right * underRect.width,
+              underRect.top + hole.bottom * underRect.height,
+            ),
+        ];
+
+        expect(windows, hasLength(2));
+        expect(holes, hasLength(2));
+        for (final (index, window) in windows.indexed) {
+          final ring = inFrame(window.rect).inflate(gap * _vertical);
+          expect(holes[index].left, closeTo(ring.left, 1e-9));
+          expect(holes[index].top, closeTo(ring.top, 1e-9));
+          expect(holes[index].right, closeTo(ring.right, 1e-9));
+          expect(holes[index].bottom, closeTo(ring.bottom, 1e-9));
+          // The ring stays inside the clip it is cut from.
+          expect(underRect.contains(ring.topLeft), isTrue);
+          expect(underRect.contains(ring.bottomRight), isTrue);
+        }
+      });
+
+      test('keeps the rings of round windows apart at the widest gap', () {
+        const gap = SplitScreenLayoutGeometry.maxGap;
+        final [_, ...windows] = SplitScreenLayoutPreset.threeCircles.cells(
+          aspectRatio: _vertical,
+          gap: gap,
+        );
+        final rings = [
+          for (final window in windows)
+            inFrame(window.rect).inflate(gap * _vertical),
+        ];
+
+        expect(rings, hasLength(3));
+        expect(rings[0].right, lessThan(rings[1].left));
+        expect(rings[1].right, lessThan(rings[2].left));
+        expect(rings[2].right, lessThan(_vertical));
+      });
+    });
+  });
+
+  group(SplitScreenCellShape, () {
+    const cell = Rect.fromLTWH(10, 20, 100, 100);
+
+    test('a rectangle covers its whole rect', () {
+      final path = SplitScreenCellShape.rectangle.pathIn(cell);
+
+      expect(path.contains(cell.topLeft + const Offset(1, 1)), isTrue);
+      expect(SplitScreenCellShape.rectangle.isRectangle, isTrue);
+    });
+
+    test('an oval leaves the corners of its rect out', () {
+      final path = SplitScreenCellShape.oval.pathIn(cell);
+
+      expect(path.contains(cell.center), isTrue);
+      expect(path.contains(cell.topLeft + const Offset(2, 2)), isFalse);
+      expect(SplitScreenCellShape.oval.isRectangle, isFalse);
+    });
+
+    test('a rectangle with holes leaves them out', () {
+      const shape = SplitScreenCellShape.withHoles([
+        Rect.fromLTRB(0.5, 0.5, 1, 1),
+      ]);
+      final path = shape.pathIn(cell);
+
+      expect(path.contains(cell.topLeft + const Offset(5, 5)), isTrue);
+      expect(path.contains(cell.topLeft + const Offset(75, 75)), isFalse);
+      expect(shape.isRectangle, isFalse);
+    });
+
+    test('a polygon follows its corners', () {
+      const shape = SplitScreenCellShape.polygon([
+        Offset.zero,
+        Offset(1, 0),
+        Offset(0, 1),
+      ]);
+      final path = shape.pathIn(cell);
+
+      expect(path.contains(cell.topLeft + const Offset(10, 10)), isTrue);
+      expect(path.contains(cell.bottomRight - const Offset(10, 10)), isFalse);
+    });
+
+    test('rounds a rectangle by the given radius', () {
+      final path = SplitScreenCellShape.rectangle.pathIn(
+        cell,
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+      );
+
+      expect(path.contains(cell.topLeft + const Offset(1, 1)), isFalse);
+      expect(path.contains(cell.center), isTrue);
+    });
+
+    test('compares by value', () {
+      expect(
+        const SplitScreenCellShape.polygon([Offset.zero, Offset(1, 1)]),
+        const SplitScreenCellShape.polygon([Offset.zero, Offset(1, 1)]),
+      );
+      expect(
+        const SplitScreenCellShape.withHoles([Rect.fromLTRB(0, 0, 1, 1)]),
+        isNot(SplitScreenCellShape.rectangle),
+      );
+      expect(
+        SplitScreenCellShape.withHoles(List.empty()).hashCode,
+        SplitScreenCellShape.rectangle.hashCode,
+      );
+    });
   });
 
   group('splitScreenCellAspectRatio', () {

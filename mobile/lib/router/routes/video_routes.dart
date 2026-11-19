@@ -46,11 +46,16 @@ class VideoRecorderRouteData extends GoRouteData with $VideoRecorderRouteData {
     this.challengeRecording,
     @TypedQueryParameter(name: VideoRecorderScreen.entryPointQueryParameter)
     this.entryPoint,
+    @TypedQueryParameter(name: VideoRecorderScreen.collabRoomQueryParameter)
+    this.collabRoom,
     this.$extra,
   });
 
   /// The id of the challenge this take is recorded for.
   final String? challengeRecording;
+
+  /// The id of the collaborative room whose part is filmed.
+  final String? collabRoom;
 
   /// A [CreationEntryPoint] name; anything else opens as
   /// [CreationEntryPoint.direct].
@@ -68,6 +73,7 @@ class VideoRecorderRouteData extends GoRouteData with $VideoRecorderRouteData {
           child: VideoRecorderRoute(
             initialSound: extraAs<RecorderSoundSelection>($extra),
             challengeRecordingId: challengeRecording,
+            collabRoomId: collabRoom,
             entryPoint: CreationEntryPoint.fromName(entryPoint),
             // Read from the URI, not a field: the screen owns the key and its
             // parsing, and pathForEntryPoint is the only builder that sets it.

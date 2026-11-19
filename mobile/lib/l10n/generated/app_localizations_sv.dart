@@ -15906,6 +15906,52 @@ class AppLocalizationsSv extends AppLocalizations {
       'Bild i bild, nere till höger';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Snett sida vid sida';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Snett staplade';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Tre sneda rader';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Fyra sida vid sida';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Fyra rader';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Tre över en';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'En bredvid tre';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Tre bredvid en';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Runt fönster, uppe till vänster';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Runt fönster, uppe till höger';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Runt fönster, nere till vänster';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Runt fönster, nere till höger';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Två runda fönster';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Tre runda fönster';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return 'Ruta $number';
   }
@@ -16354,4 +16400,239 @@ class AppLocalizationsSv extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Vi gör en video tillsammans! Öppna Divine, gå med i mitt rum och filma din del.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Jag är med! Längtar efter att filma min del.';
+
+  @override
+  String get collabRoomDeclineDmBody => 'Kan inte den här gången. Ha kul!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Jag lämnade vårt videorum.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Vi filmar! Öppna Divine och filma din del.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Vår video är ute! Tack för att du var med.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Jag ställde in vårt videorum.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Något har ändrats i vårt videorum. Öppna Divine och kolla.';
+
+  @override
+  String get collabRoomTitle => 'Gör det tillsammans';
+
+  @override
+  String get collabRoomMissing => 'Det här rummet finns inte längre.';
+
+  @override
+  String get collabRoomYou => 'Du';
+
+  @override
+  String get collabRoomHost => 'Värd';
+
+  @override
+  String get collabRoomStatusInvited => 'Inbjuden';
+
+  @override
+  String get collabRoomStatusJoined => 'Med';
+
+  @override
+  String get collabRoomStatusPartIn => 'Del klar';
+
+  @override
+  String get collabRoomStatusDeclined => 'Kan inte';
+
+  @override
+  String get collabRoomStatusLeft => 'Lämnade';
+
+  @override
+  String get collabRoomStatusRemoved => 'Inte med den här gången';
+
+  @override
+  String get collabRoomPickLayout => 'Välj en layout';
+
+  @override
+  String get collabRoomStartButton => 'Börja filma';
+
+  @override
+  String get collabRoomStartHint =>
+      'Börja när någon har gått med. Den som inte gått med då står över den här gången.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'Väntar på att rummet ska börja filma.';
+
+  @override
+  String get collabRoomJoinButton => 'Gå med';
+
+  @override
+  String get collabRoomLeaveButton => 'Lämna rummet';
+
+  @override
+  String get collabRoomFilmPartButton => 'Filma min del';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Filma igen';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Alla filmar sin egen del. Den beskärs till formen på din ruta.';
+
+  @override
+  String get collabRoomComposeButton => 'Sätt ihop';
+
+  @override
+  String get collabRoomComposeWaiting => 'Väntar på allas delar.';
+
+  @override
+  String get collabRoomSoundHint =>
+      'Tryck på en del för att använda dess ljud.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Använd ljudet från den här delen';
+
+  @override
+  String get collabRoomRemoveMember => 'Ta bort';
+
+  @override
+  String get collabRoomCancelButton => 'Ställ in';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Ställa in den här videon?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'Rummet stängs för alla.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Någon är borta. Välj en layout för de som är kvar.';
+
+  @override
+  String get collabRoomComposing => 'Sätter ihop…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Det gick inte att sätta ihop videon. Försök igen.';
+
+  @override
+  String get collabRoomPosted => 'Videon är ute. Snyggt jobbat, allihop!';
+
+  @override
+  String get collabRoomCancelled => 'Det här rummet ställdes in.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Det gick inte igenom. Kolla din anslutning och försök igen.';
+
+  @override
+  String get collabRoomRemovedYou => 'Du är inte med den här gången.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Du tackade nej till den här.';
+
+  @override
+  String get collabRoomPartSent => 'Din del är klar. Rummet sätter ihop allt.';
+
+  @override
+  String get collabRoomPartTitle => 'Din del';
+
+  @override
+  String get collabRoomPartRendering => 'Gör i ordning din del…';
+
+  @override
+  String get collabRoomPartRenderFailed =>
+      'Det gick inte att göra i ordning din del.';
+
+  @override
+  String get collabRoomPartSendButton => 'Skicka min del';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Det gick inte att skicka din del. Försök igen.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Gör en video tillsammans';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Bjud in upp till 3 vänner. Alla filmar sin egen del, och allt blir en video med delad skärm.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Bjud in vänner';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Vilka är med?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Dina rum';
+
+  @override
+  String get collabRoomTileHosting => 'Ditt rum';
+
+  @override
+  String get collabRoomTileGuest => 'En väns rum';
+
+  @override
+  String get collabRoomPhaseLobby => 'Väntar på att folk ska gå med';
+
+  @override
+  String get collabRoomPhaseRecording => 'Delar filmas';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Det gick inte att skicka inbjudningarna. Försök igen.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Vi gör en video tillsammans';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Gå med i rummet, så filmar alla sin egen del.';
+
+  @override
+  String get collabRoomOpenButton => 'Öppna rummet';
+
+  @override
+  String get collabRoomCallMute => 'Stäng av mikrofonen';
+
+  @override
+  String get collabRoomCallUnmute => 'Slå på mikrofonen';
+
+  @override
+  String get collabRoomCallCameraOn => 'Slå på kameran';
+
+  @override
+  String get collabRoomCallCameraOff => 'Stäng av kameran';
+
+  @override
+  String get collabRoomCallConnecting => 'Ansluter samtalet…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Det gick inte att starta samtalet. Kolla att Divine får använda mikrofonen.';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Det gick inte att slå på kameran.';
+
+  @override
+  String get collabRoomCallMuted => 'Avstängd mikrofon';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Tryck på två platser i layouten för att byta dem.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Byt den här platsen';
 }

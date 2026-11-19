@@ -161,6 +161,48 @@ class DmVideoSendService {
     }
   }
 
+  /// Encrypts [videoFile] and uploads the ciphertext without sending it to
+  /// anyone, for a video whose key travels in messages of its own — a
+  /// collaborative room's part, which the room's author hands to everyone in
+  /// one snapshot.
+  ///
+  /// Returns where the ciphertext lives and the metadata that verifies and
+  /// decrypts it, or `null` when the upload fails. The ciphertext temp file is
+  /// deleted either way.
+  Future<({String url, DmFileMetadata metadata})?> uploadVideo({
+    required File videoFile,
+    required String mimeType,
+  }) async {
+    final enc = await _encryption.encryptFile(videoFile);
+    try {
+      // Read alongside the upload; the reader never throws.
+      final reading = _readPreview(videoFile);
+      final upload = await _blossom.uploadEncryptedFile(
+        ciphertextFile: enc.ciphertextFile,
+      );
+      final preview = await reading;
+      if (!upload.success || upload.videoId == null) return null;
+      return (
+        url:
+            upload.url ??
+            '${BlossomUploadService.defaultBlossomServer}/${upload.videoId}',
+        metadata: DmFileMetadata(
+          fileType: mimeType,
+          encryptionAlgorithm: 'aes-gcm',
+          decryptionKey: enc.key,
+          decryptionNonce: enc.nonce,
+          fileHash: enc.ciphertextHash,
+          originalFileHash: enc.plaintextHash,
+          fileSize: enc.ciphertextSize,
+          dimensions: preview.dimensions,
+          blurhash: preview.blurhash,
+        ),
+      );
+    } finally {
+      await _deleteCiphertextQuietly(enc.ciphertextFile);
+    }
+  }
+
   /// Best-effort deletion of the ciphertext temp file.
   ///
   /// A failure to delete must not mask the send result, so filesystem errors

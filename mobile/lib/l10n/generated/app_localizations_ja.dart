@@ -15145,6 +15145,48 @@ class AppLocalizationsJa extends AppLocalizations {
       'ピクチャー・イン・ピクチャー（右下）';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => '斜めに左右';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => '斜めに上下';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => '斜めに3段';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => '4列';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => '4段';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => '上に3つ、下に1つ';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => '左に1つ、右に3つ';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => '左に3つ、右に1つ';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => '丸いウィンドウ（左上）';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => '丸いウィンドウ（右上）';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft => '丸いウィンドウ（左下）';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight => '丸いウィンドウ（右下）';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => '丸いウィンドウ2つ';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => '丸いウィンドウ3つ';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return 'セル$number';
   }
@@ -15580,4 +15622,222 @@ class AppLocalizationsJa extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat：$outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      '一緒に動画を作りましょう！Divine を開いて私のルームに参加し、あなたのパートを撮ってください。';
+
+  @override
+  String get collabRoomJoinDmBody => '参加します！自分のパートを撮るのが楽しみです。';
+
+  @override
+  String get collabRoomDeclineDmBody => '今回は参加できません。楽しんでください！';
+
+  @override
+  String get collabRoomLeaveDmBody => '動画ルームを抜けました。';
+
+  @override
+  String get collabRoomStartedDmBody => '撮影開始です！Divine を開いてあなたのパートを撮ってください。';
+
+  @override
+  String get collabRoomPostedDmBody => '動画を公開しました！参加してくれてありがとう。';
+
+  @override
+  String get collabRoomCancelledDmBody => '動画ルームを中止しました。';
+
+  @override
+  String get collabRoomUpdatedDmBody => '動画ルームに変更がありました。Divine を開いて確認してください。';
+
+  @override
+  String get collabRoomTitle => 'みんなで作る';
+
+  @override
+  String get collabRoomMissing => 'このルームはもうありません。';
+
+  @override
+  String get collabRoomYou => 'あなた';
+
+  @override
+  String get collabRoomHost => 'ホスト';
+
+  @override
+  String get collabRoomStatusInvited => '招待中';
+
+  @override
+  String get collabRoomStatusJoined => '参加中';
+
+  @override
+  String get collabRoomStatusPartIn => 'パート提出済み';
+
+  @override
+  String get collabRoomStatusDeclined => '参加できない';
+
+  @override
+  String get collabRoomStatusLeft => '退出';
+
+  @override
+  String get collabRoomStatusRemoved => '今回は不参加';
+
+  @override
+  String get collabRoomPickLayout => 'レイアウトを選ぶ';
+
+  @override
+  String get collabRoomStartButton => '撮影を始める';
+
+  @override
+  String get collabRoomStartHint => '誰かが参加したら始められます。その時点で参加していない人は今回は不参加になります。';
+
+  @override
+  String get collabRoomWaitingForHost => 'ルームの撮影開始を待っています。';
+
+  @override
+  String get collabRoomJoinButton => '参加する';
+
+  @override
+  String get collabRoomLeaveButton => 'ルームを抜ける';
+
+  @override
+  String get collabRoomFilmPartButton => '自分のパートを撮る';
+
+  @override
+  String get collabRoomRefilmPartButton => '撮り直す';
+
+  @override
+  String get collabRoomFilmHint => 'それぞれが自分のパートを撮ります。パートはあなたの枠の形に切り取られます。';
+
+  @override
+  String get collabRoomComposeButton => 'つなげる';
+
+  @override
+  String get collabRoomComposeWaiting => '全員のパートを待っています。';
+
+  @override
+  String get collabRoomSoundHint => 'パートをタップするとその音声を使えます。';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'このパートの音声を使う';
+
+  @override
+  String get collabRoomRemoveMember => '外す';
+
+  @override
+  String get collabRoomCancelButton => '中止する';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'この動画を中止しますか？';
+
+  @override
+  String get collabRoomCancelConfirmBody => '全員のルームが閉じます。';
+
+  @override
+  String get collabRoomPickNewLayout => '抜けた人がいます。残っている人に合うレイアウトを選んでください。';
+
+  @override
+  String get collabRoomComposing => 'つなげています…';
+
+  @override
+  String get collabRoomComposeFailed => '動画をつなげられませんでした。もう一度お試しください。';
+
+  @override
+  String get collabRoomPosted => 'この動画は公開されました。みんなお疲れさまでした！';
+
+  @override
+  String get collabRoomCancelled => 'このルームは中止されました。';
+
+  @override
+  String get collabRoomActionFailed => '送信できませんでした。接続を確認してもう一度お試しください。';
+
+  @override
+  String get collabRoomRemovedYou => '今回は参加していません。';
+
+  @override
+  String get collabRoomDeclinedYou => '今回は辞退しました。';
+
+  @override
+  String get collabRoomPartSent => 'パートを提出しました。ルームで全部をつなげます。';
+
+  @override
+  String get collabRoomPartTitle => 'あなたのパート';
+
+  @override
+  String get collabRoomPartRendering => 'パートを準備しています…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'パートを準備できませんでした。';
+
+  @override
+  String get collabRoomPartSendButton => 'パートを送る';
+
+  @override
+  String get collabRoomPartSendFailed => 'パートを送信できませんでした。もう一度お試しください。';
+
+  @override
+  String get collabRoomLobbyTitle => 'みんなで動画を作る';
+
+  @override
+  String get collabRoomLobbyBody =>
+      '友達を3人まで招待できます。それぞれが自分のパートを撮り、ひとつの分割画面の動画にまとまります。';
+
+  @override
+  String get collabRoomLobbyInvite => '友達を招待';
+
+  @override
+  String get collabRoomInvitePickerTitle => '誰が参加する？';
+
+  @override
+  String get collabRoomLobbyRooms => 'あなたのルーム';
+
+  @override
+  String get collabRoomTileHosting => '自分のルーム';
+
+  @override
+  String get collabRoomTileGuest => '友達のルーム';
+
+  @override
+  String get collabRoomPhaseLobby => '参加者を待っています';
+
+  @override
+  String get collabRoomPhaseRecording => 'パートを撮影中';
+
+  @override
+  String get collabRoomCreateFailed => '招待を送信できませんでした。もう一度お試しください。';
+
+  @override
+  String get collabRoomInviteCardTitle => '一緒に動画を作りましょう';
+
+  @override
+  String get collabRoomInviteCardBody => 'ルームに参加すると、それぞれが自分のパートを撮ります。';
+
+  @override
+  String get collabRoomOpenButton => 'ルームを開く';
+
+  @override
+  String get collabRoomCallMute => 'ミュート';
+
+  @override
+  String get collabRoomCallUnmute => 'ミュート解除';
+
+  @override
+  String get collabRoomCallCameraOn => 'カメラをオン';
+
+  @override
+  String get collabRoomCallCameraOff => 'カメラをオフ';
+
+  @override
+  String get collabRoomCallConnecting => '通話に接続しています…';
+
+  @override
+  String get collabRoomCallFailed => '通話を開始できませんでした。Divine がマイクを使えるか確認してください。';
+
+  @override
+  String get collabRoomCallCameraFailed => 'カメラをオンにできませんでした。';
+
+  @override
+  String get collabRoomCallMuted => 'ミュート中';
+
+  @override
+  String get collabRoomSwapSeatHint => 'レイアウトの2か所をタップすると入れ替わります。';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'この場所を入れ替える';
 }

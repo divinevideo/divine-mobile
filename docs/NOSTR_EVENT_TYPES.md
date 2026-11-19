@@ -229,6 +229,50 @@ one of their videos, and the ones they hid
 - Sent by `QuestionAnswerCubit` through `DmRepository.sendSharedVideo`; never
   sent as a plaintext kind 4 copy
 
+### Collaborative Recording Rooms (NIP-17)
+**Used for:** The camera's Together mode, where up to four people each film
+their own part of one split-screen video
+
+**Implementation:**
+- No new event kind. A room lives in one-to-one NIP-17 messages between its
+  author and each invitee, so members never message each other and nothing
+  about the room is public until the video is posted
+- Every room message carries `["divine", "collab-room", "1"]` and
+  `["collab-room", "<room id>", "<type>", "<recipient pubkey>"]`. The room id
+  is 16 random bytes in hex. The recipient must be the other side of the
+  message's conversation, or the message is ignored
+- Kind 14 types: `invite`, `state` (author to member), `join`, `decline`,
+  `leave` (member to author). `invite` and `state` also carry
+  `["collab-room-state", "<snapshot JSON>"]`: revision, phase
+  (`lobby`/`recording`/`posted`/`cancelled`), members with status and layout
+  cell, layout name, `vertical` or `square`, whose sound the video keeps, the
+  finished parts, and the posted video's address. The highest revision wins
+- Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
+  Blossom sent to the author as a NIP-17 file message. The author forwards each
+  part's URL and key to everyone in the next snapshot
+- Every device folds its own DM history into its rooms
+  (`foldCollabRooms` in `dm_repository`); the author's device publishes a new
+  snapshot whenever it knows more than its last one shows
+- The posted video tags everyone who handed in a part with the usual
+  collaborator `p` tag, so the collaborator invite and kind 34238 acceptance
+  run as for any other collaboration
+- The snapshot also carries the room's call key, a private key the author
+  generates. While the room screen is open, everyone in the room talks over a
+  peer-to-peer WebRTC call set up through kind 1059 events signed by the call
+  key, NIP-44 encrypted to the call key's own pubkey, with
+  `["p", "<call pubkey>"]` and a NIP-40 `["expiration", ...]` ten minutes out.
+  relay.divine.video accepts only an allowlist of kinds, and none of its
+  ephemeral kinds fits. The JSON inside says `hello`, `offer`, `answer`,
+  `state`, `bye` or `lobby`
+- `lobby` is the author's lobby as it stands — the layout and who sits where —
+  so the others see a change within a few hundred milliseconds instead of
+  waiting for the next snapshot, which is held back half a second to batch
+  taps and then signed through the account's signer. It is only a preview:
+  members apply it only from the author's pubkey and only in the lobby, and the
+  first snapshot with a revision past the one it names replaces it. Everyone
+  who holds the call key can write to the call, so the snapshot stays the
+  record
+
 ## Event Subscription Requirements
 
 ### VideoEventService Subscriptions

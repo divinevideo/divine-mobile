@@ -475,8 +475,20 @@ class VideoRecorderBloc
 
     final prefs = _readSharedPreferences();
 
-    final requestedMode = event.fromEditor ? null : event.recorderMode;
-    if (requestedMode != null) {
+    // A part recorder stays one for its lifetime: returning from the editor
+    // re-initializes without the flag.
+    final collabPart = event.collabPart || state.isCollabPart;
+    if (collabPart && !state.isCollabPart) {
+      emit(state.copyWith(isCollabPart: true));
+    }
+    final requestedMode = event.fromEditor
+        ? null
+        : collabPart
+        ? VideoRecorderMode.capture
+        : event.recorderMode;
+    // A room part leaves the last-used mode alone: the next plain open
+    // should land where the user left the recorder, not in a part's capture.
+    if (requestedMode != null && !collabPart) {
       // Persist before restoring so every later re-init in this session
       // (returning from the editor or the library) lands on this mode rather
       // than the previous session's — that switch would clear the session's
@@ -622,7 +634,7 @@ class VideoRecorderBloc
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
-    if (state.recorderMode == VideoRecorderMode.upload) {
+    if (!state.recorderMode.recordsVideo) {
       await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
     }
 
@@ -847,7 +859,7 @@ class VideoRecorderBloc
     if (!state.supportsVideoStabilization) {
       await _saveStabilizationModePreference(event.mode);
       if (isClosed) return;
-      if (state.recorderMode == VideoRecorderMode.upload) {
+      if (!state.recorderMode.recordsVideo) {
         await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
       } else {
         await _applyCameraForRecorderMode(emit);
@@ -1044,7 +1056,7 @@ class VideoRecorderBloc
         !_cameraService.canRecord ||
         state.hasRecordingInFlight ||
         (remainingDuration < const Duration(milliseconds: 30) &&
-            state.recorderMode.hasRecordingLimit)) {
+            state.hasRecordingLimit)) {
       Log.debug(
         '🎥 Recording start ignored - '
         'locked: ${state.recordingLockedForNavigation}, '
@@ -1195,9 +1207,7 @@ class VideoRecorderBloc
 
     unawaited(_playSoundPlayback());
     final success = await _cameraService.startRecording(
-      maxDuration: state.recorderMode.hasRecordingLimit
-          ? remainingDuration
-          : null,
+      maxDuration: state.hasRecordingLimit ? remainingDuration : null,
     );
 
     if (state.recordingLockedForNavigation) {
@@ -1491,7 +1501,7 @@ class VideoRecorderBloc
       originalAspectRatio: _cameraService.cameraAspectRatio,
       targetAspectRatio: state.aspectRatio,
       lensMetadata: _cameraService.currentLensMetadata,
-      limitClipDuration: state.recorderMode.hasRecordingLimit,
+      limitClipDuration: state.hasRecordingLimit,
       captureChromaKey: captureChromaKey,
       secondaryRecording: secondaryRecording,
       secondaryPipCenter: state.dualCameraPipCenter,
@@ -2222,7 +2232,7 @@ class VideoRecorderBloc
     if (_isClosing) return;
     // Leaving Upload resumes a paused camera: a rebind while paused would
     // restart it on Android, so the resume applies the mode instead.
-    if (previousMode != VideoRecorderMode.upload) {
+    if (previousMode.recordsVideo) {
       await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
     }
   }
@@ -2238,14 +2248,14 @@ class VideoRecorderBloc
     // The recording mode the session's clips belong to. Upload records nothing,
     // so while it shows, that is the mode it was entered from — null when the
     // recorder opened straight into Upload.
-    final sessionMode = state.recorderMode == VideoRecorderMode.upload
+    final sessionMode = !state.recorderMode.recordsVideo
         ? state.modeBeforeUpload
         : state.recorderMode;
     emit(
       state.copyWith(
         recorderMode: mode,
-        modeBeforeUpload: mode == VideoRecorderMode.upload ? sessionMode : null,
-        clearModeBeforeUpload: mode != VideoRecorderMode.upload,
+        modeBeforeUpload: mode.recordsVideo ? null : sessionMode,
+        clearModeBeforeUpload: mode.recordsVideo,
         aspectRatio: mode.defaultAspectRatio,
         showGridLines: _gridLinesEnabledFor(mode),
         timerDuration: _timerDurationCarriedTo(mode),
@@ -2263,9 +2273,7 @@ class VideoRecorderBloc
     // A peek at Upload and back keeps the session; any other move between two
     // recording modes discards it, with or without Upload in between.
     final switchesRecordingMode =
-        mode != VideoRecorderMode.upload &&
-        sessionMode != null &&
-        mode != sessionMode;
+        mode.recordsVideo && sessionMode != null && mode != sessionMode;
     if (switchesRecordingMode) {
       await _readClipManager().clearAll(
         keepAutosavedDraft: keepAutosavedDraft,
@@ -3056,6 +3064,7 @@ class VideoRecorderBloc
         showLastClipOverlay: state.showLastClipOverlay,
         recorderMode: state.recorderMode,
         modeBeforeUpload: state.modeBeforeUpload,
+        isCollabPart: state.isCollabPart,
         showGridLines: state.showGridLines,
         // The native take outlives a re-sync. Reading idle here would hide the
         // stop button and let the shutter start a second take on top of it.
@@ -3106,7 +3115,7 @@ class VideoRecorderBloc
   ) {
     // The Upload tab pauses the camera and shows no preview, so a volume or
     // Bluetooth press there must not start a recording the user cannot see.
-    if (state.recorderMode == VideoRecorderMode.upload) {
+    if (!state.recorderMode.recordsVideo) {
       Log.debug(
         '🎮 Remote record trigger ignored - no preview on '
         '${state.recorderMode.name}',
@@ -3290,8 +3299,7 @@ class VideoRecorderBloc
     bool clearRetainedRequest = false,
   }) async {
     // Upload pauses the camera and records nothing.
-    if (state.recorderMode == VideoRecorderMode.upload ||
-        !_cameraService.isInitialized) {
+    if (!state.recorderMode.recordsVideo || !_cameraService.isInitialized) {
       return;
     }
     // Where dual capture is not offered — another mode, or the color mask,

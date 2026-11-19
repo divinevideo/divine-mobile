@@ -15780,6 +15780,51 @@ class AppLocalizationsId extends AppLocalizations {
       'Gambar dalam gambar, kanan bawah';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Berdampingan miring';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Bertumpuk miring';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Tiga baris miring';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Empat berdampingan';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Empat baris';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Tiga di atas satu';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Satu di samping tiga';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Tiga di samping satu';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => 'Jendela bulat, kiri atas';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Jendela bulat, kanan atas';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Jendela bulat, kiri bawah';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Jendela bulat, kanan bawah';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Dua jendela bulat';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Tiga jendela bulat';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return 'Sel $number';
   }
@@ -16227,4 +16272,239 @@ class AppLocalizationsId extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Yuk bikin video bareng! Buka Divine, gabung ke ruanganku, dan rekam bagianmu.';
+
+  @override
+  String get collabRoomJoinDmBody => 'Aku ikut! Nggak sabar rekam bagianku.';
+
+  @override
+  String get collabRoomDeclineDmBody =>
+      'Kali ini aku nggak bisa. Selamat bersenang-senang!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Aku keluar dari ruang video kita.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Kita mulai syuting! Buka Divine dan rekam bagianmu.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Video kita sudah tayang! Makasih sudah ikut.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Aku membatalkan ruang video kita.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Ada yang berubah di ruang video kita. Buka Divine untuk lihat.';
+
+  @override
+  String get collabRoomTitle => 'Bikin bareng';
+
+  @override
+  String get collabRoomMissing => 'Ruangan ini sudah tidak ada.';
+
+  @override
+  String get collabRoomYou => 'Kamu';
+
+  @override
+  String get collabRoomHost => 'Tuan rumah';
+
+  @override
+  String get collabRoomStatusInvited => 'Diundang';
+
+  @override
+  String get collabRoomStatusJoined => 'Ikut';
+
+  @override
+  String get collabRoomStatusPartIn => 'Bagian masuk';
+
+  @override
+  String get collabRoomStatusDeclined => 'Nggak bisa';
+
+  @override
+  String get collabRoomStatusLeft => 'Keluar';
+
+  @override
+  String get collabRoomStatusRemoved => 'Nggak ikut kali ini';
+
+  @override
+  String get collabRoomPickLayout => 'Pilih tata letak';
+
+  @override
+  String get collabRoomStartButton => 'Mulai syuting';
+
+  @override
+  String get collabRoomStartHint =>
+      'Mulai setelah ada yang gabung. Yang belum gabung saat itu absen dulu kali ini.';
+
+  @override
+  String get collabRoomWaitingForHost => 'Menunggu ruangan mulai syuting.';
+
+  @override
+  String get collabRoomJoinButton => 'Gabung';
+
+  @override
+  String get collabRoomLeaveButton => 'Keluar dari ruangan';
+
+  @override
+  String get collabRoomFilmPartButton => 'Rekam bagianku';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Rekam ulang';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Semua merekam bagiannya sendiri. Bagianmu dipotong sesuai bentuk selmu.';
+
+  @override
+  String get collabRoomComposeButton => 'Satukan';
+
+  @override
+  String get collabRoomComposeWaiting => 'Menunggu bagian semua orang.';
+
+  @override
+  String get collabRoomSoundHint => 'Ketuk satu bagian untuk memakai suaranya.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Pakai suara bagian ini';
+
+  @override
+  String get collabRoomRemoveMember => 'Hapus';
+
+  @override
+  String get collabRoomCancelButton => 'Batalkan';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Batalkan video ini?';
+
+  @override
+  String get collabRoomCancelConfirmBody =>
+      'Ruangan ditutup untuk semua orang.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Ada yang keluar. Pilih tata letak untuk yang masih ada.';
+
+  @override
+  String get collabRoomComposing => 'Menyatukan…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Video tidak bisa disatukan. Coba lagi.';
+
+  @override
+  String get collabRoomPosted =>
+      'Video ini sudah tayang. Kerja bagus, semuanya!';
+
+  @override
+  String get collabRoomCancelled => 'Ruangan ini dibatalkan.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Gagal terkirim. Cek koneksimu dan coba lagi.';
+
+  @override
+  String get collabRoomRemovedYou => 'Kamu nggak ikut kali ini.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Kamu menolak yang ini.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Bagianmu sudah masuk. Ruangan akan menyatukan semuanya.';
+
+  @override
+  String get collabRoomPartTitle => 'Bagianmu';
+
+  @override
+  String get collabRoomPartRendering => 'Menyiapkan bagianmu…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Bagianmu tidak bisa disiapkan.';
+
+  @override
+  String get collabRoomPartSendButton => 'Kirim bagianku';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Bagianmu tidak bisa dikirim. Coba lagi.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Bikin video bareng';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Undang hingga 3 teman. Semua merekam bagiannya sendiri, lalu semuanya jadi satu video layar terbagi.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Undang teman';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Siapa yang ikut?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Ruanganmu';
+
+  @override
+  String get collabRoomTileHosting => 'Ruanganmu sendiri';
+
+  @override
+  String get collabRoomTileGuest => 'Ruangan teman';
+
+  @override
+  String get collabRoomPhaseLobby => 'Menunggu orang bergabung';
+
+  @override
+  String get collabRoomPhaseRecording => 'Merekam bagian';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Undangan tidak bisa dikirim. Coba lagi.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Yuk bikin video bareng';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Gabung ke ruangan, lalu semua merekam bagiannya sendiri.';
+
+  @override
+  String get collabRoomOpenButton => 'Buka ruangan';
+
+  @override
+  String get collabRoomCallMute => 'Bisukan';
+
+  @override
+  String get collabRoomCallUnmute => 'Bunyikan';
+
+  @override
+  String get collabRoomCallCameraOn => 'Nyalakan kamera';
+
+  @override
+  String get collabRoomCallCameraOff => 'Matikan kamera';
+
+  @override
+  String get collabRoomCallConnecting => 'Menghubungkan panggilanmu…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Panggilan tidak bisa dimulai. Pastikan Divine boleh memakai mikrofonmu.';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Kameramu tidak bisa dinyalakan.';
+
+  @override
+  String get collabRoomCallMuted => 'Dibisukan';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Ketuk dua tempat di tata letak untuk menukarnya.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Tukar tempat ini';
 }

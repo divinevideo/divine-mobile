@@ -59,6 +59,7 @@ class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
     this.recorderMode = VideoRecorderMode.capture,
     this.modeBeforeUpload,
+    this.isCollabPart = false,
     this.recordingState = VideoRecorderState.idle,
     this.zoomLevel = 1.0,
     this.minZoomLevel = 1.0,
@@ -118,11 +119,21 @@ class VideoRecorderBlocState extends Equatable {
   /// Recorder mode from the camera.
   final VideoRecorderMode recorderMode;
 
-  /// The recording mode the Upload tab was entered from, or null outside it.
+  /// The recording mode the Upload or Together tab was entered from, or null
+  /// outside them.
   ///
   /// The session's clips belong to that mode: returning to it keeps them,
   /// moving on to any other recording mode discards them.
   final VideoRecorderMode? modeBeforeUpload;
+
+  /// Whether the recorder films someone's part of a collaborative room.
+  ///
+  /// The part is capped at the post length like a Classic take, and is cut
+  /// to the shape of the person's layout cell afterwards.
+  final bool isCollabPart;
+
+  /// Whether a take may not run past the post length.
+  bool get hasRecordingLimit => recorderMode.hasRecordingLimit || isCollabPart;
 
   /// Camera focus point in normalized coordinates (0.0-1.0).
   final Offset focusPoint;
@@ -477,6 +488,7 @@ class VideoRecorderBlocState extends Equatable {
     VideoRecorderMode? recorderMode,
     VideoRecorderMode? modeBeforeUpload,
     bool clearModeBeforeUpload = false,
+    bool? isCollabPart,
     VideoRecorderState? recordingState,
     double? zoomLevel,
     double? minZoomLevel,
@@ -538,6 +550,7 @@ class VideoRecorderBlocState extends Equatable {
       modeBeforeUpload: clearModeBeforeUpload
           ? null
           : modeBeforeUpload ?? this.modeBeforeUpload,
+      isCollabPart: isCollabPart ?? this.isCollabPart,
       recordingState: recordingState ?? this.recordingState,
       zoomLevel: zoomLevel ?? this.zoomLevel,
       minZoomLevel: minZoomLevel ?? this.minZoomLevel,
@@ -616,6 +629,7 @@ class VideoRecorderBlocState extends Equatable {
   List<Object?> get props => [
     recorderMode,
     modeBeforeUpload,
+    isCollabPart,
     recordingState,
     zoomLevel,
     minZoomLevel,

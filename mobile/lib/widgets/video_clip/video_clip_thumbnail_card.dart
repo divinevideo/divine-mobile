@@ -156,6 +156,7 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                       ClipCropGuideOverlay(
                         aspectRatio: guide.aspectRatio,
                         contentAspectRatio: widget.clip.videoAspectRatio,
+                        shape: guide.shape,
                       ),
 
                     // The badges keep their size while a pinch on the clip

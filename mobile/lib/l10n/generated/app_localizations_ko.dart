@@ -15162,6 +15162,48 @@ class AppLocalizationsKo extends AppLocalizations {
       '화면 속 화면, 오른쪽 아래';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => '사선 좌우 배치';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => '사선 상하 배치';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => '사선 3단';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => '좌우 4개';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => '4단';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => '위 3개, 아래 1개';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => '왼쪽 1개, 오른쪽 3개';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => '왼쪽 3개, 오른쪽 1개';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => '원형 창, 왼쪽 위';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => '원형 창, 오른쪽 위';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft => '원형 창, 왼쪽 아래';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight => '원형 창, 오른쪽 아래';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => '원형 창 2개';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => '원형 창 3개';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return '칸 $number';
   }
@@ -15597,4 +15639,224 @@ class AppLocalizationsKo extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      '같이 영상 만들어요! Divine을 열고 제 방에 들어와서 내 파트를 찍어 주세요.';
+
+  @override
+  String get collabRoomJoinDmBody => '저도 할래요! 제 파트 찍는 게 기대돼요.';
+
+  @override
+  String get collabRoomDeclineDmBody => '이번엔 못 해요. 재밌게 해요!';
+
+  @override
+  String get collabRoomLeaveDmBody => '우리 영상 방에서 나왔어요.';
+
+  @override
+  String get collabRoomStartedDmBody => '촬영 시작이에요! Divine을 열고 파트를 찍어 주세요.';
+
+  @override
+  String get collabRoomPostedDmBody => '우리 영상이 올라갔어요! 함께해 줘서 고마워요.';
+
+  @override
+  String get collabRoomCancelledDmBody => '우리 영상 방을 취소했어요.';
+
+  @override
+  String get collabRoomUpdatedDmBody => '우리 영상 방에 변화가 있어요. Divine을 열고 확인해 보세요.';
+
+  @override
+  String get collabRoomTitle => '함께 만들기';
+
+  @override
+  String get collabRoomMissing => '이 방은 더 이상 없어요.';
+
+  @override
+  String get collabRoomYou => '나';
+
+  @override
+  String get collabRoomHost => '호스트';
+
+  @override
+  String get collabRoomStatusInvited => '초대됨';
+
+  @override
+  String get collabRoomStatusJoined => '참여 중';
+
+  @override
+  String get collabRoomStatusPartIn => '파트 완료';
+
+  @override
+  String get collabRoomStatusDeclined => '참여 못 함';
+
+  @override
+  String get collabRoomStatusLeft => '나감';
+
+  @override
+  String get collabRoomStatusRemoved => '이번엔 빠짐';
+
+  @override
+  String get collabRoomPickLayout => '레이아웃 고르기';
+
+  @override
+  String get collabRoomStartButton => '촬영 시작';
+
+  @override
+  String get collabRoomStartHint =>
+      '누군가 들어오면 시작할 수 있어요. 그때까지 들어오지 않은 사람은 이번엔 빠져요.';
+
+  @override
+  String get collabRoomWaitingForHost => '방에서 촬영을 시작하길 기다리고 있어요.';
+
+  @override
+  String get collabRoomJoinButton => '참여하기';
+
+  @override
+  String get collabRoomLeaveButton => '방 나가기';
+
+  @override
+  String get collabRoomFilmPartButton => '내 파트 찍기';
+
+  @override
+  String get collabRoomRefilmPartButton => '다시 찍기';
+
+  @override
+  String get collabRoomFilmHint => '모두 자기 파트를 찍어요. 파트는 내 칸 모양에 맞게 잘려요.';
+
+  @override
+  String get collabRoomComposeButton => '합치기';
+
+  @override
+  String get collabRoomComposeWaiting => '모두의 파트를 기다리고 있어요.';
+
+  @override
+  String get collabRoomSoundHint => '파트를 탭하면 그 소리를 쓸 수 있어요.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => '이 파트의 소리 쓰기';
+
+  @override
+  String get collabRoomRemoveMember => '빼기';
+
+  @override
+  String get collabRoomCancelButton => '취소하기';
+
+  @override
+  String get collabRoomCancelConfirmTitle => '이 영상을 취소할까요?';
+
+  @override
+  String get collabRoomCancelConfirmBody => '모두에게 방이 닫혀요.';
+
+  @override
+  String get collabRoomPickNewLayout => '누군가 빠졌어요. 남은 사람에게 맞는 레이아웃을 골라 주세요.';
+
+  @override
+  String get collabRoomComposing => '합치는 중…';
+
+  @override
+  String get collabRoomComposeFailed => '영상을 합치지 못했어요. 다시 해 보세요.';
+
+  @override
+  String get collabRoomPosted => '영상이 올라갔어요. 모두 수고했어요!';
+
+  @override
+  String get collabRoomCancelled => '이 방은 취소됐어요.';
+
+  @override
+  String get collabRoomActionFailed => '보내지 못했어요. 연결을 확인하고 다시 해 보세요.';
+
+  @override
+  String get collabRoomRemovedYou => '이번엔 참여하지 않아요.';
+
+  @override
+  String get collabRoomDeclinedYou => '이번 초대는 거절했어요.';
+
+  @override
+  String get collabRoomPartSent => '파트를 보냈어요. 방에서 모두 합쳐요.';
+
+  @override
+  String get collabRoomPartTitle => '내 파트';
+
+  @override
+  String get collabRoomPartRendering => '파트를 준비하는 중…';
+
+  @override
+  String get collabRoomPartRenderFailed => '파트를 준비하지 못했어요.';
+
+  @override
+  String get collabRoomPartSendButton => '내 파트 보내기';
+
+  @override
+  String get collabRoomPartSendFailed => '파트를 보내지 못했어요. 다시 해 보세요.';
+
+  @override
+  String get collabRoomLobbyTitle => '같이 영상 만들기';
+
+  @override
+  String get collabRoomLobbyBody =>
+      '친구를 최대 3명까지 초대하세요. 모두 자기 파트를 찍고, 하나의 분할 화면 영상으로 합쳐져요.';
+
+  @override
+  String get collabRoomLobbyInvite => '친구 초대하기';
+
+  @override
+  String get collabRoomInvitePickerTitle => '누가 함께해요?';
+
+  @override
+  String get collabRoomLobbyRooms => '내 방';
+
+  @override
+  String get collabRoomTileHosting => '내가 만든 방';
+
+  @override
+  String get collabRoomTileGuest => '친구의 방';
+
+  @override
+  String get collabRoomPhaseLobby => '참여자를 기다리는 중';
+
+  @override
+  String get collabRoomPhaseRecording => '파트 촬영 중';
+
+  @override
+  String get collabRoomCreateFailed => '초대를 보내지 못했어요. 다시 해 보세요.';
+
+  @override
+  String get collabRoomInviteCardTitle => '같이 영상 만들어요';
+
+  @override
+  String get collabRoomInviteCardBody => '방에 들어오면 모두 자기 파트를 찍어요.';
+
+  @override
+  String get collabRoomOpenButton => '방 열기';
+
+  @override
+  String get collabRoomCallMute => '음소거';
+
+  @override
+  String get collabRoomCallUnmute => '음소거 해제';
+
+  @override
+  String get collabRoomCallCameraOn => '카메라 켜기';
+
+  @override
+  String get collabRoomCallCameraOff => '카메라 끄기';
+
+  @override
+  String get collabRoomCallConnecting => '통화 연결 중…';
+
+  @override
+  String get collabRoomCallFailed =>
+      '통화를 시작하지 못했어요. Divine이 마이크를 쓸 수 있는지 확인해 주세요.';
+
+  @override
+  String get collabRoomCallCameraFailed => '카메라를 켜지 못했어요.';
+
+  @override
+  String get collabRoomCallMuted => '음소거됨';
+
+  @override
+  String get collabRoomSwapSeatHint => '레이아웃에서 두 자리를 탭하면 서로 바뀌어요.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => '이 자리 바꾸기';
 }
