@@ -237,6 +237,56 @@ void main() {
         ],
       );
 
+      for (final archiveVerdict in [
+        (
+          name: 'archive verification',
+          replace: (VideoEvent video) =>
+              video.copyWith(isVerifiedArchive: true),
+          read: (VideoEvent video) => video.isVerifiedArchive,
+        ),
+        (
+          name: 'archive verification availability',
+          replace: (VideoEvent video) =>
+              video.copyWith(isArchiveVerificationUnknown: true),
+          read: (VideoEvent video) => video.isArchiveVerificationUnknown,
+        ),
+        (
+          name: 'archive audio reuse policy',
+          replace: (VideoEvent video) =>
+              video.copyWith(archiveAudioReuseEnabled: true),
+          read: (VideoEvent video) => video.archiveAudioReuseEnabled,
+        ),
+      ]) {
+        test(
+          'retains same-ID ${archiveVerdict.name} hydration on completion',
+          () async {
+            final cached = createVideo(id: 'same-video');
+            when(
+              () => mockVideosRepository.searchVideos(
+                query: 'flutter',
+                sort: any(named: 'sort'),
+              ),
+            ).thenAnswer(
+              (_) => Stream.fromIterable([
+                [cached],
+                [archiveVerdict.replace(cached)],
+              ]),
+            );
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            final completed = bloc.stream.firstWhere(
+              (state) => state.status == VideoSearchStatus.success,
+            );
+            bloc.add(const VideoSearchQueryChanged('flutter'));
+
+            final result = await completed;
+
+            expect(result.videos.single.id, 'same-video');
+            expect(archiveVerdict.read(result.videos.single), isTrue);
+          },
+        );
+      }
+
       blocTest<VideoSearchBloc, VideoSearchState>(
         'stays searching when local cache is empty '
         'until API yields results and stream completes',
@@ -556,6 +606,7 @@ void main() {
           VideoSearchStatus.success,
           'test',
           videos,
+          [(false, false, false)],
           -1,
           0,
           -1,

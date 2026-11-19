@@ -194,6 +194,7 @@ void main() {
       Future<OgVinerCacheService> mountSearch(
         WidgetTester tester,
         List<VideoEvent> videos, {
+        Stream<List<VideoEvent>>? resultBatches,
         Future<({List<VideoEvent> videos, int totalCount, bool hasMore})>?
         nextPage,
       }) async {
@@ -203,7 +204,7 @@ void main() {
             query: 'archive',
             sort: any(named: 'sort'),
           ),
-        ).thenAnswer((_) => Stream.value(videos));
+        ).thenAnswer((_) => resultBatches ?? Stream.value(videos));
         when(
           () => mockVideosRepository.searchVideosViaApi(
             query: 'archive',
@@ -252,6 +253,39 @@ void main() {
         expect(badgeFor(video), findsOneWidget);
         expect(cache.isOgViner(video.pubkey), isTrue);
       });
+
+      testWidgets(
+        'badges a same-ID search result when archive verification arrives',
+        (
+          tester,
+        ) async {
+          final cached = archiveVideo('a');
+          final batches = StreamController<List<VideoEvent>>();
+          addTearDown(batches.close);
+          batches.add([cached]);
+          final cache = await mountSearch(
+            tester,
+            [cached],
+            resultBatches: batches.stream,
+          );
+          final bloc = tester
+              .element(find.byType(SearchResultsView))
+              .read<VideoSearchBloc>();
+          expect(bloc.state.status, VideoSearchStatus.searching);
+          expect(find.byType(SearchVideoTile), findsOneWidget);
+          expect(badgeFor(cached), findsNothing);
+          expect(cache.isOgViner(cached.pubkey), isFalse);
+
+          batches.add([cached.copyWith(isVerifiedArchive: true)]);
+          await tester.pump();
+          await tester.pump();
+
+          expect(bloc.state.status, VideoSearchStatus.searching);
+          expect(badgeFor(cached), findsOneWidget);
+          expect(cache.isOgViner(cached.pubkey), isTrue);
+          expect(bloc.state.videos.single.isVerifiedArchive, isTrue);
+        },
+      );
 
       testWidgets('badges a newly verified creator on the next search page', (
         tester,
