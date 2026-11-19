@@ -20,7 +20,15 @@ wrong fact can change the design.
   - How should Live-Activity-only tokens be kept out of normal delivery?
   - Who can run the staging test send?
   - Would you hold an Apple push key for the direct-to-Apple fallback, if
-    it's needed?
+    it's needed? Relatedly: if a device that declined notifications cannot
+    get a Firebase token, could `token` be optional when `liveActivity` is
+    present, so those people are not quietly left out?
+  - Matching an ended registration by its activity token, and never letting
+    one create or refresh a notification registration.
+  - Leaving the server to finish the hour after a sign-out or account switch
+    (*When the server is told an activity ended*).
+  - The content-state date encoding: ActivityKit's default decoder may expect
+    seconds since 2001 rather than Unix time for `updatedAt`.
 - **Sebastian (iOS):**
   - The `WidgetBundle` conversion, the 16.2 guard, and the thumbnail in the
     app group within widget memory limits.
@@ -285,13 +293,21 @@ to the Runner `Info.plist`.
 **Activity data.** An `ActivityAttributes` type shared by Runner and the
 extension:
 
-- *Static:* owner pubkey (full hex), post coordinate, post event id at start,
-  thumbnail reference, `postedAt`.
+- *Static:* owner pubkey (full hex), thumbnail reference, and when the
+  activity started.
 - *Content state:* phase (`posting`, `live`, `notFound`, `summary`), `views`,
   `likes` and `comments` (each nullable, meaning not known yet; zero means a
-  confirmed zero), `updatedAt`, and whether to show the first-run note.
+  confirmed zero), `updatedAt`, whether to show the first-run note, and the
+  post's coordinate and event id (nil until the post is published).
 
-The content state carries **numbers and enums only, no display strings**. All
+The post's identity lives in the content state, not the static attributes,
+because the activity starts before the post has either: its `d` tag is the
+uploaded file's hash and its event id exists only once signed, and ActivityKit
+never lets static attributes change after start. The app sets both when the
+post goes live; the server echoes them in every update.
+
+The content state carries **no display strings**: numbers, enums and
+identifiers only. All
 text is localized in the extension's existing `*.lproj/Localizable.strings`
 (18 localizations already present; the widget has never shipped `ms`, `te`, `ur`, `vi` or `zh`, which fall back to English), and numbers are formatted compactly on device.
 That keeps payloads far under Apple's 4 KB limit and keeps copy out of the
@@ -331,13 +347,43 @@ the server registration. A cubit or the existing publish flow drives it:
    coordinate and event id, and the window end (`postedAt` + 60 minutes).
    Push tokens can rotate; send each new token.
 3. On **publish failure or cancel**, end the activity immediately.
-4. On **Stop, toggle-off, a `dismissed` state, account switch or sign-out**,
-   end the activity and tell the server it ended (a 3079 with
-   `state: ended`, see *Token protocol*).
-5. On **every app foreground**, sweep running activities. End any whose
-   window plus the summary period has passed (protection against orphans if
-   the server never sent the end), and any that belongs to a different
-   account.
+4. On **Stop, toggle-off, a newer post, or a `dismissed` state seen while the
+   app is running**, end the activity and tell the server it ended (a 3079
+   with `state: ended`, see *Token protocol*).
+5. On **account switch or sign-out**, end the activity on the device only.
+   The server is not told; it stops at the window end. See *When the server
+   is told an activity ended*.
+6. On **every app foreground**, sweep running activities. End, on the device
+   only, any whose window plus the summary period has passed (protection
+   against orphans if the server never sent the end) and any that belongs to
+   a different account. Re-adopt the current account's live activity if the
+   app was killed before it registered.
+
+**When the server is told an activity ended** (decided 2026-11-19). The app
+tells the server only when the account that owns the activity is still signed
+in and the app is running. On sign-out, account switch, or a Lock Screen
+dismissal while the app was closed, the app ends the activity on the device
+and the server finishes its hour on its own.
+
+- *Why.* Sending a correctly signed "ended" message exactly once in those cases
+  needed device-stored records, a hand-off between four senders, changes to
+  the notification cleanup that runs at sign-out and account switch, and
+  per-account bindings that survive the moment two accounts briefly overlap
+  during a switch. Three independent reviews of the implementation plan found
+  defects in exactly that machinery, and it sits on the sign-out and
+  account-switch paths, where a bug does the most harm.
+- *What the person sees.* Nothing different. The activity leaves the Lock
+  Screen immediately in every case, never reappears, and never follows them
+  into another account.
+- *Tradeoffs accepted.* After a sign-out, switch or closed-app dismissal mid
+  hour, the server keeps polling that post's public stats and sends up to
+  about 20 silent updates, at most until the window ends, to an activity
+  that no longer exists. Those updates never alert, never become
+  notifications, and have nowhere to show. The server's records show the
+  activity as running until then. If Firebase reports the token invalid
+  sooner, the server stops sooner (*Cleanup*).
+- *Revisit if* the server's cost per activity becomes material, or a later
+  feature needs the server to know the activity's exact state.
 
 **Deep link.** The activity's `widgetURL` uses the `divine://` scheme.
 `DeepLinkService` is deny-by-default for that scheme (#11017), and
@@ -417,15 +463,41 @@ Proposed additions:
    of kinds, which includes 3079/3080/3083. A new kind pair would therefore need a Funnelcake
    allow-list change in every environment. *My proposal, for Daniel to
    confirm:* **extend kind 3079's encrypted payload** with an optional
-   `liveActivity` object
-   (`{activityPushToken, postCoordinate, postEventId, windowEndsAt, state}`,
-   where `state` is `active` or `ended`), alongside the existing required
-   `token`.
+   `liveActivity` object, alongside the existing required `token` and a new
+   top-level `notificationsAuthorized` boolean:
+
+   ```json
+   {
+     "token": "<FCM token>",
+     "notificationsAuthorized": false,
+     "liveActivity": {
+       "activityPushToken": "<hex>",
+       "postCoordinate": "<kind>:<pubkey>:<d>",
+       "postEventIds": ["<event id>", "<later version's id>"],
+       "postedAt": 1763500000,
+       "windowEndsAt": 1763503600,
+       "showFirstRunNote": true,
+       "state": "active"
+     }
+   }
+   ```
+
+   The existing fields (`timezoneOffsetMinutes`, `timezone`,
+   `campaignTargetTypes`) are unchanged. Times are Unix seconds. `state` is
+   `active` or `ended`. Every content-state the server sends echoes
+   `postCoordinate`, `postEventIds[0]` and `showFirstRunNote`.
    - `TokenPayload` has no `deny_unknown_fields`, so a push service without
      this change treats such an event as an ordinary re-registration of the
      same device token, which is harmless.
    - Ending is a 3079 with `state: ended`, **never a 3080**, because 3080
-     deregisters the device token itself.
+     deregisters the device token itself. An ended registration matches the
+     activity by its `activityPushToken`, not by owner and device, so a late
+     ended message for a replaced post never ends the new one. It must never
+     create or refresh a notification registration.
+   - The app tells the server an activity ended only while its account is
+     signed in and the app is running (*When the server is told an activity
+     ended*). Otherwise the server stops at the window end or when Firebase
+     reports the token invalid.
    - The payload carries whether the device has notification permission. A
      token registered only for Live Activities (permission declined) must
      **never receive alert or background notification pushes**: the service
