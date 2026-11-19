@@ -188,16 +188,40 @@ void main() {
     group('attach and detach', () {
       test('detaching a first binding leaves a later one for the same owner '
           '(A to B to A)', () async {
-        stubResult(PushRegistrationResult.published);
-        final firstA = registrar.attach(binding());
+        final firstPush = _MockPushService();
+        final secondPush = _MockPushService();
+        for (final p in [firstPush, secondPush]) {
+          when(
+            () => p.registerLiveActivity(
+              any(),
+              any(),
+              notificationsAuthorized: any(named: 'notificationsAuthorized'),
+            ),
+          ).thenAnswer((_) async => PushRegistrationResult.published);
+        }
+        final firstA = registrar.attach(binding(readPush: () => firstPush));
         final b = registrar.attach(binding(ownerPubkey: other));
-        final secondA = registrar.attach(binding());
+        final secondA = registrar.attach(binding(readPush: () => secondPush));
 
         registrar.detach(firstA);
 
         expect(
           await registrar.register(registration),
           LiveActivityRegistrarResult.published,
+        );
+        verify(
+          () => secondPush.registerLiveActivity(
+            owner,
+            registration,
+            notificationsAuthorized: true,
+          ),
+        ).called(1);
+        verifyNever(
+          () => firstPush.registerLiveActivity(
+            any(),
+            any(),
+            notificationsAuthorized: any(named: 'notificationsAuthorized'),
+          ),
         );
 
         registrar
@@ -208,6 +232,43 @@ void main() {
           LiveActivityRegistrarResult.retryLater,
         );
       });
+
+      test(
+        'registers through the latest of two bindings for an owner',
+        () async {
+          final firstPush = _MockPushService();
+          final secondPush = _MockPushService();
+          for (final p in [firstPush, secondPush]) {
+            when(
+              () => p.registerLiveActivity(
+                any(),
+                any(),
+                notificationsAuthorized: any(named: 'notificationsAuthorized'),
+              ),
+            ).thenAnswer((_) async => PushRegistrationResult.published);
+          }
+          registrar
+            ..attach(binding(readPush: () => firstPush))
+            ..attach(binding(readPush: () => secondPush));
+
+          await registrar.register(registration);
+
+          verify(
+            () => secondPush.registerLiveActivity(
+              owner,
+              registration,
+              notificationsAuthorized: true,
+            ),
+          ).called(1);
+          verifyNever(
+            () => firstPush.registerLiveActivity(
+              any(),
+              any(),
+              notificationsAuthorized: any(named: 'notificationsAuthorized'),
+            ),
+          );
+        },
+      );
 
       test('detaching the same handle twice is harmless', () async {
         final handle = registrar.attach(binding());
