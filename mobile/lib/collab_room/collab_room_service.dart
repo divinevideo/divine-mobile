@@ -97,7 +97,7 @@ class CollabRoomService {
   ///
   /// Throws an [ArgumentError] when [invitees] is empty, too long, repeats
   /// someone or includes the account itself, and a [CollabRoomException]
-  /// when no invite could be delivered.
+  /// when no invite could be sent or queued for retry.
   Future<String> createRoom(List<String> invitees) async {
     final owner = ownerPubkey;
     final unique = invitees.toSet();
@@ -139,7 +139,8 @@ class CollabRoomService {
   /// [snapshot], which lists them as invited again: they get a fresh invite,
   /// everyone else still in the room the update.
   ///
-  /// Throws a [CollabRoomException] when the invite could not be delivered.
+  /// Throws a [CollabRoomException] when the invite could not be sent or
+  /// queued for retry.
   Future<void> reinvite(
     CollabRoom room,
     String pubkey,
@@ -252,7 +253,6 @@ class CollabRoomService {
       type: CollabRoomMessageType.state,
       snapshot: snapshot,
       content: _stateText(room.snapshot, snapshot),
-      countQueued: true,
     );
     if (delivered > 0) sent();
     if (delivered != recipients.length) {
@@ -513,6 +513,11 @@ class CollabRoomService {
 
   /// Sends the room message to each of [recipients] and returns how many
   /// took it.
+  ///
+  /// A message queued for retry counts as taken: the device keeps it, reads
+  /// the room back from it at once, and sends it once the relays are back.
+  /// Reporting it as failed would let someone try again and make a second
+  /// room, or a second answer, that the queue then delivers as well.
   Future<int> _sendToEach({
     required List<String> recipients,
     required String roomId,
@@ -520,7 +525,6 @@ class CollabRoomService {
     required String content,
     CollabRoomSnapshot? snapshot,
     int? inviteRevision,
-    bool countQueued = false,
   }) async {
     if (_isDmRestricted) {
       throw const CollabRoomException('The account cannot use Together rooms');
@@ -545,11 +549,7 @@ class CollabRoomService {
         skipNip04Fallback: true,
         backgroundDelivery: backgroundDelivery,
       );
-      if (result.success ||
-          ((countQueued || backgroundDelivery) &&
-              result.queuedRumorId != null)) {
-        delivered++;
-      }
+      if (result.success || result.queuedRumorId != null) delivered++;
     }
     return delivered;
   }

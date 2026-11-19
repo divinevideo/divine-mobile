@@ -242,6 +242,31 @@ void main() {
           throwsA(isA<CollabRoomException>()),
         );
       });
+
+      test('creates the room when the invite is queued for retry', () async {
+        // Offline, the invite waits in the queue and goes out later: the
+        // room exists, and a second try would make a second one.
+        when(
+          () => dm.sendMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult.failure(
+            'offline',
+            retryablePending: true,
+            queuedRumorId: 'queued',
+          ),
+        );
+
+        final roomId = await service().createRoom([_sam]);
+
+        expect(roomId, isNotEmpty);
+        expect(sentMessages(), hasLength(1));
+      });
     });
 
     group('answers', () {
@@ -294,6 +319,26 @@ void main() {
           service().join(room),
           throwsA(isA<CollabRoomException>()),
         );
+      });
+
+      test('counts an answer queued for retry as sent', () async {
+        when(
+          () => dm.sendMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult.failure(
+            'offline',
+            retryablePending: true,
+            queuedRumorId: 'queued',
+          ),
+        );
+
+        await expectLater(service().join(room), completes);
       });
 
       test('refuses an answer from the author', () async {
