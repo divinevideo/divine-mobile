@@ -66,5 +66,33 @@ void main() {
         expect(requests, hasLength(1));
       });
     }
+
+    testWidgets('shares the complete npub URL when no shortener exists', (
+      tester,
+    ) async {
+      late WidgetRef reference;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            profileReadRepositoryProvider.overrideWithValue(null),
+            shortLinkClientProvider.overrideWithValue(null),
+          ],
+          child: Consumer(
+            builder: (_, ref, _) {
+              reference = ref;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(
+        await resolveProfileShareUrl(
+          reference,
+          pubkey: pubkey,
+          profile: null,
+        ),
+        canonical,
+      );
+    });
   });
 }
