@@ -1458,6 +1458,89 @@ void main() {
         );
       });
 
+      test('keeps late camera proofs off a reimported timeline take', () async {
+        const mainPath = '/documents/VID_1.mp4';
+        const recordingHash = 'main-proof-hash';
+        final bothStarted = Completer<void>();
+        final mainProof = Completer<NativeProofData?>();
+        final secondProof = Completer<NativeProofData?>();
+        final requestedPaths = <String>{};
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) {
+              requestedPaths.add(file.path);
+              if (requestedPaths.length == 2) bothStarted.complete();
+              return file.path == mainPath
+                  ? mainProof.future
+                  : secondProof.future;
+            };
+        when(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: any(named: 'clipId'),
+            fileName: any(named: 'fileName'),
+            sha256: any(named: 'sha256'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockClipLibraryService.saveClip(any()),
+        ).thenAnswer((_) async {});
+        final backgroundWork = container.read(editorBackgroundWorkProvider);
+        final notifier = container.read(clipManagerProvider.notifier);
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file(mainPath),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+        );
+        await notifier.saveClipToLibrary(clip);
+        await bothStarted.future;
+        expect(requestedPaths, {mainPath, second.filePath});
+
+        final generation = notifier.sessionGeneration;
+        expect(notifier.abandonExtraction({clip.id}, generation: generation), [
+          clip,
+        ]);
+        final reimported = clip.copyWith(volume: 0.5);
+        notifier.insertClip(0, reimported);
+        notifier.cacheMergeOutput('/documents/new-project-merge.mp4');
+        mainProof.complete(const NativeProofData(videoHash: recordingHash));
+        secondProof.complete(
+          const NativeProofData(videoHash: 'second-proof-hash'),
+        );
+        await backgroundWork.settle();
+
+        verify(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: clip.id,
+            fileName: 'VID_1.mp4',
+            sha256: recordingHash,
+          ),
+        ).called(1);
+        final current = notifier.getClipById(clip.id)!;
+        expect(
+          [
+            current.proofManifestJson,
+            current.secondaryCamera!.clip.proofManifestJson,
+          ],
+          [null, null],
+        );
+        expect(current, same(reimported));
+        expect(
+          container.read(clipManagerProvider).mergeOutputPath,
+          '/documents/new-project-merge.mp4',
+        );
+      });
+
       test('gives the take its composite thumbnail, and only that take', () {
         NativeProofModeService.proofFileOverride = (
           _, {

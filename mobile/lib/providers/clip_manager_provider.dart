@@ -338,6 +338,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     VideoRecordingResult? secondaryRecording,
     Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
   }) {
+    final generation = _sessionGeneration;
     // A new recording supersedes any pending undo from a previous tap.
     if (state.pendingDeletion != null) {
       _cancelPendingDeletionTimer();
@@ -431,9 +432,13 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
-    _editorBackgroundWork.track(_generateClipProof(clip));
+    _editorBackgroundWork.track(_generateClipProof(clip, generation));
     if (clip.secondaryCamera case final second?) {
-      final proof = _generateSecondaryCameraProof(clip.id, second.clip);
+      final proof = _generateSecondaryCameraProof(
+        clip.id,
+        second.clip,
+        generation,
+      );
       _editorBackgroundWork.track(proof);
       trackClipEnrichment(second.clip.id, proof);
     }
@@ -580,23 +585,25 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Waits for any pending processing (e.g. trimming) to finish first,
   /// then generates the proof and updates the clip via [refreshClip].
   /// Failures are logged but do not block clip usage.
-  Future<void> _generateClipProof(DivineVideoClip clip) => _proveRecording(
-    clip,
-    apply: (proofManifestJson, recordingSha256) {
-      // Merge with latest clip state (thumbnail may have been updated).
-      // If the clip was deleted while proof generation was in progress,
-      // it is not brought back.
-      final current = getClipById(clip.id);
-      if (current == null) return;
-      refreshClip(
-        current.copyWith(
-          proofManifestJson: proofManifestJson,
-          recordingSha256: recordingSha256,
-        ),
+  Future<void> _generateClipProof(DivineVideoClip clip, int generation) =>
+      _proveRecording(
+        clip,
+        generation: generation,
+        apply: (proofManifestJson, recordingSha256) {
+          // Merge with latest clip state (thumbnail may have been updated).
+          // If the clip was deleted while proof generation was in progress,
+          // it is not brought back.
+          final current = getClipById(clip.id);
+          if (current == null) return;
+          refreshClip(
+            current.copyWith(
+              proofManifestJson: proofManifestJson,
+              recordingSha256: recordingSha256,
+            ),
+          );
+          _triggerAutosave();
+        },
       );
-      _triggerAutosave();
-    },
-  );
 
   /// Generates the proof of the second camera's recording of the clip
   /// [ownerId] and writes it onto that take.
@@ -607,8 +614,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   Future<void> _generateSecondaryCameraProof(
     String ownerId,
     DivineVideoClip secondary,
+    int generation,
   ) => _proveRecording(
     secondary,
+    generation: generation,
     isLibraryRecording: false,
     apply: (proofManifestJson, recordingSha256) {
       final current = getClipById(ownerId)?.secondaryCamera?.clip;
@@ -630,6 +639,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// up to the gallery.
   Future<void> _proveRecording(
     DivineVideoClip clip, {
+    required int generation,
     required void Function(String proofManifestJson, String? recordingSha256)
     apply,
     bool isLibraryRecording = true,
@@ -662,7 +672,11 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             ? proofData.videoHash
             : null;
 
-        apply(jsonEncode(proofData), recordingSha256);
+        // A later session can reimport the same clip and take IDs. Only the
+        // recording's session may update the timeline and its recovery draft.
+        if (isSessionCurrent(generation)) {
+          apply(jsonEncode(proofData), recordingSha256);
+        }
 
         // The recorder saved the take to the clip library before its proof
         // came back, and the take can be picked from there long after it
