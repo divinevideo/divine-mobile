@@ -250,8 +250,10 @@ void main() {
       blocTest<TagsPickerBloc, TagsPickerState>(
         'keeps a limit notice when the cleared field sends an empty query',
         build: createBloc,
-        seed: () =>
-            const TagsPickerState(notice: TagsPickerNotice.tagLimitReached),
+        seed: () => TagsPickerState(
+          selectedTags: {for (var i = 0; i < 10; i++) 'tag$i'},
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
         act: (b) => b.add(const TagsPickerQueryChanged('')),
         wait: debounce,
         expect: () => const <TagsPickerState>[],
@@ -262,11 +264,6 @@ void main() {
 
       blocTest<TagsPickerBloc, TagsPickerState>(
         'keeps a limit notice while typing at the limit',
-        setUp: () {
-          when(
-            () => repo.searchHashtags(query: 'news'),
-          ).thenAnswer((_) async => const []);
-        },
         build: createBloc,
         seed: () => TagsPickerState(
           selectedTags: {for (var i = 0; i < 10; i++) 'tag$i'},
