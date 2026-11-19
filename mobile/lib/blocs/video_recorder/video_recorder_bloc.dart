@@ -1344,6 +1344,7 @@ class VideoRecorderBloc
     // The footage is the raw camera frame. The key the viewfinder showed
     // travels with it as an intent and is baked right after the take.
     final captureChromaKey = state.isChromaKeyActive ? state.chromaKey : null;
+    final generation = clipManager.sessionGeneration;
     final clip = clipManager.addClip(
       video: videoResult,
       originalAspectRatio: _cameraService.cameraAspectRatio,
@@ -1382,6 +1383,7 @@ class VideoRecorderBloc
             clipId: clip.id,
             take: second,
             clipManager: clipManager,
+            generation: generation,
           ).then<void>((_) {}).catchError((
             Object error,
             StackTrace stackTrace,
@@ -1427,6 +1429,7 @@ class VideoRecorderBloc
           videoResult: videoResult,
           clip: clip,
           clipManager: clipManager,
+          generation: generation,
           remainingDuration: remainingDuration,
         ).catchError((Object error, StackTrace stackTrace) {
           // Detached work must not escape as an unhandled async error. The bare
@@ -1465,7 +1468,13 @@ class VideoRecorderBloc
       clipManager.trackClipEnrichment(
         clip.id,
         Future.wait([enrichment, secondaryThumbnail])
-            .then((_) => _composeDualCameraThumbnail(clip.id, clipManager))
+            .then(
+              (_) => _composeDualCameraThumbnail(
+                clip.id,
+                clipManager,
+                generation: generation,
+              ),
+            )
             .catchError((Object error, StackTrace stackTrace) {
               Log.error(
                 '⚠️ Dual-camera thumbnail failed for ${clip.id}',
@@ -1487,8 +1496,15 @@ class VideoRecorderBloc
   /// carries what the library copy holds.
   Future<void> _composeDualCameraThumbnail(
     String clipId,
-    ClipManagerNotifier clipManager,
-  ) async {
+    ClipManagerNotifier clipManager, {
+    required int generation,
+  }) async {
+    if (!clipManager.isSessionCurrent(generation)) return;
+    // The composite and its proof travel together in the library. Wait
+    // before writing the file or attaching it to the working timeline.
+    await clipManager.waitForSecondaryCameraTakes();
+    if (!clipManager.isSessionCurrent(generation)) return;
+
     final clip = clipManager.getClipById(clipId);
     final take = clip?.secondaryCamera;
     final mainThumbnail = clip?.thumbnailPath;
@@ -1510,15 +1526,15 @@ class VideoRecorderBloc
       ),
     );
     if (composed == null) return;
-    if (!clipManager.setSecondaryCameraThumbnail(
-      clipId,
-      takeId: take.clip.id,
-      path: composed,
-    )) {
+    if (!clipManager.isSessionCurrent(generation) ||
+        !clipManager.setSecondaryCameraThumbnail(
+          clipId,
+          takeId: take.clip.id,
+          path: composed,
+        )) {
       _deleteFileQuietly(composed);
       return;
     }
-    await clipManager.waitForSecondaryCameraTakes();
     final current = clipManager.getClipById(clipId);
     if (current == null) return;
     final saved = await clipManager.saveClipToLibrary(current);
@@ -1538,7 +1554,9 @@ class VideoRecorderBloc
     required String clipId,
     required SecondaryCameraTake take,
     required ClipManagerNotifier clipManager,
+    required int generation,
   }) async {
+    if (!clipManager.isSessionCurrent(generation)) return null;
     final videoPath = take.clip.video?.file?.path;
     if (videoPath == null) return null;
     final halfDuration = take.clip.duration ~/ 2;
@@ -1549,6 +1567,10 @@ class VideoRecorderBloc
           ? halfDuration
           : VideoEditorConstants.defaultThumbnailExtractTime,
     );
+    if (!clipManager.isSessionCurrent(generation)) {
+      if (thumbnail != null) _deleteFileQuietly(thumbnail.path);
+      return null;
+    }
     final current = clipManager.getClipById(clipId)?.secondaryCamera;
     if (current == null || current.clip.id != take.clip.id) {
       if (thumbnail != null) _deleteFileQuietly(thumbnail.path);
@@ -1574,9 +1596,9 @@ class VideoRecorderBloc
     required EditorVideo videoResult,
     required DivineVideoClip clip,
     required ClipManagerNotifier clipManager,
+    required int generation,
     required Duration remainingDuration,
   }) async {
-    final generation = clipManager.sessionGeneration;
     final videoPath = await videoResult.safeFilePath();
     if (!clipManager.isSessionCurrent(generation)) return;
     final workCopyPath = '$videoPath.work.mp4';

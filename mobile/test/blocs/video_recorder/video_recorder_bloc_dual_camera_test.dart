@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_camera/divine_camera.dart';
@@ -19,15 +20,43 @@ import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
+import '../../mocks/mock_path_provider_platform.dart';
+
 class _MockDualCameraService extends Mock
     implements CameraService, DualCameraCapture {}
 
-class _MockClipManager extends Mock implements ClipManagerNotifier {}
+class _MockClipManager extends Mock implements ClipManagerNotifier {
+  int generation = 0;
+
+  @override
+  int get sessionGeneration => generation;
+
+  @override
+  bool isSessionCurrent(int expected) => generation == expected;
+}
+
+class _GatedProVideoEditor extends Fake
+    with MockPlatformInterfaceMixin
+    implements ProVideoEditor {
+  final thumbnailStarted = Completer<void>();
+  final thumbnail = Completer<List<Uint8List>>();
+
+  @override
+  Future<List<Uint8List>> getThumbnails(
+    ThumbnailConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) {
+    thumbnailStarted.complete();
+    return thumbnail.future;
+  }
+}
 
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
@@ -531,8 +560,28 @@ void main() {
       );
 
       group('when the clip carries the take', () {
+        late DivineVideoClip captured;
+
         setUp(() {
           registerFallbackValue(Future<void>.value());
+          captured = DivineVideoClip(
+            id: 'clip_1',
+            video: main,
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            secondaryCamera: SecondaryCameraTake(
+              clip: DivineVideoClip(
+                id: 'clip_1_second',
+                video: EditorVideo.file(second.filePath),
+                duration: const Duration(seconds: 2),
+                recordedAt: DateTime(2026),
+                targetAspectRatio: model.AspectRatio.vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ),
+          );
           when(
             () => clipManager.addClip(
               video: any(named: 'video'),
@@ -544,27 +593,24 @@ void main() {
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
             ),
-          ).thenReturn(
-            DivineVideoClip(
-              id: 'clip_1',
-              video: main,
-              duration: const Duration(seconds: 2),
-              recordedAt: DateTime(2026),
-              targetAspectRatio: model.AspectRatio.vertical,
-              originalAspectRatio: 9 / 16,
-              secondaryCamera: SecondaryCameraTake(
-                clip: DivineVideoClip(
-                  id: 'clip_1_second',
-                  video: EditorVideo.file(second.filePath),
-                  duration: const Duration(seconds: 2),
-                  recordedAt: DateTime(2026),
-                  targetAspectRatio: model.AspectRatio.vertical,
-                  originalAspectRatio: 9 / 16,
-                ),
-              ),
-            ),
-          );
+          ).thenAnswer((_) => captured);
         });
+
+        Future<void> trackEnrichmentCompletion() {
+          final work = <Future<void>>[];
+          final completed = Completer<void>();
+          when(
+            () => clipManager.trackClipEnrichment(any(), any()),
+          ).thenAnswer((invocation) {
+            work.add(invocation.positionalArguments[1] as Future<void>);
+            // The recorder tracks the secondary poster, main enrichment,
+            // and final composite separately.
+            if (work.length == 3) {
+              completed.complete(Future.wait(work).then<void>((_) {}));
+            }
+          });
+          return completed.future;
+        }
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
           "tracks the take's poster so the editor can wait for it",
@@ -577,10 +623,56 @@ void main() {
           },
         );
 
+        test('does not give a pending poster to a reimported take', () async {
+          final dir = Directory.systemTemp.createTempSync('second_poster_bloc');
+          final editor = _GatedProVideoEditor();
+          final originalEditor = ProVideoEditor.instance;
+          final originalPaths = PathProviderPlatform.instance;
+          ProVideoEditor.instance = editor;
+          PathProviderPlatform.instance = MockPathProviderPlatform()
+            ..setApplicationDocumentsPath(dir.path);
+          addTearDown(() {
+            ProVideoEditor.instance = originalEditor;
+            PathProviderPlatform.instance = originalPaths;
+            dir.deleteSync(recursive: true);
+          });
+          final secondaryFile = File('${dir.path}/second.mp4')
+            ..writeAsStringSync('second camera footage');
+          final take = captured.secondaryCamera!;
+          captured = captured.copyWith(
+            secondaryCamera: take.copyWith(
+              clip: take.clip.copyWith(video: EditorVideo.file(secondaryFile)),
+            ),
+          );
+          final finished = trackEnrichmentCompletion();
+          final bloc = buildBloc(recordingState: VideoRecorderState.recording);
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await editor.thumbnailStarted.future;
+          verify(() => clipManager.saveClipToLibrary(captured)).called(1);
+          clipManager.generation++;
+          final reimported = captured.copyWith(volume: 0.5);
+          when(() => clipManager.getClipById(captured.id))
+              .thenReturn(reimported);
+          editor.thumbnail.complete([
+            Uint8List.fromList([1, 2, 3]),
+          ]);
+          await finished;
+
+          verifyNever(
+            () => clipManager.updateSecondaryCameraClip(any(), any()),
+          );
+          expect(dir.listSync().map((entry) => entry.path), [
+            secondaryFile.path,
+          ]);
+        });
+
         group('once both cameras have thumbnails', () {
           late Directory dir;
           late Completer<String> composed;
           late Completer<void> savedAgain;
+          late DivineVideoClip enriched;
 
           setUp(() {
             dir = Directory.systemTemp.createTempSync('dual_thumbnail_bloc');
@@ -603,7 +695,7 @@ void main() {
                 thumbnailPath: thumbnail('second.jpg'),
               ),
             );
-            final enriched = DivineVideoClip(
+            enriched = DivineVideoClip(
               id: 'clip_1',
               video: main,
               duration: const Duration(seconds: 2),
@@ -666,6 +758,72 @@ void main() {
                       as String;
               expect(path, endsWith('main_dual.jpg'));
               expect(File(path).existsSync(), isTrue);
+            },
+          );
+
+          test('reclaims a composite if the take was reimported', () async {
+            final finished = trackEnrichmentCompletion();
+            final reimported = enriched.copyWith(volume: 0.5);
+            var timeline = enriched;
+            var lookups = 0;
+            when(() => clipManager.getClipById(enriched.id)).thenAnswer((_) {
+              // The poster checks the take first. The second lookup is the
+              // composer's read of the inputs before it starts its isolate.
+              if (++lookups == 2) {
+                scheduleMicrotask(() {
+                  clipManager.generation++;
+                  timeline = reimported;
+                });
+              }
+              return timeline;
+            });
+            final bloc = buildBloc(
+              recordingState: VideoRecorderState.recording,
+            );
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            await finished;
+
+            expect(timeline, same(reimported));
+            verifyNever(
+              () => clipManager.setSecondaryCameraThumbnail(
+                any(),
+                takeId: any(named: 'takeId'),
+                path: any(named: 'path'),
+              ),
+            );
+            expect(File('${dir.path}/main_dual.jpg').existsSync(), isFalse);
+          });
+
+          test(
+            'does not resave a reimported take after proof finishes',
+            () async {
+              final finished = trackEnrichmentCompletion();
+              final proofStarted = Completer<void>();
+              final proofPending = Completer<void>();
+              when(
+                () => clipManager.waitForSecondaryCameraTakes(),
+              ).thenAnswer((_) {
+                proofStarted.complete();
+                return proofPending.future;
+              });
+              final bloc = buildBloc(
+                recordingState: VideoRecorderState.recording,
+              );
+              addTearDown(bloc.close);
+
+              bloc.add(const VideoRecorderRecordingStopRequested());
+              await proofStarted.future;
+              clipManager.generation++;
+              final reimported = enriched.copyWith(volume: 0.5);
+              when(() => clipManager.getClipById(enriched.id))
+                  .thenReturn(reimported);
+              proofPending.complete();
+              await finished;
+
+              verifyNever(() => clipManager.saveClipToLibrary(reimported));
+              expect(File('${dir.path}/main_dual.jpg').existsSync(), isFalse);
             },
           );
         });
