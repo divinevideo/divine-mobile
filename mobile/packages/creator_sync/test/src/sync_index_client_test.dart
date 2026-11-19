@@ -261,7 +261,12 @@ void main() {
         final sealed = await cipher.seal(
           SyncIndexEntry.item(body: const {'id': 'abc'}).toPayloadJson(),
         );
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(
               pubkey,
@@ -290,7 +295,12 @@ void main() {
         // unrelated reason (undecryptable content).
         final dmCursorPayload = await cipher.seal('opaque-dm-cursor');
         final vaultKeyPayload = await cipher.seal('wrapped-key');
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(pubkey, 30078, const [
               ['d', 'divine:dm:read-cursor'],
@@ -309,7 +319,12 @@ void main() {
         final sealed = await cipher.seal(
           SyncIndexEntry.item(body: const {'id': 'abc'}).toPayloadJson(),
         );
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(pubkey, 30078, [
               ['d', clipRef.dTag],
@@ -321,7 +336,12 @@ void main() {
       });
 
       test('skips records it cannot decrypt', () async {
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(pubkey, 30078, [
               ['d', ref.dTag],
@@ -334,7 +354,12 @@ void main() {
 
       test('skips records with a malformed decrypted payload', () async {
         final sealed = await cipher.seal('not a payload envelope');
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(pubkey, 30078, [
               ['d', ref.dTag],
@@ -352,7 +377,12 @@ void main() {
         final newer = await cipher.seal(
           SyncIndexEntry.item(body: const {'gen': 'new'}).toPayloadJson(),
         );
-        when(() => client.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => _confirmed([
             Event(
               pubkey,
@@ -421,7 +451,10 @@ void main() {
             [higher, lower],
           ]) {
             when(
-              () => client.queryEventsDetailed(any()),
+              () => client.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
             ).thenAnswer((_) async => _confirmed(ordering));
 
             final records = await indexClient.fetch(SyncItemKind.sound);
@@ -439,7 +472,12 @@ void main() {
           final sealed = await cipher.seal(
             SyncIndexEntry.item(body: const {'id': 'genuine'}).toPayloadJson(),
           );
-          when(() => client.queryEventsDetailed(any())).thenAnswer(
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
             (_) async => _confirmed([
               Event(
                 pubkey,
@@ -480,7 +518,12 @@ void main() {
           final sealed = await cipher.seal(
             SyncIndexEntry.item(body: const {'id': 'genuine'}).toPayloadJson(),
           );
-          when(() => client.queryEventsDetailed(any())).thenAnswer(
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
             (_) async => _confirmed([
               Event(
                 pubkey,
@@ -516,14 +559,22 @@ void main() {
 
       test('sends kinds, authors, and since in the query filter', () async {
         when(
-          () => client.queryEventsDetailed(any()),
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenAnswer((_) async => _confirmed(const []));
 
         await indexClient.fetch(SyncItemKind.sound, since: 1_234_567);
 
         final filters =
             verify(
-                  () => client.queryEventsDetailed(captureAny()),
+                  () => client.queryEventsDetailed(
+                    captureAny(),
+                    requireAllRelaysSettled: any(
+                      named: 'requireAllRelaysSettled',
+                    ),
+                  ),
                 ).captured.single
                 as List<Filter>;
         expect(filters, hasLength(1));
@@ -534,14 +585,22 @@ void main() {
 
       test('omits since from the filter when not passed', () async {
         when(
-          () => client.queryEventsDetailed(any()),
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenAnswer((_) async => _confirmed(const []));
 
         await indexClient.fetch(SyncItemKind.sound);
 
         final filters =
             verify(
-                  () => client.queryEventsDetailed(captureAny()),
+                  () => client.queryEventsDetailed(
+                    captureAny(),
+                    requireAllRelaysSettled: any(
+                      named: 'requireAllRelaysSettled',
+                    ),
+                  ),
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.since, isNull);
@@ -549,7 +608,10 @@ void main() {
 
       test('throws $SyncIndexException when the query fails', () async {
         when(
-          () => client.queryEventsDetailed(any()),
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenThrow(StateError('relay unreachable'));
 
         await expectLater(
@@ -562,7 +624,12 @@ void main() {
         'throws $SyncIndexException rather than reading an empty library '
         'when no relays are connected',
         () async {
-          when(() => client.queryEventsDetailed(any())).thenAnswer(
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
             (_) async => (events: <Event>[], timedOut: false, noRelays: true),
           );
 
@@ -577,7 +644,53 @@ void main() {
         'throws $SyncIndexException rather than reading an empty library '
         'when the relay query times out',
         () async {
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+
+          await expectLater(
+            indexClient.fetch(SyncItemKind.sound),
+            throwsA(isA<SyncIndexException>()),
+          );
+        },
+      );
+
+      test(
+        'throws $SyncIndexException rather than reading a partial library '
+        'when a relay still owes its answer',
+        () async {
+          final sealed = await cipher.seal(
+            SyncIndexEntry.item(body: const {'id': 'answered'}).toPayloadJson(),
+          );
+          // A relay that stays silent past the pool's settle window, or ends
+          // the read with CLOSED, is dropped from a default read, which
+          // returns what the other relays sent with `timedOut: false`; only
+          // a fully settled read reports it as `timedOut: true`. The stubs
+          // answer each read shape the way the client does for that relay.
           when(() => client.queryEventsDetailed(any())).thenAnswer(
+            (_) async => _confirmed([
+              Event(
+                pubkey,
+                30078,
+                [
+                  ['d', ref.dTag],
+                ],
+                sealed,
+                createdAt: 1000,
+              ),
+            ]),
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
             (_) async => (events: <Event>[], timedOut: true, noRelays: false),
           );
 
@@ -595,7 +708,12 @@ void main() {
           indexClient.fetch(SyncItemKind.sound),
           throwsA(isA<SyncIndexException>()),
         );
-        verifyNever(() => client.queryEventsDetailed(any()));
+        verifyNever(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
       });
 
       test(
@@ -610,7 +728,12 @@ void main() {
             indexClient.fetch(SyncItemKind.sound),
             throwsA(isA<SyncIndexException>()),
           );
-          verifyNever(() => client.queryEventsDetailed(any()));
+          verifyNever(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          );
         },
       );
     });
