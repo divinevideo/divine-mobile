@@ -17353,6 +17353,25 @@ void main() {
         },
       );
 
+      test('gives up at the bound while status updates keep arriving', () {
+        fakeAsync((async) {
+          bool? connected;
+          unawaited(
+            createRepository().waitForConnectedRelay().then(
+              (value) => connected = value,
+            ),
+          );
+          async.elapse(dmFileSendRelayWait - const Duration(seconds: 1));
+          // The relay is still connecting, so the update cannot end the wait
+          // and must not restart its bound either.
+          statuses.add(relayIs(RelayState.connecting));
+          async.elapse(const Duration(seconds: 1));
+
+          expect(connected, isFalse);
+          expect(statuses.hasListener, isFalse);
+        });
+      });
+
       test('honours a shorter timeout', () {
         fakeAsync((async) {
           bool? connected;
