@@ -1050,6 +1050,38 @@ void main() {
 
           expect(params?[EditorVideoEffect.beatsParam], [2000000]);
         });
+
+        test('keeps the beats of disco and laser a third of a second apart, '
+            'and every beat of the zoom blur', () {
+          final beats = [ms(1150), ms(1000), ms(1300), ms(1450), ms(1650)];
+          CustomVideoEffect onBeat(EditorEffectType type) =>
+              EditorVideoEffect.of(
+                id: type.name,
+                type: type,
+                intensity: 0.8,
+                onBeat: true,
+              ).custom!;
+
+          for (final type in [EditorEffectType.disco, EditorEffectType.laser]) {
+            expect(
+              customVideoEffectRenderParams(
+                onBeat(type),
+                plain,
+                beats,
+              )?[EditorVideoEffect.beatsParam],
+              [1000000, 1450000],
+              reason: type.name,
+            );
+          }
+          expect(
+            customVideoEffectRenderParams(
+              onBeat(EditorEffectType.zoomBlur),
+              plain,
+              beats,
+            )?[EditorVideoEffect.beatsParam],
+            [1000000, 1150000, 1300000, 1450000, 1650000],
+          );
+        });
       });
     });
 

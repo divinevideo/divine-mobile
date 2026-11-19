@@ -1158,8 +1158,10 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// [EditorVideoEffect.durationParam] (see [introOutroDurationUs]). One on the
 /// beat also gets the times it fires at, under [EditorVideoEffect.beatsParam]:
 /// the [beats] of the exported video that fall in its window, as microseconds
-/// after its start. It moves with the time since it started in the preview as
-/// in the export, so the beats are counted the same way. For a player whose
+/// after its start. Disco and laser skip beats closer than [minimumFlashGap]
+/// to the one before, as flashing effects do; see [_partyLightVideoEffectIds].
+/// It moves with the time since it started in the preview as in the export,
+/// so the beats are counted the same way. For a player whose
 /// timeline is not the exported video's, [toPlayer] maps a time on the editor
 /// timeline onto the player's, and the beats are counted on it.
 ///
@@ -1223,13 +1225,31 @@ Map<String, Object?>? customVideoEffectRenderParams(
   }
   final start = timelineMap.editorToOutput(effect.startTime ?? Duration.zero);
   final end = timelineMap.editorToOutputOrNull(effect.endTime);
-  final offsets = _offsetsInWindow(effect, timelineMap, [
+  final inWindow = [
     for (final beat in [...beats]..sort())
       if (beat >= start && (end == null || beat < end)) beat,
-  ], toPlayer: toPlayer);
+  ];
+  final offsets = _offsetsInWindow(
+    effect,
+    timelineMap,
+    _partyLightVideoEffectIds.contains(effect.id)
+        ? _spacedForFlashing(inWindow)
+        : inWindow,
+    toPlayer: toPlayer,
+  );
   if (offsets.isEmpty) return null;
   return {...effect.params, EditorVideoEffect.beatsParam: offsets};
 }
+
+/// The custom effects whose lights change colour and turn round on every beat.
+///
+/// They are not flashing, but on a fast song a change on every beat would
+/// light parts of the picture up and down more than three times a second, so
+/// they keep their beats [minimumFlashGap] apart, as flashing effects do.
+const Set<String> _partyLightVideoEffectIds = {
+  discoVideoEffectId,
+  laserVideoEffectId,
+};
 
 /// [times], on the exported video, as microseconds after the start of the
 /// window of [effect]: on the exported video, or on the player's timeline when
