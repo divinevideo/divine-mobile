@@ -1072,17 +1072,32 @@ void main() {
         });
       });
 
-      test('setToggleOn(true) starts nothing (RF2)', () {
+      test('setToggleOn(true) neither starts nor adopts an activity (RF2)', () {
         fakeAsync((async) {
           final repo = build(async);
           unawaited(repo.setToggleOn(false));
           async.flushMicrotasks();
-          expect(repo.isToggleOn, isFalse);
-          unawaited(repo.setToggleOn(true));
+          // An adoptable activity: the current owner's, live, inside its
+          // window, with a post identity and a replayed token.
+          platform
+            ..emit(const PushTokenChanged(activityId: 'cold', token: 'tok'))
+            ..running = [
+              _running(
+                'cold',
+                owner: _ownerA,
+                startedAt: nowOf(async).subtract(const Duration(minutes: 10)),
+                coordinate: _coordA,
+                eventId: _eventA,
+              ),
+            ];
           async.flushMicrotasks();
+          platform.calls.clear();
+          unawaited(repo.setToggleOn(true));
+          async.elapse(const Duration(minutes: 1));
 
           expect(repo.isToggleOn, isTrue);
-          expect(platform.calls.where((c) => c == 'start'), isEmpty);
+          expect(platform.calls, isNot(contains('start')));
+          expect(registrar.sent, isEmpty);
         });
       });
 
