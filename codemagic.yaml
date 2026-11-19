@@ -5,9 +5,10 @@
 # 1 - Create the Codemagic project with access to the repository.
 # 2 - Setup iOS publishing:
 #   2.1 - https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Creating%20the%20App%20Store%20Connect%20API%20key
-#   2.2 - Every iOS app-extension target needs its own App Store provisioning
-#         profile in Codemagic Code signing identities. Keep
-#         IOS_EXTENSION_BUNDLE_IDS in sync with the Xcode app-extension targets.
+#   2.2 - Every iOS app-extension target and the Watch app need their own App
+#         Store provisioning profile in Codemagic Code signing identities. Add
+#         each bundle ID to IOS_EXTENSION_BUNDLE_IDS together with its profile;
+#         the signing check fails while a shipping target is missing.
 # 3 - Setup Android publishing:
 #   3.1 - Code signing: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Generating%20a%20keystore
 #   3.2 - Connect to Google Play: https://docs.codemagic.io/yaml-publishing/google-play/
