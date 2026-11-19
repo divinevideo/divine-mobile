@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -15,15 +14,74 @@ import 'package:openvine/collab_room/call/collab_room_call.dart';
 import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
 
-class _MockPeerConnection extends Mock implements RTCPeerConnection {}
+class _FakeSender extends Fake implements RTCRtpSender {}
 
-class _MockTransceiver extends Mock implements RTCRtpTransceiver {}
+class _FakeTransceiver extends Fake implements RTCRtpTransceiver {
+  @override
+  final RTCRtpSender sender = _FakeSender();
+}
 
-class _MockSender extends Mock implements RTCRtpSender {}
+/// A connection that makes offers and takes answers, and counts what was
+/// done to it. It waits for an answer until it gets one.
+class _FakePeerConnection extends Fake implements RTCPeerConnection {
+  RTCSignalingState _signaling =
+      RTCSignalingState.RTCSignalingStateHaveLocalOffer;
+  int answers = 0;
+  int closes = 0;
+  int disposes = 0;
 
-class _FakeTrack extends Fake implements MediaStreamTrack {}
+  @override
+  Function(RTCPeerConnectionState state)? onConnectionState;
 
-class _FakeStream extends Fake implements MediaStream {}
+  @override
+  Function(RTCTrackEvent event)? onTrack;
+
+  @override
+  Function(RTCIceGatheringState state)? onIceGatheringState;
+
+  @override
+  Function(RTCIceCandidate candidate)? onIceCandidate;
+
+  @override
+  RTCSignalingState? get signalingState => _signaling;
+
+  @override
+  Future<RTCRtpSender> addTrack(
+    MediaStreamTrack track, [
+    MediaStream? stream,
+  ]) async => _FakeSender();
+
+  @override
+  Future<RTCRtpTransceiver> addTransceiver({
+    MediaStreamTrack? track,
+    RTCRtpMediaType? kind,
+    RTCRtpTransceiverInit? init,
+  }) async => _FakeTransceiver();
+
+  @override
+  Future<RTCSessionDescription> createOffer([
+    Map<String, dynamic> constraints = const {},
+  ]) async => RTCSessionDescription('v=0', 'offer');
+
+  @override
+  Future<void> setLocalDescription(RTCSessionDescription description) async {}
+
+  @override
+  Future<RTCSessionDescription?> getLocalDescription() async =>
+      RTCSessionDescription('v=0', 'offer');
+
+  @override
+  Future<void> setRemoteDescription(RTCSessionDescription description) async {
+    answers++;
+    _signaling = RTCSignalingState.RTCSignalingStateStable;
+  }
+
+  @override
+  Future<void> close() async => closes++;
+
+  @override
+  Future<void> dispose() async => disposes++;
+}
 
 /// Hands the call what [incoming] carries and keeps what it sends. Each
 /// subscription closes at once while [closes] is set.
@@ -73,18 +131,9 @@ void main() {
     late String me;
     late String otherKey;
     late String other;
-    late List<_MockPeerConnection> connections;
+    late List<_FakePeerConnection> connections;
     late StreamController<int> made;
-    late RTCSignalingState signaling;
     late WebRtcCollabRoomCall call;
-
-    setUpAll(() {
-      registerFallbackValue(_FakeTrack());
-      registerFallbackValue(_FakeStream());
-      registerFallbackValue(RTCSessionDescription('', ''));
-      registerFallbackValue(RTCRtpMediaType.RTCRtpMediaTypeVideo);
-      registerFallbackValue(RTCRtpTransceiverInit());
-    });
 
     setUp(() {
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -113,7 +162,6 @@ void main() {
       other = keys.getPublicKey(otherKey);
       connections = [];
       made = StreamController<int>.broadcast();
-      signaling = RTCSignalingState.RTCSignalingStateHaveLocalOffer;
       call = WebRtcCollabRoomCall(
         me: me,
         others: {other},
@@ -128,34 +176,7 @@ void main() {
           Duration(milliseconds: 10),
         ],
         createConnection: (_) async {
-          final sender = _MockSender();
-          final transceiver = _MockTransceiver();
-          final connection = _MockPeerConnection();
-          when(() => transceiver.sender).thenReturn(sender);
-          when(
-            () => connection.addTrack(any(), any()),
-          ).thenAnswer((_) async => sender);
-          when(
-            () => connection.addTransceiver(
-              kind: any(named: 'kind'),
-              init: any(named: 'init'),
-            ),
-          ).thenAnswer((_) async => transceiver);
-          when(
-            connection.createOffer,
-          ).thenAnswer((_) async => RTCSessionDescription('v=0', 'offer'));
-          when(
-            () => connection.setLocalDescription(any()),
-          ).thenAnswer((_) async {});
-          when(() => connection.setRemoteDescription(any())).thenAnswer(
-            (_) async => signaling = RTCSignalingState.RTCSignalingStateStable,
-          );
-          when(
-            connection.getLocalDescription,
-          ).thenAnswer((_) async => RTCSessionDescription('v=0', 'offer'));
-          when(() => connection.signalingState).thenAnswer((_) => signaling);
-          when(connection.close).thenAnswer((_) async {});
-          when(connection.dispose).thenAnswer((_) async {});
+          final connection = _FakePeerConnection();
           connections.add(connection);
           made.add(connections.length);
           return connection;
@@ -209,7 +230,7 @@ void main() {
         await again.timeout(const Duration(seconds: 5));
 
         expect(connections, hasLength(2));
-        verify(connections.first.close).called(1);
+        expect(connections.first.closes, 1);
       });
 
       test('is not made again once answered', () async {
@@ -235,7 +256,7 @@ void main() {
           throwsA(isA<TimeoutException>()),
         );
         expect(connections, hasLength(1));
-        verify(() => connections.single.setRemoteDescription(any())).called(1);
+        expect(connections.single.answers, 1);
       });
 
       test('is given up after two more tries', () async {
@@ -295,7 +316,7 @@ void main() {
         await call.stop();
 
         expect(connections, hasLength(1));
-        verify(connections.single.dispose).called(1);
+        expect(connections.single.disposes, 1);
       });
 
       test('needs nothing extra once a connection was made', () async {
