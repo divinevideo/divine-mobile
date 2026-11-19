@@ -660,13 +660,22 @@ VideoEditorProviderState _rebaseEdits(
       const DeepCollectionEquality().equals(field(edited), field(opened))
       ? field(latest)
       : field(edited);
+  Set<T> applySetEdits<T>(
+    Set<T> Function(VideoEditorProviderState state) field,
+  ) {
+    final before = field(opened);
+    final after = field(edited);
+    return field(latest).difference(before.difference(after))
+      ..addAll(after.difference(before));
+  }
+
   final inspiredByVideo = pick((state) => state.inspiredByVideo);
   return edited.copyWith(
     title: pick((state) => state.title),
     description: pick((state) => state.description),
-    tags: pick((state) => state.tags),
-    contentWarnings: pick((state) => state.contentWarnings),
-    collaboratorPubkeys: pick((state) => state.collaboratorPubkeys),
+    tags: applySetEdits((state) => state.tags),
+    contentWarnings: applySetEdits((state) => state.contentWarnings),
+    collaboratorPubkeys: applySetEdits((state) => state.collaboratorPubkeys),
     inspiredByVideo: inspiredByVideo,
     clearInspiredByVideo: inspiredByVideo == null,
     inspiredByNpubs: pick((state) => state.inspiredByNpubs),
