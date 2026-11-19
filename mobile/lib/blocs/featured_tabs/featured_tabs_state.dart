@@ -8,11 +8,14 @@ enum FeaturedTabsStatus {
   /// No fetch has completed yet.
   initial,
 
-  /// A fetch is in flight.
+  /// A fetch or verification check is in progress.
   loading,
 
-  /// A fetch has completed; [FeaturedTabsState.tab] is authoritative.
+  /// Eligibility has resolved against a usable catalog.
   resolved,
+
+  /// The catalog or verification could not be loaded.
+  failed,
 }
 
 /// The featured tab the Explore screen should render, if any.
@@ -37,11 +40,12 @@ class FeaturedTabsState extends Equatable {
   FeaturedTabsState copyWith({
     FeaturedTabsStatus? status,
     FeaturedTabConfig? tab,
+    bool clearTab = false,
     Duration? pollInterval,
   }) {
     return FeaturedTabsState(
       status: status ?? this.status,
-      tab: tab ?? this.tab,
+      tab: clearTab ? null : tab ?? this.tab,
       pollInterval: pollInterval ?? this.pollInterval,
     );
   }

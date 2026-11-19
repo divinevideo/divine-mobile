@@ -9,11 +9,15 @@ class FeaturedTabsSnapshot {
   /// Creates a snapshot carrying the renderable tab, if any.
   const FeaturedTabsSnapshot({
     this.tab,
+    this.hasResolvedCatalog = true,
     this.pollInterval = FeaturedTabsResponse.defaultPollInterval,
   });
 
   /// The single tab that should render, or `null` when none is eligible.
   final FeaturedTabConfig? tab;
+
+  /// Whether this answer came from a successful fetch or a usable cache.
+  final bool hasResolvedCatalog;
 
   /// Cadence at which the caller should refresh.
   final Duration pollInterval;
@@ -92,8 +96,7 @@ class FeaturedTabsRepository {
   /// Fetches and resolves the featured tab for the current viewer.
   ///
   /// Never throws: a failed fetch degrades to the cached config while it is
-  /// fresher than [cacheTtl], and to an empty snapshot once that has elapsed.
-  /// Callers get a resolved answer, not an error to interpret.
+  /// fresher than [cacheTtl]. Otherwise, the snapshot has no resolved catalog.
   ///
   /// [gateAgeRestrictedContent] hides tabs whose dashboard configuration does
   /// not allow viewers under 18. The public config endpoint is shared-cacheable
@@ -197,11 +200,11 @@ class FeaturedTabsRepository {
     final cached = _cached;
     final cachedAt = _cachedAt;
     if (cached == null || cachedAt == null) {
-      return const FeaturedTabsSnapshot();
+      return const FeaturedTabsSnapshot(hasResolvedCatalog: false);
     }
     if (_now().difference(cachedAt) >= cacheTtl) {
       clearCache();
-      return const FeaturedTabsSnapshot();
+      return const FeaturedTabsSnapshot(hasResolvedCatalog: false);
     }
     return _resolve(
       cached,

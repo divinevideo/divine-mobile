@@ -347,15 +347,25 @@ void main() {
         );
       });
 
-      test('returns no tab when the first fetch fails with no cache', () async {
-        stubFailure();
+      test(
+        'distinguishes a cold fetch failure from confirmed absence',
+        () async {
+          final repository = buildRepository();
+          stubFailure();
+          final failed = await repository.refresh(
+            gateAgeRestrictedContent: false,
+          );
+          expect(failed.hasTab, isFalse);
+          expect(failed.hasResolvedCatalog, isFalse);
 
-        final snapshot = await buildRepository().refresh(
-          gateAgeRestrictedContent: false,
-        );
-
-        expect(snapshot.hasTab, isFalse);
-      });
+          stubTabs(const []);
+          final empty = await repository.refresh(
+            gateAgeRestrictedContent: false,
+          );
+          expect(empty.hasTab, isFalse);
+          expect(empty.hasResolvedCatalog, isTrue);
+        },
+      );
 
       test('recovers on the next successful fetch after expiry', () async {
         final repository = buildRepository();

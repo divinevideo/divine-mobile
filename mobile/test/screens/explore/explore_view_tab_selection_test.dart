@@ -1,6 +1,8 @@
 // ABOUTME: Tab selection under late availability changes on Explore.
 // ABOUTME: Launch intent must land once, then stop overriding the user.
 
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
@@ -10,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
+import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -23,6 +26,7 @@ import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
+import 'package:openvine/screens/explore/explore_view.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -97,7 +101,9 @@ const _pollInterval = Duration(seconds: 30);
 /// the selection behaviour it exists to guard.
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
-final _testFeaturedTabAgeGateProvider = StateProvider<bool>((ref) => true);
+final _testFeaturedTabAgeGateProvider = StateProvider<FeaturedTabAudience>(
+  (ref) => FeaturedTabAudience.unverified,
+);
 
 const _featuredConfig = FeaturedTabConfig(
   id: 'ft_a1b2c3d4',
@@ -106,6 +112,18 @@ const _featuredConfig = FeaturedTabConfig(
   // The tab itself reads the compiled "Featured"; the pill is what makes
   // this particular collection identifiable on screen.
   pillLabel: {'default': 'Spotlight'},
+  startsAt: null,
+  endsAt: null,
+  enabled: true,
+  hasContent: true,
+  visibleToMinors: true,
+);
+
+const _adultConfig = FeaturedTabConfig(
+  id: 'ft_abcdefgh',
+  slug: 'adult-featured-slug',
+  label: {'default': 'Featured'},
+  pillLabel: {'default': 'Adult spotlight'},
   startsAt: null,
   endsAt: null,
   enabled: true,
@@ -144,6 +162,31 @@ class _StagedFeaturedTabsRepository implements FeaturedTabsRepository {
   }) async => const FeaturedTabVideosPage(videos: []);
 }
 
+class _ControlledFeaturedTabsRepository extends _StagedFeaturedTabsRepository {
+  final requests =
+      <
+        ({
+          bool gated,
+          String? feedId,
+          Completer<FeaturedTabsSnapshot> result,
+        })
+      >[];
+
+  @override
+  Future<FeaturedTabsSnapshot> refresh({
+    required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
+  }) {
+    final result = Completer<FeaturedTabsSnapshot>();
+    requests.add((
+      gated: gateAgeRestrictedContent,
+      feedId: requiredFeaturedFeedId,
+      result: result,
+    ));
+    return result.future;
+  }
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(SubscriptionType.discovery);
@@ -176,7 +219,10 @@ void main() {
     required FeaturedTabsRepository repository,
     String? initialTabName,
     String? initialTabSlug,
+    String? requiredFeaturedFeedId,
     bool classicsAvailable = false,
+    bool settle = true,
+    FeaturedTabAudience audience = FeaturedTabAudience.unverified,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -204,6 +250,7 @@ void main() {
             FeatureFlag.integratedApps,
           ).overrideWithValue(false),
           featuredTabsRepositoryProvider.overrideWithValue(repository),
+          _testFeaturedTabAgeGateProvider.overrideWith((ref) => audience),
           featuredTabAgeGateProvider.overrideWith(
             (ref) => ref.watch(_testFeaturedTabAgeGateProvider),
           ),
@@ -215,12 +262,17 @@ void main() {
             body: ExploreScreen(
               initialTabName: initialTabName,
               initialTabSlug: initialTabSlug,
+              requiredFeaturedFeedId: requiredFeaturedFeedId,
             ),
           ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
   }
 
   TabController controllerOf(WidgetTester tester) =>
@@ -232,6 +284,119 @@ void main() {
   }
 
   group('ExploreView tab selection', () {
+    testWidgets('keeps Explore mounted for a missing campaign and retries on '
+        'foreground', (tester) async {
+      final repository = _StagedFeaturedTabsRepository();
+      await pumpExplore(
+        tester,
+        repository: repository,
+        requiredFeaturedFeedId: _featuredConfig.id,
+      );
+      expect(find.byType(ExploreView), findsOneWidget);
+      expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);
+      expect(find.text(_l10n.exploreTabCategories), findsOneWidget);
+
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(repository.refreshCount, 2);
+      expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
+      expect(find.text('Spotlight'), findsOneWidget);
+    });
+
+    testWidgets('a cold campaign waits for verification and hides adult '
+        'content immediately during the next account check', (tester) async {
+      final repository = _ControlledFeaturedTabsRepository();
+      await pumpExplore(
+        tester,
+        repository: repository,
+        requiredFeaturedFeedId: _adultConfig.id,
+        audience: FeaturedTabAudience.loading,
+        settle: false,
+      );
+      final view = tester.state(find.byType(ExploreView));
+      final gate = ProviderScope.containerOf(
+        tester.element(find.byType(ExploreScreen)),
+      ).read(_testFeaturedTabAgeGateProvider.notifier);
+      expect(selectedTabName(tester), exploreFeaturedTabName);
+      expect(repository.requests.single.gated, isTrue);
+      expect(repository.requests.single.feedId, _adultConfig.id);
+
+      repository.requests.single.result.complete(const FeaturedTabsSnapshot());
+      await tester.pump();
+      expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
+      expect(find.text('Adult spotlight'), findsNothing);
+
+      gate.state = FeaturedTabAudience.adult;
+      await tester.pump();
+      expect(repository.requests, hasLength(2));
+      expect(repository.requests.last.gated, isFalse);
+      repository.requests.last.result.complete(
+        const FeaturedTabsSnapshot(tab: _adultConfig),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Adult spotlight'), findsOneWidget);
+
+      gate.state = FeaturedTabAudience.loading;
+      await tester.pump();
+      expect(repository.requests, hasLength(3));
+      expect(repository.requests.last.gated, isTrue);
+      expect(find.text('Adult spotlight'), findsNothing);
+      expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
+      expect(tester.state(find.byType(ExploreView)), same(view));
+
+      gate.state = FeaturedTabAudience.unverified;
+      await tester.pump();
+      expect(repository.requests, hasLength(4));
+      repository.requests[2].result.complete(const FeaturedTabsSnapshot());
+      repository.requests[3].result.complete(const FeaturedTabsSnapshot());
+      await tester.pumpAndSettle();
+      expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);
+    });
+
+    testWidgets('shows a lookup error before absence is confirmed and keeps '
+        'confirmed absence visible during a later foreground retry', (
+      tester,
+    ) async {
+      final repository = _ControlledFeaturedTabsRepository();
+      await pumpExplore(
+        tester,
+        repository: repository,
+        requiredFeaturedFeedId: _featuredConfig.id,
+        settle: false,
+      );
+      expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
+      repository.requests.single.result.complete(
+        const FeaturedTabsSnapshot(hasResolvedCatalog: false),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(_l10n.commonSomethingWentWrong), findsOneWidget);
+      expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
+
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(repository.requests, hasLength(2));
+      repository.requests.last.result.complete(const FeaturedTabsSnapshot());
+      await tester.pumpAndSettle();
+      expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);
+
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(repository.requests, hasLength(3));
+      expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);
+      repository.requests.last.result.complete(
+        const FeaturedTabsSnapshot(hasResolvedCatalog: false),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);
+    });
+
     testWidgets('refreshes featured tabs when 18+ verification resolves', (
       tester,
     ) async {
@@ -243,7 +408,8 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(ExploreScreen)),
       );
-      container.read(_testFeaturedTabAgeGateProvider.notifier).state = false;
+      container.read(_testFeaturedTabAgeGateProvider.notifier).state =
+          FeaturedTabAudience.adult;
       await tester.pumpAndSettle();
 
       expect(repository.refreshCount, 2);

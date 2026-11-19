@@ -10,6 +10,16 @@ import 'package:openvine/repositories/featured_tabs_repository.dart';
 
 part 'featured_tabs_state.dart';
 
+/// Eligibility to see featured content reserved for verified adults.
+enum FeaturedTabAudience {
+  loading,
+  failed,
+  unverified,
+  adult;
+
+  bool get gatesAdultContent => this != adult;
+}
+
 /// Keeps the featured Explore tab in sync with its server configuration.
 ///
 /// Polls at the server-supplied cadence and refetches on app foreground so a
@@ -19,23 +29,28 @@ part 'featured_tabs_state.dart';
 class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   /// Creates the cubit over [repository].
   ///
-  /// [gateAgeRestrictedContent] is read at each refresh rather than captured
-  /// once, so an age-up or account switch is reflected on the next poll.
+  /// [audience] is read at each refresh so the decision follows verification
+  /// and account changes.
   FeaturedTabsCubit({
     required FeaturedTabsRepository repository,
-    required bool Function() gateAgeRestrictedContent,
+    required FeaturedTabAudience Function() audience,
     this.requiredFeaturedFeedId,
+    DateTime Function()? now,
   }) : _repository = repository,
-       _gateAgeRestrictedContent = gateAgeRestrictedContent,
+       _audience = audience,
+       _now = now ?? DateTime.now,
        super(const FeaturedTabsState());
 
   final FeaturedTabsRepository _repository;
-  final bool Function() _gateAgeRestrictedContent;
+  final FeaturedTabAudience Function() _audience;
+  final DateTime Function() _now;
 
   /// Feed required by a campaign destination, or null for normal Explore.
   final String? requiredFeaturedFeedId;
 
   Timer? _pollTimer;
+  Timer? _expiryTimer;
+  FeaturedTabAudience? _resolvedAudience;
 
   /// Sequence number of the newest started refresh.
   ///
@@ -56,22 +71,78 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   Future<void> refresh() async {
     if (isClosed) return;
     final generation = ++_refreshGeneration;
-    emit(state.copyWith(status: FeaturedTabsStatus.loading));
+    final audience = _audience();
+    final previousTab = state.tab;
+    final hadConfirmedAbsence =
+        state.status == FeaturedTabsStatus.resolved &&
+        state.tab == null &&
+        _resolvedAudience == audience;
+    if (!hadConfirmedAbsence) {
+      emit(
+        state.copyWith(
+          status: FeaturedTabsStatus.loading,
+          clearTab:
+              (audience.gatesAdultContent &&
+                  previousTab?.visibleToMinors == false) ||
+              previousTab?.endsAt?.isAfter(_now()) == false,
+        ),
+      );
+    }
 
     final snapshot = await _repository.refresh(
-      gateAgeRestrictedContent: _gateAgeRestrictedContent(),
+      gateAgeRestrictedContent: audience.gatesAdultContent,
       requiredFeaturedFeedId: requiredFeaturedFeedId,
     );
-    if (isClosed || generation != _refreshGeneration) return;
+    if (isClosed ||
+        generation != _refreshGeneration ||
+        _audience() != audience) {
+      return;
+    }
 
+    final tab = snapshot.tab;
+    final status = switch ((tab, snapshot.hasResolvedCatalog, audience)) {
+      (FeaturedTabConfig(), _, _) => FeaturedTabsStatus.resolved,
+      (null, false, _) when hadConfirmedAbsence => FeaturedTabsStatus.resolved,
+      (null, false, _) => FeaturedTabsStatus.failed,
+      (null, true, FeaturedTabAudience.loading) => FeaturedTabsStatus.loading,
+      (null, true, FeaturedTabAudience.failed) => FeaturedTabsStatus.failed,
+      _ => FeaturedTabsStatus.resolved,
+    };
+    if (status == FeaturedTabsStatus.resolved) _resolvedAudience = audience;
     emit(
       FeaturedTabsState(
-        status: FeaturedTabsStatus.resolved,
-        tab: snapshot.tab,
+        status: status,
+        tab: tab,
         pollInterval: snapshot.pollInterval,
       ),
     );
     _schedulePoll(snapshot.pollInterval);
+    _scheduleExpiry(tab);
+  }
+
+  void _scheduleExpiry(FeaturedTabConfig? tab) {
+    _expiryTimer?.cancel();
+    final endsAt = tab?.endsAt;
+    if (endsAt == null) return;
+    final remaining = endsAt.difference(_now());
+    const maximumDelay = Duration(days: 1);
+    _expiryTimer = Timer(
+      remaining > maximumDelay ? maximumDelay : remaining,
+      () {
+        if (isClosed || state.tab != tab) return;
+        if (_now().isBefore(endsAt)) {
+          _scheduleExpiry(tab);
+          return;
+        }
+        _resolvedAudience = _audience();
+        emit(
+          state.copyWith(
+            status: FeaturedTabsStatus.resolved,
+            clearTab: true,
+          ),
+        );
+      },
+    );
   }
 
   void _schedulePoll(Duration interval) {
@@ -83,7 +154,7 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   @override
   Future<void> close() {
     _pollTimer?.cancel();
-    _pollTimer = null;
+    _expiryTimer?.cancel();
     return super.close();
   }
 }

@@ -11,7 +11,6 @@ import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/explore/explore_view.dart';
-import 'package:openvine/screens/explore/widgets/featured_campaign_gate.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -95,11 +94,13 @@ class ExploreScreen extends ConsumerWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
+          key: ValueKey(requiredFeaturedFeedId),
           // Both providers are stable keepAlive Providers that are never
           // invalidated, so ref.read is safe here (state_management.md §1).
           create: (_) => ExploreTabsCubit(
             screenAnalytics: ref.read(screenAnalyticsServiceProvider),
             topHashtags: ref.read(topHashtagsServiceProvider),
+            reserveFeaturedSlot: requiredFeaturedFeedId != null,
           ),
         ),
         BlocProvider(
@@ -113,8 +114,7 @@ class ExploreScreen extends ConsumerWidget {
             final cubit = FeaturedTabsCubit(
               repository: featuredTabsRepository,
               requiredFeaturedFeedId: requiredFeaturedFeedId,
-              gateAgeRestrictedContent: () =>
-                  ref.read(featuredTabAgeGateProvider),
+              audience: () => ref.read(featuredTabAgeGateProvider),
             );
             runDetached(
               cubit.refresh(),
@@ -126,21 +126,13 @@ class ExploreScreen extends ConsumerWidget {
           },
         ),
       ],
-      child: requiredFeaturedFeedId == null
-          ? ExploreView(
-              initialTabName: initialTabName,
-              initialTabSlug: initialTabSlug,
-            )
-          : BlocBuilder<FeaturedTabsCubit, FeaturedTabsState>(
-              builder: (context, state) => FeaturedCampaignGate(
-                feedId: requiredFeaturedFeedId!,
-                state: state,
-                child: ExploreView(
-                  key: ValueKey(requiredFeaturedFeedId),
-                  initialTabName: exploreFeaturedTabName,
-                ),
-              ),
-            ),
+      child: ExploreView(
+        key: ValueKey(requiredFeaturedFeedId),
+        initialTabName: requiredFeaturedFeedId == null
+            ? initialTabName
+            : exploreFeaturedTabName,
+        initialTabSlug: initialTabSlug,
+      ),
     );
   }
 }

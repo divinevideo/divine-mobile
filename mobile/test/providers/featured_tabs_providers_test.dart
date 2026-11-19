@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -55,7 +56,10 @@ void main() {
     test('gates while persisted adult verification is loading', () {
       final container = createContainer();
 
-      expect(container.read(featuredTabAgeGateProvider), isTrue);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.loading,
+      );
     });
 
     test('gates a viewer without 18+ verification', () async {
@@ -63,7 +67,10 @@ void main() {
 
       await container.read(featuredTabViewerIsAdultProvider.future);
 
-      expect(container.read(featuredTabAgeGateProvider), isTrue);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.unverified,
+      );
     });
 
     test('does not gate an 18+ verified viewer', () async {
@@ -74,7 +81,10 @@ void main() {
 
       await container.read(featuredTabViewerIsAdultProvider.future);
 
-      expect(container.read(featuredTabAgeGateProvider), isFalse);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.adult,
+      );
     });
 
     test('recomputes when adult verification changes', () async {
@@ -84,7 +94,10 @@ void main() {
       ).thenAnswer((_) => verified);
       final container = createContainer();
       await container.read(featuredTabViewerIsAdultProvider.future);
-      expect(container.read(featuredTabAgeGateProvider), isTrue);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.unverified,
+      );
 
       verified = true;
       container
@@ -92,7 +105,10 @@ void main() {
           .increment();
       await container.read(featuredTabViewerIsAdultProvider.future);
 
-      expect(container.read(featuredTabAgeGateProvider), isFalse);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.adult,
+      );
     });
 
     test(
@@ -104,15 +120,25 @@ void main() {
         ).thenAnswer((_) => verified);
         final container = createContainer();
         await container.read(featuredTabViewerIsAdultProvider.future);
-        expect(container.read(featuredTabAgeGateProvider), isFalse);
+        expect(
+          container.read(featuredTabAgeGateProvider),
+          FeaturedTabAudience.adult,
+        );
 
         // Account switch: the service now answers for the new account, but
         // nothing bumps the verification version. Only the auth state moves.
         verified = false;
         switchAccount(container);
+        expect(
+          container.read(featuredTabAgeGateProvider),
+          FeaturedTabAudience.loading,
+        );
         await container.read(featuredTabViewerIsAdultProvider.future);
 
-        expect(container.read(featuredTabAgeGateProvider), isTrue);
+        expect(
+          container.read(featuredTabAgeGateProvider),
+          FeaturedTabAudience.unverified,
+        );
       },
     );
   });

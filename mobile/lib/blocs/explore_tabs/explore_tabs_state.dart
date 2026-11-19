@@ -46,6 +46,7 @@ class ExploreTabsState extends Equatable {
     this.appsAvailable = false,
     this.challengesAvailable = challengesTestEnabled,
     this.featuredTab,
+    this.reserveFeaturedSlot = false,
   });
 
   /// Whether the Classics tab is shown.
@@ -60,6 +61,9 @@ class ExploreTabsState extends Equatable {
 
   /// Server-configured featured tab, or `null` when none should render.
   final FeaturedTabConfig? featuredTab;
+
+  /// Keeps the featured tab addressable while a campaign lookup resolves.
+  final bool reserveFeaturedSlot;
 
   /// Ordered tab names based on current availability.
   ///
@@ -78,7 +82,7 @@ class ExploreTabsState extends Equatable {
       if (appsAvailable) exploreAppsTabName,
       if (challengesAvailable) exploreChallengesTabName,
     ];
-    if (featuredTab == null) return names;
+    if (featuredTab == null && !reserveFeaturedSlot) return names;
     return names..insert(_featuredInsertIndex(names), exploreFeaturedTabName);
   }
 
@@ -134,6 +138,7 @@ class ExploreTabsState extends Equatable {
       appsAvailable: appsAvailable ?? this.appsAvailable,
       challengesAvailable: challengesAvailable ?? this.challengesAvailable,
       featuredTab: clearFeaturedTab ? null : featuredTab ?? this.featuredTab,
+      reserveFeaturedSlot: reserveFeaturedSlot,
     );
   }
 
@@ -144,5 +149,6 @@ class ExploreTabsState extends Equatable {
     appsAvailable,
     challengesAvailable,
     featuredTab,
+    reserveFeaturedSlot,
   ];
 }

@@ -31,9 +31,10 @@ class ExploreTabsCubit extends Cubit<ExploreTabsState> {
   ExploreTabsCubit({
     required ScreenAnalyticsService screenAnalytics,
     TopHashtagsLoader? topHashtags,
+    bool reserveFeaturedSlot = false,
   }) : _screenAnalytics = screenAnalytics,
        _topHashtags = topHashtags ?? TopHashtagsService(),
-       super(const ExploreTabsState());
+       super(ExploreTabsState(reserveFeaturedSlot: reserveFeaturedSlot));
 
   static const _screenName = 'explore_screen';
 

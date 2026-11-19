@@ -2,6 +2,8 @@
 // ABOUTME: Rebuilds with the Funnelcake client so an env swap propagates.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -39,11 +41,20 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
 /// Loading and unverified states fail closed. Protected-minor accounts also
 /// stay gated because [AgeVerificationService] prevents them from completing
 /// adult-content verification.
-final featuredTabAgeGateProvider = Provider<bool>((ref) {
-  final viewerIsAdult = ref.watch(featuredTabViewerIsAdultProvider);
-  return viewerIsAdult.when(
-    data: (isAdult) => !isAdult,
-    error: (_, _) => true,
-    loading: () => true,
-  );
+final featuredTabAgeGateProvider = Provider<FeaturedTabAudience>((ref) {
+  final auth = ref.watch(currentAuthStateProvider);
+  if (auth == AuthState.authenticating || auth == AuthState.checking) {
+    return FeaturedTabAudience.loading;
+  }
+  if (auth != AuthState.authenticated) return FeaturedTabAudience.unverified;
+  return ref
+      .watch(featuredTabViewerIsAdultProvider)
+      .when(
+        skipLoadingOnRefresh: false,
+        data: (isAdult) => isAdult
+            ? FeaturedTabAudience.adult
+            : FeaturedTabAudience.unverified,
+        error: (_, _) => FeaturedTabAudience.failed,
+        loading: () => FeaturedTabAudience.loading,
+      );
 });

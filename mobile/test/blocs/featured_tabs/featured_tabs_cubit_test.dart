@@ -43,7 +43,9 @@ void main() {
     FeaturedTabsCubit buildCubit({bool gateAgeRestrictedContent = false}) {
       return FeaturedTabsCubit(
         repository: repository,
-        gateAgeRestrictedContent: () => gateAgeRestrictedContent,
+        audience: () => gateAgeRestrictedContent
+            ? FeaturedTabAudience.unverified
+            : FeaturedTabAudience.adult,
       );
     }
 
@@ -98,6 +100,26 @@ void main() {
       ).called(1);
     });
 
+    test('verification failure keeps a cold campaign inconclusive', () async {
+      when(
+        () => repository.refresh(
+          gateAgeRestrictedContent: true,
+          requiredFeaturedFeedId: _tab.id,
+        ),
+      ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+      final cubit = FeaturedTabsCubit(
+        repository: repository,
+        audience: () => FeaturedTabAudience.failed,
+        requiredFeaturedFeedId: _tab.id,
+      );
+      addTearDown(cubit.close);
+
+      await cubit.refresh();
+
+      expect(cubit.state.tab, isNull);
+      expect(cubit.state.status, FeaturedTabsStatus.failed);
+    });
+
     test('passes the required campaign feed on every refresh', () async {
       when(
         () => repository.refresh(
@@ -107,7 +129,7 @@ void main() {
       ).thenAnswer((_) async => const FeaturedTabsSnapshot());
       final cubit = FeaturedTabsCubit(
         repository: repository,
-        gateAgeRestrictedContent: () => false,
+        audience: () => FeaturedTabAudience.adult,
         requiredFeaturedFeedId: 'ft_b',
       );
       addTearDown(cubit.close);
@@ -170,6 +192,44 @@ void main() {
             gateAgeRestrictedContent: any(named: 'gateAgeRestrictedContent'),
           ),
         ).called(1);
+
+        unawaited(cubit.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('clears a campaign at its configured end before the next poll', () {
+      fakeAsync((async) {
+        final start = DateTime.utc(2026, 11, 17, 12);
+        final tab = FeaturedTabConfig(
+          id: _tab.id,
+          slug: _tab.slug,
+          label: _tab.label,
+          startsAt: start,
+          endsAt: start.add(const Duration(seconds: 1)),
+          enabled: true,
+          hasContent: true,
+        );
+        when(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).thenAnswer((_) async => FeaturedTabsSnapshot(tab: tab));
+        final cubit = FeaturedTabsCubit(
+          repository: repository,
+          audience: () => FeaturedTabAudience.adult,
+          requiredFeaturedFeedId: tab.id,
+          now: () => start.add(async.elapsed),
+        );
+
+        unawaited(cubit.refresh());
+        async.flushMicrotasks();
+        expect(cubit.state.tab, tab);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(cubit.state.tab, isNull);
+        expect(cubit.state.status, FeaturedTabsStatus.resolved);
 
         unawaited(cubit.close());
         async.flushMicrotasks();
