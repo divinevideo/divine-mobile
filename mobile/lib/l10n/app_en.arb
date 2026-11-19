@@ -13922,6 +13922,14 @@
   "@collabRoomPhaseRecording": {
     "description": "Subtitle of a collaborative video room where everyone is filming their part."
   },
+  "collabRoomPhaseReady": "Ready to start filming",
+  "@collabRoomPhaseReady": {
+    "description": "Subtitle of a collaborative video room for its host once someone joined, while filming has not started yet."
+  },
+  "collabRoomPhaseWaitingForHost": "Waiting for the host to start filming",
+  "@collabRoomPhaseWaitingForHost": {
+    "description": "Subtitle of a collaborative video room for a guest who joined, while the host has not started filming yet."
+  },
   "collabRoomCreateFailed": "Couldn't send the invites. Try again.",
   "@collabRoomCreateFailed": {
     "description": "Shown when the invites to a new collaborative video room could not be sent."

@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "Bir arkadaşın odası",
   "collabRoomPhaseLobby": "Katılımcılar bekleniyor",
   "collabRoomPhaseRecording": "Bölümler çekiliyor",
+  "collabRoomPhaseReady": "Çekime hazır",
+  "collabRoomPhaseWaitingForHost": "Odanın çekime başlaması bekleniyor",
   "collabRoomCreateFailed": "Davetler gönderilemedi. Tekrar dene.",
   "collabRoomInviteCardTitle": "Hadi birlikte video yapalım",
   "collabRoomInviteCardBody": "Odaya katıl, herkes kendi bölümünü çeksin.",

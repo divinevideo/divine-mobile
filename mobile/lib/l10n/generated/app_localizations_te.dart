@@ -17035,6 +17035,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get collabRoomPhaseRecording => 'భాగాలు చిత్రీకరించబడుతున్నాయి';
 
   @override
+  String get collabRoomPhaseReady => 'చిత్రీకరణకు సిద్ధం';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'రూమ్‌లో చిత్రీకరణ మొదలవడం కోసం వేచి ఉంది';
+
+  @override
   String get collabRoomCreateFailed =>
       'ఆహ్వానాలను పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 

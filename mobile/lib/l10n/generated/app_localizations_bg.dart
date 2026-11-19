@@ -16808,6 +16808,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Снимат се частите';
 
   @override
+  String get collabRoomPhaseReady => 'Готово за снимки';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Чакаме стаята да започне снимките';
+
+  @override
   String get collabRoomCreateFailed =>
       'Поканите не можаха да се изпратят. Опитай пак.';
 

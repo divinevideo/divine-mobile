@@ -156,9 +156,16 @@ class _RoomTile extends StatelessWidget {
     final title = room.isAuthor
         ? l10n.collabRoomTileHosting
         : l10n.collabRoomTileGuest;
-    final subtitle = room.phase == CollabRoomPhase.recording
-        ? l10n.collabRoomPhaseRecording
-        : l10n.collabRoomPhaseLobby;
+    final subtitle = switch (room.phase) {
+      CollabRoomPhase.recording => l10n.collabRoomPhaseRecording,
+      _ when room.isAuthor && room.participants.length > 1 =>
+        l10n.collabRoomPhaseReady,
+      _
+          when !room.isAuthor &&
+              room.me?.status == CollabRoomMemberStatus.joined =>
+        l10n.collabRoomPhaseWaitingForHost,
+      _ => l10n.collabRoomPhaseLobby,
+    };
     return MergeSemantics(
       child: Semantics(
         button: true,

@@ -16857,6 +16857,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Filmando las partes';
 
   @override
+  String get collabRoomPhaseReady => 'Todo listo para filmar';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Esperando que la sala empiece a filmar';
+
+  @override
   String get collabRoomCreateFailed =>
       'No se pudieron enviar las invitaciones. Probá de nuevo.';
 

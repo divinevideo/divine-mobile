@@ -9444,6 +9444,8 @@
   "collabRoomTileGuest": "స్నేహితుని రూమ్",
   "collabRoomPhaseLobby": "ఇతరులు చేరడం కోసం వేచి ఉంది",
   "collabRoomPhaseRecording": "భాగాలు చిత్రీకరించబడుతున్నాయి",
+  "collabRoomPhaseReady": "చిత్రీకరణకు సిద్ధం",
+  "collabRoomPhaseWaitingForHost": "రూమ్‌లో చిత్రీకరణ మొదలవడం కోసం వేచి ఉంది",
   "collabRoomCreateFailed": "ఆహ్వానాలను పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
   "collabRoomInviteCardTitle": "కలిసి వీడియో చేద్దాం",
   "collabRoomInviteCardBody": "రూమ్‌లో చేరండి, ప్రతి ఒక్కరూ తమ భాగాన్ని చిత్రీకరిస్తారు.",

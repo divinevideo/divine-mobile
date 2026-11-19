@@ -15899,6 +15899,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomPhaseRecording => '파트 촬영 중';
 
   @override
+  String get collabRoomPhaseReady => '촬영 시작 준비 완료';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => '촬영 시작을 기다리는 중';
+
+  @override
   String get collabRoomCreateFailed => '초대를 보내지 못했어요. 다시 해 보세요.';
 
   @override

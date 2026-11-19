@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "En väns rum",
   "collabRoomPhaseLobby": "Väntar på att folk ska gå med",
   "collabRoomPhaseRecording": "Delar filmas",
+  "collabRoomPhaseReady": "Redo att filma",
+  "collabRoomPhaseWaitingForHost": "Väntar på att rummet ska börja filma",
   "collabRoomCreateFailed": "Det gick inte att skicka inbjudningarna. Försök igen.",
   "collabRoomInviteCardTitle": "Vi gör en video tillsammans",
   "collabRoomInviteCardBody": "Gå med i rummet, så filmar alla sin egen del.",

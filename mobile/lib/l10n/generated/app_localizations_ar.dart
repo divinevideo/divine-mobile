@@ -16703,6 +16703,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collabRoomPhaseRecording => 'جارٍ تصوير الأجزاء';
 
   @override
+  String get collabRoomPhaseReady => 'كل شيء جاهز للتصوير';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => 'بانتظار بدء التصوير في الغرفة';
+
+  @override
   String get collabRoomCreateFailed =>
       'تعذّر إرسال الدعوات. يُرجى المحاولة مجددًا.';
 

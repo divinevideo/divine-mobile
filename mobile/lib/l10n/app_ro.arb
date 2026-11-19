@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "Camera unui prieten",
   "collabRoomPhaseLobby": "Așteptăm să intre oameni",
   "collabRoomPhaseRecording": "Se filmează părțile",
+  "collabRoomPhaseReady": "Gata de filmare",
+  "collabRoomPhaseWaitingForHost": "Așteptăm să înceapă filmarea în cameră",
   "collabRoomCreateFailed": "Invitațiile nu au putut fi trimise. Încearcă din nou.",
   "collabRoomInviteCardTitle": "Hai să facem un video împreună",
   "collabRoomInviteCardBody": "Intră în cameră și fiecare își filmează propria parte.",

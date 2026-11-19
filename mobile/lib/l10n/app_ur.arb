@@ -7821,6 +7821,8 @@
   "collabRoomTileGuest": "کسی دوست کا روم",
   "collabRoomPhaseLobby": "لوگوں کے شامل ہونے کا انتظار",
   "collabRoomPhaseRecording": "حصے فلمائے جا رہے ہیں",
+  "collabRoomPhaseReady": "فلم بندی کے لیے تیار",
+  "collabRoomPhaseWaitingForHost": "روم میں فلم بندی شروع ہونے کا انتظار",
   "collabRoomCreateFailed": "دعوت نامے نہیں بھیجے جا سکے۔ دوبارہ کوشش کریں۔",
   "collabRoomInviteCardTitle": "آئیں مل کر ویڈیو بنائیں",
   "collabRoomInviteCardBody": "روم میں شامل ہوں، اور ہر کوئی اپنا حصہ فلمائے۔",

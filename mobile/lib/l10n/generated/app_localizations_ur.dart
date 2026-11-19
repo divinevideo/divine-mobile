@@ -16656,6 +16656,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get collabRoomPhaseRecording => 'حصے فلمائے جا رہے ہیں';
 
   @override
+  String get collabRoomPhaseReady => 'فلم بندی کے لیے تیار';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'روم میں فلم بندی شروع ہونے کا انتظار';
+
+  @override
   String get collabRoomCreateFailed =>
       'دعوت نامے نہیں بھیجے جا سکے۔ دوبارہ کوشش کریں۔';
 

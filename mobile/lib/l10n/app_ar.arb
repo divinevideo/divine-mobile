@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "غرفة صديق",
   "collabRoomPhaseLobby": "بانتظار انضمام المشاركين",
   "collabRoomPhaseRecording": "جارٍ تصوير الأجزاء",
+  "collabRoomPhaseReady": "كل شيء جاهز للتصوير",
+  "collabRoomPhaseWaitingForHost": "بانتظار بدء التصوير في الغرفة",
   "collabRoomCreateFailed": "تعذّر إرسال الدعوات. يُرجى المحاولة مجددًا.",
   "collabRoomInviteCardTitle": "لنصنع فيديو معًا",
   "collabRoomInviteCardBody": "الانضمام إلى الغرفة، ثم يصوّر كل شخص جزءه.",

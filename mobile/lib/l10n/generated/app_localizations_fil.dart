@@ -16803,6 +16803,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Nagfi-film ng mga part';
 
   @override
+  String get collabRoomPhaseReady => 'Handa nang mag-film';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Hinihintay na magsimula ang pag-film sa room';
+
+  @override
   String get collabRoomCreateFailed =>
       'Hindi naipadala ang mga imbitasyon. Subukan ulit.';
 

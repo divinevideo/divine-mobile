@@ -15689,6 +15689,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomPhaseRecording => '正在拍摄各部分';
 
   @override
+  String get collabRoomPhaseReady => '可以开始拍摄了';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => '正在等待房间开始拍摄';
+
+  @override
   String get collabRoomCreateFailed => '邀请发送失败，请重试。';
 
   @override

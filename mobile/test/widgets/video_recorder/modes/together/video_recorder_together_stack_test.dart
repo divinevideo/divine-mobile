@@ -1,5 +1,6 @@
 import 'dart:ui' show Locale;
 
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
@@ -57,6 +58,55 @@ void main() {
         expect(find.text(l10n.collabRoomTileHosting), findsOneWidget);
         expect(find.text(l10n.collabRoomTileGuest), findsOneWidget);
         expect(find.text(l10n.collabRoomPhaseLobby), findsNWidgets(2));
+      });
+
+      testWidgets('a host whose guest joined as ready to start', (
+        tester,
+      ) async {
+        when(service.watchRooms).thenAnswer(
+          (_) => Stream.value([
+            twoPersonRoom(
+              owner: author,
+              samStatus: CollabRoomMemberStatus.joined,
+            ),
+          ]),
+        );
+        await pump(tester);
+
+        expect(find.text(l10n.collabRoomPhaseReady), findsOneWidget);
+        expect(find.text(l10n.collabRoomPhaseLobby), findsNothing);
+      });
+
+      testWidgets('a guest who joined as waiting for the host', (
+        tester,
+      ) async {
+        when(service.watchRooms).thenAnswer(
+          (_) => Stream.value([
+            twoPersonRoom(
+              owner: sam,
+              samStatus: CollabRoomMemberStatus.joined,
+            ),
+          ]),
+        );
+        await pump(tester);
+
+        expect(find.text(l10n.collabRoomPhaseWaitingForHost), findsOneWidget);
+        expect(find.text(l10n.collabRoomPhaseLobby), findsNothing);
+      });
+
+      testWidgets('a room filming parts as filming', (tester) async {
+        when(service.watchRooms).thenAnswer(
+          (_) => Stream.value([
+            twoPersonRoom(
+              owner: sam,
+              phase: CollabRoomPhase.recording,
+              samStatus: CollabRoomMemberStatus.joined,
+            ),
+          ]),
+        );
+        await pump(tester);
+
+        expect(find.text(l10n.collabRoomPhaseRecording), findsOneWidget);
       });
     });
   });

@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "Sala de um amigo",
   "collabRoomPhaseLobby": "Esperando o pessoal entrar",
   "collabRoomPhaseRecording": "Filmando as partes",
+  "collabRoomPhaseReady": "Tudo pronto para filmar",
+  "collabRoomPhaseWaitingForHost": "Esperando a sala começar a filmar",
   "collabRoomCreateFailed": "Não foi possível enviar os convites. Tente de novo.",
   "collabRoomInviteCardTitle": "Bora fazer um vídeo juntos",
   "collabRoomInviteCardBody": "Entre na sala, e cada pessoa filma a própria parte.",

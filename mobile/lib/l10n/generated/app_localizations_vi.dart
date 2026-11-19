@@ -16605,6 +16605,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Đang quay các phần';
 
   @override
+  String get collabRoomPhaseReady => 'Sẵn sàng quay';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => 'Đang chờ phòng bắt đầu quay';
+
+  @override
   String get collabRoomCreateFailed => 'Không gửi được lời mời. Hãy thử lại.';
 
   @override

@@ -6573,6 +6573,8 @@
   "collabRoomTileGuest": "የጓደኛ ክፍል",
   "collabRoomPhaseLobby": "ሰዎች እስኪቀላቀሉ በመጠበቅ ላይ",
   "collabRoomPhaseRecording": "ክፍሎች እየተቀረጹ ነው",
+  "collabRoomPhaseReady": "ለመቅረጽ ዝግጁ",
+  "collabRoomPhaseWaitingForHost": "ክፍሉ መቅረጽ እስኪጀምር በመጠበቅ ላይ",
   "collabRoomCreateFailed": "ግብዣዎቹን መላክ አልተቻለም። እንደገና ይሞክሩ።",
   "collabRoomInviteCardTitle": "አብረን ቪዲዮ እንሥራ",
   "collabRoomInviteCardBody": "ክፍሉን ይቀላቀሉ፣ እያንዳንዱም የራሱን ክፍል ይቀርጻል።",

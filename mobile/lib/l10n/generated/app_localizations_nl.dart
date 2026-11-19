@@ -16746,6 +16746,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Delen worden gefilmd';
 
   @override
+  String get collabRoomPhaseReady => 'Klaar om te filmen';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Wachten tot de ruimte begint met filmen';
+
+  @override
   String get collabRoomCreateFailed =>
       'De uitnodigingen konden niet worden verstuurd. Probeer het opnieuw.';
 

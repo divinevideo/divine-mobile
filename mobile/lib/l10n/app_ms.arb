@@ -7821,6 +7821,8 @@
   "collabRoomTileGuest": "Bilik rakan",
   "collabRoomPhaseLobby": "Menunggu orang menyertai",
   "collabRoomPhaseRecording": "Merakam bahagian",
+  "collabRoomPhaseReady": "Sedia untuk mula merakam",
+  "collabRoomPhaseWaitingForHost": "Menunggu bilik mula merakam",
   "collabRoomCreateFailed": "Jemputan tidak dapat dihantar. Cuba lagi.",
   "collabRoomInviteCardTitle": "Jom buat video bersama",
   "collabRoomInviteCardBody": "Sertai bilik, dan semua orang merakam bahagian sendiri.",

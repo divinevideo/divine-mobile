@@ -16878,6 +16878,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Si girano le parti';
 
   @override
+  String get collabRoomPhaseReady => 'Pronti a girare';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'In attesa che la stanza inizi a girare';
+
+  @override
   String get collabRoomCreateFailed =>
       'Impossibile inviare gli inviti. Riprova.';
 

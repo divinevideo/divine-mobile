@@ -7821,6 +7821,8 @@
   "collabRoomTileGuest": "朋友的房间",
   "collabRoomPhaseLobby": "正在等人加入",
   "collabRoomPhaseRecording": "正在拍摄各部分",
+  "collabRoomPhaseReady": "可以开始拍摄了",
+  "collabRoomPhaseWaitingForHost": "正在等待房间开始拍摄",
   "collabRoomCreateFailed": "邀请发送失败，请重试。",
   "collabRoomInviteCardTitle": "一起拍个视频吧",
   "collabRoomInviteCardBody": "加入房间后，每个人拍自己的部分。",

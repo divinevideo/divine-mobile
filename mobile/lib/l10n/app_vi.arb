@@ -7821,6 +7821,8 @@
   "collabRoomTileGuest": "Phòng của bạn bè",
   "collabRoomPhaseLobby": "Đang chờ mọi người tham gia",
   "collabRoomPhaseRecording": "Đang quay các phần",
+  "collabRoomPhaseReady": "Sẵn sàng quay",
+  "collabRoomPhaseWaitingForHost": "Đang chờ phòng bắt đầu quay",
   "collabRoomCreateFailed": "Không gửi được lời mời. Hãy thử lại.",
   "collabRoomInviteCardTitle": "Cùng làm video nhé",
   "collabRoomInviteCardBody": "Vào phòng, rồi mỗi người quay phần của mình.",

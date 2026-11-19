@@ -15881,6 +15881,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomPhaseRecording => 'パートを撮影中';
 
   @override
+  String get collabRoomPhaseReady => '撮影を始められます';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => 'ルームの撮影開始を待っています';
+
+  @override
   String get collabRoomCreateFailed => '招待を送信できませんでした。もう一度お試しください。';
 
   @override

@@ -6520,6 +6520,8 @@
   "collabRoomTileGuest": "Ruangan teman",
   "collabRoomPhaseLobby": "Menunggu orang bergabung",
   "collabRoomPhaseRecording": "Merekam bagian",
+  "collabRoomPhaseReady": "Siap mulai syuting",
+  "collabRoomPhaseWaitingForHost": "Menunggu ruangan mulai syuting",
   "collabRoomCreateFailed": "Undangan tidak bisa dikirim. Coba lagi.",
   "collabRoomInviteCardTitle": "Yuk bikin video bareng",
   "collabRoomInviteCardBody": "Gabung ke ruangan, lalu semua merekam bagiannya sendiri.",

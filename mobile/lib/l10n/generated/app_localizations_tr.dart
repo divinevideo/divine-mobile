@@ -16580,6 +16580,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Bölümler çekiliyor';
 
   @override
+  String get collabRoomPhaseReady => 'Çekime hazır';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Odanın çekime başlaması bekleniyor';
+
+  @override
   String get collabRoomCreateFailed => 'Davetler gönderilemedi. Tekrar dene.';
 
   @override

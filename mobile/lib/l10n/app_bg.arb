@@ -6637,6 +6637,8 @@
   "collabRoomTileGuest": "Стая на приятел",
   "collabRoomPhaseLobby": "Чакаме хора да влязат",
   "collabRoomPhaseRecording": "Снимат се частите",
+  "collabRoomPhaseReady": "Готово за снимки",
+  "collabRoomPhaseWaitingForHost": "Чакаме стаята да започне снимките",
   "collabRoomCreateFailed": "Поканите не можаха да се изпратят. Опитай пак.",
   "collabRoomInviteCardTitle": "Хайде да направим видео заедно",
   "collabRoomInviteCardBody": "Влез в стаята и всеки заснема своята част.",

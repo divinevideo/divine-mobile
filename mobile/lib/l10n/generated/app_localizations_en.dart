@@ -16782,6 +16782,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Filming parts';
 
   @override
+  String get collabRoomPhaseReady => 'Ready to start filming';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Waiting for the host to start filming';
+
+  @override
   String get collabRoomCreateFailed => 'Couldn\'t send the invites. Try again.';
 
   @override

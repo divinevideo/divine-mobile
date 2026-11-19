@@ -16675,6 +16675,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get collabRoomPhaseRecording => 'Delar filmas';
 
   @override
+  String get collabRoomPhaseReady => 'Redo att filma';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Väntar på att rummet ska börja filma';
+
+  @override
   String get collabRoomCreateFailed =>
       'Det gick inte att skicka inbjudningarna. Försök igen.';
 
