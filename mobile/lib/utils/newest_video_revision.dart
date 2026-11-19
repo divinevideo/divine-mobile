@@ -13,20 +13,28 @@ import 'package:videos_repository/videos_repository.dart'
         VideosRepository;
 
 /// The newest revision [repository] reads at [video]'s address, or null when
-/// a relay did not answer in full or none holds a revision there. Either way
-/// the reason is logged under [logName].
+/// there is no repository to ask, a relay did not answer in full, or none
+/// holds a revision there. The reason is logged under [logName].
 ///
 /// A video's copy in hand can be older than the relays' newest revision, and
 /// a replacement built from it deletes whatever only the newer one carried.
 ///
 /// Throws [ArgumentError] when [video] is not an addressable video.
 Future<Event?> newestVideoRevision(
-  VideosRepository repository,
+  VideosRepository? repository,
   VideoEvent video, {
   required String logName,
 }) async {
   final kind = video.eventKind ?? NIP71VideoKinds.addressableShortVideo;
   final address = '$kind:${video.pubkey}:${video.stableId}';
+  if (repository == null) {
+    Log.warning(
+      'Not republishing $address: no repository to read its newest revision',
+      name: logName,
+      category: LogCategory.video,
+    );
+    return null;
+  }
   switch (await repository.fetchLatestVideoRevision(address)) {
     case LatestVideoRevisionFound(:final event):
       return event;
