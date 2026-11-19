@@ -892,6 +892,35 @@ void main() {
         ).called(1);
       });
 
+      test('keeps a newer title when saving details after subtitles', () async {
+        final opened = _testVideo();
+        final subtitleRevision = newerRevision(
+          title: 'Title from another device',
+          extraTags: const [subtitleTrack],
+        );
+        final afterSubtitles = VideoEvent.fromNostrEvent(subtitleRevision);
+        relaysHold(subtitleRevision);
+
+        final result = await service.updateVideo(
+          originalVideo: afterSubtitles,
+          editorBaseline: opened,
+          editorState: editorStateFromPublishedVideo(opened)
+              .copyWith(description: 'Unsaved caption edit'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags,
+          contains(equals(['title', 'Title from another device'])),
+        );
+        expect(
+          capturedTags,
+          contains(equals(['summary', 'Unsaved caption edit'])),
+        );
+        expect(capturedTags, contains(equals(subtitleTrack)));
+      });
+
       test('preserves separate imeta variants and their metadata', () async {
         const hls = [
           'imeta',
