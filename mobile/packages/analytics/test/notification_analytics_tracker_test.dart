@@ -167,6 +167,76 @@ void main() {
       },
     );
 
+    group('campaign revision', () {
+      const revision = '12345678-1234-4234-8234-123456789abc';
+
+      test('is exported for a campaign open', () async {
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: revision,
+        );
+        expect(sink.events.single.parameters, {
+          'notification_type': 'campaign',
+          'open_source': 'local_tap',
+          'campaign_revision_id': revision,
+        });
+      });
+
+      test('is dropped when it is not a lowercase UUID', () async {
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: 'free text from the payload',
+        );
+        expect(
+          sink.events.single.parameters,
+          isNot(contains('campaign_revision_id')),
+        );
+      });
+
+      test('logs the shape of a dropped revision, not its text', () async {
+        const rejected = '12345678-1234-4234-8234-123456789ABC';
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: rejected,
+        );
+        final warning = logs
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .map((entry) => entry.message)
+            .singleWhere((message) => message.contains('no attribution'));
+        expect(warning, contains('uppercaseUuid=true'));
+        expect(warning, isNot(contains(rejected)));
+      });
+
+      test('counts one open per revision across deliveries', () async {
+        for (final messageId in ['message-1', 'message-2']) {
+          await tracker.opened(
+            notificationType: 'campaign',
+            source: NotificationOpenSource.osBackground,
+            deduplicationKey: messageId,
+            campaignRevisionId: revision,
+          );
+        }
+        expect(sink.events, hasLength(1));
+      });
+
+      test('is ignored on a non-campaign open', () async {
+        await tracker.opened(
+          notificationType: 'like',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: revision,
+        );
+        expect(
+          sink.events.single.parameters,
+          isNot(contains('campaign_revision_id')),
+        );
+      });
+    });
+
     test(
       'sink failure is best effort and does not prevent a later open',
       () async {
@@ -191,6 +261,37 @@ void main() {
           deduplicationKey: 'retryable-delivery',
         );
         expect(sink.events, hasLength(1));
+      },
+    );
+  });
+
+  group('campaignConsentChanged', () {
+    test('records the new choice as a numeric flag', () async {
+      await tracker.campaignConsentChanged(enabled: false);
+      expect(sink.events.single.name, 'campaign_consent_changed');
+      expect(sink.events.single.parameters, {'enabled': 0});
+    });
+
+    test('does not record when collection is disabled', () async {
+      allowed = false;
+      await tracker.campaignConsentChanged(enabled: true);
+      expect(sink.events, isEmpty);
+    });
+
+    test(
+      'drops the change if the privacy boundary changes while consent loads',
+      () async {
+        final consent = Completer<bool>();
+        tracker = NotificationAnalyticsTracker(
+          sink: sink,
+          collectionAllowed: () => consent.future,
+          privacyBoundary: () => boundary,
+        );
+        final pending = tracker.campaignConsentChanged(enabled: true);
+        boundary = 'another-account-session';
+        consent.complete(true);
+        await pending;
+        expect(sink.events, isEmpty);
       },
     );
   });

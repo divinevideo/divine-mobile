@@ -15,7 +15,8 @@ import androidx.media3.exoplayer.video.VideoRendererEventListener
 /**
  * Builds the audio path with the loop declick fade in it (#6468), and the
  * per-clip equalizer when [setClipEqualizer] asked for one. The video
- * renderers are wrapped in a [KnownOutputSizeVideoRenderer].
+ * renderers are wrapped in a [KnownOutputSizeVideoRenderer], and release their
+ * frames [videoReleaseLeadUs] ahead of the clock (see [LeadingVideoRenderer]).
  *
  * The processors have to be injected at construction because
  * `DefaultAudioSink`'s processor chain is fixed once the sink is built, and
@@ -25,6 +26,7 @@ import androidx.media3.exoplayer.video.VideoRendererEventListener
 internal class LoopDeclickRenderersFactory(
     context: Context,
     private val declickProcessor: LoopDeclickAudioProcessor,
+    private val videoReleaseLeadUs: () -> Long = { 0L },
 ) : DefaultRenderersFactory(context) {
 
     private var clipEqualizer: ClipEqualizerAudioProcessor? = null
@@ -122,7 +124,9 @@ internal class LoopDeclickRenderersFactory(
         )
         // Wrapped rather than rebuilt, so each renderer keeps the stock config.
         for (index in start until out.size) {
-            out[index] = KnownOutputSizeVideoRenderer(out[index])
+            out[index] = KnownOutputSizeVideoRenderer(
+                LeadingVideoRenderer(out[index], videoReleaseLeadUs),
+            )
         }
     }
 }

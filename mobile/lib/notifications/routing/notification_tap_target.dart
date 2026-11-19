@@ -43,12 +43,12 @@ class OpenVideoTarget extends NotificationTapTarget {
   List<Object?> get props => [autoOpenComments];
 }
 
-/// Open the actor's profile (e.g. a follow notification, or a tap whose video
-/// target could not be determined).
+/// Open a profile: the actor's (e.g. a follow notification, or a tap whose
+/// video target could not be determined) or a campaign's creator.
 class OpenProfileTarget extends NotificationTapTarget {
   const OpenProfileTarget(this.actorPubkey);
 
-  /// Hex pubkey of the actor whose profile to open.
+  /// Hex pubkey of the profile to open.
   final String actorPubkey;
 
   @override
@@ -141,10 +141,38 @@ NotificationKind? notificationKindFromPushType(String? type) {
   }
 }
 
-/// Returns a safe in-app route for a campaign target, or null when unsupported.
+/// Returns the allowlisted in-app route of an `app_route` campaign target, or
+/// null otherwise.
 String? campaignAppRoute({required String? type, required String? value}) {
   if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;
+}
+
+final _campaignVideoCoordinate = RegExp(
+  '^${NIP71VideoKinds.addressableShortVideo}:[0-9a-f]{64}:.+\$',
+);
+final _lowercaseHexPubkey = RegExp(r'^[0-9a-f]{64}$');
+
+/// Returns the coordinate of a `video_address` campaign target: kind 34236, a
+/// lowercase hex creator pubkey and a non-empty d-tag. Null otherwise.
+String? campaignVideoCoordinate({
+  required String? type,
+  required String? value,
+}) {
+  if (type != NotificationWireValues.videoAddress || value == null) return null;
+  return _campaignVideoCoordinate.hasMatch(value) ? value : null;
+}
+
+/// Returns the lowercase hex pubkey of a `creator_profile` campaign target,
+/// or null otherwise.
+String? campaignCreatorPubkey({
+  required String? type,
+  required String? value,
+}) {
+  if (type != NotificationWireValues.creatorProfile || value == null) {
+    return null;
+  }
+  return _lowercaseHexPubkey.hasMatch(value) ? value : null;
 }
 
 /// Parses a public curated-list coordinate into an in-app route target.

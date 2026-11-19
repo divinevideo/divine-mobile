@@ -801,6 +801,45 @@ void main() {
       expect(detachedClipPlayers.entryCount, 0);
     });
 
+    testWidgets('drops the poster fade once its player has drawn a frame', (
+      tester,
+    ) async {
+      final opening = Completer<DetachedClipPlayer?>();
+      unawaited(detachedClipPlayers.acquire(key, () => opening.future));
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      detachedClipPlayers.release(key);
+      final fake = _fakePlayer();
+      final firstFrame = Completer<bool>();
+      when(
+        () => fake.controller.firstFrameRendered,
+      ).thenAnswer((_) => firstFrame.future);
+      opening.complete(fake);
+      await tester.pump();
+      await tester.pump();
+      expect(shownPlayer(tester)?.controller, same(fake.controller));
+      expect(
+        shownPlayer(tester)?.placeholder,
+        isNotNull,
+        reason: 'nothing is drawn yet, so the poster bridges the gap',
+      );
+
+      firstFrame.complete(true);
+      await tester.pump();
+
+      // Mounted again at each window entry, the surface would otherwise fade
+      // in over the poster at every cut between two takes.
+      expect(shownPlayer(tester)?.placeholder, isNull);
+
+      // Unmounted, the layer hands the player to the pool's grace window.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
     testWidgets('does not retain an idle player when mounted during export', (
       tester,
     ) async {

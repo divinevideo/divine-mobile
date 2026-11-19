@@ -9086,6 +9086,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'Camera wisselen';
 
   @override
+  String get videoRecorderToggleDualCameraLabel =>
+      'Opnemen met beide camera\'s';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'Camera\'s omwisselen';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoomen naar $zoom×';
   }

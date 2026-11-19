@@ -11,9 +11,17 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../helpers/test_provider_overrides.dart';
+
+class _TestCurrentAuth extends CurrentAuthState {
+  @override
+  AuthState build() => AuthState.unauthenticated;
+}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -33,8 +41,11 @@ void main() {
     late _MockVideoEventService mockVideoEventService;
     late _MockContentBlocklistRepository mockBlocklistRepository;
     late SharedPreferences sharedPreferences;
+    late TestAnalyticsService analytics;
 
     setUp(() async {
+      analytics = TestAnalyticsService();
+      addTearDown(analytics.dispose);
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
 
@@ -55,6 +66,8 @@ void main() {
     ProviderContainer createContainer() => ProviderContainer(
       overrides: [
         appReadyProvider.overrideWithValue(true),
+        analyticsServiceProvider.overrideWithValue(analytics),
+        currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         videosRepositoryProvider.overrideWithValue(mockVideosRepository),
         videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -98,6 +111,7 @@ void main() {
         (_, _) {},
       );
       addTearDown(subscription.close);
+      await container.read(classicVinesFeedProvider.future);
       final viners = await container.read(topClassicVinersProvider.future);
 
       expect(viners.single.authorName, equals('Zach�'));

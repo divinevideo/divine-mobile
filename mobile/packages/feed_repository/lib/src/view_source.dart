@@ -54,10 +54,14 @@ final class PopularViewSource extends ViewSource {
 /// The "Classic Vines" feed.
 final class ClassicVinesViewSource extends ViewSource {
   /// Creates a Classic Vines view source.
-  const ClassicVinesViewSource();
+  const ClassicVinesViewSource({this.anchor});
+
+  /// A selected classic starts its own fullscreen session rather than sharing
+  /// the global grid's mutable paging stream.
+  final VideoEvent? anchor;
 
   @override
-  List<Object?> get props => const [];
+  List<Object?> get props => [anchor];
 }
 
 /// The chronological "New" videos feed.

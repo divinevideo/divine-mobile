@@ -317,10 +317,10 @@ class VideoEditorMainBloc
   }
 
   /// Hands the edit over once the fonts its social stickers draw in are
-  /// loaded: the export captures the stickers as they show, and a viewer's
-  /// copy draws its emoji in the same font. A request while one is pending is
-  /// ignored, and one cancelled meanwhile, or replaced by a newer one, never
-  /// hands over.
+  /// loaded and the layers still being placed are in: the export captures
+  /// the stickers as they show, and a viewer's copy draws its emoji in the
+  /// same font. A request while one is pending is ignored, and one cancelled
+  /// meanwhile, or replaced by a newer one, never hands over.
   Future<void> _onFinishRequested(
     VideoEditorFinishRequested event,
     Emitter<VideoEditorMainState> emit,
@@ -329,6 +329,13 @@ class VideoEditorMainBloc
     final finish = state.finishCounter + 1;
     emit(state.copyWith(isFinishing: true, finishCounter: finish));
     await _loadStickerFonts(event.stickerTexts);
+    if (event.pendingLayers case final pending?) {
+      try {
+        await pending;
+      } catch (_) {
+        // The canvas logged the failure; the edit goes without that layer.
+      }
+    }
     if (!state.isFinishing || state.finishCounter != finish) return;
     emit(
       state.copyWith(

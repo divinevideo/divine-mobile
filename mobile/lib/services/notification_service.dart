@@ -50,6 +50,7 @@ class NotificationTapEvent {
     this.senderPubkey,
     this.tapTargetType,
     this.tapTargetValue,
+    this.campaignRevisionId,
   });
 
   /// Transport identifier retained locally for analytics callback deduplication.
@@ -73,11 +74,17 @@ class NotificationTapEvent {
   /// to a profile.
   final String? senderPubkey;
 
-  /// Campaign destination type, currently `app_route`.
+  /// Campaign destination type: `app_route`, `video_address` or
+  /// `creator_profile`.
   final String? tapTargetType;
 
-  /// Campaign destination value, such as an absolute in-app route.
+  /// Campaign destination value: an absolute in-app route, a kind-34236
+  /// coordinate, or a creator's hex pubkey.
   final String? tapTargetValue;
+
+  /// Campaign revision from the local-notification payload, for live and
+  /// cold-start local taps.
+  final String? campaignRevisionId;
 
   @override
   bool operator ==(Object other) =>
@@ -90,7 +97,8 @@ class NotificationTapEvent {
           notificationType == other.notificationType &&
           senderPubkey == other.senderPubkey &&
           tapTargetType == other.tapTargetType &&
-          tapTargetValue == other.tapTargetValue;
+          tapTargetValue == other.tapTargetValue &&
+          campaignRevisionId == other.campaignRevisionId;
 
   @override
   int get hashCode => Object.hash(
@@ -102,6 +110,7 @@ class NotificationTapEvent {
     senderPubkey,
     tapTargetType,
     tapTargetValue,
+    campaignRevisionId,
   );
 }
 
@@ -597,6 +606,7 @@ class NotificationService {
         senderPubkey: senderPubkey,
         tapTargetType: field(NotificationPayloadKeys.tapTargetType),
         tapTargetValue: field(NotificationPayloadKeys.tapTargetValue),
+        campaignRevisionId: field(NotificationPayloadKeys.campaignRevisionId),
       );
     } catch (e) {
       // Malformed payload (non-JSON, non-object, or unexpected shape).

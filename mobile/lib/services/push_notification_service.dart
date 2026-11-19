@@ -16,7 +16,7 @@ import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show localNotificationTapPayload;
+    show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -447,6 +447,7 @@ class PushNotificationService {
     final plaintext = jsonEncode({
       'token': token,
       'timezoneOffsetMinutes': timezone.offset,
+      'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
       if (timezone.name != null) 'timezone': timezone.name,
     });
 

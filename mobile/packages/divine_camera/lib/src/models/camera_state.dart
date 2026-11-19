@@ -4,6 +4,7 @@
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_lens_metadata.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
+import 'package:divine_camera/src/models/secondary_camera_state.dart';
 import 'package:divine_camera/src/models/video_stabilization_mode.dart';
 import 'package:equatable/equatable.dart';
 
@@ -35,6 +36,8 @@ class CameraState extends Equatable {
       DivineVideoStabilizationMode.off,
     ],
     this.isVideoStabilizationSupported = false,
+    this.isDualCameraSupported = false,
+    this.secondaryCamera,
   });
 
   /// Creates a [CameraState] from a map.
@@ -81,6 +84,12 @@ class CameraState extends Equatable {
           : const [DivineVideoStabilizationMode.off],
       isVideoStabilizationSupported:
           map['isVideoStabilizationSupported'] as bool? ?? false,
+      isDualCameraSupported: map['isDualCameraSupported'] as bool? ?? false,
+      secondaryCamera: map['secondaryCamera'] != null
+          ? SecondaryCameraState.fromMap(
+              map['secondaryCamera'] as Map<dynamic, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -161,6 +170,22 @@ class CameraState extends Equatable {
   /// Whether the active camera supports any video stabilization beyond off.
   final bool isVideoStabilizationSupported;
 
+  /// Whether the device can run its front and back camera at the same time.
+  ///
+  /// iOS reports it on devices with a multi-camera session (iPhone XS / XR
+  /// and later), Android on devices that list a concurrent front and back
+  /// pair. Never on macOS.
+  final bool isDualCameraSupported;
+
+  /// The second camera while dual-camera capture is on, null otherwise.
+  ///
+  /// [lens] is the camera that fills the viewfinder and records with sound;
+  /// this one records a second, silent file of every take.
+  final SecondaryCameraState? secondaryCamera;
+
+  /// Whether dual-camera capture is on.
+  bool get isDualCameraEnabled => secondaryCamera != null;
+
   /// Whether the camera can record video.
   bool get canRecord => isInitialized && !isRecording;
 
@@ -214,6 +239,9 @@ class CameraState extends Equatable {
     DivineVideoStabilizationMode? videoStabilizationMode,
     List<DivineVideoStabilizationMode>? availableVideoStabilizationModes,
     bool? isVideoStabilizationSupported,
+    bool? isDualCameraSupported,
+    SecondaryCameraState? secondaryCamera,
+    bool clearSecondaryCamera = false,
   }) {
     return CameraState(
       isInitialized: isInitialized ?? this.isInitialized,
@@ -246,6 +274,11 @@ class CameraState extends Equatable {
           this.availableVideoStabilizationModes,
       isVideoStabilizationSupported:
           isVideoStabilizationSupported ?? this.isVideoStabilizationSupported,
+      isDualCameraSupported:
+          isDualCameraSupported ?? this.isDualCameraSupported,
+      secondaryCamera: clearSecondaryCamera
+          ? null
+          : secondaryCamera ?? this.secondaryCamera,
     );
   }
 
@@ -278,6 +311,8 @@ class CameraState extends Equatable {
           .map((m) => m.toNativeString())
           .toList(),
       'isVideoStabilizationSupported': isVideoStabilizationSupported,
+      'isDualCameraSupported': isDualCameraSupported,
+      'secondaryCamera': secondaryCamera?.toMap(),
     };
   }
 
@@ -305,7 +340,9 @@ class CameraState extends Equatable {
         'videoStabilizationMode: $videoStabilizationMode, '
         'availableVideoStabilizationModes: '
         '$availableVideoStabilizationModes, '
-        'isVideoStabilizationSupported: $isVideoStabilizationSupported)';
+        'isVideoStabilizationSupported: $isVideoStabilizationSupported, '
+        'isDualCameraSupported: $isDualCameraSupported, '
+        'secondaryCamera: $secondaryCamera)';
   }
 
   @override
@@ -332,5 +369,7 @@ class CameraState extends Equatable {
     videoStabilizationMode,
     availableVideoStabilizationModes,
     isVideoStabilizationSupported,
+    isDualCameraSupported,
+    secondaryCamera,
   ];
 }

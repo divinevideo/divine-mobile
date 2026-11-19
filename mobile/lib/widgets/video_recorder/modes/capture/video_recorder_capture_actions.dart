@@ -35,6 +35,8 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         supportsGhostFrame: b.state.supportsGhostFrame,
         supportsStabilization: b.state.supportsVideoStabilization,
         offersChromaKey: b.state.offersChromaKey,
+        supportsDualCamera: b.state.supportsDualCamera,
+        isDualCameraEnabled: b.state.isDualCameraEnabled,
       ),
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
@@ -121,7 +123,24 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                         )
                       : null,
                 ),
-                if (state.supportsStabilization) const _StabilizationButton(),
+                if (state.supportsDualCamera)
+                  _IconButton(
+                    icon: .pictureInPicture,
+                    label: l10n.videoRecorderToggleDualCameraLabel,
+                    identifier: SemanticIds.cameraDualCameraButton,
+                    toggled: state.isDualCameraEnabled,
+                    // Rebuilding the camera session ends a take, so the
+                    // recorder refuses it while one is in flight.
+                    onTap: !state.hasRecordingInFlight
+                        ? () => context.read<VideoRecorderBloc>().add(
+                            const VideoRecorderDualCameraToggled(),
+                          )
+                        : null,
+                  ),
+                // Dual capture runs without stabilization; the saved mode
+                // returns with one camera.
+                if (state.supportsStabilization && !state.isDualCameraEnabled)
+                  const _StabilizationButton(),
                 if (state.offersChromaKey) const _ColorMaskButton(),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,7 +21,6 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
-import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -382,52 +382,32 @@ void main() {
     });
   });
 
-  group('VideoEditorCanvas.shouldUseLegacySurface', () {
-    test('keeps an ordinary editor session on the default surface', () {
+  group('VideoEditorCanvas.canWriteHistory', () {
+    test('writes right away in a session that starts without a history', () {
       expect(
-        VideoEditorCanvas.shouldUseLegacySurface(
-          alreadyEnabled: false,
-          editorStateHistory: const {},
+        VideoEditorCanvas.canWriteHistory(
+          startsFromHistory: false,
+          isHistoryImported: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('waits while a saved history is still being imported', () {
+      expect(
+        VideoEditorCanvas.canWriteHistory(
+          startsFromHistory: true,
+          isHistoryImported: false,
         ),
         isFalse,
       );
     });
 
-    test('starts a restored detached-clip draft on the legacy surface', () {
-      final meta = DetachedClipLayerData(
-        clip: _createClip(id: 'detached'),
-        layerId: 'layer',
-      ).toMeta();
-
+    test('writes once the saved history is imported', () {
       expect(
-        VideoEditorCanvas.shouldUseLegacySurface(
-          alreadyEnabled: false,
-          editorStateHistory: {
-            'history': [meta],
-          },
-        ),
-        isTrue,
-      );
-    });
-
-    test('upgrades on detach and remains sticky afterward', () {
-      final detach = ClipDetachSuccess(
-        previousClips: [_createClip(id: 'detached')],
-        detachedClip: _createClip(id: 'detached'),
-      );
-
-      expect(
-        VideoEditorCanvas.shouldUseLegacySurface(
-          alreadyEnabled: false,
-          editorStateHistory: const {},
-          detachResult: detach,
-        ),
-        isTrue,
-      );
-      expect(
-        VideoEditorCanvas.shouldUseLegacySurface(
-          alreadyEnabled: true,
-          editorStateHistory: const {},
+        VideoEditorCanvas.canWriteHistory(
+          startsFromHistory: true,
+          isHistoryImported: true,
         ),
         isTrue,
       );
@@ -577,6 +557,65 @@ void main() {
           isPlaying: false,
         ),
         isFalse,
+      );
+    });
+  });
+
+  group('VideoEditorCanvas.playheadAnchor', () {
+    final now = DateTime(2026, 11, 17, 12);
+
+    test('follows the clock where the player does not say what it shows', () {
+      const state = DivineVideoPlayerState(
+        status: PlaybackStatus.playing,
+        position: Duration(milliseconds: 1000),
+      );
+
+      expect(
+        VideoEditorCanvas.playheadAnchor(state, now: now),
+        const Duration(milliseconds: 1000),
+      );
+    });
+
+    test('follows the picture, moved on by the time since it went up', () {
+      final state = DivineVideoPlayerState(
+        status: PlaybackStatus.playing,
+        position: const Duration(milliseconds: 1000),
+        shownPosition: const Duration(milliseconds: 1033),
+        shownAt: now.subtract(const Duration(milliseconds: 20)),
+      );
+
+      expect(
+        VideoEditorCanvas.playheadAnchor(state, now: now),
+        const Duration(milliseconds: 1053),
+      );
+    });
+
+    test('moves on at the playback speed', () {
+      final state = DivineVideoPlayerState(
+        status: PlaybackStatus.playing,
+        position: const Duration(milliseconds: 1000),
+        shownPosition: const Duration(milliseconds: 1033),
+        shownAt: now.subtract(const Duration(milliseconds: 20)),
+        playbackSpeed: 2,
+      );
+
+      expect(
+        VideoEditorCanvas.playheadAnchor(state, now: now),
+        const Duration(milliseconds: 1073),
+      );
+    });
+
+    test('falls back to the clock for a frame reported long ago', () {
+      final state = DivineVideoPlayerState(
+        status: PlaybackStatus.playing,
+        position: const Duration(milliseconds: 1000),
+        shownPosition: const Duration(milliseconds: 1033),
+        shownAt: now.subtract(const Duration(seconds: 1)),
+      );
+
+      expect(
+        VideoEditorCanvas.playheadAnchor(state, now: now),
+        const Duration(milliseconds: 1000),
       );
     });
   });

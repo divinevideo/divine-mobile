@@ -40,6 +40,13 @@ void main() {
     NotificationPayloadKeys.tapTargetType: 'app_route',
     NotificationPayloadKeys.tapTargetValue: destination,
   };
+  const revision = '12345678-1234-4234-8234-123456789abc';
+  // Kept apart from [campaignTap]: a revision becomes the deduplication key,
+  // which would hide a dropped message ID from the message-ID tests.
+  const revisionCampaignTap = <String, dynamic>{
+    ...campaignTap,
+    NotificationPayloadKeys.campaignRevisionId: revision,
+  };
 
   late _MockGoRouter routerA;
   late _MockGoRouter routerB;
@@ -168,6 +175,48 @@ void main() {
   });
 
   group('routeBackgroundPushTap', () {
+    ProviderContainer revisionContainer(_RecordingSink sink) {
+      final container = ProviderContainer(
+        overrides: [
+          goRouterProvider.overrideWithValue(routerA),
+          notificationAnalyticsTrackerProvider.overrideWithValue(
+            NotificationAnalyticsTracker(
+              sink: sink,
+              collectionAllowed: () async => true,
+              privacyBoundary: () => 'test',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      containerA.dispose();
+      return container;
+    }
+
+    test('a campaign open carries its revision to analytics', () async {
+      final sink = _RecordingSink();
+      final container = revisionContainer(sink);
+      await routeBackgroundPushTap(
+        revisionCampaignTap,
+        liveContainer: () => container,
+      );
+      await pumpEventQueue();
+      expect(sink.events.single['campaign_revision_id'], revision);
+    });
+
+    test('duplicate callbacks for one revision record one open', () async {
+      final sink = _RecordingSink();
+      final container = revisionContainer(sink);
+      for (var tap = 0; tap < 2; tap++) {
+        await routeBackgroundPushTap(
+          revisionCampaignTap,
+          liveContainer: () => container,
+        );
+      }
+      await pumpEventQueue();
+      expect(sink.events, hasLength(1));
+    });
+
     test('routes immediately while analytics waits for consent', () async {
       final consent = Completer<bool>();
       final sink = _RecordingSink();

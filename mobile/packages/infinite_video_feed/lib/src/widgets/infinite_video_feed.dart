@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart'
         ValueListenable,
         defaultTargetPlatform,
         kIsWeb,
+        setEquals,
         visibleForTesting;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
@@ -51,6 +52,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.videoBuilder,
     this.urlResolver,
     this.preferB2Original = false,
+    this.bunnyPlaybackPaths = const {},
     this.loadingBuilder,
     this.errorBuilder,
     this.overlayBuilder,
@@ -124,6 +126,10 @@ class InfiniteVideoFeed extends StatefulWidget {
   /// Only a selected B2 original bypasses event-ID disk caching and prefetch.
   /// Switching this off rebuilds subsequent playback with canonical sources.
   final bool preferB2Original;
+
+  /// Verified progressive MP4 paths for the Bunny canary on this test device.
+  /// An empty set disables the canary.
+  final Set<String> bunnyPlaybackPaths;
 
   /// Builder for the loading state shown while a video initializes.
   final LoadingBuilder? loadingBuilder;
@@ -581,12 +587,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // but not counted in optimized widget coverage.
     _watchdog = LoadWatchdog(
       threshold: widget.slowLoadThreshold,
-      onSlowLoad: (index) => unawaited(_retryWithNextSource(index)),
+      onSlowLoad: (index) => unawaited(
+        _retryWithNextSource(index, detectedStall: true),
+      ),
       log: _log,
     );
     _staleDetector = StalePlaybackDetector(
       onSeekRecovery: _seekKick,
-      onSourceFailover: (index) => unawaited(_retryWithNextSource(index)),
+      onSourceFailover: (index) => unawaited(
+        _retryWithNextSource(index, detectedStall: true),
+      ),
       log: _log,
     );
     // coverage:ignore-end
@@ -605,8 +615,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _reconcileInactiveReleasePolicy(oldWidget);
     }
     _syncCurrentAutoPlayGate();
-    if (widget.videos == oldWidget.videos &&
-        widget.preferB2Original == oldWidget.preferB2Original) {
+    final bunnyPathsChanged = !setEquals(
+      widget.bunnyPlaybackPaths,
+      oldWidget.bunnyPlaybackPaths,
+    );
+    final routingChanged =
+        bunnyPathsChanged ||
+        widget.preferB2Original != oldWidget.preferB2Original;
+    if (widget.videos == oldWidget.videos && !routingChanged) {
       return;
     }
 
@@ -614,7 +630,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // playback source. A changed resolved URL for an existing index (e.g. the
     // caller swapped the playback source for the same id) ends the common
     // prefix there, so its stale controller is rebuilt below.
-    final commonPrefix = _commonPrefixLength(oldWidget, widget);
+    final commonPrefix = routingChanged
+        ? 0
+        : _commonPrefixLength(oldWidget, widget);
 
     // The active video and everything before it are unchanged when the common
     // prefix extends past the current index. Keep those controllers and only
@@ -645,9 +663,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
 
     _terminalErrorTypesByVideoId.clear();
-    _teardownAllControllers();
+    final sameVideos = identical(widget.videos, oldWidget.videos);
+    _teardownAllControllers(keepViewerHeaders: sameVideos && bunnyPathsChanged);
 
-    _currentIndex = _clampIndex(widget.initialIndex);
+    _currentIndex = _clampIndex(
+      sameVideos && bunnyPathsChanged ? _currentIndex : widget.initialIndex,
+    );
     _lastAppliedGate = null;
     _pagePosition.value = _currentIndex.toDouble();
     _beginFirstFrameMeasurement(_currentIndex);
@@ -682,7 +703,6 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     InfiniteVideoFeed oldWidget,
     InfiniteVideoFeed newWidget,
   ) {
-    if (oldWidget.preferB2Original != newWidget.preferB2Original) return 0;
     final maxLength = oldWidget.videos.length < newWidget.videos.length
         ? oldWidget.videos.length
         : newWidget.videos.length;
@@ -973,32 +993,46 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.start(index, controller);
   }
 
-  bool _usesB2Original(VideoEvent video) {
-    final sources = resolvePlaybackSources(
-      video,
-      urlResolver: widget.urlResolver,
-      preferB2Original: widget.preferB2Original,
-      derivativeFailureCache: _derivativeFailures,
-    );
-    return sources.isNotEmpty && isB2OriginalPlaybackSource(sources.first);
-  }
+  bool _hasViewerHeaders(int? index) =>
+      _httpHeadersByIndex[index]?.isNotEmpty ?? false;
+
+  List<String> _playbackSources(VideoEvent video, {int? index}) =>
+      resolvePlaybackSources(
+        video,
+        urlResolver: widget.urlResolver,
+        preferB2Original: widget.preferB2Original,
+        bunnyPlaybackPaths: _hasViewerHeaders(index)
+            ? const {}
+            : widget.bunnyPlaybackPaths,
+        derivativeFailureCache: _derivativeFailures,
+      );
+
+  bool _bypassesDiskCache(List<String> sources) =>
+      sources.any(isBunnyPlaybackSource) ||
+      (sources.isNotEmpty && isB2OriginalPlaybackSource(sources.first));
 
   bool _canaryStopsFallback(
-    VideoEvent video,
+    int index,
     String? source,
     NativePlayerErrorCode? code,
     String? message,
-  ) =>
-      (resolvePlaybackSources(
-            video,
-            urlResolver: widget.urlResolver,
-            preferB2Original: widget.preferB2Original,
-            derivativeFailureCache: _derivativeFailures,
-          ).any(isB2OriginalPlaybackSource) ||
-          isB2OriginalPlaybackSource(source ?? '')) &&
-      (blocksB2CanaryFallback(errorCode: code, errorMessage: message) ||
-          (isB2OriginalPlaybackSource(source ?? '') &&
-              !canFailOverB2Original(code)));
+  ) {
+    if (source != null && isBunnyPlaybackSource(source)) {
+      return !canFailOverBunny(errorCode: code, errorMessage: message);
+    }
+    final isB2Source = isB2OriginalPlaybackSource(source ?? '');
+    if (isB2Source && !canFailOverB2Original(code)) return true;
+    final sources = _playbackSources(widget.videos[index], index: index);
+    final hasBunnySource = sources.any(isBunnyPlaybackSource);
+    return (hasBunnySource ||
+            isB2Source ||
+            sources.any(isB2OriginalPlaybackSource)) &&
+        blocksCanaryFallback(
+          errorCode: code,
+          errorMessage: message,
+          denyNotFound: hasBunnySource,
+        );
+  }
 
   // coverage:ignore-start
   // Simple resolver wrapper; behavior is covered via callers, but optimized
@@ -1016,6 +1050,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   }
 
   Map<String, String> _sourceHeaders(int index, String source) {
+    if (isBunnyPlaybackSource(source)) {
+      _telemetryLoads.remove(index);
+      _firstFrameTimerFor(index)?.attachLoad(null);
+      return const {};
+    }
     final supportsTelemetry =
         _controllers[index]?.supportsPlaybackTelemetry ?? false;
     final nativeNetwork =
@@ -1036,8 +1075,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _telemetryLoads[index] = load;
     }
     _firstFrameTimerFor(index)?.attachLoad(load);
+    final bypassesCache =
+        widget.bunnyPlaybackPaths.isNotEmpty &&
+        _playbackSources(widget.videos[index], index: index).any(
+          isBunnyPlaybackSource,
+        );
     return {
       ...?_httpHeadersByIndex[index],
+      // Bypass the native client cache for the pilot's canonical requests.
+      if (bypassesCache) 'Cache-Control': 'no-store',
       if (load != null && supportsTelemetry) 'X-Playback-Load-Id': load.id,
     };
   }
@@ -1214,25 +1260,22 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       startIndex: prefetchStart,
       endIndex: prefetchEnd,
       videos: widget.videos,
-      resolveUrls: (video) =>
-          resolvePlaybackSources(
-                video,
-                urlResolver: widget.urlResolver,
-                preferB2Original: widget.preferB2Original,
-                derivativeFailureCache: _derivativeFailures,
-              )
-              // Never prefetch across a B2 attempt into its canonical raw
-              // fallback: event-key disk bytes would mask that attempt.
-              .takeWhile((url) => !isB2OriginalPlaybackSource(url))
-              // Exclude HLS manifests: prefetch writes static files to disk,
-              // but HLS playback needs re-streaming the manifest + segments.
-              .where((url) => !isHlsManifest(url))
-              .toList(),
+      resolveUrls: (video) {
+        final sources = _playbackSources(video);
+        // Event-key disk bytes can mask the Bunny attempt or its policy denial.
+        if (sources.any(isBunnyPlaybackSource)) return const [];
+        return sources
+            // Keep B2's normal rendition prefetch before a B2 original.
+            .takeWhile((url) => !isB2OriginalPlaybackSource(url))
+            // HLS needs streaming the manifest and its segments.
+            .where((url) => !isHlsManifest(url))
+            .toList();
+      },
     );
     // coverage:ignore-end
   }
 
-  void _teardownAllControllers() {
+  void _teardownAllControllers({bool keepViewerHeaders = false}) {
     _cancelPreloadGraceTimers();
     _prefetcher.cancelActive();
     _playerWindowGeneration++;
@@ -1257,7 +1300,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _loadedFromCache.clear();
     _errors.clear();
     _errorTypes.clear();
-    _httpHeadersByIndex.clear();
+    if (!keepViewerHeaders) _httpHeadersByIndex.clear();
     _telemetryLoads.clear();
     for (final subscription in _networkSubscriptions.values) {
       unawaited(subscription.cancel());
@@ -1310,7 +1353,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final initGeneration = (_controllerInitGenerations[index] ?? 0) + 1;
     _controllerInitGenerations[index] = initGeneration;
 
-    final cachedFile = skipCache || _usesB2Original(video)
+    final playbackSources = _playbackSources(video, index: index);
+    final usesBunny = playbackSources.any(isBunnyPlaybackSource);
+    final cachedFile =
+        skipCache ||
+            _hasViewerHeaders(index) ||
+            _bypassesDiskCache(playbackSources)
         ? null
         : widget.cache.getCachedFileSync(video.id);
     final fromCache = cachedFile != null;
@@ -1391,12 +1439,6 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       // Always resolve network sources. They are used as runtime fallbacks
       // even when the video is loaded from disk cache (in case the cached
       // file is corrupt or unreadable).
-      final playbackSources = resolvePlaybackSources(
-        video,
-        urlResolver: widget.urlResolver,
-        preferB2Original: widget.preferB2Original,
-        derivativeFailureCache: _derivativeFailures,
-      );
       // Hash-bound auth applies to every resolved source for this index, so
       // the optimized/HLS/raw variants all authenticate, not just the bare URL.
       Map<String, String> httpHeadersForSource(String source) =>
@@ -1493,11 +1535,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           return false;
         }
         _sources.register(index, playbackSources, openedSourceIdx);
-        _log(
-          'Source selected index $index (${video.id}): '
-          'openedSource=$openedSource '
-          'attempt=$openedSourceIdx',
-        );
+        if (usesBunny) {
+          final host = isBunnyPlaybackSource(openedSource)
+              ? 'Bunny'
+              : 'canonical';
+          _log(
+            'Bunny canary selected $host index $index attempt=$openedSourceIdx',
+          );
+        } else {
+          _log(
+            'Source selected index $index (${video.id}): '
+            'openedSource=$openedSource '
+            'attempt=$openedSourceIdx',
+          );
+        }
       }
       _firstFrameTimerFor(index)?.markSourceReady();
 
@@ -1526,16 +1577,23 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         outcome: FeedPlaybackOutcome.error,
         errorCategory: FeedPlaybackError.initialization,
       );
-      final sourceDetail = lastFailedSource == null
-          ? ''
-          : ' failedSource=$lastFailedSource';
-      _log('Error loading index $index (${video.id}):$sourceDetail $e');
-      logPlaybackFailure(
-        'Player init failed$sourceDetail',
-        name: _logName,
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (usesBunny) {
+        _log(
+          'Bunny canary load failed index $index '
+          'code=${nativePlayerErrorCodeFromError(e)}',
+        );
+      } else {
+        final sourceDetail = lastFailedSource == null
+            ? ''
+            : ' failedSource=$lastFailedSource';
+        _log('Error loading index $index (${video.id}):$sourceDetail $e');
+        logPlaybackFailure(
+          'Player init failed$sourceDetail',
+          name: _logName,
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       final errorType = classifyVideoError(
         errorCode: nativePlayerErrorCodeFromError(e),
         errorMessage: e.toString(),
@@ -1543,7 +1601,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       unawaited(_controllers.remove(index)?.dispose());
       if (_isTerminalPlaybackFailure(e) ||
           _canaryStopsFallback(
-            video,
+            index,
             lastFailedSource,
             nativePlayerErrorCodeFromError(e),
             e.toString(),
@@ -1666,22 +1724,30 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// `onFailoverSourceFailure`.
   Future<void> _retryWithNextSource(
     int index, {
+    bool detectedStall = false,
     bool recordSourceFailure = false,
+    bool bunnyTransientFailure = false,
   }) async {
+    if (_hasTerminalError(index)) return;
     if (!_sources.hasSources(index)) {
       _log('No sources to retry for index $index');
       _onVideoStalled(index);
       return;
     }
 
-    if (recordSourceFailure) {
-      final failedSource = _sources.activeSourceFor(index);
-      if (failedSource != null) {
-        _derivativeFailures.recordFailureForSource(failedSource);
-      }
-    }
-
     final failedSource = _sources.activeSourceFor(index);
+    final failedOnBunny = isBunnyPlaybackSource(failedSource ?? '');
+    final stalledBeforeBunny =
+        detectedStall &&
+        isBunnyPlaybackSource(_sources.nextSourceFor(index) ?? '');
+    // A stall alone cannot authorize a switch involving Bunny.
+    if ((failedOnBunny && !bunnyTransientFailure) || stalledBeforeBunny) {
+      _onVideoStalled(index, isTerminal: true);
+      return;
+    }
+    if (recordSourceFailure && failedSource != null && !failedOnBunny) {
+      _derivativeFailures.recordFailureForSource(failedSource);
+    }
     final nextSource = _sources.advance(index);
     if (nextSource == null) {
       _log('All sources exhausted for index $index');
@@ -1689,10 +1755,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       return;
     }
 
-    _log(
-      'Source failover index $index: '
-      'failedSource=$failedSource source=$nextSource',
-    );
+    final changesBunny = failedOnBunny || isBunnyPlaybackSource(nextSource);
+    if (changesBunny) {
+      final host = failedOnBunny ? 'canonical' : 'Bunny';
+      _log('Bunny canary runtime failover to $host index $index');
+    } else {
+      _log(
+        'Source failover index $index: '
+        'failedSource=$failedSource source=$nextSource',
+      );
+    }
     if (isB2OriginalPlaybackSource(failedSource ?? '')) {
       _log(
         'B2 canary fallback index $index: '
@@ -1721,14 +1793,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       if (mounted && identical(_controllers[index], controller)) return true;
       _log(
         'Abort stale source failover at index $index'
-        '${error == null ? '' : ' after: $error'}',
+        '${error == null || changesBunny ? '' : ' after: $error'}',
       );
       return false;
     }
 
+    var retryUnavailableBunny = false;
     _failoverInFlight.add(index);
     try {
       await controller.stop();
+      if (!ownsFailover()) return;
       await controller.setSource(
         VideoClip.network(
           nextSource,
@@ -1749,31 +1823,44 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       }
     } on Object catch (e, stackTrace) {
       if (!ownsFailover(e)) return;
-      _log('Source failover failed index $index source=$nextSource: $e');
-      logPlaybackFailure(
-        'Source failover failed',
-        name: _logName,
-        error: e,
-        stackTrace: stackTrace,
-      );
-      _onVideoStalled(
-        index,
-        isTerminal:
-            _isTerminalPlaybackFailure(e) ||
-            _canaryStopsFallback(
-              widget.videos[index],
-              nextSource,
-              nativePlayerErrorCodeFromError(e),
-              e.toString(),
-            ),
-        errorType: classifyVideoError(
-          errorCode: nativePlayerErrorCodeFromError(e),
-          errorMessage: e.toString(),
-          source: nextSource,
-        ),
-      );
+      final errorCode = nativePlayerErrorCodeFromError(e);
+      if (changesBunny) {
+        _log(
+          'Bunny canary runtime failover failed index $index code=$errorCode',
+        );
+      } else {
+        _log('Source failover failed index $index source=$nextSource: $e');
+        logPlaybackFailure(
+          'Source failover failed',
+          name: _logName,
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+      retryUnavailableBunny =
+          isBunnyPlaybackSource(nextSource) &&
+          canFailOverBunny(errorCode: errorCode, errorMessage: e.toString()) &&
+          _sources.canAdvance(index);
+      if (!retryUnavailableBunny) {
+        _onVideoStalled(
+          index,
+          isTerminal:
+              _isTerminalPlaybackFailure(e) ||
+              _canaryStopsFallback(index, nextSource, errorCode, e.toString()),
+          errorType: classifyVideoError(
+            errorCode: errorCode,
+            errorMessage: e.toString(),
+            source: nextSource,
+          ),
+        );
+      }
     } finally {
-      _failoverInFlight.remove(index);
+      if (identical(_controllers[index], controller)) {
+        _failoverInFlight.remove(index);
+      }
+    }
+    if (retryUnavailableBunny && ownsFailover()) {
+      await _retryWithNextSource(index, bunnyTransientFailure: true);
     }
   }
 
@@ -2072,16 +2159,36 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             _failoverInFlight.contains(index) ||
             _processingRetryInFlight.contains(index),
         onError: (errorCode, errorMessage) {
-          _log(
-            'Runtime playback error at index '
-            '$index ${_resolveUrl(widget.videos[index])}: '
-            'code=$errorCode message=$errorMessage',
-          );
+          final activeSource = _sources.activeSourceFor(index);
+          final isBunny = isBunnyPlaybackSource(activeSource ?? '');
+          if (isBunny) {
+            _log('Bunny canary playback error index $index code=$errorCode');
+          } else {
+            _log(
+              'Runtime playback error at index '
+              '$index ${_resolveUrl(widget.videos[index])}: '
+              'code=$errorCode message=$errorMessage',
+            );
+          }
           _watchdog.stop(index);
           if (index == _currentIndex) _staleDetector.stop();
 
-          if (errorCode == NativePlayerErrorCode.mediaProcessing ||
-              isMediaProcessingError(errorMessage)) {
+          final bunnyTransientFailure =
+              isBunny &&
+              canFailOverBunny(
+                errorCode: errorCode,
+                errorMessage: errorMessage,
+              );
+          final canaryPolicyDenied = _canaryStopsFallback(
+            index,
+            activeSource,
+            errorCode,
+            errorMessage,
+          );
+          if (!canaryPolicyDenied &&
+              !isBunny &&
+              (errorCode == NativePlayerErrorCode.mediaProcessing ||
+                  isMediaProcessingError(errorMessage))) {
             unawaited(_retryCurrentProcessingSource(index, errorMessage));
             return;
           }
@@ -2089,20 +2196,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           // Use the typed error code for a reliable failover decision.
           // Fall back to attempting failover for unknown errors so we
           // don't give up prematurely on unclassified failures.
-          final canaryPolicyDenied = _canaryStopsFallback(
-            widget.videos[index],
-            _sources.activeSourceFor(index),
-            errorCode,
-            errorMessage,
-          );
           final shouldFailover =
               !canaryPolicyDenied &&
-              (errorCode == null ||
+              (bunnyTransientFailure ||
+                  errorCode == null ||
                   errorCode == NativePlayerErrorCode.unknown ||
                   errorCode.shouldFailover ||
-                  (isB2OriginalPlaybackSource(
-                        _sources.activeSourceFor(index) ?? '',
-                      ) &&
+                  (isB2OriginalPlaybackSource(activeSource ?? '') &&
                       canFailOverB2Original(errorCode))) &&
               _sources.hasSources(index) &&
               _sources.canAdvance(index);
@@ -2111,6 +2211,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
               _retryWithNextSource(
                 index,
                 recordSourceFailure: errorCode?.shouldFailover ?? false,
+                bunnyTransientFailure: bunnyTransientFailure,
               ),
             );
             return;

@@ -178,6 +178,7 @@ class _TopActions extends ConsumerWidget {
             if (SocialStickerData.of(layer) case final sticker?)
               SocialStickerView.textOf(sticker),
         ],
+        pendingLayers: scope.secondaryCameraPlacementNotifier?.value,
       ),
     );
   }

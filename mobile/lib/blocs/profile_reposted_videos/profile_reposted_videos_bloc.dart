@@ -188,8 +188,11 @@ class ProfileRepostedVideosBloc
         _targetUserPubkey!,
       );
     } else {
-      final localIds = await _repostsRepository
-          .getOrderedRepostedAddressableIds();
+      // After a failed load the local list may hold only the one repost the
+      // live subscription brought back, so a retry asks the relays (#11182).
+      final localIds = state.status == ProfileRepostedVideosStatus.failure
+          ? const <String>[]
+          : await _repostsRepository.getOrderedRepostedAddressableIds();
       if (localIds.isNotEmpty) {
         _scheduleBackgroundRelaySync();
         addressableIds = localIds;
@@ -471,7 +474,9 @@ class ProfileRepostedVideosBloc
   ///
   /// Dispatches [ProfileRepostedVideosReconcileRequested] on change so the
   /// async handler can fetch a newly-reposted clip — `emit.forEach`'s callback
-  /// is synchronous and cannot await. Own profile only.
+  /// is synchronous and cannot await. While the tab shows a failed load it
+  /// dispatches a full [ProfileRepostedVideosSyncRequested] instead, since the
+  /// change may be only the newest repost (#11182). Own profile only.
   Future<void> _onSubscriptionRequested(
     ProfileRepostedVideosSubscriptionRequested event,
     Emitter<ProfileRepostedVideosState> emit,
@@ -485,6 +490,15 @@ class ProfileRepostedVideosBloc
         if (listEquals(newIds, state.repostedAddressableIds) ||
             state.status == ProfileRepostedVideosStatus.initial ||
             state.status == ProfileRepostedVideosStatus.syncing) {
+          return state;
+        }
+        // The live subscription brings back only the newest repost, so after
+        // a failed load reconciling to it would show one of many (#11182).
+        if (state.status == ProfileRepostedVideosStatus.failure) {
+          // A running sync emits IDs too; do not let it retry itself.
+          if (!state.isRefreshing) {
+            addIfOpen(const ProfileRepostedVideosSyncRequested());
+          }
           return state;
         }
         Log.info(

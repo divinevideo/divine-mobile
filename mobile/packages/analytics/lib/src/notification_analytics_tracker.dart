@@ -1,4 +1,5 @@
-// ABOUTME: Measures notification opens through the existing consented event sink.
+// ABOUTME: Measures notification opens and campaign consent changes through the
+// ABOUTME: existing consented event sink.
 // ABOUTME: Deduplicates callbacks locally without exporting delivery identifiers.
 
 import 'package:analytics/src/analytics_event_sink.dart';
@@ -38,6 +39,9 @@ class NotificationAnalyticsTracker {
     'list_add',
   };
   static const _maxRememberedOpens = 256;
+  static final _campaignRevisionPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  );
 
   final AnalyticsEventSink _sink;
   final Future<bool> Function() _collectionAllowed;
@@ -45,15 +49,66 @@ class NotificationAnalyticsTracker {
   final _seen = <String, Object>{};
   Object? _boundary;
 
-  /// [deduplicationKey] stays in memory, scoped to the current privacy/session
-  /// boundary. Missing keys never collapse unrelated legacy notifications.
+  /// Records a change to the persisted campaign opt-in, behind the same consent
+  /// and privacy-boundary check as [opened]. Callers pass only real transitions;
+  /// nothing here deduplicates.
+  Future<void> campaignConsentChanged({required bool enabled}) async {
+    try {
+      final boundary = _privacyBoundary();
+      if (!await _collectionAllowed() || _privacyBoundary() != boundary) return;
+      await _sink.logEvent(
+        name: 'campaign_consent_changed',
+        parameters: {'enabled': enabled ? 1 : 0},
+      );
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'Campaign consent analytics failed: $error',
+        name: 'NotificationAnalyticsTracker',
+        category: LogCategory.system,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Records an open once per key within the current privacy/session boundary,
+  /// while the key is among the last 256 remembered in memory; a missing key is
+  /// never deduplicated.
+  ///
+  /// For a `campaign` open, a lowercase-UUID [campaignRevisionId] replaces
+  /// [deduplicationKey] as the key and is exported as `campaign_revision_id`;
+  /// any other value is dropped with a warning.
   Future<void> opened({
     required String? notificationType,
     required NotificationOpenSource source,
     String? deduplicationKey,
+    String? campaignRevisionId,
   }) async {
     final reservation = Object();
-    final key = deduplicationKey?.isNotEmpty ?? false ? deduplicationKey : null;
+    final isCampaign = notificationType == 'campaign';
+    final revision =
+        isCampaign &&
+            campaignRevisionId != null &&
+            _campaignRevisionPattern.hasMatch(campaignRevisionId)
+        ? campaignRevisionId
+        : null;
+    if (isCampaign && campaignRevisionId != null && revision == null) {
+      // The rejected value is unvalidated payload text, so only its shape is
+      // logged: enough to tell an uppercase UUID from anything else.
+      final uppercaseUuid = _campaignRevisionPattern.hasMatch(
+        campaignRevisionId.toLowerCase(),
+      );
+      Log.warning(
+        'Campaign open has no attribution: revision is not a lowercase UUID '
+        '(length=${campaignRevisionId.length}, uppercaseUuid=$uppercaseUuid)',
+        name: 'NotificationAnalyticsTracker',
+        category: LogCategory.system,
+      );
+    }
+    final effectiveKey = revision == null
+        ? deduplicationKey
+        : 'campaign:$revision';
+    final key = effectiveKey?.isNotEmpty ?? false ? effectiveKey : null;
     var recorded = false;
     try {
       final boundary = _privacyBoundary();
@@ -84,6 +139,7 @@ class NotificationAnalyticsTracker {
               ? normalizedType!
               : 'unknown',
           'open_source': source.wireValue,
+          'campaign_revision_id': ?revision,
         },
       );
       recorded = true;

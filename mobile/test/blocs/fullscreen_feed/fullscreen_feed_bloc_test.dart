@@ -95,6 +95,7 @@ void main() {
       VideoHideFilter? hideFilter,
       UnavailableVideoFilter? unavailableFilter,
       FeedTuningRepository? feedTuningRepository,
+      void Function(ClassicFeedFeedback)? recommendationFeedback,
     }) => FullscreenFeedBloc(
       videosStream: videosController.stream,
       initialIndex: initialIndex,
@@ -110,6 +111,7 @@ void main() {
       hideFilter: hideFilter,
       unavailableFilter: unavailableFilter,
       feedTuningRepository: feedTuningRepository,
+      recommendationFeedback: recommendationFeedback,
     );
 
     ConfirmVideoUnavailable confirmerWith(
@@ -391,6 +393,93 @@ void main() {
             verify(() => tuningRepository.undo('tuning-event-id')).called(1);
           },
         );
+
+        late List<ClassicFeedFeedback> recommendationFeedback;
+
+        FullscreenFeedBloc createFeedbackBloc() {
+          recommendationFeedback = [];
+          return createBloc(
+            feedTuningRepository: tuningRepository,
+            recommendationFeedback: recommendationFeedback.add,
+          );
+        }
+
+        Future<void> swipeVideo1(
+          FullscreenFeedBloc bloc,
+          FeedTuningDirection direction,
+        ) async {
+          bloc.add(const FullscreenFeedStarted());
+          await pumpEventQueue();
+          videosController.add([createTestVideo('video1')]);
+          await pumpEventQueue();
+          bloc.add(
+            FullscreenFeedTuningSwipeCommitted(
+              videoId: 'video1',
+              direction: direction,
+            ),
+          );
+          await pumpEventQueue();
+        }
+
+        group(FullscreenFeedTuningSwipeCommitted, () {
+          blocTest<FullscreenFeedBloc, FullscreenFeedState>(
+            'reports a "more" swipe as positive Classics feedback',
+            build: createFeedbackBloc,
+            act: (bloc) => swipeVideo1(bloc, FeedTuningDirection.more),
+            verify: (_) {
+              expect(
+                recommendationFeedback,
+                equals([
+                  const ClassicFeedInteraction(
+                    videoId: 'video1',
+                    signal: ClassicFeedSignal.positive,
+                  ),
+                ]),
+              );
+            },
+          );
+
+          blocTest<FullscreenFeedBloc, FullscreenFeedState>(
+            'reports a "less" swipe as less Classics feedback',
+            build: createFeedbackBloc,
+            act: (bloc) => swipeVideo1(bloc, FeedTuningDirection.less),
+            verify: (_) {
+              expect(
+                recommendationFeedback,
+                equals([
+                  const ClassicFeedInteraction(
+                    videoId: 'video1',
+                    signal: ClassicFeedSignal.less,
+                  ),
+                ]),
+              );
+            },
+          );
+        });
+
+        group(FullscreenFeedTuningUndoRequested, () {
+          blocTest<FullscreenFeedBloc, FullscreenFeedState>(
+            'retracts the Classics feedback of the undone swipe',
+            build: createFeedbackBloc,
+            act: (bloc) async {
+              await swipeVideo1(bloc, FeedTuningDirection.more);
+              bloc.add(const FullscreenFeedTuningUndoRequested('published-id'));
+              await pumpEventQueue();
+            },
+            verify: (_) {
+              expect(
+                recommendationFeedback,
+                equals([
+                  const ClassicFeedInteraction(
+                    videoId: 'video1',
+                    signal: ClassicFeedSignal.positive,
+                  ),
+                  const ClassicFeedInteractionRetracted(videoId: 'video1'),
+                ]),
+              );
+            },
+          );
+        });
       });
 
       test('videoUpdateSignature changes when loop metadata changes', () {

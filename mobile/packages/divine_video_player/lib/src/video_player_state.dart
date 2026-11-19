@@ -53,6 +53,8 @@ class DivineVideoPlayerState {
   const DivineVideoPlayerState({
     this.status = PlaybackStatus.idle,
     this.position = Duration.zero,
+    Duration? shownPosition,
+    this.shownAt,
     this.duration = Duration.zero,
     this.bufferedPosition = Duration.zero,
     this.currentClipIndex = 0,
@@ -61,6 +63,7 @@ class DivineVideoPlayerState {
     this.volume = 1.0,
     this.playbackSpeed = 1.0,
     this.isFirstFrameRendered = false,
+    bool? isPictureAdvancing,
     this.videoWidth = 0,
     this.videoHeight = 0,
     this.pixelWidthHeightRatio = 1.0,
@@ -68,13 +71,33 @@ class DivineVideoPlayerState {
     this.textureCrop,
     this.errorMessage,
     this.errorCode,
-  });
+  }) : _isPictureAdvancing = isPictureAdvancing,
+       _shownPosition = shownPosition;
 
   /// Current playback status.
   final PlaybackStatus status;
 
   /// Current position on the global timeline.
   final Duration position;
+
+  final Duration? _shownPosition;
+
+  /// Where the frame on screen sits on the global timeline: a time a seek
+  /// lands on that same frame.
+  ///
+  /// Android hands frames to the screen up to 50 ms ahead of their time, so
+  /// a paused player often shows the frame after [position], and a playing
+  /// one runs that far ahead of it; it reports the frame's own time. Paused
+  /// on iOS and macOS, the picture holds the frame it last drew while a seek
+  /// lands on the nearest one, so they report a millisecond into that frame.
+  /// Where the platform does not say, this is [position].
+  Duration get shownPosition => _shownPosition ?? position;
+
+  /// When the frame at [shownPosition] went on screen, while playing, or
+  /// `null` where the platform does not say.
+  ///
+  /// The picture has moved on by the time since, at [playbackSpeed].
+  final DateTime? shownAt;
 
   /// Total duration of the combined timeline.
   final Duration duration;
@@ -106,6 +129,18 @@ class DivineVideoPlayerState {
   /// Use this (not [PlaybackStatus.ready]) to decide when to hide a
   /// thumbnail placeholder.
   final bool isFirstFrameRendered;
+
+  final bool? _isPictureAdvancing;
+
+  /// Whether frames are moving on screen: [isPlaying], and past the frame the
+  /// picture rested on when playback started.
+  ///
+  /// A player with audio starts its clock only once its audio output runs,
+  /// up to ~100 ms after it reports [isPlaying], and its picture holds still
+  /// until then. Android reports this from the frames it renders, iOS and
+  /// macOS from the frames that reach a texture. Elsewhere it follows
+  /// [isPlaying].
+  bool get isPictureAdvancing => isPlaying && (_isPictureAdvancing ?? true);
 
   /// Width of the video in pixels, or 0 if unknown.
   final int videoWidth;
@@ -177,6 +212,8 @@ class DivineVideoPlayerState {
   DivineVideoPlayerState copyWith({
     PlaybackStatus? status,
     Duration? position,
+    Duration? shownPosition,
+    DateTime? shownAt,
     Duration? duration,
     Duration? bufferedPosition,
     int? currentClipIndex,
@@ -185,6 +222,7 @@ class DivineVideoPlayerState {
     double? volume,
     double? playbackSpeed,
     bool? isFirstFrameRendered,
+    bool? isPictureAdvancing,
     int? videoWidth,
     int? videoHeight,
     double? pixelWidthHeightRatio,
@@ -197,6 +235,8 @@ class DivineVideoPlayerState {
     return DivineVideoPlayerState(
       status: status ?? this.status,
       position: position ?? this.position,
+      shownPosition: shownPosition ?? _shownPosition,
+      shownAt: shownAt ?? this.shownAt,
       duration: duration ?? this.duration,
       bufferedPosition: bufferedPosition ?? this.bufferedPosition,
       currentClipIndex: currentClipIndex ?? this.currentClipIndex,
@@ -205,6 +245,7 @@ class DivineVideoPlayerState {
       volume: volume ?? this.volume,
       playbackSpeed: playbackSpeed ?? this.playbackSpeed,
       isFirstFrameRendered: isFirstFrameRendered ?? this.isFirstFrameRendered,
+      isPictureAdvancing: isPictureAdvancing ?? _isPictureAdvancing,
       videoWidth: videoWidth ?? this.videoWidth,
       videoHeight: videoHeight ?? this.videoHeight,
       pixelWidthHeightRatio:
@@ -223,6 +264,14 @@ class DivineVideoPlayerState {
     return DivineVideoPlayerState(
       status: _parseStatus(map['status'] as String? ?? 'idle'),
       position: Duration(milliseconds: (map['positionMs'] as int?) ?? 0),
+      shownPosition: switch (map['shownPositionMs']) {
+        final int ms => Duration(milliseconds: ms),
+        _ => null,
+      },
+      shownAt: switch (map['shownAtEpochMs']) {
+        final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+        _ => null,
+      },
       duration: Duration(milliseconds: (map['durationMs'] as int?) ?? 0),
       bufferedPosition: Duration(
         milliseconds: (map['bufferedPositionMs'] as int?) ?? 0,
@@ -233,6 +282,7 @@ class DivineVideoPlayerState {
       volume: (map['volume'] as double?) ?? 1.0,
       playbackSpeed: (map['playbackSpeed'] as double?) ?? 1.0,
       isFirstFrameRendered: (map['isFirstFrameRendered'] as bool?) ?? false,
+      isPictureAdvancing: map['isPictureAdvancing'] as bool?,
       videoWidth: (map['videoWidth'] as int?) ?? 0,
       videoHeight: (map['videoHeight'] as int?) ?? 0,
       pixelWidthHeightRatio:
@@ -277,6 +327,8 @@ class DivineVideoPlayerState {
       other is DivineVideoPlayerState &&
           status == other.status &&
           position == other.position &&
+          _shownPosition == other._shownPosition &&
+          shownAt == other.shownAt &&
           duration == other.duration &&
           bufferedPosition == other.bufferedPosition &&
           currentClipIndex == other.currentClipIndex &&
@@ -285,6 +337,7 @@ class DivineVideoPlayerState {
           volume == other.volume &&
           playbackSpeed == other.playbackSpeed &&
           isFirstFrameRendered == other.isFirstFrameRendered &&
+          _isPictureAdvancing == other._isPictureAdvancing &&
           videoWidth == other.videoWidth &&
           videoHeight == other.videoHeight &&
           pixelWidthHeightRatio == other.pixelWidthHeightRatio &&
@@ -297,6 +350,8 @@ class DivineVideoPlayerState {
   int get hashCode => Object.hash(
     status,
     position,
+    _shownPosition,
+    shownAt,
     duration,
     bufferedPosition,
     currentClipIndex,
@@ -305,6 +360,7 @@ class DivineVideoPlayerState {
     volume,
     playbackSpeed,
     isFirstFrameRendered,
+    _isPictureAdvancing,
     videoWidth,
     videoHeight,
     pixelWidthHeightRatio,
@@ -317,11 +373,14 @@ class DivineVideoPlayerState {
   @override
   String toString() =>
       'DivineVideoPlayerState(status: $status, position: $position, '
+      '${_shownPosition != null ? 'shown: $_shownPosition, ' : ''}'
+      '${shownAt != null ? 'shownAt: $shownAt, ' : ''}'
       'duration: $duration, buffered: $bufferedPosition, '
       'clipIndex: $currentClipIndex/$clipCount, '
       'size: ${videoWidth}x$videoHeight, '
       'pixelRatio: $pixelWidthHeightRatio, '
       'firstFrame: $isFirstFrameRendered, '
+      'pictureAdvancing: $isPictureAdvancing, '
       '${textureCrop != null ? 'textureCrop: $textureCrop, ' : ''}'
       '${errorCode != null ? 'errorCode: $errorCode, ' : ''}'
       '${errorMessage != null ? 'error: $errorMessage, ' : ''}'

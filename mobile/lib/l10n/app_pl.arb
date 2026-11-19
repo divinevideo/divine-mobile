@@ -2610,6 +2610,8 @@
   "videoRecorderTapToStartLabel": "Dotknij dowolnego miejsca, aby rozpocząć nagrywanie",
   "videoRecorderDeleteLastClipLabel": "Usuń ostatni klip",
   "videoRecorderSwitchCameraLabel": "Przełącz aparat",
+  "videoRecorderToggleDualCameraLabel": "Nagrywaj oboma aparatami",
+  "videoRecorderDualCameraSwapLabel": "Zamień aparaty",
   "videoRecorderZoomLevelLabel": "Powiększ do {zoom}×",
   "videoRecorderToggleGridLabel": "Przełącz siatkę",
   "videoRecorderToggleGhostFrameLabel": "Przełącz klatkę odniesienia",

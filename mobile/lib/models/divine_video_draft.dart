@@ -755,7 +755,7 @@ class DivineVideoDraft {
   String? get coverThumbnailPath =>
       customThumbnailPath ??
       finalRenderedClip?.thumbnailPath ??
-      (clips.isNotEmpty ? clips.first.thumbnailPath : null);
+      (clips.isNotEmpty ? clips.first.galleryThumbnailPath : null);
 
   bool get hasTitle => title.trim().isNotEmpty;
   bool get hasDescription => description.trim().isNotEmpty;

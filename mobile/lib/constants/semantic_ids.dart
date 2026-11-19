@@ -51,15 +51,22 @@ abstract class SemanticIds {
 
   /// Capture-mode control rail, top to bottom. Flash, aspect ratio and the
   /// lens switch are unconditional, so every mode that renders the rail drives
-  /// them with the same three E2E utils. Timer, stabilization and the color
-  /// mask are rendered only by the modes that declare them — capture, which
-  /// drives the first five with `driveCaptureRail`. The color mask also needs
-  /// a renderer that keys the viewfinder live, and hides stabilization while
-  /// it is on.
+  /// them with the same three E2E utils. Timer, dual camera, stabilization and
+  /// the color mask are rendered only by the modes that declare them: capture
+  /// renders all four, stop-motion the timer. Capture drives flash, timer,
+  /// aspect ratio, lens and stabilization with `driveCaptureRail`. Dual camera
+  /// also needs a device that runs both cameras at once, and the color mask a
+  /// renderer that keys the viewfinder live; while the mask is on it hides
+  /// stabilization, the ghost frame and dual camera.
   static const String cameraFlashButton = 'camera_flash_button';
   static const String cameraTimerButton = 'camera_timer_button';
   static const String cameraAspectRatioButton = 'camera_aspect_ratio_button';
   static const String cameraSwitchCameraButton = 'camera_switch_camera_button';
+  static const String cameraDualCameraButton = 'camera_dual_camera_button';
+
+  /// The second camera's window in the viewfinder while dual-camera capture
+  /// is on. Tapping it swaps the cameras.
+  static const String cameraDualCameraWindow = 'camera_dual_camera_window';
   static const String cameraStabilizationButton = 'camera_stabilization_button';
   static const String cameraColorMaskButton = 'camera_color_mask_button';
 

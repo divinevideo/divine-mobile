@@ -10,12 +10,27 @@ doesn't prove. Joyscrolling is the primary tagline; Welcome Home is the arrival
 greeting. Do not force either into every update. Retired phrases: Life in Loops;
 Live, Love, Loop. Avoid leverage, synergy, ecosystem and pitch-deck language.
 
-TestFlight What to Test is for people using an app, not software developers.
-Give a short, useful set of things to try and visible behavior to look for.
-Example: "Search for a friend, then open one of their videos. Tell us if either
-section gets stuck loading." Never ask testers to inspect SQL, caches, indexes,
-providers, CI, signatures, RPCs, shards, migrations or commits. Do not ask people
-to clear their app data or delete accounts to test a startup repair.
+TestFlight What to Test should make sense to someone who hasn't installed any
+of the betas. Give the changes since the last public App Store release room to
+breathe. Invite people to try a few things as you explain what's new. Use plain
+headings, blank lines and words people can find in the app. Never ask testers
+to inspect SQL, caches, indexes, providers, CI, signatures, RPCs, shards,
+migrations or commits. Do not ask people to clear their app data or delete
+accounts to test a startup repair.
+
+TestFlight example for tone and structure:
+
+> A little more room to play with sound, and an easier time keeping your lists
+> where you left them.
+>
+> Let the good bit play
+> Add a song to your loop and watch the whole thing in the editor. The music
+> should keep playing through the preview. You can bring in FLAC audio too.
+>
+> Take your lists offline
+> Edit a list while you're offline, then reconnect and open it again. Your
+> changes should be right where you left them. If something goes sideways,
+> tell us what you tried through Report a Bug in Settings.
 
 Store What's New describes useful changes since the previous numbered public
 release, grouped naturally and in plain language. Summarize related changes to

@@ -71,6 +71,11 @@ class VideoRecorderBlocState extends Equatable {
     this.isFrontCamera = false,
     this.isSwitchingCamera = false,
     this.previewTextureId,
+    this.isDualCameraSupported = false,
+    this.isDualCameraEnabled = false,
+    this.isDualCameraChosen = false,
+    this.secondaryPreviewTextureId,
+    this.dualCameraPipCenter = SecondaryCameraTake.defaultPipCenter,
     this.hasFlash = true,
     this.isScreenFlashActive = false,
     this.countdownValue = 0,
@@ -150,6 +155,30 @@ class VideoRecorderBlocState extends Equatable {
   /// so this changes on switch; the preview is keyed on it to pick up the new
   /// camera's frames.
   final int? previewTextureId;
+
+  /// Whether this device can record with its front and back camera at once.
+  final bool isDualCameraSupported;
+
+  /// Whether dual-camera capture is on: every take records both cameras, and
+  /// the viewfinder shows the second one in a small window.
+  final bool isDualCameraEnabled;
+
+  /// Whether the creator turned dual-camera capture on in this recorder.
+  ///
+  /// A recorder opens with one camera. Leaving it for the editor or the
+  /// library disposes the camera and the next one opens with one camera too,
+  /// so this choice brings dual capture back where the mode offers it.
+  final bool isDualCameraChosen;
+
+  /// Flutter texture id of the second camera's preview while dual-camera
+  /// capture is on. The small window is keyed on it, so a swap remounts it on
+  /// the other camera's texture.
+  final int? secondaryPreviewTextureId;
+
+  /// Where the second camera's window sits in the viewfinder: its center as
+  /// fractions of the frame. The editor places the picture-in-picture layer
+  /// there.
+  final Offset dualCameraPipCenter;
 
   /// Whether the camera has flash capability.
   final bool hasFlash;
@@ -381,6 +410,15 @@ class VideoRecorderBlocState extends Equatable {
   bool get supportsGhostFrame =>
       recorderMode.supportsGhostFrame && !isChromaKeyActive;
 
+  /// Whether the dual-camera control shows and both cameras may record.
+  ///
+  /// Off under the color mask: the wall is measured and keyed on the main
+  /// camera's footage alone.
+  bool get supportsDualCamera =>
+      recorderMode.supportsDualCamera &&
+      isDualCameraSupported &&
+      !isChromaKeyActive;
+
   /// Whether a wall measurement is running.
   bool get isMeasuringChromaKey =>
       chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.detecting;
@@ -451,6 +489,12 @@ class VideoRecorderBlocState extends Equatable {
     bool? isFrontCamera,
     bool? isSwitchingCamera,
     int? previewTextureId,
+    bool? isDualCameraSupported,
+    bool? isDualCameraEnabled,
+    bool? isDualCameraChosen,
+    int? secondaryPreviewTextureId,
+    bool clearSecondaryPreviewTextureId = false,
+    Offset? dualCameraPipCenter,
     bool? hasFlash,
     bool? isScreenFlashActive,
     int? countdownValue,
@@ -507,6 +551,14 @@ class VideoRecorderBlocState extends Equatable {
       isFrontCamera: isFrontCamera ?? this.isFrontCamera,
       isSwitchingCamera: isSwitchingCamera ?? this.isSwitchingCamera,
       previewTextureId: previewTextureId ?? this.previewTextureId,
+      isDualCameraSupported:
+          isDualCameraSupported ?? this.isDualCameraSupported,
+      isDualCameraEnabled: isDualCameraEnabled ?? this.isDualCameraEnabled,
+      isDualCameraChosen: isDualCameraChosen ?? this.isDualCameraChosen,
+      secondaryPreviewTextureId: clearSecondaryPreviewTextureId
+          ? null
+          : (secondaryPreviewTextureId ?? this.secondaryPreviewTextureId),
+      dualCameraPipCenter: dualCameraPipCenter ?? this.dualCameraPipCenter,
       hasFlash: hasFlash ?? this.hasFlash,
       isScreenFlashActive: isScreenFlashActive ?? this.isScreenFlashActive,
       countdownValue: countdownValue ?? this.countdownValue,
@@ -576,6 +628,11 @@ class VideoRecorderBlocState extends Equatable {
     isFrontCamera,
     isSwitchingCamera,
     previewTextureId,
+    isDualCameraSupported,
+    isDualCameraEnabled,
+    isDualCameraChosen,
+    secondaryPreviewTextureId,
+    dualCameraPipCenter,
     hasFlash,
     isScreenFlashActive,
     countdownValue,

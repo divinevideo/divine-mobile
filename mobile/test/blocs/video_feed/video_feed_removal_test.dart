@@ -91,8 +91,10 @@ void main() {
       FeedPerformanceTracker? feedTracker,
       bool serveCachedHomeFeed = false,
       Stream<VideosRepository>? removalRepositoryStream,
+      ClassicFeedSession? classicSession,
     }) => VideoFeedBloc(
       videosRepository: videos,
+      classicSession: classicSession,
       removedIdsStream: videos.removedVideoIds,
       removalRepositoryStream: removalRepositoryStream,
       followRepository: _MockFollowRepository(),
@@ -306,6 +308,9 @@ void main() {
         when(() => replacement.removedVideoIds)
             .thenAnswer((_) => current.stream);
         when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
+        when(() => replacement.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
       });
 
       tearDown(() async {
@@ -426,6 +431,78 @@ void main() {
           await pumpEventQueue();
         },
         verify: (bloc) => expect(bloc.state.videos, [_video('1')]),
+      );
+
+      late ClassicFeedSession adaptiveSession;
+      final adaptiveRequests = <ClassicRecommendationsRequest>[];
+      feedBlocTest(
+        'adaptive Classics keeps replacement tombstones out of later snapshots',
+        build: () {
+          when(() => videos.applyContentPreferences(any())).thenAnswer(
+            (call) => call.positionalArguments.single as List<VideoEvent>,
+          );
+          adaptiveSession = ClassicFeedSession(
+            filter: (items) => items
+                .where(
+                  (video) => !replacement.isVideoKnownDeleted(video),
+                )
+                .toList(),
+            loadPage: (request) async {
+              adaptiveRequests.add(request);
+              return HomeFeedResult(
+                videos: [_video('1'), _video('2'), _video('3')],
+                hasMore: true,
+                paginationCursor: 'next',
+                recommendationPageCount: 1,
+              );
+            },
+          );
+          return createBloc(
+            classicSession: adaptiveSession,
+            removalRepositoryStream: repositories.stream,
+          );
+        },
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: const VideoFeedSource.classic(),
+          videos: [_video('1'), _video('2'), _video('3')],
+        ),
+        act: (bloc) async {
+          await adaptiveSession.loadInitial();
+          await pumpEventQueue();
+          when(() => replacement.isVideoKnownDeleted(any())).thenAnswer(
+            (call) =>
+                (call.positionalArguments.single as VideoEvent).id ==
+                _video('1').id,
+          );
+          repositories.add(replacement);
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('2'), _video('3')]);
+          bloc.add(const VideoFeedActiveIndexChanged(1));
+          await pumpEventQueue();
+          await adaptiveSession.settled;
+          await pumpEventQueue();
+          expect(adaptiveRequests.last.anchorVideoId, _video('3').id);
+          expect(bloc.state.videos, [_video('2'), _video('3')]);
+          expect(adaptiveSession.state.videos, bloc.state.videos);
+          retired.add(_video('2').id);
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('2'), _video('3')]);
+          await adaptiveSession.loadInitial(refresh: true);
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('2'), _video('3')]);
+          // The retired service's tombstones must not hide candidates allowed
+          // by the replacement on later updates.
+          when(() => videos.applyContentPreferences(any())).thenAnswer(
+            (call) => (call.positionalArguments.single as List<VideoEvent>)
+                .where((video) => video.id != _video('1').id)
+                .toList(),
+          );
+          when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
+          await adaptiveSession.loadInitial(refresh: true);
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('1'), _video('2'), _video('3')]);
+        },
       );
 
       test(

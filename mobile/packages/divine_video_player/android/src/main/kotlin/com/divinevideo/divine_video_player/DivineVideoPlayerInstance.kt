@@ -324,6 +324,20 @@ internal class DivineVideoPlayerInstance(
     private var rotationDegrees = 0
 
     /**
+     * Rotation of the last frame the player drew, on the main thread.
+     *
+     * [ExoPlayer.getVideoFormat] is the format the decoder is reading, and
+     * near the end of a clip it reads the next one ahead: a back-camera clip
+     * after a front-camera one turned the front clip's last frames by the
+     * back clip's rotation. The rendered frame's own format does not run
+     * ahead.
+     */
+    private var renderedRotationDegrees = 0
+
+    /** [renderedRotationDegrees] as the playback thread last posted it. */
+    private var renderedFrameRotation = 0
+
+    /**
      * True only during the synchronous stop→clearMediaItems→setMediaItems→prepare
      * sequence inside [handleSetClips]. Suppresses [sendStateUpdate] so the
      * spurious STATE_IDLE / position-0 event from [ExoPlayer.stop] is never
@@ -355,6 +369,16 @@ internal class DivineVideoPlayerInstance(
      * renderers factory when the player is built, like [declickProcessor].
      */
     private val clipEqualizer = ClipEqualizerAudioProcessor()
+
+    /**
+     * How far ahead of the playback clock the video renderer releases its
+     * frames: [LEGACY_SURFACE_VIDEO_LEAD_US] on the legacy surface, which shows
+     * them that much later than a [TextureRegistry.SurfaceProducer]. Read by
+     * the renderer on the playback thread.
+     */
+    @Volatile
+    internal var videoReleaseLeadUs = 0L
+        private set
 
     /**
      * Rebuilds the clip's audio loop once its equalizer stopped changing; see
@@ -423,12 +447,57 @@ internal class DivineVideoPlayerInstance(
     private var seekFrameGeneration = 0
 
     /**
+     * The presentation time of the frame last handed to the surface. Written
+     * on the playback thread.
+     */
+    @Volatile
+    private var lastRenderedPtsUs = C.TIME_UNSET
+
+    /**
+     * When that frame goes on screen, in [System.nanoTime]: the release time
+     * Media3 scheduled for it. Written on the playback thread.
+     */
+    @Volatile
+    private var lastRenderedReleaseNs = 0L
+
+    /**
+     * The frame the picture rested on when playback started, while no later
+     * frame has been rendered yet, or [PICTURE_NOT_WAITING].
+     */
+    @Volatile
+    private var pictureRestPtsUs = PICTURE_NOT_WAITING
+
+    /**
+     * Whether frames are moving on screen: playing, and past the frame the
+     * picture rested on when playback started. A player with audio starts
+     * its clock only once its audio output runs, up to ~100 ms after
+     * [Player.isPlaying] turns `true`, so a player started beside it at that
+     * moment ran ahead of its picture.
+     */
+    private var pictureAdvancing = false
+
+    /** Reports the picture as moving if no frame says so, as for audio. */
+    private val pictureAdvanceTimeoutRunnable = Runnable { onPictureAdvancing() }
+
+    /**
      * Fires on the playback thread for every frame about to be rendered.
      * Returns immediately unless a paused seek is armed or the decoder's
      * output format changed, so feed playback does not enqueue a main-thread
      * task per frame.
      */
-    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, mediaFormat ->
+    private val renderedFrameListener = VideoFrameMetadataListener { presentationTimeUs, releaseTimeNs, format, mediaFormat ->
+        lastRenderedReleaseNs = releaseTimeNs
+        lastRenderedPtsUs = presentationTimeUs
+        val restPts = pictureRestPtsUs
+        if (restPts != PICTURE_NOT_WAITING && presentationTimeUs != restPts) {
+            pictureRestPtsUs = PICTURE_NOT_WAITING
+            mainHandler.post { onPictureAdvancing() }
+        }
+        if (format.rotationDegrees != renderedFrameRotation) {
+            val rotation = format.rotationDegrees
+            renderedFrameRotation = rotation
+            mainHandler.post { onRenderedRotationChanged(rotation) }
+        }
         if (mediaFormat != null && mediaFormat !== decoderOutputFormat) {
             decoderOutputFormat = mediaFormat
             val crop = DecoderCrop.of(mediaFormat)
@@ -532,6 +601,7 @@ internal class DivineVideoPlayerInstance(
         if (useLegacySurface) {
             val entry = registry.createSurfaceTexture()
             legacyEntry = entry
+            videoReleaseLeadUs = LEGACY_SURFACE_VIDEO_LEAD_US
             val surface = Surface(entry.surfaceTexture())
             legacySurface = surface
             needsSurface = false
@@ -585,7 +655,7 @@ internal class DivineVideoPlayerInstance(
         // extraction contend for a small hardware decoder pool — into a
         // successful (if slower) decode instead of a dead surface.
         val renderersFactory =
-            LoopDeclickRenderersFactory(context, declickProcessor)
+            LoopDeclickRenderersFactory(context, declickProcessor) { videoReleaseLeadUs }
                 .also {
                     if (bufferProfile == BufferProfile.FULL) it.setClipEqualizer(clipEqualizer)
                 }
@@ -2266,6 +2336,19 @@ internal class DivineVideoPlayerInstance(
         if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
     }
 
+    /**
+     * Applies the rotation of the frame now on screen: the first frame of a
+     * clip shot in another orientation turns the picture, not the decoder
+     * reading that clip ahead.
+     */
+    private fun onRenderedRotationChanged(rotation: Int) {
+        renderedRotationDegrees = rotation
+        if (backendHandlesRotation || videoWidth == 0) return
+        if (rotationDegrees == rotation) return
+        rotationDegrees = rotation
+        sendStateUpdate()
+    }
+
     /** Sends a changed [decoderCrop] to Dart, which draws only that part of the texture. */
     private fun onDecoderCropChanged(crop: DecoderCrop?) {
         if (crop == decoderCrop) return
@@ -2290,6 +2373,15 @@ internal class DivineVideoPlayerInstance(
     }
 
     // -- state broadcasting --
+
+    /** Reports, once per start, that the picture has moved on. */
+    private fun onPictureAdvancing() {
+        mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
+        pictureRestPtsUs = PICTURE_NOT_WAITING
+        if (pictureAdvancing || player?.isPlaying != true) return
+        pictureAdvancing = true
+        sendStateUpdate()
+    }
 
     private fun sendStateUpdate() {
         if (isResettingPlayer) return
@@ -2328,17 +2420,34 @@ internal class DivineVideoPlayerInstance(
             "volume" to volume,
             "playbackSpeed" to speed,
             "isFirstFrameRendered" to firstFrameRendered,
+            "isPictureAdvancing" to (exoPlayer.isPlaying && pictureAdvancing),
             "videoWidth" to layout.width,
             "videoHeight" to layout.height,
             "pixelWidthHeightRatio" to layout.pixelWidthHeightRatio,
             "rotationDegrees" to layout.rotationDegrees,
         )
+        if (statusString == "paused" && pendingGlobalStartMs <= 0) {
+            shownGlobalPlaybackMs(exoPlayer)?.let { map["shownPositionMs"] = it }
+        } else if (exoPlayer.isPlaying && pictureAdvancing) {
+            // Playing, the clock runs behind the picture: frames go on screen
+            // up to 50 ms early. With the moment the frame went up, Dart can
+            // follow the picture rather than the clock.
+            shownGlobalPlaybackMs(exoPlayer)?.let {
+                val sinceShownMs = (System.nanoTime() - lastRenderedReleaseNs) / 1_000_000L
+                map["shownPositionMs"] = it
+                map["shownAtEpochMs"] = System.currentTimeMillis() - sinceShownMs
+            }
+        }
         layout.textureCrop?.let { map["textureCrop"] = it.toFractions() }
         exoPlayer.playerError?.let { error ->
-            map["errorMessage"] = error.localizedMessage
-                ?: error.cause?.localizedMessage
-                ?: error.errorCodeName
-            map["errorCode"] = errorCodeFor(error)
+            val code = errorCodeFor(error)
+            val pilot = playbackPilotProvider(exoPlayer.currentMediaItem?.localConfiguration?.uri)
+            map["errorMessage"] = if (pilot != null) {
+                "provider=$pilot code=$code"
+            } else {
+                error.localizedMessage ?: error.cause?.localizedMessage ?: error.errorCodeName
+            }
+            map["errorCode"] = code
         }
         sink.success(map)
     }
@@ -2379,6 +2488,22 @@ internal class DivineVideoPlayerInstance(
             Player.STATE_ENDED -> "ended"
             else -> "unknown($state)"
         }
+
+    /** Pilot diagnostics identify the CDN and error class without clip URLs. */
+    private fun playbackPilotProvider(uri: Uri?): String? {
+        val host = uri?.host ?: return null
+        if (host.equals(BUNNY_PLAYBACK_HOST, ignoreCase = true)) return "Bunny"
+        // Canonical requests in the Bunny ladder carry a client-cache bypass.
+        if (host.equals("media.divine.video", ignoreCase = true) &&
+            httpHeadersForRequest(uri.toString()).any { (name, value) ->
+                name.equals("Cache-Control", ignoreCase = true) &&
+                    value.equals("no-store", ignoreCase = true)
+            }
+        ) {
+            return "canonical"
+        }
+        return null
+    }
 
     private fun errorCodeFor(error: PlaybackException): String =
         when (error.errorCode) {
@@ -2484,9 +2609,45 @@ internal class DivineVideoPlayerInstance(
      * ExoPlayer's source-time `currentPosition` through the active clip's
      * playback speed.
      */
-    private fun currentGlobalPlaybackMs(exoPlayer: ExoPlayer): Long {
-        val currentIndex = exoPlayer.currentMediaItemIndex
-        val localSourceMs = exoPlayer.currentPosition
+    private fun currentGlobalPlaybackMs(exoPlayer: ExoPlayer): Long =
+        globalPlaybackMs(exoPlayer, exoPlayer.currentPosition)
+
+    /**
+     * Where the frame on screen sits on the global timeline.
+     *
+     * Not the clock: frames are handed to the surface up to 50 ms ahead of
+     * their time, so a pause often leaves the next frame showing, and during
+     * playback the picture runs that far ahead. Something matched to the
+     * reported position sat a frame or two behind the picture. `null` when no
+     * frame of the current clip can be placed.
+     */
+    private fun shownGlobalPlaybackMs(exoPlayer: ExoPlayer): Long? {
+        val ptsUs = lastRenderedPtsUs
+        val timeline = exoPlayer.currentTimeline
+        if (ptsUs == C.TIME_UNSET || timeline.isEmpty) return null
+        val clockMs = currentGlobalPlaybackMs(exoPlayer)
+        val index = exoPlayer.currentMediaItemIndex
+        // At a cut the frame on screen can already belong to the next clip,
+        // or still to the one before, while the player names the other.
+        for (candidate in intArrayOf(index, index + 1, index - 1)) {
+            if (candidate < 0 || candidate >= timeline.windowCount) continue
+            val window = timeline.getWindow(candidate, Timeline.Window())
+            val period = timeline.getPeriod(window.firstPeriodIndex, Timeline.Period())
+            val localSourceMs = (ptsUs + period.positionInWindowUs) / 1000L
+            if (localSourceMs < 0L) continue
+            val shownMs = globalPlaybackMs(candidate, localSourceMs)
+            // Otherwise a frame of another clip, or one left from before a seek.
+            if (shownMs in clockMs - SHOWN_FRAME_WINDOW_MS..clockMs + SHOWN_FRAME_WINDOW_MS) {
+                return shownMs
+            }
+        }
+        return null
+    }
+
+    private fun globalPlaybackMs(exoPlayer: ExoPlayer, localSourceMs: Long): Long =
+        globalPlaybackMs(exoPlayer.currentMediaItemIndex, localSourceMs)
+
+    private fun globalPlaybackMs(currentIndex: Int, localSourceMs: Long): Long {
         val clipSpeed = clipSpeeds.getOrElse(currentIndex) { 1.0f }
         val localPlaybackMs = sourceToPlaybackMs(localSourceMs, clipSpeed)
         return if (currentIndex < clipOffsets.size) {
@@ -2625,6 +2786,14 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            pictureAdvancing = false
+            mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
+            if (isPlaying) {
+                pictureRestPtsUs = lastRenderedPtsUs
+                mainHandler.postDelayed(pictureAdvanceTimeoutRunnable, PICTURE_ADVANCE_TIMEOUT_MS)
+            } else {
+                pictureRestPtsUs = PICTURE_NOT_WAITING
+            }
             // The private loop track has no playWhenReady of its own, so it is
             // keyed to the player's *actual* playing state rather than to the
             // play and pause Dart asks for. That covers the pauses the player
@@ -2732,10 +2901,18 @@ internal class DivineVideoPlayerInstance(
         override fun onPlayerError(error: PlaybackException) {
             val currentUri = player?.currentMediaItem?.localConfiguration?.uri
             val nativeErrorCode = errorCodeFor(error)
-            val message =
+            val pilot = playbackPilotProvider(currentUri)
+            val failure = if (pilot != null) {
+                "provider=$pilot code=$nativeErrorCode"
+            } else {
+                error.message ?: "Unknown playback error"
+            }
+            val message = if (pilot != null) {
+                "$logTarget playback error: $failure"
+            } else {
                 "$logTarget playback error [${error.errorCodeName}]: " +
-                    "source=${currentUri ?: "unknown"} " +
-                    (error.message ?: "unknown")
+                    "source=${currentUri ?: "unknown"} $failure"
+            }
             if (nativeErrorCode == "media_processing") {
                 DivineVideoPlayerLog.warning(
                     message,
@@ -2756,7 +2933,7 @@ internal class DivineVideoPlayerInstance(
             mainHandler.removeCallbacks(setClipsTimeoutRunnable)
             pendingSetClipsResult?.error(
                 "PLAYER_ERROR",
-                error.message ?: "Unknown playback error",
+                failure,
                 mapOf("errorCode" to nativeErrorCode),
             )
             pendingSetClipsResult = null
@@ -2807,11 +2984,7 @@ internal class DivineVideoPlayerInstance(
             // Guard: ExoPlayer emits onVideoSizeChanged(0, 0) as an intermediate
             // reset during seeks and transitions; skip to avoid a brief flash
             // of 0° rotation.
-            val newRotation = if (backendHandlesRotation) {
-                0
-            } else {
-                player?.videoFormat?.rotationDegrees ?: 0
-            }
+            val newRotation = if (backendHandlesRotation) 0 else renderedRotationDegrees
             if (videoSize.width > 0 && videoSize.height > 0) {
                 videoWidth = videoSize.width
                 videoHeight = videoSize.height
@@ -2969,6 +3142,7 @@ internal class DivineVideoPlayerInstance(
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         mainHandler.removeCallbacks(setClipsTimeoutRunnable)
         mainHandler.removeCallbacks(bufferingWatchdogRunnable)
+        mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
         cancelDecoderRetry()
         releaseClipAudioLoop()
         metadataExecutor.shutdownNow()
@@ -3007,6 +3181,17 @@ internal class DivineVideoPlayerInstance(
 
     companion object {
 
+        /**
+         * How much later the legacy SurfaceTexture shows a frame than a
+         * SurfaceProducer under Impeller, which copies each legacy frame from
+         * GL to Vulkan. Measured on a Galaxy S26 with a detached clip beside
+         * the editor's timeline player, each playing a video that encodes its
+         * frame index: 2 to 3 frames behind without a lead, within half a
+         * frame with this one (40 ms left it a little behind, 60 ms a little
+         * ahead).
+         */
+        internal const val LEGACY_SURFACE_VIDEO_LEAD_US = 50_000L
+
         /** Whether [uri] addresses an HLS playlist rather than a media file. */
         private fun isHlsSource(uri: String): Boolean {
             val path = uri.substringBefore('?').substringBefore('#')
@@ -3027,6 +3212,22 @@ internal class DivineVideoPlayerInstance(
 
         /** [armedSeekGeneration] while no paused seek is armed. */
         private const val NO_ARMED_SEEK = -1
+
+        /**
+         * How far from the paused clock a rendered frame may sit and still be
+         * the one on screen: frames go out up to 50 ms early.
+         */
+        private const val SHOWN_FRAME_WINDOW_MS = 100L
+
+        /** [pictureRestPtsUs] while no start waits for the picture to move. */
+        private const val PICTURE_NOT_WAITING = Long.MIN_VALUE
+
+        /**
+         * How long a start waits for a frame before reporting the picture as
+         * moving anyway: audio has no frames, and an audio output starts well
+         * within this.
+         */
+        private const val PICTURE_ADVANCE_TIMEOUT_MS = 500L
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
 

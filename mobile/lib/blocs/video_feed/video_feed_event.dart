@@ -271,3 +271,23 @@ final class VideoFeedVideoRemoved extends VideoFeedEvent {
   @override
   List<Object?> get props => [videoId, removalGeneration];
 }
+
+/// Independent Classics queue changed after request-only feedback.
+final class VideoFeedClassicsSessionChanged extends VideoFeedEvent {
+  const VideoFeedClassicsSessionChanged(this.snapshot);
+
+  final ClassicFeedSessionState snapshot;
+
+  @override
+  List<Object?> get props => [snapshot];
+}
+
+/// Whether Home is visible, independent of transient player overlays.
+final class VideoFeedVisibilityChanged extends VideoFeedEvent {
+  const VideoFeedVisibilityChanged(this.visible);
+
+  final bool visible;
+
+  @override
+  List<Object?> get props => [visible];
+}

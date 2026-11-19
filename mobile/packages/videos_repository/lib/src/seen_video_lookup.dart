@@ -7,7 +7,8 @@ import 'package:models/models.dart';
 ///
 /// Matches how long the app keeps seen history, so a feed never shows a video
 /// the viewer has already seen while that history remembers it. Profiles and
-/// search do not apply it: a seen video is always findable there.
+/// search do not apply it: a seen video is always findable there. Videos by the
+/// viewer are also kept, so creators can still find their own posts.
 const Duration seenVideoExclusionWindow = Duration(days: 365);
 
 /// Consecutive pages a feed reads past when every video on them was seen.
@@ -43,6 +44,8 @@ class SeenVideoLookup {
 
 /// Filters out videos seen within [recencyWindow] entirely (drop, not demote).
 ///
+/// Videos authored by [viewerPubkey] remain visible even after being seen.
+///
 /// Feeds use it so a video the viewer has already seen does not come back
 /// while they browse. Returns all candidates if none were seen. By default it
 /// also retains all candidates when every candidate was seen, so callers with a
@@ -52,6 +55,7 @@ class SeenVideoLookup {
 List<VideoEvent> filterOutRecentlySeenVideos(
   Iterable<VideoEvent> videos, {
   SeenVideoLookup? seenVideoLookup,
+  String? viewerPubkey,
   Duration recencyWindow = seenVideoExclusionWindow,
   bool retainAllWhenAllSeen = true,
 }) {
@@ -61,7 +65,12 @@ List<VideoEvent> filterOutRecentlySeenVideos(
   final filtered = <VideoEvent>[];
   var dropped = 0;
   for (final video in candidates) {
-    if (video.id.isNotEmpty &&
+    final isOwnVideo =
+        viewerPubkey != null &&
+        viewerPubkey.isNotEmpty &&
+        video.pubkey == viewerPubkey;
+    if (!isOwnVideo &&
+        video.id.isNotEmpty &&
         seenVideoLookup.wasSeenRecently(video.id, within: recencyWindow)) {
       dropped++;
     } else {

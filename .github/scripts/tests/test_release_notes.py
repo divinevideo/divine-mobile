@@ -364,6 +364,65 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertEqual(result["changes"], inventory)
         self.assertEqual(result["google_play"], self.bundle["google_play"])
 
+    def test_testflight_covers_both_betas_since_the_shipped_version(self):
+        shipped_sha, first_beta_sha, candidate_sha = "a" * 40, "b" * 40, "c" * 40
+        data = {
+            "versions": [
+                {
+                    "version": "1.0.30",
+                    "state": "READY_FOR_DISTRIBUTION",
+                    "build_id": "shipped",
+                },
+                {
+                    "version": "1.0.31",
+                    "state": "IN_REVIEW",
+                    "build_id": "first-beta",
+                },
+            ],
+            "builds": [
+                {"id": "shipped", "version": "1.0.30", "sha": shipped_sha},
+                {"id": "first-beta", "version": "1.0.31", "sha": first_beta_sha},
+                {"id": "second-beta", "version": "1.0.31", "sha": candidate_sha},
+            ],
+        }
+        subjects = [
+            {"sha": first_beta_sha, "subject": "feat(editor): add curtain effects"},
+            {"sha": candidate_sha, "subject": "feat(camera): film with both cameras"},
+        ]
+        generated = {
+            "testflight": [{"language": "en-US", "text": "Give your loop an entrance"}],
+            "app_store": [{"language": "en-US", "text": "Open with a stage curtain."}],
+        }
+        baseline = self.notes.production_baseline("ios", data)
+        with (
+            patch.object(
+                self.notes,
+                "_git",
+                side_effect=[
+                    "mobile/lib/editor.dart\nmobile/lib/camera.dart\n",
+                    "\n".join(f"{entry['sha']}\t{entry['subject']}" for entry in subjects),
+                    "mobile/lib/editor.dart\n",
+                    "mobile/lib/camera.dart\n",
+                ],
+            ) as git,
+            patch.object(self.notes, "model_json", return_value=generated) as model,
+        ):
+            bundle = self.notes._generate(
+                "ios", candidate_sha, baseline, ["en-US"],
+                {"RELEASE_NOTES_LUNAROUTE_API_KEY": "lr_synthetic"},
+            )
+        git.assert_any_call(
+            "log", "--first-parent", "--reverse", "--format=%H%x09%s",
+            f"{shipped_sha}..{candidate_sha}",
+        )
+        _, instructions, context, _ = model.call_args.args
+        self.assertEqual(context["baseline"], {"version": "1.0.30", "sha": shipped_sha})
+        self.assertEqual(context["changes"], subjects)
+        self.assertIn("upgrading from the previous public App Store release", instructions)
+        self.assertIn("earlier betas of the same version", instructions)
+        self.assertIn("1,100–1,800 characters", instructions)
+        self.assertEqual(self.notes.notes_for(bundle, "testflight"), generated["testflight"])
+
     def test_changelog_excludes_build_only_prototype_and_other_platform_changes(self):
         subjects = {
             "c" * 40: "fix(search): show results together",

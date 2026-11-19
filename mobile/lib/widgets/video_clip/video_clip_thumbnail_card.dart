@@ -218,7 +218,7 @@ class _Thumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnailPath = clip.thumbnailPath;
+    final thumbnailPath = clip.galleryThumbnailPath;
     if (thumbnailPath != null) {
       return Hero(
         tag: videoClipPreviewHeroTag(clip.id),

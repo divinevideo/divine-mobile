@@ -353,6 +353,10 @@ class GitHub:
                 raise ProviderError("GitHub listing exceeded safe pagination bound")
 
 
+class UnmappedBuild(ProviderError):
+    """The provider build has no allocation or release provenance record."""
+
+
 class StateStore:
     def __init__(self, github):
         self.github = github
@@ -584,7 +588,8 @@ class Runtime:
                         "legacy": True,
                     }
             if len(matches) != 1:
-                raise ProviderError(
+                error_type = ProviderError if matches else UnmappedBuild
+                raise error_type(
                     f"Unreconciled {platform} build {number}; repair private provenance mapping"
                 )
             path = matches[0]
@@ -762,23 +767,38 @@ class Runtime:
         }
 
     def play_snapshot(self):
-        tracks = self.play.tracks()
-        found = {}
-        for track in tracks:
-            if track["track"] not in {"internal", "production"}:
-                continue
-            numbers = []
-            for release in track.get("releases", []):
-                if release.get("status") == "draft":
-                    continue
-                if release.get("status") not in {"completed", "inProgress", "halted"}:
-                    raise ProviderError("Unknown Play track state")
-                numbers.extend(int(n) for n in release["versionCodes"])
-            found[track["track"]] = [
-                self.identity("android", n) for n in sorted(set(numbers))
-            ]
-        if not found.get("production"):
-            raise ProviderError("Play production state is empty")
+        tracks, errors = self.play.release_statuses()
+        found = {"internal": [], "production": [], "releases": []}
+        for track, releases in tracks.items():
+            published = sorted({n for r in releases if r["state"] == "PUBLISHED"
+                                for n in r["numbers"]})
+            identities = {n: self.identity("android", n) for n in published}
+            found[track] = list(identities.values())
+            newest = max(published, default=0)
+            for release in releases:
+                current = not release["numbers"] or max(release["numbers"]) >= newest
+                status = release["state"]
+                builds = []
+                for number in release["numbers"]:
+                    try:
+                        builds.append(identities.get(number) or self.identity("android", number))
+                    except UnmappedBuild:
+                        # An obsolete rejection without a recorded identity has no audit
+                        # target. Current releases and inconsistent provenance fail closed.
+                        if status != "NOT_APPROVED" or current:
+                            raise
+                found["releases"].append({"track": track, "state": status, "builds": builds})
+                if current and status == "NOT_APPROVED":
+                    found["error"] = "Google Play release rejected; resolve the provider rejection"
+                elif status not in {"PUBLISHED", "NOT_APPROVED"}:
+                    found[track + "_pending"] = True
+        complete = not errors and {"internal", "production"} <= tracks.keys()
+        if not complete:
+            found["release_state_errors"] = errors
+            found["error"] = "Google Play release lifecycle read incomplete; publication stopped"
+        elif not found["production"]:
+            found["error"] = "Play published production state is empty"
+        found["lifecycle_complete"] = complete and bool(found["production"])
         setting = self.env.get("PLAY_MANAGED_PUBLISHING")
         found["managed_publishing"] = (
             False if setting == "off" else True if setting == "on" else None
@@ -832,6 +852,7 @@ class Runtime:
                         play_token(self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])
                     )
                     snapshot["android"] = self.play_snapshot()
+                    snapshot["android"]["observed_at"] = int(time.time())
             except (ProviderError, KeyError, ValueError) as error:
                 snapshot[platform] = {
                     "error": str(error)
@@ -966,19 +987,25 @@ class Runtime:
                     state,
                     "in review or pending availability",
                 )
-        for build in snapshot.get("android", {}).get("internal", []):
-            if build.get("sha"):
-                self.deploy("android-play-internal", build, "success", state, "available")
-        for build in snapshot.get("android", {}).get("production", []):
-            if not build.get("sha"):
+        for track in ["internal", "production"]:
+            for build in snapshot.get("android", {}).get(track, []):
+                if build.get("sha"):
+                    self.deploy("android-play-" + track, build, "success", state, "available")
+        for release in snapshot.get("android", {}).get("releases", []):
+            status = release["state"]
+            if status == "PUBLISHED":
                 continue
-            self.deploy(
-                "android-play-production",
-                build,
-                "in_progress",
-                state,
-                "production track observed; review outcome via console/email",
-            )
+            published = {b["number"] for b in snapshot["android"].get(release["track"], [])}
+            for build in release["builds"]:
+                # A metadata review does not remove an already published binary.
+                if not build.get("sha") or build["number"] in published:
+                    continue
+                self.deploy(
+                    "android-play-" + release["track"], build,
+                    "failure" if status == "NOT_APPROVED" else "in_progress",
+                    state,
+                    "rejected" if status == "NOT_APPROVED" else status.lower().replace("_", " "),
+                )
         for key in state.get("acknowledged", []):
             operation = state.get("operations", {}).get(key)
             if (
@@ -1246,6 +1273,37 @@ def epoch(value):
     return int(datetime.fromisoformat(value).timestamp())
 
 
+def diagnose_android_upload(runtime, number):
+    """Store private Play validation evidence without changing release state."""
+    if not re.fullmatch(r"[1-9][0-9]{0,9}", number) or int(number) > 2100000000:
+        raise ProviderError("Diagnostic build number must be a positive Android version code")
+    from release_train.release_notes import bundle_from_env, notes_for
+
+    env = runtime.env
+    record = runtime.ledger.read_json(f"uploads/android/{number}.json")
+    if record.get("number") != int(number) or record.get("status") != "failed":
+        raise ProviderError("Diagnostic requires the exact retained failed upload")
+    if runtime.store.load().get("holds", {}).get("android") != f"android-upload:{number}":
+        raise ProviderError("Diagnostic requires the exact Android upload hold")
+    if any(build["platform"] == "android" and build["status"] in ACTIVE
+           for build in runtime.list_builds()):
+        raise ProviderError("Wait for active Android builds before opening a diagnostic edit")
+    bundle = bundle_from_env({"RELEASE_NOTES_BUNDLE": json.dumps(record["release_notes"])},
+                             record["sha"], "android")
+    play = Play(play_token(env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]))
+    report = play.diagnose_upload(notes=notes_for(bundle, "google_play"))
+    path = f"diagnostics/android/{number}/{env['GITHUB_RUN_ID']}-{env['GITHUB_RUN_ATTEMPT']}.json"
+    if not runtime.ledger.create_json(path, report | {"number": int(number), "sha": record["sha"]},
+                                       f"Record Android upload diagnostic {number}"):
+        raise ProviderError("Diagnostic report path already exists; inspect the retained report")
+    # Provider messages may contain private metadata. Only the ledger gets them.
+    print("Android upload diagnostic recorded privately at " + path)
+    print("No binary upload, edit commit, release acknowledgement or build dispatch performed.")
+    return 1 if any(report.get(key) for key in [
+        "error", "cleanup_error", "release_state_errors"
+    ]) else 0
+
+
 def main(env=os.environ):
     expected = (
         env.get("GITHUB_REPOSITORY", "")
@@ -1267,6 +1325,12 @@ def main(env=os.environ):
         "android": env.get("RELEASE_TRAIN_ANDROID") or "off",
     }
     runtime = Runtime(env)
+    if env.get("RELEASE_DIAGNOSE_ANDROID_UPLOAD"):
+        if env.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or any(
+            env.get(name) for name in ["RELEASE_ACKNOWLEDGE"]
+        ) or any(env.get(name) == "true" for name in ["RELEASE_SETUP_CODEMAGIC", "RELEASE_BOOTSTRAP"]):
+            raise ProviderError("Upload diagnostics require a standalone manual dispatch")
+        return diagnose_android_upload(runtime, env["RELEASE_DIAGNOSE_ANDROID_UPLOAD"])
     dry = env.get("RELEASE_DRY_RUN") == "true" or all(
         level in {"off", "dry-run"} for level in levels.values()
     )

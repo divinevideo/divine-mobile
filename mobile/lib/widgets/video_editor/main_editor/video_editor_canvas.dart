@@ -86,6 +86,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_prev
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_setup_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
+import 'package:openvine/widgets/video_editor/secondary_camera_layers.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
@@ -238,21 +239,16 @@ class VideoEditorCanvas extends StatelessWidget {
     );
   }
 
-  /// Whether this editor session needs the Android legacy texture surface.
+  /// Whether the editor's history can be written to yet.
   ///
-  /// The choice is sticky once enabled: changing surface implementations more
-  /// than once in a session would repeatedly tear down playback. Imported
-  /// drafts start in legacy mode only when their history already owns a
-  /// detached clip; ordinary sessions upgrade once, on the first detach.
+  /// A session that starts from a saved history imports it, and the import
+  /// replaces the whole history when it ends. It can still be running when
+  /// the view is ready, so anything written before it ends is lost.
   @visibleForTesting
-  static bool shouldUseLegacySurface({
-    required bool alreadyEnabled,
-    required Map<String, dynamic> editorStateHistory,
-    ClipDetachResult? detachResult,
-  }) =>
-      alreadyEnabled ||
-      detachResult is ClipDetachSuccess ||
-      DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
+  static bool canWriteHistory({
+    required bool startsFromHistory,
+    required bool isHistoryImported,
+  }) => !startsFromHistory || isHistoryImported;
 
   /// Whether [current] differs from [previous] *only* in clip thumbnail paths,
   /// shape masks, mask background colors and keyframes, none of which the
@@ -369,6 +365,34 @@ class VideoEditorCanvas extends StatelessWidget {
     if (isPlaying || seekTarget == null) return true;
     final delta = report - seekTarget;
     return (delta.isNegative ? -delta : delta) <= seekSettleTolerance;
+  }
+
+  /// How old a report of the frame on screen may be and still place the
+  /// playhead. Older, the clock it came with is the better guess.
+  static const _shownFrameMaxAge = Duration(milliseconds: 500);
+
+  /// Where the playhead of a playing [state] is at [now]: on the picture, not
+  /// on the player's clock, where the player says when its frame went on
+  /// screen.
+  ///
+  /// Android hands frames to the screen up to 50 ms ahead of the clock, and a
+  /// report reaches Dart a little after it was taken. A playhead on the clock
+  /// ran 50 to 70 ms behind the picture, so a layer window closed that late:
+  /// at a cut between two dual-camera takes the earlier take's
+  /// picture-in-picture stayed over the next take for a frame or two.
+  @visibleForTesting
+  static Duration playheadAnchor(
+    DivineVideoPlayerState state, {
+    required DateTime now,
+  }) {
+    final shownAt = state.shownAt;
+    if (shownAt == null) return state.position;
+    final since = now.difference(shownAt);
+    if (since > _shownFrameMaxAge || since < -_shownFrameMaxAge) {
+      return state.position;
+    }
+    final speed = state.playbackSpeed > 0 ? state.playbackSpeed : 1.0;
+    return state.shownPosition + since * speed;
   }
 
   static const _compositionErrorCode = 'COMPOSITION_ERROR';
@@ -710,7 +734,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool _isInitialized = false;
   bool _isImportingHistory = false;
-  late bool _useLegacySurface;
+
+  /// Whether the editor has imported the history the session started from.
+  /// The import replaces the whole history when it ends, and it can still be
+  /// running when the view is ready, so anything written into the history
+  /// before then is lost.
+  bool _isHistoryImported = false;
+
+  /// The latest run of [_placeSecondaryCameraTakes]. Runs go one after the
+  /// other: two that overlap would both see a take unplaced and both place it.
+  Future<void>? _secondaryCameraPlacement;
 
   /// See [VideoEditorCanvas.resolveInitStateHistory].
   ImportStateHistory? _initStateHistory;
@@ -862,6 +895,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Processed as a trailing seek once the current seek completes.
   Duration? _pendingSeekPosition;
 
+  /// The play time of [_pendingSeekPosition], applied once that seek lands.
+  Duration? _pendingSeekPlayTime;
+
   /// Monotonically increasing seek generation. Bumped on every composition
   /// swap so in-flight seeks from the previous composition are discarded.
   int _seekEpoch = 0;
@@ -950,10 +986,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     _initializeController();
     _documentsPath = getDocumentsPath();
-    _useLegacySurface = VideoEditorCanvas.shouldUseLegacySurface(
-      alreadyEnabled: false,
-      editorStateHistory: ref.read(videoEditorProvider).editorStateHistory,
-    );
 
     // Initialize the player with the current clips.
     if (_clipPaths.isNotEmpty) {
@@ -1279,6 +1311,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   }) async {
     _seekEpoch++;
     _pendingSeekPosition = null;
+    _pendingSeekPlayTime = null;
     _isSeeking = true;
     final ownerEpoch = _seekEpoch;
     try {
@@ -1292,14 +1325,18 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // newer swap (e.g. a trim-start) already set.
       if (!mounted || _seekEpoch != ownerEpoch) return;
       // A seek requested during the reload is newer than the restored
-      // position; [_onSeekRequested] queued it and already set its play time.
+      // position; [_onSeekRequested] queued it with its play time.
       if (_pendingSeekPosition != null) {
         while (_pendingSeekPosition != null &&
             mounted &&
             _seekEpoch == ownerEpoch) {
           final pending = _pendingSeekPosition!;
+          final pendingPlayTime = _pendingSeekPlayTime ?? pending;
           _pendingSeekPosition = null;
+          _pendingSeekPlayTime = null;
           await _videoPlayer?.seekTo(_composition.timelineToPlayer(pending));
+          if (!mounted || _seekEpoch != ownerEpoch) return;
+          _setLayerPlayTime(pendingPlayTime);
         }
         return;
       }
@@ -1644,7 +1681,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // can't overwrite the seek target before the next player report stops it.
     _playheadInterpolator.stop();
     final playTime = playTimePosition ?? position;
-    _setLayerPlayTime(playTime);
     // Pin the play time to this scrub so late reports from a superseded seek
     // are dropped until the player converges here (see [_onPlayerStateChanged]
     // / [VideoEditorCanvas.shouldAcceptPlayerReport]).
@@ -1652,6 +1688,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     if (_isSeeking) {
       _pendingSeekPosition = position;
+      _pendingSeekPlayTime = playTime;
       return;
     }
 
@@ -1661,18 +1698,29 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       await _videoPlayer?.seekTo(_composition.timelineToPlayer(position));
       if (_seekEpoch != epoch) {
         _pendingSeekPosition = null;
+        _pendingSeekPlayTime = null;
         return;
       }
+      // The layers move once the player shows the frame, not with the finger:
+      // ahead of it, a scrub across a cut between two dual-camera takes put
+      // the next take's picture-in-picture over the last frame of the one
+      // before, showing the same camera twice.
+      if (mounted) _setLayerPlayTime(playTime);
 
       // Process trailing seek if one arrived while we were busy.
       while (_pendingSeekPosition != null && mounted) {
         final pending = _pendingSeekPosition!;
+        final pendingPlayTime = _pendingSeekPlayTime ?? pending;
         _pendingSeekPosition = null;
+        _pendingSeekPlayTime = null;
         if (_seekEpoch != epoch) {
           _pendingSeekPosition = null;
+          _pendingSeekPlayTime = null;
           break;
         }
         await _videoPlayer?.seekTo(_composition.timelineToPlayer(pending));
+        if (_seekEpoch != epoch || !mounted) break;
+        _setLayerPlayTime(pendingPlayTime);
       }
     } finally {
       // Only reset under the current epoch; a composition swap takes over ownership.
@@ -1709,8 +1757,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // to the start.
     if (isPlaying) _pendingSeekTarget = null;
 
+    // The frame on screen, not the clock: paused, they can be a frame apart,
+    // and the playhead puts the layers and detached clips on that frame.
     final timelinePosition = _composition.playerToTimeline(
-      playerState.position,
+      playerState.shownPosition,
     );
 
     // Drop the delayed reset report a composition swap emits while loading the
@@ -1766,10 +1816,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // Smoothly interpolate the layer overlay between the coarse native reports
     // while playing; re-anchor on every report to correct drift. Stop the
-    // moment playback ends or a gesture takes over the play time.
-    if (isPlaying && canDrivePlayTime) {
+    // moment playback ends or a gesture takes over the play time. It starts
+    // with the picture, not with the playing report: a clip with sound holds
+    // its first frame until the audio runs, and a detached clip started on
+    // the report ran that far ahead of it.
+    if (playerState.isPictureAdvancing && canDrivePlayTime) {
       _playheadInterpolator.anchor(
-        position: playerState.position,
+        position: VideoEditorCanvas.playheadAnchor(
+          playerState,
+          now: clock.now(),
+        ),
         speed: playerState.playbackSpeed,
         maxDuration: playerState.duration,
         // A short loop wraps in less time than a report takes to arrive, so
@@ -1945,11 +2001,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   }
 
   /// Initializes (or reinitializes) the native video player with [clips].
-  ///
-  /// The clips are passed in rather than read from the clip manager: the
-  /// detach that moves the player onto the legacy surface rebuilds it from
-  /// the [ClipEditorBloc]'s list, which the clip manager only matches once
-  /// the detach reaches the editor history.
   Future<void> _initializePlayer(
     List<DivineVideoClip> clips, {
     Duration? startPosition,
@@ -1984,17 +2035,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // just abandon it rather than resurrecting a released player.
     final player = DivineVideoPlayerController(
       useTexture: true,
-      // A detached clip puts a second texture-backed player on this screen.
-      // The SurfaceProducer backend shares an ImageReader pool across players,
-      // and that is how the detached clip's frames surfaced inside this
-      // player's area — the composition briefly showing footage its own clip
-      // list does not contain. The legacy SurfaceTexture has no shared pool.
-      //
-      // The trade-off is deliberate: the legacy backend has no surface-recreate
-      // callback, so it cannot transparently survive an OEM compositor event
-      // (a permission dialog, for instance) and the player is re-initialised
-      // instead.
-      useLegacySurface: _useLegacySurface,
+      // The SurfaceProducer, even beside detached clips. Their players run on
+      // the legacy SurfaceTexture, so this is the only player on the
+      // producer's ImageReader pool and no detached clip's frames can surface
+      // in it. On the legacy surface this player went black wherever two
+      // clips of different formats meet, a front and a back camera take for
+      // instance: near the cut the decoder is rebuilt for the next clip, and
+      // a scrub there rebuilt it on every seek.
       debugLabel: 'editor_canvas',
     );
     _videoPlayer = player;
@@ -2669,6 +2716,70 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
   }
 
+  /// Places the picture-in-picture layers of the dual-camera takes on the
+  /// clips that this session's history does not hold yet.
+  ///
+  /// Waits for the takes' thumbnails and proofs first: they land on a take
+  /// after it was recorded, the editor often opens before that, and a layer
+  /// made earlier would keep neither.
+  ///
+  /// The layers join the session's starting state rather than arriving as an
+  /// edit: undo never removes them, and leaving an untouched session does not
+  /// ask to save a draft. A session that saves no edit saves no layer either;
+  /// its takes are still on their clips, so the next session, or a post
+  /// straight from the library, places them again.
+  ///
+  /// Runs when the session opens and again whenever a take joins it, from the
+  /// camera or the clip picker; see [_secondaryCameraPlacement].
+  Future<void> _placeSecondaryCameraTakes(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+  ) {
+    final previous = _secondaryCameraPlacement;
+    final placement = _secondaryCameraPlacement = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Logged by the run that failed; this one places what is left.
+      }
+      await _placeUnplacedSecondaryCameraTakes(scope, bloc);
+    }();
+    // Done waits for it; see VideoEditorScope.secondaryCameraPlacementNotifier.
+    scope.secondaryCameraPlacementNotifier?.value = placement;
+    return placement;
+  }
+
+  Future<void> _placeUnplacedSecondaryCameraTakes(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+  ) async {
+    await ref.read(clipManagerProvider.notifier).waitForSecondaryCameraTakes();
+    final editor = scope.editor;
+    if (!mounted || editor == null) return;
+
+    final placements = secondaryCameraTakeLayers(
+      clips: ref.read(clipManagerProvider).clips,
+      canvasRenderSize: scope.canvasRenderSize,
+      now: DateTime.now(),
+      placedTakeIds: editor.stateManager.placedSecondaryCameraTakeIds,
+    );
+    if (placements.isEmpty) return;
+
+    editor.placeSecondaryCameraLayers(
+      [for (final placement in placements) placement.layer],
+      [for (final placement in placements) placement.takeId],
+    );
+    Log.info(
+      '🎥 Placed ${placements.length} second-camera take(s) as '
+      'picture-in-picture layers',
+      name: 'VideoEditorCanvas',
+      category: LogCategory.video,
+    );
+    // Rewriting the history fires no history change: the timeline catches up
+    // and the rewritten history is saved here.
+    await _onStateHistoryChange(scope, bloc);
+  }
+
   /// Syncs the draw capabilities from the paint editor to the bloc.
   void _syncDrawCapabilities(VideoEditorScope scope, VideoEditorDrawBloc bloc) {
     final paintEditor = scope.paintEditor;
@@ -2949,6 +3060,33 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     final targetAspectRatio = clip.targetAspectRatio;
 
+    // A dual-camera take that joins the composition mid-session, from the
+    // camera or the clip picker, gets its window like those the session
+    // opened with. Until the session can write its history, its own first
+    // placement picks the take up.
+    ref.listen<List<String>>(
+      clipManagerProvider.select(
+        (s) => [for (final c in s.clips) ?c.secondaryCamera?.clip.id],
+      ),
+      (previous, takeIds) {
+        final joined = takeIds.where((id) => !(previous ?? []).contains(id));
+        if (joined.isEmpty ||
+            !_isInitialized ||
+            !VideoEditorCanvas.canWriteHistory(
+              // The session's own start, not today's draft, which autosave
+              // fills in as soon as anything is edited.
+              startsFromHistory: _initStateHistory != null,
+              isHistoryImported: _isHistoryImported,
+            )) {
+          return;
+        }
+        _runDetached(
+          _placeSecondaryCameraTakes(scope, bloc),
+          'place joined dual-camera takes',
+        );
+      },
+    );
+
     // Reinitialize the player when clip paths change.
     // Uses a custom equality check because List uses reference equality by
     // default, which would cause the listener to fire on every provider
@@ -3211,6 +3349,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             // Composition swap: invalidate in-flight seeks and release _isSeeking.
             _seekEpoch++;
             _pendingSeekPosition = null;
+            _pendingSeekPlayTime = null;
             _isSeeking = false;
             _runDetached(
               _setClipsSafely(_videoPlayer, [
@@ -3356,6 +3495,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
             _seekEpoch++;
             _pendingSeekPosition = null;
+            _pendingSeekPlayTime = null;
             final generation = _beginClipLoad();
             _isSeeking = true;
             final ownerEpoch = _seekEpoch;
@@ -3425,39 +3565,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               _setLayerPlayTime(speedRemapPosition);
             }
 
-            final needsLegacyUpgrade =
-                !_useLegacySurface &&
-                VideoEditorCanvas.shouldUseLegacySurface(
-                  alreadyEnabled: _useLegacySurface,
-                  editorStateHistory: const {},
-                  detachResult: state.lastDetachResult,
-                );
-            if (needsLegacyUpgrade) {
-              _useLegacySurface = true;
-              _seekEpoch++;
-              _pendingSeekPosition = null;
-              _isSeeking = true;
-              final ownerEpoch = _seekEpoch;
-              try {
-                // From the bloc: the clip manager catches up with the detach
-                // only once it reaches the editor history.
-                await _initializePlayer(
-                  state.clips,
-                  startPosition: startPosition,
-                );
-                if (!mounted) return;
-                _lastReportedPosition = startPosition;
-                _pendingSeekTarget = startPosition;
-                _setLayerPlayTime(startPosition);
-              } finally {
-                if (_seekEpoch == ownerEpoch) _isSeeking = false;
-              }
-              return;
-            }
             // Composition swap back — invalidate in-flight single-clip seeks.
             _composition.ensureSeamsRendered(state.clips);
             _seekEpoch++;
             _pendingSeekPosition = null;
+            _pendingSeekPlayTime = null;
             final generation = _beginClipLoad();
             // Claim _isSeeking under the new epoch; try/finally ensures
             // release even if setClips throws.
@@ -3789,8 +3901,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                             editorState.seedSelectedSoundAsAudioTrack,
                       );
 
+                  final firstEntry = scope.requireEditor.stateHistory.first;
                   scope.requireEditor.stateManager.replaceHistory(
-                    scope.requireEditor.stateHistory.first.copyWith(
+                    firstEntry.copyWith(
                       meta: {
                         ...scope.requireEditor.stateManager.activeMeta,
                         VideoEditorConstants.clipsStateHistoryKey: clips
@@ -3820,6 +3933,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       },
                     ),
                     index: 0,
+                  );
+                }
+
+                // Otherwise onImportHistoryEnd lifts them.
+                if (VideoEditorCanvas.canWriteHistory(
+                  startsFromHistory: editorStateHistory.isNotEmpty,
+                  isHistoryImported: _isHistoryImported,
+                )) {
+                  _runDetached(
+                    _placeSecondaryCameraTakes(scope, bloc),
+                    'place dual-camera takes',
                   );
                 }
 
@@ -3856,7 +3980,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _isImportingHistory = false;
+                _isHistoryImported = true;
                 InterruptedRenderMonitor.noteEditorPhase('historyImported');
+                // Before the view is ready, onAfterViewInit lifts them.
+                if (_isInitialized) {
+                  _runDetached(
+                    _placeSecondaryCameraTakes(scope, bloc),
+                    'place dual-camera takes',
+                  );
+                }
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {

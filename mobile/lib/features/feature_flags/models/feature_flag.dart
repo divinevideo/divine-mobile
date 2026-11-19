@@ -98,6 +98,11 @@ enum FeatureFlag {
         'Internal per-device test; off restores canonical playback.',
     audience: FeatureFlagAudience.internal,
   ),
+  bunnyPlaybackCanary(
+    'Bunny Playback Canary',
+    'Try Bunny for verified public videos on this test device.',
+    audience: FeatureFlagAudience.internal,
+  ),
   concordChat(
     'Concord Rooms',
     'Show public community Rooms in Messages when this build includes an '

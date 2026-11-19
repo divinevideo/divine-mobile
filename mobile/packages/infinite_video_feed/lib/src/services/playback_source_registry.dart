@@ -44,25 +44,24 @@ class PlaybackSourceRegistry {
       _sources[index] != null && _sources[index]!.isNotEmpty;
 
   /// Whether there is at least one more source to try for [index].
-  bool canAdvance(int index) {
+  bool canAdvance(int index) => nextSourceFor(index) != null;
+
+  /// Returns the next source for [index] without changing the active source.
+  String? nextSourceFor(int index) {
     final list = _sources[index];
-    if (list == null || list.isEmpty) return false;
     // _activeIndices[index] == -1 means prestart (cache); next = 0 is valid.
     final next = (_activeIndices[index] ?? 0) + 1;
-    return next < list.length;
+    return list != null && next < list.length ? list[next] : null;
   }
 
   /// Advances [index] to the next source and returns it, or `null` when the
   /// source list is exhausted.
   String? advance(int index) {
-    final list = _sources[index];
-    if (list == null || list.isEmpty) return null;
-    // _activeIndices[index] == -1 means prestart (cache);
-    // next = 0 is sources[0].
-    final next = (_activeIndices[index] ?? 0) + 1;
-    if (next >= list.length) return null;
-    _activeIndices[index] = next;
-    return list[next];
+    final source = nextSourceFor(index);
+    if (source != null) {
+      _activeIndices[index] = (_activeIndices[index] ?? 0) + 1;
+    }
+    return source;
   }
 
   /// The current attempt index for [index] (0-based).

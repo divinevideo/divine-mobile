@@ -102,11 +102,10 @@ final class VideoFrameEffectProcessor {
   /// The frames decoded for the last seek, kept across seeks for scrubbing.
   private var decoded: [Decoded] = []
 
-  private let context = CIContext(options: [
-    .workingColorSpace: NSNull(),
-    .outputColorSpace: NSNull(),
-    .cacheIntermediates: false,
-  ])
+  /// Made the first time an effect is drawn, because creating it sets up Metal
+  /// on the main thread and most players never draw an effect.
+  private lazy var context = makeContext()
+  private let makeContext: () -> CIContext
   /// The item whose asset a seek's missing earlier frames are decoded from.
   weak var playerItem: AVPlayerItem?
 
@@ -129,6 +128,21 @@ final class VideoFrameEffectProcessor {
   private var outputSize = CGSize.zero
   private var historyPool: CVPixelBufferPool?
   private var historySize = CGSize.zero
+
+  /// `makeContext` builds the context effects are drawn with, once an effect
+  /// is first drawn.
+  init(makeContext: @escaping () -> CIContext = VideoFrameEffectProcessor.makeRenderContext) {
+    self.makeContext = makeContext
+  }
+
+  /// A context that draws in the frames' own colour space.
+  static func makeRenderContext() -> CIContext {
+    CIContext(options: [
+      .workingColorSpace: NSNull(),
+      .outputColorSpace: NSNull(),
+      .cacheIntermediates: false,
+    ])
+  }
 
   /// Whether any effect is set, so frames have to pass through.
   var isActive: Bool { !stages.isEmpty }

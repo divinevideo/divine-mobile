@@ -118,9 +118,39 @@ class AnalyticsService implements BackgroundAwareService {
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
   final _privacyChanges = StreamController<void>.broadcast(sync: true);
+  int _privacyGeneration = 0;
+
+  /// Loops watched below which a view reads as a [ClassicFeedSignal.skip].
+  static const _classicSkipBelowLoops = 0.75;
+
+  /// Loops watched above which a view reads as a [ClassicFeedSignal.replay].
+  static const _classicReplayAboveLoops = 1.25;
+
+  final _recommendationFeedback =
+      StreamController<ClassicFeedFeedback>.broadcast(sync: true);
+
+  /// Request-only recommendation feedback, governed by the same consent gate
+  /// as playback. This stream never publishes or persists another event.
+  Stream<ClassicFeedFeedback> get recommendationFeedback =>
+      _recommendationFeedback.stream;
+
+  /// Records a confirmed action for an active local recommendation session.
+  void recordRecommendationInteraction(ClassicFeedFeedback feedback) {
+    if (!initializedAnalyticsConsent) return;
+    _recommendationFeedback.add(feedback);
+  }
 
   /// Signals initialized consent and account/privacy boundaries without identity.
   Stream<void> get privacyChanges => _privacyChanges.stream;
+
+  /// Changes synchronously at every consent, identity, or disposal boundary.
+  /// Unlike a session ID, this cannot return to an earlier value after a toggle.
+  int get privacyGeneration => _privacyGeneration;
+
+  void _notifyPrivacyChange() {
+    _privacyGeneration++;
+    if (!_privacyChanges.isClosed) _privacyChanges.add(null);
+  }
 
   /// Fails closed until the stored analytics preference has been loaded.
   bool get initializedAnalyticsConsent =>
@@ -299,7 +329,7 @@ class AnalyticsService implements BackgroundAwareService {
   /// most likely to be quietly incomplete, since nobody is watching it happen.
   Future<void> _applyAnalyticsConsent(bool enabled) async {
     _analyticsEnabled = enabled;
-    if (!_privacyChanges.isClosed) _privacyChanges.add(null);
+    _notifyPrivacyChange();
     _productEventQueue?.setSendingEnabled(_productAnalyticsEnabled && enabled);
     _viewEventRetryService?.setPublishingEnabled(enabled);
     await _applyFirebaseAnalyticsConsent(enabled: enabled);
@@ -420,7 +450,7 @@ class AnalyticsService implements BackgroundAwareService {
   /// account, while clearing the whole queue prevents older anonymous or
   /// account-owned rows from crossing the boundary later.
   Future<void> handleIdentityChange() async {
-    if (!_privacyChanges.isClosed) _privacyChanges.add(null);
+    _notifyPrivacyChange();
     _productAnalyticsUtm.clear();
     _rotateProductAnalyticsIdentity();
     await _productEventQueue?.clear();
@@ -831,6 +861,26 @@ class AnalyticsService implements BackgroundAwareService {
     // events.
     if (!_isInitialized || !_analyticsEnabled) return;
 
+    if (eventType == 'view_end' && watchDuration != null) {
+      final ratio =
+          loopCount ??
+          (totalDuration != null && totalDuration > Duration.zero
+              ? watchDuration.inMicroseconds / totalDuration.inMicroseconds
+              : null);
+      if (ratio != null && ratio.isFinite && ratio > 0) {
+        recordRecommendationInteraction(
+          ClassicFeedInteraction(
+            videoId: video.id,
+            signal: ratio < _classicSkipBelowLoops
+                ? ClassicFeedSignal.skip
+                : ratio <= _classicReplayAboveLoops
+                ? ClassicFeedSignal.completed
+                : ClassicFeedSignal.replay,
+          ),
+        );
+      }
+    }
+
     // Deduplicate rapid-fire tracking of the same video
     final dedupeKey = '${video.id}_${eventType}_${sessionToken ?? ''}';
     if (eventType == 'view_start' &&
@@ -1082,8 +1132,9 @@ class AnalyticsService implements BackgroundAwareService {
       _isBackgroundRegistered = false;
     }
     _isDisposed = true;
-    _privacyChanges.add(null);
+    _notifyPrivacyChange();
     unawaited(_privacyChanges.close());
+    unawaited(_recommendationFeedback.close());
     _cleanupTimer?.cancel();
   }
 }

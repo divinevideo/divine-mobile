@@ -20,6 +20,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Surface
 import android.view.WindowManager
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -132,6 +133,29 @@ class CameraController(
     // back.
     private var requestedStabilizationMode: String = STABILIZATION_OFF
 
+    // Dual-camera capture: the front and the back camera bound at once
+    // through CameraX's concurrent-camera mode. [camera] / [preview] /
+    // [videoCapture] / [surfaceProducer] keep meaning the main camera, the one
+    // that fills the preview and records with sound; the `secondary*` set is
+    // the other camera, which records a silent file of every take. A swap
+    // exchanges the two sets without rebinding: each camera keeps its use
+    // cases and texture, only the roles change.
+    private var isDualCameraEnabled: Boolean = false
+    private var secondaryCamera: Camera? = null
+    private var secondaryPreview: Preview? = null
+    private var secondaryVideoCapture: VideoCapture<Recorder>? = null
+    private var secondarySurfaceProducer: TextureRegistry.SurfaceProducer? = null
+    private var secondaryLensType: String = "front"
+    private var secondaryVideoWidth: Int = 720
+    private var secondaryVideoHeight: Int = 1280
+    private var secondaryAspectRatio: Float = 9f / 16f
+    // The second camera's recording of the current take (see
+    // [startSecondaryRecording] / [awaitSecondaryTake]).
+    private var secondaryTake: SecondaryTake? = null
+    // When the main take's first frame was recorded, on the elapsed-realtime
+    // clock; lines the second camera's file up with it.
+    private var mainRecordingStartNs: Long = Long.MAX_VALUE
+
     // Auto flash mode - checks brightness once when recording starts
     private var isAutoFlashMode: Boolean = false
     private var autoFlashTorchEnabled: Boolean = false
@@ -174,6 +198,10 @@ class CameraController(
                     onFirstFrameAfterSwitch = null
                     completion()
                 }
+            }
+            onNextMainFrame?.let { action ->
+                onNextMainFrame = null
+                action()
             }
         }
     }
@@ -249,6 +277,11 @@ class CameraController(
     @Volatile
     private var switchSettleFramesRemaining: Int = 0
 
+    // Fires on the main camera's next frame; see [whenMainCameraStreams].
+    // Written on the main thread, read on the Camera2 capture thread.
+    @Volatile
+    private var onNextMainFrame: (() -> Unit)? = null
+
     // Quality fallback: when the hardware encoder rejects the requested quality
     // (e.g. device falsely reports FHD support), retry with lower quality.
     private var encoderRetryCount: Int = 0
@@ -296,6 +329,10 @@ class CameraController(
         // Dart side can't hang forever.
         private const val SWITCH_FIRST_FRAME_TIMEOUT_MS = 1200L
 
+        // How long turning dual capture on waits for the main camera to
+        // stream before it binds both cameras anyway.
+        private const val STREAM_WAIT_TIMEOUT_MS = 600L
+
         // Preview frames to let pass after a lens switch before resolving it.
         // The incoming camera renders onto a fresh texture; its capture result
         // completes a frame or two before those pixels reach the surface, so
@@ -304,6 +341,10 @@ class CameraController(
         // there before the swap. The extra frozen frames are hidden by the
         // switch blur, so they're imperceptible.
         private const val SWITCH_SETTLE_FRAMES = 3
+
+        // Longest the main take's result waits for the second camera's file
+        // of a dual-camera take before it goes out without it.
+        private const val SECONDARY_FINALIZE_TIMEOUT_MS = 3000L
 
         // Canonical cross-platform stabilization mode strings, shared with the
         // iOS/macOS implementations so the Dart layer speaks one vocabulary.
@@ -799,6 +840,9 @@ class CameraController(
      * Returns a list of available lens types on this device.
      */
     private fun getAvailableLenses(): List<String> {
+        // Dual capture runs one front and one back camera; other lenses
+        // would need the cameras rebound one at a time.
+        if (isDualCameraEnabled) return listOf("front", "back")
         val lenses = mutableListOf<String>()
         if (hasFrontCamera) lenses.add("front")
         if (frontUltraWideCameraId != null) lenses.add("frontUltraWide")
@@ -1359,6 +1403,12 @@ class CameraController(
         // Disable screen flash when switching cameras
         disableScreenFlash()
 
+        // Both cameras already run: a flip swaps their roles instead.
+        if (isDualCameraEnabled) {
+            swapDualCameras(callback)
+            return
+        }
+
         // Only a facing flip (front<->back) needs a fresh preview texture — that
         // sensor-orientation delta is what produced the upside-down flash. A
         // same-facing rebind (a stabilization toggle rebinds through this
@@ -1525,6 +1575,647 @@ class CameraController(
             mainHandler.post {
                 callback(null, "Failed to switch camera: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * The concurrent front and back camera pair, or null when this device
+     * cannot run both at once (no `FEATURE_CAMERA_CONCURRENT`, or no listed
+     * combination holding one of each). Returns `(main, other)` for the
+     * current lens.
+     */
+    private fun concurrentCameraPair(
+        provider: ProcessCameraProvider
+    ): Pair<CameraInfo, CameraInfo>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        val combos = try {
+            provider.availableConcurrentCameraInfos
+        } catch (e: Exception) {
+            DivineCameraLog.w(TAG, "Concurrent camera query failed: ${e.message}")
+            return null
+        }
+        for (combo in combos) {
+            val back = combo.firstOrNull { it.lensFacing == CameraSelector.LENS_FACING_BACK }
+            val front = combo.firstOrNull { it.lensFacing == CameraSelector.LENS_FACING_FRONT }
+            if (back != null && front != null) {
+                return if (currentLens == CameraSelector.LENS_FACING_FRONT) {
+                    front to back
+                } else {
+                    back to front
+                }
+            }
+        }
+        return null
+    }
+
+    // Whether a concurrent front + back pair exists; fixed per device, so
+    // asked once per controller.
+    private var dualCameraSupported: Boolean? = null
+
+    private fun isDualCameraSupported(): Boolean {
+        dualCameraSupported?.let { return it }
+        val provider = cameraProvider ?: return false
+        return (concurrentCameraPair(provider) != null).also { dualCameraSupported = it }
+    }
+
+    /**
+     * Turns dual-camera capture on or off.
+     *
+     * On binds both cameras concurrently: the main camera keeps its preview
+     * texture, the other gets a new one and a silent recorder. Off rebinds the
+     * main camera alone on the same texture. Both complete once the main
+     * camera delivers frames again, like a lens switch.
+     */
+    fun setDualCameraEnabled(
+        enabled: Boolean,
+        callback: (Map<String, Any?>?, String?) -> Unit
+    ) {
+        if (enabled == isDualCameraEnabled) {
+            callback(getCameraState(), null)
+            return
+        }
+        if (isRecording || recording != null) {
+            callback(null, "Cannot change dual camera while recording")
+            return
+        }
+        val provider = cameraProvider ?: run {
+            callback(null, "Camera provider not available")
+            return
+        }
+        disableScreenFlash()
+        disableAutoFlashTorch()
+        isAutoFlashMode = false
+
+        if (!enabled) {
+            DivineCameraLog.info("Dual camera off", name = "DivineCamera.DualCamera")
+            try {
+                provider.unbindAll()
+            } catch (e: Exception) {
+                DivineCameraLog.w(TAG, "Unbind before leaving dual camera failed: ${e.message}")
+            }
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
+            // Same-facing rebind: reuses the main texture Dart is showing.
+            switchCamera(if (currentLens == CameraSelector.LENS_FACING_FRONT) "front" else "back") { state, error ->
+                callback(state, error)
+            }
+            return
+        }
+
+        // A camera that has just opened is still configuring its session.
+        // Rebinding it then leaves the main camera of the pair without frames
+        // (the S26, when the recorder reopens with dual capture on), so wait
+        // for its next frame. One that is already streaming sends it within a
+        // frame.
+        whenMainCameraStreams { bindDualCamerasNow(callback) }
+    }
+
+    /** Binds both cameras, once [setDualCameraEnabled] has waited. */
+    private fun bindDualCamerasNow(callback: (Map<String, Any?>?, String?) -> Unit) {
+        if (isReleased || isDualCameraEnabled) {
+            callback(getCameraState(), null)
+            return
+        }
+        if (isRecording || recording != null) {
+            callback(null, "Cannot change dual camera while recording")
+            return
+        }
+        val provider = cameraProvider ?: run {
+            callback(null, "Camera provider not available")
+            return
+        }
+        val pair = concurrentCameraPair(provider) ?: run {
+            callback(null, "Dual camera is not supported on this device")
+            return
+        }
+        try {
+            provider.unbindAll()
+            bindDualCameras(provider, pair.first, pair.second)
+            isDualCameraEnabled = true
+        } catch (e: Exception) {
+            DivineCameraLog.error(
+                "Dual camera bind failed, back to one camera: ${e.message}",
+                name = "DivineCamera.DualCamera"
+            )
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
+            switchCamera(currentLensType) { state, error -> callback(state, error) }
+            return
+        }
+        completeOnSettledFrames(callback)
+    }
+
+    /**
+     * Runs [action] on the main thread once the main camera delivers its next
+     * frame, or after [STREAM_WAIT_TIMEOUT_MS] when none comes, such as from
+     * a paused camera.
+     */
+    private fun whenMainCameraStreams(action: () -> Unit) {
+        val run = object : Runnable {
+            private var hasRun = false
+
+            override fun run() {
+                if (hasRun) return
+                hasRun = true
+                mainHandler.removeCallbacks(this)
+                onNextMainFrame = null
+                action()
+            }
+        }
+        onNextMainFrame = { mainHandler.post(run) }
+        mainHandler.postDelayed(run, STREAM_WAIT_TIMEOUT_MS)
+    }
+
+    /**
+     * Resolves [callback] with the new state once the main camera has
+     * produced a few frames, or after the switch timeout.
+     */
+    private fun completeOnSettledFrames(callback: (Map<String, Any?>?, String?) -> Unit) {
+        val finish = object : Runnable {
+            override fun run() {
+                mainHandler.removeCallbacks(this)
+                onFirstFrameAfterSwitch = null
+                callback(getCameraState(), null)
+            }
+        }
+        switchSettleFramesRemaining = SWITCH_SETTLE_FRAMES
+        onFirstFrameAfterSwitch = { mainHandler.post(finish) }
+        mainHandler.postDelayed(finish, SWITCH_FIRST_FRAME_TIMEOUT_MS)
+    }
+
+    /**
+     * Binds the main camera ([mainInfo]) and the other one ([otherInfo])
+     * concurrently, each with a preview and a video capture built for its
+     * role. Stabilization stays off: concurrent streams do not guarantee it.
+     *
+     * Each camera draws into the texture already held for its role, so a
+     * rebind keeps the texture ids Dart shows; the other camera gets a new
+     * one only when dual capture turns on.
+     */
+    @SuppressLint("RestrictedApi")
+    private fun bindDualCameras(
+        provider: ProcessCameraProvider,
+        mainInfo: CameraInfo,
+        otherInfo: CameraInfo
+    ) {
+        val owner = activity as LifecycleOwner
+        val mainProducer = surfaceProducer ?: textureRegistry.createSurfaceProducer().also {
+            surfaceProducer = it
+        }
+        val otherProducer = secondarySurfaceProducer
+            ?: textureRegistry.createSurfaceProducer().also {
+                secondarySurfaceProducer = it
+            }
+        secondaryLensType =
+            if (otherInfo.lensFacing == CameraSelector.LENS_FACING_FRONT) "front" else "back"
+        currentLensType =
+            if (mainInfo.lensFacing == CameraSelector.LENS_FACING_FRONT) "front" else "back"
+        currentLens = mainInfo.lensFacing
+
+        val mainPreview = buildPreviewWithExposureMonitoring(AspectRatio.RATIO_16_9, 0)
+        mainPreview.setSurfaceProvider(ContextCompat.getMainExecutor(context)) { request ->
+            val resolution = request.resolution
+            val (width, height) = resolution.width to resolution.height
+            mainProducer.setSize(width, height)
+            if (mainProducer === surfaceProducer) {
+                videoWidth = width
+                videoHeight = height
+                aspectRatio = height.toFloat() / width.toFloat()
+            } else {
+                secondaryVideoWidth = width
+                secondaryVideoHeight = height
+                secondaryAspectRatio = height.toFloat() / width.toFloat()
+            }
+            provideProducerSurface(request, mainProducer)
+        }
+        val otherPreview = Preview.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            .build()
+        otherPreview.setSurfaceProvider(ContextCompat.getMainExecutor(context)) { request ->
+            val resolution = request.resolution
+            val (width, height) = resolution.width to resolution.height
+            otherProducer.setSize(width, height)
+            if (otherProducer === surfaceProducer) {
+                videoWidth = width
+                videoHeight = height
+                aspectRatio = height.toFloat() / width.toFloat()
+            } else {
+                secondaryVideoWidth = width
+                secondaryVideoHeight = height
+                secondaryAspectRatio = height.toFloat() / width.toFloat()
+            }
+            provideProducerSurface(request, otherProducer)
+        }
+
+        val mainCapture = buildVideoCapture(AspectRatio.RATIO_16_9)
+        val otherCapture = buildSecondaryVideoCapture(otherInfo.lensFacing)
+
+        val concurrent = provider.bindToLifecycle(
+            listOf(
+                ConcurrentCamera.SingleCameraConfig(
+                    mainInfo.cameraSelector,
+                    UseCaseGroup.Builder()
+                        .addUseCase(mainPreview)
+                        .addUseCase(mainCapture)
+                        .build(),
+                    owner
+                ),
+                ConcurrentCamera.SingleCameraConfig(
+                    otherInfo.cameraSelector,
+                    UseCaseGroup.Builder()
+                        .addUseCase(otherPreview)
+                        .addUseCase(otherCapture)
+                        .build(),
+                    owner
+                ),
+            )
+        )
+        isPaused = false
+        preview = mainPreview
+        videoCapture = mainCapture
+        imageCapture = null
+        secondaryPreview = otherPreview
+        secondaryVideoCapture = otherCapture
+        camera = concurrent.cameras.getOrNull(0)
+        secondaryCamera = concurrent.cameras.getOrNull(1)
+        refreshMainCameraInfo()
+        DivineCameraLog.info(
+            "Dual camera on: main=$currentLensType, second=$secondaryLensType",
+            name = "DivineCamera.DualCamera"
+        )
+    }
+
+    /** Hands [producer]'s surface to a CameraX preview surface request. */
+    private fun provideProducerSurface(
+        request: SurfaceRequest,
+        producer: TextureRegistry.SurfaceProducer
+    ) {
+        val surface = producer.getSurface()
+        if (surface.isValid) {
+            request.provideSurface(surface, ContextCompat.getMainExecutor(context)) { result ->
+                DivineCameraLog.d(TAG, "Dual: surface result code: ${result.resultCode}")
+            }
+        } else {
+            request.willNotProvideSurface()
+        }
+    }
+
+    /** The second camera's video capture, mirrored like the main one. */
+    private fun buildSecondaryVideoCapture(lensFacing: Int?): VideoCapture<Recorder> =
+        VideoCapture.Builder(buildSecondaryRecorder())
+            .setMirrorMode(
+                if (mirrorFrontCameraOutput &&
+                    lensFacing == CameraSelector.LENS_FACING_FRONT
+                ) {
+                    MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
+                } else {
+                    MirrorMode.MIRROR_MODE_OFF
+                }
+            )
+            .build()
+
+    /** The second camera's recorder: no audio source, a lower bitrate. */
+    @SuppressLint("RestrictedApi")
+    private fun buildSecondaryRecorder(): Recorder = Recorder.Builder()
+        .setQualitySelector(
+            QualitySelector.from(
+                Quality.HD,
+                FallbackStrategy.lowerQualityOrHigherThan(Quality.SD)
+            )
+        )
+        .setAspectRatio(AspectRatio.RATIO_16_9)
+        .setExecutor(cameraExecutor)
+        .setTargetVideoEncodingBitRate(videoEncodingBitRate(Quality.HD))
+        .build()
+
+    /**
+     * Reads zoom, flash and focus support from the main camera after a dual
+     * bind or a swap. Auto lens switching stays off while both cameras run:
+     * it would rebind a single camera.
+     */
+    private fun refreshMainCameraInfo() {
+        camera?.let { cam ->
+            val info = cam.cameraInfo
+            val zoomState = info.zoomState.value
+            minZoom = zoomState?.minZoomRatio ?: 1.0f
+            maxZoom = zoomState?.maxZoomRatio ?: 1.0f
+            currentZoom = zoomState?.zoomRatio ?: 1.0f
+            hasFlash = info.hasFlashUnit() ||
+                (screenFlashFeatureEnabled && currentLens == CameraSelector.LENS_FACING_FRONT)
+            isFocusPointSupported = true
+            isExposurePointSupported = true
+        }
+        autoLensSwitchEnabled = false
+        virtualMinZoom = minZoom
+        virtualMaxZoom = maxZoom
+        virtualCurrentZoom = currentZoom
+    }
+
+    /**
+     * Swaps which camera fills the preview and records with sound.
+     *
+     * Both cameras are bound again for their new roles: the main role's
+     * recorder carries the chosen quality and the resolved audio source, the
+     * second one's is a silent HD recorder, and only the main preview feeds
+     * the exposure monitor. Each camera keeps its texture across the rebind,
+     * so Dart remounts the main preview on the other texture without a jump.
+     * Completes once the new main camera delivers frames, like a lens switch.
+     */
+    private fun swapDualCameras(callback: (Map<String, Any?>?, String?) -> Unit) {
+        if (isRecording || recording != null) {
+            callback(null, "Cannot swap cameras while recording")
+            return
+        }
+        val provider = cameraProvider ?: run {
+            callback(null, "Camera provider not available")
+            return
+        }
+        val newMain = secondaryCamera?.cameraInfo
+        val newOther = camera?.cameraInfo
+        if (newMain == null || newOther == null) {
+            callback(null, "Dual camera lost its cameras")
+            return
+        }
+        // Dart shows the flash off after any switch, and the torch belongs to
+        // the camera that leaves the main role.
+        disableAutoFlashTorch()
+        isAutoFlashMode = false
+        isTorchEnabled = false
+        currentFlashMode = ImageCapture.FLASH_MODE_OFF
+
+        val previousLensType = currentLensType
+        surfaceProducer = secondarySurfaceProducer.also { secondarySurfaceProducer = surfaceProducer }
+        try {
+            provider.unbindAll()
+            bindDualCameras(provider, newMain, newOther)
+        } catch (e: Exception) {
+            DivineCameraLog.error(
+                "Dual camera swap failed, back to one camera: ${e.message}",
+                name = "DivineCamera.DualCamera"
+            )
+            // Back to the camera and texture Dart still shows.
+            surfaceProducer = secondarySurfaceProducer.also { secondarySurfaceProducer = surfaceProducer }
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
+            currentLensType = previousLensType
+            currentLens = getLensFacingForType(previousLensType)
+            switchCamera(previousLensType) { state, error -> callback(state, error) }
+            return
+        }
+        DivineCameraLog.info(
+            "Dual camera swapped: main=$currentLensType",
+            name = "DivineCamera.DualCamera"
+        )
+        completeOnSettledFrames(callback)
+    }
+
+    /** Binds both cameras again after a releasing [pausePreview]. */
+    private fun rebindDualAfterPause(provider: ProcessCameraProvider) {
+        val owner = activity as LifecycleOwner
+        val mainSelector = camera?.cameraInfo?.cameraSelector
+        val otherSelector = secondaryCamera?.cameraInfo?.cameraSelector
+        if (mainSelector == null || otherSelector == null) {
+            throw IllegalStateException("Dual camera lost its cameras")
+        }
+        val concurrent = provider.bindToLifecycle(
+            listOf(
+                ConcurrentCamera.SingleCameraConfig(
+                    mainSelector,
+                    UseCaseGroup.Builder()
+                        .addUseCase(preview!!)
+                        .addUseCase(videoCapture!!)
+                        .build(),
+                    owner
+                ),
+                ConcurrentCamera.SingleCameraConfig(
+                    otherSelector,
+                    UseCaseGroup.Builder()
+                        .addUseCase(secondaryPreview!!)
+                        .addUseCase(secondaryVideoCapture!!)
+                        .build(),
+                    owner
+                ),
+            )
+        )
+        camera = concurrent.cameras.getOrNull(0)
+        secondaryCamera = concurrent.cameras.getOrNull(1)
+        isPaused = false
+        if (currentZoom != 1.0f) {
+            camera?.cameraControl?.setZoomRatio(currentZoom)
+        }
+        if (isTorchEnabled && currentLens != CameraSelector.LENS_FACING_FRONT) {
+            camera?.cameraControl?.enableTorch(true)
+        }
+        DivineCameraLog.d(TAG, "Dual camera rebound after pause")
+    }
+
+    /** Drops the second camera's use cases, texture and any open take. */
+    private fun releaseSecondaryCamera() {
+        secondaryTake?.recording?.stop()
+        secondaryTake = null
+        secondaryCamera = null
+        secondaryPreview = null
+        secondaryVideoCapture = null
+        secondarySurfaceProducer?.release()
+        secondarySurfaceProducer = null
+    }
+
+    /** The second camera's state for Dart, null while dual capture is off. */
+    private fun secondaryCameraState(): Map<String, Any?>? {
+        if (!isDualCameraEnabled) return null
+        val producer = secondarySurfaceProducer ?: return null
+        val handlesTransform = producer.handlesCropAndRotation()
+        return mapOf(
+            "lens" to secondaryLensType,
+            "textureId" to producer.id(),
+            "aspectRatio" to secondaryAspectRatio.toDouble(),
+            "previewRotationDegrees" to
+                if (handlesTransform) 0 else sensorOrientationOf(secondaryCamera?.cameraInfo),
+            "previewHandlesTransform" to handlesTransform,
+        )
+    }
+
+    /** Sensor orientation of a bound camera, from its Camera2 id. */
+    @SuppressLint("UnsafeOptInUsageError")
+    private fun sensorOrientationOf(info: CameraInfo?): Int {
+        info ?: return 0
+        return try {
+            val cameraId = Camera2CameraInfo.from(info).cameraId
+            sensorOrientationByCameraId.getOrPut(cameraId) {
+                val cameraManager =
+                    context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                cameraManager
+                    .getCameraCharacteristics(cameraId)
+                    .get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
+            }
+        } catch (e: Exception) {
+            DivineCameraLog.w(TAG, "Failed to read sensor orientation: ${e.message}")
+            0
+        }
+    }
+
+    /**
+     * Rebinds the camera at the lowered [videoQuality] before a recording
+     * retry: both cameras while dual capture is on, the main one otherwise.
+     */
+    private fun restartCameraForRetry(callback: (Map<String, Any?>?, String?) -> Unit) {
+        val provider = cameraProvider
+        val pair = provider?.let { concurrentCameraPair(it) }
+        if (!isDualCameraEnabled || provider == null || pair == null) {
+            if (isDualCameraEnabled) {
+                releaseSecondaryCamera()
+                isDualCameraEnabled = false
+            }
+            startCamera(callback)
+            return
+        }
+        try {
+            provider.unbindAll()
+            releaseSecondaryCamera()
+            bindDualCameras(provider, pair.first, pair.second)
+            callback(getCameraState(), null)
+        } catch (e: Exception) {
+            DivineCameraLog.e(TAG, "Dual camera rebind for retry failed", e)
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
+            startCamera(callback)
+        }
+    }
+
+    /**
+     * The second camera's recording of one dual-camera take. Kept per take so
+     * a late finalize of an earlier take (an encoder retry) cannot overwrite
+     * the current one.
+     */
+    private class SecondaryTake(val file: File, val lens: String) {
+        var recording: Recording? = null
+        var finalized: Boolean = false
+        var result: Map<String, Any?>? = null
+        var onFinalized: ((Map<String, Any?>?) -> Unit)? = null
+        // When its first frame was recorded, on the elapsed-realtime clock.
+        var startNs: Long = Long.MAX_VALUE
+    }
+
+    /**
+     * Starts the second camera's silent file of a dual-camera take, next to
+     * the main recording in [outputDir]. Called before the main recording
+     * starts, so the file covers the take's first frame.
+     */
+    private fun startSecondaryRecording(outputDir: File, baseName: String) {
+        val capture = secondaryVideoCapture ?: return
+        val take = SecondaryTake(File(outputDir, "${baseName}_second.mp4"), secondaryLensType)
+        val width = secondaryVideoWidth
+        val height = secondaryVideoHeight
+        secondaryTake = take
+        try {
+            take.recording = capture.output
+                .prepareRecording(context, FileOutputOptions.Builder(take.file).build())
+                .start(ContextCompat.getMainExecutor(context)) { event ->
+                    val recordedNanos = event.recordingStats.recordedDurationNanos
+                    if (recordedNanos > 0 && event !is VideoRecordEvent.Finalize) {
+                        take.startNs = minOf(
+                            take.startNs,
+                            SystemClock.elapsedRealtimeNanos() - recordedNanos
+                        )
+                    }
+                    if (event !is VideoRecordEvent.Finalize) return@start
+                    val playable = !event.hasError() || isFinalizedOutputPlayable(event.error)
+                    val result = if (playable && take.file.exists() && take.file.length() > 0) {
+                        mapOf(
+                            "filePath" to take.file.absolutePath,
+                            "durationMs" to (recordedNanos / 1_000_000).toInt(),
+                            "width" to width,
+                            "height" to height,
+                            "lens" to take.lens,
+                        )
+                    } else {
+                        if (event.hasError()) {
+                            DivineCameraLog.warning(
+                                "Second camera file failed (error ${event.error})",
+                                name = "DivineCamera.DualCamera"
+                            )
+                        }
+                        take.file.delete()
+                        null
+                    }
+                    take.recording = null
+                    take.finalized = true
+                    take.result = result
+                    take.onFinalized?.let { waiter ->
+                        take.onFinalized = null
+                        waiter(result)
+                    }
+                }
+        } catch (e: Exception) {
+            DivineCameraLog.warning(
+                "Second camera recording failed to start: ${e.message}",
+                name = "DivineCamera.DualCamera"
+            )
+            secondaryTake = null
+        }
+    }
+
+    /**
+     * Runs [deliver] with the second camera's file of the take once it is
+     * written, stopping it first: it runs until the main take is finalized.
+     * The result carries `startOffsetMs`, how far into the second file the
+     * main take begins. Delivers null at once for a single-camera take, and
+     * after [SECONDARY_FINALIZE_TIMEOUT_MS] if the second recorder never
+     * finalizes.
+     */
+    private fun awaitSecondaryTake(deliver: (Map<String, Any?>?) -> Unit) {
+        val take = secondaryTake ?: run {
+            deliver(null)
+            return
+        }
+        secondaryTake = null
+        val mainStartNs = mainRecordingStartNs
+        val withOffset: (Map<String, Any?>?) -> Map<String, Any?>? = { result ->
+            result?.let {
+                val leadInNs = if (mainStartNs != Long.MAX_VALUE &&
+                    take.startNs != Long.MAX_VALUE
+                ) {
+                    (mainStartNs - take.startNs).coerceAtLeast(0L)
+                } else {
+                    0L
+                }
+                DivineCameraLog.info(
+                    "Second camera file leads the take by ${leadInNs / 1_000_000}ms",
+                    name = "DivineCamera.DualCamera"
+                )
+                it + ("startOffsetMs" to (leadInNs / 1_000_000).toInt())
+            }
+        }
+        if (take.finalized) {
+            deliver(withOffset(take.result))
+            return
+        }
+        var delivered = false
+        val timeout = Runnable {
+            if (delivered) return@Runnable
+            delivered = true
+            take.onFinalized = { result ->
+                (result?.get("filePath") as? String)?.let { File(it).delete() }
+            }
+            DivineCameraLog.warning(
+                "Second camera file did not finalize in time — the take keeps " +
+                    "the main camera only",
+                name = "DivineCamera.DualCamera"
+            )
+            deliver(null)
+        }
+        take.onFinalized = { result ->
+            mainHandler.removeCallbacks(timeout)
+            if (!delivered) {
+                delivered = true
+                deliver(withOffset(result))
+            }
+        }
+        mainHandler.postDelayed(timeout, SECONDARY_FINALIZE_TIMEOUT_MS)
+        try {
+            take.recording?.stop()
+        } catch (e: Exception) {
+            DivineCameraLog.w(TAG, "Failed to stop the second camera: ${e.message}")
         }
     }
 
@@ -2169,6 +2860,9 @@ class CameraController(
             return false
         }
         if (mode == requestedStabilizationMode) return true
+        // Concurrent streams do not guarantee stabilization, and the rebind
+        // below would swap the dual cameras instead.
+        if (isDualCameraEnabled) return false
         if (isRecording) {
             DivineCameraLog.w(
                 TAG,
@@ -2453,6 +3147,14 @@ class CameraController(
             // Store callback so it can be called from Finalize if recording is stopped early
             startRecordingCallback = callback
 
+            // Dual capture: the second camera starts first and stops after
+            // the main take is written, so its silent file covers the whole
+            // take; the measured lead-in lines the two up again.
+            mainRecordingStartNs = Long.MAX_VALUE
+            if (isDualCameraEnabled) {
+                startSecondaryRecording(outputDir, "VID_$timestamp")
+            }
+
             val recorder = videoCap.output
             recording = recorder
                 .prepareRecording(context, outputOptions)
@@ -2477,6 +3179,12 @@ class CameraController(
                             // Status events are sent continuously during recording
                             // When recordedDurationNanos > 0, the encoder is truly recording frames
                             val durationNanos = event.recordingStats.recordedDurationNanos
+                            if (durationNanos > 0) {
+                                mainRecordingStartNs = minOf(
+                                    mainRecordingStartNs,
+                                    SystemClock.elapsedRealtimeNanos() - durationNanos
+                                )
+                            }
                             if (startRecordingCallback != null && durationNanos > 0) {
                                 recordingTrulyStarted = true
                                 recordingStartTime = System.currentTimeMillis()
@@ -2574,9 +3282,18 @@ class CameraController(
                                     val savedCallback = startRecordingCallback!!
                                     startRecordingCallback = null
 
+                                    // The second camera's file of the failed take
+                                    // goes with it.
+                                    if (secondaryTake != null) {
+                                        awaitSecondaryTake { secondary ->
+                                            (secondary?.get("filePath") as? String)
+                                                ?.let { File(it).delete() }
+                                        }
+                                    }
+
                                     // Re-initialize camera with lower quality, then retry recording
                                     val params = pendingRecordingParams
-                                    startCamera { _, error ->
+                                    restartCameraForRetry { _, error ->
                                         if (error != null) {
                                             DivineCameraLog.e(TAG, "Failed to reinitialize camera at $lower: $error")
                                             savedCallback("Recording failed: encoder not supported")
@@ -2611,15 +3328,29 @@ class CameraController(
 
                             // Build the result map once
                             val file = currentRecordingFile
-                            val result = if (file != null && file.exists() && file.length() > 0) {
+                            val mainResult = if (file != null && file.exists() && file.length() > 0) {
                                 val duration = System.currentTimeMillis() - recordingStartTime
                                 mapOf(
                                     "filePath" to file.absolutePath,
                                     "durationMs" to duration.toInt(),
                                     "width" to videoWidth,
-                                    "height" to videoHeight
+                                    "height" to videoHeight,
+                                    "lens" to currentLensType
                                 )
                             } else null
+
+                            // A dual-camera take reports once the second
+                            // camera's file is written too.
+                            awaitSecondaryTake { secondary ->
+                            val result = when {
+                                mainResult == null -> {
+                                    (secondary?.get("filePath") as? String)
+                                        ?.let { File(it).delete() }
+                                    null
+                                }
+                                secondary == null -> mainResult
+                                else -> mainResult + ("secondary" to secondary)
+                            }
 
                             // Only the stop that ended the recording gets the file:
                             // the manual one or the time limit's, never both.
@@ -2659,6 +3390,7 @@ class CameraController(
                                 // recording is over (#9261).
                                 onAutoStopListener?.invoke(take ?: emptyMap())
                             }
+                            }
 
                             currentRecordingFile = null
                             recording = null
@@ -2670,6 +3402,10 @@ class CameraController(
         } catch (e: Exception) {
             DivineCameraLog.e(TAG, "Failed to start recording", e)
             startRecordingCallback = null
+            // A second camera file already running belongs to no take.
+            awaitSecondaryTake { secondary ->
+                (secondary?.get("filePath") as? String)?.let { File(it).delete() }
+            }
             callback("Failed to start recording: ${e.message}")
         }
     }
@@ -2853,6 +3589,10 @@ class CameraController(
             isPaused = true
         }
         videoCapture = buildVideoCapture(AspectRatio.RATIO_16_9)
+        if (isDualCameraEnabled) {
+            secondaryVideoCapture =
+                buildSecondaryVideoCapture(secondaryCamera?.cameraInfo?.lensFacing)
+        }
         if (wasBound) {
             rebindAfterPause(provider)
         }
@@ -2864,6 +3604,10 @@ class CameraController(
      * be retried.
      */
     private fun rebindAfterPause(provider: ProcessCameraProvider) {
+        if (isDualCameraEnabled) {
+            rebindDualAfterPause(provider)
+            return
+        }
         val owner = activity as LifecycleOwner
         val selector = buildCameraSelectorForLens(currentLensType, provider)
         val photo = imageCapture
@@ -2921,9 +3665,16 @@ class CameraController(
         // neither. Otherwise (API 29+ ImageReader path) frames arrive raw and
         // the UI reconstructs both (issue #5865).
         val handlesTransform = surfaceProducer?.handlesCropAndRotation() == true
-        val previewRotation =
-            if (handlesTransform) 0 else currentSensorOrientation()
-        val (onSupported, previewSupported) = stabilizationSupport()
+        val previewRotation = when {
+            handlesTransform -> 0
+            // The concurrent pair can be other camera ids than the lens map's.
+            isDualCameraEnabled -> sensorOrientationOf(camera?.cameraInfo)
+            else -> currentSensorOrientation()
+        }
+        // Dual capture binds both cameras without stabilization and refuses a
+        // change, so it reports that rather than the mode it keeps for later.
+        val (onSupported, previewSupported) =
+            if (isDualCameraEnabled) false to false else stabilizationSupport()
         val stabilizationModes =
             buildStabilizationModeList(onSupported, previewSupported)
         return mutableMapOf(
@@ -2953,7 +3704,9 @@ class CameraController(
                 previewSupported,
             ),
             "availableVideoStabilizationModes" to stabilizationModes,
-            "isVideoStabilizationSupported" to (stabilizationModes.size > 1)
+            "isVideoStabilizationSupported" to (stabilizationModes.size > 1),
+            "isDualCameraSupported" to isDualCameraSupported(),
+            "secondaryCamera" to secondaryCameraState()
         )
     }
 
@@ -2985,6 +3738,8 @@ class CameraController(
             recording = null
             isRecording = false
 
+            releaseSecondaryCamera()
+            isDualCameraEnabled = false
             cameraProvider?.unbindAll()
             cameraProvider = null
             camera = null

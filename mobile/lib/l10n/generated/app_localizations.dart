@@ -15161,6 +15161,18 @@ abstract class AppLocalizations {
   /// **'Switch camera'**
   String get videoRecorderSwitchCameraLabel;
 
+  /// Accessibility label and tooltip of the recorder toggle that records the front and the back camera at the same time; the second camera appears in a small window.
+  ///
+  /// In en, this message translates to:
+  /// **'Record with both cameras'**
+  String get videoRecorderToggleDualCameraLabel;
+
+  /// Accessibility label of the small second-camera window in the recorder while both cameras record; tapping it swaps which camera fills the viewfinder.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap cameras'**
+  String get videoRecorderDualCameraSwapLabel;
+
   /// Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.
   ///
   /// In en, this message translates to:

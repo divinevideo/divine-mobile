@@ -11,15 +11,18 @@ receipt alone does not record an open. New parameters are:
 | --- | --- |
 | `notification_type` | like, comment, follow, mention, repost, campaign, direct_message, new_post, list_add, unknown |
 | `open_source` | os_cold_start, local_cold_start, os_background, local_tap |
+| `campaign_revision_id` | The approved campaign revision, a lowercase UUID, on campaign opens only; any other value is dropped |
 
 `local_tap` identifies a local-notification callback; it does not assert the app
 was in the foreground. No new identity, message text, route, event ID, or FCM
 token is sent as a parameter. Transport/source IDs are never exported. The FCM
 message ID travels in a locally rendered notification's payload, so it also
 appears in the app's local tap log, and otherwise serves only bounded in-memory
-deduplication within a privacy/session boundary. Older campaigns
-without either ID cannot reliably deduplicate callbacks. Deduplication does not
-promise exactly-once delivery across process restarts.
+deduplication within a privacy/session boundary. A campaign open with a valid
+revision deduplicates on the revision instead, so separate deliveries of one
+revision count once per session. Older campaigns without either ID cannot
+reliably deduplicate callbacks. Deduplication does not promise exactly-once
+delivery across process restarts.
 
 ## Run the report
 

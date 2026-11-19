@@ -216,11 +216,13 @@ bar, its own action rows, and no record button at all.
 | `camera_stabilization_button` | ✅ | — | — |
 | `camera_ghost_frame_button` | ✅ | ✅ | ✅ |
 | `camera_grid_button` | — | ✅ | ✅ |
+| `camera_dual_camera_button` | device | — | — |
 | `camera_color_mask_button` | device | — | — |
 
 The color mask button is on capture's rail only where the renderer can key the
-viewfinder live, so no assert mentions it. While the mask is on, the rail also
-drops stabilization and the ghost frame.
+viewfinder live, and the dual-camera button only where the device can run both
+cameras at once, so no assert mentions either. While the mask is on, the rail
+also drops stabilization, the ghost frame and dual camera.
 
 Stop-motion's rail and capture's **overlap without either containing
 the other** — both have the timer and the ghost frame, but only capture has

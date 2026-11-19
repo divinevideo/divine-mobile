@@ -294,6 +294,21 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   }
 
   @override
+  Future<CameraState> setDualCameraEnabled({required bool enabled}) async {
+    final result = await methodChannel.invokeMapMethod<dynamic, dynamic>(
+      'setDualCameraEnabled',
+      {'enabled': enabled},
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'DUAL_CAMERA_FAILED',
+        message: 'Failed to change dual-camera capture',
+      );
+    }
+    return CameraState.fromMap(result);
+  }
+
+  @override
   Future<bool> startRecording({
     Duration? maxDuration,
     bool useCache = true,

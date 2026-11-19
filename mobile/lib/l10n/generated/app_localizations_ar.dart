@@ -9052,6 +9052,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'تبديل الكاميرا';
 
   @override
+  String get videoRecorderToggleDualCameraLabel => 'التسجيل بالكاميرتين معًا';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'تبديل الكاميرتين';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'تكبير إلى $zoom×';
   }
