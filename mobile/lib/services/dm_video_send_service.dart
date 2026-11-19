@@ -40,7 +40,8 @@ class DmVideoUpload {
   String toString() => 'DmVideoUpload(fileUrl: $fileUrl)';
 }
 
-/// The media server did not accept the encrypted upload.
+/// The encrypted upload did not succeed, whether the media server refused it
+/// or it failed before reaching the server.
 class DmVideoUploadFailed implements Exception {
   /// Creates a [DmVideoUploadFailed] with a diagnostic [reason].
   const DmVideoUploadFailed(this.reason);
@@ -100,9 +101,10 @@ class DmVideoSendService {
   ///
   /// Throws:
   ///
-  /// * [DmVideoUploadFailed] if the media server does not accept the upload.
+  /// * [DmVideoUploadFailed] if the encrypted upload does not succeed.
   /// * [DmVideoSendCancelled] if [cancellation] ends the attempt first.
   /// * [DmVideoTooLargeException] if [videoFile] is too large to encrypt.
+  /// * [FileSystemException] if [videoFile] cannot be read.
   @useResult
   Future<DmVideoUpload> uploadVideo({
     required File videoFile,
@@ -196,7 +198,8 @@ class DmVideoSendService {
   /// marker that identifies a Divine camera clip.
   ///
   /// Throws [DmVideoSendCancelled] if [cancellation] ended the attempt before
-  /// publication started; nothing is published then.
+  /// publication started; nothing is published then. Errors from
+  /// [DmRepository.sendFileMessage] pass through unchanged.
   @useResult
   Future<NIP17SendResult> publishVideo({
     required String recipientPubkey,
