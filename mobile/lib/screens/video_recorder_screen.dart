@@ -432,7 +432,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
 
   void _onRecorderPop(bool didPop, Object? result) {
     if (didPop) {
-      if (!widget.fromEditor) discardRecorderSession(ref);
+      // A room part never autosaves, so the autosave slot holds the user's
+      // own unfinished work, whatever the editor's flag says: keep it.
+      if (!widget.fromEditor) {
+        discardRecorderSession(ref, keepAutosavedDraft: widget.collabPart);
+      }
       return;
     }
     if (!_isLibraryReaction || _reactionExitResult != null) return;

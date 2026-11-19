@@ -69,12 +69,18 @@ void closeVideoRecorder(BuildContext context, WidgetRef ref) {
 /// whose only payload is the clip selection that pinned the aspect ratio in
 /// the first place. An OS kill still leaves the draft intact, which is the
 /// case recovery is for.
-void discardRecorderSession(WidgetRef ref) {
+///
+/// [keepAutosavedDraft] keeps it regardless, for a session that never wrote
+/// to it.
+void discardRecorderSession(
+  WidgetRef ref, {
+  bool keepAutosavedDraft = false,
+}) {
   final isAutosavedDraft = ref.read(videoEditorProvider).isAutosavedDraft;
   runDetached(
     ref
         .read(videoPublishProvider.notifier)
-        .clearAll(keepAutosavedDraft: !isAutosavedDraft),
+        .clearAll(keepAutosavedDraft: keepAutosavedDraft || !isAutosavedDraft),
     'discard recorder session',
     logName: 'VideoRecorderNavigation',
     category: LogCategory.video,
