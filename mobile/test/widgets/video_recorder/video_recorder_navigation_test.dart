@@ -738,6 +738,27 @@ void main() {
       return l10n;
     }
 
+    testWidgets('holds remote record while the offer is open', (
+      tester,
+    ) async {
+      await pushRecorderAndOffer(tester);
+
+      verify(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+      ).called(1);
+      verifyNever(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+      );
+
+      // Tap the barrier above the sheet.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+      ).called(1);
+    });
+
     testWidgets('keeps the recorder open when the offer is dismissed while '
         'Continue restores', (tester) async {
       final restore = fakeEditor.restoreGate = Completer<void>();

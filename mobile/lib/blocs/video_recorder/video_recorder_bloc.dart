@@ -3115,6 +3115,16 @@ class VideoRecorderBloc
       );
       return;
     }
+    // A sheet's pause reaches the camera asynchronously, so a press can land
+    // between the sheet opening and remote control going off.
+    if (state.isRemoteRecordPaused) {
+      Log.debug(
+        '🎮 Remote record trigger ignored - a sheet covers the preview',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
     if (_remoteRecordPausedForSound) {
       Log.debug(
         '🎮 Remote record trigger ignored - sound is selected',

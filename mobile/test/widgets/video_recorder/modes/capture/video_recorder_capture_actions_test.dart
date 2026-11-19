@@ -502,6 +502,40 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('holds remote record while the menu is open', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            isVideoStabilizationSupported: true,
+            availableVideoStabilizationModes: const [
+              DivineVideoStabilizationMode.off,
+              DivineVideoStabilizationMode.standard,
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        ).called(1);
+      });
+
       testWidgets('dispatches nothing when the menu is dismissed', (
         tester,
       ) async {

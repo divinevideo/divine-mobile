@@ -4399,6 +4399,23 @@ void main() {
           ).called(1);
         });
 
+        test('is ignored while a sheet covers the preview', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          // The press lands before the pause has turned remote control off.
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          trigger!();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+        });
+
         test('is ignored on the Upload tab, which shows no preview', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);

@@ -284,8 +284,8 @@ class VideoRecorderBlocState extends Equatable {
   /// "next" in that window would push a second editor over the first.
   final bool editorNavigationInProgress;
 
-  /// True while a sheet over the preview, the sound picker or the color mask
-  /// settings, has paused remote record control.
+  /// True while a sheet over the preview, such as the sound picker or the
+  /// autosave offer, has paused remote record control.
   ///
   /// Kept apart from whether remote control is on: those sheets can open
   /// while the camera is still starting, before setup turns remote control
