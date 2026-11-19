@@ -34,6 +34,7 @@ import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../../helpers/semantics_nodes.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -576,6 +577,38 @@ void main() {
           handle.dispose();
         }
       });
+
+      testWidgets(
+        'lets a screen reader open an own tile from its labelled node',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final handle = tester.ensureSemantics();
+          try {
+            await tester.pumpWidget(
+              buildSubject(
+                userIdHex: _ownPubkey,
+                videos: _createTestVideos(pubkey: _ownPubkey),
+              ),
+            );
+
+            final node = tester.getSemantics(_thumbnail(1));
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+              reason:
+                  'The labelled button must open the video; a tap action on an '
+                  'unlabelled twin node is announced as a second, nameless '
+                  'control.',
+            );
+            expect(
+              countSemanticsNodesWithAction(node, SemanticsAction.tap),
+              equals(1),
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
 
       testWidgets(
         "does not advertise a long-press action on another user's video",

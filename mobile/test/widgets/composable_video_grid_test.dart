@@ -56,6 +56,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/decoded_images.dart';
+import '../helpers/semantics_nodes.dart';
 import '../helpers/test_provider_overrides.dart';
 
 const _ownPubkey =
@@ -1582,6 +1583,37 @@ void main() {
         );
         handle.dispose();
       });
+
+      testWidgets(
+        'lets a screen reader open an owned tile from its labelled node',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            await pumpGridFor(
+              tester,
+              video: videoBy(_ownPubkey),
+              nostrClientPubkey: _ownPubkey,
+              authServicePubkey: _ownPubkey,
+            );
+
+            final node = tileNode(tester);
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+              reason:
+                  'The labelled button must open the video; a tap action on an '
+                  'unlabelled twin node is announced as a second, nameless '
+                  'control.',
+            );
+            expect(
+              countSemanticsNodesWithAction(node, SemanticsAction.tap),
+              equals(1),
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
 
       testWidgets(
         'advertises no long-press action on an owned video in selection mode',
