@@ -133,6 +133,7 @@ void main() {
           'tags': [
             ['d', 'video-d-tag'],
             ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+            buildCollaboratorPTag(collaboratorPubkey),
           ],
           'content': 'Test video content',
           'sig': '',
