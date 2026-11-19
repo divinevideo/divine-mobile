@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -16,6 +17,8 @@ import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/notifications/notification_tap_router.dart';
+import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
@@ -25,9 +28,11 @@ import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/shell.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/explore/explore_view.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
@@ -220,6 +225,7 @@ void main() {
     String? initialTabName,
     String? initialTabSlug,
     String? requiredFeaturedFeedId,
+    GoRouter? router,
     bool classicsAvailable = false,
     bool settle = true,
     FeaturedTabAudience audience = FeaturedTabAudience.unverified,
@@ -255,17 +261,23 @@ void main() {
             (ref) => ref.watch(_testFeaturedTabAgeGateProvider),
           ),
         ],
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: ExploreScreen(
-              initialTabName: initialTabName,
-              initialTabSlug: initialTabSlug,
-              requiredFeaturedFeedId: requiredFeaturedFeedId,
-            ),
-          ),
-        ),
+        child: router == null
+            ? MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: ExploreScreen(
+                    initialTabName: initialTabName,
+                    initialTabSlug: initialTabSlug,
+                    requiredFeaturedFeedId: requiredFeaturedFeedId,
+                  ),
+                ),
+              )
+            : MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
       ),
     );
     if (settle) {
@@ -309,10 +321,30 @@ void main() {
     testWidgets('a cold campaign waits for verification and hides adult '
         'content immediately during the next account check', (tester) async {
       final repository = _ControlledFeaturedTabsRepository();
+      final tap = pushNotificationTapTarget(
+        referencedAddress: null,
+        referencedEventId: null,
+        eventId: null,
+        notificationType: NotificationWireValues.campaign,
+        senderPubkey: null,
+        tapTargetType: NotificationWireValues.featuredFeed,
+        tapTargetValue: _adultConfig.id,
+      );
+      expect(tap.target, isA<OpenAppRouteTarget>());
+      final shell = shellRoutes().single as StatefulShellRoute;
+      final exploreTabRoute = shell.branches
+          .expand((branch) => branch.routes)
+          .whereType<GoRoute>()
+          .singleWhere((route) => route.path == ExploreScreen.pathTabSubpath);
+      final router = GoRouter(
+        initialLocation: (tap.target as OpenAppRouteTarget).location,
+        routes: [exploreTabRoute],
+      );
+      addTearDown(router.dispose);
       await pumpExplore(
         tester,
         repository: repository,
-        requiredFeaturedFeedId: _adultConfig.id,
+        router: router,
         audience: FeaturedTabAudience.loading,
         settle: false,
       );
