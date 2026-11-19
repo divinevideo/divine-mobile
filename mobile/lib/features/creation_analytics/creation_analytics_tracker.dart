@@ -48,8 +48,19 @@ class CreationAnalyticsTracker {
   DateTime? get cameraOpenedAt => _cameraOpenedAt;
 
   /// Mode of the camera flow this recorder is joining, if it is still active.
-  VideoRecorderMode? activeRecorderMode(CreationAnalyticsSession? session) =>
-      _accepts(session) ? activeMode : null;
+  VideoRecorderMode? activeRecorderMode(
+    CreationAnalyticsSession? session, {
+    bool continuesEditorSession = false,
+  }) {
+    if (!_accepts(session) ||
+        _replacesEditorSession(
+          session,
+          continuesEditorSession: continuesEditorSession,
+        )) {
+      return null;
+    }
+    return activeMode;
+  }
 
   Future<void> cameraOpened({
     required VideoRecorderMode mode,
@@ -58,15 +69,15 @@ class CreationAnalyticsTracker {
     bool continuesEditorSession = false,
   }) async {
     if (session?._closed ?? false) return;
-    // A replacement recorder can mount before the old editor is disposed.
-    // Only that editor's Add clip camera continues its existing funnel.
-    if (_editorSession != null &&
-        (session != null || !continuesEditorSession)) {
-      unawaited(creationAbandoned());
-    }
+    final replacesEditor = _replacesEditorSession(
+      session,
+      continuesEditorSession: continuesEditorSession,
+    );
     final previous = _cameraSession;
-    if (!identical(previous, session)) {
-      if (previous != null) {
+    if (replacesEditor || !identical(previous, session)) {
+      // A publish attempt suppresses abandonment analytics. The replacement
+      // still needs a fresh funnel even when there is no abandonment event.
+      if (replacesEditor || previous != null) {
         unawaited(creationAbandoned(session: previous));
       }
       _cameraSession = session;
@@ -218,6 +229,12 @@ class CreationAnalyticsTracker {
       parameters: {'mode': _mode!.name, 'last_stage': _lastStage!.name},
     );
   }
+
+  // A standalone camera can mount before the old reaction editor is disposed.
+  bool _replacesEditorSession(
+    CreationAnalyticsSession? session, {
+    required bool continuesEditorSession,
+  }) => _editorSession != null && (session != null || !continuesEditorSession);
 
   bool _accepts(CreationAnalyticsSession? session) =>
       identical(_cameraSession, session) && !(session?._closed ?? false);

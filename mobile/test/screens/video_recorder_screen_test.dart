@@ -47,12 +47,16 @@ class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _CreationEventSink extends Fake implements AnalyticsEventSink {
   final events = <String>[];
+  final cameraModes = <Object>[];
 
   @override
   Future<void> logEvent({
     required String name,
     Map<String, Object> parameters = const {},
-  }) async => events.add(name);
+  }) async {
+    events.add(name);
+    if (name == 'camera_opened') cameraModes.add(parameters['mode']!);
+  }
 }
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
@@ -329,6 +333,10 @@ void main() {
           'fromEditor=$fromEditor selects continuation versus a new funnel',
           (tester) async {
             await testPrefs.setBool('why_six_seconds_shown', true);
+            await testPrefs.setString(
+              VideoRecorderMode.persistenceKey,
+              VideoRecorderMode.classic.name,
+            );
             final sink = _CreationEventSink();
             final tracker = CreationAnalyticsTracker(analytics: sink);
             final reaction = CreationAnalyticsSession();
@@ -363,6 +371,7 @@ void main() {
               'editor_opened',
               if (!fromEditor) ...['creation_abandoned', 'camera_opened'],
             ]);
+            expect(sink.cameraModes, ['capture', if (!fromEditor) 'classic']);
             if (!fromEditor) {
               await tracker.abandonEditorSession(reaction);
               expect(tracker.activeMode, isNotNull);

@@ -339,7 +339,10 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     final tracker = ref.read(creationAnalyticsTrackerProvider);
     _creationAnalyticsTracker = tracker;
     final openingMode =
-        tracker.activeRecorderMode(widget.analyticsSession) ??
+        tracker.activeRecorderMode(
+          widget.analyticsSession,
+          continuesEditorSession: widget.fromEditor,
+        ) ??
         (widget.fromEditor
             ? initialBlocMode
             : _requestedRecorderMode ?? _lastUsedRecorderMode);

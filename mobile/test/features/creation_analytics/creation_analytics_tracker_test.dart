@@ -286,6 +286,41 @@ void main() {
       },
     );
 
+    test(
+      'a failed reaction publish leaves a fresh standalone camera funnel',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        final reaction = CreationAnalyticsSession();
+        await tracker.cameraOpened(
+          mode: .capture,
+          entryPoint: 'library',
+          session: reaction,
+        );
+        await tracker.recordingStarted(.capture, session: reaction);
+        await tracker.claimEditorSession(reaction);
+        await tracker.publishStarted(.capture);
+        await tracker.publishFailed(
+          mode: .capture,
+          reason: 'relay_publish_failed',
+        );
+        final firstCamera = sink.events.length;
+
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+        await tracker.abandonEditorSession(reaction);
+        await tracker.recordingStarted(.classic);
+
+        expect(sink.events.skip(firstCamera).map((event) => event.name), [
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(sink.events[firstCamera].parameters, {
+          'mode': 'classic',
+          'entry_point': 'bottom_nav',
+        });
+      },
+    );
+
     test('records publish failure without misclassifying disposal', () async {
       final sink = _RecordingSink();
       final tracker = CreationAnalyticsTracker(analytics: sink);
