@@ -16,8 +16,8 @@ internal typealias RecordingStopCallback = (Map<String, Any?>?, String?) -> Unit
  * `VideoRecordEvent.Finalize`. When both stops waited for that one event, a
  * Stop tap just before the limit got the file and the timer got it again, and
  * Dart added the take twice (#10194). So the first stop owns the recording:
- * beginning it cancels the timer, and a stop that begins after it is refused,
- * as the iOS controller refuses a stop once `isRecording` is false.
+ * beginning it cancels the timer. If Dart stops during an automatic stop,
+ * it can take over delivery so its response waits for the same native file.
  *
  * Not thread-safe: every call must come from [handler]'s thread, which is
  * where CameraX delivers the recording events and Flutter its method calls.
@@ -25,6 +25,7 @@ internal typealias RecordingStopCallback = (Map<String, Any?>?, String?) -> Unit
 internal class RecordingStopArbiter(private val handler: Handler) {
     private var maxDurationTimer: Runnable? = null
     private var pendingStop: RecordingStopCallback? = null
+    private var automaticStop = false
 
     /**
      * Whether a stop has begun and its recording has not finalized yet. A
@@ -54,10 +55,19 @@ internal class RecordingStopArbiter(private val handler: Handler) {
      * max-duration timer. Returns false, without calling [callback], when
      * another stop already owns the recording.
      */
-    fun beginStop(callback: RecordingStopCallback): Boolean {
+    fun beginStop(automatic: Boolean = false, callback: RecordingStopCallback): Boolean {
         if (pendingStop != null) return false
         cancelMaxDuration()
         pendingStop = callback
+        automaticStop = automatic
+        return true
+    }
+
+    /** Gives a manual request the pending automatic stop's single result. */
+    fun handoffAutomaticStop(callback: RecordingStopCallback): Boolean {
+        if (!automaticStop) return false
+        pendingStop = callback
+        automaticStop = false
         return true
     }
 
@@ -67,13 +77,14 @@ internal class RecordingStopArbiter(private val handler: Handler) {
      */
     fun abandonStop() {
         pendingStop = null
+        automaticStop = false
     }
 
     /** Hands the finalized recording to the stop that owns it, if any. */
     fun finish(result: Map<String, Any?>?, error: String?) {
         cancelMaxDuration()
         val callback = pendingStop ?: return
-        pendingStop = null
+        abandonStop()
         callback(result, error)
     }
 }

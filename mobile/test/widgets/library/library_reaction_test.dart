@@ -204,6 +204,7 @@ class _Editor extends VideoEditorNotifier {
   @override
   Future<String?> keepAutosaveAsDraft({
     Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
+    bool Function()? isCurrent,
   }) async {
     events.add('keep draft');
     return keepGate?.future ?? 'kept-draft';

@@ -291,6 +291,7 @@ void main() {
 
   /// Builds a bloc with all dependencies wired to the mocks.
   VideoRecorderBloc buildBloc({
+    ReactionRecordingOwner? reactionRecordingOwner,
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
@@ -298,6 +299,7 @@ void main() {
   }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
+      reactionRecordingOwner: reactionRecordingOwner,
       readVideoEditor: () => videoEditor,
       readVideoEditorState: readVideoEditorState,
       readSharedPreferences: () => prefs,
@@ -2075,6 +2077,77 @@ void main() {
           // The freeze at the tap is the only stop; the timer is not stopped
           // a second time when the native call returns.
           verifyNever(() => clipManager.stopRecording());
+        },
+      );
+    });
+
+    group('Library reaction recording ownership', () {
+      setUp(stubRecorderDefaults);
+
+      test(
+        'retains a late native result outside the replacement timeline',
+        () async {
+          final nativeStop = Completer<EditorVideo?>();
+          final stopRequested = Completer<void>();
+          final retained = Completer<DivineVideoClip>();
+          final video = EditorVideo.file('/tmp/reaction_take.mp4');
+          const duration = Duration(seconds: 2);
+          final clip = DivineVideoClip(
+            id: 'reaction_take',
+            video: video,
+            duration: duration,
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          when(() => clipManager.recordingElapsed).thenReturn(duration);
+          clipManager.generation = 1;
+          when(() => cameraService.stopRecording()).thenAnswer((_) {
+            stopRequested.complete();
+            return nativeStop.future;
+          });
+          when(
+            () => clipManager.buildRecordedClip(
+              video: video,
+              duration: duration,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          ).thenReturn(clip);
+
+          var isCurrent = true;
+          final bloc =
+              buildBloc(
+                reactionRecordingOwner: (
+                  isCurrent: () => isCurrent,
+                  retain: (clip) async => retained.complete(clip),
+                ),
+              )..emit(
+                const VideoRecorderBlocState(
+                  recordingState: VideoRecorderState.recording,
+                ),
+              );
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await stopRequested.future;
+          isCurrent = false;
+          nativeStop.complete(video);
+
+          expect(await retained.future, same(clip));
+          expect(bloc.state.isRecording, isFalse);
+          verifyNever(
+            () => clipManager.addClip(
+              video: video,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          );
+          verifyNever(() => clipManager.saveClipToLibrary(any()));
         },
       );
     });

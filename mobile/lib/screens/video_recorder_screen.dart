@@ -17,6 +17,8 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -26,6 +28,7 @@ import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/router/challenge_recording_gate.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
@@ -114,6 +117,8 @@ class VideoRecorderRoute extends ConsumerWidget {
     }
     Widget recorder = _VideoRecorderBlocScope(
       analyticsSession: analyticsSession,
+      isLibraryReaction:
+          analyticsSession != null && entryPoint == CreationEntryPoint.library,
       child: CameraPermissionGate(child: view),
     );
     final recordingId = challengeRecordingId;
@@ -239,10 +244,54 @@ class VideoRecorderScreen extends ConsumerWidget {
 }
 
 class _VideoRecorderBlocScope extends ConsumerWidget {
-  const _VideoRecorderBlocScope({required this.child, this.analyticsSession});
+  const _VideoRecorderBlocScope({
+    required this.child,
+    this.analyticsSession,
+    this.isLibraryReaction = false,
+  });
 
   final Widget child;
   final CreationAnalyticsSession? analyticsSession;
+  final bool isLibraryReaction;
+
+  ReactionRecordingOwner _captureReactionOwner(ProviderContainer container) {
+    final manager = container.read(clipManagerProvider.notifier);
+    final generation = manager.sessionGeneration;
+    final authService = container.read(authServiceProvider);
+    final pubkey = authService.currentPublicKeyHex;
+    final library = container.read(clipLibraryServiceProvider);
+    final drafts = container.read(draftStorageServiceProvider);
+
+    Future<void> retain(DivineVideoClip clip) async {
+      try {
+        await library.retainClip(clip);
+      } catch (error, stackTrace) {
+        Log.warning(
+          'Could not keep a reaction recording in the Library',
+          name: 'VideoRecorderScreen',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        await drafts.saveDraft(
+          DivineVideoDraft.create(
+            clips: [clip],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+          ),
+        );
+      }
+    }
+
+    return (
+      isCurrent: () =>
+          manager.isSessionCurrent(generation) &&
+          authService.currentPublicKeyHex == pubkey,
+      retain: retain,
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -267,6 +316,9 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
       )),
       create: (_) => VideoRecorderBloc(
         readClipManager: () => container.read(clipManagerProvider.notifier),
+        reactionRecordingOwner: isLibraryReaction
+            ? _captureReactionOwner(container)
+            : null,
         readVideoEditor: () => container.read(videoEditorProvider.notifier),
         readVideoEditorState: () => container.read(videoEditorProvider),
         readSharedPreferences: () => container.read(sharedPreferencesProvider),
@@ -334,10 +386,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       widget.entryPoint == CreationEntryPoint.library;
 
   bool _reactionTakeInFlight(VideoRecorderBlocState state) =>
-      _isLibraryReaction &&
-      (state.isRecording ||
-          state.isStartingRecording ||
-          state.isStoppingRecording);
+      _isLibraryReaction && state.hasRecordingInFlight;
 
   void _onRecorderPop(bool didPop, Object? result) {
     if (didPop) {
@@ -420,7 +469,8 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     AudioSelectionBottomSheet.preload(ref);
     await _maybeShowWhySixSeconds();
     // An auto-recording open already found nothing to offer.
-    if (!mounted || autoStartRecording) return;
+    // A Library reaction has already retained the previous session.
+    if (!mounted || autoStartRecording || _isLibraryReaction) return;
     await offerAutosavedSession(context, ref, openEditorOnRestore: true);
   }
 

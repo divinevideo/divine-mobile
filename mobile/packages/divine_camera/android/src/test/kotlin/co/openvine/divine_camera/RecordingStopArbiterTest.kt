@@ -61,6 +61,32 @@ internal class RecordingStopArbiterTest {
         assertTrue(autoResults.isEmpty())
     }
 
+    @Test
+    fun manualStopDuringAutoStop_waitsForOneFinalResult() {
+        val manualResults = mutableListOf<Map<String, Any?>?>()
+        val autoResults = mutableListOf<Map<String, Any?>?>()
+        assertTrue(arbiter.beginStop(automatic = true) { result, _ -> autoResults += result })
+
+        assertTrue(arbiter.handoffAutomaticStop { result, _ -> manualResults += result })
+        assertFalse(arbiter.handoffAutomaticStop { _, _ -> error("already claimed") })
+        assertTrue(manualResults.isEmpty())
+        assertTrue(arbiter.isStopPending)
+        arbiter.finish(take, null)
+
+        assertEquals(listOf<Map<String, Any?>?>(take), manualResults)
+        assertTrue(autoResults.isEmpty())
+    }
+
+    @Test
+    fun autoStopWithoutManualRequest_deliversToItsCallback() {
+        val autoResults = mutableListOf<Map<String, Any?>?>()
+        assertTrue(arbiter.beginStop(automatic = true) { result, _ -> autoResults += result })
+        arbiter.finish(take, null)
+
+        assertEquals(listOf<Map<String, Any?>?>(take), autoResults)
+        assertFalse(arbiter.handoffAutomaticStop { _, _ -> error("already finalized") })
+    }
+
     // Finalize reads it to tell a requested stop from one CameraX made on its
     // own; a requested stop seen as unsolicited would be reported twice.
     @Test

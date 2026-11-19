@@ -84,9 +84,9 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       mockDraftStorageService = _MockDraftStorageService();
       mockClipLibraryService = _MockClipLibraryService();
-      when(
-        () => mockDraftStorageService.deleteDraft(any()),
-      ).thenAnswer((_) async {});
+      when(mockDraftStorageService.deleteAutosavedDraft).thenAnswer(
+        (_) async => false,
+      );
       when(
         () => mockClipLibraryService.softDelete(
           any(),
@@ -628,20 +628,15 @@ void main() {
 
       test('deletes the autosave draft by default', () async {
         final notifier = container.read(clipManagerProvider.notifier);
-        when(
-          () => mockDraftStorageService.draftExists(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).thenAnswer((_) async => true);
+        when(mockDraftStorageService.deleteAutosavedDraft).thenAnswer(
+          (_) async => true,
+        );
         addClip(notifier);
 
         await notifier.clearAll();
 
-        verify(
-          () => mockDraftStorageService.deleteDraft(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).called(greaterThanOrEqualTo(1));
+        verify(mockDraftStorageService.deleteAutosavedDraft)
+            .called(greaterThanOrEqualTo(1));
       });
 
       test('leaves the autosave draft untouched when keeping it', () async {
@@ -652,7 +647,7 @@ void main() {
 
         // The shared `draft_autosave` slot is never touched — the editor's
         // save path relies on that, having already reaped it itself.
-        verifyNever(() => mockDraftStorageService.deleteDraft(any()));
+        verifyNever(mockDraftStorageService.deleteAutosavedDraft);
         // ...and the session still empties, which is what cures the inherited
         // aspect ratio. The flag only decides the draft's fate.
         expect(container.read(clipManagerProvider).clips, isEmpty);
@@ -828,19 +823,13 @@ void main() {
       test('abandonment removes an existing recovery draft and cancels its debounce', () async {
         var recoveryExists = true;
         final deleted = Completer<void>();
-        when(
-          () => mockDraftStorageService.draftExists(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).thenAnswer((_) async => recoveryExists);
-        when(
-          () => mockDraftStorageService.deleteDraft(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).thenAnswer((_) async {
-          recoveryExists = false;
-          deleted.complete();
-        });
+        when(mockDraftStorageService.deleteAutosavedDraft)
+            .thenAnswer((_) async {
+              if (!recoveryExists) return false;
+              recoveryExists = false;
+              deleted.complete();
+              return true;
+            });
         final notifier = container.read(clipManagerProvider.notifier);
         final take = DivineVideoClip(
           id: 'captured',

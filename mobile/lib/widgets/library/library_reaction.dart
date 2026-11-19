@@ -73,14 +73,21 @@ Future<void> recordLibraryReaction(
   final publish = ref.read(videoPublishProvider.notifier);
   final manager = ref.read(clipManagerProvider.notifier);
   final analytics = ref.read(creationAnalyticsTrackerProvider);
-  final owner = ref.read(authServiceProvider).currentPublicKeyHex;
+  final authService = ref.read(authServiceProvider);
+  final owner = authService.currentPublicKeyHex;
   // Capture the connection before navigation; cleanup can outlive its widget.
   final database = cleanupAbandoned == null ? ref.read(databaseProvider) : null;
 
+  bool isCurrentAccount() => authService.currentPublicKeyHex == owner;
+
   bool isActive() =>
       context.mounted &&
-      ref.read(authServiceProvider).currentPublicKeyHex == owner &&
+      isCurrentAccount() &&
       identical(ref.read(clipManagerProvider.notifier), manager);
+
+  final sourceGeneration = manager.sessionGeneration;
+  bool ownsSourceSession() =>
+      manager.isSessionCurrent(sourceGeneration) && isCurrentAccount();
 
   bool canOpenCamera() =>
       isActive() &&
@@ -94,11 +101,12 @@ Future<void> recordLibraryReaction(
   try {
     final library = ref.read(clipLibraryServiceProvider);
     keptDraftId = await editor.keepAutosaveAsDraft(
+      isCurrent: ownsSourceSession,
       retainUneditedClips: (clips) async {
-        if (!isActive()) {
-          throw StateError('The reaction source account changed');
-        }
         for (final clip in clips) {
+          if (!ownsSourceSession()) {
+            throw StateError('The reaction source session changed');
+          }
           if (!clip.isPlaceholder && !clip.isFreezeFrame) {
             await library.retainClip(clip);
           }
@@ -123,6 +131,7 @@ Future<void> recordLibraryReaction(
     }
     return;
   }
+  if (!ownsSourceSession()) return;
   if (!canOpenCamera()) {
     if (keptDraftId != null) await editor.discardKeptDraft(keptDraftId);
     return;

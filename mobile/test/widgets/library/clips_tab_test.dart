@@ -76,6 +76,7 @@ class _GatedEditor extends VideoEditorNotifier {
 
   @override
   Future<String?> keepAutosaveAsDraft({
+    bool Function()? isCurrent,
     Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
   }) {
     onKeep();

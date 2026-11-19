@@ -1395,6 +1395,48 @@ void main() {
     });
 
     group('Autosave Restore Flow', () {
+      testWidgets('a Library reaction skips recovery from an older project', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({'why_six_seconds_shown': true});
+        final prefs = await SharedPreferences.getInstance();
+        final drafts = _MockDraftStorageService();
+        when(drafts.getAutosaveDraft)
+            .thenAnswer((_) async => _autosavedDraft());
+
+        final library = _MockClipLibraryService();
+        when(library.getAllClips).thenAnswer((_) async => []);
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            draftStorageServiceProvider.overrideWithValue(drafts),
+            clipLibraryServiceProvider.overrideWithValue(library),
+            ..._stubSoundPickerOverrides(),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          buildNavigatorTestWidget(
+            fromEditor: true,
+            reactionSession: CreationAnalyticsSession(),
+            overrides: [],
+            container: container,
+          ),
+        );
+        await tester.tap(find.text('Open recorder'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoRecorderView), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en'))
+                .videoRecorderAutosaveFoundTitle,
+          ),
+          findsNothing,
+        );
+        verifyNever(drafts.getAutosaveDraft);
+      });
+
       testWidgets('shows bottom sheet when autosaved draft has been edited', (
         tester,
       ) async {

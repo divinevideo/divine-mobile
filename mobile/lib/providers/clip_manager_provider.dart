@@ -96,6 +96,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Returns an unmodifiable view of all clips.
   List<DivineVideoClip> get clips => List.unmodifiable(_clips);
 
+  /// The elapsed capture time, including after stopping the timer.
+  Duration get recordingElapsed => _recordStopwatch.elapsed;
+
   /// Ownership stamp for work that must not change a later capture session.
   int get sessionGeneration => _sessionGeneration;
 
@@ -368,31 +371,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     // Proof generation runs independently and does not block the UI.
     final processingCompleter = isClipTooLong ? Completer<bool>() : null;
 
-    var clip = DivineVideoClip(
-      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+    var clip = buildRecordedClip(
       video: video,
       duration: isClipTooLong ? remainingDuration : clipDuration,
-      recordedAt: .now(),
-      thumbnailPath: thumbnailPath,
-      targetAspectRatio: targetAspectRatio,
       originalAspectRatio: originalAspectRatio,
+      targetAspectRatio: targetAspectRatio,
+      thumbnailPath: thumbnailPath,
       processingCompleter: processingCompleter,
       lensMetadata: lensMetadata,
       captureChromaKey: captureChromaKey,
+      secondaryRecording: secondaryRecording,
+      secondaryPipCenter: secondaryPipCenter,
     );
-    if (secondaryRecording != null) {
-      clip = clip.copyWith(
-        secondaryCamera: SecondaryCameraTake(
-          clip: _secondaryCameraClip(
-            ownerId: clip.id,
-            recording: secondaryRecording,
-            mainDuration: clip.duration,
-            targetAspectRatio: targetAspectRatio,
-          ),
-          pipCenter: secondaryPipCenter,
-        ),
-      );
-    }
 
     // Asynchronously trim the clip if it exceeds remaining duration
     if (isClipTooLong) {
@@ -452,6 +442,49 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       );
       _editorBackgroundWork.track(proof);
       trackClipEnrichment(second.clip.id, proof);
+    }
+
+    return clip;
+  }
+
+  /// Builds a take without changing the timeline. A reaction can still store
+  /// the original camera result after its project has been replaced.
+  DivineVideoClip buildRecordedClip({
+    required EditorVideo video,
+    required Duration duration,
+    required double originalAspectRatio,
+    required model.AspectRatio targetAspectRatio,
+    String? thumbnailPath,
+    Completer<bool>? processingCompleter,
+    CameraLensMetadata? lensMetadata,
+    ClipChromaKey? captureChromaKey,
+    VideoRecordingResult? secondaryRecording,
+    Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
+  }) {
+    var clip = DivineVideoClip(
+      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+      video: video,
+      duration: duration,
+      recordedAt: .now(),
+      thumbnailPath: thumbnailPath,
+      targetAspectRatio: targetAspectRatio,
+      originalAspectRatio: originalAspectRatio,
+      processingCompleter: processingCompleter,
+      lensMetadata: lensMetadata,
+      captureChromaKey: captureChromaKey,
+    );
+    if (secondaryRecording != null) {
+      clip = clip.copyWith(
+        secondaryCamera: SecondaryCameraTake(
+          clip: _secondaryCameraClip(
+            ownerId: clip.id,
+            recording: secondaryRecording,
+            mainDuration: clip.duration,
+            targetAspectRatio: targetAspectRatio,
+          ),
+          pipCenter: secondaryPipCenter,
+        ),
+      );
     }
 
     return clip;
