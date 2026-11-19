@@ -19,7 +19,10 @@ void main() {
       'https://divine.video/profile/${NostrKeyUtils.encodePubKey(pubkey)}';
   group('profile external sharing', () {
     for (final succeeds in [false, true]) {
-      testWidgets('profile share shortens when available: $succeeds', (
+      final outcome = succeeds
+          ? 'shares the short link when the gateway creates one'
+          : 'shares the complete npub URL when the gateway fails';
+      testWidgets(outcome, (
         tester,
       ) async {
         final requests = <http.Request>[];
