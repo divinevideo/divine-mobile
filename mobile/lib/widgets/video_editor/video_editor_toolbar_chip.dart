@@ -17,6 +17,7 @@ class VideoEditorToolbarChip extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.semanticValue,
+    this.semanticHint,
     this.liveRegion = false,
     this.loading = false,
     super.key,
@@ -34,6 +35,10 @@ class VideoEditorToolbarChip extends StatelessWidget {
   /// Extra state a screen reader announces after [label].
   final String? semanticValue;
 
+  /// What a tap does, for a screen reader, when [label] says something else:
+  /// a state such as "Connecting…" rather than the action.
+  final String? semanticHint;
+
   /// Whether a screen reader announces the chip when it appears or its
   /// [label] changes, for a chip that comes and goes on its own.
   final bool liveRegion;
@@ -47,6 +52,7 @@ class VideoEditorToolbarChip extends StatelessWidget {
     return Semantics(
       button: true,
       value: semanticValue,
+      hint: semanticHint,
       liveRegion: liveRegion,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

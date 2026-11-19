@@ -317,6 +317,10 @@ class CollabRoomEditorCallButton extends ConsumerWidget {
             _EditorCall.connecting => l10n.collabRoomCallConnecting,
             _EditorCall.connected => l10n.collabRoomCallLeave,
           },
+          // While connecting the label says so, but a tap leaves the call.
+          semanticHint: phase == _EditorCall.connecting
+              ? l10n.collabRoomCallLeave
+              : null,
           liveRegion: true,
           onTap: () => runDetached(
             inCall ? call.leave() : call.join(),

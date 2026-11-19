@@ -279,6 +279,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.collabRoomCallJoin));
       await tester.pump();
+      // The label says it is connecting; a screen reader hears what a tap
+      // does.
+      expect(
+        find.bySemanticsLabel(l10n.collabRoomCallConnecting),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSemantics(
+          find.bySemanticsLabel(l10n.collabRoomCallConnecting),
+        ),
+        isSemantics(hint: l10n.collabRoomCallLeave),
+      );
 
       await tester.tap(find.text(l10n.collabRoomCallConnecting));
       await tester.runAsync(pumpEventQueue);
