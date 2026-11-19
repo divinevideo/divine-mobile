@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -84,6 +85,16 @@ class _NonAutosaveVideoEditorNotifier extends VideoEditorNotifier {
   @override
   VideoEditorProviderState build() =>
       VideoEditorProviderState(isAutosavedDraft: false);
+}
+
+/// Leaves out the debounced autosave a sound change schedules, which would
+/// outlive a test that does not wait for it.
+class _NoAutosaveTimerVideoEditorNotifier extends VideoEditorNotifier {
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void triggerAutosave() {}
 }
 
 class _AutosaveVideoEditorNotifier extends VideoEditorNotifier {
@@ -688,6 +699,51 @@ void main() {
 
         expect(container.read(overlayVisibilityProvider).isPageOpen, isFalse);
         expect(pageOpenChanges, equals([false]));
+      });
+    });
+
+    group('Remote recorder state', () {
+      testWidgets('refreshes the remote when a sound is picked or removed', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        when(() => recorderBloc.isClosed).thenReturn(false);
+        try {
+          await tester.pumpWidget(
+            buildTestWidget(
+              overrides: [
+                videoEditorProvider.overrideWith(
+                  _NoAutosaveTimerVideoEditorNotifier.new,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          clearInteractions(recorderBloc);
+          final editor = ProviderScope.containerOf(
+            tester.element(find.byType(VideoRecorderView)),
+          ).read(videoEditorProvider.notifier);
+
+          editor.selectSound(
+            AudioEvent(id: 'sound', pubkey: 'a' * 64, createdAt: 0),
+          );
+          await tester.pump();
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderRemoteStateRefreshRequested(),
+            ),
+          ).called(1);
+
+          editor.selectSound(null);
+          await tester.pump();
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderRemoteStateRefreshRequested(),
+            ),
+          ).called(1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       });
     });
 

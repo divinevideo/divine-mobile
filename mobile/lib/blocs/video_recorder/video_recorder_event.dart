@@ -90,9 +90,10 @@ final class VideoRecorderRemoteRecordResumed extends VideoRecorderEvent {
   const VideoRecorderRemoteRecordResumed();
 }
 
-/// The recorded clips changed outside the recorder's own start and stop (a
-/// clip was added, deleted or restored), so remote controls mirroring the
-/// clip budget need the new total.
+/// The recorded clips or the selected sound changed outside the recorder's
+/// own start and stop (a clip was added, deleted or restored, or a sound was
+/// picked or removed), so remote controls mirroring the clip budget and the
+/// shutter need the new state.
 final class VideoRecorderRemoteStateRefreshRequested
     extends VideoRecorderEvent {
   const VideoRecorderRemoteStateRefreshRequested();
