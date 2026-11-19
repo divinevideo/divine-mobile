@@ -35,6 +35,15 @@ enum PostActivityColors {
     static let deepGreen = Color(red: 0, green: 21 / 255, blue: 13 / 255)
 }
 
+/// The activity's text styles. Rounded, like the camera's Live Activity
+/// (#11134), so Divine's activities read as one family.
+enum PostActivityFonts {
+    static let headline = Font.system(.headline, design: .rounded)
+    static let detail = Font.system(.subheadline, design: .rounded).weight(.semibold)
+    static let caption = Font.system(.caption, design: .rounded)
+    static let compactCount = Font.system(.caption2, design: .rounded).weight(.semibold)
+}
+
 // MARK: - Presentations
 
 @available(iOS 16.2, *)
@@ -55,7 +64,7 @@ struct PostActivityLockScreenView: View {
                         postedAt: attributes.postedAt,
                         bundle: bundle
                     )
-                    .font(.headline)
+                    .font(PostActivityFonts.headline)
                     Spacer(minLength: 4)
                     PostActivityTimeText(
                         display: display,
@@ -63,7 +72,7 @@ struct PostActivityLockScreenView: View {
                         postedAt: attributes.postedAt,
                         bundle: bundle
                     )
-                    .font(.caption)
+                    .font(PostActivityFonts.caption)
                     .foregroundStyle(.white.opacity(0.7))
                 }
                 PostActivityDetailLine(display: display, bundle: bundle)
@@ -115,7 +124,7 @@ struct PostActivityCompactTrailingView: View {
     var body: some View {
         if let count = display.compactCount {
             PostActivityCountLabel(count: count)
-                .font(.caption2.weight(.semibold))
+                .font(PostActivityFonts.compactCount)
                 .foregroundStyle(PostActivityColors.green)
                 .opacity(display.showsUpdatedAt ? 0.5 : 1)
                 .frame(maxWidth: 52)
@@ -166,7 +175,7 @@ struct PostActivityExpandedBottomView: View {
             PostActivityDetailLine(display: display, bundle: bundle)
             if display.showsUpdatedAt {
                 Text("divine_post_activity_updated \(Text(updatedAt, style: .relative))", bundle: bundle)
-                    .font(.caption)
+                    .font(PostActivityFonts.caption)
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -238,10 +247,10 @@ struct PostActivityDetailLine: View {
                     PostActivityCountLabel(count: count)
                 }
             }
-            .font(.subheadline.weight(.semibold))
+            .font(PostActivityFonts.detail)
         } else if display.showsFirstRunNote {
             Text(LocalizedStringKey(PostActivityStrings.firstRunNote), bundle: bundle)
-                .font(.caption)
+                .font(PostActivityFonts.caption)
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)

@@ -29,7 +29,7 @@ struct PostLiveActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.center) {
                     PostActivityHeadlineText(headline: display.headline, postedAt: postedAt, bundle: .main)
-                        .font(.headline)
+                        .font(PostActivityFonts.headline)
                         .foregroundStyle(.white)
                         // The bottom region reads the whole activity, headline included.
                         .accessibilityHidden(true)
