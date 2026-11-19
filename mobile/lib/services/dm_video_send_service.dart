@@ -191,6 +191,10 @@ class DmVideoSendService {
   /// The same [uploaded] can be published again after a failed publication,
   /// without encrypting or uploading the video again.
   ///
+  /// When no relay is connected it first waits, for as long as
+  /// [DmRepository.waitForConnectedRelay] allows, for one to reconnect, and
+  /// publishes either way. [cancellation] can end that wait.
+  ///
   /// [onPhase], when supplied, is invoked with [DmVideoSendPhase.sending]
   /// once publication starts. From then on [cancellation] can no longer
   /// interrupt the attempt: publication owns its delivery result.
@@ -199,7 +203,8 @@ class DmVideoSendService {
   /// marker that identifies a Divine camera clip.
   ///
   /// Throws [DmVideoSendCancelled] if [cancellation] ended the attempt before
-  /// publication started; nothing is published then.
+  /// publication started, including during the relay wait; nothing is
+  /// published then.
   @useResult
   Future<NIP17SendResult> publishVideo({
     required String recipientPubkey,
@@ -208,6 +213,9 @@ class DmVideoSendService {
     void Function(DmVideoSendPhase phase)? onPhase,
     DmVideoSendCancellation? cancellation,
   }) async {
+    cancellation?.throwIfCancelled();
+    final relayWait = _dmRepository.waitForConnectedRelay();
+    await (cancellation?.waitFor(relayWait) ?? relayWait);
     cancellation?.beginPublication();
     onPhase?.call(DmVideoSendPhase.sending);
     return _dmRepository.sendFileMessage(

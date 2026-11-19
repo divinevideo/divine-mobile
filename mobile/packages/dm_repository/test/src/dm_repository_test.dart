@@ -17384,6 +17384,134 @@ void main() {
       });
     });
 
+    group('waitForConnectedRelay', () {
+      late StreamController<Map<String, RelayConnectionStatus>> statuses;
+      late int connectedRelays;
+
+      Map<String, RelayConnectionStatus> relayIs(RelayState state) => {
+        'wss://relay.divine.video': RelayConnectionStatus(
+          url: 'wss://relay.divine.video',
+          state: state,
+        ),
+      };
+
+      setUp(() {
+        statuses = StreamController.broadcast();
+        connectedRelays = 0;
+        when(
+          () => mockNostrClient.connectedRelayCount,
+        ).thenAnswer((_) => connectedRelays);
+        when(
+          () => mockNostrClient.relayStatusStream,
+        ).thenAnswer((_) => statuses.stream);
+      });
+
+      tearDown(() async {
+        if (!statuses.isClosed) await statuses.close();
+      });
+
+      test('returns true at once when a relay is connected', () async {
+        connectedRelays = 1;
+
+        expect(await createRepository().waitForConnectedRelay(), isTrue);
+        verifyNever(() => mockNostrClient.relayStatusStream);
+      });
+
+      test('waits for a relay to connect, then returns true', () {
+        fakeAsync((async) {
+          bool? connected;
+          unawaited(
+            createRepository().waitForConnectedRelay().then(
+              (value) => connected = value,
+            ),
+          );
+          async.elapse(const Duration(seconds: 2));
+          expect(connected, isNull);
+
+          connectedRelays = 1;
+          statuses.add(relayIs(RelayState.connected));
+          async.flushMicrotasks();
+
+          expect(connected, isTrue);
+          expect(statuses.hasListener, isFalse);
+        });
+      });
+
+      test('ignores status updates while no relay is counted connected', () {
+        fakeAsync((async) {
+          bool? connected;
+          unawaited(
+            createRepository().waitForConnectedRelay().then(
+              (value) => connected = value,
+            ),
+          );
+          async.flushMicrotasks();
+          // The relay manager does not count this relay as connected yet.
+          statuses.add(relayIs(RelayState.connected));
+          async.flushMicrotasks();
+
+          expect(connected, isNull);
+          async.elapse(dmFileSendRelayWait);
+          expect(connected, isFalse);
+        });
+      });
+
+      test(
+        'returns false when no relay connects within $dmFileSendRelayWait',
+        () {
+          fakeAsync((async) {
+            bool? connected;
+            unawaited(
+              createRepository().waitForConnectedRelay().then(
+                (value) => connected = value,
+              ),
+            );
+            async.elapse(dmFileSendRelayWait - const Duration(milliseconds: 1));
+            expect(connected, isNull);
+
+            async.elapse(const Duration(milliseconds: 1));
+
+            expect(connected, isFalse);
+            expect(statuses.hasListener, isFalse);
+          });
+        },
+      );
+
+      test('honours a shorter timeout', () {
+        fakeAsync((async) {
+          bool? connected;
+          unawaited(
+            createRepository()
+                .waitForConnectedRelay(timeout: const Duration(seconds: 1))
+                .then((value) => connected = value),
+          );
+          async.elapse(const Duration(milliseconds: 999));
+          expect(connected, isNull);
+
+          async.elapse(const Duration(milliseconds: 1));
+
+          expect(connected, isFalse);
+        });
+      });
+
+      test('returns false at once when the status stream closes', () {
+        fakeAsync((async) {
+          bool? connected;
+          unawaited(
+            createRepository().waitForConnectedRelay().then(
+              (value) => connected = value,
+            ),
+          );
+          async.flushMicrotasks();
+
+          unawaited(statuses.close());
+          async.flushMicrotasks();
+
+          expect(connected, isFalse);
+        });
+      });
+    });
+
     group('sendFileMessage', () {
       const fileHash =
           'cccccccccccccccccccccccccccccccc'
@@ -17454,155 +17582,33 @@ void main() {
         );
       });
 
-      group('with no relay connected', () {
-        late StreamController<Map<String, RelayConnectionStatus>> statuses;
-        late int connectedRelays;
-
-        Future<NIP17SendResult> anyPrivateMessage() =>
-            mockMessageService.sendPrivateMessage(
-              recipientPubkey: any(named: 'recipientPubkey'),
-              content: any(named: 'content'),
-              eventKind: any(named: 'eventKind'),
-              additionalTags: any(named: 'additionalTags'),
-              targetRelays: any(named: 'targetRelays'),
-              selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
-              awaitRecipientOk: any(named: 'awaitRecipientOk'),
-              selfWrapOnSoftUnconfirmed: any(
-                named: 'selfWrapOnSoftUnconfirmed',
-              ),
-            );
-
-        setUp(() {
-          statuses = StreamController.broadcast();
-          connectedRelays = 0;
-          when(
-            () => mockNostrClient.connectedRelayCount,
-          ).thenAnswer((_) => connectedRelays);
-          when(
-            () => mockNostrClient.relayStatusStream,
-          ).thenAnswer((_) => statuses.stream);
-          // A failed publish writes nothing, so no DAO stubs are needed.
-          when(anyPrivateMessage).thenAnswer(
-            (_) async => const NIP17SendResult.failure('relay rejected'),
-          );
-        });
-
-        tearDown(() async {
-          if (!statuses.isClosed) await statuses.close();
-        });
-
-        test('waits for a relay to connect, then publishes', () {
-          fakeAsync((async) {
-            NIP17SendResult? result;
-            unawaited(
-              createRepository()
-                  .sendFileMessage(
-                    recipientPubkey: _validPubkeyB,
-                    fileUrl: 'https://blossom.example.com/file.enc',
-                    fileMetadata: testFileMetadata,
-                  )
-                  .then((value) => result = value),
-            );
-            async.elapse(const Duration(seconds: 2));
-            verifyNever(anyPrivateMessage);
-            expect(result, isNull);
-
-            connectedRelays = 1;
-            statuses.add({
-              'wss://relay.divine.video': RelayConnectionStatus.connected(
-                'wss://relay.divine.video',
-              ),
-            });
-            async.flushMicrotasks();
-
-            verify(anyPrivateMessage).called(1);
-            expect(result?.error, equals('relay rejected'));
-            expect(statuses.hasListener, isFalse);
-          });
-        });
-
-        test('ignores status updates that connect no relay', () {
-          fakeAsync((async) {
-            unawaited(
-              createRepository().sendFileMessage(
-                recipientPubkey: _validPubkeyB,
-                fileUrl: 'https://blossom.example.com/file.enc',
-                fileMetadata: testFileMetadata,
-              ),
-            );
-            async.flushMicrotasks();
-            statuses.add({
-              'wss://relay.divine.video': RelayConnectionStatus.connecting(
-                'wss://relay.divine.video',
-              ),
-            });
-            async.flushMicrotasks();
-
-            verifyNever(anyPrivateMessage);
-            async.elapse(dmFileSendRelayWait);
-          });
-        });
-
-        test(
-          'goes on when no relay connects within $dmFileSendRelayWait',
-          () {
-            fakeAsync((async) {
-              NIP17SendResult? result;
-              unawaited(
-                createRepository()
-                    .sendFileMessage(
-                      recipientPubkey: _validPubkeyB,
-                      fileUrl: 'https://blossom.example.com/file.enc',
-                      fileMetadata: testFileMetadata,
-                    )
-                    .then((value) => result = value),
-              );
-              async.elapse(
-                dmFileSendRelayWait - const Duration(milliseconds: 1),
-              );
-              verifyNever(anyPrivateMessage);
-              expect(result, isNull);
-
-              async.elapse(const Duration(milliseconds: 1));
-
-              verify(anyPrivateMessage).called(1);
-              expect(result?.error, equals('relay rejected'));
-              expect(statuses.hasListener, isFalse);
-            });
-          },
+      test('does not wait for a relay before publishing', () async {
+        when(() => mockNostrClient.connectedRelayCount).thenReturn(0);
+        when(
+          () => mockMessageService.sendPrivateMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            eventKind: any(named: 'eventKind'),
+            additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult.failure('relay rejected'),
         );
 
-        test('goes on at once when the relay status stream closes', () {
-          fakeAsync((async) {
-            unawaited(
-              createRepository().sendFileMessage(
-                recipientPubkey: _validPubkeyB,
-                fileUrl: 'https://blossom.example.com/file.enc',
-                fileMetadata: testFileMetadata,
-              ),
-            );
-            async.flushMicrotasks();
-            verifyNever(anyPrivateMessage);
+        final result = await createRepository().sendFileMessage(
+          recipientPubkey: _validPubkeyB,
+          fileUrl: 'https://blossom.example.com/file.enc',
+          fileMetadata: testFileMetadata,
+        );
 
-            unawaited(statuses.close());
-            async.flushMicrotasks();
-
-            verify(anyPrivateMessage).called(1);
-          });
-        });
-
-        test('does not wait when a relay is already connected', () async {
-          connectedRelays = 1;
-
-          final result = await createRepository().sendFileMessage(
-            recipientPubkey: _validPubkeyB,
-            fileUrl: 'https://blossom.example.com/file.enc',
-            fileMetadata: testFileMetadata,
-          );
-
-          expect(result.error, equals('relay rejected'));
-          verifyNever(() => mockNostrClient.relayStatusStream);
-        });
+        expect(result.error, equals('relay rejected'));
+        verifyNever(() => mockNostrClient.relayStatusStream);
       });
 
       test('refuses a self-addressed recipient in upper-case hex', () async {

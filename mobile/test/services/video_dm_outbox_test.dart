@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,6 +23,12 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+class _MockDmVideoEncryption extends Mock implements DmVideoEncryption {}
 
 class _MockFile extends Mock implements File {}
 
@@ -132,6 +140,7 @@ void main() {
   var idCounter = 0;
 
   VideoDmOutbox createOutbox({
+    DmVideoSendService Function()? sendService,
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
     ArchivedVineCheck? isArchivedVine,
@@ -140,7 +149,7 @@ void main() {
     Future<void> Function(DmVideoSendCancellation)? waitUntilReady,
   }) {
     final created = VideoDmOutbox(
-      sendService: () => service,
+      sendService: sendService ?? () => service,
       readFrame: (file) => readFrame(file),
       newId: () => 'entry-${idCounter++}',
       now: () => DateTime.utc(2026, 11, 13),
@@ -272,6 +281,7 @@ void main() {
       registerFallbackValue((double _) {});
       registerFallbackValue(DmVideoSendCancellation()..finish());
       registerFallbackValue(_uploadOf('/tmp/fallback.mp4'));
+      registerFallbackValue(_uploadOf('/tmp/fallback.mp4').fileMetadata);
     });
 
     setUp(() {
@@ -2231,6 +2241,124 @@ void main() {
 
           expect(outbox.keptUploadCount, isZero);
         });
+      });
+    });
+
+    group('waiting for a relay before publishing', () {
+      late _MockDmRepository repository;
+      late Completer<bool> relay;
+      late DmVideoSendService realService;
+
+      Future<NIP17SendResult> anyFileMessage() => repository.sendFileMessage(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        fileUrl: any(named: 'fileUrl'),
+        fileMetadata: any(named: 'fileMetadata'),
+        extraTags: any(named: 'extraTags'),
+      );
+
+      setUp(() {
+        repository = _MockDmRepository();
+        relay = Completer<bool>();
+        when(repository.waitForConnectedRelay).thenAnswer((_) => relay.future);
+        when(anyFileMessage).thenAnswer((_) async => _success('rumor-1'));
+        final ciphertext = _MockFile();
+        when(ciphertext.delete).thenAnswer((_) async => ciphertext);
+        final encryption = _MockDmVideoEncryption();
+        when(() => encryption.encryptFile(any())).thenAnswer(
+          (_) async => EncryptedVideoFile(
+            ciphertextFile: ciphertext,
+            key: 'c' * 64,
+            nonce: 'd' * 24,
+            ciphertextHash: 'a' * 64,
+            plaintextHash: 'b' * 64,
+            ciphertextSize: 4,
+          ),
+        );
+        final blossom = _MockBlossomUploadService();
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: any(named: 'ciphertextFile'),
+            onProgress: any(named: 'onProgress'),
+            cancelToken: any(named: 'cancelToken'),
+            onUploadAttempt: any(named: 'onUploadAttempt'),
+          ),
+        ).thenAnswer(
+          (_) async => BlossomUploadResult(
+            success: true,
+            videoId: 'a' * 64,
+            url: 'https://media.example/${'a' * 64}',
+          ),
+        );
+        realService = DmVideoSendService(
+          dmRepository: repository,
+          blossom: blossom,
+          encryption: encryption,
+          readPreview: (_) async => (blurhash: null, dimensions: null),
+        );
+      });
+
+      test(
+        'cancelPendingSends during the wait fails the send at once and '
+        'keeps its upload',
+        () async {
+          outbox = createOutbox(sendService: () => realService);
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          verify(repository.waitForConnectedRelay).called(1);
+          expect(events.last.single.phase, isNot(OutgoingVideoDmPhase.failed));
+
+          outbox.cancelPendingSends();
+          await pumpEventQueue();
+
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.failed));
+          expect(events.last.single.canRetry, isTrue);
+          expect(outbox.keptUploadCount, equals(1));
+          relay.complete(true);
+          await pumpEventQueue();
+          verifyNever(anyFileMessage);
+        },
+      );
+
+      test('dispose during the wait ends the attempt at once', () async {
+        outbox = createOutbox(sendService: () => realService);
+        sendVideo();
+        await pumpEventQueue();
+        verify(repository.waitForConnectedRelay).called(1);
+
+        outbox.dispose();
+        await pumpEventQueue();
+        relay.complete(true);
+        await pumpEventQueue();
+
+        verifyNever(anyFileMessage);
+      });
+
+      test('quiesce completes without waiting out the relay wait', () async {
+        outbox = createOutbox(sendService: () => realService);
+        sendVideo();
+        await pumpEventQueue();
+        verify(repository.waitForConnectedRelay).called(1);
+        var quiesced = false;
+
+        unawaited(outbox.quiesce().then((_) => quiesced = true));
+        await pumpEventQueue();
+
+        expect(relay.isCompleted, isFalse);
+        expect(quiesced, isTrue);
+        verifyNever(anyFileMessage);
+      });
+
+      test('publishes as soon as the wait answers', () async {
+        relay.complete(true);
+        outbox = createOutbox(sendService: () => realService);
+        final events = recordConversation('c1');
+
+        sendVideo();
+        await pumpEventQueue();
+
+        verify(anyFileMessage).called(1);
+        expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
       });
     });
 
