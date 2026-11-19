@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -554,6 +555,18 @@ void main() {
           expect(find.text(limitStanding), findsNothing);
           expect(fieldText(tester), equals('news'));
           expect(chip('news'), findsNothing);
+        });
+
+        testWidgets('shows the warning in the warning colour', (tester) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          final warning = find.text(limitWarning);
+          expect(
+            tester.widget<Text>(warning).style?.color,
+            equals(tester.element(warning).vineColors.accentWarning),
+          );
         });
 
         testWidgets('announces the first rejection through a live region', (
