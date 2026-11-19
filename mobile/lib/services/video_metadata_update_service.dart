@@ -301,12 +301,43 @@ class VideoMetadataUpdateService {
         );
       }
 
-      final latest = await newestVideoRevision(
+      var latest = await newestVideoRevision(
         _videosRepository,
         originalVideo,
         logName: 'VideoMetadataUpdateService',
       );
       if (latest == null) return const VideoUpdateOriginalUnavailable();
+
+      String? uploadedThumbnailUrl;
+      if (newThumbnailFile != null) {
+        final beforeUpload = latest.id == originalVideo.id
+            ? originalVideo
+            : VideoEvent.fromNostrEvent(latest, permissive: true);
+        _imetaTagsForEdit(latest.tags, fallback: beforeUpload);
+        final uploadResult = await _blossomService.uploadImage(
+          imageFile: newThumbnailFile,
+          nostrPubkey: _authService.currentPublicKeyHex ?? '',
+        );
+        if (uploadResult.success && uploadResult.cdnUrl != null) {
+          uploadedThumbnailUrl = uploadResult.cdnUrl;
+        } else {
+          Log.error(
+            'Thumbnail upload failed during video update; keeping original',
+            name: 'VideoMetadataUpdateService',
+            category: LogCategory.video,
+          );
+        }
+
+        // A subtitle or sound may have been published while Blossom was
+        // uploading. Use the last revision we saw as the floor for this read.
+        latest = await newestVideoRevision(
+          _videosRepository,
+          beforeUpload.copyWith(eventCreatedAt: latest.createdAt),
+          logName: 'VideoMetadataUpdateService',
+        );
+        if (latest == null) return const VideoUpdateOriginalUnavailable();
+      }
+
       final baseline = editorBaseline ?? originalVideo;
       final isOpenedRevision = latest.id == baseline.id;
       final video = latest.id == originalVideo.id
@@ -356,22 +387,6 @@ class VideoMetadataUpdateService {
       tags.add(['d', latest.dTagValue]);
 
       final imetaTags = _imetaTagsForEdit(originalTags, fallback: video);
-      String? uploadedThumbnailUrl;
-      if (newThumbnailFile != null) {
-        final uploadResult = await _blossomService.uploadImage(
-          imageFile: newThumbnailFile,
-          nostrPubkey: _authService.currentPublicKeyHex ?? '',
-        );
-        if (uploadResult.success && uploadResult.cdnUrl != null) {
-          uploadedThumbnailUrl = uploadResult.cdnUrl;
-        } else {
-          Log.error(
-            'Thumbnail upload failed during video update; keeping original',
-            name: 'VideoMetadataUpdateService',
-            category: LogCategory.video,
-          );
-        }
-      }
       final thumbnailUrl = uploadedThumbnailUrl;
       tags.addAll(
         thumbnailUrl == null

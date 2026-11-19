@@ -995,6 +995,40 @@ void main() {
         ]);
       });
 
+      test(
+        'keeps a subtitle revision published during a cover upload',
+        () async {
+          final opened = _testVideo();
+          relaysHold(relayRevisionOf(opened));
+          when(
+            () => mockBlossomUploadService.uploadImage(
+              imageFile: any(named: 'imageFile'),
+              nostrPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async {
+            relaysHold(newerRevision(extraTags: const [subtitleTrack]));
+            return const BlossomUploadResult(
+              success: true,
+              url: 'https://cdn.example.com/new-thumbnail.jpg',
+            );
+          });
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened),
+            initialCollaboratorPubkeys: const {},
+            newThumbnailFile: File('new-thumbnail.jpg'),
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(subtitleTrack)));
+          expect(
+            capturedTags.singleWhere((tag) => tag.first == 'imeta'),
+            contains('image https://cdn.example.com/new-thumbnail.jpg'),
+          );
+        },
+      );
+
       test('keeps the subtitles and sound another device added', () async {
         relaysHold(
           newerRevision(
