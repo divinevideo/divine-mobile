@@ -201,7 +201,6 @@ void main() {
             'corrupted', () async {
           final olderCorrupted = _createVideoEvent(
             id: 'older',
-            createdAt: 1000000,
             tags: [
               ['d', 'video_123'],
               corruptImeta(),
@@ -236,7 +235,6 @@ void main() {
         test('repairs only the newest revision', () async {
           final olderCorrupted = _createVideoEvent(
             id: 'older',
-            createdAt: 1000000,
             tags: [
               ['d', 'video_123'],
               corruptImeta(),
