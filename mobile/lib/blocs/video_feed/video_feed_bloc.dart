@@ -75,6 +75,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Future<Iterable<String>> Function()? badgeAuthors,
     Stream<void>? badgeSubscriptionChanges,
     Stream<String>? removedIdsStream,
+    Stream<VideoEvent>? replacedVideosStream,
     // Rebind only deletion notifications/policy when a same-account service
     // rebuild replaces the repository. Do not reset feed or playback state.
     Stream<VideosRepository>? removalRepositoryStream,
@@ -146,11 +147,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
     on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
+    on<VideoFeedVideoReplaced>(_onVideoReplaced, transformer: sequential());
     _watchRemovedVideoIds(
       removedIdsStream ??
           (removalRepositoryStream == null
               ? null
               : videosRepository.removedVideoIds),
+    );
+    _watchReplacedVideos(
+      replacedVideosStream ??
+          (removalRepositoryStream == null
+              ? null
+              : videosRepository.replacedVideos),
     );
     _removalRepositorySubscription = removalRepositoryStream?.listen(
       (repository) {
@@ -164,6 +172,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           keep: (video) => !repository.isVideoKnownDeleted(video),
         );
         _watchRemovedVideoIds(repository.removedVideoIds);
+        _watchReplacedVideos(repository.replacedVideos);
         // Tombstones hydrate before the service is published, and broadcasts
         // do not replay. Reconcile its snapshot as well as future removals.
         for (final video in state.videos) {
@@ -245,6 +254,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
   StreamSubscription<String>? _removedIdsSubscription;
+  StreamSubscription<VideoEvent>? _replacedVideosSubscription;
 
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
@@ -848,6 +858,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
+  /// Follows [replacements], so a video republished from this device shows
+  /// its new revision in place of the one the feed holds (#11250).
+  void _watchReplacedVideos(Stream<VideoEvent>? replacements) {
+    final previous = _replacedVideosSubscription;
+    _replacedVideosSubscription = replacements?.listen((video) {
+      if (_isClosing || isClosed) return;
+      add(VideoFeedVideoReplaced(video));
+    });
+    if (previous != null) {
+      runDetached(
+        previous.cancel(),
+        'cancel the retired Home replacement subscription',
+        logName: 'VideoFeedBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   @override
   Future<void> close() async {
     _isClosing = true;
@@ -859,6 +887,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final cleanup = <Future<void>?>[
       _removalRepositorySubscription?.cancel(),
       _removedIdsSubscription?.cancel(),
+      _replacedVideosSubscription?.cancel(),
       ..._pendingRemovalCancellations,
       _classicSessionSubscription?.cancel(),
       _classicSession?.dispose(),
@@ -871,6 +900,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     ];
     _removalRepositorySubscription = null;
     _removedIdsSubscription = null;
+    _replacedVideosSubscription = null;
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
@@ -2393,6 +2423,45 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       );
     }
   }
+
+  void _onVideoReplaced(
+    VideoFeedVideoReplaced event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final republished = event.video;
+    final address = republished.feedDedupKey;
+    var changed = false;
+    final videos = state.videos.map((video) {
+      if (video.feedDedupKey != address ||
+          !_isNewerRevision(republished, than: video)) {
+        return video;
+      }
+      changed = true;
+      return mergeRepublishedVideo(video, republished);
+    }).toList();
+    if (!changed) return;
+
+    emit(state.copyWith(videos: videos));
+
+    if (_usesHomeFeedCache(state.source)) {
+      _resumeManager.persistNow(
+        pubkey: _userPubkey,
+        mode: state.source.mode.name,
+        videos: videos,
+        activeIndex: state.currentIndex,
+      );
+    }
+  }
+
+  /// Whether [candidate] replaces [than] at their shared address: a later
+  /// `created_at`, or the lower event id on a tie, as NIP-01 keeps.
+  static bool _isNewerRevision(
+    VideoEvent candidate, {
+    required VideoEvent than,
+  }) =>
+      candidate.nostrCreatedAt > than.nostrCreatedAt ||
+      (candidate.nostrCreatedAt == than.nostrCreatedAt &&
+          candidate.id.compareTo(than.id) < 0);
 
   /// Batch-fetch creator profiles for the given videos.
   ///

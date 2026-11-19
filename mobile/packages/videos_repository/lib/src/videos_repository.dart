@@ -226,6 +226,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -260,6 +261,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
