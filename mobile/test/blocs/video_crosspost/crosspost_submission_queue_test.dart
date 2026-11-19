@@ -89,6 +89,54 @@ void main() {
         },
       );
 
+      test('ignores jobs from other submissions of the same video', () {
+        fakeAsync((clock) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenAnswer((_) async => [queuedJob]);
+          when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
+            (_) async => const [
+              CrosspostJob(
+                id: 'old-failure',
+                platform: 'tiktok',
+                status: CrosspostJobStatus.failed,
+              ),
+              CrosspostJob(
+                id: 'other-pending',
+                platform: 'youtube',
+                status: CrosspostJobStatus.queued,
+              ),
+              CrosspostJob(
+                id: 'job-1',
+                platform: 'instagram',
+                status: CrosspostJobStatus.posted,
+              ),
+            ],
+          );
+          final updates = <VideoCrosspostState>[];
+          unawaited(
+            queue.submit(
+              eventId: eventId,
+              connections: [connection],
+              onUpdate: updates.add,
+            ),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(const Duration(seconds: 3));
+          clock.flushMicrotasks();
+          expect(
+            updates.expand((state) => state.jobs).map((job) => job.id),
+            everyElement('job-1'),
+          );
+          expect(updates.last.jobs.single.status, CrosspostJobStatus.posted);
+          expect(updates.last.status, VideoCrosspostStatus.finished);
+          expect(clock.pendingTimers, isEmpty);
+        });
+      });
+
       test('returns mapped failure for the background notification', () async {
         when(
           () => client.createCrossposts(

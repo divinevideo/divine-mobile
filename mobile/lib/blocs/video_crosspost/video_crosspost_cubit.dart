@@ -161,18 +161,13 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
       if (_pollInFlight) return;
       _pollInFlight = true;
       try {
-        final jobs = await _repository.getCrossposts(eventId: _eventId);
+        final videoJobs = await _repository.getCrossposts(eventId: _eventId);
         if (isClosed || _pollTimer == null) return;
-        final pending = jobs.any((j) => j.status.isPending);
-        emit(
-          state.copyWith(
-            status: pending
-                ? VideoCrosspostStatus.polling
-                : VideoCrosspostStatus.finished,
-            jobs: jobs,
-          ),
-        );
-        if (!pending) _stopPolling();
+        // The GET lists jobs for the entire video, not just this submission.
+        final byId = {for (final job in videoJobs) job.id: job};
+        _onJobsUpdated([
+          for (final job in state.jobs) byId[job.id] ?? job,
+        ]);
       } on CrosspostingApiException catch (e, stackTrace) {
         // Transient poll failure — keep the timer running and retry on
         // the next tick.
