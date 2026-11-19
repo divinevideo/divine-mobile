@@ -34,7 +34,7 @@ struct RemoteShutterView: View {
           GeometryReader { region in
             RecordButton(
               isRecording: shown.isShutterActive,
-              isEnabled: recorder != nil && isPhoneReachable,
+              isEnabled: recorder?.isShutterEnabled == true && isPhoneReachable,
               diameter: min(region.size.width, region.size.height) * Self.buttonFraction,
               action: onToggleRecording
             )

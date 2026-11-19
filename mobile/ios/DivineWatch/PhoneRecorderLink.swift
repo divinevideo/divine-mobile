@@ -17,6 +17,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     static let budgetMs = "budgetMs"
     static let modeName = "modeName"
     static let shutterActive = "shutterActive"
+    static let shutterEnabled = "shutterEnabled"
     static let stillShutterCount = "stillShutterCount"
     static let command = "command"
     static let startRecording = "watchStart"
@@ -46,7 +47,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   /// Asks the iPhone to start or stop a take. What the recorder then does
   /// comes back as a new `recorder`.
   func toggleRecording() {
-    guard let recorder, !isShutterPending else { return }
+    guard let recorder, recorder.isShutterEnabled, !isShutterPending else { return }
     guard session.isReachable else {
       updateReachability()
       deliveryFailures.send()
@@ -104,6 +105,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
       snapshot.modeName = modeName
     }
     snapshot.isShutterActive = payload[Wire.shutterActive] as? Bool ?? snapshot.isRecording
+    snapshot.isShutterEnabled = payload[Wire.shutterEnabled] as? Bool ?? true
     if let stillShutterCount = payload[Wire.stillShutterCount] as? Int {
       snapshot.stillShutterCount = stillShutterCount
     }

@@ -4664,7 +4664,6 @@ void main() {
           ).called(1);
         });
 
-<<<<<<< HEAD
         test('is ignored while a sheet covers the preview', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
@@ -4672,7 +4671,7 @@ void main() {
           await pumpEventQueue();
           // The press lands before the pause has turned remote control off.
           bloc.add(const VideoRecorderRemoteRecordPaused());
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           verifyNever(
@@ -4696,7 +4695,7 @@ void main() {
             ..add(const VideoRecorderRemoteRecordPaused())
             ..add(const VideoRecorderRemoteRecordResumed());
           await pumpEventQueue();
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           expect(bloc.state.isRemoteRecordPaused, isTrue);
@@ -4712,7 +4711,7 @@ void main() {
           bloc.add(const VideoRecorderRemoteRecordResumed());
           await pumpEventQueue();
           expect(bloc.state.isRemoteRecordPaused, isFalse);
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
           verify(
             () => cameraService.setRemoteRecordControlEnabled(enabled: true),
@@ -4724,8 +4723,6 @@ void main() {
           ).called(1);
         });
 
-||||||| parent of 50bd4a4 (fix(watch): apply explicit shutter actions and recover preview)
-=======
         test('stale Watch Stop never starts a take', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
@@ -4796,7 +4793,6 @@ void main() {
           },
         );
 
->>>>>>> 50bd4a4 (fix(watch): apply explicit shutter actions and recover preview)
         test('is ignored while a sheet pauses remote recording', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
