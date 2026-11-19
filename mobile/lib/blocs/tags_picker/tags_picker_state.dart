@@ -15,7 +15,8 @@ enum TagsPickerStatus {
   success,
 }
 
-/// A one-off explanation for why the last commit did not add a tag.
+/// Why a recent commit did not add a tag. A limit notice stays until a tag
+/// is removed.
 enum TagsPickerNotice {
   /// Nothing to explain.
   none,
@@ -59,7 +60,7 @@ final class TagsPickerState extends Equatable {
   /// Lifecycle of the suggestion search.
   final TagsPickerStatus status;
 
-  /// Why the last commit did not add a tag, if it was rejected.
+  /// Why a recent commit did not add a tag, if one was rejected.
   final TagsPickerNotice notice;
 
   /// Whether the video already carries [HashtagExtractor.maxHashtagsPerVideo]

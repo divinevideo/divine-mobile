@@ -50,7 +50,7 @@ All paths below are relative to `mobile/` unless they start with `docs/`.
   - In the `TagsPickerTagRemoved` group: `'clears a limit notice'` mirroring the existing too-long one with `notice: TagsPickerNotice.tagLimitReached`.
   - In the `TagsPickerQueryChanged` group: `'keeps a limit notice when the cleared field sends an empty query'` and `'keeps a limit notice while typing at the limit'`, both seeded with ten tags and `notice: TagsPickerNotice.tagLimitReached`, `wait` past the debounce as the neighbouring debounce tests do, and the notice stays `tagLimitReached`.
   - `'keeps a limit notice when a tag the video already has is committed'`: seed ten tags and the limit notice, add `['tag3']`, expect no emit.
-  - In the `sticker tags` group: `'flags a tag turned away when a sticker fills the last slot'`: bloc with 9 initial tags and one sticker tag (construct as that group does), add `['new']`, expect notice `tagLimitReached`; and `'does not flag a sticker hashtag at the limit'` adding the sticker's own tag, expect no emit.
+  - In the `sticker tags` group (8 initial tags and two sticker tags, as that group constructs them): `'flag a tag turned away when they fill the last slot'`, add `['new']`, expect notice `tagLimitReached`; and `'do not flag their own hashtag at the limit'` adding a sticker's own tag, expect no emit.
 
 - [ ] **Step 2: Run to verify they fail**
 
@@ -80,7 +80,7 @@ for (final raw in rawTokens) {
 }
 ```
 
-Notice: `tagLimitReached` if `droppedForLimit`, else `tagTooLong` if `droppedForLength`, else `none`. Keep `_onTagsAdded`'s `if (next != state) emit(next)`. Update the method doc to mention the new notice.
+Notice: `tagLimitReached` if `droppedForLimit`, or if a limit notice is already showing while the video is still at the limit; else `tagTooLong` if `droppedForLength`; else `none`. Keep `_onTagsAdded`'s `if (next != state) emit(next)`. Update the method doc to mention the new notice.
 
 - [ ] **Step 4: Run to verify they pass**
 
@@ -127,7 +127,7 @@ Expected: the new tests FAIL (warning not found / controller cleared).
 
 - [ ] **Step 4: Implement**
   - `_TagInputHint`: helper selection becomes notice `tagLimitReached` → `l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(max)` in `accentWarning`; else `isAtTagLimit` → existing standing string, muted; else the existing too-long/counter logic unchanged. Keep the `Semantics(liveRegion: true)` wrapper. Update its doc comment.
-  - `_addTag(String raw)`: read `final bloc = context.read<TagsPickerBloc>()`. If `bloc.state.turnsAwayAtLimit(raw)`: call `_announceRepeatLimitRejection(bloc.state, [raw])`, dispatch `TagsPickerTagsAdded([raw])` and return without clearing the field or dispatching `TagsPickerSearchCleared`. Else if `bloc.state.isAtTagLimit` (an empty return or a tag the video already has): clear the field and dispatch nothing, which leaves any notice in place. Otherwise behave as today. One-line comment on why the text stays (the creator can add it once a tag is removed).
+  - `_addTag(String raw)`: read `final bloc = context.read<TagsPickerBloc>()`. If `bloc.state.turnsAwayAtLimit(raw)`: call `_announceRepeatLimitRejection(bloc.state, [raw])`, dispatch `TagsPickerTagsAdded([raw])` and return without clearing the field or dispatching `TagsPickerSearchCleared`. Otherwise behave as today: an empty return or a tag the video already has clears the field, and the bloc leaves a limit notice in place. One-line comment on why the text stays (the creator can add it once a tag is removed).
   - `_announceRepeatLimitRejection(state, tokens)`: when `state.notice` is already `tagLimitReached` and any token `turnsAwayAtLimit`, call `announceDetached` (import `package:openvine/utils/semantics_announcement.dart`) as `announceDetached(context, context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(HashtagExtractor.maxHashtagsPerVideo), description: 'announce repeated tag limit rejection', logName: 'VideoMetadataTagsSelector')`.
   - `_onSearchChanged` calls the same `_announceRepeatLimitRejection` before dispatching, so a repeat rejection ended with a space, or pasted in a list, is announced too.
 

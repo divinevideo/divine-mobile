@@ -150,8 +150,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
     // Text holding a private key is never searched for; it resets like an
     // empty field.
     if (query.isEmpty || NostrKeyUtils.containsPrivateKey(query)) {
-      // Every commit clears the field, which lands here one debounce later,
-      // so the notice is kept until the user types a new tag.
+      // A commit that clears the field lands here one debounce later, so the
+      // notice is kept.
       emit(
         state.copyWith(
           status: TagsPickerStatus.initial,

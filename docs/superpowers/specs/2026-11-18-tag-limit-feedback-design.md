@@ -46,8 +46,9 @@ in review.
   the video was dropped because the video is at the limit.
 - `_withAddedTags` sets it whenever such a token is dropped, for a single
   typed tag and for the overflow of a pasted list. A token that duplicates an
-  existing or sticker tag is not a rejection: it adds no notice, and a limit
-  notice already showing stays while the video is at the limit. If one paste
+  existing or sticker tag is not a rejection: it adds no notice. A limit
+  notice already showing stays for any commit, a too-long token included,
+  while the video is at the limit. If one paste
   hits both "too long" and the limit, the limit notice wins, since no new tag
   fits until one is removed. (Claude's call.)
 - Removing a tag resets `notice`, and the empty-query debounce keeps it
@@ -96,7 +97,8 @@ of #11226; the PR says so. (Claude's call.)
 ## Tests
 
 - Bloc: limit notice for a typed tag at 10; for paste overflow; none for a
-  duplicate at 10, and a duplicate keeps a limit notice already showing;
+  duplicate at 10, and a duplicate or a too-long token keeps a limit notice
+  already showing;
   cleared by removing a tag; survives the empty-query debounce and typing at
   the limit; limit wins over "too long" in one paste; `turnsAwayAtLimit` for
   new, existing, sticker and invalid tags.
