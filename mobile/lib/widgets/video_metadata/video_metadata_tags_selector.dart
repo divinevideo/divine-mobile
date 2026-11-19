@@ -169,7 +169,7 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
     }
 
     final bloc = context.read<TagsPickerBloc>();
-    _announceRepeatLimitRejection(bloc.state, parsed.completed);
+    _announceLimitRejection(bloc.state, parsed.completed);
     bloc.add(TagsPickerTagsAdded(parsed.completed));
     _previousText = parsed.remainder;
     _searchController.value = TextEditingValue(
@@ -186,7 +186,7 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
     final bloc = context.read<TagsPickerBloc>();
     if (bloc.state.turnsAwayAtLimit(raw)) {
       // Kept in the field so the creator can add it once they remove a tag.
-      _announceRepeatLimitRejection(bloc.state, [raw]);
+      _announceLimitRejection(bloc.state, [raw]);
       bloc.add(TagsPickerTagsAdded([raw]));
       return;
     }
@@ -197,22 +197,20 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
     _searchController.clear();
   }
 
-  /// Announces a limit rejection that repeats the one on screen.
+  /// Announces a limit rejection that leaves the hint's text unchanged.
   ///
-  /// The hint's live region announces the first; a repeat leaves its text
-  /// unchanged.
-  void _announceRepeatLimitRejection(
-    TagsPickerState state,
-    List<String> tokens,
-  ) {
-    if (state.notice != TagsPickerNotice.tagLimitReached) return;
+  /// The hint's live region announces a change of text. A repeat of the
+  /// rejection on screen changes nothing, and neither does any rejection
+  /// whose warning is the limit line already shown.
+  void _announceLimitRejection(TagsPickerState state, List<String> tokens) {
     if (!tokens.any(state.turnsAwayAtLimit)) return;
+    final tagsToRemove = state.tagsToRemoveForRoom;
+    final isRepeat = state.notice == TagsPickerNotice.tagLimitReached;
+    if (!isRepeat && tagsToRemove != null) return;
     announceDetached(
       context,
-      context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
-        HashtagExtractor.maxHashtagsPerVideo,
-      ),
-      description: 'announce repeated tag limit rejection',
+      _tagLimitWarning(context.l10n, tagsToRemove),
+      description: 'announce tag limit rejection',
       logName: 'VideoMetadataTagsSelector',
     );
   }
@@ -502,11 +500,21 @@ class HashtagInputFormatter extends TextInputFormatter {
   }
 }
 
+/// The warning for a tag turned away at the limit: how many of the video's
+/// tags to remove, or the limit alone when removing tags in this sheet cannot
+/// make room because sticker hashtags fill it.
+String _tagLimitWarning(AppLocalizations l10n, int? tagsToRemove) {
+  const max = HashtagExtractor.maxHashtagsPerVideo;
+  return tagsToRemove == null
+      ? l10n.videoMetadataTagsPickerTagLimitReached(max)
+      : l10n.videoMetadataTagsPickerTagLimitRemoveCount(max, tagsToRemove);
+}
+
 /// Explains the hashtag limits under the field: a character counter for the
 /// tag being typed once it gets long, and a helper line when a tag is too
 /// long or the video already has the maximum number of tags. When a tag was
-/// turned away for that limit, the line adds how to make room, in the warning
-/// colour.
+/// turned away for that limit, the line turns the warning colour and says
+/// how many tags to remove, when removing tags here can make room.
 class _TagInputHint extends StatelessWidget {
   const _TagInputHint({required this.controller});
 
@@ -516,8 +524,12 @@ class _TagInputHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (isAtTagLimit, notice) = context.select(
-      (TagsPickerBloc bloc) => (bloc.state.isAtTagLimit, bloc.state.notice),
+    final (isAtTagLimit, notice, tagsToRemove) = context.select(
+      (TagsPickerBloc bloc) => (
+        bloc.state.isAtTagLimit,
+        bloc.state.notice,
+        bloc.state.tagsToRemoveForRoom,
+      ),
     );
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
@@ -527,9 +539,7 @@ class _TagInputHint extends StatelessWidget {
         final l10n = context.l10n;
         final limitRejected = notice == TagsPickerNotice.tagLimitReached;
         final helper = limitRejected
-            ? l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
-                HashtagExtractor.maxHashtagsPerVideo,
-              )
+            ? _tagLimitWarning(l10n, tagsToRemove)
             : isAtTagLimit
             ? l10n.videoMetadataTagsPickerTagLimitReached(
                 HashtagExtractor.maxHashtagsPerVideo,

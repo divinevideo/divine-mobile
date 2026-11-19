@@ -12848,13 +12848,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max) {
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       max,
       locale: localeName,
-      other: '最多可以添加 $max 个话题标签。删除一个即可腾出位置。',
+      other: '最多可以添加 $max 个话题标签。',
     );
-    return '$_temp0';
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 个即可腾出位置。',
+    );
+    return '$_temp0$_temp1';
   }
 
   @override

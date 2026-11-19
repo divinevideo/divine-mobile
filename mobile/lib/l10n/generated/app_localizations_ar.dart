@@ -13654,18 +13654,28 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max) {
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       max,
       locale: localeName,
-      other: 'يمكنك إضافة ما يصل إلى $max وسم. حذف وسم يُفسح المجال لآخر.',
-      many: 'يمكنك إضافة ما يصل إلى $max وسمًا. حذف وسم يُفسح المجال لآخر.',
-      few: 'يمكنك إضافة ما يصل إلى $max وسوم. حذف وسم يُفسح المجال لآخر.',
-      two: 'يمكنك إضافة ما يصل إلى $max وسمين. حذف وسم يُفسح المجال لآخر.',
-      one: 'يمكنك إضافة ما يصل إلى $max وسم. حذف الوسم يُفسح المجال لآخر.',
-      zero: 'يمكنك إضافة ما يصل إلى $max وسم. حذف وسم يُفسح المجال لآخر.',
+      other: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      many: 'يمكنك إضافة ما يصل إلى $max وسمًا.',
+      few: 'يمكنك إضافة ما يصل إلى $max وسوم.',
+      two: 'يمكنك إضافة ما يصل إلى $max وسمين.',
+      one: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      zero: 'يمكنك إضافة ما يصل إلى $max وسم.',
     );
-    return '$_temp0';
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'حذف $count وسم يُفسح المجال لآخر.',
+      many: 'حذف $count وسمًا يُفسح المجال لآخر.',
+      few: 'حذف $count وسوم يُفسح المجال لآخر.',
+      two: 'حذف وسمين يُفسح المجال لآخر.',
+      one: 'حذف وسم واحد يُفسح المجال لآخر.',
+      zero: 'حذف $count وسم يُفسح المجال لآخر.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

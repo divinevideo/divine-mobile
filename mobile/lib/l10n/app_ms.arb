@@ -6435,7 +6435,7 @@
   "videoMetadataTagsPickerNoResults": "Tiada tag sepadan",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag boleh mencapai {max} aksara.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Anda boleh menambah sehingga {max} hashtag.}}",
-  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{Anda boleh menambah sehingga {max} hashtag. Buang satu untuk memberi ruang.}}",
+  "videoMetadataTagsPickerTagLimitRemoveCount": "{max, plural, other{Anda boleh menambah sehingga {max} hashtag.}} {count, plural, other{Buang {count} untuk memberi ruang.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count} daripada {max} aksara}}",
   "videoMetadataTagsPickerAddTag": "Tambah \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {

@@ -696,6 +696,44 @@ void main() {
         expect(state.turnsAwayAtLimit(tooLong), isFalse);
       });
     });
+
+    group('tagsToRemoveForRoom', () {
+      final stickers = {for (var i = 0; i < 10; i++) 'sticker$i'};
+
+      test('is 0 below the limit', () {
+        final state = TagsPickerState(selectedTags: ten.take(9).toSet());
+        expect(state.tagsToRemoveForRoom, equals(0));
+      });
+
+      test('is 1 at the limit', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.tagsToRemoveForRoom, equals(1));
+      });
+
+      test('counts the overflow when sticker hashtags push past the limit', () {
+        final state = TagsPickerState(
+          selectedTags: ten.toSet(),
+          stickerTags: stickers.take(2).toSet(),
+        );
+        expect(state.tagsToRemoveForRoom, equals(3));
+      });
+
+      test('is null when sticker hashtags alone fill the limit', () {
+        final state = TagsPickerState(stickerTags: stickers);
+        expect(state.tagsToRemoveForRoom, isNull);
+      });
+
+      test("does not count a tag that is also a sticker's hashtag", () {
+        // Removing 'sticker0' from the tags leaves the sticker's copy, so the
+        // video keeps carrying it.
+        final state = TagsPickerState(
+          selectedTags: const {'sticker0'},
+          stickerTags: stickers,
+        );
+        expect(state.tagsToRemoveForRoom, isNull);
+      });
+    });
+
     group('sticker tags', () {
       const stickerTags = {'summer', 'beach'};
       final eight = [for (var i = 0; i < 8; i++) 'tag$i'];

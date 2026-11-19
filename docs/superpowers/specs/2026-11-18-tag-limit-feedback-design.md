@@ -82,12 +82,18 @@ in review.
   explicitly with `announceDetached`, as the support form does for every
   rejected attempt. No double announcement on the first one.
 
-**Copy**: new ARB key `videoMetadataTagsPickerTagLimitRemoveToAdd`:
-"You can add up to {max} hashtags. Remove one to make room." (`one` form:
-"…{max} hashtag. Remove it to make room."). `{max}` comes from
-`HashtagExtractor.maxHashtagsPerVideo`. Checked against the brand tone guide
-and the localization style guide, translated into every locale as #10053 did,
-and flagged in the PR for fluent review.
+**Copy**: new ARB key `videoMetadataTagsPickerTagLimitRemoveCount`:
+"You can add up to {max} hashtags. Remove {count} to make room." (`count`
+`one` form: "…Remove one to make room."). `{max}` comes from
+`HashtagExtractor.maxHashtagsPerVideo`; `{count}` from
+`TagsPickerState.tagsToRemoveForRoom`, which is more than 1 when caption
+hashtags and hashtag stickers together take a video past the limit (#11244,
+found by @realmeylisdev in review). When sticker hashtags alone fill the
+limit, no tag removed in this sheet makes room, so the warning is the limit
+line alone, in the warning colour, and the field announces it because the
+text does not change. Checked against the brand tone guide and the
+localization style guide, translated into every locale as #10053 did, and
+flagged in the PR for fluent review.
 
 **Social sticker sheet**: keeps the existing string. That sheet shows the
 limit before any attempt and cannot remove tags itself, so "Remove one to make

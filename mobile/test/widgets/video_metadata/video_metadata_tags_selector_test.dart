@@ -340,18 +340,25 @@ void main() {
       final limitStanding = l10n.videoMetadataTagsPickerTagLimitReached(
         HashtagExtractor.maxHashtagsPerVideo,
       );
-      final limitWarning = l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(
+      final limitWarning = l10n.videoMetadataTagsPickerTagLimitRemoveCount(
         HashtagExtractor.maxHashtagsPerVideo,
+        1,
       );
 
       Future<void> openPicker(
         WidgetTester tester, {
         Set<String> tags = const {},
+        List<String> stickerHashtags = const [],
       }) async {
         await tester.pumpWidget(
           _buildTestApp(
             hashtagRepository: hashtagRepository,
-            videoEditorState: VideoEditorProviderState(tags: tags),
+            videoEditorState: VideoEditorProviderState(
+              tags: tags,
+              editorEditingParameters: stickerHashtags.isEmpty
+                  ? null
+                  : _withHashtagStickers(stickerHashtags),
+            ),
           ),
         );
         await tester.tap(
@@ -566,6 +573,66 @@ void main() {
           expect(
             tester.widget<Text>(warning).style?.color,
             equals(tester.element(warning).vineColors.accentWarning),
+          );
+        });
+
+        testWidgets(
+          'past the limit, says how many tags to remove to make room',
+          (tester) async {
+            // Caption hashtags can take a post's own tags to 10 without
+            // counting its sticker hashtags (#11244).
+            await openPicker(
+              tester,
+              tags: tenTags,
+              stickerHashtags: const ['summer', 'beach'],
+            );
+
+            await submit(tester, 'news');
+
+            expect(
+              find.text(
+                l10n.videoMetadataTagsPickerTagLimitRemoveCount(
+                  HashtagExtractor.maxHashtagsPerVideo,
+                  3,
+                ),
+              ),
+              findsOneWidget,
+            );
+            expect(find.text(limitWarning), findsNothing);
+          },
+        );
+
+        group('when sticker hashtags alone fill the limit', () {
+          final tenStickers = [for (var i = 0; i < 10; i++) 'sticker$i'];
+
+          testWidgets(
+            'warns with the limit alone, since removing a tag here cannot '
+            'make room',
+            (tester) async {
+              await openPicker(tester, stickerHashtags: tenStickers);
+
+              await submit(tester, 'news');
+
+              final warning = find.text(limitStanding);
+              expect(warning, findsOneWidget);
+              expect(
+                tester.widget<Text>(warning).style?.color,
+                equals(tester.element(warning).vineColors.accentWarning),
+              );
+              expect(fieldText(tester), equals('news'));
+            },
+          );
+
+          testWidgets(
+            'announces the first rejection, which leaves the text unchanged',
+            (tester) async {
+              final announcements = captureAnnouncements(tester);
+              await openPicker(tester, stickerHashtags: tenStickers);
+
+              await submit(tester, 'news');
+
+              expect(announcements, equals([limitStanding]));
+            },
           );
         });
 
@@ -803,3 +870,24 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 }
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
+
+/// Editor parameters carrying one hashtag sticker per entry of [hashtags].
+CompleteParameters _withHashtagStickers(List<String> hashtags) =>
+    CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
+      layers: [
+        for (final hashtag in hashtags)
+          WidgetLayer(
+            widget: const SizedBox(),
+            meta: SocialStickerData(
+              kind: SocialStickerKind.hashtag,
+              hashtag: hashtag,
+            ).toMeta(),
+            exportConfigs: WidgetLayerExportConfigs(
+              meta: SocialStickerData(
+                kind: SocialStickerKind.hashtag,
+                hashtag: hashtag,
+              ).toMeta(),
+            ),
+          ),
+      ],
+    );

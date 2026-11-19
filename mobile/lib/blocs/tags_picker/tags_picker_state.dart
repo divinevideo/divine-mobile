@@ -68,6 +68,18 @@ final class TagsPickerState extends Equatable {
   bool get isAtTagLimit =>
       allTags.length >= HashtagExtractor.maxHashtagsPerVideo;
 
+  /// How many of the video's own tags must go before another tag fits: 0
+  /// below the limit, more than 1 when sticker hashtags push the video past
+  /// it (#11244), and `null` when removing tags here cannot make room because
+  /// the sticker hashtags alone fill the limit.
+  int? get tagsToRemoveForRoom {
+    final needed = allTags.length - HashtagExtractor.maxHashtagsPerVideo + 1;
+    if (needed <= 0) return 0;
+    // A tag that is also a sticker's hashtag stays on the video when removed.
+    final removable = selectedTags.difference(stickerTags).length;
+    return needed <= removable ? needed : null;
+  }
+
   /// Whether committing [raw] would be turned away for the tag limit: it is a
   /// valid tag the video does not carry yet, and the video is at the limit.
   bool turnsAwayAtLimit(String raw) {

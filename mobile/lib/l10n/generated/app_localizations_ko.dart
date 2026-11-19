@@ -13019,13 +13019,18 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String videoMetadataTagsPickerTagLimitRemoveToAdd(int max) {
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       max,
       locale: localeName,
-      other: '해시태그는 최대 $max개까지 추가할 수 있어요. 하나를 지우면 새로 추가할 수 있어요.',
+      other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
     );
-    return '$_temp0';
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개를 지우면 새로 추가할 수 있어요.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

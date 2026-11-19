@@ -3929,7 +3929,7 @@
   "videoMetadataTagsPickerNoResults": "일치하는 태그 없음",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{해시태그는 최대 {max}자까지 쓸 수 있어요.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{해시태그는 최대 {max}개까지 추가할 수 있어요.}}",
-  "videoMetadataTagsPickerTagLimitRemoveToAdd": "{max, plural, other{해시태그는 최대 {max}개까지 추가할 수 있어요. 하나를 지우면 새로 추가할 수 있어요.}}",
+  "videoMetadataTagsPickerTagLimitRemoveCount": "{max, plural, other{해시태그는 최대 {max}개까지 추가할 수 있어요.}} {count, plural, other{{count}개를 지우면 새로 추가할 수 있어요.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{max}자 중 {count}자}}",
   "videoMetadataTagsPickerAddTag": "\"#{tag}\" 추가",
   "@videoMetadataTagsPickerAddTag": {
