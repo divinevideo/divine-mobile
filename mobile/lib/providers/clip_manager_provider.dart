@@ -63,9 +63,13 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   Timer? _pendingDeletionTimer;
   final Map<String, Future<void>> _clipEnrichment = {};
 
-  /// Chroma-key bakes still running, by clip id, so a second request for the
-  /// same take joins the first instead of rendering it again.
-  final Map<String, Future<DivineVideoClip>> _capturedChromaKeyBakes = {};
+  /// A recorder and editor can share a render of the same take. The source
+  /// and account matter because a later project can reuse a library clip ID.
+  final Map<
+    ({String id, String? path, ClipChromaKey? key, String? owner}),
+    Future<DivineVideoClip>
+  >
+  _capturedChromaKeyBakes = {};
 
   /// Nullable rather than `late`, which would throw a
   /// `LateInitializationError` in two ways. Riverpod reuses this notifier
@@ -1369,29 +1373,59 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   ///
   /// Throws whatever the bake throws; the take then keeps its raw footage and
   /// the key it was recorded with, so the next request tries again.
-  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) {
-    final held = getClipById(clip.id);
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) =>
+      _startCapturedChromaKeyBake(
+        clip,
+        generation: _sessionGeneration,
+        clipLibrary: ref.read(clipLibraryServiceProvider),
+      );
+
+  Future<DivineVideoClip> _startCapturedChromaKeyBake(
+    DivineVideoClip clip, {
+    required int generation,
+    required ClipLibraryService clipLibrary,
+  }) {
+    final sourcePath = clip.video?.file?.path;
+    final held = isSessionCurrent(generation) && _isCurrentLibrary(clipLibrary)
+        ? getClipById(clip.id)
+        : null;
     if (held != null &&
         held.chromaKey != null &&
-        !held.hasPendingCaptureChromaKey) {
+        held.chromaKey == clip.captureChromaKey &&
+        held.chromaKeySourcePath == sourcePath) {
       return Future.value(held);
     }
-    final running = _capturedChromaKeyBakes[clip.id];
-    if (running != null) return running;
+    final source = (
+      id: clip.id,
+      path: sourcePath,
+      key: clip.captureChromaKey,
+      owner: clipLibrary.ownerPubkey,
+    );
+    final running = _capturedChromaKeyBakes[source];
+    if (running != null) {
+      return running.then((keyed) {
+        _applyCapturedChromaKeyToTimeline(
+          clip,
+          keyed,
+          generation: generation,
+          clipLibrary: clipLibrary,
+        );
+        return keyed;
+      });
+    }
 
-    // The library as it is now, while the take's own account is signed in:
-    // one read when the bake lands could belong to whoever signed in since.
     final bake = _bakeCapturedChromaKey(
       clip,
-      clipLibrary: ref.read(clipLibraryServiceProvider),
+      generation: generation,
+      clipLibrary: clipLibrary,
     );
-    _capturedChromaKeyBakes[clip.id] = bake;
+    _capturedChromaKeyBakes[source] = bake;
     _editorBackgroundWork.track(
       bake
           .then<void>((_) {}, onError: (Object _) {})
           .whenComplete(
             () => _capturedChromaKeyBakes.removeWhere(
-              (id, running) => id == clip.id && identical(running, bake),
+              (key, running) => key == source && identical(running, bake),
             ),
           ),
     );
@@ -1400,24 +1434,41 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   Future<DivineVideoClip> _bakeCapturedChromaKey(
     DivineVideoClip clip, {
+    required int generation,
     required ClipLibraryService clipLibrary,
   }) async {
     final keyed = await ref.read(capturedChromaKeyBakerProvider).bake(clip);
     if (!ref.mounted) return keyed;
 
-    // Signed out, or signed in as someone else, since the bake started: the
-    // session and its autosave are no longer the take's account's to write.
-    // Only the take's own library row gets the keyed file.
-    final accountChanged =
-        ref.read(clipLibraryServiceProvider).ownerPubkey !=
-        clipLibrary.ownerPubkey;
-    if (accountChanged) {
-      await applyChromaKeyBakeToLibrary(
-        raw: clip,
-        baked: keyed,
-        clipLibrary: clipLibrary,
-      );
-      return keyed;
+    _applyCapturedChromaKeyToTimeline(
+      clip,
+      keyed,
+      generation: generation,
+      clipLibrary: clipLibrary,
+    );
+    if (await applyChromaKeyBakeToLibrary(
+          raw: clip,
+          baked: keyed,
+          clipLibrary: clipLibrary,
+        ) &&
+        _isCurrentLibrary(clipLibrary)) {
+      state = state.copyWith(libraryRevision: state.libraryRevision + 1);
+    }
+    return keyed;
+  }
+
+  bool _isCurrentLibrary(ClipLibraryService library) =>
+      ref.mounted &&
+      ref.read(clipLibraryServiceProvider).ownerPubkey == library.ownerPubkey;
+
+  void _applyCapturedChromaKeyToTimeline(
+    DivineVideoClip clip,
+    DivineVideoClip keyed, {
+    required int generation,
+    required ClipLibraryService clipLibrary,
+  }) {
+    if (!isSessionCurrent(generation) || !_isCurrentLibrary(clipLibrary)) {
+      return;
     }
 
     // Only a take still waiting on the very footage that was keyed: one the
@@ -1425,6 +1476,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     // is left alone.
     bool waitsOnThisBake(DivineVideoClip held) =>
         held.hasPendingCaptureChromaKey &&
+        held.captureChromaKey == clip.captureChromaKey &&
         held.video?.file?.path == clip.video?.file?.path;
 
     final index = _clips.indexWhere((c) => c.id == clip.id);
@@ -1445,32 +1497,38 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         ),
       );
     }
-
-    if (await applyChromaKeyBakeToLibrary(
-          raw: clip,
-          baked: keyed,
-          clipLibrary: clipLibrary,
-        ) &&
-        ref.mounted) {
-      state = state.copyWith(libraryRevision: state.libraryRevision + 1);
-    }
-    return keyed;
   }
 
-  /// Bakes the key the take [clipId] was recorded with, wherever the take is
-  /// now: in the session, deleted but still inside the undo window, or only
-  /// in the library once the recorder has moved on from it.
-  ///
-  /// For the recorder, right after a take. Does nothing when the take is
-  /// gone or already keyed. Throws whatever [bakeCapturedChromaKey] throws.
-  Future<void> bakeRecordedTake(String clipId) async {
-    final pending = state.pendingDeletion;
-    final clip =
-        getClipById(clipId) ??
-        (pending?.clip.id == clipId ? pending!.clip : null) ??
-        await ref.read(clipLibraryServiceProvider).getClipById(clipId);
-    if (clip == null || !clip.hasPendingCaptureChromaKey) return;
-    await bakeCapturedChromaKey(clip);
+  /// Bakes the original recording after its raw saves settle. Once the
+  /// project leaves [generation], only the original library row is eligible.
+  Future<void> bakeRecordedTake(
+    DivineVideoClip recorded, {
+    required int generation,
+    required Future<void> after,
+  }) async {
+    final clipLibrary = ref.read(clipLibraryServiceProvider);
+    await after;
+    if (!ref.mounted) return;
+    DivineVideoClip? clip;
+    if (isSessionCurrent(generation) && _isCurrentLibrary(clipLibrary)) {
+      final pending = state.pendingDeletion?.clip;
+      clip =
+          getClipById(recorded.id) ??
+          (pending?.id == recorded.id ? pending : null);
+    }
+    clip ??= await clipLibrary.getClipById(recorded.id);
+    if (!ref.mounted ||
+        clip == null ||
+        !clip.hasPendingCaptureChromaKey ||
+        clip.captureChromaKey != recorded.captureChromaKey ||
+        clip.video?.file?.path != recorded.video?.file?.path) {
+      return;
+    }
+    await _startCapturedChromaKeyBake(
+      clip,
+      generation: generation,
+      clipLibrary: clipLibrary,
+    );
   }
 
   /// Holds chroma-key bakes back while the camera records — see

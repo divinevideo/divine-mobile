@@ -2190,6 +2190,78 @@ void main() {
         expect(rendered, [take.id]);
       });
 
+      test(
+        'lets a new project request the shared bake for its own take',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          renderGate = Completer<void>();
+
+          final oldBake = notifier.bakeCapturedChromaKey(take);
+          await pumpEventQueue();
+          notifier.abandonExtraction({
+            take.id,
+          }, generation: notifier.sessionGeneration);
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+          final requestedBake = notifier.bakeCapturedChromaKey(reimported);
+          renderGate!.complete();
+          await Future.wait([oldBake, requestedBake]);
+
+          expect(rendered, [take.id]);
+          expect(
+            notifier.clips.single.video?.file?.path,
+            '/documents/keyed.mp4',
+          );
+          expect(notifier.clips.single.volume, 0.5);
+          verify(() => mockClipLibraryService.saveClip(any())).called(1);
+        },
+      );
+
+      test(
+        'saves a late bake to the library without changing a reimport',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          renderGate = Completer<void>();
+
+          final bake = notifier.bakeCapturedChromaKey(take);
+          await pumpEventQueue();
+          expect(rendered, [take.id]);
+          final generation = notifier.sessionGeneration;
+          expect(
+            notifier.abandonExtraction({take.id}, generation: generation),
+            [
+              take,
+            ],
+          );
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+          notifier.cacheMergeOutput('/documents/new-project-merge.mp4');
+
+          renderGate!.complete();
+          expect((await bake).video?.file?.path, '/documents/keyed.mp4');
+
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.single
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          expect(notifier.clips.single, same(reimported));
+          expect(
+            container.read(clipManagerProvider).mergeOutputPath,
+            '/documents/new-project-merge.mp4',
+          );
+        },
+      );
+
       test('hands back a take it already keyed without rendering', () async {
         final notifier = container.read(clipManagerProvider.notifier);
         final take = recordTake(notifier);
@@ -2333,10 +2405,15 @@ void main() {
           when(
             () => mockClipLibraryService.getClipById(take.id),
           ).thenAnswer((_) async => take);
+          final generation = notifier.sessionGeneration;
           // Leaving the recorder right after the take clears the session.
           notifier.clearClips();
 
-          await notifier.bakeRecordedTake(take.id);
+          await notifier.bakeRecordedTake(
+            take,
+            generation: generation,
+            after: Future<void>.value(),
+          );
 
           expect(rendered, [take.id]);
           final saved =
@@ -2346,6 +2423,39 @@ void main() {
                   as DivineVideoClip;
           expect(saved.video?.file?.path, '/documents/keyed.mp4');
           expect(saved.chromaKey, key);
+        },
+      );
+
+      test(
+        'bakes the original library take after the recorder moves on',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          final generation = notifier.sessionGeneration;
+          final rawSaved = Completer<void>();
+          final bake = notifier.bakeRecordedTake(
+            take,
+            generation: generation,
+            after: rawSaved.future,
+          );
+          notifier.abandonExtraction({take.id}, generation: generation);
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+
+          expect(rendered, isEmpty);
+          rawSaved.complete();
+          await bake;
+
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.single
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          expect(notifier.clips.single, same(reimported));
         },
       );
     });

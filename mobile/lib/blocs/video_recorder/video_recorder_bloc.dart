@@ -1361,17 +1361,16 @@ class VideoRecorderBloc
         when imagePath == state.unrecordedChromaKeyImagePath) {
       emit(state.copyWith(clearUnrecordedChromaKeyImagePath: true));
     }
-    unawaited(
-      clipManager.saveClipToLibrary(clip).then((saved) {
-        if (!saved) {
-          Log.warning(
-            '⚠️ Initial clip save to library failed for ${clip.id}',
-            name: 'VideoRecorderBloc',
-            category: LogCategory.video,
-          );
-        }
-      }),
-    );
+    final initialSave = clipManager.saveClipToLibrary(clip).then((saved) {
+      if (!saved) {
+        Log.warning(
+          '⚠️ Initial clip save to library failed for ${clip.id}',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      }
+    });
+    unawaited(initialSave);
     // The second camera's take travels on its clip: the library lists the
     // clip, with both cameras on its picture.
     Future<void>? secondaryThumbnail;
@@ -1443,25 +1442,21 @@ class VideoRecorderBloc
             stackTrace: stackTrace,
           );
         });
-    clipManager.trackClipEnrichment(
-      clip.id,
-      enrichment
-      // Bakes the take into the composite the viewfinder showed, so the
-      // clip and its library copy hold that and not the raw footage. Only
-      // once post-processing is done: that pass ends by saving the raw
-      // take to the library, and a raw save landing after the keyed one
-      // would put the wall back. A failed bake leaves the take raw with its
-      // key, and the editor tries again when it opens on the clip.
-      .then((_) {
-        if (clip.captureChromaKey == null) return;
-        runDetached(
-          clipManager.bakeRecordedTake(clip.id),
-          'bake the chroma key of take ${clip.id}',
-          logName: 'VideoRecorderBloc',
-          category: LogCategory.video,
-        );
-      }),
-    );
+    clipManager.trackClipEnrichment(clip.id, enrichment);
+    if (clip.hasPendingCaptureChromaKey) {
+      // Bind the bake to this recording now. Let both raw library saves
+      // finish first so neither can overwrite a keyed result.
+      runDetached(
+        clipManager.bakeRecordedTake(
+          clip,
+          generation: generation,
+          after: Future.wait([initialSave, enrichment]),
+        ),
+        'bake the chroma key of take ${clip.id}',
+        logName: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
     if (secondaryThumbnail != null) {
       // Galleries show a dual-camera take as one picture, as the viewfinder
       // showed it; drawn once both cameras' thumbnails exist.
