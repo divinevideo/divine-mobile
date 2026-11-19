@@ -210,13 +210,19 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       if (!_isActiveSession(sessionId)) return;
 
       // An API page can include a video already returned by cache or relay
-      // search. Keep its position while taking the API's archive verdict.
+      // search: the same event, or a newer revision of the same address.
+      // Keep the result's position while taking the API's archive verdict.
       final apiVideosById = {
         for (final video in result.videos) video.id: video,
       };
+      final apiVideosByKey = {
+        for (final video in result.videos) video.feedDedupKey: video,
+      };
+      final matchedApiIds = <String>{};
       final hydratedVideos = currentVideos.map((video) {
-        final apiVideo = apiVideosById.remove(video.id);
-        if (apiVideo == null) return video;
+        final apiVideo =
+            apiVideosById[video.id] ?? apiVideosByKey[video.feedDedupKey];
+        if (apiVideo == null || !matchedApiIds.add(apiVideo.id)) return video;
 
         return video.copyWith(
           isVerifiedArchive: apiVideo.isVerifiedArchive,
@@ -226,7 +232,7 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       }).toList();
       final merged = _videosRepository.deduplicateVideosPreservingOrder([
         ...hydratedVideos,
-        ...apiVideosById.values,
+        ...result.videos.where((video) => !matchedApiIds.contains(video.id)),
       ]);
       final newOffset = apiOffset + _pageSize;
 
