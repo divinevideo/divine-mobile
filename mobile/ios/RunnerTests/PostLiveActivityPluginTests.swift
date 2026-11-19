@@ -189,4 +189,50 @@ final class PostLiveActivityPluginTests: XCTestCase {
         handler.emit(["type": "state"])
         XCTAssertEqual(count, 2)
     }
+
+    func testEmitFromABackgroundQueueReachesTheSinkOnTheMainThread() {
+        let handler = PostActivityStreamHandler(source: FakeSource(items: []))
+        let delivered = expectation(description: "state event delivered")
+        _ = handler.onListen(withArguments: nil) { event in
+            guard (event as? [String: Any])?["type"] as? String == "state" else { return }
+            XCTAssertTrue(Thread.isMainThread)
+            delivered.fulfill()
+        }
+        DispatchQueue.global().async { handler.emit(["type": "state"]) }
+        wait(for: [delivered], timeout: 5)
+    }
+
+    // MARK: Update content state
+
+    private func contentState() -> PostActivityContentState {
+        PostActivityContentState(
+            phase: .posting, views: 3, likes: 2, comments: 1,
+            updatedAt: Date(timeIntervalSince1970: 1), showFirstRunNote: false,
+            postCoordinate: "old-coord", postEventId: "old-id"
+        )
+    }
+
+    func testUpdateWithOmittedIdentityKeepsExistingValuesAndCounts() throws {
+        let args = try XCTUnwrap(PostActivityUpdateArguments([
+            "activityId": "a", "phase": "live", "showFirstRunNote": true,
+        ]))
+        let now = Date(timeIntervalSince1970: 99)
+        let next = args.applied(to: contentState(), now: now)
+        XCTAssertEqual(next.postCoordinate, "old-coord")
+        XCTAssertEqual(next.postEventId, "old-id")
+        XCTAssertEqual(next.phase, .live)
+        XCTAssertTrue(next.showFirstRunNote)
+        XCTAssertEqual(next.updatedAt, now)
+        XCTAssertEqual([next.views, next.likes, next.comments], [3, 2, 1])
+    }
+
+    func testUpdateWithPresentIdentityReplacesIt() throws {
+        let args = try XCTUnwrap(PostActivityUpdateArguments([
+            "activityId": "a", "phase": "live", "showFirstRunNote": false,
+            "postCoordinate": "new-coord", "postEventId": "new-id",
+        ]))
+        let next = args.applied(to: contentState(), now: Date())
+        XCTAssertEqual(next.postCoordinate, "new-coord")
+        XCTAssertEqual(next.postEventId, "new-id")
+    }
 }

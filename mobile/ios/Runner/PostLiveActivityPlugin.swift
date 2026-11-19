@@ -56,6 +56,21 @@ struct PostActivityUpdateArguments {
     }
 }
 
+extension PostActivityUpdateArguments {
+    /// The content state after this update. Counts are carried over untouched
+    /// (only the push service sets them); an omitted post identity keeps the
+    /// activity's existing value, a present one replaces it.
+    func applied(to state: PostActivityContentState, now: Date) -> PostActivityContentState {
+        var next = state
+        next.phase = phase
+        next.postCoordinate = postCoordinate ?? state.postCoordinate
+        next.postEventId = postEventId ?? state.postEventId
+        next.showFirstRunNote = showFirstRunNote
+        next.updatedAt = now
+        return next
+    }
+}
+
 enum PostActivityPushToken {
     /// Lowercase hex, which is what the push service registers.
     static func hex(_ token: Data) -> String {
@@ -145,7 +160,14 @@ final class PostActivityStreamHandler: NSObject, FlutterStreamHandler {
 
     /// Delivers a live event, dropped while nobody listens (the next
     /// `onListen` replays current values).
+    ///
+    /// Flutter requires the sink on the main thread, and `sink` is only
+    /// written there, so a call from any other thread hops to main first.
     func emit(_ event: [String: Any]) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in self?.emit(event) }
+            return
+        }
         sink?(event)
     }
 }
@@ -342,18 +364,12 @@ final class PostLiveActivityPlugin: NSObject {
         guard let activity = PostActivityKit.activity(withId: args.activityId) else {
             return result(nil)
         }
-        // Counts are carried over untouched; only the push service sets them.
-        var state = activity.content.state
-        state.phase = args.phase
-        state.postCoordinate = args.postCoordinate
-        state.postEventId = args.postEventId
-        state.showFirstRunNote = args.showFirstRunNote
-        state.updatedAt = Date()
+        let state = args.applied(to: activity.content.state, now: Date())
         let content = ActivityContent(
             state: state,
             staleDate: Date().addingTimeInterval(Self.staleInterval)
         )
-        Task {
+        Task { @MainActor in
             await activity.update(content)
             result(nil)
         }
@@ -369,7 +385,7 @@ final class PostLiveActivityPlugin: NSObject {
         guard let activity = PostActivityKit.activity(withId: activityId) else {
             return result(nil)
         }
-        Task {
+        Task { @MainActor in
             await activity.end(nil, dismissalPolicy: immediate ? .immediate : .default)
             result(nil)
         }
@@ -379,7 +395,7 @@ final class PostLiveActivityPlugin: NSObject {
 
     @available(iOS 16.2, *)
     private func observeEnablement() {
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             for await enabled in ActivityAuthorizationInfo().activityEnablementUpdates {
                 self?.streamHandler.emit(PostActivityEvents.enablement(enabled))
             }
@@ -391,12 +407,12 @@ final class PostLiveActivityPlugin: NSObject {
     private func observe(_ activity: Activity<PostActivityAttributes>) {
         guard observed.insert(activity.id).inserted else { return }
         let id = activity.id
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             for await token in activity.pushTokenUpdates {
                 self?.streamHandler.emit(PostActivityEvents.pushToken(activityId: id, token: token))
             }
         }
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             for await state in activity.activityStateUpdates {
                 self?.streamHandler.emit(
                     PostActivityEvents.state(activityId: id, state: PostActivityKit.stateName(state))
