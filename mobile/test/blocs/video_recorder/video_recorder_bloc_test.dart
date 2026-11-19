@@ -1693,7 +1693,7 @@ void main() {
         ).thenAnswer((_) async => true);
       });
 
-      VideoRecorderBloc buildCountdownBloc() =>
+      VideoRecorderBloc buildCountdownBloc({bool libraryReaction = false}) =>
           VideoRecorderBloc(
             readClipManager: () => clipManager,
             readVideoEditor: () => videoEditor,
@@ -1701,6 +1701,13 @@ void main() {
             readSharedPreferences: () => prefs,
             cameraService: cameraService,
             countdownSoundServiceFactory: () => countdownSounds,
+            reactionRecordingOwner: libraryReaction
+                ? (
+                    clipManager: clipManager,
+                    isCurrent: () => true,
+                    retain: (_) async {},
+                  )
+                : null,
           )..emit(
             const VideoRecorderBlocState(timerDuration: TimerDuration.three),
           );
@@ -1764,6 +1771,32 @@ void main() {
 
           expect(bloc.state.isCapturingFootage, isTrue);
 
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
+
+      test('cancels a Library countdown before opening the mic', () {
+        fakeAsync((async) {
+          final bloc = buildCountdownBloc(libraryReaction: true);
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          async.flushMicrotasks();
+          expect(bloc.state.countdownValue, 3);
+          verify(cameraService.suspendAudioCapture).called(1);
+
+          // The screen sends Stop when system Back interrupts a pending take.
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          async.flushMicrotasks();
+          expect(bloc.state.hasRecordingInFlight, isFalse);
+          expect(bloc.state.countdownValue, 0);
+          expect(bloc.state.pendingStopAfterStart, isFalse);
+          async.elapse(const Duration(seconds: 3));
+          verifyNever(cameraService.resumeAudioCapture);
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
           unawaited(bloc.close());
           async.flushMicrotasks();
         });
@@ -2084,6 +2117,72 @@ void main() {
 
     group('Library reaction recording ownership', () {
       setUp(stubRecorderDefaults);
+
+      test(
+        'recovers a stopped take if its first write fails after close',
+        () async {
+          final retained = <DivineVideoClip>[];
+          final firstWrite = Completer<bool>();
+          final nativeVideo = _MockEditorVideo();
+          when(nativeVideo.safeFilePath).thenAnswer(
+            (_) => Completer<String>().future,
+          );
+          when(() => clipManager.recordingElapsed).thenReturn(
+            const Duration(seconds: 2),
+          );
+          final take = DivineVideoClip(
+            id: 'stopped-take',
+            video: nativeVideo,
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          when(cameraService.stopRecording)
+              .thenAnswer((_) async => nativeVideo);
+          when(
+            () => clipManager.addClip(
+              video: nativeVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+              secondaryRecording: any(named: 'secondaryRecording'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          ).thenReturn(take);
+          when(() => clipManager.saveClipToLibrary(take)).thenAnswer(
+            (_) => firstWrite.future,
+          );
+          registerFallbackValue(Future<void>.value());
+          when(() => clipManager.trackClipEnrichment(any(), any()))
+              .thenReturn(null);
+
+          var isCurrent = true;
+          final bloc =
+              buildBloc(
+                reactionRecordingOwner: (
+                  clipManager: clipManager,
+                  isCurrent: () => isCurrent,
+                  retain: (clip) async => retained.add(clip),
+                ),
+              )..emit(
+                const VideoRecorderBlocState(recordingState: .recording),
+              );
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await pumpEventQueue();
+          expect(bloc.state.isRecording, isFalse);
+          verify(() => clipManager.saveClipToLibrary(take)).called(1);
+          isCurrent = false;
+          await bloc.close();
+
+          firstWrite.complete(false);
+          await pumpEventQueue();
+          expect(retained, [take]);
+        },
+      );
 
       for (final stage in ['stopping', 'recording', 'starting']) {
         test(

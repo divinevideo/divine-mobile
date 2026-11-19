@@ -348,7 +348,9 @@ class _FilterContent extends ConsumerWidget {
         await saveClipsToGallery(context, [clip]);
       },
       onDelete: () => _confirmDeleteClip(context, clip),
-      onRecordReaction: offersRecordReaction
+      onRecordReaction:
+          offersRecordReaction &&
+              LibraryClipTypeFilter.reactionCompatible.matches(clip)
           ? () {
               route.navigator?.pop();
               if (!context.mounted) return;

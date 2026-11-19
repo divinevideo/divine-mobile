@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -62,6 +63,7 @@ Future<void> recordLibraryReaction(
   )?
   openEditor,
 }) async {
+  if (!LibraryClipTypeFilter.reactionCompatible.matches(source)) return;
   final isLatestRequest = LibraryReactionProgressHost.claimReaction(context);
   if (previewClosed != null) await previewClosed;
   if (!context.mounted || !isLatestRequest()) return;
@@ -270,8 +272,9 @@ Future<void> recordLibraryReaction(
         analyticsSession: analyticsSession,
       ),
     );
-    final result = await Navigator.of(cameraContext).push<bool>(route);
-    await route.completed;
+    // Transition completion also settles when the entire Navigator is removed.
+    Navigator.of(cameraContext).push<bool>(route);
+    final result = await route.completed;
     if (!manager.isSessionCurrent(generation)) return null;
     final takeIds = manager.clips
         .where((clip) => !initialIds.contains(clip.id))
@@ -425,6 +428,7 @@ Future<void> recordLibraryReaction(
     buildScrollBody: (controller) => LibraryScreen(
       initialTabIndex: LibraryScreen.clipsTabIndex,
       selectionMode: true,
+      clipTypeFilter: LibraryClipTypeFilter.reactionCompatible,
       allowsMixedClipTypes: true,
       cropGuideAspectRatio: cellAspectRatio,
       maxSelectedClips: maxClips,

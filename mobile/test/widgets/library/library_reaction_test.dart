@@ -123,7 +123,8 @@ class _Manager extends ClipManagerNotifier {
   int get sessionGeneration => _generation;
 
   @override
-  bool isSessionCurrent(int generation) => generation == _generation;
+  bool isSessionCurrent(int generation) =>
+      generation == _generation && ref.mounted;
 
   @override
   List<DivineVideoClip> abandonExtraction(
@@ -271,7 +272,9 @@ void main() {
       required SplitScreenCellPicker? record,
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
+      DivineVideoClip? source,
       NavigatorObserver? observer,
+      ValueNotifier<bool>? navigatorVisible,
       Completer<void>? clearGate,
       Future<void> Function(CreationAnalyticsSession)? onOpenEditor,
       Future<void>? Function()? previewClosed,
@@ -285,7 +288,7 @@ void main() {
               onPressed: () async => recordLibraryReaction(
                 context,
                 ref,
-                _clip('source'),
+                source ?? _clip('source'),
                 previewClosed: previewClosed?.call(),
                 recordWithCamera: record,
                 showLayout: layout,
@@ -304,44 +307,51 @@ void main() {
           ),
         ),
       );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(auth),
-            clipLibraryServiceProvider.overrideWithValue(library),
-            draftStorageServiceProvider.overrideWithValue(recovery),
-            creationAnalyticsTrackerProvider.overrideWithValue(tracker),
-            clipManagerProvider.overrideWith(() => manager),
-            videoEditorProvider.overrideWith(() => editor),
-            videoPublishProvider.overrideWith(
-              () => _Publish(events, manager, clearGate: clearGate),
-            ),
-          ],
-          child: MaterialApp(
-            navigatorObservers: [?observer],
-            builder: reducedMotion
-                ? (context, child) => MediaQuery(
-                    data: MediaQuery.of(context)
-                        .copyWith(disableAnimations: true),
-                    child: child!,
-                  )
-                : null,
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: pushed
-                ? Builder(
-                    builder: (context) => Scaffold(
-                      body: TextButton(
-                        onPressed: () => Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(builder: (_) => libraryView),
-                        ),
-                        child: const Text('open library'),
-                      ),
-                    ),
-                  )
-                : libraryView,
+      final app = ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          clipLibraryServiceProvider.overrideWithValue(library),
+          draftStorageServiceProvider.overrideWithValue(recovery),
+          creationAnalyticsTrackerProvider.overrideWithValue(tracker),
+          clipManagerProvider.overrideWith(() => manager),
+          videoEditorProvider.overrideWith(() => editor),
+          videoPublishProvider.overrideWith(
+            () => _Publish(events, manager, clearGate: clearGate),
           ),
+        ],
+        child: MaterialApp(
+          navigatorObservers: [?observer],
+          builder: reducedMotion
+              ? (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(disableAnimations: true),
+                  child: child!,
+                )
+              : null,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: pushed
+              ? Builder(
+                  builder: (context) => Scaffold(
+                    body: TextButton(
+                      onPressed: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(builder: (_) => libraryView),
+                      ),
+                      child: const Text('open library'),
+                    ),
+                  ),
+                )
+              : libraryView,
         ),
+      );
+      await tester.pumpWidget(
+        navigatorVisible == null
+            ? app
+            : ValueListenableBuilder(
+                valueListenable: navigatorVisible,
+                builder: (_, visible, _) =>
+                    visible ? app : const SizedBox.shrink(),
+              ),
       );
       if (pushed) {
         await tester.tap(find.text('open library'));
@@ -368,6 +378,46 @@ void main() {
         tracker.recordingStarted(.capture, session: recorder.analyticsSession),
       );
     }
+
+    testWidgets('ends the camera funnel if its Navigator unmounts', (
+      tester,
+    ) async {
+      final visible = ValueNotifier(true);
+      addTearDown(visible.dispose);
+      await start(
+        tester,
+        record: null,
+        navigatorVisible: visible,
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
+          visible.value = false;
+        }),
+        layout: (_, _, _, _) async => fail('must not open Layout'),
+      );
+      expect(find.byType(Navigator), findsNothing);
+      expect(
+        analytics.events.map((event) => event.name),
+        ['camera_opened', 'recording_started', 'creation_abandoned'],
+      );
+      expect(tracker.activeMode, isNull);
+    });
+
+    testWidgets('does not start a reaction from a two-camera source', (
+      tester,
+    ) async {
+      await start(
+        tester,
+        source: _clip('dual').copyWith(
+          secondaryCamera: SecondaryCameraTake(clip: _clip('second')),
+        ),
+        record: (_, {required cellAspectRatio, required maxClips}) async =>
+            fail('must not discard the second lens'),
+        layout: (_, _, _, _) async => fail('must not open Layout'),
+      );
+      expect(find.text('react'), findsOneWidget);
+      expect(events, isEmpty);
+      expect(analytics.events, isEmpty);
+    });
 
     for (final rejectWrites in [false, true]) {
       testWidgets(
@@ -1407,9 +1457,12 @@ void main() {
           fail('must not record after leaving the library');
         },
         layout: (_, _, _, _) async => null,
+        pushed: true,
       );
       expect(manager.clips.map((clip) => clip.id), ['unfinished']);
-      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('open library'), findsOneWidget);
       gate.complete('kept-draft');
       await tester.pumpAndSettle();
       expect(events, ['keep draft', 'discard duplicate kept-draft']);

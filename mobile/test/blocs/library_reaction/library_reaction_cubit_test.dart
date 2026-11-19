@@ -184,10 +184,10 @@ void main() {
         );
         addTearDown(cubit.close);
         final result = cubit.combine([one, two]);
-        final waitingForBake = mergeInputs == null;
+        await pumpEventQueue();
+        expect(mergeInputs, isNull);
         gate.complete(keyed(one));
         expect(await result, isNotNull);
-        expect(waitingForBake, isTrue);
         expect(baked, ['one', 'two']);
         expect(mergeInputs!.map((clip) => clip.video!.file!.path), [
           '/documents/one-keyed.mp4',

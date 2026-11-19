@@ -137,6 +137,7 @@ void main() {
       VideoRecorderState recordingState = VideoRecorderState.idle,
       bool liveChromaKeySupported = false,
       VideoEditorNotifier? videoEditor,
+      ReactionRecordingOwner? reactionRecordingOwner,
     }) =>
         VideoRecorderBloc(
           readClipManager: () => clipManager,
@@ -145,6 +146,7 @@ void main() {
           readSharedPreferences: () => prefs,
           cameraService: camera,
           liveChromaKeySupported: liveChromaKeySupported,
+          reactionRecordingOwner: reactionRecordingOwner,
         )..emit(
           VideoRecorderBlocState(
             recorderMode: mode,
@@ -155,6 +157,23 @@ void main() {
 
     group(VideoRecorderDualCameraToggled, () {
       setUp(stubCamera);
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps one camera for a Library reaction',
+        build: () => buildBloc(
+          reactionRecordingOwner: (
+            clipManager: clipManager,
+            isCurrent: () => true,
+            retain: (_) async {},
+          ),
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderDualCameraToggled()),
+        verify: (bloc) {
+          expect(bloc.state.isDualCameraSupported, isFalse);
+          expect(bloc.state.isDualCameraEnabled, isFalse);
+          verifyNever(() => camera.setDualCameraEnabled(enabled: true));
+        },
+      );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'turns dual-camera capture on and shows the second camera',
