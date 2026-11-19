@@ -188,9 +188,10 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   /// A token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
   /// with [TagsPickerNotice.tagTooLong] rather than truncated. A new tag that
   /// does not fit is dropped and flagged with
-  /// [TagsPickerNotice.tagLimitReached], which wins because it is the one
-  /// that blocks the rest. A tag the video already has is not a rejection and
-  /// leaves a limit notice in place.
+  /// [TagsPickerNotice.tagLimitReached], which wins over
+  /// [TagsPickerNotice.tagTooLong] because no new tag fits until one is
+  /// removed. A tag the video already has is not a rejection and leaves a
+  /// limit notice in place.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
     var droppedForLength = false;
@@ -203,7 +204,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
         }
         continue;
       }
-      // Already on the video, as a sticker's hashtag or a tag.
+      // Checked before the limit, so a tag the video already has is never a
+      // rejection.
       if (state.stickerTags.contains(tag) || updated.contains(tag)) continue;
       if ({...state.stickerTags, ...updated}.length >=
           HashtagExtractor.maxHashtagsPerVideo) {

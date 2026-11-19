@@ -204,8 +204,10 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
     _searchController.clear();
   }
 
-  /// The hint's live region announces the first limit rejection. A repeat
-  /// leaves the hint's text unchanged, so it is announced here.
+  /// Announces a limit rejection that repeats the one on screen.
+  ///
+  /// The hint's live region announces the first; a repeat leaves its text
+  /// unchanged.
   void _announceRepeatLimitRejection(
     TagsPickerState state,
     List<String> tokens,
@@ -510,7 +512,8 @@ class HashtagInputFormatter extends TextInputFormatter {
 /// Explains the hashtag limits under the field: a character counter for the
 /// tag being typed once it gets long, and a helper line when a tag is too
 /// long or the video already has the maximum number of tags. When a tag was
-/// just turned away for that limit, the line says so in the warning colour.
+/// turned away for that limit, the line adds how to make room, in the warning
+/// colour.
 class _TagInputHint extends StatelessWidget {
   const _TagInputHint({required this.controller});
 
