@@ -12,6 +12,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';
 import 'package:openvine/features/appearance/models/appearance_mode.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -109,6 +111,9 @@ void main() {
           goRouterProvider.overrideWithValue(router),
           crashReportingServiceProvider.overrideWithValue(crashReporting),
           currentAuthStateProvider.overrideWithValue(AuthState.unauthenticated),
+          isFeatureEnabledProvider(
+            FeatureFlag.largeScreenLayout,
+          ).overrideWithValue(false),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -137,6 +142,63 @@ void main() {
       expect(crashReporting.reasons, [
         'RestorationSafeRouter.parseRouteInformation',
       ]);
+    });
+    testWidgets('ends every page before a status bar column', (tester) async {
+      const pageKey = Key('page');
+      const window = Size(951, 669);
+      const padding = FakeViewPadding(right: 84, bottom: 34);
+      tester.view.physicalSize = window;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = padding;
+      tester.view.viewPadding = padding;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final router = GoRouter(
+        initialLocation: '/page',
+        routes: [
+          GoRoute(
+            path: '/page',
+            builder: (_, _) => const SizedBox.expand(key: pageKey),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      final localeCubit = _MockLocaleCubit();
+      when(() => localeCubit.state).thenReturn(const LocaleState());
+      final appearanceCubit = _MockAppearanceCubit();
+      when(() => appearanceCubit.state).thenReturn(AppearanceMode.dark);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goRouterProvider.overrideWithValue(router),
+            crashReportingServiceProvider.overrideWithValue(
+              _RecordingCrashReportingService(),
+            ),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.unauthenticated,
+            ),
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(true),
+          ],
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<LocaleCubit>.value(value: localeCubit),
+              BlocProvider<AppearanceCubit>.value(value: appearanceCubit),
+            ],
+            child: const DivineMaterialApp(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.byKey(pageKey)),
+        equals(const Rect.fromLTRB(0, 0, 867, 669)),
+      );
     });
   });
 

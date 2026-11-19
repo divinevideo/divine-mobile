@@ -14,6 +14,7 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
   _FakeGoRouterState(String location)
@@ -209,9 +210,14 @@ void main() {
           build('/account-review/parent-consent'),
           isA<MinorAccountReviewParentConsentScreen>(),
         );
+        // The consent camera records in portrait.
         expect(
           build('/account-review/parent-consent/record'),
-          isA<MinorAccountReviewRecordConsentScreen>(),
+          isA<PortraitOrientationLock>().having(
+            (lock) => lock.child,
+            'child',
+            isA<MinorAccountReviewRecordConsentScreen>(),
+          ),
         );
         expect(
           build('/account-review/parent-contact'),

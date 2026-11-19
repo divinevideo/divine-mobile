@@ -16,10 +16,12 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
+import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
@@ -206,11 +208,15 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     ref.watch(subscribedListVideoCacheProvider);
 
     // Responsive column count: 3 for tablets/desktop (width >= 600),
-    // 2 for phones
+    // 2 for phones; with the large-screen layouts on, a column more at each
+    // breakpoint.
     final screenSize = MediaQuery.sizeOf(context);
-    final responsiveCrossAxisCount = screenSize.width >= 600
-        ? 3
-        : widget.crossAxisCount;
+    final layout = context.adaptiveLayout;
+    final responsiveCrossAxisCount = layout.gridColumns(
+      compact: widget.crossAxisCount,
+      width: screenSize.width,
+      largeColumnsWithoutFlag: 3,
+    );
     final cacheExtent = screenSize.height * _gridCacheExtentScreens;
 
     // Whether to render the load-more footer below the grid.
@@ -241,8 +247,6 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
     Widget buildItem(BuildContext context, int index) {
       final video = videosToShow[index];
-      final isOwnVideo = viewerPubkey != null && viewerPubkey == video.pubkey;
-
       final selectedIds = widget.selectedVideoIds;
       return _VideoItem(
         borderRadius: tileRadiusFor(index),
@@ -251,10 +255,8 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
         onVideoTap: widget.onVideoTap,
         index: index,
         displayedVideos: videosToShow,
-        // In selection mode a long-press menu would fight the toggle gesture.
-        onLongPress: isOwnVideo && selectedIds == null
-            ? () => _showVideoContextMenu(context, video)
-            : null,
+        viewerPubkey: viewerPubkey,
+        onOwnerLongPress: () => _showVideoContextMenu(context, video),
         isSelected: selectedIds?.contains(video.id),
       );
     }
@@ -374,8 +376,8 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
   /// Show the owner action sheet for a long-pressed video tile.
   ///
-  /// Ownership is decided in [_buildGrid] so a non-owned tile never wires the
-  /// gesture — and therefore never advertises the action to assistive tech.
+  /// [OwnerVideoActionsTile] decides ownership, so a non-owned tile never
+  /// wires the gesture and never advertises the action to assistive tech.
   Future<void> _showVideoContextMenu(BuildContext context, VideoEvent video) =>
       showOwnerVideoActionsSheet(
         context: context,
@@ -395,7 +397,8 @@ class _VideoItem extends StatelessWidget {
     required this.onVideoTap,
     required this.index,
     required this.displayedVideos,
-    this.onLongPress,
+    required this.viewerPubkey,
+    required this.onOwnerLongPress,
     this.isSelected,
     this.borderRadius = const BorderRadius.all(Radius.circular(4)),
   });
@@ -404,9 +407,11 @@ class _VideoItem extends StatelessWidget {
   final double aspectRatio;
   final Function(List<VideoEvent> videos, int index) onVideoTap;
 
-  /// Opens the own-video actions sheet; `null` for videos the viewer does not
-  /// own, so neither the gesture nor the semantics action is offered.
-  final VoidCallback? onLongPress;
+  /// The signed-in viewer, resolved once per grid build.
+  final String? viewerPubkey;
+
+  /// Opens the own-video actions sheet; the tile wires it only for the owner.
+  final VoidCallback onOwnerLongPress;
   final int index;
   final List<VideoEvent> displayedVideos;
 
@@ -420,48 +425,44 @@ class _VideoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      identifier: 'video_thumbnail_$index',
-      label: context.l10n.profileVideoThumbnailLabel(index + 1),
-      button: true,
+    return OwnerVideoActionsTile(
+      video: video,
+      viewerPubkey: viewerPubkey,
+      index: index,
+      onTap: () => onVideoTap(displayedVideos, index),
+      onOwnerLongPress: onOwnerLongPress,
+      // In selection mode a long-press menu would fight the toggle gesture.
+      ownerActionsEnabled: isSelected == null,
       selected: isSelected,
-      onLongPress: onLongPress,
-      onLongPressHint: onLongPress == null
-          ? null
-          : context.l10n.videoGridOptionsTitle,
-      child: GestureDetector(
-        onTap: () => onVideoTap(displayedVideos, index),
-        onLongPress: onLongPress,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: Stack(
-            children: [
-              // Per the design, a selected tile dims to half opacity over
-              // the page surface so the pending removal reads at a glance.
-              if (isSelected ?? false)
-                ColoredBox(
-                  color: context.vineColors.surface,
-                  child: Opacity(
-                    opacity: 0.5,
-                    child: _VideoThumbnail(video: video),
-                  ),
-                )
-              else
-                _VideoThumbnail(video: video),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _VideoInfoSection(video: video, index: index),
-              ),
-              if (isSelected case final isSelected?)
-                PositionedDirectional(
-                  top: 10,
-                  end: 10,
-                  child: _SelectionBadge(isSelected: isSelected),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Stack(
+          children: [
+            // Per the design, a selected tile dims to half opacity over
+            // the page surface so the pending removal reads at a glance.
+            if (isSelected ?? false)
+              ColoredBox(
+                color: context.vineColors.surface,
+                child: Opacity(
+                  opacity: 0.5,
+                  child: _VideoThumbnail(video: video),
                 ),
-            ],
-          ),
+              )
+            else
+              _VideoThumbnail(video: video),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _VideoInfoSection(video: video, index: index),
+            ),
+            if (isSelected case final isSelected?)
+              PositionedDirectional(
+                top: 10,
+                end: 10,
+                child: _SelectionBadge(isSelected: isSelected),
+              ),
+          ],
         ),
       ),
     );

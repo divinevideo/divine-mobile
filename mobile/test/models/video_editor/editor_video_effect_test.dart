@@ -175,6 +175,83 @@ void main() {
     });
   });
 
+  group('withoutFlashingOverlaps with lightning', () {
+    Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
+
+    EditorVideoEffect lightning({
+      Duration? start,
+      Duration? end,
+      bool onBeat = false,
+    }) => EditorVideoEffect.of(
+      id: 'lightning',
+      type: EditorEffectType.lightning,
+      intensity: 0.4,
+      startTime: start,
+      endTime: end,
+      onBeat: onBeat,
+    );
+
+    test('cuts a strobe out of the window of lightning, and leaves disco '
+        'alone', () {
+      final disco = EditorVideoEffect.of(
+        id: 'disco',
+        type: EditorEffectType.disco,
+        intensity: 0.7,
+      );
+
+      final result = withoutFlashingOverlaps(
+        [
+          const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+          lightning(start: s(2), end: s(4)),
+          disco,
+        ],
+        keepId: 'lightning',
+        createId: () => 'piece',
+      );
+
+      expect(
+        [for (final e in result!) (e.id, e.startTime, e.endTime)],
+        [
+          ('strobe', Duration.zero, s(2)),
+          ('piece', s(4), null),
+          ('lightning', s(2), s(4)),
+          ('disco', null, null),
+        ],
+      );
+    });
+
+    test('cuts lightning out of the window of a strobe, keeping its '
+        'strength and its beat', () {
+      final result = withoutFlashingOverlaps(
+        [
+          EditorVideoEffect(
+            id: 'strobe',
+            effect: VideoEffect.strobe(startTime: s(1), endTime: s(3)),
+          ),
+          lightning(onBeat: true),
+        ],
+        keepId: 'strobe',
+        createId: () => 'piece',
+      );
+
+      expect(
+        [for (final e in result!) (e.id, e.startTime, e.endTime)],
+        [
+          ('strobe', s(1), s(3)),
+          ('lightning', Duration.zero, s(1)),
+          ('piece', s(3), null),
+        ],
+      );
+      expect(
+        [for (final e in result.skip(1)) (e.type, e.intensity, e.onBeat)],
+        [
+          (EditorEffectType.lightning, 0.4, true),
+          (EditorEffectType.lightning, 0.4, true),
+        ],
+      );
+    });
+  });
+
   group('requiredContentLabelsForEffects', () {
     test('requires the flashing lights warning for a flashing effect', () {
       expect(
@@ -193,6 +270,45 @@ void main() {
           VideoEffect.glitch(),
           VideoEffect.strobe(intensity: 0),
         ]),
+        isEmpty,
+      );
+    });
+
+    test('requires the flashing lights warning for lightning', () {
+      expect(
+        requiredContentLabelsForEffects(
+          const [VideoEffect.vignette()],
+          customEffects: [
+            EditorVideoEffect.of(
+              id: 'lightning',
+              type: EditorEffectType.lightning,
+              intensity: 0.5,
+            ).custom!,
+          ],
+        ),
+        {ContentLabel.flashingLights},
+      );
+    });
+
+    test('requires nothing for lightning switched off, or for disco and '
+        'laser on the beat', () {
+      expect(
+        requiredContentLabelsForEffects(
+          const [],
+          customEffects: [
+            for (final (type, intensity) in [
+              (EditorEffectType.lightning, 0.0),
+              (EditorEffectType.disco, 1.0),
+              (EditorEffectType.laser, 1.0),
+            ])
+              EditorVideoEffect.of(
+                id: type.name,
+                type: type,
+                intensity: intensity,
+                onBeat: true,
+              ).custom!,
+          ],
+        ),
         isEmpty,
       );
     });
@@ -934,6 +1050,279 @@ void main() {
 
           expect(params?[EditorVideoEffect.beatsParam], [2000000]);
         });
+
+        test('keeps the beats of disco and laser a third of a second apart, '
+            'and every beat of the zoom blur', () {
+          final beats = [ms(1150), ms(1000), ms(1300), ms(1450), ms(1650)];
+          CustomVideoEffect onBeat(EditorEffectType type) =>
+              EditorVideoEffect.of(
+                id: type.name,
+                type: type,
+                intensity: 0.8,
+                onBeat: true,
+              ).custom!;
+
+          for (final type in [EditorEffectType.disco, EditorEffectType.laser]) {
+            expect(
+              customVideoEffectRenderParams(
+                onBeat(type),
+                plain,
+                beats,
+              )?[EditorVideoEffect.beatsParam],
+              [1000000, 1450000],
+              reason: type.name,
+            );
+          }
+          expect(
+            customVideoEffectRenderParams(
+              onBeat(EditorEffectType.zoomBlur),
+              plain,
+              beats,
+            )?[EditorVideoEffect.beatsParam],
+            [1000000, 1150000, 1300000, 1450000, 1650000],
+          );
+        });
+      });
+    });
+
+    group('lightningStrikesOnOutput', () {
+      CustomVideoEffect lightning({
+        Duration? start,
+        Duration? end,
+        bool onBeat = false,
+      }) => EditorVideoEffect.of(
+        id: 'lightning',
+        type: EditorEffectType.lightning,
+        intensity: 0.7,
+        startTime: start,
+        endTime: end,
+        onBeat: onBeat,
+      ).custom!;
+
+      /// The most flashes that start within any one second of [map]'s video
+      /// as it loops: [strikes], the flash transitions, and where the
+      /// built-in [onOutput] turn the frame clearly white, sampled once per
+      /// renderer frame (24 a second), over three passes.
+      int mostFlashesPerSecondWith(
+        List<Duration> strikes,
+        TransitionTimelineMap map, {
+        List<VideoEffect> onOutput = const [],
+      }) {
+        final loopPoint = map.loopPoint;
+        Duration frameTime(int frame) =>
+            Duration(microseconds: (frame + 0.5) * 1e6 ~/ 24);
+        final onsets = <Duration>[];
+        for (var pass = 0; pass < 3; pass++) {
+          var wasOn = false;
+          for (var frame = 0; frameTime(frame) < loopPoint; frame++) {
+            final at = frameTime(frame);
+            final on = VideoEffect.resolve(onOutput, at).flash >= 0.5;
+            if (on && !wasOn) onsets.add(loopPoint * pass + at);
+            wasOn = on;
+          }
+          for (final at in [...strikes, ...map.flashes]) {
+            onsets.add(loopPoint * pass + at);
+          }
+        }
+        var most = 0;
+        for (final start in onsets) {
+          final inWindow = onsets
+              .where(
+                (t) => t >= start && t - start < const Duration(seconds: 1),
+              )
+              .length;
+          if (inWindow > most) most = inWindow;
+        }
+        return most;
+      }
+
+      test('strikes at irregular intervals all through its window', () {
+        final effect = lightning();
+
+        expect(lightningStrikesOnOutput([effect], plain)[effect], [
+          ms(300),
+          ms(1700),
+          ms(2500),
+          ms(4600),
+          ms(5700),
+        ]);
+      });
+
+      test('counts its strikes from the start of its window on the shorter '
+          'exported video', () {
+        final effect = lightning(
+          start: const Duration(seconds: 1),
+          end: const Duration(seconds: 4),
+        );
+
+        expect(lightningStrikesOnOutput([effect], compressed)[effect], [
+          ms(1300),
+          ms(2700),
+          ms(3500),
+        ]);
+      });
+
+      test('strikes on the beats in its window, skipping those under a '
+          'third of a second after the one before', () {
+        final effect = lightning(onBeat: true);
+
+        expect(
+          lightningStrikesOnOutput(
+            [effect],
+            plain,
+            beats: [ms(1000), ms(1200), ms(1500), ms(2000), ms(6500)],
+          )[effect],
+          [ms(1000), ms(1500), ms(2000)],
+        );
+      });
+
+      test('drops the strikes that would crowd a second with a flash '
+          'transition', () {
+        // A 200 ms flash between the two 3 s clips starts at 2.87 s.
+        final map = TransitionTimelineMap.fromClips([
+          clip(
+            'a',
+            transition: const ClipTransition(
+              type: ClipTransitionType.flash,
+              duration: Duration(milliseconds: 200),
+            ),
+          ),
+          clip('b'),
+        ]);
+        final beats = [ms(2400), ms(2750), ms(3100), ms(3450)];
+        final effect = lightning(onBeat: true);
+
+        final alone = lightningStrikesOnOutput(
+          [effect],
+          plain,
+          beats: beats,
+        )[effect]!;
+        final beside = lightningStrikesOnOutput(
+          [effect],
+          map,
+          beats: beats,
+        )[effect]!;
+
+        expect(alone, beats);
+        expect(beside, [ms(2400), ms(2750), ms(3450)]);
+        expect(mostFlashesPerSecondWith(beside, map), 3);
+      });
+
+      test('drops the strikes that would crowd a second with a built-in '
+          'flashing effect next to it', () {
+        final strobe = videoEffectsOnOutput([
+          EditorVideoEffect(
+            id: 'strobe',
+            effect: VideoEffect.strobe(endTime: ms(2300)),
+          ),
+        ], plain);
+        final beats = [ms(2300), ms(2640), ms(2980), ms(3320)];
+        final effect = lightning(start: ms(2300), onBeat: true);
+
+        final strikes = lightningStrikesOnOutput(
+          [effect],
+          plain,
+          beats: beats,
+          flashingEffects: strobe,
+        )[effect]!;
+
+        expect(strikes.length, lessThan(beats.length));
+        expect(
+          mostFlashesPerSecondWith(strikes, plain, onOutput: strobe),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test('keeps the strikes of one lightning clear of those of another', () {
+        final first = lightning(end: ms(3000), onBeat: true);
+        final second = lightning(start: ms(3000), onBeat: true);
+        // 170 beats a minute: one every 353 ms.
+        final beats = [for (var t = 0; t < 6000; t += 353) ms(t)];
+
+        final strikes = lightningStrikesOnOutput(
+          [first, second],
+          plain,
+          beats: beats,
+        );
+
+        expect(
+          mostFlashesPerSecondWith([
+            ...strikes[first]!,
+            ...strikes[second]!,
+          ], plain),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test('hands the renderer its strikes, counted from the start of its '
+          'window, and a bolt for each', () {
+        final effect = lightning(
+          start: const Duration(seconds: 1),
+          end: const Duration(seconds: 4),
+        );
+
+        final params = customVideoEffectRenderParams(effect, plain, const []);
+
+        expect(params?[EditorVideoEffect.strikesParam], [
+          300000,
+          1700000,
+          2500000,
+        ]);
+        expect(params?[EditorVideoEffect.boltsParam], [
+          ...lightningBolt(0),
+          ...lightningBolt(1),
+          ...lightningBolt(2),
+        ]);
+        expect(params, isNot(contains(EditorVideoEffect.beatsParam)));
+      });
+
+      test('counts its strikes on the player when one maps the timeline', () {
+        Duration slowed(Duration editorTime) => editorTime * 2;
+
+        final params = customVideoEffectRenderParams(
+          lightning(start: ms(1000)),
+          plain,
+          const [],
+          toPlayer: slowed,
+        );
+
+        expect(
+          (params?[EditorVideoEffect.strikesParam] as List?)?.first,
+          600000,
+        );
+      });
+
+      test('is left out without a strike in its window', () {
+        expect(
+          customVideoEffectsOnOutput(
+            [
+              lightning(start: ms(1000), end: ms(1200)),
+              lightning(onBeat: true),
+            ],
+            plain,
+            beats: [ms(7000)],
+          ),
+          isEmpty,
+        );
+      });
+    });
+
+    group('lightningBolt', () {
+      test('describes each bolt within the frame, ending 55% to 85% of the '
+          'way down', () {
+        for (var index = 0; index < 50; index++) {
+          final bolt = lightningBolt(index);
+
+          expect(bolt, hasLength(lightningBoltValueCount));
+          expect(bolt, everyElement(inInclusiveRange(0.0, 1.0)));
+          expect(bolt[1], inInclusiveRange(0.15, 0.45));
+          expect(bolt.last, anyOf(0.0, 1.0));
+        }
+      });
+
+      test('gives each strike its own bolt, the same every time', () {
+        expect(lightningBolt(3), lightningBolt(3));
+        expect(lightningBolt(3), isNot(lightningBolt(4)));
       });
     });
 
@@ -1284,7 +1673,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(69));
+      expect(custom, hasLength(72));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1298,11 +1687,18 @@ void main() {
       }
     });
 
-    test('only the zoom blur, the spin blur and the tunnels of the custom '
-        'effects fire on the beat', () {
-      expect(EditorEffectType.zoomBlur.supportsOnBeat, isTrue);
-      expect(EditorEffectType.tunnel.supportsOnBeat, isTrue);
-      expect(EditorEffectType.spiralTunnel.supportsOnBeat, isTrue);
+    test('only the zoom blur, the spin blur, the tunnels, disco, laser and '
+        'lightning of the custom effects fire on the beat', () {
+      for (final type in [
+        EditorEffectType.zoomBlur,
+        EditorEffectType.tunnel,
+        EditorEffectType.spiralTunnel,
+        EditorEffectType.disco,
+        EditorEffectType.laser,
+        EditorEffectType.lightning,
+      ]) {
+        expect(type.supportsOnBeat, isTrue, reason: type.name);
+      }
       final spinBlur = EditorVideoEffect.of(
         id: 'spin',
         type: EditorEffectType.spinBlur,
@@ -1363,6 +1759,12 @@ void main() {
       );
     });
 
+    test('counts lightning as flashing, but not disco or laser', () {
+      expect(EditorEffectType.lightning.isFlashing, isTrue);
+      expect(EditorEffectType.disco.isFlashing, isFalse);
+      expect(EditorEffectType.laser.isFlashing, isFalse);
+    });
+
     test('never counts as flashing', () {
       expect(EditorEffectType.echo.isFlashing, isFalse);
       expect(
@@ -1406,8 +1808,8 @@ void main() {
       ]);
     });
 
-    test('lists the light rays, anamorphic, prism, window light and '
-        'spotlight under light, after the light leak', () {
+    test('lists the light rays, anamorphic, prism, window light, spotlight, '
+        'disco, laser and lightning under light, after the light leak', () {
       expect(EditorEffectCategory.light.types, [
         const EditorEffectType.builtIn(VideoEffectType.strobe),
         const EditorEffectType.builtIn(VideoEffectType.negativeFlash),
@@ -1419,6 +1821,9 @@ void main() {
         EditorEffectType.prism,
         EditorEffectType.windowLight,
         EditorEffectType.spotlight,
+        EditorEffectType.disco,
+        EditorEffectType.laser,
+        EditorEffectType.lightning,
       ]);
     });
 

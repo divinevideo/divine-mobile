@@ -5001,6 +5001,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Rapportera en bugg';
+
+  @override
   String get navMyProfile => 'Min profil';
 
   @override
@@ -8224,6 +8227,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Enhetsinfo och loggar inkluderas automatiskt.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Genväg: när fältet längst ned syns, håll inne din profilbild för att rapportera en bugg från vilken skärm som helst.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Tack! Vi har fått din rapport och använder den för att göra Divine bättre.';
 
@@ -9181,6 +9188,33 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Växla bildförhållande';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Blixt';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Vänd';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Bildförhållande';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Spökram';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Rutnät';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dubbelkamera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Visa kameraalternativ';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Dölj kameraalternativ';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisering';
 
   @override
@@ -9390,6 +9424,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Strålkastare';
+
+  @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Blixt';
 
   @override
   String get videoEditorEffectSnow => 'Snö';
@@ -13662,6 +13705,23 @@ class AppLocalizationsSv extends AppLocalizations {
       one: 'Du kan lägga till upp till $max hashtagg.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Du kan lägga till upp till $max hashtaggar.',
+      one: 'Du kan lägga till upp till $max hashtagg.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ta bort $count för att få plats.',
+      one: 'Ta bort en för att få plats.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

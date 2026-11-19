@@ -1,0 +1,24 @@
+appId: co.openvine.app.staging
+---
+#Utility: unfold the control rail of the capture stack (capture and
+#stop-motion), so every control it offers is on screen.
+#
+# Folded, the rail renders only flash, the lens switch, aspect ratio and the
+# button that unfolds it. Every other control — timer, ghost frame, grid,
+# stabilization, dual camera, color mask — is not built at all while it is
+# folded, so an assert on one of them reads "not visible" rather than finding
+# it off screen. A recorder opens folded, and starting a take or a
+# stop-motion interval folds it again.
+#
+# Precondition the caller owns: **a folded rail.** The same button folds an
+# unfolded one, so calling this twice leaves the rail folded. Every flow that
+# unfolds it folds it back with foldCaptureRail.yaml before it hands over.
+#
+# Waits for the timer, which both capture-stack modes list once unfolded.
+
+- tapOn:
+    id: camera_rail_options_button
+- extendedWaitUntil:
+    visible:
+      id: camera_timer_button
+    timeout: 10000

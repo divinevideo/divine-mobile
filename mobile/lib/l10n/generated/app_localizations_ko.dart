@@ -4725,6 +4725,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navProfile => '프로필';
 
   @override
+  String get navProfileLongPressHint => '버그 신고';
+
+  @override
   String get navMyProfile => '내 프로필';
 
   @override
@@ -7835,6 +7838,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get bugReportDiagnosticsNotice => '기기 정보와 로그가 자동으로 함께 보내져요.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      '바로가기: 하단 바가 보일 때 프로필 사진을 길게 누르면 어느 화면에서든 버그를 신고할 수 있어요.';
+
+  @override
   String get bugReportSuccessMessage =>
       '고마워요! 신고를 받았어요. Divine을 더 좋게 만드는 데 쓸게요.';
 
@@ -8745,6 +8752,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => '화면 비율 전환';
 
   @override
+  String get videoRecorderRailFlashLabel => '플래시';
+
+  @override
+  String get videoRecorderRailFlipLabel => '뒤집기';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => '화면 비율';
+
+  @override
+  String get videoRecorderRailTimerLabel => '타이머';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => '고스트 프레임';
+
+  @override
+  String get videoRecorderRailGridLabel => '그리드';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => '듀얼 카메라';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => '카메라 옵션 표시';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => '카메라 옵션 숨기기';
+
+  @override
   String get videoRecorderStabilizationLabel => '흔들림 보정';
 
   @override
@@ -8950,6 +8984,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => '스포트라이트';
+
+  @override
+  String get videoEditorEffectDisco => '디스코';
+
+  @override
+  String get videoEditorEffectLaser => '레이저';
+
+  @override
+  String get videoEditorEffectLightning => '번개';
 
   @override
   String get videoEditorEffectSnow => '눈';
@@ -13019,6 +13062,21 @@ class AppLocalizationsKo extends AppLocalizations {
       other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개를 지우면 새로 추가할 수 있어요.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

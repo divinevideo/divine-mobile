@@ -72,6 +72,7 @@ import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_s
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -111,8 +112,12 @@ PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
     barrierDismissible: true,
     barrierColor: VineTheme.transparent,
     pageBuilder: (_, _, _) => recorder,
+    // The camera records in portrait, even over an editor turned sideways.
+    // Locked around the transition, so the page stays the recorder itself.
     transitionsBuilder: (_, animation, _, child) {
-      return FadeTransition(opacity: animation, child: child);
+      return PortraitOrientationLock(
+        child: FadeTransition(opacity: animation, child: child),
+      );
     },
   );
 }
@@ -157,20 +162,6 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Besides the abandoned-creation analytics event when the editor closes,
   /// it only sets the `entry` of the `editor_ready` performance trace.
   static const libraryOrigin = 'library';
-
-  /// Builds the editor location, optionally for an existing [draftId].
-  ///
-  /// The origin rides in the URL rather than `extra` so a restored session
-  /// keeps the library exit behaviour instead of silently falling back to the
-  /// recorder one (#3335).
-  static String pathFor({String? draftId, bool fromLibrary = false}) {
-    return Uri(
-      path: draftId == null || draftId.isEmpty ? path : '$path/$draftId',
-      queryParameters: fromLibrary
-          ? {originQueryParameter: libraryOrigin}
-          : null,
-    ).toString();
-  }
 
   @override
   ConsumerState<VideoEditorScreen> createState() => _VideoEditorScreenState();

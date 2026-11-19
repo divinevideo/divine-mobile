@@ -5059,6 +5059,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get navProfile => 'Профил';
 
   @override
+  String get navProfileLongPressHint => 'докладване на грешка';
+
+  @override
   String get navMyProfile => 'Моят профил';
 
   @override
@@ -8314,6 +8317,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Информацията за устройството и логовете ще се прикачат автоматично.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Пряк път: когато долната лента се вижда, натисни и задръж профилната си снимка, за да докладваш за грешка от всеки екран.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Благодарим ти! Получихме доклада ти и ще го използваме, за да направим Divine по-добро.';
 
@@ -9268,6 +9275,33 @@ class AppLocalizationsBg extends AppLocalizations {
       'Превключване на пропорциите';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Светкавица';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Обръщане';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Пропорции';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Таймер';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Призрачна рамка';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Мрежа';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Две камери';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Покажи опциите на камерата';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Скрий опциите на камерата';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Стабилизация';
 
   @override
@@ -9479,6 +9513,15 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Прожектор';
+
+  @override
+  String get videoEditorEffectDisco => 'Диско';
+
+  @override
+  String get videoEditorEffectLaser => 'Лазер';
+
+  @override
+  String get videoEditorEffectLightning => 'Мълния';
 
   @override
   String get videoEditorEffectSnow => 'Сняг';
@@ -13777,6 +13820,23 @@ class AppLocalizationsBg extends AppLocalizations {
       one: 'Можеш да добавиш до $max хаштаг.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Можеш да добавиш до $max хаштага.',
+      one: 'Можеш да добавиш до $max хаштаг.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Премахни $count, за да освободиш място.',
+      one: 'Премахни един, за да освободиш място.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

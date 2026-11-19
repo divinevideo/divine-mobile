@@ -60,9 +60,6 @@ class VoiceOverRecorderScreen extends ConsumerWidget {
   /// there is no preview behind the recorder.
   final ValueListenable<Duration>? playTime;
 
-  /// Route name for navigation.
-  static const routeName = 'voice-over-recorder';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Resolve l10n here (a valid place) and capture the AppLocalizations

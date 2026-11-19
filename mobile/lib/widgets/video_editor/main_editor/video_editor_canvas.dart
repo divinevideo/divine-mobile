@@ -2247,7 +2247,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   /// Hands the effects Divine renders itself to the native player, which
   /// draws them on the preview (#9708), with their windows, and the beats of
-  /// an effect on the beat, moved onto the player's timeline.
+  /// an effect on the beat, moved onto the player's timeline. Lightning
+  /// strikes clear of the flashes of the built-in effects the preview shows,
+  /// as in the export (see `lightningStrikesOnOutput`).
   ///
   /// The looks come after the other effects, and the Adjust sets'
   /// highlights, shadows, vibrance and sharpening last, as in the export
@@ -2276,6 +2278,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             : null,
       ),
     ];
+    final strikes = lightningStrikesOnOutput(
+      effects,
+      timelineMap,
+      beats: state.beats,
+      flashingEffects: videoEffectsOnOutput(
+        state.previewEffects,
+        timelineMap,
+        beats: state.beats,
+      ),
+    );
     int? onPlayer(Duration? time) => time == null
         ? null
         : _composition.timelineToPlayer(time).inMicroseconds;
@@ -2288,6 +2300,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                     timelineMap,
                     state.beats,
                     toPlayer: _composition.timelineToPlayer,
+                    strikes: strikes[effect],
                   )
                   case final params?)
                 {
@@ -3259,7 +3272,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 previous.previewCustomEffects,
                 current.previewCustomEffects,
               ) ||
-              !listEquals(previous.beats, current.beats),
+              !listEquals(previous.beats, current.beats) ||
+              // Lightning strikes clear of the built-in effects' flashes.
+              (current.previewCustomEffects.any(
+                    (effect) => isFlashingCustomVideoEffect(effect.id),
+                  ) &&
+                  !listEquals(previous.previewEffects, current.previewEffects)),
           listener: (context, state) => _syncFrameEffects(),
         ),
         // The Adjust editor previews its highlights, shadows, vibrance and

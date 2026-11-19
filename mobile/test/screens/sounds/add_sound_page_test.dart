@@ -21,6 +21,8 @@ import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/saved_sound.dart';
@@ -36,6 +38,7 @@ import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -265,6 +268,7 @@ void main() {
     required Widget page,
     List<Override> overrides = const [],
     SavedSoundsService? savedSoundsService,
+    bool largeScreenLayout = false,
   }) async {
     final router = GoRouter(
       initialLocation: '/add',
@@ -284,6 +288,9 @@ void main() {
         overrides: [
           audioPlaybackServiceProvider.overrideWithValue(audio),
           soundSilenceTrimmerProvider.overrideWithValue(trimmer),
+          isFeatureEnabledProvider(
+            FeatureFlag.largeScreenLayout,
+          ).overrideWithValue(largeScreenLayout),
           ...overrides,
         ],
         child: SavedSoundsScope(
@@ -295,6 +302,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             routerConfig: router,
+            builder: (context, child) => AdaptiveLayoutScope(child: child!),
           ),
         ),
       ),
@@ -308,10 +316,12 @@ void main() {
   Future<GoRouter> pumpView(
     WidgetTester tester, {
     SavedSoundsService? savedSoundsService,
+    bool largeScreenLayout = false,
   }) {
     return pump(
       tester,
       savedSoundsService: savedSoundsService,
+      largeScreenLayout: largeScreenLayout,
       page: Builder(
         builder: (context) => MultiBlocProvider(
           providers: [
@@ -472,6 +482,39 @@ void main() {
         expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
         expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
         expect(find.byKey(const Key('add_sound_save')), findsNothing);
+      });
+
+      testWidgets('keeps the page to a readable column on a wide window '
+          'with the large-screen layouts', (tester) async {
+        tester.view.physicalSize = const Size(1194, 834);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpView(tester, largeScreenLayout: true);
+
+        await pickFile(tester);
+
+        final list = tester.getRect(find.byType(ListView));
+        expect(list.width, equals(600));
+        expect(list.center.dx, equals(1194 / 2));
+        final save = tester.getRect(find.byKey(const Key('add_sound_save')));
+        expect(save.left, equals(list.left + 16));
+        expect(save.right, equals(list.right - 16));
+      });
+
+      testWidgets('spans a wide window with the flag off', (tester) async {
+        tester.view.physicalSize = const Size(1194, 834);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpView(tester);
+
+        await pickFile(tester);
+
+        expect(tester.getRect(find.byType(ListView)).width, equals(1194));
+        final save = tester.getRect(find.byKey(const Key('add_sound_save')));
+        expect(save.left, equals(16));
+        expect(save.right, equals(1194 - 16));
       });
 
       testWidgets('keeps a picked sound private by default', (tester) async {

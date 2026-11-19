@@ -5153,6 +5153,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'raportarea unui bug';
+
+  @override
   String get navMyProfile => 'Profilul meu';
 
   @override
@@ -8430,6 +8433,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Informațiile despre dispozitiv și jurnalele vor fi incluse automat.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Scurtătură: când bara de jos este vizibilă, ține apăsată poza ta de profil ca să raportezi un bug din orice ecran.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Mulțumim! Am primit raportul tău și îl vom folosi ca să facem Divine mai bun.';
 
@@ -9397,6 +9404,33 @@ class AppLocalizationsRo extends AppLocalizations {
       'Schimbă raportul de aspect';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Bliț';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Întoarce';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Raport de aspect';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Temporizator';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Cadru fantomă';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grilă';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Cameră dublă';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Afișează opțiunile camerei';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ascunde opțiunile camerei';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilizare';
 
   @override
@@ -9609,6 +9643,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Reflector';
+
+  @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Fulger';
 
   @override
   String get videoEditorEffectSnow => 'Zăpadă';
@@ -13934,6 +13977,25 @@ class AppLocalizationsRo extends AppLocalizations {
       one: 'Poți adăuga până la $max hashtag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Poți adăuga până la $max de hashtaguri.',
+      few: 'Poți adăuga până la $max hashtaguri.',
+      one: 'Poți adăuga până la $max hashtag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Șterge $count ca să faci loc.',
+      few: 'Șterge $count ca să faci loc.',
+      one: 'Șterge unul ca să faci loc.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

@@ -1,10 +1,12 @@
-// ABOUTME: Shared bottom navigation bar widget for app shell and profile screens
-// ABOUTME: Provides consistent bottom nav across screens with/without shell
+// ABOUTME: Shared tab navigation for the app shell and profile screens: a bottom
+// ABOUTME: bar, or a side rail / status bar column in wide landscape windows
 
 import 'dart:async';
 import 'dart:math' show pi;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/navigation/tab_identity.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -30,17 +33,34 @@ import 'package:openvine/utils/camera_permission_check.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/widgets/notification_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Shared bottom navigation bar used by AppShell and standalone profile screens.
+/// Shared tab navigation used by AppShell and standalone profile screens: the
+/// bottom bar, or the side navigation of wide landscape windows.
 class VineBottomNav extends ConsumerWidget {
   const VineBottomNav({
     required this.currentIndex,
     this.isCampaignLanding = false,
+    this.direction = Axis.horizontal,
+    this.statusBarColumnWidth,
     super.key,
   });
+
+  /// [Axis.horizontal] lays the tabs out as the bottom bar; [Axis.vertical]
+  /// stacks them for wide landscape windows (see
+  /// `AdaptiveLayout.isWideLandscape`): a [vineNavigationRailWidth]-wide rail
+  /// along the leading edge, or the status bar column when
+  /// [statusBarColumnWidth] is set.
+  final Axis direction;
+
+  /// When set, the vertical nav fills the status bar column the system runs
+  /// down a side of the window (see `AdaptiveLayout.statusBarColumn`): it is
+  /// this wide and keeps no inset on that side because it stands in the
+  /// inset. Its tabs stay centered, clear of the status bar at the top.
+  final double? statusBarColumnWidth;
 
   /// Currently selected tab index (0-3), or -1 if no tab is selected.
   final int currentIndex;
@@ -110,6 +130,17 @@ class VineBottomNav extends ConsumerWidget {
     };
   }
 
+  /// Handles a press-and-hold on the Profile tab: opens Report a Bug.
+  void _handleProfileHold(BuildContext context) {
+    unawaited(HapticFeedback.lightImpact());
+    runDetached(
+      const BugReportRouteData.withoutShortcutTip().push<void>(context),
+      'open the bug report',
+      logName: 'Navigation',
+      category: LogCategory.ui,
+    );
+  }
+
   /// Combined unread count for the inbox tab (DMs + notifications).
   int _inboxUnreadCount(BuildContext context, WidgetRef ref) {
     final dmCount = context.watch<DmUnreadCountCubit>().state;
@@ -123,6 +154,10 @@ class VineBottomNav extends ConsumerWidget {
     final isHomeRefreshing = context.select(
       (HomeFeedRetapCubit cubit) => cubit.state.isRefreshing,
     );
+    final isRail = direction == Axis.vertical;
+    final columnWidth = isRail ? statusBarColumnWidth : null;
+    final inColumn = columnWidth != null;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return ColoredBox(
       // Same surface the shell paints behind its rounded corners.
       color: context.vineColors.nav,
@@ -130,9 +165,14 @@ class VineBottomNav extends ConsumerWidget {
       // breathing room around the icons are folded into adjacent tab hit
       // targets (see [_kTopExtraTapHeight], [_kBottomExtraTapHeight],
       // [_kHorizontalEdgePad]). [SafeArea] still keeps tap targets clear
-      // of the iOS home indicator and Android navigation bar.
+      // of the iOS home indicator and Android navigation bar; as a rail, of
+      // the cutout on the leading edge it sits on; in the status bar column,
+      // of the home indicator only.
       child: SafeArea(
         top: false,
+        bottom: !isRail || inColumn,
+        left: !isRail || (!inColumn && !isRtl),
+        right: !isRail || (!inColumn && isRtl),
         child: LayoutBuilder(
           builder: (context, constraints) {
             // Each tab's slot covers its icon plus half of each adjacent
@@ -144,25 +184,43 @@ class VineBottomNav extends ConsumerWidget {
             const cameraWidth = _kCameraButtonWidth;
             const totalIconWidth = iconWidth * 4 + cameraWidth;
             const totalEdgePad = _kHorizontalEdgePad * 2;
-            // 4 inter-icon gaps × 2 halves = 8.
-            final halfGap =
-                ((constraints.maxWidth - totalIconWidth - totalEdgePad) / 8)
-                    .clamp(0.0, double.infinity);
+            // 4 inter-icon gaps × 2 halves = 8. A rail stacks equal slots
+            // instead, centred down the edge it sits on.
+            final halfGap = isRail
+                ? 0.0
+                : ((constraints.maxWidth - totalIconWidth - totalEdgePad) / 8)
+                      .clamp(0.0, double.infinity);
+            Size slot(double barWidth) => isRail
+                ? Size(
+                    columnWidth ?? vineNavigationRailWidth,
+                    _kRailSlotHeight,
+                  )
+                : Size(barWidth, _kTabSlotHeight);
 
             return MediaQuery.withClampedTextScaling(
               maxScaleFactor: fixedRowTextScaleLimit,
-              child: Row(
+              child: Flex(
+                direction: direction,
+                mainAxisAlignment: isRail
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
                 children: [
                   _HomeTabButton(
                     semanticLabel: context.l10n.navHome,
                     isSelected: currentIndex == 0,
                     isRefreshing: isHomeRefreshing,
                     onTap: () => _handleTabTap(context, ref, 0),
-                    tapTargetWidth: _kHorizontalEdgePad + iconWidth + halfGap,
-                    iconAlignment: AlignmentDirectional.centerStart,
-                    edgePadding: const EdgeInsetsDirectional.only(
-                      start: _kHorizontalEdgePad,
+                    tapTargetSize: slot(
+                      _kHorizontalEdgePad + iconWidth + halfGap,
                     ),
+                    iconAlignment: isRail
+                        ? AlignmentDirectional.center
+                        : AlignmentDirectional.centerStart,
+                    edgePadding: isRail
+                        ? EdgeInsetsDirectional.zero
+                        : const EdgeInsetsDirectional.only(
+                            start: _kHorizontalEdgePad,
+                          ),
                   ),
                   _IconTabButton(
                     semanticIdentifier: SemanticIds.exploreTab,
@@ -170,11 +228,11 @@ class VineBottomNav extends ConsumerWidget {
                     icon: DivineIconName.search,
                     isSelected: currentIndex == 1,
                     onTap: () => _handleTabTap(context, ref, 1),
-                    tapTargetWidth: iconWidth + halfGap * 2,
+                    tapTargetSize: slot(iconWidth + halfGap * 2),
                   ),
                   // Camera button in center of bottom nav
                   _CameraButton(
-                    tapTargetWidth: cameraWidth + halfGap * 2,
+                    tapTargetSize: slot(cameraWidth + halfGap * 2),
                     onTap: () {
                       Log.info(
                         '👆 User tapped camera button',
@@ -219,18 +277,25 @@ class VineBottomNav extends ConsumerWidget {
                     icon: DivineIconName.chat,
                     isSelected: currentIndex == 2,
                     onTap: () => _handleTabTap(context, ref, 2),
-                    tapTargetWidth: iconWidth + halfGap * 2,
+                    tapTargetSize: slot(iconWidth + halfGap * 2),
                     badgeCount: _inboxUnreadCount(context, ref),
                   ),
                   _ProfileTabButton(
                     semanticLabel: context.l10n.navProfile,
                     isSelected: currentIndex == 3,
                     onTap: () => _handleTabTap(context, ref, 3),
-                    tapTargetWidth: iconWidth + halfGap + _kHorizontalEdgePad,
-                    iconAlignment: AlignmentDirectional.centerEnd,
-                    edgePadding: const EdgeInsetsDirectional.only(
-                      end: _kHorizontalEdgePad,
+                    onLongPress: () => _handleProfileHold(context),
+                    tapTargetSize: slot(
+                      iconWidth + halfGap + _kHorizontalEdgePad,
                     ),
+                    iconAlignment: isRail
+                        ? AlignmentDirectional.center
+                        : AlignmentDirectional.centerEnd,
+                    edgePadding: isRail
+                        ? EdgeInsetsDirectional.zero
+                        : const EdgeInsetsDirectional.only(
+                            end: _kHorizontalEdgePad,
+                          ),
                   ),
                 ],
               ),
@@ -244,6 +309,13 @@ class VineBottomNav extends ConsumerWidget {
 
 /// Visible width of the green camera-button pill in the bottom nav.
 const double _kCameraButtonWidth = 72;
+
+/// Width of the nav as a rail ([VineBottomNav.direction] vertical), wide
+/// enough for the camera pill with a margin on each side.
+const double vineNavigationRailWidth = 88;
+
+/// Height of each tab's hit target in the rail.
+const double _kRailSlotHeight = 64;
 
 /// Extra hit-target height stacked above the [kMinInteractiveDimension]
 /// icon row, so taps in the strip immediately above the visible icons
@@ -290,7 +362,7 @@ const double _kHorizontalEdgePad = 16;
 /// Shared hit-target + [Semantics] wrapper for every bottom-nav tab.
 ///
 /// Holds the Figma hit geometry in one place: an opaque [GestureDetector]
-/// filling [tapTargetWidth] × [_kTabSlotHeight] so taps in the surrounding
+/// filling [tapTargetSize] so taps in the surrounding
 /// gap route to the right tab, with the visible [child] positioned by
 /// [edgePadding] and [iconAlignment] (defaults centre the child, matching a
 /// bare [Center]).
@@ -299,9 +371,11 @@ class _TabSlot extends StatelessWidget {
     required this.identifier,
     required this.label,
     required this.onTap,
-    required this.tapTargetWidth,
+    required this.tapTargetSize,
     required this.child,
     this.onLongPress,
+    this.onLongPressHint,
+    this.customSemanticsActions,
     this.value,
     this.edgePadding = EdgeInsets.zero,
     this.iconAlignment = Alignment.center,
@@ -319,10 +393,17 @@ class _TabSlot extends StatelessWidget {
   /// only a hold past the long-press timeout fires this instead.
   final VoidCallback? onLongPress;
 
-  /// Full width the [GestureDetector] occupies inside the nav row — usually
+  /// Optional TalkBack hint for [onLongPress], read after "Double-tap and
+  /// hold to". VoiceOver does not announce it.
+  final String? onLongPressHint;
+
+  /// Optional named actions assistive technology lists for this tab.
+  final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
+
+  /// Full size the [GestureDetector] occupies inside the nav — usually
   /// larger than the visible icon so taps in the surrounding gap and edge
   /// strips also route to this tab.
-  final double tapTargetWidth;
+  final Size tapTargetSize;
 
   /// Inset folded into the hit target on the outermost tabs (Home / Profile)
   /// so taps in the screen-edge strip still route to the adjacent tab.
@@ -337,13 +418,15 @@ class _TabSlot extends StatelessWidget {
       button: true,
       label: label,
       value: value,
+      onLongPressHint: onLongPressHint,
+      customSemanticsActions: customSemanticsActions,
       child: GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
-          width: tapTargetWidth,
-          height: _kTabSlotHeight,
+          width: tapTargetSize.width,
+          height: tapTargetSize.height,
           child: Padding(
             padding: edgePadding,
             child: Align(alignment: iconAlignment, child: child),
@@ -366,7 +449,7 @@ class _HomeTabButton extends StatefulWidget {
     required this.isSelected,
     required this.isRefreshing,
     required this.onTap,
-    required this.tapTargetWidth,
+    required this.tapTargetSize,
     required this.iconAlignment,
     required this.edgePadding,
   });
@@ -375,7 +458,7 @@ class _HomeTabButton extends StatefulWidget {
   final bool isSelected;
   final bool isRefreshing;
   final VoidCallback onTap;
-  final double tapTargetWidth;
+  final Size tapTargetSize;
   final AlignmentGeometry iconAlignment;
   final EdgeInsetsGeometry edgePadding;
 
@@ -533,7 +616,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
       identifier: 'home_tab',
       label: widget.semanticLabel,
       onTap: widget.onTap,
-      tapTargetWidth: widget.tapTargetWidth,
+      tapTargetSize: widget.tapTargetSize,
       edgePadding: widget.edgePadding,
       iconAlignment: widget.iconAlignment,
       child: iconBox,
@@ -546,9 +629,9 @@ class _HomeTabButtonState extends State<_HomeTabButton>
 /// The child gets a 32 %-alpha tint in the unselected state and the
 /// glyph-shaped shadow pair in the selected state. See [_NavIcon].
 ///
-/// [tapTargetWidth] is the full width the GestureDetector occupies inside
-/// the bottom nav row — usually larger than the 48 px icon container so
-/// taps in the surrounding gap also route to this tab. The icon itself
+/// [tapTargetSize] is the full size the GestureDetector occupies inside
+/// the nav — usually larger than the 48 px icon container so taps in the
+/// surrounding gap also route to this tab. The icon itself
 /// stays a centred [kMinInteractiveDimension]-sized box.
 class _IconTabButton extends StatelessWidget {
   const _IconTabButton({
@@ -557,7 +640,7 @@ class _IconTabButton extends StatelessWidget {
     required this.icon,
     required this.isSelected,
     required this.onTap,
-    required this.tapTargetWidth,
+    required this.tapTargetSize,
     this.badgeCount,
   });
 
@@ -566,7 +649,7 @@ class _IconTabButton extends StatelessWidget {
   final DivineIconName icon;
   final bool isSelected;
   final VoidCallback onTap;
-  final double tapTargetWidth;
+  final Size tapTargetSize;
 
   /// When non-null, wraps the inner icon container in a [NotificationBadge]
   /// so the badge stays anchored to the icon's top-right corner rather
@@ -598,7 +681,7 @@ class _IconTabButton extends StatelessWidget {
       label: semanticLabel,
       value: semanticValue,
       onTap: onTap,
-      tapTargetWidth: tapTargetWidth,
+      tapTargetSize: tapTargetSize,
       child: iconBox,
     );
   }
@@ -657,7 +740,8 @@ class _ProfileTabButton extends ConsumerWidget {
     required this.semanticLabel,
     required this.isSelected,
     required this.onTap,
-    required this.tapTargetWidth,
+    required this.onLongPress,
+    required this.tapTargetSize,
     this.iconAlignment = Alignment.center,
     this.edgePadding = EdgeInsets.zero,
   });
@@ -665,7 +749,10 @@ class _ProfileTabButton extends ConsumerWidget {
   final String semanticLabel;
   final bool isSelected;
   final VoidCallback onTap;
-  final double tapTargetWidth;
+
+  /// Press-and-hold action: opens Report a Bug.
+  final VoidCallback onLongPress;
+  final Size tapTargetSize;
   final AlignmentGeometry iconAlignment;
 
   /// See [_TabSlot.edgePadding].
@@ -693,11 +780,24 @@ class _ProfileTabButton extends ConsumerWidget {
       ),
     );
 
+    final reportBug = isNativeMobilePlatform ? onLongPress : null;
     return _TabSlot(
       identifier: 'profile_tab',
       label: semanticLabel,
       onTap: onTap,
-      tapTargetWidth: tapTargetWidth,
+      onLongPress: reportBug,
+      onLongPressHint: reportBug == null
+          ? null
+          : context.l10n.navProfileLongPressHint,
+      // iOS only: TalkBack would list it twice, and iOS ignores hint overrides.
+      customSemanticsActions:
+          reportBug != null && defaultTargetPlatform == TargetPlatform.iOS
+          ? {
+              CustomSemanticsAction(label: context.l10n.supportReportBug):
+                  reportBug,
+            }
+          : null,
+      tapTargetSize: tapTargetSize,
       edgePadding: edgePadding,
       iconAlignment: iconAlignment,
       child: iconBox,
@@ -768,12 +868,12 @@ class _CameraButton extends StatelessWidget {
   const _CameraButton({
     required this.onTap,
     required this.onLongPress,
-    required this.tapTargetWidth,
+    required this.tapTargetSize,
   });
 
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final double tapTargetWidth;
+  final Size tapTargetSize;
 
   @override
   Widget build(BuildContext context) {
@@ -785,7 +885,7 @@ class _CameraButton extends StatelessWidget {
       label: context.l10n.navOpenCamera,
       onTap: onTap,
       onLongPress: onLongPress,
-      tapTargetWidth: tapTargetWidth,
+      tapTargetSize: tapTargetSize,
       child: Container(
         width: _kCameraButtonWidth,
         height: kMinInteractiveDimension,

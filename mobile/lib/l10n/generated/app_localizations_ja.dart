@@ -4707,6 +4707,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navProfile => 'プロフィール';
 
   @override
+  String get navProfileLongPressHint => 'バグを報告する';
+
+  @override
   String get navMyProfile => 'マイプロフィール';
 
   @override
@@ -7814,6 +7817,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get bugReportDiagnosticsNotice => 'デバイス情報とログは自動で添付されるよ。';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'ショートカット: 下のバーが表示されているときは、プロフィール画像を長押しすると、どの画面からでもバグを報告できます。';
+
+  @override
   String get bugReportSuccessMessage => 'ありがとう！レポートを受け取ったよ。Divine をよくするのに使うね。';
 
   @override
@@ -8726,6 +8733,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'アスペクト比を切り替え';
 
   @override
+  String get videoRecorderRailFlashLabel => 'フラッシュ';
+
+  @override
+  String get videoRecorderRailFlipLabel => '反転';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'アスペクト比';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'タイマー';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'ゴーストフレーム';
+
+  @override
+  String get videoRecorderRailGridLabel => 'グリッド';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'デュアルカメラ';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'カメラオプションを表示';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'カメラオプションを非表示';
+
+  @override
   String get videoRecorderStabilizationLabel => '手ぶれ補正';
 
   @override
@@ -8931,6 +8965,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'スポットライト';
+
+  @override
+  String get videoEditorEffectDisco => 'ディスコ';
+
+  @override
+  String get videoEditorEffectLaser => 'レーザー';
+
+  @override
+  String get videoEditorEffectLightning => '稲妻';
 
   @override
   String get videoEditorEffectSnow => '雪';
@@ -12998,6 +13041,21 @@ class AppLocalizationsJa extends AppLocalizations {
       other: 'ハッシュタグは$max個まで追加できます。',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ハッシュタグは$max個まで追加できます。',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '追加するには、$count個削除してください。',
+    );
+    return '$_temp0$_temp1';
   }
 
   @override

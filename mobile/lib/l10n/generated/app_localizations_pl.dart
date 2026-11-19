@@ -5148,6 +5148,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'zgłosić błąd';
+
+  @override
   String get navMyProfile => 'Mój profil';
 
   @override
@@ -8435,6 +8438,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Informacje o urządzeniu i logi zostaną dołączone automatycznie.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Skrót: gdy widać dolny pasek, przytrzymaj swoje zdjęcie profilowe, żeby zgłosić błąd z dowolnego ekranu.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Dzięki! Dostaliśmy twoje zgłoszenie i wykorzystamy je, żeby ulepszyć Divine.';
 
@@ -9403,6 +9410,33 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Przełącz proporcje';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Lampa błyskowa';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Odwróć';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Proporcje';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Klatka odniesienia';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Siatka';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dwa aparaty';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Pokaż opcje aparatu';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ukryj opcje aparatu';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilizacja';
 
   @override
@@ -9614,6 +9648,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Reflektor';
+
+  @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Błyskawica';
 
   @override
   String get videoEditorEffectSnow => 'Śnieg';
@@ -13925,6 +13968,27 @@ class AppLocalizationsPl extends AppLocalizations {
       one: 'Możesz dodać maksymalnie $max hashtag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Możesz dodać maksymalnie $max hashtaga.',
+      many: 'Możesz dodać maksymalnie $max hashtagów.',
+      few: 'Możesz dodać maksymalnie $max hashtagi.',
+      one: 'Możesz dodać maksymalnie $max hashtag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Usuń $count, aby zrobić miejsce.',
+      many: 'Usuń $count, aby zrobić miejsce.',
+      few: 'Usuń $count, aby zrobić miejsce.',
+      one: 'Usuń jeden, aby zrobić miejsce.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

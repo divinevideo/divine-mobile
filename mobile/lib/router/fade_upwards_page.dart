@@ -4,6 +4,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/router/go_router_page_name.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 
 /// Wraps [child] in a page that fades in while sliding up the last
 /// quarter — the classic pre-Pie Android transition.
@@ -25,13 +26,19 @@ CustomTransitionPage<void> fadeUpwardsPage({
     },
     restorationId: state.pageKey.value,
     child: child,
+    // It brings its own transition, so the theme's frame never reaches it:
+    // framed here, as the theme's page routes are, the page ends before a
+    // status bar column and the column stays put while the page fades in.
     transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-        const FadeUpwardsPageTransitionsBuilder().buildTransitions<void>(
-          null,
-          context,
-          animation,
-          secondaryAnimation,
-          child,
+        StatusBarColumnFrame(
+          child: const FadeUpwardsPageTransitionsBuilder()
+              .buildTransitions<void>(
+                null,
+                context,
+                animation,
+                secondaryAnimation,
+                child,
+              ),
         ),
   );
 }

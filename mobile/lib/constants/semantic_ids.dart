@@ -70,6 +70,11 @@ abstract class SemanticIds {
   static const String cameraStabilizationButton = 'camera_stabilization_button';
   static const String cameraColorMaskButton = 'camera_color_mask_button';
 
+  /// Unfolds the capture rail, and folds it back. Folded, the rail shows only
+  /// flash, lens and aspect ratio, so the E2E flows tap this before driving
+  /// any other rail control.
+  static const String cameraRailOptionsButton = 'camera_rail_options_button';
+
   /// Sound picker on [VideoEditorAudioChip]. Capture puts it in the top-bar
   /// slot stop-motion fills with its shot budget, so `assertCaptureMode`
   /// asserts it and the stop-motion assert its absence.
@@ -89,12 +94,14 @@ abstract class SemanticIds {
   /// Confirms the currently selected sound in the sound picker.
   static const String audioSelectionDoneButton = 'audio_selection_done_button';
 
-  /// What stop-motion adds to that rail (both gated on `capturesStills`), plus
-  /// the shot budget it puts in the top bar's center slot. Which viewfinder is
-  /// up is settled by the mode wheel's `selected` state, not by these — the
-  /// rest of the chrome is shared, since stop-motion is the capture stack. The
-  /// E2E asserts pin their absence in the modes that do not declare them, so a
-  /// control leaking across modes fails a run rather than passing quietly.
+  /// The ghost-frame and grid toggles on that rail (gated on
+  /// `supportsGhostFrame` and `supportGridLines`, both declared by capture and
+  /// stop-motion), plus the shot budget stop-motion puts in the top bar's
+  /// center slot. Which viewfinder is up is settled by the mode wheel's
+  /// `selected` state, not by these — the rest of the chrome is shared, since
+  /// stop-motion is the capture stack. The E2E asserts pin the budget absent
+  /// in capture, so a control leaking across modes fails a run rather than
+  /// passing quietly.
   ///
   /// Classic mode renders its own grid and ghost toggles in
   /// `video_recorder_classic_actions_bottom.dart`, and its own lens switch

@@ -74,12 +74,6 @@ class VideoAudioEditorTimingScreen extends StatefulWidget {
   @visibleForTesting
   final AudioClipPlayer? clipPlayer;
 
-  /// Route name for navigation.
-  static const routeName = 'video-audio-timing';
-
-  /// Route path.
-  static const path = '/video-audio-timing';
-
   @visibleForTesting
   static const videoDurationSegmentKey = Key(
     'video-audio-timing-video-duration-segment',
@@ -332,50 +326,60 @@ class _BottomControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Instruction text
-        Padding(
-          padding: const .symmetric(horizontal: 16),
-          child: Text(
-            context.l10n.videoEditorAudioSegmentInstruction,
-            style: VineTheme.bodySmallFont(
-              color: context.vineColors.primaryText,
+    // Both tracks span the controls' width inside their 16 px padding, which
+    // a side safe area (a status bar column in landscape) narrows below the
+    // screen's.
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Instruction text
+          Padding(
+            padding: const .symmetric(horizontal: 16),
+            child: Text(
+              context.l10n.videoEditorAudioSegmentInstruction,
+              style: VineTheme.bodySmallFont(
+                color: context.vineColors.primaryText,
+              ),
+              textAlign: .center,
             ),
-            textAlign: .center,
           ),
-        ),
 
-        const SizedBox(height: 28),
+          const SizedBox(height: 28),
 
-        // Video duration timeline (top bar with green segment)
-        _VideoDurationTimeline(
-          startOffset: startOffset,
-          audioDuration: audioDuration,
-          selectionSecs: selectionSecs,
-          onOffsetChanged: onOffsetChanged,
-          onFling: onFling,
-          onDragStart: onDragStart,
-          onDragEnd: onDragEnd,
-        ),
+          // Video duration timeline (top bar with green segment)
+          _VideoDurationTimeline(
+            spanWidth: constraints.maxWidth - _trackPadding * 2,
+            startOffset: startOffset,
+            audioDuration: audioDuration,
+            selectionSecs: selectionSecs,
+            onOffsetChanged: onOffsetChanged,
+            onFling: onFling,
+            onDragStart: onDragStart,
+            onDragEnd: onDragEnd,
+          ),
 
-        const SizedBox(height: 18),
+          const SizedBox(height: 18),
 
-        // Audio waveform with draggable selection
-        _AudioWaveformSelector(
-          startOffset: startOffset,
-          audioDuration: audioDuration,
-          selectionSecs: selectionSecs,
-          onOffsetChanged: onOffsetChanged,
-          onFling: onFling,
-          onDragStart: onDragStart,
-          onDragEnd: onDragEnd,
-        ),
-      ],
+          // Audio waveform with draggable selection
+          _AudioWaveformSelector(
+            spanWidth: constraints.maxWidth - _trackPadding * 2,
+            startOffset: startOffset,
+            audioDuration: audioDuration,
+            selectionSecs: selectionSecs,
+            onOffsetChanged: onOffsetChanged,
+            onFling: onFling,
+            onDragStart: onDragStart,
+            onDragEnd: onDragEnd,
+          ),
+        ],
+      ),
     );
   }
 }
+
+/// The space each track keeps from the sides of the controls.
+const double _trackPadding = 16;
 
 /// [VideoEditorConstants.maxDuration] expressed in seconds.
 double get _maxDurationSecs =>
@@ -408,6 +412,7 @@ double _maxDurationSegmentWidth({
 /// Video duration timeline showing where the selected segment will play.
 class _VideoDurationTimeline extends StatelessWidget {
   const _VideoDurationTimeline({
+    required this.spanWidth,
     required this.startOffset,
     required this.audioDuration,
     required this.selectionSecs,
@@ -422,6 +427,9 @@ class _VideoDurationTimeline extends StatelessWidget {
   /// Keeps it visible on very long tracks, where its true share of the bar
   /// falls below a few pixels.
   static const double _minSegmentWidth = 12;
+
+  /// The width the track spans, inside its padding.
+  final double spanWidth;
 
   final double startOffset;
 
@@ -439,7 +447,7 @@ class _VideoDurationTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width - 32;
+    final screenWidth = spanWidth;
     final audioDurationSecs = audioDuration ?? 0;
 
     // This bar spans the whole track, so the marker's share of it is the
@@ -508,7 +516,7 @@ class _VideoDurationTimeline extends StatelessWidget {
         onFling(velocityInOffset);
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: _trackPadding),
         child: SizedBox(
           height: kMinInteractiveDimension,
           child: Center(
@@ -550,6 +558,7 @@ class _VideoDurationTimeline extends StatelessWidget {
 /// Audio waveform with draggable green selection area.
 class _AudioWaveformSelector extends StatelessWidget {
   const _AudioWaveformSelector({
+    required this.spanWidth,
     required this.startOffset,
     required this.audioDuration,
     required this.selectionSecs,
@@ -558,6 +567,9 @@ class _AudioWaveformSelector extends StatelessWidget {
     required this.onDragStart,
     required this.onDragEnd,
   });
+
+  /// The width the track spans, inside its padding.
+  final double spanWidth;
 
   final double startOffset;
 
@@ -574,7 +586,7 @@ class _AudioWaveformSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width - 32;
+    final screenWidth = spanWidth;
     final audioDurationSecs = audioDuration ?? 0;
 
     // Zoom is chosen for scrub precision, not to mirror the overview bar above.

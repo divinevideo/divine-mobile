@@ -4947,6 +4947,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'hata bildirmek';
+
+  @override
   String get navMyProfile => 'Profilim';
 
   @override
@@ -8154,6 +8157,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Cihaz bilgileri ve günlükler otomatik olarak eklenecek.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Kısayol: alt çubuk görünürken, herhangi bir ekrandan hata bildirmek için profil fotoğrafına basılı tut.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Teşekkürler! Raporunu aldık ve Divine\'i daha iyi yapmak için kullanacağız.';
 
@@ -9100,6 +9107,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'En-boy oranını değiştir';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flaş';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Çevir';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'En-boy oranı';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Zamanlayıcı';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Hayalet kare';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Izgara';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Çift kamera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Kamera seçeneklerini göster';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Kamera seçeneklerini gizle';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Sabitleme';
 
   @override
@@ -9309,6 +9343,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Spot Işık';
+
+  @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Lazer';
+
+  @override
+  String get videoEditorEffectLightning => 'Şimşek';
 
   @override
   String get videoEditorEffectSnow => 'Kar';
@@ -13568,6 +13611,23 @@ class AppLocalizationsTr extends AppLocalizations {
       one: 'En fazla $max hashtag ekleyebilirsin.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'En fazla $max hashtag ekleyebilirsin.',
+      one: 'En fazla $max hashtag ekleyebilirsin.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Yer açmak için $count tanesini kaldır.',
+      one: 'Yer açmak için birini kaldır.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

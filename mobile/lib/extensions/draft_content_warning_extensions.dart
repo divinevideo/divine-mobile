@@ -15,8 +15,10 @@ extension DraftContentWarnings on DivineVideoDraft {
   Set<ContentLabel> get requiredContentWarnings {
     final meta = editorEditingParameters['meta'];
     if (meta is! Map) return const {};
+    final effects = meta[VideoEditorConstants.effectsStateHistoryKey];
     return requiredContentLabelsForEffects(
-      videoEffectsFromMeta(meta[VideoEditorConstants.effectsStateHistoryKey]),
+      videoEffectsFromMeta(effects),
+      customEffects: customVideoEffectsFromMeta(effects),
     );
   }
 

@@ -8395,6 +8395,12 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
+  /// TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a fragment that fits TalkBack's localized long-press hint (English: 'Double-tap and hold to …'). Follow the locale's register in mobile/docs/LOCALIZATION_STYLE_GUIDE.md.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get navProfileLongPressHint;
+
   /// No description provided for @navMyProfile.
   ///
   /// In en, this message translates to:
@@ -13801,6 +13807,12 @@ abstract class AppLocalizations {
   /// **'Device info and logs will be included automatically.'**
   String get bugReportDiagnosticsNotice;
 
+  /// Muted line at the bottom of the Report a Bug form, shown unless the form was opened by holding the Profile tab. The tab shows the user's profile picture, not a word. Some people reach this form while the bottom bar is hidden, so keep the 'when the bottom bar is showing' condition. Avoid left/right wording (RTL locales).
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut: when the bottom bar is showing, press and hold your profile picture to report a bug from any screen.'**
+  String get bugReportProfileHoldTip;
+
   /// No description provided for @bugReportSuccessMessage.
   ///
   /// In en, this message translates to:
@@ -15353,6 +15365,60 @@ abstract class AppLocalizations {
   /// **'Toggle aspect ratio'**
   String get videoRecorderToggleAspectRatioLabel;
 
+  /// Short visible name of the camera's flash control, shown next to its icon while the recorder's control rail is unfolded over the viewfinder.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get videoRecorderRailFlashLabel;
+
+  /// Short visible name of the control that switches between the front and back camera, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip'**
+  String get videoRecorderRailFlipLabel;
+
+  /// Short visible name of the control that switches between a vertical and a square frame, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Aspect ratio'**
+  String get videoRecorderRailAspectRatioLabel;
+
+  /// Short visible name of the countdown timer control (the stop-motion interval in Stop Motion), shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Timer'**
+  String get videoRecorderRailTimerLabel;
+
+  /// Short visible name of the control that overlays the last clip faintly on the viewfinder, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ghost frame'**
+  String get videoRecorderRailGhostFrameLabel;
+
+  /// Short visible name of the rule-of-thirds grid control, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get videoRecorderRailGridLabel;
+
+  /// Short visible name of the control that records with the front and the back camera at once, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Dual camera'**
+  String get videoRecorderRailDualCameraLabel;
+
+  /// Screen-reader label of the button that unfolds the recorder's control rail to list every camera control. Read while the rail is folded.
+  ///
+  /// In en, this message translates to:
+  /// **'Show camera options'**
+  String get videoRecorderRailShowOptionsLabel;
+
+  /// Screen-reader label of the same button while the rail is unfolded: tapping it folds the rail back to flash, camera switch and aspect ratio.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide camera options'**
+  String get videoRecorderRailHideOptionsLabel;
+
   /// No description provided for @videoRecorderStabilizationLabel.
   ///
   /// In en, this message translates to:
@@ -15736,6 +15802,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spotlight'**
   String get videoEditorEffectSpotlight;
+
+  /// Name of a video effect: coloured spots from a mirror ball sweep over the slightly dimmed picture, changing colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Disco'**
+  String get videoEditorEffectDisco;
+
+  /// Name of a video effect: thin coloured laser beams fan out from the top of the picture and sweep across it.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser'**
+  String get videoEditorEffectLaser;
+
+  /// Name of a video effect: the picture flashes blue-white with a lightning bolt, then fades back.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning'**
+  String get videoEditorEffectLightning;
 
   /// Name of a video effect: snowflakes fall over the picture.
   ///
@@ -23012,6 +23096,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}'**
   String videoMetadataTagsPickerTagLimitReached(int max);
+
+  /// Warning under the tags picker field when a tag was not added because the video already has the maximum number of hashtags. The first sentence states the limit; the second says how many of the video's tags to remove before another one fits.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}} {count, plural, one{Remove one to make room.} other{Remove {count} to make room.}}'**
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count);
 
   /// Screen-reader label for the tags picker character counter, which is shown visually as count/max.
   ///

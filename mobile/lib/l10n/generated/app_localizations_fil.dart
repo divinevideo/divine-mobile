@@ -5037,6 +5037,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
+  String get navProfileLongPressHint => 'Mag-report ng bug';
+
+  @override
   String get navMyProfile => 'Profile Ko';
 
   @override
@@ -8287,6 +8290,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Awtomatikong isasama ang device info at logs.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Shortcut: kapag nakikita ang bottom bar, pindutin nang matagal ang larawan mo sa profile para mag-report ng bug mula sa kahit anong screen.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Salamat! Natanggap namin ang report mo at gagamitin namin ito para mas gumanda ang Divine.';
 
@@ -9250,6 +9257,35 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'I-toggle ang aspect ratio';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'I-flip';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Aspect ratio';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Ghost frame';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dalawang camera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel =>
+      'Ipakita ang mga opsyon ng camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel =>
+      'Itago ang mga opsyon ng camera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Estabilisasyon';
 
   @override
@@ -9458,6 +9494,15 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Spotlight';
+
+  @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Kidlat';
 
   @override
   String get videoEditorEffectSnow => 'Niyebe';
@@ -13768,6 +13813,23 @@ class AppLocalizationsFil extends AppLocalizations {
       one: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+      one: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mag-alis ng $count para magkaroon ng puwang.',
+      one: 'Mag-alis ng $count para magkaroon ng puwang.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

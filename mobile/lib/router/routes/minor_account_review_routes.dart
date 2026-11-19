@@ -11,6 +11,7 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 
 part 'minor_account_review_routes.g.dart';
 
@@ -116,9 +117,12 @@ class MinorAccountReviewRecordConsentRouteData extends GoRouteData
   static final GlobalKey<NavigatorState> $parentNavigatorKey =
       NavigatorKeys.root;
 
+  // The camera records in portrait, as the video camera does.
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const MinorAccountReviewRecordConsentScreen();
+      const PortraitOrientationLock(
+        child: MinorAccountReviewRecordConsentScreen(),
+      );
 }
 
 /// The step that reaches a parent by email.

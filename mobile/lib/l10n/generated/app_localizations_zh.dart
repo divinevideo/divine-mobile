@@ -4682,6 +4682,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navProfile => '我的';
 
   @override
+  String get navProfileLongPressHint => '报告 Bug';
+
+  @override
   String get navMyProfile => '我的主页';
 
   @override
@@ -7740,6 +7743,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bugReportDiagnosticsNotice => '设备信息和日志会自动附上。';
 
   @override
+  String get bugReportProfileHoldTip => '快捷方式：当底部栏显示时，长按你的头像，就能在任意页面报告 Bug。';
+
+  @override
   String get bugReportSuccessMessage => '谢谢！我们已收到你的报告，会用它来把 Divine 做得更好。';
 
   @override
@@ -8643,6 +8649,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => '切换宽高比';
 
   @override
+  String get videoRecorderRailFlashLabel => '闪光灯';
+
+  @override
+  String get videoRecorderRailFlipLabel => '翻转';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => '宽高比';
+
+  @override
+  String get videoRecorderRailTimerLabel => '倒计时';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => '洋葱皮';
+
+  @override
+  String get videoRecorderRailGridLabel => '网格';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => '双摄像头';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => '显示相机选项';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => '隐藏相机选项';
+
+  @override
   String get videoRecorderStabilizationLabel => '防抖';
 
   @override
@@ -8850,6 +8883,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => '聚光灯';
+
+  @override
+  String get videoEditorEffectDisco => '迪斯科';
+
+  @override
+  String get videoEditorEffectLaser => '激光';
+
+  @override
+  String get videoEditorEffectLightning => '闪电';
 
   @override
   String get videoEditorEffectSnow => '雪花';
@@ -12848,6 +12890,21 @@ class AppLocalizationsZh extends AppLocalizations {
       other: '最多可以添加 $max 个话题标签。',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '最多可以添加 $max 个话题标签。',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 个即可腾出位置。',
+    );
+    return '$_temp0$_temp1';
   }
 
   @override

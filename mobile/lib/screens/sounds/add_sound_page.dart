@@ -28,6 +28,7 @@ import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart
 import 'package:openvine/screens/sounds/widgets/microphone_denied_notice.dart';
 import 'package:openvine/screens/sounds/widgets/share_cover_section.dart';
 import 'package:openvine/screens/sounds/widgets/sound_recording_panel.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 import 'package:permissions_service/permissions_service.dart';
@@ -469,101 +470,121 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                   }
                 },
               ),
-              body: ListView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.only(bottom: 24),
-                children: [
-                  if (isMicrophoneDenied) const MicrophoneDeniedNotice(),
-                  if (isRecorderActive)
-                    const SoundRecordingPanel()
-                  else if (audio == null)
-                    _SourcePrompt(
-                      inFlight: state.status == AddSoundStatus.importing
-                          ? state.source
-                          : isRecorderStarting
-                          ? AddSoundSource.recording
-                          : null,
-                      onPick: _pickFile,
-                      onRecord: _startRecording,
-                    )
-                  else ...[
-                    _PickedSound(
-                      sound: audio,
-                      isPlaying: _playing,
-                      canPreview: !state.isBusy && !isRecorderStarting,
-                      canChange: state.canEdit && !isRecorderStarting,
-                      isRecordedSound: isRecordedSound,
-                      onTogglePreview: () => _togglePreview(audio),
-                      onChange: isRecordedSound ? _startRecording : _pickFile,
-                    ),
-                    AnimatedReveal(
-                      child: state.sharePublicly
-                          ? null
-                          : Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                              child: DivineTextField(
-                                key: const Key('add_sound_name_field'),
-                                controller: _nameController,
-                                enabled: !state.isBusy && !isRecorderStarting,
-                                filled: true,
-                                labelText: context.l10n.savedSoundYourLabel,
-                                textInputAction: TextInputAction.done,
-                                spellCheckConfiguration:
-                                    const SpellCheckConfiguration.disabled(),
-                              ),
+              // A readable column on wide windows with the large-screen
+              // layouts, as the settings screens keep.
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: _maxContentWidthOf(context),
+                  ),
+                  child: ListView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      if (isMicrophoneDenied) const MicrophoneDeniedNotice(),
+                      if (isRecorderActive)
+                        const SoundRecordingPanel()
+                      else if (audio == null)
+                        _SourcePrompt(
+                          inFlight: state.status == AddSoundStatus.importing
+                              ? state.source
+                              : isRecorderStarting
+                              ? AddSoundSource.recording
+                              : null,
+                          onPick: _pickFile,
+                          onRecord: _startRecording,
+                        )
+                      else ...[
+                        _PickedSound(
+                          sound: audio,
+                          isPlaying: _playing,
+                          canPreview: !state.isBusy && !isRecorderStarting,
+                          canChange: state.canEdit && !isRecorderStarting,
+                          isRecordedSound: isRecordedSound,
+                          onTogglePreview: () => _togglePreview(audio),
+                          onChange: isRecordedSound
+                              ? _startRecording
+                              : _pickFile,
+                        ),
+                        AnimatedReveal(
+                          child: state.sharePublicly
+                              ? null
+                              : Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    8,
+                                    16,
+                                    0,
+                                  ),
+                                  child: DivineTextField(
+                                    key: const Key('add_sound_name_field'),
+                                    controller: _nameController,
+                                    enabled:
+                                        !state.isBusy && !isRecorderStarting,
+                                    filled: true,
+                                    labelText: context.l10n.savedSoundYourLabel,
+                                    textInputAction: TextInputAction.done,
+                                    spellCheckConfiguration:
+                                        const SpellCheckConfiguration.disabled(),
+                                  ),
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: DivineSwitchTile(
+                              key: const Key('add_sound_share_publicly'),
+                              value: state.sharePublicly,
+                              title: context.l10n.soundsAddSharePublicly,
+                              subtitle: context.l10n.soundUploadReuseNotice,
+                              onChanged: state.canEdit && !isRecorderStarting
+                                  ? cubit.setSharePublicly
+                                  : null,
                             ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: DivineSwitchTile(
-                          key: const Key('add_sound_share_publicly'),
-                          value: state.sharePublicly,
-                          title: context.l10n.soundsAddSharePublicly,
-                          subtitle: context.l10n.soundUploadReuseNotice,
-                          onChanged: state.canEdit && !isRecorderStarting
-                              ? cubit.setSharePublicly
+                          ),
+                        ),
+                        AnimatedReveal(
+                          child: state.sharePublicly && attribution != null
+                              // ExcludeFocus as well as IgnorePointer: a field
+                              // still focused when Share is tapped would keep
+                              // taking keystrokes the cubit drops, so a retry
+                              // would publish a credit other than the one on
+                              // screen.
+                              ? ExcludeFocus(
+                                  excluding:
+                                      !state.canEdit || isRecorderStarting,
+                                  child: IgnorePointer(
+                                    ignoring:
+                                        !state.canEdit || isRecorderStarting,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        ShareCoverSection(
+                                          coverImage: state.coverImage,
+                                          onChangeCover: _changeCover,
+                                        ),
+                                        PublicAudioCreditEditor(
+                                          key: ValueKey(audio.id),
+                                          attribution: attribution,
+                                          onChanged: cubit.updateAttribution,
+                                          emptyTitleHint: context
+                                              .l10n
+                                              .soundsShareTitleRequiredHint,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
                               : null,
                         ),
-                      ),
-                    ),
-                    AnimatedReveal(
-                      child: state.sharePublicly && attribution != null
-                          // ExcludeFocus as well as IgnorePointer: a field
-                          // still focused when Share is tapped would keep
-                          // taking keystrokes the cubit drops, so a retry
-                          // would publish a credit other than the one on
-                          // screen.
-                          ? ExcludeFocus(
-                              excluding: !state.canEdit || isRecorderStarting,
-                              child: IgnorePointer(
-                                ignoring: !state.canEdit || isRecorderStarting,
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    ShareCoverSection(
-                                      coverImage: state.coverImage,
-                                      onChangeCover: _changeCover,
-                                    ),
-                                    PublicAudioCreditEditor(
-                                      key: ValueKey(audio.id),
-                                      attribution: attribution,
-                                      onChanged: cubit.updateAttribution,
-                                      emptyTitleHint: context
-                                          .l10n
-                                          .soundsShareTitleRequiredHint,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
-                  ],
-                ],
+                      ],
+                    ],
+                  ),
+                ),
               ),
               bottomNavigationBar: audio == null || isRecorderActive
                   ? null
@@ -585,6 +606,11 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
     );
   }
 }
+
+/// The widest the page's content gets with the large-screen layouts, as on
+/// the settings screens; without them it spans the window as it always did.
+double _maxContentWidthOf(BuildContext context) =>
+    context.adaptiveLayout.enabled ? 600 : double.infinity;
 
 /// The two ways to add a sound: pick a file or record one.
 class _SourcePrompt extends StatelessWidget {
@@ -761,14 +787,21 @@ class _SaveBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: DivineButton(
-          key: const Key('add_sound_save'),
-          label: label,
-          expanded: true,
-          isLoading: isSaving,
-          onPressed: onSave,
+      // Under the content's column, not across a wide window.
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: _maxContentWidthOf(context)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: DivineButton(
+              key: const Key('add_sound_save'),
+              label: label,
+              expanded: true,
+              isLoading: isSaving,
+              onPressed: onSave,
+            ),
+          ),
         ),
       ),
     );

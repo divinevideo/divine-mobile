@@ -14,6 +14,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
@@ -153,7 +154,12 @@ class _VideosGrid extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth >= 600 ? 3 : 2;
+    final layout = context.adaptiveLayout;
+    final crossAxisCount = layout.gridColumns(
+      compact: 2,
+      width: screenWidth,
+      largeColumnsWithoutFlag: 3,
+    );
 
     return SliverPadding(
       padding: const EdgeInsets.all(4),

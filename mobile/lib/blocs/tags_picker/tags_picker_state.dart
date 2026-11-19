@@ -15,7 +15,8 @@ enum TagsPickerStatus {
   success,
 }
 
-/// A one-off explanation for why the last commit did not add a tag.
+/// Why a recent commit did not add a tag. A limit notice stays until a tag
+/// is removed.
 enum TagsPickerNotice {
   /// Nothing to explain.
   none,
@@ -23,6 +24,10 @@ enum TagsPickerNotice {
   /// A token was longer than [HashtagExtractor.maxHashtagLength] and was
   /// rejected.
   tagTooLong,
+
+  /// A valid tag the video did not already have was dropped because the
+  /// video carries [HashtagExtractor.maxHashtagsPerVideo] tags.
+  tagLimitReached,
 }
 
 /// State for the tags picker sheet.
@@ -55,13 +60,33 @@ final class TagsPickerState extends Equatable {
   /// Lifecycle of the suggestion search.
   final TagsPickerStatus status;
 
-  /// Why the last commit did not add a tag, if it was rejected.
+  /// Why a recent commit did not add a tag, if one was rejected.
   final TagsPickerNotice notice;
 
   /// Whether the video already carries [HashtagExtractor.maxHashtagsPerVideo]
   /// tags, so nothing more can be added.
   bool get isAtTagLimit =>
       allTags.length >= HashtagExtractor.maxHashtagsPerVideo;
+
+  /// How many of the video's own tags must go before another tag fits: 0
+  /// below the limit, more than 1 when sticker hashtags push the video past
+  /// it (#11244), and `null` when removing tags here cannot make room because
+  /// the sticker hashtags alone fill the limit.
+  int? get tagsToRemoveForRoom {
+    final needed = allTags.length - HashtagExtractor.maxHashtagsPerVideo + 1;
+    if (needed <= 0) return 0;
+    // A tag that is also a sticker's hashtag stays on the video when removed.
+    final removable = selectedTags.difference(stickerTags).length;
+    return needed <= removable ? needed : null;
+  }
+
+  /// Whether committing [raw] would be turned away for the tag limit: it is a
+  /// valid tag the video does not carry yet, and the video is at the limit.
+  bool turnsAwayAtLimit(String raw) {
+    if (!isAtTagLimit) return false;
+    final tag = HashtagExtractor.normalizeVideoHashtag(raw);
+    return tag != null && !allTags.contains(tag);
+  }
 
   /// Search results in the form they would be added — normalized and
   /// deduplicated — minus anything already selected or not addable.

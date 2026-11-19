@@ -5177,6 +5177,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navProfile => 'ప్రొఫైల్';
 
   @override
+  String get navProfileLongPressHint => 'బగ్‌ను నివేదించడం';
+
+  @override
   String get navMyProfile => 'నా ప్రొఫైల్';
 
   @override
@@ -8480,6 +8483,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'పరికర సమాచారం మరియు లాగ్‌లు స్వయంచాలకంగా చేర్చబడతాయి.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'షార్ట్‌కట్: దిగువన ఉన్న బార్ కనిపిస్తున్నప్పుడు, ఏ స్క్రీన్ నుండైనా బగ్‌ను నివేదించడానికి మీ ప్రొఫైల్ చిత్రాన్ని నొక్కి ఉంచండి.';
+
+  @override
   String get bugReportSuccessMessage =>
       'ధన్యవాదాలు! మేము మీ నివేదికను స్వీకరించాము మరియు Divineని మెరుగుపరచడానికి దాన్ని ఉపయోగిస్తాము.';
 
@@ -9442,6 +9449,33 @@ class AppLocalizationsTe extends AppLocalizations {
       'కారక నిష్పత్తిని టోగుల్ చేయండి';
 
   @override
+  String get videoRecorderRailFlashLabel => 'ఫ్లాష్';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'ఫ్లిప్';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'కారక నిష్పత్తి';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'టైమర్';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'గోస్ట్ ఫ్రేమ్';
+
+  @override
+  String get videoRecorderRailGridLabel => 'గ్రిడ్';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'డ్యూయల్ కెమెరా';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'కెమెరా ఎంపికలను చూపించు';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'కెమెరా ఎంపికలను దాచు';
+
+  @override
   String get videoRecorderStabilizationLabel => 'స్థిరీకరణ';
 
   @override
@@ -9652,6 +9686,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'స్పాట్‌లైట్';
+
+  @override
+  String get videoEditorEffectDisco => 'డిస్కో';
+
+  @override
+  String get videoEditorEffectLaser => 'లేజర్';
+
+  @override
+  String get videoEditorEffectLightning => 'మెరుపు';
 
   @override
   String get videoEditorEffectSnow => 'మంచు';
@@ -13983,6 +14026,23 @@ class AppLocalizationsTe extends AppLocalizations {
       one: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్ జోడించవచ్చు.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు.',
+      one: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్ జోడించవచ్చు.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'చోటు కోసం $count తీసివేయండి.',
+      one: 'చోటు కోసం ఒకదాన్ని తీసివేయండి.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

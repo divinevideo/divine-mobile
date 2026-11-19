@@ -248,6 +248,48 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice when the cleared field sends an empty query',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: {for (var i = 0; i < 10; i++) 'tag$i'},
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerQueryChanged('')),
+        wait: debounce,
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagLimitReached));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice while typing at the limit',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: {for (var i = 0; i < 10; i++) 'tag$i'},
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerQueryChanged('news')),
+        wait: debounce,
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.searching)
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.success)
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
         'clears a too-long notice once a new query is typed',
         build: createBloc,
         seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),
@@ -444,23 +486,125 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
-        'ignores further tags once the limit is reached',
+        'flags a tag turned away at the limit',
         build: () => createBloc(initial: ten.toSet()),
         act: (b) => b.add(const TagsPickerTagsAdded(['eleven'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', ten.toSet())
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'flags the overflow of a pasted list',
+        build: () => createBloc(initial: ten.take(9).toSet()),
+        act: (b) => b.add(const TagsPickerTagsAdded(['a', 'b'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', {
+                ...ten.take(9),
+                'a',
+              })
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'does not flag a tag the video already has',
+        build: () => createBloc(initial: ten.toSet()),
+        act: (b) => b.add(const TagsPickerTagsAdded(['tag3'])),
         expect: () => const <TagsPickerState>[],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice when a tag the video already has is committed',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: ten.toSet(),
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerTagsAdded(['tag3'])),
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagLimitReached));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice when a too-long tag is pasted at the limit',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: ten.toSet(),
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(TagsPickerTagsAdded([tooLong])),
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagLimitReached));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'limit notice wins over a too-long tag in the same paste',
+        build: () => createBloc(initial: ten.take(9).toSet()),
+        act: (b) => b.add(TagsPickerTagsAdded([tooLong, 'x', 'y'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', {
+                ...ten.take(9),
+                'x',
+              })
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
       );
     });
 
     group('TagsPickerSuggestionSelected', () {
       blocTest<TagsPickerBloc, TagsPickerState>(
-        'is ignored once the limit is reached',
+        'is turned away with a limit notice once the limit is reached',
         build: () => createBloc(initial: ten.toSet()),
         act: (b) => b.add(const TagsPickerSuggestionSelected('eleven')),
-        expect: () => const <TagsPickerState>[],
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', ten.toSet())
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
       );
     });
 
     group('TagsPickerTagRemoved', () {
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'clears a limit notice',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: ten.toSet(),
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerTagRemoved('tag0')),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.isAtTagLimit, 'isAtTagLimit', isFalse)
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+        ],
+      );
+
       blocTest<TagsPickerBloc, TagsPickerState>(
         'clears a too-long notice',
         build: createBloc,
@@ -520,6 +664,76 @@ void main() {
         expect(state.canAddQuery, isFalse);
       });
     });
+
+    group('turnsAwayAtLimit', () {
+      test('is true for a new tag at the limit', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit('News'), isTrue);
+      });
+
+      test('is false below the limit', () {
+        final state = TagsPickerState(selectedTags: ten.take(9).toSet());
+        expect(state.turnsAwayAtLimit('news'), isFalse);
+      });
+
+      test('is false for a tag the video already has', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit('TAG3'), isFalse);
+      });
+
+      test("is false for a sticker's hashtag", () {
+        final state = TagsPickerState(
+          selectedTags: ten.take(8).toSet(),
+          stickerTags: const {'summer', 'beach'},
+        );
+        expect(state.turnsAwayAtLimit('summer'), isFalse);
+      });
+
+      test('is false for input that is not a tag', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.turnsAwayAtLimit(''), isFalse);
+        expect(state.turnsAwayAtLimit('   '), isFalse);
+        expect(state.turnsAwayAtLimit(tooLong), isFalse);
+      });
+    });
+
+    group('tagsToRemoveForRoom', () {
+      final stickers = {for (var i = 0; i < 10; i++) 'sticker$i'};
+
+      test('is 0 below the limit', () {
+        final state = TagsPickerState(selectedTags: ten.take(9).toSet());
+        expect(state.tagsToRemoveForRoom, equals(0));
+      });
+
+      test('is 1 at the limit', () {
+        final state = TagsPickerState(selectedTags: ten.toSet());
+        expect(state.tagsToRemoveForRoom, equals(1));
+      });
+
+      test('counts the overflow when sticker hashtags push past the limit', () {
+        final state = TagsPickerState(
+          selectedTags: ten.toSet(),
+          stickerTags: stickers.take(2).toSet(),
+        );
+        expect(state.tagsToRemoveForRoom, equals(3));
+      });
+
+      test('is null when sticker hashtags alone fill the limit', () {
+        final state = TagsPickerState(stickerTags: stickers);
+        expect(state.tagsToRemoveForRoom, isNull);
+      });
+
+      test("does not count a tag that is also a sticker's hashtag", () {
+        // Removing 'sticker0' from the tags leaves the sticker's copy, so the
+        // video keeps carrying it.
+        final state = TagsPickerState(
+          selectedTags: const {'sticker0'},
+          stickerTags: stickers,
+        );
+        expect(state.tagsToRemoveForRoom, isNull);
+      });
+    });
+
     group('sticker tags', () {
       const stickerTags = {'summer', 'beach'};
       final eight = [for (var i = 0; i < 8; i++) 'tag$i'];
@@ -541,6 +755,28 @@ void main() {
               .having((s) => s.selectedTags, 'selectedTags', eight.toSet())
               .having((s) => s.isAtTagLimit, 'isAtTagLimit', isTrue),
         ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'flag a tag turned away when they fill the last slot',
+        build: () => createWithStickers(initial: eight.toSet()),
+        act: (b) => b.add(const TagsPickerTagsAdded(['new'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', eight.toSet())
+              .having(
+                (s) => s.notice,
+                'notice',
+                TagsPickerNotice.tagLimitReached,
+              ),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'do not flag their own hashtag at the limit',
+        build: () => createWithStickers(initial: eight.toSet()),
+        act: (b) => b.add(const TagsPickerTagsAdded(['summer'])),
+        expect: () => const <TagsPickerState>[],
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(

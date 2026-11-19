@@ -34,32 +34,39 @@ appId: co.openvine.app.staging
 - assertNotVisible:
     id: audio_chip
 
-# Control rail, top to bottom. The grid is rendered only by the mode that
-# captures stills; the ghost frame is shared with capture and classic. The
-# timer is shared too, but here it sets the interval of the hands-free loop
-# rather than a delayed start.
+# Control rail, folded as the recorder opens it: flash, the lens switch,
+# aspect ratio and the button that unfolds it. Every flow that unfolds the
+# rail folds it back, and a stop-motion interval folds it too, so this holds
+# wherever the assert runs.
 - assertVisible:
     id: camera_flash_button
 - assertVisible:
+    id: camera_switch_camera_button
+- assertVisible:
+    id: camera_aspect_ratio_button
+- assertVisible:
+    id: camera_rail_options_button
+- assertNotVisible:
     id: camera_timer_button
+
+# The rest of the rail, unfolded. The ghost frame and the grid are shared with
+# capture and classic. The timer is shared with capture too, but here it sets
+# the interval of the hands-free loop rather than a delayed start.
+- runFlow: ../utils/unfoldCaptureRail.yaml
 - assertVisible:
     id: camera_ghost_frame_button
 - assertVisible:
     id: camera_grid_button
-- assertVisible:
-    id: camera_aspect_ratio_button
-- assertVisible:
-    id: camera_switch_camera_button
 
 # And the one capture mode has that this mode does not: stop-motion does not
 # declare `supportsVideoStabilization`. This is a leak guard, not what
 # separates the two screens — the mode wheel above already does that, and
-# neither rail contains the other, so assertCaptureMode fails here on
-# `camera_stabilization_button` regardless. What it catches is a control
-# starting to render in a mode that does not declare it, which nothing else
-# in the suite would.
+# assertCaptureMode fails here on `camera_stabilization_button` regardless.
+# What it catches is a control starting to render in a mode that does not
+# declare it, which nothing else in the suite would.
 - assertNotVisible:
     id: camera_stabilization_button
+- runFlow: ../utils/foldCaptureRail.yaml
 
 # And classic's shutter, for the same reason assertCaptureMode pins it: the
 # record button is pinned absent in assertClassicMode and this one absent in

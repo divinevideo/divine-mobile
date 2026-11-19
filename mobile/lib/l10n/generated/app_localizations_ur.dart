@@ -5016,6 +5016,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navProfile => 'پروفائل';
 
   @override
+  String get navProfileLongPressHint => 'بگ کی رپورٹ کرنے';
+
+  @override
   String get navMyProfile => 'میرا پروفائل';
 
   @override
@@ -8234,6 +8237,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ڈیوائس کی معلومات اور لاگز خودکار طور پر شامل ہوں گے۔';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'شارٹ کٹ: جب نیچے موجود بار دکھائی دے تو کسی بھی اسکرین سے بگ کی رپورٹ کرنے کے لیے اپنی پروفائل تصویر کو دبا کر رکھیں۔';
+
+  @override
   String get bugReportSuccessMessage =>
       'شکریہ! ہمیں آپ کی رپورٹ مل گئی ہے اور ہم اسے Divine کو بہتر بنانے کے لیے استعمال کریں گے۔';
 
@@ -9184,6 +9191,33 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'ایسپیکٹ ریشو ٹوگل کریں';
 
   @override
+  String get videoRecorderRailFlashLabel => 'فلیش';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'پلٹیں';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'ایسپیکٹ ریشو';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'ٹائمر';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'گھوسٹ فریم';
+
+  @override
+  String get videoRecorderRailGridLabel => 'گرڈ';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'ڈوئل کیمرہ';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'کیمرہ کے اختیارات دکھائیں';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'کیمرہ کے اختیارات چھپائیں';
+
+  @override
   String get videoRecorderStabilizationLabel => 'استحکام';
 
   @override
@@ -9392,6 +9426,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'اسپاٹ لائٹ';
+
+  @override
+  String get videoEditorEffectDisco => 'ڈسکو';
+
+  @override
+  String get videoEditorEffectLaser => 'لیزر';
+
+  @override
+  String get videoEditorEffectLightning => 'بجلی';
 
   @override
   String get videoEditorEffectSnow => 'برف';
@@ -13656,6 +13699,23 @@ class AppLocalizationsUr extends AppLocalizations {
       one: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+      one: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'جگہ بنانے کے لیے $count ہٹا دیں۔',
+      one: 'جگہ بنانے کے لیے ایک ہٹا دیں۔',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

@@ -4927,6 +4927,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'melaporkan bug';
+
+  @override
   String get navMyProfile => 'Profilku';
 
   @override
@@ -8143,6 +8146,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Info perangkat dan log akan disertakan otomatis.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: saat bilah bawah terlihat, tekan lama foto profilmu untuk melaporkan bug dari layar mana pun.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Terima kasih! Laporanmu sudah kami terima dan akan kami pakai untuk membuat Divine lebih baik.';
 
@@ -9089,6 +9096,33 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Ganti rasio aspek';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Balik';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Rasio aspek';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Frame hantu';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Kamera ganda';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Tampilkan opsi kamera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Sembunyikan opsi kamera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisasi';
 
   @override
@@ -9298,6 +9332,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Lampu Sorot';
+
+  @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Petir';
 
   @override
   String get videoEditorEffectSnow => 'Salju';
@@ -13553,6 +13596,21 @@ class AppLocalizationsId extends AppLocalizations {
       other: 'Kamu bisa menambahkan hingga $max hashtag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Kamu bisa menambahkan hingga $max hashtag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hapus $count untuk memberi ruang.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

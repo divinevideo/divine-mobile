@@ -5005,6 +5005,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navProfile => 'الملف الشخصي';
 
   @override
+  String get navProfileLongPressHint => 'الإبلاغ عن خطأ';
+
+  @override
   String get navMyProfile => 'ملفي الشخصي';
 
   @override
@@ -8239,6 +8242,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستُرفَق معلومات الجهاز والسجلات تلقائيًا.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'اختصار: عندما يكون الشريط السفلي ظاهرًا، يمكن الإبلاغ عن خطأ من أي شاشة بالضغط مطولًا على صورة ملفك الشخصي.';
+
+  @override
   String get bugReportSuccessMessage =>
       'شكرًا لك! استلمنا تقريرك وسنستخدمه لجعل Divine أفضل.';
 
@@ -9201,6 +9208,33 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبديل نسبة العرض إلى الارتفاع';
 
   @override
+  String get videoRecorderRailFlashLabel => 'الفلاش';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'قلب';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'نسبة الأبعاد';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'المؤقت';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'الإطار الشبحي';
+
+  @override
+  String get videoRecorderRailGridLabel => 'الشبكة';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'كاميرا مزدوجة';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'إظهار خيارات الكاميرا';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'إخفاء خيارات الكاميرا';
+
+  @override
   String get videoRecorderStabilizationLabel => 'تثبيت الفيديو';
 
   @override
@@ -9411,6 +9445,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'بقعة ضوء';
+
+  @override
+  String get videoEditorEffectDisco => 'ديسكو';
+
+  @override
+  String get videoEditorEffectLaser => 'ليزر';
+
+  @override
+  String get videoEditorEffectLightning => 'برق';
 
   @override
   String get videoEditorEffectSnow => 'ثلج';
@@ -13654,6 +13697,31 @@ class AppLocalizationsAr extends AppLocalizations {
       zero: 'يمكنك إضافة ما يصل إلى $max وسم.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      many: 'يمكنك إضافة ما يصل إلى $max وسمًا.',
+      few: 'يمكنك إضافة ما يصل إلى $max وسوم.',
+      two: 'يمكنك إضافة ما يصل إلى $max وسمين.',
+      one: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      zero: 'يمكنك إضافة ما يصل إلى $max وسم.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'حذف $count وسم يُفسح المجال لآخر.',
+      many: 'حذف $count وسمًا يُفسح المجال لآخر.',
+      few: 'حذف $count وسوم يُفسح المجال لآخر.',
+      two: 'حذف وسمين يُفسح المجال لآخر.',
+      one: 'حذف وسم واحد يُفسح المجال لآخر.',
+      zero: 'حذف $count وسم يُفسح المجال لآخر.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

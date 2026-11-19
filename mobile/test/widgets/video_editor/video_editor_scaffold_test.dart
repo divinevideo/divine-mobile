@@ -19,11 +19,14 @@ import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubi
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
@@ -117,12 +120,20 @@ void main() {
       LoopSuggestionCubit? loopSuggestionCubit,
       ValueNotifier<double>? maskPanelHeight,
       ThemeData? theme,
+      bool largeScreenLayout = false,
     }) {
       final editorKey = GlobalKey<ProImageEditorState>();
       final removeAreaKey = GlobalKey();
+      final scaffold = VideoEditorScaffold(isLoading: isLoading);
 
       return ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          if (largeScreenLayout)
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(true),
+        ],
         child: VideoEditorScope(
           editorKey: editorKey,
           editorOverride: editorOverride,
@@ -177,7 +188,9 @@ void main() {
               theme: theme,
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: VideoEditorScaffold(isLoading: isLoading),
+              home: largeScreenLayout
+                  ? AdaptiveLayoutScope(child: scaffold)
+                  : scaffold,
             ),
           ),
         ),
@@ -360,6 +373,128 @@ void main() {
         expect(collapseSection().sizeFactor.value, 1);
       },
     );
+
+    group('wide landscape', () {
+      void setWindow(WidgetTester tester, Size size, {double right = 0}) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        tester.view.padding = FakeViewPadding(right: right);
+        tester.view.viewPadding = FakeViewPadding(right: right);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.view.resetViewPadding);
+      }
+
+      Rect preview(WidgetTester tester) =>
+          tester.getRect(find.byType(BrandedLoadingScaffold));
+      Rect timeline(WidgetTester tester) =>
+          tester.getRect(find.byType(VideoEditorTimelineScaffold));
+
+      testWidgets('puts the full-height preview first, the timeline beside '
+          'it', (tester) async {
+        setWindow(tester, const Size(1194, 834));
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBlocWithClip(),
+            largeScreenLayout: true,
+          ),
+        );
+
+        // A 9:16 preview as tall as the window, the timeline beside it.
+        const previewWidth = 834 * 9 / 16;
+        expect(preview(tester).height, equals(834));
+        expect(preview(tester).width, moreOrLessEquals(previewWidth));
+        expect(preview(tester).left, equals(0));
+        expect(timeline(tester).left, moreOrLessEquals(previewWidth));
+        expect(timeline(tester).right, equals(1194));
+        // The timeline fills the column instead of leaving it empty above.
+        expect(timeline(tester).top, equals(12));
+        expect(timeline(tester).bottom, equals(834));
+      });
+
+      testWidgets('keeps the timeline below the preview with the flag off', (
+        tester,
+      ) async {
+        setWindow(tester, const Size(1194, 834));
+        await tester.pumpWidget(
+          buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+        );
+
+        expect(
+          timeline(tester).top,
+          greaterThanOrEqualTo(preview(tester).bottom),
+        );
+      });
+
+      testWidgets('ends the editor at a status bar column', (tester) async {
+        setWindow(tester, const Size(951, 669), right: 84);
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBlocWithClip(),
+            largeScreenLayout: true,
+          ),
+        );
+
+        expect(timeline(tester).right, equals(951 - 84));
+      });
+
+      testWidgets('gives the preview the whole width while the timeline '
+          'steps aside', (tester) async {
+        setWindow(tester, const Size(1194, 834));
+        final mainBloc = VideoEditorMainBloc();
+        addTearDown(mainBloc.close);
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            mainBlocOverride: mainBloc,
+            clipBlocOverride: clipBlocWithClip(),
+            largeScreenLayout: true,
+          ),
+        );
+        await tester.pump();
+
+        mainBloc.add(
+          const VideoEditorMainOpenSubEditor(SubEditorType.voiceOver),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(preview(tester).left, equals(0));
+        expect(preview(tester).width, equals(1194));
+      });
+
+      testWidgets('keeps the timeline when a rotation moves it beside the '
+          'preview', (tester) async {
+        setWindow(tester, const Size(834, 1194));
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBlocWithClip(),
+            largeScreenLayout: true,
+          ),
+        );
+        final before = tester.state(find.byType(VideoEditorTimelineScaffold));
+        expect(
+          timeline(tester).top,
+          greaterThanOrEqualTo(preview(tester).bottom),
+        );
+
+        setWindow(tester, const Size(1194, 834));
+        await tester.pump();
+
+        expect(
+          timeline(tester).left,
+          greaterThanOrEqualTo(preview(tester).right),
+        );
+        expect(
+          tester.state(find.byType(VideoEditorTimelineScaffold)),
+          same(before),
+        );
+      });
+    });
 
     testWidgets(
       'keeps the canvas above the mask editor panel while a mask is edited',

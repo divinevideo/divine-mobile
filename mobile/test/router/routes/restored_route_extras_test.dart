@@ -162,7 +162,7 @@ void main() {
             .builder!(
               context,
               _FakeGoRouterState(
-                location: VideoEditorScreen.pathFor(fromLibrary: true),
+                location: '/video-editor?from=library',
                 pathParameters: const {},
               ),
             )
@@ -171,7 +171,7 @@ void main() {
             .builder!(
               context,
               _FakeGoRouterState(
-                location: VideoEditorScreen.pathFor(),
+                location: '/video-editor',
                 pathParameters: const {},
               ),
             )
@@ -192,10 +192,7 @@ void main() {
             .builder!(
               context,
               _FakeGoRouterState(
-                location: VideoEditorScreen.pathFor(
-                  draftId: 'draft-1',
-                  fromLibrary: true,
-                ),
+                location: '/video-editor/draft-1?from=library',
                 pathParameters: const {'draftId': 'draft-1'},
               ),
             )
@@ -207,18 +204,6 @@ void main() {
       expect(legacyExtra.fromLibrary, isFalse);
       expect(draft.draftId, 'draft-1');
       expect(draft.fromLibrary, isTrue);
-    });
-
-    test('video editor locations carry the origin in the URL', () {
-      expect(VideoEditorScreen.pathFor(), VideoEditorScreen.path);
-      expect(
-        VideoEditorScreen.pathFor(fromLibrary: true),
-        '${VideoEditorScreen.path}?from=library',
-      );
-      expect(
-        VideoEditorScreen.pathFor(draftId: 'draft-1', fromLibrary: true),
-        '${VideoEditorScreen.path}/draft-1?from=library',
-      );
     });
 
     testWidgets('video metadata route restores draft recorder modes', (

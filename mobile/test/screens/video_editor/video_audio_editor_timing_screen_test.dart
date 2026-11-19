@@ -379,6 +379,29 @@ void main() {
       },
     );
 
+    testWidgets('centres the selection inside a side safe area', (
+      tester,
+    ) async {
+      // The status bar column of the iPhone Duo, opened in landscape.
+      tester.view.physicalSize = const Size(951, 669);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(right: 84);
+      tester.view.viewPadding = const FakeViewPadding(right: 84);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final selection = tester.getRect(
+        find.byKey(VideoAudioEditorTimingScreen.waveformSelectionKey),
+      );
+      expect(selection.center.dx, moreOrLessEquals((951 - 84) / 2));
+      expect(selection.right, lessThanOrEqualTo(951 - 84 - 16));
+    });
+
     testWidgets('resolves the in-point to at most one frame per pixel', (
       tester,
     ) async {
@@ -554,14 +577,6 @@ void main() {
         tester.getSize(selection).width,
         closeTo(AudioTimingCubit.minRemainingAudioSecs * pixelsPerSecond, 0.1),
       );
-    });
-
-    testWidgets('has route name and path constants', (tester) async {
-      expect(
-        VideoAudioEditorTimingScreen.routeName,
-        equals('video-audio-timing'),
-      );
-      expect(VideoAudioEditorTimingScreen.path, equals('/video-audio-timing'));
     });
 
     testWidgets('survives a clip player that fails to pause on drag', (

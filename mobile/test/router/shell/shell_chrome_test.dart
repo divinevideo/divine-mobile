@@ -11,10 +11,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/shell/shell_chrome.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -66,6 +69,8 @@ void main() {
       bool showBackButton = false,
       VoidCallback? onBackPressed,
       int currentIndex = 1,
+      bool largeScreenLayout = false,
+      Widget branch = const Text('branch content'),
     }) async {
       await tester.pumpWidget(
         MultiBlocProvider(
@@ -77,18 +82,25 @@ void main() {
           ],
           child: testProviderScope(
             mockAuthService: mockAuth,
+            additionalOverrides: [
+              isFeatureEnabledProvider(
+                FeatureFlag.largeScreenLayout,
+              ).overrideWithValue(largeScreenLayout),
+            ],
             child: MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: ShellChrome(
-                currentIndex: currentIndex,
-                title: title,
-                routeContext: routeContext,
-                suppressAppBar: suppressAppBar,
-                showBackButton: showBackButton,
-                resizeToAvoidBottomInset: true,
-                onBackPressed: onBackPressed ?? () {},
-                child: const Text('branch content'),
+              home: AdaptiveLayoutScope(
+                child: ShellChrome(
+                  currentIndex: currentIndex,
+                  title: title,
+                  routeContext: routeContext,
+                  suppressAppBar: suppressAppBar,
+                  showBackButton: showBackButton,
+                  resizeToAvoidBottomInset: true,
+                  onBackPressed: onBackPressed ?? () {},
+                  child: branch,
+                ),
               ),
             ),
           ),
@@ -140,12 +152,199 @@ void main() {
         }
       });
 
+      testWidgets(
+        'leaves the insets the app bar and bottom bar cover out of the branch',
+        (tester) async {
+          tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
+          tester.view.viewPadding = const FakeViewPadding(top: 47, bottom: 34);
+          addTearDown(tester.view.resetPadding);
+          addTearDown(tester.view.resetViewPadding);
+          EdgeInsets? branchInsets;
+          await pumpChrome(
+            tester,
+            suppressAppBar: false,
+            branch: Builder(
+              builder: (context) {
+                branchInsets = MediaQuery.viewPaddingOf(context);
+                return const SizedBox.expand();
+              },
+            ),
+          );
+
+          // The feed would otherwise pad its caption clear of a home
+          // indicator the bottom bar already sits over.
+          expect(branchInsets, equals(EdgeInsets.zero));
+        },
+      );
+
       testWidgets('hides the back button when the route does not want one', (
         tester,
       ) async {
         await pumpChrome(tester, suppressAppBar: false);
 
         expect(find.bySemanticsIdentifier('back_button'), findsNothing);
+      });
+    });
+
+    group('large-screen layout', () {
+      void setWindow(WidgetTester tester, Size size) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+      }
+
+      Axis navDirection(WidgetTester tester) =>
+          tester.widget<VineBottomNav>(find.byType(VineBottomNav)).direction;
+
+      testWidgets('moves the tabs into a leading rail in wide landscape', (
+        tester,
+      ) async {
+        setWindow(tester, const Size(1194, 834));
+        await pumpChrome(
+          tester,
+          suppressAppBar: true,
+          largeScreenLayout: true,
+        );
+
+        expect(navDirection(tester), equals(Axis.vertical));
+        expect(tester.getTopLeft(find.byType(VineBottomNav)).dx, equals(0));
+        // Stacked: Home above Explore, in one column.
+        final home = tester.getCenter(find.bySemanticsIdentifier('home_tab'));
+        final explore = tester.getCenter(
+          find.bySemanticsIdentifier('explore_tab'),
+        );
+        expect(home.dy, lessThan(explore.dy));
+        expect(home.dx, equals(explore.dx));
+      });
+
+      testWidgets('keeps the bottom bar in portrait', (tester) async {
+        setWindow(tester, const Size(834, 1194));
+        await pumpChrome(
+          tester,
+          suppressAppBar: true,
+          largeScreenLayout: true,
+        );
+
+        expect(navDirection(tester), equals(Axis.horizontal));
+      });
+
+      testWidgets('keeps the bottom bar with the flag off', (tester) async {
+        setWindow(tester, const Size(1194, 834));
+        await pumpChrome(tester, suppressAppBar: true);
+
+        expect(navDirection(tester), equals(Axis.horizontal));
+      });
+
+      void setStatusBarColumn(WidgetTester tester) {
+        tester.view.padding = const FakeViewPadding(right: 84, bottom: 34);
+        tester.view.viewPadding = const FakeViewPadding(right: 84, bottom: 34);
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.view.resetViewPadding);
+      }
+
+      testWidgets(
+        'moves the tabs into the status bar column in landscape',
+        (tester) async {
+          setWindow(tester, const Size(951, 669));
+          setStatusBarColumn(tester);
+          await pumpChrome(
+            tester,
+            suppressAppBar: true,
+            largeScreenLayout: true,
+          );
+
+          expect(navDirection(tester), equals(Axis.vertical));
+          expect(
+            tester.getTopLeft(find.byType(VineBottomNav)).dx,
+            equals(951 - 84),
+          );
+          // Centered on the column's height above the home indicator, clear
+          // of the status bar at the top of it.
+          final camera = tester.getCenter(
+            find.bySemanticsIdentifier('camera_button'),
+          );
+          expect(camera.dy, moreOrLessEquals((669 - 34) / 2));
+        },
+      );
+
+      testWidgets(
+        'ends the content and the bottom bar tabs at a portrait status bar '
+        'column',
+        (tester) async {
+          setWindow(tester, const Size(466, 678));
+          setStatusBarColumn(tester);
+          EdgeInsets? branchInsets;
+          await pumpChrome(
+            tester,
+            suppressAppBar: true,
+            largeScreenLayout: true,
+            branch: Builder(
+              builder: (context) {
+                branchInsets = MediaQuery.viewPaddingOf(context);
+                return const SizedBox.expand();
+              },
+            ),
+          );
+
+          expect(navDirection(tester), equals(Axis.horizontal));
+          expect(
+            tester.getRect(find.byKey(const ValueKey('shell-branches'))).right,
+            equals(466 - 84),
+          );
+          // The tabs are centered under the content, not under the column.
+          expect(
+            tester.getCenter(find.bySemanticsIdentifier('camera_button')).dx,
+            moreOrLessEquals((466 - 84) / 2),
+          );
+          expect(branchInsets, equals(EdgeInsets.zero));
+        },
+      );
+
+      testWidgets(
+        'keeps the home indicator inset for the branch beside the tabs in '
+        'the column',
+        (tester) async {
+          setWindow(tester, const Size(951, 669));
+          setStatusBarColumn(tester);
+          EdgeInsets? branchInsets;
+          await pumpChrome(
+            tester,
+            suppressAppBar: true,
+            largeScreenLayout: true,
+            branch: Builder(
+              builder: (context) {
+                branchInsets = MediaQuery.viewPaddingOf(context);
+                return const SizedBox.expand();
+              },
+            ),
+          );
+
+          // No bottom bar covers the home indicator, so the branch keeps
+          // clear of it; the nav in the column takes the side inset.
+          expect(branchInsets, equals(const EdgeInsets.only(bottom: 34)));
+        },
+      );
+
+      testWidgets('keeps the branch state when a rotation adds the rail', (
+        tester,
+      ) async {
+        setWindow(tester, const Size(834, 1194));
+        await pumpChrome(
+          tester,
+          suppressAppBar: true,
+          largeScreenLayout: true,
+          branch: const _TapCounter(),
+        );
+        await tester.tap(find.byType(_TapCounter));
+        await tester.pump();
+        expect(find.text('taps: 1'), findsOneWidget);
+
+        setWindow(tester, const Size(1194, 834));
+        await tester.pump();
+
+        expect(navDirection(tester), equals(Axis.vertical));
+        expect(find.text('taps: 1'), findsOneWidget);
       });
     });
 
@@ -168,4 +367,23 @@ void main() {
       });
     });
   });
+}
+
+/// Branch content that remembers how often it was tapped, to tell whether a
+/// layout change rebuilt the branch.
+class _TapCounter extends StatefulWidget {
+  const _TapCounter();
+
+  @override
+  State<_TapCounter> createState() => _TapCounterState();
+}
+
+class _TapCounterState extends State<_TapCounter> {
+  int _taps = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => setState(() => _taps++),
+    child: Text('taps: $_taps'),
+  );
 }

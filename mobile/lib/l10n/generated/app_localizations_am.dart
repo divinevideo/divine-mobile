@@ -4888,6 +4888,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navProfile => 'መገለጫ';
 
   @override
+  String get navProfileLongPressHint => 'ሳንካ ሪፖርት';
+
+  @override
   String get navMyProfile => 'የእኔ መገለጫ';
 
   @override
@@ -8043,6 +8046,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get bugReportDiagnosticsNotice => 'የመሳሪያ መረጃ እና ሎጎች በራስ-ሰር ይካተታሉ።';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'አቋራጭ: የታችኛው አሞሌ በሚታይበት ጊዜ፣ ከማንኛውም ስክሪን ሳንካ ሪፖርት ለማድረግ የመገለጫ ፎቶዎን በረጅሙ ይጫኑ።';
+
+  @override
   String get bugReportSuccessMessage =>
       'እናመሰግናለን! ሪፖርትዎን ተቀብለናል፣ Divineን ለማሻሻል እንጠቀምበታለን።';
 
@@ -8971,6 +8978,33 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'ምጥጥን ቀያይር';
 
   @override
+  String get videoRecorderRailFlashLabel => 'ብልጭታ';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'ካሜራ ቀይር';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'ምጥጥን';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'ሰዓት ቆጣሪ';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Ghost ፍሬም';
+
+  @override
+  String get videoRecorderRailGridLabel => 'ፍርግርግ';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'ሁለት ካሜራ';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'የካሜራ አማራጮችን አሳይ';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'የካሜራ አማራጮችን ደብቅ';
+
+  @override
   String get videoRecorderStabilizationLabel => 'ማረጋጊያ';
 
   @override
@@ -9178,6 +9212,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'ስፖትላይት';
+
+  @override
+  String get videoEditorEffectDisco => 'ዲስኮ';
+
+  @override
+  String get videoEditorEffectLaser => 'ሌዘር';
+
+  @override
+  String get videoEditorEffectLightning => 'መብረቅ';
 
   @override
   String get videoEditorEffectSnow => 'በረዶ';
@@ -13325,6 +13368,23 @@ class AppLocalizationsAm extends AppLocalizations {
       one: 'እስከ $max ሃሽታግ ማከል ይችላሉ።',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'እስከ $max ሃሽታጎች ማከል ይችላሉ።',
+      one: 'እስከ $max ሃሽታግ ማከል ይችላሉ።',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ቦታ ለማስለቀቅ $count ሃሽታጎችን ያስወግዱ።',
+      one: 'ቦታ ለማስለቀቅ አንዱን ያስወግዱ።',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

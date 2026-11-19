@@ -24,6 +24,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_wavefo
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_transition_buttons.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/timeline_snap_controller.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/visible_timeline_x.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 part 'video_editor_timeline_clip_strip_tiles.dart';
@@ -571,18 +572,18 @@ class _VideoEditorTimelineClipStripState
     _updateAutoScroll(details.globalPosition.dx);
   }
 
-  // --------------- Auto-scroll while dragging near screen edges -------------
+  //----------- Auto-scroll while dragging near the timeline's edges -----------
 
   void _updateAutoScroll(double globalX) {
     if (widget.scrollController == null) return;
 
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final (:x, :width) = visibleTimelineX(context, globalX);
 
-    if (globalX < _autoScrollEdgeZone) {
-      final t = 1 - (globalX / _autoScrollEdgeZone);
+    if (x < _autoScrollEdgeZone) {
+      final t = 1 - (x / _autoScrollEdgeZone);
       _autoScrollSpeed = -t * _maxAutoScrollPxPerFrame;
-    } else if (globalX > screenWidth - _autoScrollEdgeZone) {
-      final t = 1 - ((screenWidth - globalX) / _autoScrollEdgeZone);
+    } else if (x > width - _autoScrollEdgeZone) {
+      final t = 1 - ((width - x) / _autoScrollEdgeZone);
       _autoScrollSpeed = t * _maxAutoScrollPxPerFrame;
     } else {
       _autoScrollSpeed = 0;

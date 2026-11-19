@@ -3,6 +3,8 @@
 // ABOUTME: SCOPE: Non-feed detail use cases only (e.g. debug screens).
 // ABOUTME: Feed surfaces must use PooledFullscreenVideoFeedScreen / FeedVideos instead.
 
+import 'dart:math' as math;
+
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,6 +27,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -217,9 +220,18 @@ class VideoOverlayActions extends ConsumerWidget {
     // (video metadata preview, video editor preview) keep the legacy
     // 14 px offset and the `-6` action-column adjustment so their layouts
     // are unaffected.
-    final bottomOffset = isFullscreen
-        ? 20.0 + MediaQuery.viewPaddingOf(context).bottom
-        : 14.0 + MediaQuery.viewPaddingOf(context).bottom;
+    //
+    // On a large screen with the large-screen layouts, a fullscreen overlay
+    // that reaches the bottom edge (no bottom bar below it, as beside the
+    // side navigation) keeps clear of the home indicator instead: its inset
+    // replaces the 20 px rather than adding to it, which left the caption
+    // floating high.
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomOffset = !isFullscreen
+        ? 14.0 + bottomPadding
+        : context.adaptiveLayout.isLargeScreen
+        ? math.max(20.0, bottomPadding)
+        : 20.0 + bottomPadding;
 
     // Everything the overlay renders below the author row, each entry
     // present only when it shows something.

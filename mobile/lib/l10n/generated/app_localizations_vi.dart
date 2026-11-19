@@ -4967,6 +4967,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navProfile => 'Hồ sơ';
 
   @override
+  String get navProfileLongPressHint => 'Báo lỗi';
+
+  @override
   String get navMyProfile => 'Hồ sơ của tôi';
 
   @override
@@ -8190,6 +8193,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thông tin thiết bị và nhật ký sẽ được đính kèm tự động.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Phím tắt: khi thanh dưới cùng đang hiển thị, hãy nhấn giữ ảnh đại diện của bạn để báo lỗi từ bất kỳ màn hình nào.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Cảm ơn bạn! Bọn mình đã nhận được báo cáo và sẽ dùng nó để làm Divine tốt hơn.';
 
@@ -9138,6 +9145,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Đổi tỷ lệ khung hình';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Đèn flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Lật';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Tỷ lệ khung hình';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Hẹn giờ';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Khung ma';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Lưới';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Camera kép';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Hiện tùy chọn camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ẩn tùy chọn camera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Chống rung';
 
   @override
@@ -9348,6 +9382,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Đèn rọi';
+
+  @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Tia chớp';
 
   @override
   String get videoEditorEffectSnow => 'Tuyết';
@@ -13605,6 +13648,21 @@ class AppLocalizationsVi extends AppLocalizations {
       other: 'Bạn có thể thêm tối đa $max hashtag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Bạn có thể thêm tối đa $max hashtag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hãy xóa bớt $count cái để có chỗ.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

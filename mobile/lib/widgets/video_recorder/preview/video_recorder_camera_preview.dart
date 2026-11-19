@@ -13,6 +13,7 @@ import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/platform_helpers.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
@@ -45,12 +46,20 @@ class VideoRecorderCameraPreview extends StatelessWidget {
         final aspectRatio = context.select(
           (VideoRecorderBloc b) => b.state.aspectRatio,
         );
-        // In vertical mode, we use the full available screen size,
-        // even if it's not exactly 16:9.
+        // In vertical mode a phone, and the folded iPhone Duo, uses the full
+        // available screen size, even if it's not exactly 16:9. The desktop,
+        // and with the large-screen layouts a large screen (the open iPhone
+        // Duo, iPads), shows the 9:16 frame that is recorded instead of more
+        // than lands in it.
+        final availableAspectRatio = constraints.biggest.aspectRatio;
+        final showsRecordedFrame =
+            isDesktopPlatform ||
+            (context.adaptiveLayout.isLargeScreen &&
+                availableAspectRatio > 9 / 16);
         final aspectRatioValue = aspectRatio == .vertical
-            ? isDesktopPlatform
+            ? showsRecordedFrame
                   ? 9 / 16
-                  : constraints.biggest.aspectRatio
+                  : availableAspectRatio
             : 1.0;
 
         return Center(

@@ -4999,6 +4999,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'melaporkan pepijat';
+
+  @override
   String get navMyProfile => 'Profil Saya';
 
   @override
@@ -8234,6 +8237,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Maklumat peranti dan log akan disertakan secara automatik.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: apabila bar bawah kelihatan, tekan dan tahan gambar profil anda untuk melaporkan pepijat dari mana-mana skrin.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Terima kasih! Kami telah menerima laporan anda dan akan menggunakannya untuk menjadikan Divine lebih baik.';
 
@@ -9187,6 +9194,33 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Togol nisbah aspek';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Denyar';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Terbalikkan';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Nisbah aspek';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Pemasa';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Bingkai hantu';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dwi kamera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Tunjukkan pilihan kamera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Sembunyikan pilihan kamera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Penstabilan';
 
   @override
@@ -9396,6 +9430,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorEffectSpotlight => 'Lampu Sorot';
+
+  @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Kilat';
 
   @override
   String get videoEditorEffectSnow => 'Salji';
@@ -13660,6 +13703,21 @@ class AppLocalizationsMs extends AppLocalizations {
       other: 'Anda boleh menambah sehingga $max hashtag.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitRemoveCount(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Anda boleh menambah sehingga $max hashtag.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Buang $count untuk memberi ruang.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

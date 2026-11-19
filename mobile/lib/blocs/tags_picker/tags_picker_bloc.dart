@@ -150,8 +150,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
     // Text holding a private key is never searched for; it resets like an
     // empty field.
     if (query.isEmpty || NostrKeyUtils.containsPrivateKey(query)) {
-      // Every commit clears the field, which lands here one debounce later,
-      // so the notice is kept until the user types a new tag.
+      // A commit that clears the field lands here one debounce later, so the
+      // notice is kept.
       emit(
         state.copyWith(
           status: TagsPickerStatus.initial,
@@ -162,11 +162,14 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
       return;
     }
 
+    // Typing a new tag clears a rejection notice, except the limit one. The
+    // field keeps the turned-away text, so its own debounced query arrives
+    // after the rejection.
     emit(
       state.copyWith(
         status: TagsPickerStatus.searching,
         query: query,
-        notice: TagsPickerNotice.none,
+        notice: _keepsLimitNotice ? state.notice : TagsPickerNotice.none,
       ),
     );
 
@@ -180,27 +183,46 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   }
 
   /// Adds every valid token that still fits under
-  /// [HashtagExtractor.maxHashtagsPerVideo], counting the sticker tags. A
-  /// token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
-  /// with [TagsPickerNotice.tagTooLong] rather than truncated.
+  /// [HashtagExtractor.maxHashtagsPerVideo], counting the sticker tags.
+  ///
+  /// A token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
+  /// with [TagsPickerNotice.tagTooLong] rather than truncated. A new tag that
+  /// does not fit is dropped and flagged with
+  /// [TagsPickerNotice.tagLimitReached], which wins over
+  /// [TagsPickerNotice.tagTooLong] because no new tag fits until one is
+  /// removed, and a limit notice already showing stays for any commit until
+  /// then. A tag the video already has is not a rejection.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
-    var notice = TagsPickerNotice.none;
+    var droppedForLength = false;
+    var droppedForLimit = false;
     for (final raw in rawTokens) {
-      if ({...state.stickerTags, ...updated}.length >=
-          HashtagExtractor.maxHashtagsPerVideo) {
-        break;
-      }
       final tag = HashtagExtractor.normalizeVideoHashtag(raw);
       if (tag == null) {
         if (raw.length > HashtagExtractor.maxHashtagLength) {
-          notice = TagsPickerNotice.tagTooLong;
+          droppedForLength = true;
         }
         continue;
       }
-      // A sticker's hashtag is on the video already.
-      if (!state.stickerTags.contains(tag)) updated.add(tag);
+      // Checked before the limit, so a tag the video already has is never a
+      // rejection.
+      if (state.stickerTags.contains(tag) || updated.contains(tag)) continue;
+      if ({...state.stickerTags, ...updated}.length >=
+          HashtagExtractor.maxHashtagsPerVideo) {
+        droppedForLimit = true;
+        continue;
+      }
+      updated.add(tag);
     }
+    final notice = droppedForLimit || _keepsLimitNotice
+        ? TagsPickerNotice.tagLimitReached
+        : droppedForLength
+        ? TagsPickerNotice.tagTooLong
+        : TagsPickerNotice.none;
     return state.copyWith(selectedTags: updated, notice: notice);
   }
+
+  /// Whether a limit notice still applies: it stays until a tag is removed.
+  bool get _keepsLimitNotice =>
+      state.notice == TagsPickerNotice.tagLimitReached && state.isAtTagLimit;
 }

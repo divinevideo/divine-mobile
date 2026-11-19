@@ -1,10 +1,16 @@
 // ABOUTME: Pins that fadeUpwardsPage carries go_router page metadata
 // ABOUTME: Regression test for PageLoadObserver reporting unknown_route
 
-import 'package:flutter/widgets.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
   _FakeGoRouterState({
@@ -96,6 +102,74 @@ void main() {
       );
 
       expect(page.arguments, {'id': '42', 'tab': 'recent'});
+    });
+
+    testWidgets('ends the page before a status bar column, reached through a '
+        'named route', (tester) async {
+      const pageKey = Key('library');
+      const padding = FakeViewPadding(right: 84, bottom: 34);
+      tester.view.physicalSize = const Size(951, 669);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = padding;
+      tester.view.viewPadding = padding;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const SizedBox.expand(),
+            routes: [
+              GoRoute(
+                path: 'library',
+                name: 'library',
+                pageBuilder: (_, state) => fadeUpwardsPage(
+                  state: state,
+                  child: const SizedBox.expand(key: pageKey),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(true),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            routerConfig: router,
+            builder: (context, child) => AdaptiveLayoutScope(child: child!),
+          ),
+        ),
+      );
+
+      router.goNamed('library');
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.byKey(pageKey)),
+        equals(const Rect.fromLTRB(0, 0, 867, 669)),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is ColoredBox &&
+              widget.color == VineTheme.darkColors.nav &&
+              widget.child is SizedBox &&
+              (widget.child! as SizedBox).width == 84,
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

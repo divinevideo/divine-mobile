@@ -1,0 +1,15 @@
+appId: co.openvine.app.staging
+---
+#Utility: fold the capture stack's control rail back to flash, the lens
+#switch and aspect ratio, the state a recorder opens in. The counterpart of
+#unfoldCaptureRail.yaml; see that file for what folding hides.
+#
+# Precondition the caller owns: **an unfolded rail**, since the same button
+# unfolds a folded one.
+
+- tapOn:
+    id: camera_rail_options_button
+- extendedWaitUntil:
+    notVisible:
+      id: camera_timer_button
+    timeout: 10000

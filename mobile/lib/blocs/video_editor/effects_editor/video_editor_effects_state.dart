@@ -179,7 +179,7 @@ class VideoEditorEffectsState extends Equatable {
   List<EditorVideoEffect> get previewEffects {
     final selection = isEditing ? this.selection : null;
     final picked = selection?.effect == null ? null : selection;
-    final hidesFlashing = picked != null && picked.type.isFlashing;
+    final hidesFlashing = selection != null && selection.type.isFlashing;
     final effects = <EditorVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
@@ -197,16 +197,20 @@ class VideoEditorEffectsState extends Equatable {
 
   /// The effects Divine renders itself that the preview shows, placed like
   /// [previewEffects], except a picked intro or outro, which shows over its
-  /// own window (see [selection]): the native player draws these.
+  /// own window (see [selection]): the native player draws these. A flashing
+  /// pick hides the flashing ones among them, as it does in [previewEffects].
   List<CustomVideoEffect> get previewCustomEffects {
-    final picked = isEditing ? selection?.custom : null;
+    final selection = isEditing ? this.selection : null;
+    final picked = selection?.custom;
+    final hidesFlashing = selection != null && selection.type.isFlashing;
     final effects = <CustomVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
       if (isEditing && entry.id == editingId) {
         edited = true;
         if (picked != null) effects.add(picked);
-      } else if (entry.custom case final custom?) {
+      } else if (entry.custom case final custom?
+          when !hidesFlashing || !entry.type.isFlashing) {
         effects.add(custom);
       }
     }
