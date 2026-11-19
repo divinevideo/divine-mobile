@@ -606,7 +606,7 @@ void main() {
           VideoSearchStatus.success,
           'test',
           videos,
-          [(false, false, false)],
+          [(verified: false, verificationUnknown: false, audioReuse: false)],
           -1,
           0,
           -1,

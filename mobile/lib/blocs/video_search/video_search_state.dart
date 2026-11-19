@@ -98,9 +98,9 @@ final class VideoSearchState extends Equatable {
     [
       for (final video in videos)
         (
-          video.isVerifiedArchive,
-          video.isArchiveVerificationUnknown,
-          video.archiveAudioReuseEnabled,
+          verified: video.isVerifiedArchive,
+          verificationUnknown: video.isArchiveVerificationUnknown,
+          audioReuse: video.archiveAudioReuseEnabled,
         ),
     ],
     resultCount ?? -1,
