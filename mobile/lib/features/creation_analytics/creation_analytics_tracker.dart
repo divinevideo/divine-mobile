@@ -17,6 +17,15 @@ class CreationAnalyticsSession {
   bool _closed = false;
 }
 
+/// The analytics context retained while a publish can finish in the background.
+class CreationAnalyticsPublishAttempt {
+  CreationAnalyticsPublishAttempt._(this._mode, this._cameraOpenedAt);
+
+  final VideoRecorderMode _mode;
+  final DateTime? _cameraOpenedAt;
+  bool _completed = false;
+}
+
 /// App-scoped tracker for the active creation session.
 ///
 /// The tracker is deliberately stateful so recorder, editor, metadata, and
@@ -41,7 +50,7 @@ class CreationAnalyticsTracker {
   bool _recordingStarted = false;
   bool _recordingCompleted = false;
   bool _editorOpened = false;
-  bool _publishStarted = false;
+  CreationAnalyticsPublishAttempt? _publishAttempt;
   bool _terminal = false;
 
   VideoRecorderMode? get activeMode => _terminal ? null : _mode;
@@ -174,42 +183,49 @@ class CreationAnalyticsTracker {
     await _logEvent(name: 'editor_opened', parameters: {'mode': mode.name});
   }
 
-  Future<void> publishStarted(VideoRecorderMode mode) async {
+  Future<CreationAnalyticsPublishAttempt> publishStarted(
+    VideoRecorderMode mode,
+  ) async {
     _ensureSession(mode);
-    if (_terminal) return;
-    _publishStarted = true;
+    final attempt = CreationAnalyticsPublishAttempt._(mode, _cameraOpenedAt);
+    _publishAttempt = attempt;
     _lastStage = CreationFunnelStage.publishing;
     await _logEvent(
       name: 'publish_started',
       parameters: {
         'mode': mode.name,
-        'time_since_camera_open_ms': ?_elapsedSinceCameraOpenMs,
+        'time_since_camera_open_ms': ?_elapsedSinceCameraOpenMs(
+          attempt._cameraOpenedAt,
+        ),
       },
     );
+    return attempt;
   }
 
-  Future<void> publishSucceeded(VideoRecorderMode mode) async {
-    _ensureSession(mode);
-    if (_terminal) return;
+  Future<void> publishSucceeded(CreationAnalyticsPublishAttempt attempt) async {
+    if (attempt._completed) return;
+    attempt._completed = true;
+    if (identical(_publishAttempt, attempt)) _terminal = true;
     await _logEvent(
       name: 'publish_succeeded',
       parameters: {
-        'mode': mode.name,
-        'time_since_camera_open_ms': ?_elapsedSinceCameraOpenMs,
+        'mode': attempt._mode.name,
+        'time_since_camera_open_ms': ?_elapsedSinceCameraOpenMs(
+          attempt._cameraOpenedAt,
+        ),
       },
     );
-    _terminal = true;
   }
 
-  Future<void> publishFailed({
-    required VideoRecorderMode mode,
+  Future<void> publishFailed(
+    CreationAnalyticsPublishAttempt attempt, {
     required String reason,
   }) async {
-    _ensureSession(mode);
-    if (_terminal) return;
+    if (attempt._completed) return;
+    attempt._completed = true;
     await _logEvent(
       name: 'publish_failed',
-      parameters: {'mode': mode.name, 'reason': reason},
+      parameters: {'mode': attempt._mode.name, 'reason': reason},
     );
   }
 
@@ -219,7 +235,7 @@ class CreationAnalyticsTracker {
         _mode == null ||
         _lastStage == null ||
         _terminal ||
-        _publishStarted) {
+        _publishAttempt != null) {
       return;
     }
     // The next camera can open before the analytics transport finishes.
@@ -242,8 +258,7 @@ class CreationAnalyticsTracker {
   /// Null when the active session never opened the camera (an editor-only
   /// restored draft). Reporting `0` there would be indistinguishable from an
   /// instant publish and would drag the funnel's timing distribution down.
-  int? get _elapsedSinceCameraOpenMs {
-    final openedAt = _cameraOpenedAt;
+  int? _elapsedSinceCameraOpenMs(DateTime? openedAt) {
     if (openedAt == null) return null;
     final elapsed = _now().difference(openedAt).inMilliseconds;
     return elapsed < 0 ? 0 : elapsed;
@@ -270,7 +285,7 @@ class CreationAnalyticsTracker {
     _recordingStarted = false;
     _recordingCompleted = false;
     _editorOpened = false;
-    _publishStarted = false;
+    _publishAttempt = null;
     _terminal = false;
   }
 

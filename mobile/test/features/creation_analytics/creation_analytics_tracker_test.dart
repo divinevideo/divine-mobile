@@ -53,9 +53,9 @@ void main() {
       );
       await tracker.editorOpened(VideoRecorderMode.capture);
       now = now.add(const Duration(seconds: 30));
-      await tracker.publishStarted(VideoRecorderMode.capture);
+      final attempt = await tracker.publishStarted(VideoRecorderMode.capture);
       now = now.add(const Duration(seconds: 5));
-      await tracker.publishSucceeded(VideoRecorderMode.capture);
+      await tracker.publishSucceeded(attempt);
 
       expect(sink.events.map((event) => event.name), [
         'camera_opened',
@@ -299,9 +299,9 @@ void main() {
         );
         await tracker.recordingStarted(.capture, session: reaction);
         await tracker.claimEditorSession(reaction);
-        await tracker.publishStarted(.capture);
+        final attempt = await tracker.publishStarted(.capture);
         await tracker.publishFailed(
-          mode: .capture,
+          attempt,
           reason: 'relay_publish_failed',
         );
         final firstCamera = sink.events.length;
@@ -321,6 +321,67 @@ void main() {
       },
     );
 
+    test('a background reaction publish uses its own camera timing', () async {
+      final sink = _RecordingSink();
+      var now = DateTime.utc(2026, 11, 19);
+      final tracker = CreationAnalyticsTracker(analytics: sink, now: () => now);
+      final reaction = CreationAnalyticsSession();
+      await tracker.cameraOpened(
+        mode: .capture,
+        entryPoint: 'library',
+        session: reaction,
+      );
+      await tracker.claimEditorSession(reaction);
+      final attempt = await tracker.publishStarted(.capture);
+
+      now = now.add(const Duration(seconds: 10));
+      await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+      await tracker.recordingStarted(.classic);
+      now = now.add(const Duration(seconds: 5));
+      await tracker.publishSucceeded(attempt);
+      await tracker.recordingCompleted(
+        mode: .classic,
+        clipCount: 1,
+        duration: const Duration(seconds: 2),
+      );
+
+      final publish = sink.events.singleWhere(
+        (event) => event.name == 'publish_succeeded',
+      );
+      expect(publish.parameters, {
+        'mode': 'capture',
+        'time_since_camera_open_ms': 15000,
+      });
+      expect(sink.events.last.name, 'recording_completed');
+      expect(tracker.activeMode, VideoRecorderMode.classic);
+    });
+
+    test(
+      'a late reaction publish failure preserves the new camera mode',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        final reaction = CreationAnalyticsSession();
+        await tracker.cameraOpened(
+          mode: .capture,
+          entryPoint: 'library',
+          session: reaction,
+        );
+        await tracker.claimEditorSession(reaction);
+        final attempt = await tracker.publishStarted(.capture);
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+
+        await tracker.publishFailed(attempt, reason: 'relay_publish_failed');
+
+        expect(sink.events.last.name, 'publish_failed');
+        expect(sink.events.last.parameters, {
+          'mode': 'capture',
+          'reason': 'relay_publish_failed',
+        });
+        expect(tracker.activeMode, VideoRecorderMode.classic);
+      },
+    );
+
     test('records publish failure without misclassifying disposal', () async {
       final sink = _RecordingSink();
       final tracker = CreationAnalyticsTracker(analytics: sink);
@@ -329,9 +390,9 @@ void main() {
         mode: VideoRecorderMode.classic,
         entryPoint: 'direct',
       );
-      await tracker.publishStarted(VideoRecorderMode.classic);
+      final attempt = await tracker.publishStarted(VideoRecorderMode.classic);
       await tracker.publishFailed(
-        mode: VideoRecorderMode.classic,
+        attempt,
         reason: 'relay_publish_failed',
       );
       await tracker.creationAbandoned();
@@ -379,8 +440,8 @@ void main() {
 
         await tracker.editorOpened(VideoRecorderMode.upload);
         now = now.add(const Duration(minutes: 2));
-        await tracker.publishStarted(VideoRecorderMode.upload);
-        await tracker.publishSucceeded(VideoRecorderMode.upload);
+        final attempt = await tracker.publishStarted(VideoRecorderMode.upload);
+        await tracker.publishSucceeded(attempt);
 
         // A `0` here would be indistinguishable from an instant publish and
         // would drag the campaign's timing distribution down.
