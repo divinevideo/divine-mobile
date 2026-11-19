@@ -10,6 +10,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show DmFileMetadata, DmMessage;
 import 'package:openvine/collab_room/bloc/collab_room_cubit.dart';
 import 'package:openvine/collab_room/collab_room_composer.dart';
+import 'package:openvine/collab_room/collab_room_layout.dart';
 import 'package:openvine/collab_room/collab_room_service.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
@@ -943,6 +944,41 @@ void main() {
           expect(cells.map((c) => c.withSound), [false, true]);
           expect(cells.first.rect.left, lessThan(cells.last.rect.left));
           expect(cells.first.rect, isA<Rect>());
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'stacks the parts in cell order, whoever joined first',
+        build: build,
+        act: (cubit) async {
+          // The host took the window, which must be drawn over the frame.
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.recording,
+                layout:
+                    SplitScreenLayoutPreset.pictureInPictureBottomRight.name,
+                members: [
+                  _member(_author, .joined, 1),
+                  _member(_sam, .joined, 0),
+                ],
+                parts: _recording.parts,
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.compose();
+        },
+        verify: (cubit) {
+          final cells = composed.single;
+          // Sam's frame first, the host's window over it.
+          expect(cells.map((c) => c.file.path), [
+            '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4',
+            '/parts/3333333333333333333333333333333333333333333333333333333333333333.mp4',
+          ]);
+          expect(cells.map((c) => c.rect), cubit.state.room!.cellRects);
+          expect(cells.first.rect.width, greaterThan(cells.last.rect.width));
         },
       );
 

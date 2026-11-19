@@ -480,13 +480,17 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       final shapes = room.cellShapes;
       final sound = state.effectiveSoundPubkey;
       final cells = <CollabRoomComposeCell>[];
-      for (final member in room.participants) {
+      // In cell order, not the order people joined in: the renderer stacks
+      // the cells as listed, so a picture-in-picture window listed before
+      // the cell it sits on would end up under it.
+      for (var cell = 0; cell < rects.length; cell++) {
+        final member = room.memberInCell(cell)!;
         final part = room.parts[member.pubkey]!;
         final file = await _service.partFile(_roomId, part);
         cells.add((
           file: file,
-          rect: rects[member.cell!],
-          shape: shapes[member.cell!],
+          rect: rects[cell],
+          shape: shapes[cell],
           withSound: member.pubkey == sound,
         ));
       }
