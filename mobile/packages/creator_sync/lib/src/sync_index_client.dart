@@ -146,10 +146,10 @@ class SyncIndexClient {
       throw SyncIndexException('cannot fetch while signed out');
     }
 
-    // queryEventsDetailed, not queryEvents: the latter discards `timedOut`
-    // and `noRelays` and returns [] on an unreachable relay, which would
-    // read as "the account has no synced items" and let reconcile publish
-    // over a library it simply could not see.
+    // Settled on every relay, or a relay still silent after the pool's
+    // settle window or one that ended the read with CLOSED is dropped and
+    // the rest reads as the whole library: reconcile would then publish
+    // over records it never saw.
     final List<Event> events;
     try {
       final result = await _client.queryEventsDetailed([
@@ -158,7 +158,7 @@ class SyncIndexClient {
           authors: [pubkey],
           since: since,
         ),
-      ]);
+      ], requireAllRelaysSettled: true);
       if (result.noRelays || result.timedOut) {
         throw SyncIndexException(
           'sync index query could not reach a relay '
