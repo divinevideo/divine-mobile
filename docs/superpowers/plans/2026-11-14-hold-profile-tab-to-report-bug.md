@@ -548,9 +548,8 @@ Expected: the new tests fail: nothing is pushed on hold, no hint, no custom acti
 
   Add a one-line comment on why the custom action is iOS-only: TalkBack would list it twice, and iOS ignores hint overrides.
 - `VineBottomNav._handleProfileHold(context)`, following the camera hold:
-  1. `Log.info('👆 User held profile tab — opening bug report', name: 'Navigation', category: LogCategory.ui)`
-  2. `unawaited(HapticFeedback.lightImpact())`
-  3. `runDetached(context.push(RoutePaths.supportReportBugFromProfileHold), 'open the bug report from bottom navigation', logName: 'Navigation', category: LogCategory.ui)`
+  1. `unawaited(HapticFeedback.lightImpact())`
+  2. `runDetached(context.push(RoutePaths.supportReportBugFromProfileHold), 'open the bug report from bottom navigation', logName: 'Navigation', category: LogCategory.ui)`
 
   Wire it as `onLongPress: () => _handleProfileHold(context)`.
 
@@ -690,7 +689,7 @@ It covers:
 - the link to PR 1;
 - a request for Liz to confirm.
 
-Don't call the hold's log line a record of how a report was opened. After approval, run `gh issue comment 8955 --body-file <file>` and return the comment URL.
+After approval, run `gh issue comment 8955 --body-file <file>` and return the comment URL.
 
 - [ ] **Step 6: Watch the checks**
 

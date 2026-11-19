@@ -115,11 +115,6 @@ class VineBottomNav extends ConsumerWidget {
 
   /// Handles a press-and-hold on the Profile tab: opens Report a Bug.
   void _handleProfileHold(BuildContext context) {
-    Log.info(
-      '👆 User held profile tab — opening bug report',
-      name: 'Navigation',
-      category: LogCategory.ui,
-    );
     unawaited(HapticFeedback.lightImpact());
     runDetached(
       context.push(RoutePaths.supportReportBugFromProfileHold),

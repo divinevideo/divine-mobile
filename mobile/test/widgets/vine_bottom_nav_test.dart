@@ -18,6 +18,7 @@ import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/services/bug_report_log_summary.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
@@ -720,6 +721,21 @@ void main() {
           ),
         ).called(1);
         verifyNever(() => router.go(any(), extra: any(named: 'extra')));
+      });
+
+      testWidgets('does not add the entry method to report diagnostics', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        await pumpSubjectWithRouter(tester, router);
+
+        await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+        await tester.pump();
+
+        final summary = buildLogsSummary(logCapture.getRecentLogs());
+        expect(summary ?? '', isNot(contains('held profile tab')));
       });
 
       testWidgets('a tap still opens the profile, not the report', (

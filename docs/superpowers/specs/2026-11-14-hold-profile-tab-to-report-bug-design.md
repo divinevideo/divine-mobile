@@ -74,12 +74,7 @@ the bottom bar.
 - A "discard this report?" confirmation. Cancel, the arrow and Android's back
   gesture still close the form without asking, exactly as they do today.
 - Changing Request a Feature's presentation. It keeps sliding in from the right.
-- Recording how a report was opened, including usage analytics. Product
-  analytics do not fire in production, and the hold's log line is not a
-  reliable record either: a report carries only errors, warnings and the last
-  50 log entries (`bug_report_log_summary.dart`), so an info line written at
-  hold time has usually scrolled out by the time the report is sent. Neither
-  the PR nor the #8955 comment may describe the log line as a record.
+- Recording how a report was opened in logs, diagnostics, or analytics.
 - Web and desktop.
 
 ## Anti-goals (it fails even if it works)
@@ -138,13 +133,9 @@ have to move.
 ### Bottom bar (`mobile/lib/widgets/vine_bottom_nav.dart`)
 
 - `_ProfileTabButton` passes an `onLongPress` to its `_TabSlot`, following the
-  camera button's hold (`_CameraButton`): log the hold, fire
-  `HapticFeedback.lightImpact()` (called directly, as the camera does, because
-  widgets may not import the service layer), then
-  `runDetached(context.push(<report location with the hold marker>), ...)`.
-  The log line is `Log.info` under `name: 'Navigation'`,
-  `category: LogCategory.ui`, like the camera's. It helps local debugging;
-  it is not a record of how the report was opened (see Non-goals).
+  camera button's haptic and detached navigation. It calls
+  `HapticFeedback.lightImpact()` directly, then pushes the report location with
+  `runDetached` so navigation failures are logged.
 - `_TabSlot` gains two optional semantics inputs and forwards them to its
   `Semantics` widget:
   - `onLongPressHint` → TalkBack reads "Double-tap and hold to <hint>". Flutter
