@@ -56,6 +56,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/decoded_images.dart';
+import '../helpers/semantics_nodes.dart';
 import '../helpers/test_provider_overrides.dart';
 
 const _ownPubkey =
@@ -1385,6 +1386,7 @@ void main() {
         required VideoEvent video,
         required String nostrClientPubkey,
         String? authServicePubkey,
+        Set<String>? selectedVideoIds,
       }) async {
         final mockNostr = createMockNostrService();
         when(() => mockNostr.publicKey).thenReturn(nostrClientPubkey);
@@ -1409,6 +1411,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: [video],
+                  selectedVideoIds: selectedVideoIds,
                   onVideoTap: (videos, index) {},
                 ),
               ),
@@ -1580,6 +1583,64 @@ void main() {
         );
         handle.dispose();
       });
+
+      testWidgets(
+        'lets a screen reader open an owned tile from its labelled node',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            await pumpGridFor(
+              tester,
+              video: videoBy(_ownPubkey),
+              nostrClientPubkey: _ownPubkey,
+              authServicePubkey: _ownPubkey,
+            );
+
+            final node = tileNode(tester);
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+              reason:
+                  'The labelled button must open the video; a tap action on an '
+                  'unlabelled twin node is announced as a second, nameless '
+                  'control.',
+            );
+            expect(
+              countSemanticsNodesWithAction(node, SemanticsAction.tap),
+              equals(1),
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
+
+      for (final selected in [true, false]) {
+        testWidgets(
+          'advertises no long-press action in selection mode when an owned '
+          'video is ${selected ? 'selected' : 'unselected'}',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            try {
+              final video = videoBy(_ownPubkey);
+              await pumpGridFor(
+                tester,
+                video: video,
+                nostrClientPubkey: _ownPubkey,
+                authServicePubkey: _ownPubkey,
+                selectedVideoIds: selected ? {video.id} : <String>{},
+              );
+
+              expect(
+                tileNode(tester),
+                isSemantics(isSelected: selected, hasLongPressAction: false),
+              );
+            } finally {
+              handle.dispose();
+            }
+          },
+        );
+      }
     });
 
     group('disposal', () {

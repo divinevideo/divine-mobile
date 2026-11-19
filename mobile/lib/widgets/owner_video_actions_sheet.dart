@@ -39,8 +39,9 @@ enum _OwnerVideoAction { edit, pin, delete }
 /// Shows the edit/pin/delete actions for a video the signed-in viewer owns.
 ///
 /// Callers are responsible for deciding ownership: this sheet is the
-/// presentation of an action set, not a permission check. Both grids gate the
-/// long-press affordance per tile so a non-owner never reaches here.
+/// presentation of an action set, not a permission check. Both grids open it
+/// through `OwnerVideoActionsTile`, which gates the long-press per tile so a
+/// non-owner never reaches here.
 ///
 /// The sheet closes on any tap and the chosen action runs afterwards, so a
 /// delete's confirmation dialog and outcome snackbar appear over the grid, not

@@ -34,6 +34,7 @@ import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../../helpers/semantics_nodes.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -550,6 +551,94 @@ void main() {
 
         handle.dispose();
       });
+
+      testWidgets('labels the owner long-press action with the options hint', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: _createTestVideos(pubkey: _ownPubkey),
+            ),
+          );
+
+          expect(
+            tester.getSemantics(_thumbnail(1)),
+            isSemantics(onLongPressHint: l10n.videoGridOptionsTitle),
+            reason:
+                'Without a hint, assistive tech announces that a long-press '
+                'exists but cannot say what it does.',
+          );
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets(
+        'lets a screen reader open an own tile from its labelled node',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final handle = tester.ensureSemantics();
+          try {
+            await tester.pumpWidget(
+              buildSubject(
+                userIdHex: _ownPubkey,
+                videos: _createTestVideos(pubkey: _ownPubkey),
+              ),
+            );
+
+            final node = tester.getSemantics(_thumbnail(1));
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+              reason:
+                  'The labelled button must open the video; a tap action on an '
+                  'unlabelled twin node is announced as a second, nameless '
+                  'control.',
+            );
+            expect(
+              countSemanticsNodesWithAction(node, SemanticsAction.tap),
+              equals(1),
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
+
+      testWidgets(
+        "does not advertise a long-press action on another user's video",
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final handle = tester.ensureSemantics();
+          try {
+            await tester.pumpWidget(
+              buildSubject(
+                userIdHex: _otherPubkey,
+                videos: _createTestVideos(pubkey: _otherPubkey),
+              ),
+            );
+
+            expect(
+              tester
+                  .getSemantics(_thumbnail(1))
+                  .getSemanticsData()
+                  .hasAction(SemanticsAction.longPress),
+              isFalse,
+              reason:
+                  'Advertising a long-press on a video the viewer does not '
+                  'own invites assistive-tech users to perform an action that '
+                  'silently does nothing.',
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
 
       testWidgets(
         "long-pressing a tile on another user's profile shows no actions",

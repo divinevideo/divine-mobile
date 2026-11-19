@@ -15,7 +15,6 @@ import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
-import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/grid_prefetch_mixin.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
@@ -27,6 +26,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_identity.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
+import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/profile/pending_collaborator_invite_banner_cubit.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
@@ -490,11 +490,9 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                   userIdHex: widget.userIdHex,
                   index: index,
                   isPinned: feedState.isPinned(eventEntry.videoEvent),
-                  onLongPress:
-                      currentUserPubkey != null &&
-                          currentUserPubkey == eventEntry.videoEvent.pubkey
-                      ? () => _showOwnVideoActions(eventEntry.videoEvent)
-                      : null,
+                  viewerPubkey: currentUserPubkey,
+                  onOwnerLongPress: () =>
+                      _showOwnVideoActions(eventEntry.videoEvent),
                   onTap: () {
                     // Adjust index to account for uploading videos at the top
                     final publishedIndex = index - uploadingCount;
@@ -574,7 +572,8 @@ class _VideoGridTile extends StatelessWidget {
     required this.index,
     required this.isPinned,
     required this.onTap,
-    this.onLongPress,
+    required this.viewerPubkey,
+    required this.onOwnerLongPress,
   });
 
   final VideoEvent videoEvent;
@@ -585,39 +584,36 @@ class _VideoGridTile extends StatelessWidget {
   final bool isPinned;
   final VoidCallback onTap;
 
-  /// Opens the own-video actions sheet; null on other users' profiles.
-  final VoidCallback? onLongPress;
+  /// The signed-in viewer, or `null` when no one is signed in.
+  final String? viewerPubkey;
+
+  /// Opens the own-video actions sheet; the tile wires it only for the owner.
+  final VoidCallback onOwnerLongPress;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    identifier: SemanticIds.videoThumbnail(index),
-    label: context.l10n.profileVideoThumbnailLabel(index + 1),
+  Widget build(BuildContext context) => OwnerVideoActionsTile(
+    video: videoEvent,
+    viewerPubkey: viewerPubkey,
+    index: index,
+    onTap: onTap,
+    onOwnerLongPress: onOwnerLongPress,
     // Read after the label ("Video thumbnail 2, Pinned"): the badge itself
     // is decorative, so this is the only way a screen reader learns of the
     // pin.
     value: isPinned ? context.l10n.profileVideoPinnedValue : null,
-    button: true,
-    onLongPress: onLongPress,
-    onLongPressHint: onLongPress == null
-        ? null
-        : context.l10n.videoGridOptionsTitle,
-    child: GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: context.vineColors.card),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ProfileTabThumbnail(
-                thumbnailUrl: videoEvent.thumbnailUrl,
-                blurhash: videoEvent.blurhash,
-              ),
-              if (isPinned) const _PinnedBadge(),
-            ],
-          ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: context.vineColors.card),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
+            if (isPinned) const _PinnedBadge(),
+          ],
         ),
       ),
     ),
