@@ -960,7 +960,12 @@ void main() {
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
         when(
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
-        ).thenAnswer((_) async => [createTestAudioEvent(id: 'found')]);
+        ).thenAnswer(
+          (_) async => (
+            sounds: [createTestAudioEvent(id: 'found')],
+            relays: SoundSearchRelays.timedOut,
+          ),
+        );
       });
 
       test('passes a query through to the repository', () async {
@@ -975,7 +980,12 @@ void main() {
           soundSearchResultsProvider('drums').future,
         );
 
-        expect(result.map((s) => s.id), equals(['found']));
+        expect(result.sounds.map((s) => s.id), equals(['found']));
+        expect(
+          result.relays,
+          SoundSearchRelays.timedOut,
+          reason: 'the search telemetry tells a relay answer from a fallback',
+        );
       });
 
       test('does not search for a query holding a private key', () async {
@@ -992,7 +1002,8 @@ void main() {
           ).future,
         );
 
-        expect(result, isEmpty);
+        expect(result.sounds, isEmpty);
+        expect(result.relays, SoundSearchRelays.notAsked);
         verifyNever(
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
         );

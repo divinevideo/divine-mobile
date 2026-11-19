@@ -22,6 +22,36 @@ typedef RankedSounds = ({
   Map<String, int> usageCounts,
 });
 
+/// How the relays answered a [SoundsRepository.searchSounds] query.
+///
+/// Every value but [answered] means the sounds are, wholly or in part, the
+/// repository's cached matches standing in for an answer the relays did not
+/// give.
+enum SoundSearchRelays {
+  /// The relays answered the query in time.
+  answered,
+
+  /// The relays had not finished by the deadline. The sounds hold what
+  /// arrived before it, with the cached matches.
+  timedOut,
+
+  /// No relay took the query, so the sounds are the cached matches alone.
+  noRelays,
+
+  /// The relay query threw, so the sounds are the cached matches alone.
+  failed,
+
+  /// Nothing was asked: the query has no search terms.
+  notAsked,
+}
+
+/// The sounds a [SoundsRepository.searchSounds] query found, and how the
+/// relays answered it.
+typedef SoundSearchResults = ({
+  List<AudioEvent> sounds,
+  SoundSearchRelays relays,
+});
+
 /// Repository for managing audio events (Kind 1063) for audio reuse.
 ///
 /// Responsibilities:
@@ -609,7 +639,10 @@ class SoundsRepository {
   /// unnamed match follows the rest, as it does when that query cannot tell.
   /// Anything that is not an [Exception] still propagates, from either
   /// query. Results are cached like any other fetch.
-  Future<List<AudioEvent>> searchSounds(
+  ///
+  /// The result says how the relays answered, so a caller can tell the
+  /// cached matches standing in for a failed relay query from a relay answer.
+  Future<SoundSearchResults> searchSounds(
     String query, {
     int limit = maxSearchResults,
   }) async {
@@ -620,7 +653,7 @@ class SoundsRepository {
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
-      return const [];
+      return (sounds: const <AudioEvent>[], relays: SoundSearchRelays.notAsked);
     }
 
     final matches = <String, AudioEvent>{
@@ -628,7 +661,7 @@ class SoundsRepository {
         if (sound.matchesSearch(query)) sound.id: sound,
     };
 
-    var relayAnswered = true;
+    SoundSearchRelays relays;
     try {
       // Full-text gets its own limit: a capped OR-of-tags page can omit
       // the only sound matching all words, even before local narrowing.
@@ -646,12 +679,17 @@ class SoundsRepository {
           limit: limit,
         ),
       ]);
-      relayAnswered = !read.timedOut && !read.noRelays;
+      // `noRelays` means nothing was asked, whatever `timedOut` says.
+      relays = read.noRelays
+          ? SoundSearchRelays.noRelays
+          : read.timedOut
+          ? SoundSearchRelays.timedOut
+          : SoundSearchRelays.answered;
       for (final sound in _processAndCacheEvents(read.events)) {
         if (sound.matchesSearch(query)) matches[sound.id] = sound;
       }
     } on Exception catch (e) {
-      relayAnswered = false;
+      relays = SoundSearchRelays.failed;
       Log.error(
         'Error searching sounds by tag: $e',
         name: 'SoundsRepository',
@@ -663,17 +701,18 @@ class SoundsRepository {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     // Relays that just failed or ran out the search would most likely do the
     // same to the reuse lookup, so the unnamed sounds go last without it.
-    final results = relayAnswered
+    final results = relays == SoundSearchRelays.answered
         ? await withUnusedOriginalsLast(newestFirst)
         : _originalsLast(newestFirst, _autoSharedOriginalsIn(newestFirst));
 
     Log.debug(
-      'Sound search for ${terms.length} term(s) matched ${results.length}',
+      'Sound search for ${terms.length} term(s) matched ${results.length}, '
+      'relays: ${relays.name}',
       name: 'SoundsRepository',
       category: LogCategory.api,
     );
 
-    return List.unmodifiable(results);
+    return (sounds: List<AudioEvent>.unmodifiable(results), relays: relays);
   }
 
   /// Fetch a specific sound by event ID.

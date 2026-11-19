@@ -94,6 +94,23 @@ void main() {
       expect(tracker.activeSessionCount, 0);
     });
 
+    test('passes the tab of a tabbed surface through', () async {
+      tracker.startSurfaceLoad(
+        AnalyticsSurface.soundPicker,
+        params: const {AnalyticsParam.tab: 'newest'},
+      );
+
+      await tracker.completeSurfaceLoad(
+        AnalyticsSurface.soundPicker,
+        result: SurfaceLoadResult.success,
+      );
+
+      expect(
+        sink.events.single.parameters,
+        containsPair(AnalyticsParam.tab, 'newest'),
+      );
+    });
+
     test('records completed surface loads in page load history', () async {
       final startedAt = now;
       tracker.startSurfaceLoad(

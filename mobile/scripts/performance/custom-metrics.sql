@@ -18,7 +18,8 @@ WITH samples AS (
     AND event_type = 'TRACE_METRIC'
     AND (parent_trace_name IN ('http_operation', 'creator_delete_enforcement',
       'startup_phase', 'startup_milestone', 'video_first_frame',
-      'video_publish', 'video_generation', 'camera_startup', 'editor_ready', 'video_upload', 'video_upload_enqueue') OR STARTS_WITH(parent_trace_name, 'feed_load_'))
+      'video_publish', 'video_generation', 'camera_startup', 'editor_ready', 'video_upload', 'video_upload_enqueue',
+      'sound_search') OR STARTS_WITH(parent_trace_name, 'feed_load_'))
 )
 SELECT platform, app_display_version, app_build_version, trace, metric,
   operation, outcome, phase, milestone, cache, entry, preview,

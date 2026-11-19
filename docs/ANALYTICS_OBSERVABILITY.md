@@ -107,6 +107,8 @@ Optional safe parameters:
 - `has_more`
 - `sort_mode`
 - `feature_flag`
+- `tab`: which tab of a tabbed surface loaded, from that surface's own fixed
+  vocabulary
 
 ## Comments Sheet
 
@@ -117,6 +119,61 @@ The comments sheet measures:
 - count loaded
 - whether video replies were enabled
 - whether the user dismissed before data loaded
+
+## Sound Picker
+
+The video editor's sound picker is a modal sheet, so it gets no
+`screen_view`. Most of what it loads arrives over relay WebSockets, which the
+HTTP metrics cannot see, so it reports its own loads, searches and picks. The
+search is a Firebase Performance trace, `sound_search`, described in
+[UX performance monitoring](../mobile/docs/UX_PERFORMANCE_MONITORING.md).
+
+### Tab loads
+
+`surface_load` with `surface_name = sound_picker`, once for each tab whose
+list shows in an opened picker. The time runs from the tab opening until its
+list first shows.
+
+- `tab`: `for_you`, `popular`, `newest`, or `my_sounds`
+- `entry_point`: `sheet_open` for the tab the picker opens on, `tab_switch`
+  for a tab the user switches to
+- `result`: `success`, `empty`, `failure`, or `dismissed` when the user left
+  the tab, or closed the picker, before its list showed. A dismissed tab is
+  timed again when the user returns to it.
+- `item_count`: the sounds the tab's list loaded. For you counts the sounds of
+  followed creators; Divine's own sounds are added to that list either way.
+- `initial_count`: equal to `item_count` when the list was loaded before the
+  tab opened — preloaded by the editor, or loaded behind the open tab — and
+  `0` when the user waited for it. Such a list shows at once, so split on this
+  before reading `total_ms`.
+- `has_more`: for the paged tabs, whether the list has another page
+
+### Picks
+
+| Event | Parameters | Boundary |
+| --- | --- | --- |
+| `sound_selected` | `source`, `outcome`, `searched` | A pick is attached, refused, or fails |
+
+- `source`: `for_you`, `popular`, `newest`, `my_sounds`, or `import` for a file
+  the user imported. A sound attached from another tab than the open one keeps
+  the tab it was picked from.
+- `outcome`:
+  - `attached`: the user confirmed the sound and the picker handed it to the
+    editor.
+  - `reuse_blocked`: the reuse check refused it. The check fails closed, so
+    this includes a failed `POST /api/videos/audio-reuse/bulk`: an outage of
+    that endpoint shows as a jump in the `reuse_blocked` share of `popular` and
+    `newest` picks, not as errors.
+  - `download_failed`: the sound's file could not be downloaded for the
+    preview.
+  - `failed`: an import the app could not read, or a preview that would not
+    play.
+- `searched`: `1` when a search narrowed the list the sound was picked from,
+  otherwise `0`.
+
+A sound the user only previews before picking another is not reported. A
+failed download is reported once per pick; if the user confirms that sound
+anyway, `attached` follows it.
 
 ## Creator Funnel
 
@@ -196,6 +253,10 @@ does not make them queryable as dimensions retroactively.
    before the instrumented release if notification opens and campaign consent
    changes should break down in GA4 reports. The BigQuery report reads raw
    event parameters and does not need them.
+3. Create event-scoped custom dimensions `tab` (for `surface_load`) and
+   `source`, `outcome` and `searched` (for `sound_selected`) if the sound
+   picker should break down in GA4 reports. BigQuery reads the raw event
+   parameters without them.
 
 The GA4 reporting identity setting does not gate the BigQuery `user_id` field;
 use BigQuery as the campaign source of truth.
