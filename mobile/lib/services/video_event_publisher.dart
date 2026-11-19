@@ -1175,17 +1175,21 @@ class VideoEventPublisher {
       return null;
     }
 
+    // Readers use the first text-track as the primary track. Keep the
+    // edited captions ahead of retained translations and chapter tracks.
+    final updatedTags = <List<String>>[];
     addTextTrackTags(
-      tags,
+      updatedTags,
       refs: [textTrackRef, ...extraTextTrackRefs],
       lang: textTrackLang,
     );
+    updatedTags.addAll(tags);
 
     // Sign the updated event
     final event = await _authService?.createAndSignEvent(
       kind: latest.kind,
       content: latest.content,
-      tags: tags,
+      tags: updatedTags,
       createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
     );
 
