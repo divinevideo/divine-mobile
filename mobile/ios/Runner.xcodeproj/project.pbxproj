@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		41F9074567E9ADBECE04A5D7 /* Localizable.stringsdict in Resources */ = {isa = PBXBuildFile; fileRef = 1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */; };
+		E8F5C7098A6B89ECBF26ABAC /* DivineWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */; };
+		85DB97C154E21DEB99E0A3EE /* PostLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */; };
+		96A0C3CF711372436D3ACF5D /* PostActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */; };
+		8D3514AC5375BB325C999704 /* PostActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */; };
+		9426502F7C5BD1F17FB38100 /* PostActivityViewsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */; };
 		EA5C0A29E349A99263035489 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		FF91BCB20397A7944304CBE4 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
@@ -136,6 +142,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		43E85EBACDAE4F41E45301AB /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = en; path = en.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DivineWidgetBundle.swift; sourceTree = "<group>"; };
+		13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostLiveActivityWidget.swift; sourceTree = "<group>"; };
+		3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityViews.swift; sourceTree = "<group>"; };
+		1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityViewsTests.swift; sourceTree = "<group>"; };
 		992F75580C42A8A09950DC34 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
 		59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplay.swift; sourceTree = "<group>"; };
 		9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityAttributes.swift; sourceTree = "<group>"; };
@@ -295,6 +306,7 @@
 		812A562A34344CD10B451E08 /* PostLiveActivity */ = {
 			isa = PBXGroup;
 			children = (
+				3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */,
 				59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */,
 				9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */,
 			);
@@ -320,6 +332,7 @@
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
+				1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */,
 				792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
@@ -441,6 +454,9 @@
 		D1A00000000000000000001C /* CameraQuickActionWidget */ = {
 			isa = PBXGroup;
 			children = (
+				1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */,
+				FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */,
+				13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */,
 				D1A000000000000000000005 /* CameraQuickActionWidget.swift */,
 				D1A00000000000000000001B /* Localizable.strings */,
 				D1A000000000000000000006 /* Info.plist */,
@@ -692,6 +708,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41F9074567E9ADBECE04A5D7 /* Localizable.stringsdict in Resources */,
 				D1A000000000000000000003 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -848,6 +865,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9426502F7C5BD1F17FB38100 /* PostActivityViewsTests.swift in Sources */,
 				06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */,
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 			);
@@ -857,6 +875,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8D3514AC5375BB325C999704 /* PostActivityViews.swift in Sources */,
 				48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */,
 				60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
@@ -909,6 +928,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E8F5C7098A6B89ECBF26ABAC /* DivineWidgetBundle.swift in Sources */,
+				85DB97C154E21DEB99E0A3EE /* PostLiveActivityWidget.swift in Sources */,
+				96A0C3CF711372436D3ACF5D /* PostActivityViews.swift in Sources */,
 				519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */,
 				381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */,
 				D1A000000000000000000001 /* CameraQuickActionWidget.swift in Sources */,
@@ -952,6 +974,14 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
+		1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */ = {
+			isa = PBXVariantGroup;
+			children = (
+				43E85EBACDAE4F41E45301AB /* en */,
+			);
+			name = Localizable.stringsdict;
+			sourceTree = "<group>";
+		};
 		97C146FA1CF9000F007C117D /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (

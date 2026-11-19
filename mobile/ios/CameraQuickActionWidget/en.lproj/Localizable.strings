@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Open Divine camera";
 "divine_quick_actions_camera_widget_description" = "Open the Divine camera directly from your home screen.";
+"divine_post_activity_your_post" = "Your post";
+"divine_post_activity_posting" = "Posting…";
+"divine_post_activity_live" = "Your post is live";
+"divine_post_activity_no_views_yet %@" = "No views yet · live for %@";
+"divine_post_activity_cant_find" = "We can't find stats for this post";
+"divine_post_activity_first_hour" = "First hour";
+"divine_post_activity_no_views_first_hour" = "No views in the first hour";
+"divine_post_activity_updated %@" = "Updated %@ ago";
+"divine_post_activity_first_run_note" = "Live stats for your first hour · turn off in Settings";

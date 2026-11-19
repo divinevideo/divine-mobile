@@ -78,7 +78,6 @@ struct CameraQuickActionWidgetView: View {
     }
 }
 
-@main
 struct CameraQuickActionWidget: Widget {
     let kind = "CameraQuickActionWidget"
 
