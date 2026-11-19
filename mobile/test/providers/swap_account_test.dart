@@ -150,6 +150,8 @@ class _ControlledVideoSend extends Fake implements DmVideoSendService {
     required String recipientPubkey,
     required DmVideoUpload uploaded,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
     void Function(DmVideoSendPhase)? onPhase,
     DmVideoSendCancellation? cancellation,
   }) {

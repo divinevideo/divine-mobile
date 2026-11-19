@@ -173,6 +173,7 @@ void main() {
         registerFallbackValue(File('/tmp/fallback.mp4'));
         registerFallbackValue((DmVideoSendPhase _) {});
         registerFallbackValue((double _) {});
+        registerFallbackValue((int _) {});
         final l10n = lookupAppLocalizations(const Locale('en'));
         const uploaded = DmVideoUpload(
           fileUrl: 'https://media.example/clip',
@@ -211,6 +212,8 @@ void main() {
             recipientPubkey: any(named: 'recipientPubkey'),
             uploaded: any(named: 'uploaded'),
             extraTags: any(named: 'extraTags'),
+            createdAt: any(named: 'createdAt'),
+            onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
             onPhase: any(named: 'onPhase'),
             cancellation: any(named: 'cancellation'),
           ),

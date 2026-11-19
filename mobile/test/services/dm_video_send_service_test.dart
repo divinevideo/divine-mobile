@@ -72,6 +72,7 @@ void main() {
     blossom = _MockBlossomUploadService();
     encryption = _MockDmVideoEncryption();
     tempDir = Directory.systemTemp.createTempSync('dm_video_send_service_test');
+    registerFallbackValue((int _) {});
     registerFallbackValue(
       const DmFileMetadata(
         fileType: '',
@@ -899,6 +900,48 @@ void main() {
           extraTags: any(named: 'extraTags'),
         ),
       ).thenAnswer((_) async => result);
+
+      test(
+        'builds the rumor with the given created_at and reports the one it '
+        'was built with',
+        () async {
+          when(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              fileUrl: any(named: 'fileUrl'),
+              fileMetadata: any(named: 'fileMetadata'),
+              extraTags: any(named: 'extraTags'),
+              createdAt: any(named: 'createdAt'),
+              onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            (invocation.namedArguments[#onRumorCreatedAt]
+                    as void Function(int)?)
+                ?.call(invocation.namedArguments[#createdAt] as int);
+            return const NIP17SendResult.failure('relay rejected');
+          });
+          final reported = <int>[];
+
+          final result = await createService().publishVideo(
+            recipientPubkey: _recipientPubkey,
+            uploaded: uploaded,
+            createdAt: 1700000000,
+            onRumorCreatedAt: reported.add,
+          );
+
+          verify(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: _recipientPubkey,
+              fileUrl: _fileUrl,
+              fileMetadata: uploaded.fileMetadata,
+              createdAt: 1700000000,
+              onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
+            ),
+          ).called(1);
+          expect(result.error, equals('relay rejected'));
+          expect(reported, equals([1700000000]));
+        },
+      );
 
       test(
         'publishes a finished upload again without encrypting or uploading',

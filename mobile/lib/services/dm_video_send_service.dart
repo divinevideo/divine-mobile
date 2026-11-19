@@ -197,6 +197,10 @@ class DmVideoSendService {
   /// [extraTags] are forwarded to [DmRepository.sendFileMessage], e.g. the
   /// marker that identifies a Divine camera clip.
   ///
+  /// [createdAt] and [onRumorCreatedAt] are forwarded too: a retry passes the
+  /// `created_at` the first attempt's rumor was built with, so the retry
+  /// keeps that rumor's id instead of minting a new message.
+  ///
   /// Throws [DmVideoSendCancelled] if [cancellation] ended the attempt before
   /// publication started; nothing is published then. Errors from
   /// [DmRepository.sendFileMessage] pass through unchanged.
@@ -205,6 +209,8 @@ class DmVideoSendService {
     required String recipientPubkey,
     required DmVideoUpload uploaded,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
     void Function(DmVideoSendPhase phase)? onPhase,
     DmVideoSendCancellation? cancellation,
   }) async {
@@ -215,6 +221,8 @@ class DmVideoSendService {
       fileUrl: uploaded.fileUrl,
       fileMetadata: uploaded.fileMetadata,
       extraTags: extraTags,
+      createdAt: createdAt,
+      onRumorCreatedAt: onRumorCreatedAt,
     );
   }
 

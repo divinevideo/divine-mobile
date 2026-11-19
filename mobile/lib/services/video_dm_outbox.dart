@@ -56,6 +56,12 @@ class VideoDmSendFailure implements Exception {
   String toString() => 'VideoDmSendFailure: $reason';
 }
 
+/// A finished upload kept for a retry of its entry, with the `created_at` of
+/// the rumor its last publication built, if one was built. A retry publishes
+/// the same upload under the same `created_at`, so it re-sends the same
+/// message rather than minting a new one.
+typedef _KeptUpload = ({DmVideoUpload upload, int? rumorCreatedAt});
+
 /// One unit of work for the outbox worker.
 sealed class _OutboxJob {
   const _OutboxJob();
@@ -167,7 +173,7 @@ class VideoDmOutbox {
   /// or the outbox is disposed. Held here rather than on [OutgoingVideoDm]
   /// because each carries the video's decryption key, which stays out of UI
   /// state.
-  final Map<String, DmVideoUpload> _uploads = {};
+  final Map<String, _KeptUpload> _uploads = {};
 
   DmVideoSendCancellation _newAttempt() {
     final attempt = DmVideoSendCancellation(
@@ -303,9 +309,12 @@ class VideoDmOutbox {
   }
 
   /// Queues failed entry [id] again, at the back of the queue. When its upload
-  /// finished, only the publication is redone, with the same upload; otherwise
-  /// the whole pipeline is, and a clip is checked again on its own first. Does nothing unless the entry exists
-  /// and [OutgoingVideoDm.canRetry].
+  /// finished, only the publication is redone: with the same upload and, when
+  /// the earlier publication built a rumor, that rumor's `created_at`, so the
+  /// retry re-sends the same message rather than minting a new one. Otherwise
+  /// the whole pipeline is redone, and a clip is checked again on its own
+  /// first. Does nothing unless the entry exists and
+  /// [OutgoingVideoDm.canRetry].
   void retry(String id) {
     if (_disposed) return;
     final entry = _entry(id);
@@ -631,13 +640,13 @@ class VideoDmOutbox {
 
   /// Runs [entry] through encrypt, upload and publish, and leaves it sent or
   /// failed. Given its [kept] upload, it skips encryption and upload and
-  /// publishes that.
+  /// publishes that, under the `created_at` its earlier rumor was built with.
   /// Returns null when it was sent, otherwise why it failed.
   Future<OutgoingVideoDmFailure?> _sendEntry(
     OutgoingVideoDm entry, {
     List<List<String>> extraTags = const [],
     DmVideoSendCancellation? attempt,
-    DmVideoUpload? kept,
+    _KeptUpload? kept,
   }) async {
     attempt ??= _newAttempt();
     final currentAttempt = attempt;
@@ -673,7 +682,7 @@ class VideoDmOutbox {
 
       final service = _sendService();
       final uploaded =
-          kept ??
+          kept?.upload ??
           await currentAttempt.waitFor<DmVideoUpload>(
             service.uploadVideo(
               videoFile: File(entry.localPath),
@@ -687,12 +696,20 @@ class VideoDmOutbox {
               },
             ),
           );
-      if (kept == null && !_disposed) _uploads[id] = uploaded;
+      if (kept == null && !_disposed) {
+        _uploads[id] = (upload: uploaded, rumorCreatedAt: null);
+      }
       final result = await currentAttempt.waitFor(
         service.publishVideo(
           recipientPubkey: entry.recipientPubkey,
           uploaded: uploaded,
           extraTags: extraTags,
+          createdAt: kept?.rumorCreatedAt,
+          onRumorCreatedAt: (createdAt) {
+            final current = _uploads[id];
+            if (current == null) return;
+            _uploads[id] = (upload: current.upload, rumorCreatedAt: createdAt);
+          },
           cancellation: currentAttempt,
           onPhase: onPhase,
         ),
