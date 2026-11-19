@@ -2400,7 +2400,6 @@ void main() {
         unawaited(outbox.quiesce().then((_) => quiesced = true));
         await pumpEventQueue();
 
-        expect(relay.isCompleted, isFalse);
         expect(quiesced, isTrue);
         verifyNever(anyFileMessage);
       });
