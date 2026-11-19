@@ -166,6 +166,11 @@ class PostLiveActivityRepository {
 
   /// Ends the activity for the post at [postCoordinate], telling the server
   /// if it had registered.
+  ///
+  /// An activity from an earlier launch that is not tracked yet is taken
+  /// from the platform's list. With a replayed push token it gets a
+  /// best-effort ended registration, since that launch may have registered
+  /// it; without one it is ended on the device only.
   Future<void> stopForPost(String postCoordinate) async {
     final tracked = _trackedForCoordinate(postCoordinate);
     if (tracked != null) {
@@ -173,9 +178,14 @@ class PostLiveActivityRepository {
       return;
     }
     for (final activity in await _list() ?? const <RunningLiveActivity>[]) {
-      if (activity.postCoordinate == postCoordinate) {
-        await _endActivity(activity.id, tellServer: true);
+      final eventId = activity.postEventId;
+      if (activity.postCoordinate != postCoordinate) continue;
+      if (eventId != null && !_byId.containsKey(activity.id)) {
+        final adopted = _trackedFromList(activity, postCoordinate, eventId);
+        adopted.registered = adopted.token != null;
+        _byId[activity.id] = adopted;
       }
+      await _endActivity(activity.id, tellServer: true);
     }
   }
 
@@ -228,18 +238,7 @@ class PostLiveActivityRepository {
   /// registered. Used when the toggle is turned off.
   Future<void> endAll() async {
     _cancelPending((_) => true);
-    final tracked = _byId.values.toList();
-    for (final t in tracked) {
-      _drop(t, tellServer: true);
-    }
-    final listed = await _list() ?? const <RunningLiveActivity>[];
-    final ids = {
-      for (final t in tracked) t.activityId,
-      for (final a in listed) a.id,
-    };
-    for (final id in ids) {
-      await _endActivity(id, tellServer: true);
-    }
+    await _endWhere((_) => true, tellServer: true);
   }
 
   /// Ends [ownerPubkey]'s activities on the device only, for sign-out and
@@ -250,25 +249,13 @@ class PostLiveActivityRepository {
   /// tells the server.
   Future<void> endLocally({required String ownerPubkey}) async {
     bool owned(String owner) => pubkeysEqual(owner, ownerPubkey);
-    _cancelPending((pending) => owned(pending.ownerPubkey));
-    final mine = _byId.values.where((t) => owned(t.ownerPubkey)).toList();
-    for (final t in mine) {
-      _drop(t, tellServer: false);
-    }
     Log.info(
       'Ending Live Activities on the device for '
       '${pubkeyForLogs(ownerPubkey)}',
       name: _logName,
     );
-    final listed = await _list() ?? const <RunningLiveActivity>[];
-    final ids = {
-      for (final t in mine) t.activityId,
-      for (final a in listed)
-        if (owned(a.ownerPubkey)) a.id,
-    };
-    for (final id in ids) {
-      await _endActivity(id, tellServer: false);
-    }
+    _cancelPending((pending) => owned(pending.ownerPubkey));
+    await _endWhere(owned, tellServer: false);
   }
 
   /// Reconciles the platform's activities with [currentOwnerPubkey], on
@@ -336,7 +323,9 @@ class PostLiveActivityRepository {
     );
     try {
       if (!await isSystemEnabled() || pending.cancelled) return;
-      await _endForNewPost();
+      // The pending starts this post superseded were cancelled in
+      // startPosting; ended registrations for what it replaces go detached.
+      await _endWhere((_) => true, tellServer: true);
       if (pending.cancelled) return;
       final fileName = await _writeThumbnail(await bytes);
       if (pending.cancelled) return;
@@ -388,20 +377,27 @@ class PostLiveActivityRepository {
     }
   }
 
-  /// Ends everything running before a new post's activity starts, sending
-  /// ended registrations detached.
-  Future<void> _endForNewPost() async {
-    final tracked = _byId.values.toList();
-    for (final t in tracked) {
-      _drop(t, tellServer: true);
+  /// Ends every activity whose owner [matches], tracked or listed.
+  ///
+  /// Tracking is dropped before anything is awaited, so retries stop at
+  /// once; with [tellServer], ended registrations go out detached. Pending
+  /// starts are the caller's to cancel.
+  Future<void> _endWhere(
+    bool Function(String ownerPubkey) matches, {
+    required bool tellServer,
+  }) async {
+    final dropped = _byId.values.where((t) => matches(t.ownerPubkey)).toList();
+    for (final t in dropped) {
+      _drop(t, tellServer: tellServer);
     }
     final listed = await _list() ?? const <RunningLiveActivity>[];
     final ids = {
-      for (final t in tracked) t.activityId,
-      for (final a in listed) a.id,
+      for (final t in dropped) t.activityId,
+      for (final a in listed)
+        if (matches(a.ownerPubkey)) a.id,
     };
     for (final id in ids) {
-      await _endActivity(id, tellServer: true);
+      await _endActivity(id, tellServer: tellServer);
     }
   }
 
@@ -447,22 +443,31 @@ class PostLiveActivityRepository {
   }
 
   void _adopt(RunningLiveActivity activity, String coordinate, String eventId) {
-    // postedAt is approximated by startedAt, which is earlier by the
-    // upload time; the server's window ends correspondingly early.
-    final tracked =
-        _Tracked(
-            key: null,
-            ownerPubkey: activity.ownerPubkey,
-            activityId: activity.id,
-            showFirstRunNote: false,
-          )
-          ..postCoordinate = coordinate
-          ..postEventIds = [eventId]
-          ..postedAt = activity.startedAt
-          ..token = _bufferedTokens.remove(activity.id);
+    final tracked = _trackedFromList(activity, coordinate, eventId);
     _byId[activity.id] = tracked;
     Log.info('Re-adopted Live Activity ${activity.id}', name: _logName);
     _register(tracked);
+  }
+
+  /// A record for a listed activity from an earlier launch, with its
+  /// replayed token if one arrived.
+  _Tracked _trackedFromList(
+    RunningLiveActivity activity,
+    String coordinate,
+    String eventId,
+  ) {
+    // postedAt is approximated by startedAt, which is earlier by the
+    // upload time; the server's window ends correspondingly early.
+    return _Tracked(
+        key: null,
+        ownerPubkey: activity.ownerPubkey,
+        activityId: activity.id,
+        showFirstRunNote: false,
+      )
+      ..postCoordinate = coordinate
+      ..postEventIds = [eventId]
+      ..postedAt = activity.startedAt
+      ..token = _bufferedTokens.remove(activity.id);
   }
 
   void _onEvent(LiveActivityPlatformEvent event) {

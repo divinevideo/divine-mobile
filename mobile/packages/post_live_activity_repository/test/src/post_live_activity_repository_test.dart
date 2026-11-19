@@ -995,7 +995,44 @@ void main() {
         });
       });
 
-      test('stopForPost ends an untracked listed activity', () {
+      test('stopForPost ends an untracked listed activity with a replayed '
+          'token and sends one ended registration', () {
+        fakeAsync((async) {
+          final repo = build(async);
+          final startedAt = t0.subtract(const Duration(minutes: 9));
+          platform
+            ..emit(const PushTokenChanged(activityId: 'cold', token: 'tok'))
+            ..running = [
+              _running(
+                'cold',
+                owner: _ownerA,
+                startedAt: startedAt,
+                coordinate: _coordA,
+                eventId: _eventA,
+              ),
+              _running('other', owner: _ownerA, startedAt: t0),
+            ];
+          async.flushMicrotasks();
+          unawaited(repo.stopForPost(_coordA));
+          async.flushMicrotasks();
+
+          expect(platform.ends, [(id: 'cold', immediate: true)]);
+          expect(registrar.sent, [
+            LiveActivityRegistration.forPost(
+              activityId: 'cold',
+              ownerPubkey: _ownerA,
+              activityPushToken: 'tok',
+              postCoordinate: _coordA,
+              postEventIds: const [_eventA],
+              postedAt: startedAt,
+              showFirstRunNote: false,
+            ).ended(),
+          ]);
+        });
+      });
+
+      test('stopForPost ends an untracked listed activity without a token on '
+          'the device only', () {
         fakeAsync((async) {
           final repo = build(async);
           platform.running = [
@@ -1011,7 +1048,7 @@ void main() {
           unawaited(repo.stopForPost(_coordA));
           async.flushMicrotasks();
 
-          expect(platform.endedIds, ['cold']);
+          expect(platform.ends, [(id: 'cold', immediate: true)]);
           expect(registrar.sent, isEmpty);
         });
       });
