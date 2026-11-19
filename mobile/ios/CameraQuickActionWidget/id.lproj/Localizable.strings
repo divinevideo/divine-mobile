@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Buka kamera Divine";
 "divine_quick_actions_camera_widget_description" = "Membuka kamera Divine langsung dari layar utama.";
+"divine_post_activity_your_post" = "Postinganmu";
+"divine_post_activity_posting" = "Memposting…";
+"divine_post_activity_live" = "Postinganmu sudah tayang";
+"divine_post_activity_no_views_yet %@" = "Belum ada tayangan · tayang selama %@";
+"divine_post_activity_cant_find" = "Kami tidak menemukan statistik untuk postingan ini";
+"divine_post_activity_first_hour" = "Jam pertama";
+"divine_post_activity_no_views_first_hour" = "Tidak ada tayangan di jam pertama";
+"divine_post_activity_updated %@" = "Diperbarui %@ lalu";
+"divine_post_activity_first_run_note" = "Statistik langsung untuk jam pertamamu · matikan di Pengaturan";

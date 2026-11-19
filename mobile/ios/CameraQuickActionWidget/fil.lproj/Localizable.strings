@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Buksan ang Divine camera";
 "divine_quick_actions_camera_widget_description" = "Nagbubukas ng Divine camera nang direkta mula sa home screen.";
+"divine_post_activity_your_post" = "Post mo";
+"divine_post_activity_posting" = "Nagpo-post…";
+"divine_post_activity_live" = "Live na ang post mo";
+"divine_post_activity_no_views_yet %@" = "Wala pang views · %@ nang live";
+"divine_post_activity_cant_find" = "Hindi namin mahanap ang stats para sa post na ito";
+"divine_post_activity_first_hour" = "Unang oras";
+"divine_post_activity_no_views_first_hour" = "Walang views sa unang oras";
+"divine_post_activity_updated %@" = "Na-update %@ ang nakalipas";
+"divine_post_activity_first_run_note" = "Live stats para sa unang oras mo · i-off sa Mga Setting";

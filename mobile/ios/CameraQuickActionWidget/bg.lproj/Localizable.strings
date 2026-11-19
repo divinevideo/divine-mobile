@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Отвори камерата на Divine";
 "divine_quick_actions_camera_widget_description" = "Отваря камерата на Divine директно от началния екран.";
+"divine_post_activity_your_post" = "Твоята публикация";
+"divine_post_activity_posting" = "Публикуване…";
+"divine_post_activity_live" = "Публикацията ти е онлайн";
+"divine_post_activity_no_views_yet %@" = "Още няма гледания · онлайн от %@";
+"divine_post_activity_cant_find" = "Не намираме статистика за тази публикация";
+"divine_post_activity_first_hour" = "Първият час";
+"divine_post_activity_no_views_first_hour" = "Няма гледания през първия час";
+"divine_post_activity_updated %@" = "Обновено преди %@";
+"divine_post_activity_first_run_note" = "Статистика на живо за първия ти час · изключи я от Настройки";

@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine 카메라 열기";
 "divine_quick_actions_camera_widget_description" = "홈 화면에서 직접 Divine 카메라를 엽니다.";
+"divine_post_activity_your_post" = "내 게시물";
+"divine_post_activity_posting" = "게시 중…";
+"divine_post_activity_live" = "게시물이 공개됐어요";
+"divine_post_activity_no_views_yet %@" = "아직 조회수가 없어요 · 공개 후 %@";
+"divine_post_activity_cant_find" = "이 게시물의 통계를 찾을 수 없어요";
+"divine_post_activity_first_hour" = "첫 1시간";
+"divine_post_activity_no_views_first_hour" = "첫 1시간 동안 조회수가 없어요";
+"divine_post_activity_updated %@" = "%@ 전에 업데이트됨";
+"divine_post_activity_first_run_note" = "첫 1시간 실시간 통계 · 설정에서 끌 수 있어요";

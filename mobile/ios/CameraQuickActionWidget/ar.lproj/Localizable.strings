@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "فتح كاميرا Divine";
 "divine_quick_actions_camera_widget_description" = "يفتح كاميرا Divine مباشرةً من الشاشة الرئيسية.";
+"divine_post_activity_your_post" = "منشورك";
+"divine_post_activity_posting" = "جارٍ النشر…";
+"divine_post_activity_live" = "تم نشر منشورك";
+"divine_post_activity_no_views_yet %@" = "لا مشاهدات بعد · منشور منذ %@";
+"divine_post_activity_cant_find" = "تعذّر العثور على إحصاءات لهذا المنشور";
+"divine_post_activity_first_hour" = "الساعة الأولى";
+"divine_post_activity_no_views_first_hour" = "لا مشاهدات في الساعة الأولى";
+"divine_post_activity_updated %@" = "آخر تحديث منذ %@";
+"divine_post_activity_first_run_note" = "إحصاءات مباشرة لساعتك الأولى · يمكن إيقافها من الإعدادات";

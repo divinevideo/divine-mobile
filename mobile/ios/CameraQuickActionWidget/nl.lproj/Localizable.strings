@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine-camera openen";
 "divine_quick_actions_camera_widget_description" = "Opent de Divine-camera rechtstreeks vanaf het startscherm.";
+"divine_post_activity_your_post" = "Je post";
+"divine_post_activity_posting" = "Plaatsen…";
+"divine_post_activity_live" = "Je post staat online";
+"divine_post_activity_no_views_yet %@" = "Nog geen weergaven · %@ online";
+"divine_post_activity_cant_find" = "We kunnen geen statistieken voor deze post vinden";
+"divine_post_activity_first_hour" = "Eerste uur";
+"divine_post_activity_no_views_first_hour" = "Geen weergaven in het eerste uur";
+"divine_post_activity_updated %@" = "%@ geleden bijgewerkt";
+"divine_post_activity_first_run_note" = "Live statistieken voor je eerste uur · zet ze uit in Instellingen";

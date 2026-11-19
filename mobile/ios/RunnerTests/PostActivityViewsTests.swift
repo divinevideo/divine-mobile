@@ -124,6 +124,74 @@ final class PostActivityViewsTests: XCTestCase {
         }
     }
 
+    // MARK: - Translations
+
+    private var widgetLocalizations: [String] {
+        widgetBundle.localizations.filter { $0 != "Base" }.sorted()
+    }
+
+    private func table(_ type: String, for localization: String) -> [String: Any]? {
+        guard let path = widgetBundle.path(
+            forResource: "Localizable",
+            ofType: type,
+            inDirectory: nil,
+            forLocalization: localization
+        ) else { return nil }
+        return NSDictionary(contentsOfFile: path) as? [String: Any]
+    }
+
+    /// The widget's .strings files have no other guard, so this is it: every
+    /// key in every localization the widget ships.
+    func testEveryKeyExistsInEveryWidgetLocale() {
+        XCTAssertEqual(
+            widgetLocalizations,
+            ["am", "ar", "bg", "de", "en", "es", "fil", "fr", "id", "it",
+             "ja", "ko", "nl", "pl", "pt", "ro", "sv", "tr"]
+        )
+        for localization in widgetLocalizations {
+            let strings = table("strings", for: localization) ?? [:]
+            for key in PostActivityStrings.keys {
+                let value = strings[key] as? String
+                XCTAssertNotNil(value, "\(localization) is missing \(key)")
+                XCTAssertNotEqual(value, key, "\(localization) leaves \(key) untranslated")
+            }
+            let plurals = table("stringsdict", for: localization) ?? [:]
+            for key in PostActivityStrings.pluralKeys {
+                XCTAssertNotNil(plurals[key], "\(localization) is missing plural \(key)")
+            }
+        }
+    }
+
+    func testPluralsReadCorrectlyInEnglish() throws {
+        let english = try XCTUnwrap(
+            widgetBundle.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:))
+        )
+        let format = english.localizedString(
+            forKey: PostActivityStrings.pluralKeys[0],
+            value: nil,
+            table: nil
+        )
+        let locale = Locale(identifier: "en")
+        XCTAssertEqual(String(format: format, locale: locale, 1), "1 view")
+        XCTAssertEqual(String(format: format, locale: locale, 2), "2 views")
+    }
+
+    func testPlaceholdersSurviveTranslation() {
+        let placeholderKeys = PostActivityStrings.keys.filter { $0.contains("%@") }
+        XCTAssertFalse(placeholderKeys.isEmpty)
+        for localization in widgetLocalizations {
+            let strings = table("strings", for: localization) ?? [:]
+            for key in placeholderKeys {
+                guard let value = strings[key] as? String else { continue }
+                XCTAssertEqual(
+                    value.components(separatedBy: "%@").count - 1,
+                    1,
+                    "\(localization) \(key) must keep exactly one %@"
+                )
+            }
+        }
+    }
+
     func testAppDeclaresLiveActivitySupport() {
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "NSSupportsLiveActivities") as? Bool,

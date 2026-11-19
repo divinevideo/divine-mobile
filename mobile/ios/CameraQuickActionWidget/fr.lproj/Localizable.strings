@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Ouvrir l'appareil photo Divine";
 "divine_quick_actions_camera_widget_description" = "Ouvre l'appareil photo Divine directement depuis l'écran d'accueil.";
+"divine_post_activity_your_post" = "Ta publication";
+"divine_post_activity_posting" = "Publication…";
+"divine_post_activity_live" = "Ta publication est en ligne";
+"divine_post_activity_no_views_yet %@" = "Pas encore de vues · en ligne depuis %@";
+"divine_post_activity_cant_find" = "Impossible de trouver les stats de cette publication";
+"divine_post_activity_first_hour" = "Première heure";
+"divine_post_activity_no_views_first_hour" = "Aucune vue pendant la première heure";
+"divine_post_activity_updated %@" = "Mis à jour il y a %@";
+"divine_post_activity_first_run_note" = "Stats en direct pour ta première heure · désactive-les dans Réglages";
