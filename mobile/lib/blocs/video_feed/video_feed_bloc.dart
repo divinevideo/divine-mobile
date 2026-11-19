@@ -2439,13 +2439,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (index == -1) return;
 
     final previous = state.videos[index];
-    final allowed = _removalRepository.applyContentPreferences([republished]);
+    final merged = mergeRepublishedVideo(previous, republished);
+    final allowed = _removalRepository.applyContentPreferences([merged]);
     if (allowed.isEmpty) {
       _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
       return;
     }
     final videos = [...state.videos];
-    videos[index] = mergeRepublishedVideo(previous, allowed.single);
+    videos[index] = allowed.single;
     final listSources = Map.of(state.videoListSources);
     final listOnlyIds = {...state.listOnlyVideoIds};
     if (listSources.remove(previous.id) case final sources?) {
