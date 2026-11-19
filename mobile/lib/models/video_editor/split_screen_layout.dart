@@ -598,7 +598,9 @@ final class SplitScreenCellShape {
   bool get isOval => _isOval;
 
   /// The shape fitted to [rect]. A rectangle's corners are rounded by
-  /// [borderRadius].
+  /// [borderRadius], and so are a polygon's where they meet the rect's: a
+  /// slanted cell in a corner of a rounded frame then stays inside it, its
+  /// selection ring included.
   Path pathIn(Rect rect, {BorderRadius borderRadius = BorderRadius.zero}) {
     Offset at(Offset fraction) => Offset(
       rect.left + fraction.dx * rect.width,
@@ -607,7 +609,19 @@ final class SplitScreenCellShape {
     final path = Path()..fillType = PathFillType.evenOdd;
     final corners = this.corners;
     if (corners != null) {
-      path.addPolygon([for (final corner in corners) at(corner)], true);
+      final polygon = [for (final corner in corners) at(corner)];
+      if (borderRadius == BorderRadius.zero) {
+        path.addPolygon(polygon, true);
+      } else {
+        path.addPath(
+          Path.combine(
+            PathOperation.intersect,
+            Path()..addPolygon(polygon, true),
+            Path()..addRRect(borderRadius.toRRect(rect)),
+          ),
+          Offset.zero,
+        );
+      }
     } else if (_isOval) {
       path.addOval(rect);
     } else if (borderRadius == BorderRadius.zero) {

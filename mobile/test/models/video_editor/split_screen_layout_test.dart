@@ -374,6 +374,29 @@ void main() {
       expect(path.contains(cell.center), isTrue);
     });
 
+    test('rounds a polygon where it meets the corners of its rect', () {
+      // The top cell of a slanted split: its top corners are the rect's.
+      const shape = SplitScreenCellShape.polygon([
+        Offset.zero,
+        Offset(1, 0),
+        Offset(1, 0.6),
+        Offset(0, 0.9),
+      ]);
+      const radius = BorderRadius.all(Radius.circular(20));
+
+      final rounded = shape.pathIn(cell, borderRadius: radius);
+
+      expect(rounded.contains(cell.topLeft + const Offset(1, 1)), isFalse);
+      expect(rounded.contains(cell.topRight + const Offset(-1, 1)), isFalse);
+      expect(rounded.contains(cell.center), isTrue);
+      // Only where the polygon reaches the rect's corners.
+      expect(rounded.contains(cell.topLeft + const Offset(50, 1)), isTrue);
+      expect(
+        shape.pathIn(cell).contains(cell.topLeft + const Offset(1, 1)),
+        isTrue,
+      );
+    });
+
     test('compares by value', () {
       expect(
         const SplitScreenCellShape.polygon([Offset.zero, Offset(1, 1)]),
