@@ -8,6 +8,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Repository backing the server-configured featured Explore tab.
 ///
@@ -32,7 +33,16 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
     ..watch(currentAuthStateProvider)
     ..watch(adultContentVerificationVersionProvider);
   final service = ref.watch(ageVerificationServiceProvider);
-  await service.initialized;
+  try {
+    await service.initialized;
+  } on Object catch (error) {
+    Log.warning(
+      'Featured tab 18+ check failed: $error',
+      name: 'FeaturedTabsProviders',
+      category: LogCategory.system,
+    );
+    rethrow;
+  }
   return service.isAdultContentVerified;
 });
 

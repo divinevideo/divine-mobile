@@ -3,6 +3,7 @@
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Resolved featured-tab answer for one refresh.
 class FeaturedTabsSnapshot {
@@ -126,7 +127,12 @@ class FeaturedTabsRepository {
         gateAgeRestrictedContent: gateAgeRestrictedContent,
         requiredFeaturedFeedId: requiredFeaturedFeedId,
       );
-    } on FunnelcakeException {
+    } on FunnelcakeException catch (error) {
+      Log.warning(
+        'Featured tabs fetch failed: $error',
+        name: 'FeaturedTabsRepository',
+        category: LogCategory.api,
+      );
       return _fromCache(
         gateAgeRestrictedContent: gateAgeRestrictedContent,
         requiredFeaturedFeedId: requiredFeaturedFeedId,

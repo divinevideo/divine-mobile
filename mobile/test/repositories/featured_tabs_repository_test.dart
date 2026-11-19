@@ -8,6 +8,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
@@ -265,6 +266,20 @@ void main() {
         );
 
         expect(snapshot.hasTab, isTrue);
+      });
+
+      test('logs why a fetch failed', () async {
+        await LogCaptureService().clearAllLogs();
+        final repository = buildRepository();
+        stubFailure();
+        await repository.refresh(gateAgeRestrictedContent: false);
+
+        expect(
+          LogCaptureService()
+              .getRecentLogs(minLevel: LogLevel.warning)
+              .map((entry) => entry.message),
+          contains(contains('Featured tabs fetch failed')),
+        );
       });
 
       test('drops the tab once the cache passes its TTL', () async {
