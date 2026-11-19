@@ -62,6 +62,27 @@ void main() {
 
   group(PostLiveActivityChannel, () {
     group('supported', () {
+      group('isOsSupported', () {
+        test('returns the native answer', () async {
+          respond = (_) => true;
+
+          expect(await channel.isOsSupported(), isTrue);
+          expect(calls.single.method, 'isSupported');
+        });
+
+        test('is false when the OS predates Live Activities', () async {
+          respond = (_) => false;
+
+          expect(await channel.isOsSupported(), isFalse);
+        });
+
+        test('is false when the native call fails', () async {
+          respond = (_) => throw PlatformException(code: 'boom');
+
+          expect(await channel.isOsSupported(), isFalse);
+        });
+      });
+
       test('isEnabled returns the native answer', () async {
         respond = (_) => true;
 
@@ -195,6 +216,11 @@ void main() {
 
     group('unsupported', () {
       setUp(() => channel = build(supported: false));
+
+      test('isOsSupported is false without touching the channel', () async {
+        expect(await channel.isOsSupported(), isFalse);
+        expect(calls, isEmpty);
+      });
 
       test('isEnabled is false without touching the channel', () async {
         expect(await channel.isEnabled(), isFalse);

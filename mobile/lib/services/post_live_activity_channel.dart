@@ -50,6 +50,23 @@ class PostLiveActivityChannel implements LiveActivityPlatform {
   @override
   Stream<LiveActivityPlatformEvent> get events => _events;
 
+  /// Whether this device's OS can run the post Live Activity (iOS 16.2+).
+  ///
+  /// False off iOS, below 16.2 and when the native call fails. Distinct from
+  /// [isEnabled], the person's own switch, which only exists from 16.2.
+  Future<bool> isOsSupported() async {
+    if (!_isSupported()) return false;
+    try {
+      return await _method.invokeMethod<bool>('isSupported') ?? false;
+    } on PlatformException catch (e) {
+      _warn('isSupported failed: $e');
+      return false;
+    } on MissingPluginException catch (e) {
+      _warn('channel missing for isSupported: $e');
+      return false;
+    }
+  }
+
   @override
   Future<bool> isEnabled() async {
     if (!_isSupported()) return false;

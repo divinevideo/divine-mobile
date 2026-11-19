@@ -750,7 +750,7 @@ Future<void> startOpenVineApp({
     sharedPreferences: sharedPreferences,
   ).recordSession();
 
-  final postLiveActivity = _buildPostLiveActivity(
+  final postLiveActivity = await buildPostLiveActivityDevice(
     sharedPreferences: sharedPreferences,
     crashReporting: crashReporting,
   );
@@ -1011,16 +1011,24 @@ Future<void> handleUncaughtZoneError(
   await record(error, stack, reason: 'runZonedGuarded');
 }
 
-/// Builds the post Live Activity bridge on iOS; null elsewhere.
-PostLiveActivityDevice? _buildPostLiveActivity({
+/// Builds the post Live Activity bridge on iOS 16.2 and later; null
+/// elsewhere, including iOS 16.0 and 16.1.
+///
+/// A null device turns the settings toggle, Stop and the publish hook off, so
+/// those versions keep today's behaviour. The OS check is one native call
+/// awaited here rather than an OS-version parse, so the answer comes from the
+/// same `#available(iOS 16.2, *)` gate that guards every ActivityKit call.
+@visibleForTesting
+Future<PostLiveActivityDevice?> buildPostLiveActivityDevice({
   required SharedPreferences sharedPreferences,
   required CrashReportingService crashReporting,
-}) {
-  if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
-  final channel = PostLiveActivityChannel();
+  PostLiveActivityChannel? channel,
+}) async {
+  final bridge = channel ?? PostLiveActivityChannel();
+  if (!await bridge.isOsSupported()) return null;
   final registrar = PostLiveActivityRegistrar();
   final repository = PostLiveActivityRepository(
-    platform: channel,
+    platform: bridge,
     registrar: registrar,
     sharedPreferences: sharedPreferences,
     errorReporter: (error, stack, {required site}) {
@@ -1034,7 +1042,7 @@ PostLiveActivityDevice? _buildPostLiveActivity({
     },
   );
   return PostLiveActivityDevice(
-    channel: channel,
+    channel: bridge,
     registrar: registrar,
     repository: repository,
   );

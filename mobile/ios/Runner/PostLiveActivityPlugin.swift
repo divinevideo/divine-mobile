@@ -269,6 +269,8 @@ final class PostLiveActivityPlugin: NSObject {
             return
         }
         switch call.method {
+        case "isSupported":
+            result(true)
         case "isEnabled":
             result(ActivityAuthorizationInfo().areActivitiesEnabled)
         case "writeThumbnail":
@@ -286,10 +288,11 @@ final class PostLiveActivityPlugin: NSObject {
         }
     }
 
-    /// Below iOS 16.2 everything answers "not enabled".
+    /// Below iOS 16.2 everything answers "not enabled", and `isSupported`
+    /// answers false so Dart builds no repository at all.
     private func handleUnsupported(_ call: FlutterMethodCall, result: FlutterResult) {
         switch call.method {
-        case "isEnabled": result(false)
+        case "isSupported", "isEnabled": result(false)
         case "list": result([])
         case "start": result(FlutterError(code: "activity_failed", message: "unsupported", details: nil))
         case "writeThumbnail", "update", "end": result(nil)
