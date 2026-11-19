@@ -17,8 +17,8 @@ import 'package:divine_camera/divine_camera.dart'
         DivineVideoQuality,
         DivineVideoStabilizationMode,
         PhotoCaptureResult,
-        RemoteRecorderState,
         RemoteRecordTrigger,
+        RemoteRecorderState,
         VideoRecordingResult;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, VideoClip;
@@ -445,7 +445,7 @@ class VideoRecorderBloc
   Object? _publishedRemoteRecorder;
   bool _remotePreviewReady = true;
   int _lifecycleRevision = 0;
-  bool _previewResumeFailed = false;
+  bool _isAppForeground = true;
 
   /// How long the zoom ruler stays visible after the last pinch activity
   /// before the auto-hide timer clears it.
@@ -754,10 +754,10 @@ class VideoRecorderBloc
     }
 
     await _setupRemoteRecordControl();
-    if (_previewResumeFailed &&
+    if (_isAppForeground &&
+        state.recorderMode != VideoRecorderMode.upload &&
         lifecycleRevision == _lifecycleRevision &&
         !_isClosing) {
-      _previewResumeFailed = false;
       _remotePreviewReady = true;
       _syncRemoteRecorder(state);
     }
@@ -783,8 +783,9 @@ class VideoRecorderBloc
     Emitter<VideoRecorderBlocState> emit,
   ) async {
     final revision = ++_lifecycleRevision;
-    _previewResumeFailed = false;
     final resumed = event.state == AppLifecycleState.resumed;
+    if (!event.isTabTransition) _isAppForeground = resumed;
+    if (resumed && !_isAppForeground) return;
     // Upload intentionally keeps the preview paused. Track the foreground
     // transition anyway so switching back to a capture tab enables the remote.
     if (resumed && state.recorderMode == VideoRecorderMode.upload) {
@@ -806,7 +807,6 @@ class VideoRecorderBloc
       );
       addError(e, stackTrace);
       if (!resumed || revision != _lifecycleRevision || _isClosing) return;
-      _previewResumeFailed = true;
       // A camera that does not come back would leave a black preview. Show
       // the initialization error instead; the next initialize (leaving and
       // returning to the Upload tab, or reopening the recorder) recovers.
@@ -3510,8 +3510,9 @@ class VideoRecorderBloc
       case RemoteRecordTrigger.watchStop:
         if (!state.isCameraInitialized ||
             !state.isShutterActive ||
-            state.isStoppingRecording)
+            state.isStoppingRecording) {
           return;
+        }
       case RemoteRecordTrigger.volumeUp:
       case RemoteRecordTrigger.volumeDown:
       case RemoteRecordTrigger.bluetooth:

@@ -536,12 +536,18 @@ void main() {
 
           verify(
             () => recorderBloc.add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
             ),
           ).called(1);
           verify(
             () => recorderBloc.add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.resumed,
+                isTabTransition: true,
+              ),
             ),
           ).called(1);
           // Only the open initializes; the return resumes the live camera.

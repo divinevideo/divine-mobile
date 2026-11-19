@@ -61,12 +61,16 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
 
 /// Forwarded from `WidgetsBindingObserver.didChangeAppLifecycleState`.
 final class VideoRecorderAppLifecycleChanged extends VideoRecorderEvent {
-  const VideoRecorderAppLifecycleChanged(this.state);
+  const VideoRecorderAppLifecycleChanged(
+    this.state, {
+    this.isTabTransition = false,
+  });
 
   final AppLifecycleState state;
+  final bool isTabTransition;
 
   @override
-  List<Object?> get props => [state];
+  List<Object?> get props => [state, isTabTransition];
 }
 
 /// Temporarily pauses remote record control (volume buttons / Bluetooth).

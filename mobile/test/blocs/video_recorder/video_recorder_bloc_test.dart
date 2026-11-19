@@ -4704,6 +4704,21 @@ void main() {
             await pumpEventQueue();
             expect(bloc.state.isCameraInitialized, isFalse);
 
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+            );
+            await pumpEventQueue();
             bloc.add(const VideoRecorderInitializeRequested());
             await pumpEventQueue();
             expect(bloc.state.isCameraInitialized, isTrue);
