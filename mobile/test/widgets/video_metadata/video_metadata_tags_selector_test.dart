@@ -679,6 +679,26 @@ void main() {
         );
 
         testWidgets(
+          'after a rejection, a pasted list with one new tag among tags the '
+          'video already has is announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await tester.enterText(field(), 'tag3 other tag4 ');
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(
+              announcements.where((message) => message == limitWarning),
+              hasLength(1),
+            );
+            expect(find.text(limitWarning), findsOneWidget);
+          },
+        );
+
+        testWidgets(
           'with an empty field after a rejection does not announce again',
           (tester) async {
             final announcements = captureAnnouncements(tester);
