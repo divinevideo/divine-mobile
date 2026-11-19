@@ -105,15 +105,25 @@ VideoFeedSource _sourceFor(VideoFeedSourceType type) => switch (type) {
   VideoFeedSourceType.classic => const VideoFeedSource.classic(),
 };
 
-Widget _buildEmptyFeedSubject(VideoFeedBlocState state, {GoRouter? router}) {
+Widget _buildEmptyFeedSubject(
+  VideoFeedBlocState state, {
+  GoRouter? router,
+  bool findPeopleEnabled = false,
+}) {
   final child = Scaffold(body: FeedEmptyWidget(state: state));
 
-  return MaterialApp(
-    localizationsDelegates: appLocalizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: router == null
-        ? child
-        : InheritedGoRouter(goRouter: router, child: child),
+  return ProviderScope(
+    overrides: [
+      isFeatureEnabledProvider(FeatureFlag.findPeople)
+          .overrideWithValue(findPeopleEnabled),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: router == null
+          ? child
+          : InheritedGoRouter(goRouter: router, child: child),
+    ),
   );
 }
 
@@ -139,6 +149,27 @@ void main() {
   });
 
   group(FeedEmptyWidget, () {
+    testWidgets('Find people CTA is gated and opens the permanent page', (
+      tester,
+    ) async {
+      final router = _MockGoRouter();
+      when(() => router.push<void>(any(), extra: any(named: 'extra')))
+          .thenAnswer((_) async {});
+      const state = VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        mode: FeedMode.following,
+        error: VideoFeedError.noFollowedUsers,
+      );
+      await tester.pumpWidget(_buildEmptyFeedSubject(state, router: router));
+      expect(find.text('Find people'), findsNothing);
+      await tester.pumpWidget(
+        _buildEmptyFeedSubject(state, router: router, findPeopleEnabled: true),
+      );
+      await tester.tap(find.text('Find people'));
+      await tester.pump();
+      verify(() => router.push<void>('/find-people')).called(1);
+    });
+
     testWidgets('uses no-follow guidance for an empty For You feed', (
       tester,
     ) async {

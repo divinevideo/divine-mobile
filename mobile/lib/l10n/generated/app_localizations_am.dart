@@ -15950,4 +15950,28 @@ class AppLocalizationsAm extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat፦ $outcome';
   }
+
+  @override
+  String get findPeopleTitle => 'ሰዎችን ፈልግ';
+
+  @override
+  String get findPeopleDescription => 'ንቁ ፈጣሪዎችን እና የተመለሱ የVine ማህደሮችን ተከተል።';
+
+  @override
+  String get findPeopleSuggested => 'ለእርስዎ የተጠቆመ';
+
+  @override
+  String get findPeopleArchive => 'የተመለሰ የVine ማህደር';
+
+  @override
+  String get findPeopleEmpty => 'አሁን ተጨማሪ ጥቆማዎች የሉም። አንድ ሰው ለመፈለግ ይሞክሩ።';
+
+  @override
+  String get findPeopleDismiss => 'ጥቆማውን አስወግድ';
+
+  @override
+  String get findPeopleLoadMore => 'ተጨማሪ ጫን';
+
+  @override
+  String get findPeopleContinueWatching => 'መመልከትዎን ይቀጥሉ';
 }

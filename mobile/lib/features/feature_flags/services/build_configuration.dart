@@ -20,6 +20,10 @@ class BuildConfiguration {
   /// Get the default value for a feature flag from environment variables
   bool getDefault(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.findPeople:
+        return const bool.fromEnvironment('FF_FIND_PEOPLE');
+      case FeatureFlag.feedPeopleSuggestions:
+        return const bool.fromEnvironment('FF_FEED_PEOPLE_SUGGESTIONS');
       case FeatureFlag.shortLinksSharing:
         if (const bool.hasEnvironment('FF_SHORT_LINKS_SHARING')) {
           return const bool.fromEnvironment('FF_SHORT_LINKS_SHARING');
@@ -108,6 +112,10 @@ class BuildConfiguration {
   /// Get the environment variable key for a flag
   String getEnvironmentKey(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.findPeople:
+        return 'FF_FIND_PEOPLE';
+      case FeatureFlag.feedPeopleSuggestions:
+        return 'FF_FEED_PEOPLE_SUGGESTIONS';
       case FeatureFlag.shortLinksSharing:
         return 'FF_SHORT_LINKS_SHARING';
       case FeatureFlag.publishingIdeas:

@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "Elimină",
   "dmPendingVideoSemantics": "Se trimite videoclipul, {percent}",
   "dmPendingVideoFailedSemantics": "Videoclipul nu a putut fi trimis",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Găsește oameni",
+  "findPeopleDescription": "Urmărește creatori activi și arhive Vine restaurate.",
+  "findPeopleSuggested": "Sugestie pentru tine",
+  "findPeopleArchive": "Arhivă Vine restaurată",
+  "findPeopleEmpty": "Nu mai sunt sugestii acum. Încearcă să cauți pe cineva.",
+  "findPeopleDismiss": "Ascunde sugestia",
+  "findPeopleLoadMore": "Încarcă mai mult",
+  "findPeopleContinueWatching": "Continuă vizionarea"
 }

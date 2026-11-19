@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "إزالة",
   "dmPendingVideoSemantics": "جارٍ إرسال الفيديو، {percent}",
   "dmPendingVideoFailedSemantics": "تعذّر إرسال الفيديو",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "العثور على أشخاص",
+  "findPeopleDescription": "تابع المبدعين النشطين وأرشيفات Vine المستعادة.",
+  "findPeopleSuggested": "مقترح لك",
+  "findPeopleArchive": "أرشيف Vine مستعاد",
+  "findPeopleEmpty": "لا توجد اقتراحات أخرى الآن. جرّب البحث عن شخص.",
+  "findPeopleDismiss": "إخفاء الاقتراح",
+  "findPeopleLoadMore": "تحميل المزيد",
+  "findPeopleContinueWatching": "متابعة المشاهدة"
 }

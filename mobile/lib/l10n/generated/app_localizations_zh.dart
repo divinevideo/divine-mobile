@@ -15391,4 +15391,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat：$outcome';
   }
+
+  @override
+  String get findPeopleTitle => '寻找用户';
+
+  @override
+  String get findPeopleDescription => '关注活跃创作者和已恢复的 Vine 存档。';
+
+  @override
+  String get findPeopleSuggested => '为你推荐';
+
+  @override
+  String get findPeopleArchive => '已恢复的 Vine 存档';
+
+  @override
+  String get findPeopleEmpty => '暂时没有更多推荐。试着搜索某个人吧。';
+
+  @override
+  String get findPeopleDismiss => '忽略推荐';
+
+  @override
+  String get findPeopleLoadMore => '加载更多';
+
+  @override
+  String get findPeopleContinueWatching => '继续观看';
 }

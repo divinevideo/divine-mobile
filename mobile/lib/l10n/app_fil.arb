@@ -5455,5 +5455,13 @@
   "dmPendingVideoRemove": "Alisin",
   "dmPendingVideoSemantics": "Ipinapadala ang video, {percent}",
   "dmPendingVideoFailedSemantics": "Hindi naipadala ang video",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Maghanap ng mga tao",
+  "findPeopleDescription": "Sundan ang mga aktibong creator at naibalik na archive ng Vine.",
+  "findPeopleSuggested": "Iminungkahi para sa iyo",
+  "findPeopleArchive": "Naibalik na archive ng Vine",
+  "findPeopleEmpty": "Wala nang mungkahi ngayon. Subukang maghanap ng isang tao.",
+  "findPeopleDismiss": "Alisin ang mungkahi",
+  "findPeopleLoadMore": "Mag-load pa",
+  "findPeopleContinueWatching": "Magpatuloy sa panonood"
 }

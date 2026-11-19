@@ -78,6 +78,9 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.contextTitle,
     this.currentIndex = 0,
     this.scrollPhysics,
+    this.interstitialIndex,
+    this.interstitialBuilder,
+    this.onInterstitialChanged,
     this.shouldPortraitExpand = true,
     this.isActive = true,
     this.releaseNeighboursWhenInactive = false,
@@ -97,6 +100,11 @@ class FeedVideos extends ConsumerStatefulWidget {
 
   /// Optional physics, including end swipes while discovery has only one video.
   final ScrollPhysics? scrollPhysics;
+
+  /// Optional non-video page; public indices remain video-only.
+  final int? interstitialIndex;
+  final WidgetBuilder? interstitialBuilder;
+  final ValueChanged<bool>? onInterstitialChanged;
   final String? contextTitle;
   final bool shouldPortraitExpand;
 
@@ -478,6 +486,12 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             : const {},
         initialIndex: widget.currentIndex,
         scrollPhysics: widget.scrollPhysics,
+        interstitialIndex: widget.interstitialIndex,
+        interstitialBuilder: widget.interstitialBuilder,
+        onInterstitialChanged: (visible) {
+          if (visible) _suppressAutoAdvance();
+          widget.onInterstitialChanged?.call(visible);
+        },
         onNearEnd: widget.onNearEnd,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,
         onVolumeChanged: context

@@ -16662,4 +16662,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get findPeopleTitle => 'Găsește oameni';
+
+  @override
+  String get findPeopleDescription =>
+      'Urmărește creatori activi și arhive Vine restaurate.';
+
+  @override
+  String get findPeopleSuggested => 'Sugestie pentru tine';
+
+  @override
+  String get findPeopleArchive => 'Arhivă Vine restaurată';
+
+  @override
+  String get findPeopleEmpty =>
+      'Nu mai sunt sugestii acum. Încearcă să cauți pe cineva.';
+
+  @override
+  String get findPeopleDismiss => 'Ascunde sugestia';
+
+  @override
+  String get findPeopleLoadMore => 'Încarcă mai mult';
+
+  @override
+  String get findPeopleContinueWatching => 'Continuă vizionarea';
 }

@@ -175,7 +175,9 @@ class FunnelcakeApiClient {
   /// therefore unchanged by retrying — which matters because callers await
   /// this inline (the login pre-fetch blocks the post-auth redirect on it),
   /// and a per-attempt bound would have multiplied that stall by
-  /// [maxGetAttempts]. The trade is that a request which burns the entire
+  /// [maxGetAttempts]. Domain-specific authoritative refusals may use
+  /// [_retryRead] directly to bypass retries. The trade is that a request
+  /// which burns the entire
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
@@ -193,8 +195,9 @@ class FunnelcakeApiClient {
   /// Retries an idempotent read within one shared timeout budget.
   Future<http.Response> _retryRead(
     Uri uri,
-    Future<http.Response> Function() request,
-  ) async {
+    Future<http.Response> Function() request, {
+    Set<int> terminalStatusCodes = const {},
+  }) async {
     final elapsed = Stopwatch()..start();
     Duration remaining() => _timeout - elapsed.elapsed;
 
@@ -212,7 +215,8 @@ class FunnelcakeApiClient {
       try {
         final response = await request().timeout(remaining());
 
-        if (_canRetry(attempt, remaining()) &&
+        if (!terminalStatusCodes.contains(response.statusCode) &&
+            _canRetry(attempt, remaining()) &&
             _isRetryableStatus(response.statusCode)) {
           await _awaitRetryDelay(attempt, remaining());
           continue;
@@ -1287,6 +1291,84 @@ class FunnelcakeApiClient {
       rethrow;
     } catch (error) {
       throw FunnelcakeException('Failed to fetch badge holder preview: $error');
+    }
+  }
+
+  /// Fetches active and archived creators with server-side safety rules.
+  /// [cursor] is opaque; the client never interprets or increments it.
+  /// [requestHeaders] may authenticate this request's exact final GET URI.
+  /// It runs before each transport attempt, allowing account retirement checks.
+  /// [isCurrent] rejects retired work immediately before signing and dispatch.
+  /// Without authentication the server returns its safe public ranking.
+  Future<FollowSuggestionsPage> getFollowSuggestions({
+    required String pubkey,
+    int limit = 20,
+    String? cursor,
+    String contentSafety = 'default',
+    Future<Map<String, String>> Function(Uri)? requestHeaders,
+    bool Function()? isCurrent,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pubkey)) {
+      throw ArgumentError.value(pubkey, 'pubkey', 'Expected a full hex key');
+    }
+    final uri = Uri.parse('$_baseUrl/api/users/$pubkey/follow-suggestions')
+        .replace(
+          queryParameters: {
+            'limit': limit.clamp(1, 50).toString(),
+            'content_safety': contentSafety,
+            'cursor': ?cursor,
+          },
+        );
+    var active = true;
+    try {
+      // A policy refusal must invalidate every discovery surface immediately.
+      // Retrying here could hide it behind a later successful response.
+      final response = await _retryRead(
+        uri,
+        () async {
+          void requireCurrent() {
+            if (!active || _isDisposed || isCurrent?.call() == false) {
+              throw const FunnelcakeException(
+                'People suggestions request retired',
+              );
+            }
+          }
+
+          requireCurrent();
+          final headers = await requestHeaders?.call(uri);
+          requireCurrent();
+          return _httpClient.get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              ...buildDivineClientHeaders(appVersion: _appVersion),
+              ...?headers,
+            },
+          );
+        },
+        terminalStatusCodes: const {503},
+      );
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to load follow suggestions',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      return FollowSuggestionsPage.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to load follow suggestions: $error');
+    } finally {
+      // A timed-out signer can still complete.
+      // Never dispatch that late request.
+      active = false;
     }
   }
 

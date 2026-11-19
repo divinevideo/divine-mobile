@@ -15580,4 +15580,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat：$outcome';
   }
+
+  @override
+  String get findPeopleTitle => 'ユーザーを探す';
+
+  @override
+  String get findPeopleDescription => '活動中のクリエイターや復元されたVineアーカイブをフォローしよう。';
+
+  @override
+  String get findPeopleSuggested => 'あなたへのおすすめ';
+
+  @override
+  String get findPeopleArchive => '復元されたVineアーカイブ';
+
+  @override
+  String get findPeopleEmpty => '今のところ他のおすすめはありません。ユーザーを検索してみてください。';
+
+  @override
+  String get findPeopleDismiss => 'おすすめを非表示';
+
+  @override
+  String get findPeopleLoadMore => 'もっと読み込む';
+
+  @override
+  String get findPeopleContinueWatching => '視聴を続ける';
 }

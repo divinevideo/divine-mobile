@@ -492,3 +492,14 @@ payloads in `test/fixtures/deep_links/` for offline routing coverage tests.
 7. **Missing Video**: If video ID doesn't exist, show error page with link to home.
 
 8. **SEO**: Each URL should have unique title, description, and OG image for sharing.
+
+## Find people
+
+The internal discovery experiment adds `/find-people`, with an optional
+`source=onboarding` query parameter for the skippable account-setup step.
+The typed route honors `FeatureFlag.findPeople` (off by default); a link with
+the flag disabled returns to the home feed. Suggestions use the active account,
+local dismissal history and current follow/block policy, and never depend on
+route extras. Profile previews use the existing profile route; search opens the
+existing unified search screen. Restored Vine archive rows are labeled as
+archives and do not imply that the creator is currently active.

@@ -6542,5 +6542,13 @@
   "dmPendingVideoRemove": "Премахни",
   "dmPendingVideoSemantics": "Изпращане на видео, {percent}",
   "dmPendingVideoFailedSemantics": "Видеото не беше изпратено",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Намери хора",
+  "findPeopleDescription": "Следвай активни творци и възстановени архиви от Vine.",
+  "findPeopleSuggested": "Предложено за теб",
+  "findPeopleArchive": "Възстановен архив от Vine",
+  "findPeopleEmpty": "Засега няма повече предложения. Потърси някого.",
+  "findPeopleDismiss": "Скрий предложението",
+  "findPeopleLoadMore": "Зареди още",
+  "findPeopleContinueWatching": "Продължи да гледаш"
 }

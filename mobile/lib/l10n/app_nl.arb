@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "Verwijderen",
   "dmPendingVideoSemantics": "Video versturen, {percent}",
   "dmPendingVideoFailedSemantics": "Video kon niet worden verstuurd",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Mensen vinden",
+  "findPeopleDescription": "Volg actieve makers en herstelde Vine-archieven.",
+  "findPeopleSuggested": "Voorgesteld voor jou",
+  "findPeopleArchive": "Hersteld Vine-archief",
+  "findPeopleEmpty": "Momenteel geen verdere suggesties. Zoek eens naar iemand.",
+  "findPeopleDismiss": "Suggestie verbergen",
+  "findPeopleLoadMore": "Meer laden",
+  "findPeopleContinueWatching": "Verder kijken"
 }

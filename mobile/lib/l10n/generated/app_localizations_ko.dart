@@ -15597,4 +15597,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get findPeopleTitle => '사람 찾기';
+
+  @override
+  String get findPeopleDescription => '활동 중인 크리에이터와 복원된 Vine 아카이브를 팔로우하세요.';
+
+  @override
+  String get findPeopleSuggested => '추천 사용자';
+
+  @override
+  String get findPeopleArchive => '복원된 Vine 아카이브';
+
+  @override
+  String get findPeopleEmpty => '지금은 더 이상 추천이 없어요. 사람을 검색해 보세요.';
+
+  @override
+  String get findPeopleDismiss => '추천 숨기기';
+
+  @override
+  String get findPeopleLoadMore => '더 불러오기';
+
+  @override
+  String get findPeopleContinueWatching => '계속 시청하기';
 }

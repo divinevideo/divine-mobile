@@ -9,11 +9,14 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/find_people_routes.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_upload_errors.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
@@ -298,7 +301,13 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                 ),
               );
               if (isNewUser) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                if (ref.read(
+                  isFeatureEnabledProvider(FeatureFlag.findPeople),
+                )) {
+                  const FindPeopleRouteData(source: 'onboarding').go(context);
+                } else {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
               } else {
                 if (context.canPop()) {
                   context.pop(true);
