@@ -2352,6 +2352,32 @@ void main() {
           },
         );
 
+        test(
+          'never hands a kept upload to publication once the account changed',
+          () async {
+            stubSends([unreadableInbox, _success('rumor-retried')]);
+            var accountIsOurs = true;
+            outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            expect(outbox.keptUploadCount, equals(1));
+
+            accountIsOurs = false;
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            // A kept upload skips uploadVideo, so only the account checks
+            // keep its video and key from the incoming account's service.
+            verify(() => anyPublishVideoOn(service)).called(1);
+            expect(published, hasLength(1));
+            expect(
+              events.last.single.phase,
+              equals(OutgoingVideoDmPhase.failed),
+            );
+          },
+        );
+
         test('publishing a kept upload again does not renew its age', () async {
           stubSends([unreadableInbox, unreadableInbox, _success('rumor-c')]);
           outbox = createOutbox();
