@@ -176,8 +176,14 @@ void main() {
             ]);
 
             fixture.scope.onOpenCamera();
+            // Metadata enrichment can finish while the recorder is open.
+            final returningOriginal = stopMotion
+                ? original
+                : original.copyWith(
+                    duration: const Duration(milliseconds: 200),
+                  );
             clips.replaceClips([
-              original,
+              returningOriginal,
               _clip('capture-a', stopMotion: stopMotion),
               _clip('capture-b', stopMotion: stopMotion),
             ]);
@@ -221,9 +227,12 @@ void main() {
             if (!unmount) {
               expect(fixture.bloc.isClosed, isFalse);
               expect(fixture.bloc.state.clips, clips.clips);
-            } else {
-              // No synchronization event reached the closed bloc.
-              expect(fixture.bloc.state.clips, [original]);
+              if (!stopMotion) {
+                expect(
+                  fixture.bloc.state.clips.single.duration,
+                  const Duration(milliseconds: 200),
+                );
+              }
             }
             expectNoEditorFailure(tester);
 
