@@ -174,14 +174,15 @@ void main() {
         ),
       );
 
+      // The window first, so the corner tap below has a selection to move.
+      await tester.tapAt(window.center);
+      await tester.pump();
+      expect(cubit.state.selectedCellIndex, 1);
+
       // The corner of the window's square lies outside its circle.
       await tester.tapAt(window.bottomRight - const Offset(3, 3));
       await tester.pump();
       expect(cubit.state.selectedCellIndex, 0);
-
-      await tester.tapAt(window.center);
-      await tester.pump();
-      expect(cubit.state.selectedCellIndex, 1);
     });
 
     testWidgets('labels a filled cell with how long its clip plays', (
