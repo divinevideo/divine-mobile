@@ -294,6 +294,7 @@ void main() {
     ReactionRecordingOwner? reactionRecordingOwner,
     ReadClipManager? readClipManager,
     RecordingStartedCallback? onRecordingStarted,
+    RemoteRecorderStatePublisher? publishRemoteRecorderState,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
     ReadVideoEditorState readVideoEditorState = VideoEditorProviderState.new,
@@ -307,6 +308,7 @@ void main() {
       cameraService: cameraServiceFactory == null ? cameraService : null,
       cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
+      publishRemoteRecorderState: publishRemoteRecorderState,
       liveChromaKeySupported: liveChromaKeySupported,
     );
   }
@@ -3956,6 +3958,68 @@ void main() {
       const initialized = VideoRecorderBlocState(
         isCameraInitialized: true,
         canRecord: true,
+      );
+
+      test(
+        'keeps the Watch shutter unavailable until the preview resumes '
+        'after foregrounding on Upload',
+        () async {
+          final publications = <RemoteRecorderState?>[];
+          final previewResumed = Completer<void>();
+          when(() => clipManager.activeRecordingDuration).thenReturn(
+            Duration.zero,
+          );
+          when(
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.resumed,
+            ),
+          ).thenAnswer((_) => previewResumed.future);
+          final bloc = buildBloc(
+            publishRemoteRecorderState: (state) async =>
+                publications.add(state),
+          )..emit(initialized);
+          addTearDown(bloc.close);
+          addTearDown(() {
+            if (!previewResumed.isCompleted) previewResumed.complete();
+          });
+
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc
+            ..add(
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
+            )
+            ..add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+            )
+            ..add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull]);
+
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderAppLifecycleChanged(
+              AppLifecycleState.resumed,
+              isTabTransition: true,
+            ),
+          );
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull]);
+
+          previewResumed.complete();
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull, isNotNull]);
+        },
       );
 
       test(
