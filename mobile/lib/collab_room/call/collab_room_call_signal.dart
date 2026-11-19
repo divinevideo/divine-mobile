@@ -46,6 +46,22 @@ enum CollabRoomCallSignalType {
 /// The longest seat list a lobby message carries: a room holds four people.
 const _maxLobbySeats = 4;
 
+/// A call step that did not go through: a microphone the device would not
+/// open, a message that could not be sealed or that no relay took.
+///
+/// Expected on a flaky network or a refused permission, so it is reported to
+/// the user and logged, never sent to the crash reporter.
+class CollabRoomCallException implements Exception {
+  /// Creates an exception saying [message].
+  const CollabRoomCallException(this.message);
+
+  /// What went wrong.
+  final String message;
+
+  @override
+  String toString() => 'CollabRoomCallException: $message';
+}
+
 /// One connection message between two people in a room's call.
 class CollabRoomCallSignal extends Equatable {
   /// Creates a message.
@@ -250,12 +266,16 @@ class CollabRoomCallChannel {
       recipient,
       jsonEncode({...signal._toJson(), 'to': recipient, 'room': pubkey}),
     );
-    if (payload == null) throw StateError('The call signal did not encrypt');
+    if (payload == null) {
+      throw const CollabRoomCallException('The call signal did not encrypt');
+    }
     final content = await _roomSigner.nip44Encrypt(
       pubkey,
       jsonEncode({'from': _accountPubkey, 'to': recipient, 'body': payload}),
     );
-    if (content == null) throw StateError('The call message did not encrypt');
+    if (content == null) {
+      throw const CollabRoomCallException('The call message did not encrypt');
+    }
     final expiresAt =
         DateTime.now()
             .add(collabRoomCallSignalLifetime)

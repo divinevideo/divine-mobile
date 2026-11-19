@@ -13,19 +13,10 @@ import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+export 'package:openvine/collab_room/call/collab_room_call_signal.dart'
+    show CollabRoomCallException;
+
 const _logName = 'CollabRoomCall';
-
-/// A call step the device refused, such as a microphone it would not open.
-class CollabRoomCallException implements Exception {
-  /// Creates an exception saying [message].
-  const CollabRoomCallException(this.message);
-
-  /// What went wrong.
-  final String message;
-
-  @override
-  String toString() => 'CollabRoomCallException: $message';
-}
 
 /// Runs [step], a flutter_webrtc call. That plugin reports a failure by
 /// throwing a plain string, which no `on Exception` catches; here it becomes
@@ -745,15 +736,28 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     );
   }
 
-  Future<void> _sendState() => _send(
-    CollabRoomCallSignal(
-      type: CollabRoomCallSignalType.state,
-      from: _me,
-      session: _session,
-      micOn: _micOn,
-      cameraOn: _video != null,
-    ),
-  );
+  /// Tells the others the microphone or camera changed. Best effort: the
+  /// change already happened here, and every later message carries it too, so
+  /// a message the relays turned down is no reason to report it as failed.
+  Future<void> _sendState() async {
+    try {
+      await _send(
+        CollabRoomCallSignal(
+          type: CollabRoomCallSignalType.state,
+          from: _me,
+          session: _session,
+          micOn: _micOn,
+          cameraOn: _video != null,
+        ),
+      );
+    } on Object catch (error) {
+      Log.warning(
+        'Could not tell the call about a microphone or camera change: $error',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
 
   Future<void> _send(
     CollabRoomCallSignal signal, {

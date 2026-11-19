@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call.dart';
@@ -13,6 +14,22 @@ import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
 const _author =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+/// Takes every message until [refuse] is set, then turns them all down.
+class _RefusingTransport implements CollabRoomCallTransport {
+  bool refuse = false;
+
+  @override
+  Stream<Event> watch(String author, {required int since}) =>
+      const Stream.empty();
+
+  @override
+  Future<void> publish(Event event) async {
+    if (refuse) {
+      throw const CollabRoomCallException('No relay accepted the call signal');
+    }
+  }
+}
 
 class _SilentTransport implements CollabRoomCallTransport {
   @override
@@ -81,6 +98,59 @@ void main() {
       expect(released, ['microphone', 'late-audio']);
       expect(transport.watched, isFalse);
     });
+
+    test(
+      'keeps the camera on when telling the others about it fails',
+      () async {
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          if (call.method != 'getUserMedia') return null;
+          final constraints = call.arguments['constraints'] as Map;
+          final video = constraints['video'] != false;
+          return {
+            'streamId': video ? 'camera' : 'microphone',
+            if (!video)
+              'audioTracks': [
+                {
+                  'id': 'mic-track',
+                  'label': 'Microphone',
+                  'kind': 'audio',
+                  'enabled': true,
+                },
+              ],
+            if (video)
+              'videoTracks': [
+                {
+                  'id': 'camera-track',
+                  'label': 'Camera',
+                  'kind': 'video',
+                  'enabled': true,
+                },
+              ],
+          };
+        });
+        final transport = _RefusingTransport();
+        // Real keys: the messages are encrypted to the other person.
+        final myKey = keys.generatePrivateKey();
+        final call = WebRtcCollabRoomCall(
+          me: keys.getPublicKey(myKey),
+          others: {keys.getPublicKey(keys.generatePrivateKey())},
+          callKey: keys.generatePrivateKey(),
+          accountSigner: LocalNostrSigner(myKey),
+          transport: transport,
+        );
+        addTearDown(call.stop);
+        final changes = <CollabRoomCallSnapshot>[];
+        call.changes.listen(changes.add);
+        await call.start();
+        transport.refuse = true;
+
+        // The camera opened; only the message about it did not go out.
+        await expectLater(call.setCameraOn(true), completes);
+        await pumpEventQueue();
+
+        expect(changes.last.cameraOn, isTrue);
+      },
+    );
 
     test('reports a microphone the device refuses as an exception', () async {
       messenger.setMockMethodCallHandler(channel, (call) async {

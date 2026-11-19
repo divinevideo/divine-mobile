@@ -12,6 +12,8 @@ abstract interface class CollabRoomCallTransport {
   Stream<Event> watch(String author, {required int since});
 
   /// Sends [event].
+  ///
+  /// Throws a [CollabRoomCallException] when no relay took it.
   Future<void> publish(Event event);
 }
 
@@ -38,7 +40,7 @@ class NostrCollabRoomCallTransport implements CollabRoomCallTransport {
   Future<void> publish(Event event) async {
     final result = await _client.publishEvent(event);
     if (result is! PublishSuccess) {
-      throw StateError('No relay accepted the call signal');
+      throw const CollabRoomCallException('No relay accepted the call signal');
     }
   }
 }
