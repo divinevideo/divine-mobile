@@ -71,10 +71,6 @@ void main() {
     dmRepository = _MockDmRepository();
     blossom = _MockBlossomUploadService();
     encryption = _MockDmVideoEncryption();
-    // A relay is connected unless a test says otherwise.
-    when(
-      () => dmRepository.waitForConnectedRelay(),
-    ).thenAnswer((_) async => true);
     tempDir = Directory.systemTemp.createTempSync('dm_video_send_service_test');
     registerFallbackValue(
       const DmFileMetadata(
@@ -946,85 +942,6 @@ void main() {
         },
       );
 
-      test(
-        'waits for a relay before publication starts, and publishes when '
-        'none connected in time',
-        () async {
-          stubPublish(const NIP17SendResult.failure('inbox unreadable'));
-          final relay = Completer<bool>();
-          when(
-            () => dmRepository.waitForConnectedRelay(),
-          ).thenAnswer((_) => relay.future);
-          final attempt = DmVideoSendCancellation();
-          addTearDown(attempt.finish);
-          final phases = <DmVideoSendPhase>[];
-
-          final result = createService().publishVideo(
-            recipientPubkey: _recipientPubkey,
-            uploaded: uploaded,
-            onPhase: phases.add,
-            cancellation: attempt,
-          );
-          await pumpEventQueue();
-
-          expect(phases, isEmpty);
-          verifyNever(
-            () => dmRepository.sendFileMessage(
-              recipientPubkey: any(named: 'recipientPubkey'),
-              fileUrl: any(named: 'fileUrl'),
-              fileMetadata: any(named: 'fileMetadata'),
-              extraTags: any(named: 'extraTags'),
-            ),
-          );
-
-          relay.complete(false);
-
-          expect((await result).error, equals('inbox unreadable'));
-          expect(phases, equals([DmVideoSendPhase.sending]));
-        },
-      );
-
-      test(
-        'a cancel during the relay wait ends the attempt and publishes '
-        'nothing',
-        () async {
-          stubPublish(const NIP17SendResult.failure('inbox unreadable'));
-          final relay = Completer<bool>();
-          when(
-            () => dmRepository.waitForConnectedRelay(),
-          ).thenAnswer((_) => relay.future);
-          final attempt = DmVideoSendCancellation();
-          addTearDown(attempt.finish);
-          final phases = <DmVideoSendPhase>[];
-
-          final result = createService().publishVideo(
-            recipientPubkey: _recipientPubkey,
-            uploaded: uploaded,
-            onPhase: phases.add,
-            cancellation: attempt,
-          );
-          final failure = expectLater(
-            result,
-            throwsA(isA<DmVideoSendCancelled>()),
-          );
-          await pumpEventQueue();
-          attempt.cancel('session ended');
-          await failure;
-
-          relay.complete(true);
-          await pumpEventQueue();
-          expect(phases, isEmpty);
-          verifyNever(
-            () => dmRepository.sendFileMessage(
-              recipientPubkey: any(named: 'recipientPubkey'),
-              fileUrl: any(named: 'fileUrl'),
-              fileMetadata: any(named: 'fileMetadata'),
-              extraTags: any(named: 'extraTags'),
-            ),
-          );
-        },
-      );
-
       test('publishes nothing for an attempt that was cancelled', () async {
         stubPublish(
           NIP17SendResult.success(
@@ -1071,8 +988,6 @@ void main() {
             uploaded: uploaded,
             cancellation: attempt,
           );
-          // Publication starts once the relay wait has answered.
-          await pumpEventQueue();
           attempt.cancel('session ended');
 
           expect(attempt.uploadCancelToken.isCancelled, isFalse);

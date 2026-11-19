@@ -48,11 +48,6 @@ class _Repository extends Fake implements DmRepository {
   final publishedUrls = <String>[];
 
   @override
-  Future<bool> waitForConnectedRelay({
-    Duration timeout = dmFileSendRelayWait,
-  }) async => true;
-
-  @override
   Future<NIP17SendResult> sendFileMessage({
     required String recipientPubkey,
     required String fileUrl,
