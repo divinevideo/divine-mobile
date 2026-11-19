@@ -147,7 +147,8 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
     // Takes the feed's trailing inset only while it is on screen.
     final panelOnScreen = shown != null && available;
     return CommentsPanelScope(
-      cubit: available ? _cubit : null,
+      cubit: _cubit,
+      canOpen: available,
       child: BlocListener<CommentsPanelCubit, CommentsPanelRequest?>(
         bloc: _cubit,
         listener: _onRequestChanged,

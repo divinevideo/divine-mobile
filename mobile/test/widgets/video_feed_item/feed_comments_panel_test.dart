@@ -191,6 +191,61 @@ void main() {
       });
     });
 
+    group('feed', () {
+      testWidgets(
+        'closes a hidden panel when the feed moves to another video',
+        (
+          tester,
+        ) async {
+          await pumpHost(tester, window: _landscape);
+          final cubit = CommentsPanelScope.maybeOf(feedContext)!;
+          unawaited(
+            cubit.open(
+              CommentsPanelRequest(
+                video: TestHelpers.createVideoEvent(id: 'a' * 64),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await pumpHost(tester, window: _portrait);
+          await tester.pumpAndSettle();
+          // What FeedVideos does when another video becomes active.
+          CommentsPanelScope.closeUnlessShowing(feedContext, 'b' * 64);
+          await tester.pumpAndSettle();
+
+          expect(cubit.state, isNull);
+
+          await pumpHost(tester, window: _landscape);
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(panelKey), findsNothing);
+        },
+      );
+
+      testWidgets('keeps a hidden panel while the feed stays on its video', (
+        tester,
+      ) async {
+        await pumpHost(tester, window: _landscape);
+        final cubit = CommentsPanelScope.maybeOf(feedContext)!;
+        unawaited(
+          cubit.open(
+            CommentsPanelRequest(
+              video: TestHelpers.createVideoEvent(id: 'a' * 64),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await pumpHost(tester, window: _portrait);
+        await tester.pumpAndSettle();
+        CommentsPanelScope.closeUnlessShowing(feedContext, 'a' * 64);
+        await tester.pumpAndSettle();
+
+        expect(cubit.state, isNotNull);
+      });
+    });
+
     group('semantics', () {
       testWidgets('tells a screen reader the panel opened', (tester) async {
         await pumpHost(tester, window: _landscape);

@@ -495,8 +495,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
           // The comments panel beside the feed (wide landscape windows)
-          // follows only the video it was opened for.
-          CommentsPanelScope.maybeOf(context)?.closeUnlessShowing(video.id);
+          // follows only the video it was opened for, also while it is
+          // hidden by a narrow window.
+          CommentsPanelScope.closeUnlessShowing(context, video.id);
           _resumeAutoAdvanceAfterSwipe();
           if (_analyticsSessionBoundary !=
               _consumptionAnalytics.sessionBoundary) {

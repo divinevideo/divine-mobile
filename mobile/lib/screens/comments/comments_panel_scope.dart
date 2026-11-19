@@ -60,27 +60,44 @@ class CommentsPanelCubit extends Cubit<CommentsPanelRequest?> {
   }
 }
 
-/// Publishes the [CommentsPanelCubit] of the feed below it, while that feed
-/// can show the panel.
+/// Publishes the [CommentsPanelCubit] of the feed below it.
 class CommentsPanelScope extends InheritedWidget {
   const CommentsPanelScope({
     required this.cubit,
     required super.child,
+    this.canOpen = true,
     super.key,
   });
 
-  /// The panel's cubit, or null while the window is too narrow for it and
-  /// comments open in the sheet.
-  final CommentsPanelCubit? cubit;
+  /// The panel's cubit.
+  final CommentsPanelCubit cubit;
+
+  /// Whether comments open in the panel now. False while the window is too
+  /// narrow for it: comments then open in the sheet, and a panel already
+  /// open waits, hidden, until the window is wide again.
+  final bool canOpen;
 
   /// The cubit of the panel beside the feed above [context], or null when
   /// comments open in the sheet.
   ///
   /// Read without a dependency: callers are tap handlers, not builds.
-  static CommentsPanelCubit? maybeOf(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<CommentsPanelScope>()?.cubit;
+  static CommentsPanelCubit? maybeOf(BuildContext context) {
+    final scope = context.getInheritedWidgetOfExactType<CommentsPanelScope>();
+    return scope != null && scope.canOpen ? scope.cubit : null;
+  }
+
+  /// Closes the panel beside the feed above [context] unless it shows the
+  /// comments on the video [videoId], hidden or not (see
+  /// [CommentsPanelCubit.closeUnlessShowing]).
+  ///
+  /// Read without a dependency, as [maybeOf] is.
+  static void closeUnlessShowing(BuildContext context, String videoId) =>
+      context
+          .getInheritedWidgetOfExactType<CommentsPanelScope>()
+          ?.cubit
+          .closeUnlessShowing(videoId);
 
   @override
   bool updateShouldNotify(CommentsPanelScope oldWidget) =>
-      cubit != oldWidget.cubit;
+      cubit != oldWidget.cubit || canOpen != oldWidget.canOpen;
 }

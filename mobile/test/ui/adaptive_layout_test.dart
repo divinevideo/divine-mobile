@@ -1,17 +1,21 @@
 // ABOUTME: Tests the large-screen layout classes and the orientation policy
 // ABOUTME: the adaptive layout scope applies with the flag on
 
+import 'dart:async';
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -434,6 +438,101 @@ void main() {
         expect(orientationCalls.last, hasLength(4));
 
         navigatorKey.currentState!.pop();
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+      });
+
+      Future<GlobalKey<NavigatorState>> pumpCamera(WidgetTester tester) async {
+        final navigatorKey = GlobalKey<NavigatorState>();
+        await pumpScope(
+          tester,
+          enabled: true,
+          size: _duoInnerPortrait,
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const PortraitOrientationLock(child: SizedBox.expand()),
+          ),
+        );
+        return navigatorKey;
+      }
+
+      testWidgets('lets the editor pushed over the go_router camera rotate', (
+        tester,
+      ) async {
+        final router = GoRouter(
+          initialLocation: '/camera',
+          routes: [
+            GoRoute(
+              path: '/camera',
+              // As the recorder's route builds it.
+              pageBuilder: (_, state) => fadeUpwardsPage(
+                state: state,
+                child: const PortraitOrientationLock(
+                  child: SizedBox.expand(),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/editor',
+              builder: (_, _) => const SizedBox.expand(),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await pumpScope(
+          tester,
+          enabled: true,
+          size: _duoInnerPortrait,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+
+        unawaited(router.push('/editor'));
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, hasLength(4));
+
+        router.pop();
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+      });
+
+      testWidgets('keeps portrait while a sheet covers the camera', (
+        tester,
+      ) async {
+        final navigatorKey = await pumpCamera(tester);
+
+        unawaited(
+          showModalBottomSheet<void>(
+            context: navigatorKey.currentContext!,
+            builder: (_) => const SizedBox(height: 200),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+      });
+
+      testWidgets('keeps portrait while a dialog covers the camera', (
+        tester,
+      ) async {
+        final navigatorKey = await pumpCamera(tester);
+
+        unawaited(
+          showDialog<void>(
+            context: navigatorKey.currentContext!,
+            builder: (_) => const SizedBox(height: 200),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);

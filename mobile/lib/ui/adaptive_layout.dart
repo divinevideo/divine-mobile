@@ -258,12 +258,14 @@ class _AdaptiveLayoutInherited extends InheritedWidget {
       enabled != oldWidget.enabled;
 }
 
-/// Keeps the app in portrait while [child]'s route is on top, even where the
+/// Keeps the app in portrait while [child]'s route shows, even where the
 /// large-screen layouts let it rotate.
 ///
 /// For the camera, which records in portrait. A page pushed over it, such as
 /// the editor or Post details, may rotate again, and the lock comes back
-/// with the camera. The editor is laid out for both orientations instead.
+/// with the camera; a sheet or dialog over it keeps the lock, since the
+/// camera still shows around it. The editor is laid out for both
+/// orientations instead.
 ///
 /// It asks the system, which an iPad follows. The iPhone Duo refuses
 /// programmatic rotation, so on the open Duo the camera keeps the window's
@@ -282,14 +284,31 @@ class _PortraitOrientationLockState extends State<PortraitOrientationLock> {
   /// Releases the lock this widget holds, or null while it holds none.
   VoidCallback? _release;
 
+  /// The route's secondary animation, which runs when a page is pushed over
+  /// the route and back when it pops. Sheets and dialogs do not drive it: a
+  /// page route only transitions to another page route.
+  Animation<double>? _cover;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Depends on the route's position, so this runs again whenever a page is
-    // pushed over it or popped back off.
-    final onTop = ModalRoute.isCurrentOf(context) ?? true;
-    if (onTop == (_release != null)) return;
-    if (!onTop) {
+    final cover = ModalRoute.of(context)?.secondaryAnimation;
+    if (!identical(cover, _cover)) {
+      _cover?.removeStatusListener(_onCoverChanged);
+      _cover = cover?..addStatusListener(_onCoverChanged);
+    }
+    _update();
+  }
+
+  void _onCoverChanged(AnimationStatus _) {
+    if (mounted) _update();
+  }
+
+  /// Holds the lock unless a page covers the route, or is on its way to.
+  void _update() {
+    final coveredByPage = _cover?.status.isForwardOrCompleted ?? false;
+    if (coveredByPage == (_release == null)) return;
+    if (coveredByPage) {
       _releaseLock();
       return;
     }
@@ -307,6 +326,7 @@ class _PortraitOrientationLockState extends State<PortraitOrientationLock> {
 
   @override
   void dispose() {
+    _cover?.removeStatusListener(_onCoverChanged);
     _releaseLock();
     super.dispose();
   }
