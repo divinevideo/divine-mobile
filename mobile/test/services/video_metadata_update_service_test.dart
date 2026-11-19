@@ -1,7 +1,8 @@
 // ABOUTME: Unit tests for VideoMetadataUpdateService.
 // ABOUTME: Covers auth guard, video-URL guard, original-tag preservation,
 // ABOUTME: edited-field replacement, replacement created_at, successful publish,
-// ABOUTME: publish failure, and invite failure via inviteFailureCount.
+// ABOUTME: publish failure, invite failure, and rebuilding from the relays'
+// ABOUTME: newest revision rather than the one the editor opened (#11250).
 
 import 'dart:io';
 import 'dart:ui' show Locale;
@@ -12,10 +13,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -24,6 +27,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
@@ -39,6 +43,8 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -77,6 +83,7 @@ void main() {
   late _MockDmRepository mockDmRepository;
   late _MockPersonalEventCacheService mockPersonalEventCacheService;
   late _MockVideoEventService mockVideoEventService;
+  late _MockVideosRepository mockVideosRepository;
   late VideoMetadataUpdateService service;
   late List<List<String>> capturedTags;
   late int capturedCreatedAt;
@@ -97,6 +104,7 @@ void main() {
     mockDmRepository = _MockDmRepository();
     mockPersonalEventCacheService = _MockPersonalEventCacheService();
     mockVideoEventService = _MockVideoEventService();
+    mockVideosRepository = _MockVideosRepository();
     capturedTags = [];
     capturedCreatedAt = 0;
 
@@ -136,6 +144,7 @@ void main() {
       relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
+      videosRepository: mockVideosRepository,
       collaboratorInviteService: CollaboratorInviteService(
         dmRepository: mockDmRepository,
         l10n: lookupAppLocalizations(const Locale('en')),
@@ -143,9 +152,45 @@ void main() {
     );
   });
 
+  /// The raw event behind [video], as the relays would answer for it.
+  Event relayRevisionOf(VideoEvent video) => Event.fromJson({
+    'id': video.id,
+    'pubkey': video.pubkey,
+    'created_at': video.nostrCreatedAt,
+    'kind': video.eventKind ?? NIP71VideoKinds.addressableShortVideo,
+    'tags': [
+      if (!video.nostrEventTags.any((t) => t.isNotEmpty && t.first == 'd'))
+        ['d', video.stableId],
+      ...video.nostrEventTags,
+    ],
+    'content': video.content,
+    'sig': '',
+  });
+
+  /// Edits [originalVideo] while the relays' newest revision is that same
+  /// event, the common case: nobody changed the video since it was opened.
+  Future<VideoUpdateResult> updateFromRelay({
+    required VideoEvent originalVideo,
+    required VideoEditorProviderState editorState,
+    required Set<String> initialCollaboratorPubkeys,
+    File? newThumbnailFile,
+  }) {
+    when(
+      () => mockVideosRepository.fetchLatestVideoRevision(any()),
+    ).thenAnswer(
+      (_) async => LatestVideoRevisionFound(relayRevisionOf(originalVideo)),
+    );
+    return service.updateVideo(
+      originalVideo: originalVideo,
+      editorState: editorState,
+      initialCollaboratorPubkeys: initialCollaboratorPubkeys,
+      newThumbnailFile: newThumbnailFile,
+    );
+  }
+
   group(VideoMetadataUpdateService, () {
     test('writes an explicit false audio-reuse marker', () async {
-      final result = await service.updateVideo(
+      final result = await updateFromRelay(
         originalVideo: _testVideo(),
         editorState: VideoEditorProviderState(),
         initialCollaboratorPubkeys: const {},
@@ -159,7 +204,7 @@ void main() {
     });
 
     test('replaces the video-reuse marker with the edited choice', () async {
-      final result = await service.updateVideo(
+      final result = await updateFromRelay(
         originalVideo: _testVideo(
           extraTags: const [
             ['allow_video_reuse', 'false'],
@@ -185,7 +230,7 @@ void main() {
           () => mockAuthService.authState,
         ).thenReturn(AuthState.unauthenticated);
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -228,7 +273,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: videoWithNoHttpUrl,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -252,7 +297,7 @@ void main() {
         () async {
           const stablePublishedAt = 1757385263;
           const rawEventCreatedAt = 4102444800;
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(eventCreatedAt: rawEventCreatedAt),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -266,7 +311,7 @@ void main() {
 
       test('keeps successive replacements strictly monotonic', () async {
         const rawEventCreatedAt = 4102444800;
-        final firstResult = await service.updateVideo(
+        final firstResult = await updateFromRelay(
           originalVideo: _testVideo(eventCreatedAt: rawEventCreatedAt),
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -274,7 +319,7 @@ void main() {
 
         final firstVideo = (firstResult as VideoUpdateSuccess).updatedEvent;
         final firstReplacementCreatedAt = firstVideo.nostrCreatedAt;
-        final secondResult = await service.updateVideo(
+        final secondResult = await updateFromRelay(
           originalVideo: firstVideo,
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -300,7 +345,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -316,7 +361,7 @@ void main() {
       );
 
       test('does not include engagement tags when original has none', () async {
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -354,7 +399,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -393,7 +438,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -440,7 +485,7 @@ void main() {
         expect(video.isVideoReply, isTrue);
         expect(video.inspiredByVideo, isNotNull);
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: video.inspiredByVideo,
@@ -518,7 +563,7 @@ void main() {
 
         expect(video.isVideoReply, isTrue);
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: video.inspiredByVideo,
@@ -565,7 +610,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {removedCollaborator},
@@ -605,7 +650,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -620,21 +665,10 @@ void main() {
         },
       );
 
-      test('recovers preserved tags from the personal cache when '
-          'nostrEventTags is empty', () async {
-        final cachedEvent = Event(
-          _ownerPubkey,
-          NIP71VideoKinds.addressableShortVideo,
-          const [
-            ['d', 'video-d-tag'],
-            ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
-            ['e', audioEventId, 'wss://relay.divine.video', 'audio'],
-            ['expiration', '1799999999'],
-          ],
-          'Test video content',
-        );
+      test('rebuilds from the raw tags the relays hold when the opened copy '
+          'has none', () async {
         // A VideoEvent rehydrated from a JSON cache has empty
-        // nostrEventTags; the raw event still lives in the personal cache.
+        // nostrEventTags; the relays still hold the raw event.
         final video = VideoEvent(
           id: 'event-id',
           pubkey: _ownerPubkey,
@@ -646,8 +680,30 @@ void main() {
           vineId: 'video-d-tag',
         );
         when(
-          () => mockPersonalEventCacheService.getEventById('event-id'),
-        ).thenReturn(cachedEvent);
+          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+        ).thenAnswer(
+          (_) async => LatestVideoRevisionFound(
+            Event.fromJson({
+              'id': 'event-id',
+              'pubkey': _ownerPubkey,
+              'created_at': 1757385263,
+              'kind': NIP71VideoKinds.addressableShortVideo,
+              'tags': [
+                ['d', 'video-d-tag'],
+                [
+                  'imeta',
+                  'url https://cdn.example.com/video.mp4',
+                  'url https://mirror.example.com/video.mp4',
+                  'm video/mp4',
+                ],
+                ['e', audioEventId, 'wss://relay.divine.video', 'audio'],
+                ['expiration', '1799999999'],
+              ],
+              'content': 'Test video content',
+              'sig': '',
+            }),
+          ),
+        );
 
         final result = await service.updateVideo(
           originalVideo: video,
@@ -663,28 +719,28 @@ void main() {
           ),
         );
         expect(capturedTags, contains(equals(['expiration', '1799999999'])));
+        final imeta = capturedTags.singleWhere((t) => t.first == 'imeta');
+        expect(
+          imeta,
+          containsAll([
+            'url https://cdn.example.com/video.mp4',
+            'url https://mirror.example.com/video.mp4',
+          ]),
+        );
       });
 
-      test(
-        'refuses to publish when original raw tags are unavailable',
-        () async {
-          final video = VideoEvent(
-            id: 'uncached-event-id',
-            pubkey: _ownerPubkey,
-            createdAt: 1757385263,
-            content: 'Test video content',
-            timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-            videoUrl: 'https://cdn.example.com/video.mp4',
-            title: 'Test Video Title',
-            vineId: 'video-d-tag',
-          );
+      for (final (name, revision) in [
+        ('cannot tell', const LatestVideoRevisionUnknown()),
+        ('hold none', const LatestVideoRevisionAbsent()),
+      ]) {
+        test('refuses to publish when the relays $name '
+            'what the newest revision is', () async {
           when(
-            () =>
-                mockPersonalEventCacheService.getEventById('uncached-event-id'),
-          ).thenReturn(null);
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          ).thenAnswer((_) async => revision);
 
           final result = await service.updateVideo(
-            originalVideo: video,
+            originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
             newThumbnailFile: File('/tmp/unused-thumbnail.jpg'),
@@ -706,8 +762,8 @@ void main() {
             ),
           );
           verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
-        },
-      );
+        });
+      }
 
       test(
         'REST-sourced edit preserves hashtags and provenance tags',
@@ -746,7 +802,7 @@ void main() {
             },
           }).toVideoEvent();
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(
               title: video.title ?? '',
@@ -778,6 +834,196 @@ void main() {
       );
     });
 
+    group('newest revision on the relays', () {
+      const audioEventId =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const collaborator =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const subtitleTrack = [
+        'text-track',
+        'https://cdn.example.com/subs-en.vtt',
+        'wss://relay.divine.video',
+        'captions',
+        'en',
+      ];
+      const audioTag = ['e', audioEventId, 'wss://relay.divine.video', 'audio'];
+
+      /// A revision another device published after the editor opened
+      /// [_testVideo]: same address, later, with [extraTags] on top.
+      Event newerRevision({
+        List<List<String>> extraTags = const [],
+        String title = 'Test Video Title',
+        String content = 'Test video content',
+        int createdAt = 1757385263 + 500,
+        int kind = NIP71VideoKinds.addressableShortVideo,
+      }) => Event.fromJson({
+        'id': 'newer-event-id',
+        'pubkey': _ownerPubkey,
+        'created_at': createdAt,
+        'kind': kind,
+        'tags': [
+          ['d', 'video-d-tag'],
+          ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+          ['title', title],
+          ...extraTags,
+        ],
+        'content': content,
+        'sig': '',
+      });
+
+      void relaysHold(Event event) {
+        when(
+          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => LatestVideoRevisionFound(event));
+      }
+
+      test('reads the address of the video being edited', () async {
+        relaysHold(newerRevision());
+
+        await service.updateVideo(
+          originalVideo: _testVideo(),
+          editorState: editorStateFromPublishedVideo(_testVideo()),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        verify(
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            '34236:$_ownerPubkey:video-d-tag',
+          ),
+        ).called(1);
+      });
+
+      test('keeps the subtitles and sound another device added', () async {
+        relaysHold(
+          newerRevision(
+            extraTags: const [
+              subtitleTrack,
+              audioTag,
+              ['allow_audio_reuse', 'true'],
+            ],
+          ),
+        );
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(title: 'Edited title'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags, contains(equals(subtitleTrack)));
+        expect(capturedTags, contains(equals(audioTag)));
+        expect(capturedTags, contains(equals(['allow_audio_reuse', 'true'])));
+        expect(capturedTags, contains(equals(['title', 'Edited title'])));
+      });
+
+      test('applies only the fields changed in this edit', () async {
+        relaysHold(newerRevision(title: 'Title from the other device'));
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(description: 'Caption from this edit'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags,
+          contains(equals(['title', 'Title from the other device'])),
+        );
+        expect(
+          capturedTags,
+          contains(equals(['summary', 'Caption from this edit'])),
+        );
+      });
+
+      test('stamps the replacement after the newer revision', () async {
+        final newer = NostrTimestamp.now(driftTolerance: 0) + 1000;
+        relaysHold(newerRevision(createdAt: newer));
+        final opened = _testVideo();
+
+        await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(capturedCreatedAt, equals(newer + 1));
+      });
+
+      test('publishes under the address kind of the video', () async {
+        relaysHold(newerRevision(kind: NIP71VideoKinds.addressableNormalVideo));
+        final opened = _testVideo().copyWith(
+          eventKind: NIP71VideoKinds.addressableNormalVideo,
+        );
+
+        await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        verify(
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            '34235:$_ownerPubkey:video-d-tag',
+          ),
+        ).called(1);
+        verify(
+          () => mockAuthService.createAndSignEvent(
+            kind: NIP71VideoKinds.addressableNormalVideo,
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).called(1);
+      });
+
+      test('does not re-invite a collaborator the newer revision already '
+          'credits', () async {
+        relaysHold(
+          newerRevision(
+            extraTags: const [
+              ['p', collaborator, 'wss://relay.divine.video', 'collaborator'],
+            ],
+          ),
+        );
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags,
+          contains(
+            equals([
+              'p',
+              collaborator,
+              'wss://relay.divine.video',
+              'collaborator',
+            ]),
+          ),
+        );
+        verifyNever(
+          () => mockDmRepository.sendMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+          ),
+        );
+      });
+    });
+
     group('edited field replacement', () {
       test('keeps every sound credit line under the edited caption', () async {
         // The editor never shows the lines, and an edit cannot change the
@@ -807,7 +1053,7 @@ void main() {
           );
         });
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(content: 'Old caption\n\n$credit'),
           editorState: VideoEditorProviderState(description: 'New caption'),
           initialCollaboratorPubkeys: const {},
@@ -838,7 +1084,7 @@ void main() {
             tags: const {'newtag'},
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: editorState,
             initialCollaboratorPubkeys: const {},
@@ -872,7 +1118,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(
               title: '   ',
@@ -899,7 +1145,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             tags: {pastedList, 'FunnyDivines'},
@@ -924,7 +1170,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -948,7 +1194,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -984,7 +1230,7 @@ void main() {
           contentWarnings: const {ContentLabel.violence},
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: editorState,
           initialCollaboratorPubkeys: const {},
@@ -1024,7 +1270,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {removedCollaborator},
@@ -1074,7 +1320,7 @@ void main() {
           ),
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(
             collaboratorPubkeys: {
@@ -1107,7 +1353,7 @@ void main() {
       test('compares existing collaborators in canonical form', () async {
         const collaborator = syntheticTestPubkey;
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(
             collaboratorPubkeys: {collaborator.toUpperCase()},
@@ -1150,7 +1396,7 @@ void main() {
             ),
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: editorState,
             initialCollaboratorPubkeys: const {},
@@ -1196,7 +1442,7 @@ void main() {
           ),
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: editorState,
           initialCollaboratorPubkeys: const {},
@@ -1247,7 +1493,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1329,7 +1575,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(title: 'Updated title'),
             initialCollaboratorPubkeys: const {},
@@ -1399,7 +1645,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(
               collaboratorPubkeys: {promoted.toUpperCase()},
@@ -1449,7 +1695,7 @@ void main() {
             ),
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: editorState,
             initialCollaboratorPubkeys: const {},
@@ -1492,7 +1738,7 @@ void main() {
             ),
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: editorState,
             initialCollaboratorPubkeys: const {},
@@ -1516,7 +1762,7 @@ void main() {
 
     group('successful publish', () {
       test('returns VideoUpdateSuccess on happy path', () async {
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -1528,7 +1774,7 @@ void main() {
       test(
         'publishes through the relay publisher and caches on success',
         () async {
-          await service.updateVideo(
+          await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1542,7 +1788,7 @@ void main() {
       );
 
       test('calls updateVideoEvent on success', () async {
-        await service.updateVideo(
+        await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -1561,7 +1807,7 @@ void main() {
             () => mockRelayPublisher.publishViaWebSocket(any()),
           ).thenAnswer((_) async => EventPublishOutcome.transientFailure);
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1595,7 +1841,7 @@ void main() {
             ),
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1628,7 +1874,7 @@ void main() {
             ),
           ).thenThrow(Exception('signing failed'));
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1665,7 +1911,7 @@ void main() {
             ),
           ).thenAnswer((_) async => null);
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1704,7 +1950,7 @@ void main() {
           collaboratorPubkeys: const {newCollaborator},
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: editorState,
           initialCollaboratorPubkeys: const {},
@@ -1739,7 +1985,7 @@ void main() {
             ),
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(
               collaboratorPubkeys: const {newCollaborator},
@@ -1755,7 +2001,7 @@ void main() {
       test(
         'returns inviteFailureCount = 0 when no new collaborators were added',
         () async {
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(),
             initialCollaboratorPubkeys: const {},
@@ -1807,7 +2053,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(
@@ -1829,7 +2075,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(
@@ -1857,7 +2103,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(),
           initialCollaboratorPubkeys: const {},
@@ -1880,7 +2126,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(
@@ -1905,7 +2151,7 @@ void main() {
       test('emits a p-tag for a person (npub) attribution', () async {
         final npub = NostrKeyUtils.encodePubKey(inspiredCreator);
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(inspiredByNpubs: [npub]),
           initialCollaboratorPubkeys: const {},
@@ -1929,7 +2175,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             collaboratorPubkeys: {inspiredCreator},
@@ -1978,7 +2224,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: promotedVideo,
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(
@@ -2015,7 +2261,7 @@ void main() {
           ],
         );
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(
@@ -2045,7 +2291,7 @@ void main() {
             ],
           );
 
-          final result = await service.updateVideo(
+          final result = await updateFromRelay(
             originalVideo: video,
             editorState: VideoEditorProviderState(
               inspiredByVideo: const InspiredByInfo(
@@ -2105,7 +2351,7 @@ void main() {
         );
         expect(video.isVideoReply, isTrue);
 
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: video,
           editorState: VideoEditorProviderState(
             inspiredByVideo: video.inspiredByVideo,
@@ -2118,7 +2364,7 @@ void main() {
       });
 
       test('does not self-p-tag when inspired by an own video', () async {
-        final result = await service.updateVideo(
+        final result = await updateFromRelay(
           originalVideo: _testVideo(),
           editorState: VideoEditorProviderState(
             inspiredByVideo: const InspiredByInfo(

@@ -851,6 +851,7 @@ VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
     ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
+    videosRepository: ref.watch(videosRepositoryProvider),
     collaboratorInviteService: CollaboratorInviteService(
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
