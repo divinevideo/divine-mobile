@@ -749,6 +749,16 @@ void main() {
           expect(result.postCoordinate, isNull);
         });
 
+        test('opens by id when the coordinate has an undecodable escape', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId?coordinate=%FF',
+          );
+
+          expect(result.type, equals(DeepLinkType.postAnalytics));
+          expect(result.postEventId, equals(eventId));
+          expect(result.postCoordinate, isNull);
+        });
+
         test('rejects the authority form', () {
           final result = DeepLinkService.parseDeepLink(
             'divine://post-analytics/$eventId?coordinate=$coordinate',

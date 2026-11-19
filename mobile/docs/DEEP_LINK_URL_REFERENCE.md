@@ -418,7 +418,7 @@ URL.
 | `/sound/:id` | `AudioEvent` (+ source video) | `SoundDetailLoader` fetches by id |
 | `/original-sound/:pubkey` | source video | Creator resolves from the pubkey; the source-video card is omitted |
 | `/video-edit/:videoId`, `/subtitle-edit/:videoId` | prefetched video | Loaded by id |
-| `/creator-analytics/:videoId` | `VideoPerformance` | Recomputed for that video |
+| `/creator-analytics/:videoId` | `VideoPerformance` | A URL-only entry, such as the post Live Activity link, has no `VideoPerformance` hint, so the screen resolves the post itself. It carries an optional `?coordinate=` (`kind:pubkey:d-tag`), the post's address for when an edit has retired the event id |
 | `/profile-view/:npub` | display name, avatar url | Read from the profile; the hint only covers accounts with no kind-0 |
 | `/followers/:pubkey`, `/following/:pubkey` | display name | Title falls back until the profile loads |
 | `/pooled-video-feed` | in-memory feed args | Redirects to `/video/:id` from the `?video=` parameter, else to the home feed |

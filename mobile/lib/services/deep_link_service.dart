@@ -596,7 +596,14 @@ class DeepLinkService {
         !_eventIdPattern.hasMatch(segments[1])) {
       return null;
     }
-    final coordinate = uri.queryParameters['coordinate'];
+    // A garbled escape (`%FF`) makes `queryParameters` throw; that must cost
+    // the coordinate, not the whole link, which still opens by id.
+    String? coordinate;
+    try {
+      coordinate = uri.queryParameters['coordinate'];
+    } on FormatException {
+      coordinate = null;
+    }
     return DeepLink(
       type: DeepLinkType.postAnalytics,
       postEventId: segments[1],

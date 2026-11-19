@@ -96,8 +96,9 @@ String? deepLinkRouterPath(DeepLink deepLink) {
 /// Converts a `divine://` custom-scheme app-route link into an internal path.
 ///
 /// Returns null for everything else, including NIP-46 signer callbacks. A
-/// custom scheme can be opened by any app on the device, so only saved videos
-/// and the AASA-parity route prefixes resolve to a location here.
+/// custom scheme can be opened by any app on the device, so only saved videos,
+/// post analytics and the AASA-parity route prefixes resolve to a location
+/// here.
 String? customSchemeToRouterPath(Uri uri) {
   if (uri.scheme != 'divine') return null;
 
