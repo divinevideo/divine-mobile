@@ -650,7 +650,7 @@ void main() {
 
         testWidgets(
           'after a rejection, a tag the video already has ended with a space '
-          'is not announced',
+          'keeps the warning and is not announced',
           (tester) async {
             final announcements = captureAnnouncements(tester);
             await openPicker(tester, tags: tenTags);
@@ -661,6 +661,7 @@ void main() {
             await tester.pump(const Duration(milliseconds: 400));
 
             expect(announcements, isEmpty);
+            expect(find.text(limitWarning), findsOneWidget);
           },
         );
 

@@ -162,16 +162,14 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
       return;
     }
 
-    // Typing a new tag clears a rejection notice, except the limit one: it
-    // stays true until a tag is removed, and the field keeps the turned-away
-    // text, so its own debounced query arrives after the rejection.
-    final keepsLimitNotice =
-        state.notice == TagsPickerNotice.tagLimitReached && state.isAtTagLimit;
+    // Typing a new tag clears a rejection notice, except the limit one. The
+    // field keeps the turned-away text, so its own debounced query arrives
+    // after the rejection.
     emit(
       state.copyWith(
         status: TagsPickerStatus.searching,
         query: query,
-        notice: keepsLimitNotice ? null : TagsPickerNotice.none,
+        notice: _keepsLimitNotice ? state.notice : TagsPickerNotice.none,
       ),
     );
 
@@ -191,7 +189,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   /// with [TagsPickerNotice.tagTooLong] rather than truncated. A new tag that
   /// does not fit is dropped and flagged with
   /// [TagsPickerNotice.tagLimitReached], which wins because it is the one
-  /// that blocks the rest. A tag the video already has is not a rejection.
+  /// that blocks the rest. A tag the video already has is not a rejection and
+  /// leaves a limit notice in place.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
     var droppedForLength = false;
@@ -217,7 +216,13 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
         ? TagsPickerNotice.tagLimitReached
         : droppedForLength
         ? TagsPickerNotice.tagTooLong
+        : _keepsLimitNotice
+        ? state.notice
         : TagsPickerNotice.none;
     return state.copyWith(selectedTags: updated, notice: notice);
   }
+
+  /// Whether a limit notice still applies: it stays until a tag is removed.
+  bool get _keepsLimitNotice =>
+      state.notice == TagsPickerNotice.tagLimitReached && state.isAtTagLimit;
 }

@@ -529,6 +529,20 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a limit notice when a tag the video already has is committed',
+        build: createBloc,
+        seed: () => TagsPickerState(
+          selectedTags: ten.toSet(),
+          notice: TagsPickerNotice.tagLimitReached,
+        ),
+        act: (b) => b.add(const TagsPickerTagsAdded(['tag3'])),
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagLimitReached));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
         'limit notice wins over a too-long tag in the same paste',
         build: () => createBloc(initial: ten.take(9).toSet()),
         act: (b) => b.add(TagsPickerTagsAdded([tooLong, 'x', 'y'])),
