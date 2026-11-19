@@ -218,7 +218,23 @@ void main() {
       ).called(1);
     });
 
-    test('keeps the region in the selected caption language', () async {
+    test('keeps the region in the selected caption language when the copy '
+        'in hand has no raw tags', () async {
+      // A copy restored from a cache keeps only the base language.
+      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+        (_) async => LatestVideoRevisionFound(
+          Event('a' * 64, 34236, [
+            ['d', 'my-vine-id'],
+            [
+              'text-track',
+              'https://media.divine.video/portuguese.vtt',
+              '',
+              'captions',
+              'pt-BR',
+            ],
+          ], ''),
+        ),
+      );
       when(
         () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
       ).thenAnswer(
@@ -249,15 +265,6 @@ void main() {
         video: _video.copyWith(
           textTrackRef: 'https://media.divine.video/portuguese.vtt',
           textTrackLang: 'pt',
-          nostrEventTags: const [
-            [
-              'text-track',
-              'https://media.divine.video/portuguese.vtt',
-              '',
-              'captions',
-              'pt-BR',
-            ],
-          ],
         ),
         cues: _cues,
       );
