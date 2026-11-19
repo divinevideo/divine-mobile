@@ -6,6 +6,7 @@ import 'package:divine_camera/divine_camera.dart'
     show DivineVideoStabilizationMode;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart' show DebugSemanticsDumpOrder;
+import 'package:flutter/semantics.dart' show OrdinalSortKey;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -380,11 +381,15 @@ void main() {
         });
       }
 
-      testWidgets('reads the revealed controls right after the options button', (
-        tester,
-      ) async {
+      testWidgets('reads every control in one explicit order', (tester) async {
         final handle = tester.ensureSemantics();
-        await tester.pumpWidget(buildWidget());
+        await tester.pumpWidget(
+          buildWidget(
+            isDualCameraSupported: true,
+            isVideoStabilizationSupported: true,
+            isLiveChromaKeySupported: true,
+          ),
+        );
         await tester.pumpAndSettle();
 
         final rail = tester
@@ -392,13 +397,13 @@ void main() {
               find.bySemanticsIdentifier(SemanticIds.cameraRailOptionsButton),
             )
             .parent!;
-        final readingOrder = rail
-            .debugListChildrenInOrder(DebugSemanticsDumpOrder.traversalOrder)
-            .map((node) => node.identifier)
-            .toList();
+        final controls = rail.debugListChildrenInOrder(
+          DebugSemanticsDumpOrder.traversalOrder,
+        );
 
-        // Drawn above the options button, but a swipe on from it reaches them.
-        expect(readingOrder, [
+        // The revealed controls are drawn above the options button, but a
+        // swipe on from it reaches them.
+        expect(controls.map((node) => node.identifier), [
           SemanticIds.cameraFlashButton,
           SemanticIds.cameraSwitchCameraButton,
           SemanticIds.cameraAspectRatioButton,
@@ -406,8 +411,18 @@ void main() {
           SemanticIds.cameraTimerButton,
           SemanticIds.cameraGhostFrameButton,
           SemanticIds.cameraGridButton,
+          SemanticIds.cameraDualCameraButton,
           SemanticIds.cameraStabilizationButton,
+          SemanticIds.cameraColorMaskButton,
         ]);
+        // The framework does not keep equal keys in drawn order, and iOS read
+        // them out of order, so no two controls may share one.
+        expect(
+          controls
+              .map((node) => (node.sortKey! as OrdinalSortKey).order)
+              .toSet(),
+          hasLength(controls.length),
+        );
 
         handle.dispose();
       });

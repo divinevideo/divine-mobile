@@ -21,11 +21,20 @@ const double _railPillWidth = 4 + 8 + 24 + 8 + 4;
 /// How long the rail takes to unfold or fold, and its names to fade in.
 const Duration _railAnimationDuration = Duration(milliseconds: 220);
 
-/// Screen readers read the rail top to bottom, except that the controls an
-/// unfolded rail reveals come right after the button that revealed them, where
-/// a swipe on from it lands, although they are drawn above it.
-const OrdinalSortKey _alwaysShownReadingOrder = OrdinalSortKey(0);
-const OrdinalSortKey _revealedReadingOrder = OrdinalSortKey(1);
+// Screen readers read the rail top to bottom, except that the controls an
+// unfolded rail reveals come right after the button that revealed them, where
+// a swipe on from it lands, although they are drawn above it. Every control
+// has its own key: the framework does not keep equal keys in drawn order.
+const OrdinalSortKey _flashReadingOrder = OrdinalSortKey(0);
+const OrdinalSortKey _flipReadingOrder = OrdinalSortKey(1);
+const OrdinalSortKey _aspectRatioReadingOrder = OrdinalSortKey(2);
+const OrdinalSortKey _optionsButtonReadingOrder = OrdinalSortKey(3);
+const OrdinalSortKey _timerReadingOrder = OrdinalSortKey(4);
+const OrdinalSortKey _ghostFrameReadingOrder = OrdinalSortKey(5);
+const OrdinalSortKey _gridReadingOrder = OrdinalSortKey(6);
+const OrdinalSortKey _dualCameraReadingOrder = OrdinalSortKey(7);
+const OrdinalSortKey _stabilizationReadingOrder = OrdinalSortKey(8);
+const OrdinalSortKey _colorMaskReadingOrder = OrdinalSortKey(9);
 
 /// Shadow under the controls' names, so they stay readable over a bright
 /// viewfinder.
@@ -79,7 +88,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderCycleTimerLabel,
           caption: l10n.videoRecorderRailTimerLabel,
           identifier: SemanticIds.cameraTimerButton,
-          sortKey: _revealedReadingOrder,
+          sortKey: _timerReadingOrder,
           value: _timerDurationValue(l10n, state.timer),
           onTap: () => context.read<VideoRecorderBloc>().add(
             const VideoRecorderTimerCycled(),
@@ -96,7 +105,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderToggleGridLabel,
           caption: l10n.videoRecorderRailGridLabel,
           identifier: SemanticIds.cameraGridButton,
-          sortKey: _revealedReadingOrder,
+          sortKey: _gridReadingOrder,
           toggled: state.showGridLines,
           onTap: () => context.read<VideoRecorderBloc>().add(
             const VideoRecorderGridLinesToggled(),
@@ -109,7 +118,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           label: l10n.videoRecorderToggleDualCameraLabel,
           caption: l10n.videoRecorderRailDualCameraLabel,
           identifier: SemanticIds.cameraDualCameraButton,
-          sortKey: _revealedReadingOrder,
+          sortKey: _dualCameraReadingOrder,
           toggled: state.isDualCameraEnabled,
           // Rebuilding the camera session ends a take, so the recorder
           // refuses it while one is in flight.
@@ -188,6 +197,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                               ? l10n.videoRecorderRailFlashLabel
                               : null,
                           identifier: SemanticIds.cameraFlashButton,
+                          sortKey: _flashReadingOrder,
                           value: _flashModeValue(l10n, state.flashMode),
                           onTap: state.hasFlash
                               ? () => context.read<VideoRecorderBloc>().add(
@@ -205,6 +215,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                               ? l10n.videoRecorderRailFlipLabel
                               : null,
                           identifier: SemanticIds.cameraSwitchCameraButton,
+                          sortKey: _flipReadingOrder,
                           value: DivineCameraLens.allCamerasFaceUser
                               ? null
                               : state.isFrontCamera
@@ -233,6 +244,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                               ? l10n.videoRecorderRailAspectRatioLabel
                               : null,
                           identifier: SemanticIds.cameraAspectRatioButton,
+                          sortKey: _aspectRatioReadingOrder,
                           value: _aspectRatioValue(l10n, state.aspectRatio),
                           onTap: !hasClips
                               ? () => context.read<VideoRecorderBloc>().add(
@@ -253,6 +265,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                                 ? l10n.videoRecorderRailHideOptionsLabel
                                 : l10n.videoRecorderRailShowOptionsLabel,
                             identifier: SemanticIds.cameraRailOptionsButton,
+                            sortKey: _optionsButtonReadingOrder,
                             expanded: isExpanded,
                             iconTurns: isExpanded ? 0.5 : 0,
                             onTap: state.hasRecordingInFlight
@@ -289,7 +302,7 @@ class _GhostFrameButton extends StatelessWidget {
       label: context.l10n.videoRecorderToggleGhostFrameLabel,
       caption: context.l10n.videoRecorderRailGhostFrameLabel,
       identifier: SemanticIds.cameraGhostFrameButton,
-      sortKey: _revealedReadingOrder,
+      sortKey: _ghostFrameReadingOrder,
       toggled: isVisible,
       onTap: () {
         final willEnable = !isVisible;
@@ -327,7 +340,7 @@ class _ColorMaskButton extends StatelessWidget {
       label: context.l10n.videoEditorChromaKeyLabel,
       caption: context.l10n.videoEditorChromaKeyLabel,
       identifier: SemanticIds.cameraColorMaskButton,
-      sortKey: _revealedReadingOrder,
+      sortKey: _colorMaskReadingOrder,
       toggled: isEnabled,
       highlighted: isEnabled,
       onTap: () async {
@@ -362,7 +375,7 @@ class _StabilizationButton extends StatelessWidget {
       label: context.l10n.videoRecorderStabilizationLabel,
       caption: context.l10n.videoRecorderStabilizationLabel,
       identifier: SemanticIds.cameraStabilizationButton,
-      sortKey: _revealedReadingOrder,
+      sortKey: _stabilizationReadingOrder,
       value: _stabilizationModeLabel(context.l10n, mode),
       onTap: isSupported ? () => _showStabilizationMenu(context) : null,
     );
@@ -449,13 +462,13 @@ class _RailButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    required this.sortKey,
     this.caption,
     this.identifier,
     this.value,
     this.toggled,
     this.expanded,
     this.iconTurns,
-    this.sortKey = _alwaysShownReadingOrder,
     this.highlighted = false,
     super.key,
   });
@@ -490,8 +503,7 @@ class _RailButton extends StatelessWidget {
   /// changes; `null` leaves the icon as drawn.
   final double? iconTurns;
 
-  /// Where a screen reader reads this control; controls with the same key
-  /// keep their drawn order.
+  /// Where a screen reader reads this control among the rail's controls.
   final OrdinalSortKey sortKey;
 
   /// Draws the icon in the brand green, for a control whose effect is easy to
