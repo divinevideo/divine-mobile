@@ -205,125 +205,135 @@ class _CategoryPickerState<C, T> extends State<_CategoryPicker<C, T>>
       context.vineColors,
     );
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    _layout = _GridLayout(
-      metrics,
-      sectionLengths: [
-        for (final items in picker.sections.values) items.length,
-      ],
-      width: MediaQuery.sizeOf(context).width,
-    );
-    final categories = _categories;
-    return SizedBox(
-      height: metrics.barExtent + bottomInset,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            top: metrics.tabsExtent,
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                if (notification.direction != ScrollDirection.idle) {
-                  _followScroll = true;
-                }
-                return false;
-              },
-              child: CustomScrollView(
-                controller: _gridController,
-                slivers: [
-                  for (final (index, category) in categories.indexed) ...[
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: metrics.headerExtentOf(index),
-                        child: _SectionHeader(
-                          label: picker.categoryLabel(context, category),
-                          isFirst: index == 0,
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const .symmetric(horizontal: _gridPadding),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _layout.columns,
-                          mainAxisExtent: metrics.rowExtent,
-                          mainAxisSpacing: _rowSpacing,
-                          crossAxisSpacing: _columnSpacing,
-                        ),
-                        itemCount: picker.sections[category]!.length,
-                        itemBuilder: (context, itemIndex) {
-                          final item = picker.sections[category]![itemIndex];
-                          final isSelected = picker.isSelected(item);
-                          return _RevealWhenSelected(
-                            isSelected: isSelected,
-                            child: picker.tileBuilder(
-                              context,
-                              item,
-                              isSelected,
+    // The grid fills the bar, which beside the preview of a wide window is
+    // narrower than the screen.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _layout = _GridLayout(
+          metrics,
+          sectionLengths: [
+            for (final items in picker.sections.values) items.length,
+          ],
+          width: constraints.maxWidth,
+        );
+        final categories = _categories;
+        return SizedBox(
+          height: metrics.barExtent + bottomInset,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                top: metrics.tabsExtent,
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.direction != ScrollDirection.idle) {
+                      _followScroll = true;
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
+                    controller: _gridController,
+                    slivers: [
+                      for (final (index, category) in categories.indexed) ...[
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: metrics.headerExtentOf(index),
+                            child: _SectionHeader(
+                              label: picker.categoryLabel(context, category),
+                              isFirst: index == 0,
                             ),
-                          );
-                        },
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const .symmetric(horizontal: _gridPadding),
+                          sliver: SliverGrid.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: _layout.columns,
+                                  mainAxisExtent: metrics.rowExtent,
+                                  mainAxisSpacing: _rowSpacing,
+                                  crossAxisSpacing: _columnSpacing,
+                                ),
+                            itemCount: picker.sections[category]!.length,
+                            itemBuilder: (context, itemIndex) {
+                              final item =
+                                  picker.sections[category]![itemIndex];
+                              final isSelected = picker.isSelected(item);
+                              return _RevealWhenSelected(
+                                isSelected: isSelected,
+                                child: picker.tileBuilder(
+                                  context,
+                                  item,
+                                  isSelected,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                      // The last row can scroll clear of the navigation bar.
+                      SliverPadding(
+                        padding: .only(
+                          bottom: _gridBottomPadding + bottomInset,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // The tabs' shadow on the tiles scrolled under them. A gradient
+              // rather than a box shadow: a soft drop shadow is lost on the dark
+              // surface.
+              Positioned(
+                top: metrics.tabsExtent,
+                left: 0,
+                right: 0,
+                height: _shadowExtent,
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    opacity: _scrolledUnder ? 1 : 0,
+                    duration: const Duration(milliseconds: 150)
+                        .autoReduceMotion(context),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: .topCenter,
+                          end: .bottomCenter,
+                          colors: [
+                            VineTheme.scrim50,
+                            VineTheme.scrim50.withValues(alpha: 0),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                  // The last row can scroll clear of the navigation bar.
-                  SliverPadding(
-                    padding: .only(bottom: _gridBottomPadding + bottomInset),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          // The tabs' shadow on the tiles scrolled under them. A gradient
-          // rather than a box shadow: a soft drop shadow is lost on the dark
-          // surface.
-          Positioned(
-            top: metrics.tabsExtent,
-            left: 0,
-            right: 0,
-            height: _shadowExtent,
-            child: IgnorePointer(
-              child: AnimatedOpacity(
-                opacity: _scrolledUnder ? 1 : 0,
-                duration: const Duration(milliseconds: 150)
-                    .autoReduceMotion(context),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: .topCenter,
-                      end: .bottomCenter,
-                      colors: [
-                        VineTheme.scrim50,
-                        VineTheme.scrim50.withValues(alpha: 0),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: metrics.tabsExtent,
+                child: ColoredBox(
+                  color: context.vineColors.surfaceContainerHigh,
+                  child: Align(
+                    alignment: .bottomCenter,
+                    child: VideoEditorCategoryTabs(
+                      controller: tabController,
+                      labels: [
+                        for (final category in categories)
+                          picker.categoryLabel(context, category),
                       ],
+                      tabHeight: metrics.tabHeight,
+                      highlightHeight: metrics.highlightHeight,
+                      onTap: (index) => _scrollGridTo(index, animate: true),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: metrics.tabsExtent,
-            child: ColoredBox(
-              color: context.vineColors.surfaceContainerHigh,
-              child: Align(
-                alignment: .bottomCenter,
-                child: VideoEditorCategoryTabs(
-                  controller: tabController,
-                  labels: [
-                    for (final category in categories)
-                      picker.categoryLabel(context, category),
-                  ],
-                  tabHeight: metrics.tabHeight,
-                  highlightHeight: metrics.highlightHeight,
-                  onTap: (index) => _scrollGridTo(index, animate: true),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

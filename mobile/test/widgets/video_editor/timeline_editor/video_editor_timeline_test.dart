@@ -150,6 +150,7 @@ void main() {
       LoopSuggestionCubit? loopCubit,
       TimelineOverlayBloc? overlayBloc,
       double textScale = 1,
+      double? width,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -208,7 +209,17 @@ void main() {
                     BlocProvider.value(value: loopCubit),
                 ],
 
-                child: const VideoEditorTimelineScaffold(),
+                // Beside the preview of a wide window the timeline is
+                // narrower than the screen.
+                child: width == null
+                    ? const VideoEditorTimelineScaffold()
+                    : Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: SizedBox(
+                          width: width,
+                          child: const VideoEditorTimelineScaffold(),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -564,6 +575,27 @@ void main() {
         );
 
         expect(find.byType(SingleChildScrollView), findsWidgets);
+      });
+
+      testWidgets('centres the playhead on its own width, not the screen', (
+        tester,
+      ) async {
+        final clips = [_createTestClip(id: 'a')];
+
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: clips), width: 300),
+        );
+
+        // Half the timeline's width on each side lets the start and the end
+        // of the composition scroll under the playhead in its middle.
+        expect(
+          tester
+              .widget<VideoEditorTimelineBody>(
+                find.byType(VideoEditorTimelineBody),
+              )
+              .scrollPadding,
+          equals(150),
+        );
       });
     });
 

@@ -116,6 +116,13 @@ enum FeatureFlag {
     'In-App Parent Consent Recording',
     'Let a parent record and submit a consent video in the app for a '
         'Divine Greenlight account review.',
+  ),
+  largeScreenLayout(
+    'Large Screen Layout',
+    'Layouts for tablets and foldables like the iPhone Duo: whole videos '
+        'instead of cropped ones, more grid columns, rotation on large '
+        'screens, and side navigation with comments beside the video in '
+        'landscape.',
   );
 
   const FeatureFlag(

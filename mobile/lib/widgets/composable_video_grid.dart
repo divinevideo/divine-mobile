@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
@@ -206,11 +207,15 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     ref.watch(subscribedListVideoCacheProvider);
 
     // Responsive column count: 3 for tablets/desktop (width >= 600),
-    // 2 for phones
+    // 2 for phones; with the large-screen layouts on, a column more at each
+    // breakpoint.
     final screenSize = MediaQuery.sizeOf(context);
-    final responsiveCrossAxisCount = screenSize.width >= 600
-        ? 3
-        : widget.crossAxisCount;
+    final layout = context.adaptiveLayout;
+    final responsiveCrossAxisCount = layout.gridColumns(
+      compact: widget.crossAxisCount,
+      width: screenSize.width,
+      largeColumnsWithoutFlag: 3,
+    );
     final cacheExtent = screenSize.height * _gridCacheExtentScreens;
 
     // Whether to render the load-more footer below the grid.

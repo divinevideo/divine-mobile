@@ -30,6 +30,7 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
@@ -131,7 +132,7 @@ VideoRecorderRoute _recorderAt(
     _FakeBuildContext(),
     state,
   ) as CustomTransitionPage<void>;
-  return (page.child as ReleaseCachedImagesOnDispose).child
+  return (page.child as ReleaseCachedImagesOnDispose).child.unlocked
       as VideoRecorderRoute;
 }
 
@@ -573,7 +574,12 @@ void main() {
               kAlwaysDismissedAnimation,
               child,
             );
-        expect(transition.runtimeType, equals(fadeUpwards.runtimeType));
+        // Framed against a status bar column, as every page is.
+        expect(transition, isA<StatusBarColumnFrame>());
+        expect(
+          (transition as StatusBarColumnFrame).child.runtimeType,
+          equals(fadeUpwards.runtimeType),
+        );
       });
 
       test('passes a typed sound selection to the recorder', () {
@@ -660,7 +666,7 @@ void main() {
             state,
           ) as CustomTransitionPage<void>).child,
           isA<ReleaseCachedImagesOnDispose>().having(
-            (scope) => scope.child,
+            (scope) => scope.child.unlocked,
             'child',
             isA<VideoRecorderRoute>(),
           ),
@@ -672,6 +678,45 @@ void main() {
         const VideoEditorDraftRouteData(draftId: _draftId).location,
       ]) {
         test('$location releases cached images when the editor closes', () {
+          expect(
+            _build(_videoRouter(), location),
+            isA<ReleaseCachedImagesOnDispose>().having(
+              (scope) => scope.child,
+              'child',
+              isA<VideoEditorScreen>(),
+            ),
+          );
+        });
+      }
+    });
+
+    // The camera records in portrait, even where the large-screen layout
+    // lets the rest of the app, the editor included, rotate.
+    group('portrait lock', () {
+      test('keeps the recorder in portrait', () {
+        final (:route, :state) = _resolve(
+          _videoRouter(),
+          VideoRecorderScreen.path,
+        );
+
+        expect(
+          (route.pageBuilder!(
+            _FakeBuildContext(),
+            state,
+          ) as CustomTransitionPage<void>).child,
+          isA<ReleaseCachedImagesOnDispose>().having(
+            (scope) => scope.child,
+            'child',
+            isA<PortraitOrientationLock>(),
+          ),
+        );
+      });
+
+      for (final location in [
+        const VideoEditorRouteData().location,
+        const VideoEditorDraftRouteData(draftId: _draftId).location,
+      ]) {
+        test('$location lets the editor turn with the window', () {
           expect(
             _build(_videoRouter(), location),
             isA<ReleaseCachedImagesOnDispose>().having(
@@ -1304,4 +1349,12 @@ void main() {
       });
     });
   });
+}
+
+extension on Widget {
+  /// The screen inside the portrait lock the camera route adds.
+  Widget get unlocked {
+    final widget = this;
+    return widget is PortraitOrientationLock ? widget.child : widget;
+  }
 }

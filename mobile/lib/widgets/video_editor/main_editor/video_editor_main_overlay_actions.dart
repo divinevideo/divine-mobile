@@ -15,6 +15,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
@@ -297,6 +298,12 @@ class _BottomActions extends StatelessWidget {
     final isTimelineHiddenByUser = context.select(
       (VideoEditorMainBloc b) => b.state.isTimelineHiddenByUser,
     );
+    // Beside the timeline (wide windows) hiding it leaves the preview no
+    // bigger, so the toggle only stays to bring back a timeline hidden
+    // before a rotation.
+    if (context.adaptiveLayout.isWideLandscape && !isTimelineHiddenByUser) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const .only(bottom: 8),

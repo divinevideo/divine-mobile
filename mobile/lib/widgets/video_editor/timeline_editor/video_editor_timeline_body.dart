@@ -67,8 +67,9 @@ class VideoEditorTimelineBody extends StatelessWidget {
   /// entered (the strips are frozen there and must align with the arcs).
   final ScrollController overlayStripsScrollController;
 
-  /// Empty space laid out on each side of the composition — half the screen,
-  /// so the composition's ends can sit under the centred playhead. The ruler
+  /// Empty space laid out on each side of the composition — half the
+  /// timeline's width, so the composition's ends can sit under the centred
+  /// playhead. The ruler
   /// subtracts it from the scroll position to find its own first tick.
   final double scrollPadding;
   final List<DivineVideoClip> clips;

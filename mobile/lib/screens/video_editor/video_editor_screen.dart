@@ -70,6 +70,7 @@ import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_s
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -109,8 +110,12 @@ PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
     barrierDismissible: true,
     barrierColor: VineTheme.transparent,
     pageBuilder: (_, _, _) => recorder,
+    // The camera records in portrait, even over an editor turned sideways.
+    // Locked around the transition, so the page stays the recorder itself.
     transitionsBuilder: (_, animation, _, child) {
-      return FadeTransition(opacity: animation, child: child);
+      return PortraitOrientationLock(
+        child: FadeTransition(opacity: animation, child: child),
+      );
     },
   );
 }

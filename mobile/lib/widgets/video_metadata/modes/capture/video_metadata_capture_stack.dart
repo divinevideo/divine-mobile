@@ -4,6 +4,7 @@ import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_cap
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_bottom_bar.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_clip_preview.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_layout.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_render_failure_banner.dart';
 
 class VideoMetadataCaptureStack extends StatelessWidget {
@@ -14,36 +15,21 @@ class VideoMetadataCaptureStack extends StatelessWidget {
     return Scaffold(
       backgroundColor: context.vineColors.surfaceContainerHigh,
       appBar: const VideoMetadataCaptureAppBar(),
-      body: const Column(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Column(
-                mainAxisSize: .min,
-                crossAxisAlignment: .stretch,
-                children: [
-                  // Video preview at top
-                  Padding(
-                    padding: EdgeInsets.only(top: 8, bottom: 16),
-                    child: VideoMetadataCaptureClipPreview(),
-                  ),
-
-                  // Why the render failed, when the card is too small to say
-                  VideoMetadataRenderFailureBanner(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  ),
-
-                  // Form fields
-                  VideoMetadataFormFields(enableIdeas: true),
-                ],
-              ),
-            ),
+      body: VideoMetadataLayout(
+        preview: const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 16),
+          child: VideoMetadataCaptureClipPreview(),
+        ),
+        sidePreview: (maxSize) =>
+            VideoMetadataCaptureClipPreview(maxSize: maxSize),
+        details: const [
+          // Why the render failed, when the card is too small to say
+          VideoMetadataRenderFailureBanner(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
-          // Post button at bottom
-          SafeArea(top: false, child: VideoMetadataCaptureBottomBar()),
+          VideoMetadataFormFields(enableIdeas: true),
         ],
+        bottomBar: const VideoMetadataCaptureBottomBar(),
       ),
     );
   }

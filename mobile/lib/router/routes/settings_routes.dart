@@ -52,6 +52,7 @@ import 'package:openvine/screens/settings/signature_verification_policy_screen.d
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
 
@@ -738,13 +739,17 @@ class DeveloperOptionsRouteData extends GoRouteData
         },
         restorationId: state.pageKey.value,
         child: const DeveloperOptionsScreen(),
+        // Its own transition, so framed here as the theme's page routes are
+        // (see StatusBarColumnPageTransitionsBuilder).
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+            StatusBarColumnFrame(
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
             ),
       );
 }

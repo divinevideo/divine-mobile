@@ -1,7 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 
 VideoEvent _video({String? dimensions, Map<String, String>? rawTags}) {
@@ -147,6 +151,90 @@ void main() {
         tester.getTopLeft(find.byKey(const ValueKey(2))).dx,
         equals(208),
       );
+    });
+
+    /// A [width] wide grid of square tiles, in a window [width] wide, with the
+    /// large-screen layouts on or off. Counts each tile's builds in [builds].
+    Future<void> pumpWideGrid(
+      WidgetTester tester, {
+      required double width,
+      required bool largeScreenLayout,
+      Map<int, int>? builds,
+    }) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(largeScreenLayout),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => AdaptiveLayoutScope(child: child!),
+            home: CustomScrollView(
+              slivers: [
+                ProfileMasonryGrid(
+                  childCount: 60,
+                  aspectRatioOf: (_) => profileSquareTileAspectRatio,
+                  itemBuilder: (context, index) {
+                    builds?.update(index, (n) => n + 1, ifAbsent: () => 1);
+                    return ColoredBox(
+                      key: ValueKey(index),
+                      color: Colors.black,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('keeps three columns on a wide window with the flag off', (
+      tester,
+    ) async {
+      await pumpWideGrid(tester, width: 700, largeScreenLayout: false);
+
+      // (700 - 2 gaps of 4) / 3 columns.
+      expect(
+        tester.getSize(find.byKey(const ValueKey(0))).width,
+        moreOrLessEquals(692 / 3),
+      );
+    });
+
+    testWidgets('adds a column on a wide window with the flag on', (
+      tester,
+    ) async {
+      await pumpWideGrid(tester, width: 700, largeScreenLayout: true);
+
+      // (700 - 3 gaps of 4) / 4 columns.
+      expect(
+        tester.getSize(find.byKey(const ValueKey(0))).width,
+        moreOrLessEquals(172),
+      );
+    });
+
+    testWidgets('does not rebuild its tiles while scrolling', (tester) async {
+      final builds = <int, int>{};
+      await pumpWideGrid(
+        tester,
+        width: 700,
+        largeScreenLayout: true,
+        builds: builds,
+      );
+      expect(builds[0], equals(1));
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -40));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey(0)), findsOneWidget);
+      expect(builds[0], equals(1));
     });
   });
 }

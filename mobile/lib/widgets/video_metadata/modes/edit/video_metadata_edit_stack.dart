@@ -1,6 +1,8 @@
 // ABOUTME: Full-screen scaffold for editing already-published video metadata.
 // ABOUTME: Reuses VideoMetadataFormFields from the capture stack.
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +16,7 @@ import 'package:openvine/screens/video_metadata/video_metadata_cover_screen.dart
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_layout.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -145,46 +148,37 @@ class _VideoMetadataEditStackContentState
         onLeadingPressed: context.pop,
         title: context.l10n.shareMenuEditVideo,
       ),
-      body: Column(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Thumbnail preview, matching capture stack style.
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 16),
-                    child: _EditClipPreview(
-                      video: widget.video,
-                      onEditCover: _openCoverEditor,
-                      pendingThumbnailPath: _pendingThumbnailPath,
-                    ),
-                  ),
-                  // Editing is post-publish; expiration cannot be changed
-                  // and there is no post time left to pick.
-                  const VideoMetadataFormFields(
-                    enableExpiration: false,
-                    enableSchedule: false,
-                    enableCaptionMentionAutocomplete: false,
-                  ),
-                ],
-              ),
-            ),
+      body: VideoMetadataLayout(
+        // Thumbnail preview, matching capture stack style.
+        preview: Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 16),
+          child: _EditClipPreview(
+            video: widget.video,
+            onEditCover: _openCoverEditor,
+            pendingThumbnailPath: _pendingThumbnailPath,
           ),
-          SafeArea(
-            top: false,
-            child: VideoMetadataEditBottomBar(
-              video: widget.video,
-              initialCollaboratorPubkeys: widget.initialCollaboratorPubkeys,
-              pendingThumbnailPath: _pendingThumbnailPath,
-              onVideoUpdated: widget.onVideoUpdated,
-            ),
+        ),
+        sidePreview: (maxSize) => _EditClipPreview(
+          video: widget.video,
+          onEditCover: _openCoverEditor,
+          pendingThumbnailPath: _pendingThumbnailPath,
+          maxSize: maxSize,
+        ),
+        details: const [
+          // Editing is post-publish; expiration cannot be changed
+          // and there is no post time left to pick.
+          VideoMetadataFormFields(
+            enableExpiration: false,
+            enableSchedule: false,
+            enableCaptionMentionAutocomplete: false,
           ),
         ],
+        bottomBar: VideoMetadataEditBottomBar(
+          video: widget.video,
+          initialCollaboratorPubkeys: widget.initialCollaboratorPubkeys,
+          pendingThumbnailPath: _pendingThumbnailPath,
+          onVideoUpdated: widget.onVideoUpdated,
+        ),
       ),
     );
   }
@@ -197,11 +191,16 @@ class _EditClipPreview extends StatelessWidget {
     required this.video,
     this.onEditCover,
     this.pendingThumbnailPath,
+    this.maxSize,
   });
 
   final VideoEvent video;
   final VoidCallback? onEditCover;
   final String? pendingThumbnailPath;
+
+  /// The size to fit the preview into, as in the preview pane of a wide
+  /// window. Without it the preview is 200 tall.
+  final Size? maxSize;
 
   /// Parses "WxH" dimension string into a width/height ratio.
   /// Falls back to 9/16 (vertical) if unavailable or unparseable.
@@ -220,6 +219,10 @@ class _EditClipPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final thumbnailUrl = video.thumbnailUrl;
     final ratio = _aspectRatio();
+    final maxSize = this.maxSize;
+    final height = maxSize == null
+        ? 200.0
+        : math.min(maxSize.height, maxSize.width / ratio);
     return Center(
       // Rounds the thumbnail from outside the Hero: a clip inside the Hero
       // child rides into the flight shuttle and fights the shape the
@@ -231,8 +234,8 @@ class _EditClipPreview extends StatelessWidget {
         child: Hero(
           tag: VideoEditorConstants.heroMetaPreviewId,
           child: SizedBox(
-            height: 200,
-            width: 200 * ratio,
+            height: height,
+            width: height * ratio,
             child: Stack(
               fit: StackFit.expand,
               children: [
