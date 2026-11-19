@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
@@ -35,6 +36,7 @@ class _Page extends StatelessWidget {
     this.bottomBar = false,
     this.movedOn = false,
     this.safetyOverlay = false,
+    this.warning,
   });
 
   /// Whether the page has moved on from the tile's video to the next, which
@@ -47,6 +49,11 @@ class _Page extends StatelessWidget {
   /// than standing in for it.
   final bool drawsVideo;
   final bool safetyOverlay;
+
+  /// Puts the safety overlay up and down from inside the page, which then
+  /// rebuilds without the transition above it, when given; it overrides
+  /// [safetyOverlay].
+  final ValueListenable<bool>? warning;
 
   /// Whether the video sits above a 100 px bar, as over a comment bar.
   final bool bottomBar;
@@ -109,9 +116,42 @@ class _Page extends StatelessWidget {
         child: content,
       );
     }
-    final video = ColoredBox(
+    final warning = this.warning;
+    final Widget video = warning == null
+        ? _Video(target: target, warned: safetyOverlay)
+        // Behind a repaint boundary of its own, as each video in a feed is,
+        // so the warning arriving repaints nothing above the page.
+        : RepaintBoundary(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: warning,
+              builder: (context, warned, _) =>
+                  _Video(target: target, warned: warned),
+            ),
+          );
+    if (!bottomBar) return video;
+    return Column(
+      children: [
+        Expanded(child: video),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+}
+
+/// The page's black backdrop with its video [target], under a black safety
+/// overlay when [warned].
+class _Video extends StatelessWidget {
+  const _Video({required this.target, required this.warned});
+
+  final Widget? target;
+  final bool warned;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = this.target;
+    return ColoredBox(
       color: const Color(0xFF000000),
-      child: safetyOverlay
+      child: warned
           ? Stack(
               fit: StackFit.expand,
               children: [
@@ -126,13 +166,6 @@ class _Page extends StatelessWidget {
               ],
             )
           : target,
-    );
-    if (!bottomBar) return video;
-    return Column(
-      children: [
-        Expanded(child: video),
-        const SizedBox(height: 100),
-      ],
     );
   }
 }
@@ -152,6 +185,7 @@ class _Harness extends StatelessWidget {
     this.pageBottomBar = false,
     this.pageMovedOn = false,
     this.safetyOverlay = false,
+    this.warning,
     this.disableAnimations = false,
     this.tileAlignment = Alignment.center,
     this.tileScrim = false,
@@ -174,6 +208,7 @@ class _Harness extends StatelessWidget {
   final bool pageBottomBar;
   final bool pageMovedOn;
   final bool safetyOverlay;
+  final ValueListenable<bool>? warning;
   final bool disableAnimations;
   final Alignment tileAlignment;
 
@@ -274,6 +309,7 @@ class _Harness extends StatelessWidget {
                     bottomBar: pageBottomBar,
                     movedOn: pageMovedOn,
                     safetyOverlay: safetyOverlay,
+                    warning: warning,
                   ),
                 ),
               ),
@@ -345,6 +381,28 @@ double _pageOpacity(WidgetTester tester) => tester
       find.ancestor(of: find.byType(_Page), matching: find.byType(Opacity)),
     )
     .opacity;
+
+/// The red, green, blue and alpha the screen showed at [point] in the frame
+/// last drawn, read from the layers that frame was composited from.
+Future<(int, int, int, int)> _shownAt(WidgetTester tester, Offset point) async {
+  final screen = tester.binding.renderViews.single;
+  final layer = screen.debugLayer! as OffsetLayer;
+  final shown = (await tester.runAsync(
+    () => layer.toImage(screen.paintBounds),
+  ))!;
+  try {
+    final bytes = (await tester.runAsync(shown.toByteData))!;
+    final offset = (point.dy.toInt() * shown.width + point.dx.toInt()) * 4;
+    return (
+      bytes.getUint8(offset),
+      bytes.getUint8(offset + 1),
+      bytes.getUint8(offset + 2),
+      bytes.getUint8(offset + 3),
+    );
+  } finally {
+    shown.dispose();
+  }
+}
 
 void main() {
   group(VideoTileFlightTransition, () {
@@ -1456,17 +1514,20 @@ void main() {
           (tester) async {
             final dragging = ValueNotifier(false);
             addTearDown(dragging.dispose);
+            final warning = ValueNotifier(false);
+            addTearDown(warning.dispose);
             final origin = await pumpTile(tester);
             controller.forward();
-            Widget harness({required bool warned}) => _Harness(
-              image: image,
-              animation: controller,
-              origin: origin,
-              pageDrawsVideo: true,
-              safetyOverlay: warned,
-              popGestureInProgress: dragging,
+            await tester.pumpWidget(
+              _Harness(
+                image: image,
+                animation: controller,
+                origin: origin,
+                pageDrawsVideo: true,
+                warning: warning,
+                popGestureInProgress: dragging,
+              ),
             );
-            await tester.pumpWidget(harness(warned: false));
             await tester.pumpAndSettle();
             expect(_pageHasLanded(tester), isTrue);
 
@@ -1479,12 +1540,25 @@ void main() {
             await tester.pump();
             if (!drag) await tester.pump(const Duration(milliseconds: 40));
             expect(snapshot, findsOneWidget);
+            // Where the snapshot draws the video, in red, before the warning.
+            final video = _landing.center;
+            expect(await _shownAt(tester, video), (0xFF, 0, 0, 0xFF));
 
             // The finger holds still: nothing moves the animation from here.
             if (drag) controller.stop();
-            await tester.pumpWidget(harness(warned: true));
+            // From inside the page, as moderation labels arrive in a feed,
+            // so only the page rebuilds.
+            warning.value = true;
             await tester.pump();
 
+            // In the very frame it arrives, the black warning shows on the
+            // live page, faded as far as the close has got, with nothing
+            // flying over it.
+            final (red, green, blue, alpha) = await _shownAt(tester, video);
+            expect((red, green, blue), (0, 0, 0));
+            expect(alpha, closeTo(0xFF * _pageOpacity(tester), 1));
+
+            await tester.pump();
             expect(find.byKey(const ValueKey('warning')), findsOneWidget);
             expect(snapshot, findsNothing);
             expect(_picture, findsNothing);
@@ -1492,7 +1566,7 @@ void main() {
 
             // The page snapshot predates the warning, so it stays down even
             // once the warning has gone.
-            await tester.pumpWidget(harness(warned: false));
+            warning.value = false;
             await tester.pump();
             expect(snapshot, findsNothing);
             expect(_picture, findsNothing);

@@ -298,6 +298,7 @@ class VideoTileFlightFrame {
     required this.clip,
     required this.bounds,
     required this.opacity,
+    required this.gate,
   });
 
   /// Maps where the page lays its controls out, in global coordinates, to
@@ -317,6 +318,99 @@ class VideoTileFlightFrame {
 
   /// How far the controls have faded in.
   final double opacity;
+
+  /// Whether the controls may be drawn, asked when they are painted, so a
+  /// safety overlay the page puts up in this frame already hides them.
+  final VideoTileFlightGate gate;
+}
+
+/// Whether what flies over a page may be drawn, asked when it is painted.
+///
+/// A safety overlay registers while the page builds, which is after the
+/// transition above it has built that frame, so a picture already flying
+/// would cover it for one frame. [VideoTileFlightGated] asks this once the
+/// whole frame is built instead.
+///
+/// It holds no state of its own: [isOpen] is read from its owner each time.
+class VideoTileFlightGate implements Listenable {
+  /// A gate that is open while [isOpen] says so.
+  VideoTileFlightGate(this._isOpen);
+
+  final ValueGetter<bool> _isOpen;
+
+  /// How many times what flies has been asked to look again; listeners only
+  /// care that it changed.
+  final _reconsidered = ValueNotifier<int>(0);
+
+  /// Whether what flies may be drawn now.
+  bool get isOpen => _isOpen();
+
+  /// Has what flies ask [isOpen] again before the next frame is painted.
+  void reconsider() => _reconsidered.value++;
+
+  @override
+  void addListener(VoidCallback listener) =>
+      _reconsidered.addListener(listener);
+
+  @override
+  void removeListener(VoidCallback listener) =>
+      _reconsidered.removeListener(listener);
+
+  /// Releases the listeners; the gate must not be used afterwards.
+  void dispose() => _reconsidered.dispose();
+}
+
+/// Paints [child] only while [gate] is open, asking when it is painted.
+class VideoTileFlightGated extends SingleChildRenderObjectWidget {
+  /// Draws [child] while [gate] is open.
+  const VideoTileFlightGated({required this.gate, super.child, super.key});
+
+  /// What decides whether [child] is drawn.
+  final VideoTileFlightGate gate;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderVideoTileFlightGated(gate);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderVideoTileFlightGated).gate = gate;
+  }
+}
+
+class _RenderVideoTileFlightGated extends RenderProxyBox {
+  _RenderVideoTileFlightGated(this._gate);
+
+  VideoTileFlightGate _gate;
+
+  VideoTileFlightGate get gate => _gate;
+
+  set gate(VideoTileFlightGate value) {
+    if (identical(value, _gate)) return;
+    if (attached) {
+      _gate.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _gate = value;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _gate.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _gate.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (_gate.isOpen) super.paint(context, offset);
+  }
 }
 
 /// How far a tile's picture flying over a page has got.

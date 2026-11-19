@@ -139,6 +139,10 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   bool _safetyCheckScheduled = false;
 
+  /// Hides what flies from the frame a safety overlay goes up in, which this
+  /// widget has already built by the time the overlay registers.
+  late final _gate = VideoTileFlightGate(() => !_hasSafetyOverlay);
+
   /// The video the picture flies to or from.
   String get _videoId => _closingVideoId ?? widget.origin.videoId;
 
@@ -262,9 +266,10 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   /// A safety overlay came or went in the page, which this widget only sees
   /// when it rebuilds, and a drag held still does not rebuild it. The page
-  /// is building below it when this is called, so it looks again once the
-  /// frame is done.
+  /// is building below it when this is called, so what flies is hidden when
+  /// this frame is painted, and this widget looks again once it is done.
   void _onSafetyOverlaysChanged() {
+    _gate.reconsider();
     if (_safetyCheckScheduled) return;
     _safetyCheckScheduled = true;
     WidgetsBinding.instance
@@ -343,6 +348,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     _motion.dispose();
     _phase.dispose();
     _flight.dispose();
+    _gate.dispose();
     _releasePicture();
     _playerSizeStream?.removeListener(_playerSizeListener);
     _playerSize?.dispose();
@@ -506,6 +512,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
                 clip: clip,
                 bounds: bounds,
                 opacity: progress,
+                gate: _gate,
               )
             : null;
         var revealed = page;
@@ -516,6 +523,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
               // The snapshot stands in for the page under the clip.
               flight: frame == null ? clip : null,
               bounds: bounds,
+              gate: _gate,
             ),
             child: page,
           );
@@ -526,54 +534,57 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
             Opacity(opacity: progress, child: revealed),
             if (flying)
               Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRRect(
-                    clipper: _BoundsClip(bounds),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (frame != null)
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: CustomPaint(
-                                painter: VideoTilePageSnapshotPainter(
-                                  image: frame,
-                                  page: landing.page.outerRect,
-                                  transform: transform,
-                                  clip: clip,
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (picture != null && pictureOpacity > 0)
-                          Positioned.fromRect(
-                            rect: rect,
-                            child: IgnorePointer(
-                              child: Opacity(
-                                opacity: pictureOpacity,
-                                child: ClipRRect(
-                                  borderRadius: borderRadius,
-                                  child: RawImage(
-                                    image: picture,
-                                    fit: BoxFit.cover,
-                                    alignment: alignment,
+                child: VideoTileFlightGated(
+                  gate: _gate,
+                  child: IgnorePointer(
+                    child: ClipRRect(
+                      clipper: _BoundsClip(bounds),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (frame != null)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: VideoTilePageSnapshotPainter(
+                                    image: frame,
+                                    page: landing.page.outerRect,
+                                    transform: transform,
+                                    clip: clip,
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: CustomPaint(
-                              painter: VideoTileScrimPainter(
-                                clip: clip,
-                                top: topScrim,
-                                bottom: bottomScrim,
+                          if (picture != null && pictureOpacity > 0)
+                            Positioned.fromRect(
+                              rect: rect,
+                              child: IgnorePointer(
+                                child: Opacity(
+                                  opacity: pictureOpacity,
+                                  child: ClipRRect(
+                                    borderRadius: borderRadius,
+                                    child: RawImage(
+                                      image: picture,
+                                      fit: BoxFit.cover,
+                                      alignment: alignment,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: CustomPaint(
+                                painter: VideoTileScrimPainter(
+                                  clip: clip,
+                                  top: topScrim,
+                                  bottom: bottomScrim,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -631,20 +642,23 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
 /// Shows the page around [page], where the video is, and inside [flight],
 /// the clip growing from the tile to the page, when there is one, as far as
-/// [bounds] reach.
+/// [bounds] reach; or all of it once [gate] has closed on what flies.
 class _PageReveal extends CustomClipper<Path> {
-  const _PageReveal({
+  _PageReveal({
     required this.page,
     required this.flight,
     required this.bounds,
-  });
+    required this.gate,
+  }) : super(reclip: gate);
 
   final RRect page;
   final RRect? flight;
   final RRect bounds;
+  final VideoTileFlightGate gate;
 
   @override
   Path getClip(Size size) {
+    if (!gate.isOpen) return Path()..addRect(Offset.zero & size);
     final around = Path.combine(
       PathOperation.difference,
       Path()..addRect(Offset.zero & size),
@@ -667,7 +681,8 @@ class _PageReveal extends CustomClipper<Path> {
   bool shouldReclip(_PageReveal oldClipper) =>
       page != oldClipper.page ||
       flight != oldClipper.flight ||
-      bounds != oldClipper.bounds;
+      bounds != oldClipper.bounds ||
+      gate != oldClipper.gate;
 }
 
 /// Clips what flies to [bounds], given in the transition's coordinates.

@@ -99,10 +99,14 @@ List<RRect> _flyingClips(WidgetTester tester) => tester
     .whereType<RRect>()
     .toList();
 
+/// A gate no safety overlay ever closes.
+final _openGate = VideoTileFlightGate(() => true);
+
 VideoTileFlightFrame _frame({
   double opacity = 0.4,
   RRect clip = const RRect.fromLTRBXY(0, 0, 800, 600, 0, 0),
   RRect bounds = const RRect.fromLTRBXY(0, 0, 800, 600, 0, 0),
+  VideoTileFlightGate? gate,
 }) => VideoTileFlightFrame(
   transform: Matrix4.identity()
     ..translateByDouble(10, 20, 0, 1)
@@ -110,6 +114,7 @@ VideoTileFlightFrame _frame({
   clip: clip,
   bounds: bounds,
   opacity: opacity,
+  gate: gate ?? _openGate,
 );
 
 void main() {
@@ -303,6 +308,36 @@ void main() {
         );
       });
 
+      testWidgets('stops drawing the copy in the frame its gate closes', (
+        tester,
+      ) async {
+        var open = true;
+        final gate = VideoTileFlightGate(() => open);
+        addTearDown(gate.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
+        final flight = ValueNotifier<VideoTileFlightFrame?>(_frame(gate: gate));
+        addTearDown(flight.dispose);
+
+        await _pumpChrome(tester, phase: phase, flight: flight);
+        final gated = tester.renderObject(
+          find.ancestor(
+            of: _flyingCopy,
+            matching: find.byType(VideoTileFlightGated),
+          ),
+        );
+        expect(gated, isNot(paintsNothing));
+
+        // As when a safety overlay goes up below: nothing rebuilds the copy.
+        open = false;
+        gate.reconsider();
+
+        expect(gated.debugNeedsPaint, isTrue);
+        await tester.pump();
+        expect(_flyingCopy, findsOneWidget);
+        expect(gated, paintsNothing);
+      });
+
       testWidgets('lays the copy out with the padding the chrome sees', (
         tester,
       ) async {
@@ -320,8 +355,9 @@ void main() {
               builder: (context) {
                 bottomPaddings[VideoTileFlightCopy.isIn(
                   context,
-                )] = MediaQuery.viewPaddingOf(context)
-                    .bottom;
+                )] = MediaQuery.viewPaddingOf(
+                  context,
+                ).bottom;
                 return const SizedBox.expand();
               },
             ),
