@@ -3,9 +3,11 @@
 // ABOUTME: enter→leave→next transition is visible, shared by the preset grid,
 // ABOUTME: custom editor and saved styles.
 
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_preview_cues.dart';
@@ -91,12 +93,13 @@ class CaptionStylePreview extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(_inset),
             // The cue wraps at the tile's width the way a caption layer wraps
-            // at the video's, and a cue taller than the tile shrinks to fit:
-            // it is always shown whole, as the editor shows it.
+            // at the video's, never inside a word, and a cue that does not
+            // fit the tile shrinks to fit: it is always shown whole, as the
+            // editor shows it.
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: width - 2 * _inset),
+              child: _WrapBetweenWords(
+                lineWidth: width - 2 * _inset,
                 child: Transform.scale(
                   scale: scale,
                   child: Opacity(
@@ -190,5 +193,74 @@ class CaptionStylePreview extends StatelessWidget {
     }
 
     return (opacity: opacity, scale: scale);
+  }
+}
+
+/// Lays its child out at most [lineWidth] wide, widened to the child's
+/// longest word.
+///
+/// A tile is far narrower than a video, so a line of tile width can be
+/// narrower than a word that fits the video's width easily, and the text
+/// would break that word in two.
+class _WrapBetweenWords extends SingleChildRenderObjectWidget {
+  const _WrapBetweenWords({required this.lineWidth, required super.child});
+
+  /// The width the child wraps at while its longest word fits.
+  final double lineWidth;
+
+  @override
+  _RenderWrapBetweenWords createRenderObject(BuildContext context) =>
+      _RenderWrapBetweenWords(lineWidth);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderWrapBetweenWords renderObject,
+  ) {
+    renderObject.lineWidth = lineWidth;
+  }
+}
+
+class _RenderWrapBetweenWords extends RenderProxyBox {
+  _RenderWrapBetweenWords(this._lineWidth);
+
+  double _lineWidth;
+  double get lineWidth => _lineWidth;
+  set lineWidth(double value) {
+    if (_lineWidth == value) return;
+    _lineWidth = value;
+    markNeedsLayout();
+  }
+
+  /// [constraints] narrowed to [lineWidth], or to the child's minimum
+  /// intrinsic width, its longest word, when that is wider.
+  BoxConstraints _childConstraints(
+    RenderBox child,
+    BoxConstraints constraints,
+  ) {
+    final longestWord = child.getMinIntrinsicWidth(double.infinity);
+    return BoxConstraints(
+      maxWidth: math.max(_lineWidth, longestWord),
+    ).enforce(constraints);
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final child = this.child;
+    if (child == null) return constraints.smallest;
+    return constraints.constrain(
+      child.getDryLayout(_childConstraints(child, constraints)),
+    );
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child;
+    if (child == null) {
+      size = constraints.smallest;
+      return;
+    }
+    child.layout(_childConstraints(child, constraints), parentUsesSize: true);
+    size = constraints.constrain(child.size);
   }
 }
