@@ -125,7 +125,7 @@ class CorruptedVideoRepairService {
       );
       return null;
     }
-    final events = result.events;
+    final events = _newestPerAddress(result.events);
 
     Log.info(
       'Scanning ${events.length} video events for corrupted URLs',
@@ -186,6 +186,28 @@ class CorruptedVideoRepairService {
     );
 
     return repairedCount;
+  }
+
+  /// The newest revision at each address among [events]. Relays can hold
+  /// older revisions too, and a repair built from one of those would replace
+  /// the newer revision and delete what only it carried (#11250). An event
+  /// with no `d` tag stands alone.
+  static List<Event> _newestPerAddress(List<Event> events) {
+    final newest = <String, Event>{};
+    for (final event in events) {
+      final dTag = event.dTagValue;
+      final key = dTag.isEmpty
+          ? event.id
+          : '${event.kind}:${event.pubkey}:$dTag';
+      final previous = newest[key];
+      if (previous == null ||
+          event.createdAt > previous.createdAt ||
+          (event.createdAt == previous.createdAt &&
+              event.id.compareTo(previous.id) < 0)) {
+        newest[key] = event;
+      }
+    }
+    return newest.values.toList();
   }
 
   /// Inspects and repairs imeta tags that have local file paths.
