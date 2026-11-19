@@ -122,7 +122,6 @@ void _recordSend({
     );
   });
 
-  when(dmRepository.waitForConnectedRelay).thenAnswer((_) async => true);
   when(
     () => dmRepository.sendFileMessage(
       recipientPubkey: any(named: 'recipientPubkey'),

@@ -341,14 +341,6 @@ const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 /// sent before another stalled — before the whole resolution is abandoned.
 const Duration _dmInboxOutboxSettleMargin = Duration(milliseconds: 250);
 
-/// How long [DmRepository.waitForConnectedRelay] waits by default.
-///
-/// A file message is published only after its upload finished, so failing it
-/// the moment no relay is connected throws that upload away over a socket that
-/// is usually a couple of seconds from reconnecting (#10436). Short, because
-/// the sender is watching a send that has not finished yet.
-const Duration dmFileSendRelayWait = Duration(seconds: 10);
-
 /// Most write relays the outbox leg dials for one recipient. Each is a cold
 /// connection on the send path, chosen by the person being messaged.
 const int _dmInboxOutboxRelayCap = 4;
@@ -12054,44 +12046,6 @@ class DmRepository {
     }
 
     return result;
-  }
-
-  /// Waits up to [timeout] for a relay to connect when none is.
-  ///
-  /// A file message is published only after its upload finished. Calling this
-  /// first keeps a reconnect in progress from leaving the recipient's inbox
-  /// unreadable and failing a send whose upload is already done (#10436). It
-  /// is a separate step rather than part of [sendFileMessage] so the caller
-  /// can abandon the wait, which a publication already under way cannot be.
-  ///
-  /// Returns true at once when a relay is connected, true when one connects
-  /// within [timeout], and false when none does or the client's relay status
-  /// stream closes. A relay counts as connected by the same rule either way:
-  /// [NostrClient.connectedRelayCount] is above zero.
-  Future<bool> waitForConnectedRelay({
-    Duration timeout = dmFileSendRelayWait,
-  }) async {
-    bool relayConnected() => _nostrClient.connectedRelayCount > 0;
-    if (relayConnected()) return true;
-    Log.info(
-      'No relay connected; waiting up to ${timeout.inMilliseconds}ms for one',
-      category: LogCategory.system,
-    );
-    try {
-      // A status stream that closes without a connected relay means the
-      // client is shutting down, so there is nothing left to wait for.
-      return await _nostrClient.relayStatusStream
-          .where((_) => relayConnected())
-          .timeout(timeout)
-          .map((_) => true)
-          .firstWhere((connected) => connected, orElse: () => false);
-    } on TimeoutException {
-      Log.warning(
-        'No relay connected within ${timeout.inMilliseconds}ms',
-        category: LogCategory.system,
-      );
-      return false;
-    }
   }
 
   // -------------------------------------------------------------------------
