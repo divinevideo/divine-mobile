@@ -20,12 +20,15 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/widgets/og_viner_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -162,6 +165,144 @@ void main() {
         ],
       );
     }
+
+    group('OG Viner badges from video search', () {
+      VideoEvent archiveVideo(
+        String key, {
+        bool verified = false,
+        bool unknown = false,
+      }) => VideoEvent(
+        id: key * 64,
+        pubkey: key * 64,
+        createdAt: 1451606400,
+        timestamp: DateTime.utc(2016),
+        content: '',
+        authorName: 'Archive creator $key',
+        rawTags: const {'platform': 'vine'},
+        isVerifiedArchive: verified,
+        isArchiveVerificationUnknown: unknown,
+      );
+
+      Finder badgeFor(VideoEvent video) => find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) =>
+              widget is SearchVideoTile && widget.video.pubkey == video.pubkey,
+        ),
+        matching: find.byType(OgVinerBadge),
+      );
+
+      Future<OgVinerCacheService> mountSearch(
+        WidgetTester tester,
+        List<VideoEvent> videos, {
+        Future<({List<VideoEvent> videos, int totalCount, bool hasMore})>?
+        nextPage,
+      }) async {
+        final cache = OgVinerCacheService();
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: 'archive',
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(videos));
+        when(
+          () => mockVideosRepository.searchVideosViaApi(
+            query: 'archive',
+            offset: 50,
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer(
+          (_) =>
+              nextPage ??
+              Future.value((
+                videos: <VideoEvent>[],
+                totalCount: videos.length,
+                hasMore: false,
+              )),
+        );
+        when(
+          () => mockVideosRepository.deduplicateVideosPreservingOrder(any()),
+        ).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          createTestWidget(
+            flagOverrides: [
+              ogVinerCacheServiceProvider.overrideWith((ref) => cache),
+            ],
+          ),
+        );
+        final context = tester.element(find.byType(SearchResultsView));
+        context.read<SearchResultsFilterCubit>().filterChanged(.videos);
+        context.read<VideoSearchBloc>().add(
+          const VideoSearchQueryChanged('archive'),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        await tester.pump();
+        return cache;
+      }
+
+      testWidgets('badges a verified search creator from an empty cache', (
+        tester,
+      ) async {
+        final video = archiveVideo('a', verified: true);
+        final cache = await mountSearch(tester, [video]);
+
+        expect(find.byType(SearchVideoTile), findsOneWidget);
+        expect(badgeFor(video), findsOneWidget);
+        expect(cache.isOgViner(video.pubkey), isTrue);
+      });
+
+      testWidgets('badges a newly verified creator on the next search page', (
+        tester,
+      ) async {
+        final first = archiveVideo('a', verified: true);
+        final second = archiveVideo('b', verified: true);
+        final nextPage =
+            Completer<
+              ({List<VideoEvent> videos, int totalCount, bool hasMore})
+            >();
+        final cache = await mountSearch(
+          tester,
+          [first],
+          nextPage: nextPage.future,
+        );
+        expect(badgeFor(first), findsOneWidget);
+        expect(cache.isOgViner(second.pubkey), isFalse);
+
+        tester
+            .element(find.byType(SearchResultsView))
+            .read<VideoSearchBloc>()
+            .add(const VideoSearchLoadMore());
+        await tester.pump();
+        nextPage.complete((videos: [second], totalCount: 2, hasMore: false));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(SearchVideoTile), findsNWidgets(2));
+        expect(badgeFor(second), findsOneWidget);
+        expect(cache.isOgViner(second.pubkey), isTrue);
+      });
+
+      testWidgets(
+        'keeps tag-only and unknown archive search creators unbadged',
+        (
+          tester,
+        ) async {
+          final verified = archiveVideo('a', verified: true);
+          final tagged = archiveVideo('c');
+          final unknown = archiveVideo('d', unknown: true);
+          final cache = await mountSearch(tester, [verified, tagged, unknown]);
+
+          expect(find.byType(SearchVideoTile), findsNWidgets(3));
+          expect(badgeFor(verified), findsOneWidget);
+          expect(badgeFor(tagged), findsNothing);
+          expect(badgeFor(unknown), findsNothing);
+          expect(cache.isOgViner(tagged.pubkey), isFalse);
+          expect(cache.isOgViner(unknown.pubkey), isFalse);
+        },
+      );
+    });
 
     testWidgets(
       'offstage search cannot claim focus before profiles are ready',
