@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -23,6 +25,7 @@ import 'package:openvine/models/video_publish/video_publish_provider_state.dart'
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -41,6 +44,16 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+class _CreationEventSink extends Fake implements AnalyticsEventSink {
+  final events = <String>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    Map<String, Object> parameters = const {},
+  }) async => events.add(name);
+}
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
@@ -308,6 +321,58 @@ void main() {
 
     tearDown(() {
       container.dispose();
+    });
+
+    group('reaction editor camera ownership', () {
+      for (final fromEditor in [true, false]) {
+        testWidgets(
+          'fromEditor=$fromEditor selects continuation versus a new funnel',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final sink = _CreationEventSink();
+            final tracker = CreationAnalyticsTracker(analytics: sink);
+            final reaction = CreationAnalyticsSession();
+            await tracker.cameraOpened(
+              mode: .capture,
+              entryPoint: 'library',
+              session: reaction,
+            );
+            await tracker.recordingStarted(.capture, session: reaction);
+            await tracker.claimEditorSession(reaction);
+            final routeContainer = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(testPrefs),
+                ..._stubServiceOverrides(),
+                creationAnalyticsTrackerProvider.overrideWithValue(tracker),
+              ],
+            );
+            addTearDown(routeContainer.dispose);
+            await tester.pumpWidget(
+              buildNavigatorTestWidget(
+                fromEditor: fromEditor,
+                overrides: const [],
+                container: routeContainer,
+              ),
+            );
+            await tester.tap(find.text('Open recorder'));
+            await tester.pumpAndSettle();
+            expect(find.byType(VideoRecorderView), findsOneWidget);
+            expect(sink.events, [
+              'camera_opened',
+              'recording_started',
+              'editor_opened',
+              if (!fromEditor) ...['creation_abandoned', 'camera_opened'],
+            ]);
+            if (!fromEditor) {
+              await tracker.abandonEditorSession(reaction);
+              expect(tracker.activeMode, isNotNull);
+            }
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
     });
 
     group('UI Components', () {

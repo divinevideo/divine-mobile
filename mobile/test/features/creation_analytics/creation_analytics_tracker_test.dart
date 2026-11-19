@@ -207,7 +207,11 @@ void main() {
 
       // The editor has mounted and Add clip is usable. Its provider is still
       // initializing, so the old editorOpened callback has not run yet.
-      await tracker.cameraOpened(mode: .capture, entryPoint: 'editor');
+      await tracker.cameraOpened(
+        mode: .capture,
+        entryPoint: 'editor',
+        continuesEditorSession: true,
+      );
       await tracker.recordingStarted(.capture);
       sink.editorOpening!.complete();
       await mount;
@@ -220,6 +224,35 @@ void main() {
         'publish_started',
       ]);
       expect(sink.events.last.parameters['time_since_camera_open_ms'], 8000);
+    });
+
+    test('a normal camera opening before reaction editor disposal owns a new funnel', () async {
+      final sink = _RecordingSink();
+      final tracker = CreationAnalyticsTracker(analytics: sink);
+      final reaction = CreationAnalyticsSession();
+      await tracker.cameraOpened(
+        mode: .capture,
+        entryPoint: 'library',
+        session: reaction,
+      );
+      await tracker.recordingStarted(.capture, session: reaction);
+      await tracker.claimEditorSession(reaction);
+
+      // A replacement route can mount before the old editor is disposed.
+      await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+      await tracker.recordingStarted(.classic);
+      await tracker.abandonEditorSession(reaction);
+
+      expect(sink.events.map((event) => event.name), [
+        'camera_opened',
+        'recording_started',
+        'editor_opened',
+        'creation_abandoned',
+        'camera_opened',
+        'recording_started',
+      ]);
+      expect(sink.events[4].parameters['entry_point'], 'bottom_nav');
+      expect(tracker.activeMode, VideoRecorderMode.classic);
     });
 
     test(

@@ -55,8 +55,15 @@ class CreationAnalyticsTracker {
     required VideoRecorderMode mode,
     required String entryPoint,
     CreationAnalyticsSession? session,
+    bool continuesEditorSession = false,
   }) async {
     if (session?._closed ?? false) return;
+    // A replacement recorder can mount before the old editor is disposed.
+    // Only that editor's Add clip camera continues its existing funnel.
+    if (_editorSession != null &&
+        (session != null || !continuesEditorSession)) {
+      unawaited(creationAbandoned());
+    }
     final previous = _cameraSession;
     if (!identical(previous, session)) {
       if (previous != null) {

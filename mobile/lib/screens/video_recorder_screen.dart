@@ -348,6 +348,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         mode: openingMode,
         entryPoint: widget.entryPoint,
         session: widget.analyticsSession,
+        continuesEditorSession: widget.fromEditor,
       ),
     );
 
