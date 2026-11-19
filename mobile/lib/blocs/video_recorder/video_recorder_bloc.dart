@@ -361,6 +361,7 @@ class VideoRecorderBloc
 
   final ReadClipManager _readClipManager;
   final ReactionRecordingOwner? _reactionRecordingOwner;
+  Completer<void>? _pendingReactionStart;
   Completer<void>? _pendingReactionStop;
 
   final ReadVideoEditor _readVideoEditor;
@@ -1025,7 +1026,7 @@ class VideoRecorderBloc
     // Stop-motion captures stills via VideoRecorderStopMotionFrameCaptured;
     // a video-record start here would be a no-op at best and corrupt the
     // session at worst.
-    if (state.recorderMode.capturesStills) return;
+    if (_isClosing || state.recorderMode.capturesStills) return;
 
     final clipManager = _readClipManager();
     final remainingDuration = clipManager.remainingDuration;
@@ -1149,7 +1150,24 @@ class VideoRecorderBloc
     }
 
     await _prepareSoundForPlayback();
+    if (_isClosing) return;
 
+    final pendingStart = _pendingReactionStart = _reactionRecordingOwner == null
+        ? null
+        : Completer<void>();
+    try {
+      await _startNativeRecording(emit, clipManager, remainingDuration);
+    } finally {
+      pendingStart?.complete();
+      _pendingReactionStart = null;
+    }
+  }
+
+  Future<void> _startNativeRecording(
+    Emitter<VideoRecorderBlocState> emit,
+    ClipManagerNotifier clipManager,
+    Duration remainingDuration,
+  ) async {
     emit(state.copyWith(recordingState: VideoRecorderState.recording));
 
     Log.info(
@@ -1228,6 +1246,27 @@ class VideoRecorderBloc
     VideoRecorderRecordingStopRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    try {
+      await _handleRecordingStop(event, emit);
+    } catch (error, stackTrace) {
+      if (event._teardown == null) rethrow;
+      Log.error(
+        'Could not retain the reaction recording during recorder teardown',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      addError(error, stackTrace);
+    } finally {
+      event._teardown?.complete();
+    }
+  }
+
+  Future<void> _handleRecordingStop(
+    VideoRecorderRecordingStopRequested event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
     if (state.isStoppingRecording) {
       return;
     }
@@ -1277,11 +1316,12 @@ class VideoRecorderBloc
     final pendingReactionStop = _pendingReactionStop = owner == null
         ? null
         : Completer<void>();
-    bool ownsTimeline() =>
+    bool ownsOriginalTimeline() =>
         owner == null ||
-        (!_isClosing &&
-            owner.isCurrent() &&
+        (owner.isCurrent() &&
             reactionClipManager!.isSessionCurrent(reactionGeneration!));
+    bool ownsTimeline() =>
+        owner == null || (!_isClosing && ownsOriginalTimeline());
     emit(state.copyWith(isStoppingRecording: true));
 
     unawaited(HapticService.recordingFeedback());
@@ -1295,7 +1335,7 @@ class VideoRecorderBloc
       // look-ahead stabilization mode iOS waits ~1.6s for the camera to hand
       // over the last frames; a timer still running through that wait reads
       // as a stop that did not take, and counts the wait into the clip.
-      if (ownsTimeline()) {
+      if (ownsOriginalTimeline()) {
         (reactionClipManager ?? _readClipManager()).stopRecording();
       }
       await _stopSoundPlayback();
@@ -1335,7 +1375,7 @@ class VideoRecorderBloc
       addError(e, stackTrace);
       // The 60fps duration timer was already stopped at the top of the try;
       // resetRecording only clears the in-progress segment.
-      if (ownsTimeline()) {
+      if (ownsOriginalTimeline()) {
         (reactionClipManager ?? _readClipManager()).resetRecording();
       }
       await _disableWakelockSafely();
@@ -1369,7 +1409,9 @@ class VideoRecorderBloc
       // Keeps the frozen duration: when the recording limit stopped the take
       // first, the camera refused this stop and still hands the take over,
       // and that clip is measured with it.
-      if (ownsTimeline()) clipManager.clearActiveRecordingDuration();
+      if (ownsOriginalTimeline()) {
+        clipManager.clearActiveRecordingDuration();
+      }
       return;
     }
 
@@ -1395,6 +1437,7 @@ class VideoRecorderBloc
         secondaryRecording: secondaryRecording,
         secondaryPipCenter: state.dualCameraPipCenter,
       );
+      if (ownsOriginalTimeline()) clipManager.resetRecording();
       await owner.retain(detached);
       return;
     }
@@ -3390,10 +3433,18 @@ class VideoRecorderBloc
     // A recorder closed mid-take must not leave the bakes held for good.
     _isClosing = true;
     _releaseChromaKeyBakes();
-    // Route replacement can dispose the recorder while the native writer
-    // owns a Library reaction take. Keep its result channel alive.
+    // Route replacement can bypass Back. Wait for a native start or stop
+    // already in flight, or finish the active take before releasing the camera.
+    final pendingReactionStart = _pendingReactionStart;
+    if (pendingReactionStart != null) await pendingReactionStart.future;
     final pendingReactionStop = _pendingReactionStop;
-    if (pendingReactionStop != null) await pendingReactionStop.future;
+    if (pendingReactionStop != null) {
+      await pendingReactionStop.future;
+    } else if (_reactionRecordingOwner != null && state.isCapturingFootage) {
+      final teardown = Completer<void>();
+      add(VideoRecorderRecordingStopRequested._forTeardown(teardown));
+      await teardown.future;
+    }
     // A backdrop image no clip was recorded with is referenced by nothing
     // once this recorder is gone. Unless a take is on the camera or being
     // wrapped up: the clip it becomes may yet point at the image. A countdown

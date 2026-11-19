@@ -184,7 +184,10 @@ class _Manager extends ClipManagerNotifier {
     return clip;
   }
 
-  void clear() => state = state.copyWith(clips: []);
+  void clear() {
+    _generation++;
+    state = state.copyWith(clips: []);
+  }
 }
 
 class _Editor extends VideoEditorNotifier {
@@ -271,6 +274,7 @@ void main() {
       NavigatorObserver? observer,
       Completer<void>? clearGate,
       Future<void> Function(CreationAnalyticsSession)? onOpenEditor,
+      Future<void>? Function()? previewClosed,
       bool reducedMotion = false,
       bool pushed = false,
     }) async {
@@ -282,6 +286,7 @@ void main() {
                 context,
                 ref,
                 _clip('source'),
+                previewClosed: previewClosed?.call(),
                 recordWithCamera: record,
                 showLayout: layout,
                 mergeTakes: merge,
@@ -1105,6 +1110,64 @@ void main() {
       expect(events, ['keep draft', 'clear session']);
       expect(manager.clips, isEmpty);
       expect(abandoned, ['/documents/layout.mp4']);
+    });
+
+    testWidgets('a new reaction owns the editor during preview exit', (
+      tester,
+    ) async {
+      final pendingSave = Completer<bool>();
+      final previewExit = Completer<void>();
+      Future<void>? previewClosed;
+      var layoutCount = 0;
+      manager.saveGate = pendingSave;
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        previewClosed: () => previewClosed,
+        layout: (_, _, _, _) async => _clip('layout-${++layoutCount}'),
+      );
+      expect(layoutCount, 1);
+      previewClosed = previewExit.future;
+      await tester.tap(find.text('react'));
+      await tester.pumpAndSettle();
+      pendingSave.complete(true);
+      await tester.pumpAndSettle();
+      expect(manager.clips, isEmpty);
+      expect(manager.savedClips.keys, ['layout-1']);
+      expect(events, ['keep draft', 'clear session']);
+
+      manager.saveGate = null;
+      previewExit.complete();
+      await tester.pumpAndSettle();
+      expect(layoutCount, 2);
+      expect(manager.clips.single.id, 'layout-2');
+      expect(events.where((event) => event == 'open editor'), hasLength(1));
+    });
+
+    testWidgets('a layout save cannot reopen a replaced creation session', (
+      tester,
+    ) async {
+      final gate = Completer<bool>();
+      manager.saveGate = gate;
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async => [
+          _clip('reaction'),
+        ],
+        layout: (_, _, _, _) async => _clip('layout'),
+      );
+      expect(manager.clips, isEmpty);
+      manager
+        ..clear()
+        ..insertClip(0, _clip('new-project'));
+      gate.complete(true);
+      await tester.pumpAndSettle();
+
+      expect(manager.clips.map((clip) => clip.id), ['new-project']);
+      expect(manager.savedClips.keys, ['layout']);
+      expect(events, ['keep draft', 'clear session']);
     });
 
     testWidgets(

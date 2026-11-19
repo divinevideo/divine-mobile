@@ -95,7 +95,10 @@ void main() {
       // The stop instant is read on the call, not when the pipeline catches
       // up, and set before isRecording goes false so a buffer that no longer
       // sees the recording still sees where it ends.
-      final stop = declarationAt(source, 'func stopRecording(');
+      final stop = declarationAt(
+        source,
+        'private func finishRecordingRequest(',
+      );
       final stopPTS = stop.indexOf('let stopPTS = videoClockNow()');
       final closed = stop.indexOf('_recordingWindow?.stop = stopPTS');
       final notRecording = stop.indexOf('isRecording = false');
@@ -115,7 +118,10 @@ void main() {
       expect(stopFrame, contains('finishPendingStop(end: "delivered")'));
       expect(stopFrame, contains('return'));
 
-      final stop = declarationAt(source, 'func stopRecording(');
+      final stop = declarationAt(
+        source,
+        'private func finishRecordingRequest(',
+      );
       expect(stop, contains('self.pendingStopFinish = finish'));
       expect(stop, contains('deadline: .now() + Self.maxStopDrainSeconds'));
       expect(stop, contains('self.finishPendingStop(end: "timeout")'));
@@ -142,7 +148,11 @@ void main() {
         source,
         'private func salvageInterruptedRecording(',
       );
-      expect(salvage, contains('stopRecording(drainPipeline: false)'));
+      expect(salvage, contains('stopRecordingForEvent(drainPipeline: false)'));
+      expect(
+        declarationAt(source, 'private func stopRecordingForEvent('),
+        contains('finishRecordingRequest(drainPipeline: drainPipeline)'),
+      );
       expect(salvage, contains('finishStopDrainEarly('));
       expect(
         declarationAt(source, 'func pausePreview('),

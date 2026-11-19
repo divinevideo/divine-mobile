@@ -340,8 +340,8 @@ class _FilterContent extends ConsumerWidget {
     WidgetRef ref,
     DivineVideoClip clip,
   ) async {
-    var recordReaction = false;
-    final route = videoClipPreviewRoute(
+    late final TransitionRoute<void> route;
+    route = videoClipPreviewRoute(
       clip: clip,
       // Saved like a selection, so a copy without proof is named too.
       onSaveToGallery: () async {
@@ -350,29 +350,32 @@ class _FilterContent extends ConsumerWidget {
       onDelete: () => _confirmDeleteClip(context, clip),
       onRecordReaction: offersRecordReaction
           ? () {
-              recordReaction = true;
-              Navigator.of(context).pop();
+              route.navigator?.pop();
+              if (!context.mounted) return;
+              final clipsBloc = context.read<ClipsLibraryBloc>();
+              runDetached(
+                recordLibraryReaction(
+                  context,
+                  ref,
+                  clip,
+                  // Let the preview's looping decoder go before opening the
+                  // camera, but claim the new reaction on the original tap.
+                  previewClosed: route.completed,
+                ).whenComplete(() {
+                  // New takes need not change libraryRevision. Refresh when
+                  // the camera/layout/editor returns with its saved takes.
+                  if (context.mounted && !clipsBloc.isClosed) {
+                    clipsBloc.add(const ClipsLibraryClipsChanged());
+                  }
+                }),
+                'record library reaction',
+                logName: 'ClipsTab',
+                category: LogCategory.ui,
+              );
             }
           : null,
     );
     await Navigator.of(context).push(route);
-    // Release the looping preview decoder before opening the camera.
-    await route.completed;
-    if (recordReaction && context.mounted) {
-      final clipsBloc = context.read<ClipsLibraryBloc>();
-      runDetached(
-        recordLibraryReaction(context, ref, clip).whenComplete(() {
-          // New takes need not change libraryRevision. Refresh when the
-          // camera/layout/editor returns so its saved takes appear here.
-          if (context.mounted && !clipsBloc.isClosed) {
-            clipsBloc.add(const ClipsLibraryClipsChanged());
-          }
-        }),
-        'record library reaction',
-        logName: 'ClipsTab',
-        category: LogCategory.ui,
-      );
-    }
   }
 
   Future<void> _confirmDeleteClip(

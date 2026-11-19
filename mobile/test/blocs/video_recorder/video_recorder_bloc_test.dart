@@ -2084,72 +2084,104 @@ void main() {
     group('Library reaction recording ownership', () {
       setUp(stubRecorderDefaults);
 
-      test(
-        'retains a late native result outside the replacement timeline',
-        () async {
-          final nativeStop = Completer<EditorVideo?>();
-          final stopRequested = Completer<void>();
-          final retained = Completer<DivineVideoClip>();
-          final video = EditorVideo.file('/tmp/reaction_take.mp4');
-          const duration = Duration(seconds: 2);
-          final clip = DivineVideoClip(
-            id: 'reaction_take',
-            video: video,
-            duration: duration,
-            recordedAt: DateTime.utc(2026),
-            targetAspectRatio: model.AspectRatio.vertical,
-            originalAspectRatio: 9 / 16,
-          );
-          when(() => clipManager.recordingElapsed).thenReturn(duration);
-          clipManager.generation = 1;
-          when(() => cameraService.stopRecording()).thenAnswer((_) {
-            stopRequested.complete();
-            return nativeStop.future;
-          });
-          when(
-            () => clipManager.buildRecordedClip(
+      for (final stage in ['stopping', 'recording', 'starting']) {
+        test(
+          'retains the original account’s take when the recorder is $stage',
+          () async {
+            final nativeStop = Completer<EditorVideo?>();
+            final stopRequested = Completer<void>();
+            final nativeStart = Completer<bool>();
+            final startRequested = Completer<void>();
+            final retained = Completer<DivineVideoClip>();
+            final video = EditorVideo.file('/tmp/reaction_take.mp4');
+            const duration = Duration(seconds: 2);
+            final clip = DivineVideoClip(
+              id: 'reaction_take',
               video: video,
               duration: duration,
-              originalAspectRatio: any(named: 'originalAspectRatio'),
-              targetAspectRatio: any(named: 'targetAspectRatio'),
-              lensMetadata: any(named: 'lensMetadata'),
-              secondaryPipCenter: any(named: 'secondaryPipCenter'),
-            ),
-          ).thenReturn(clip);
+              recordedAt: DateTime.utc(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            );
+            when(() => clipManager.recordingElapsed).thenReturn(duration);
+            clipManager.generation = 1;
+            when(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ).thenAnswer((_) {
+              startRequested.complete();
+              return nativeStart.future;
+            });
+            when(() => cameraService.stopRecording()).thenAnswer((_) {
+              stopRequested.complete();
+              return nativeStop.future;
+            });
+            when(
+              () => clipManager.buildRecordedClip(
+                video: video,
+                duration: duration,
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              ),
+            ).thenReturn(clip);
 
-          var isCurrent = true;
-          final bloc =
-              buildBloc(
-                reactionRecordingOwner: (
-                  isCurrent: () => isCurrent,
-                  retain: (clip) async => retained.complete(clip),
-                ),
-              )..emit(
+            var isCurrent = true;
+            final bloc = buildBloc(
+              reactionRecordingOwner: (
+                isCurrent: () => isCurrent,
+                retain: (clip) async => retained.complete(clip),
+              ),
+            );
+            if (stage == 'starting') {
+              bloc.add(const VideoRecorderRecordingStartRequested());
+              await startRequested.future;
+            } else {
+              bloc.emit(
                 const VideoRecorderBlocState(
                   recordingState: VideoRecorderState.recording,
                 ),
               );
-          addTearDown(bloc.close);
-          bloc.add(const VideoRecorderRecordingStopRequested());
-          await stopRequested.future;
-          isCurrent = false;
-          nativeStop.complete(video);
+            }
+            if (stage == 'stopping') {
+              addTearDown(bloc.close);
+              bloc.add(const VideoRecorderRecordingStopRequested());
+              await stopRequested.future;
+              isCurrent = false;
+              nativeStop.complete(video);
+            } else {
+              final closing = bloc.close();
+              final firstCameraAction = Future.any([
+                stopRequested.future.then((_) => 'stop'),
+                closing.then((_) => 'close'),
+              ]);
+              if (stage == 'starting') nativeStart.complete(true);
+              final action = await firstCameraAction;
+              nativeStop.complete(video);
+              expect(action, 'stop');
+              await closing;
+              verify(() => cameraService.dispose()).called(1);
+            }
 
-          expect(await retained.future, same(clip));
-          expect(bloc.state.isRecording, isFalse);
-          verifyNever(
-            () => clipManager.addClip(
-              video: video,
-              originalAspectRatio: any(named: 'originalAspectRatio'),
-              targetAspectRatio: any(named: 'targetAspectRatio'),
-              lensMetadata: any(named: 'lensMetadata'),
-              limitClipDuration: any(named: 'limitClipDuration'),
-              secondaryPipCenter: any(named: 'secondaryPipCenter'),
-            ),
-          );
-          verifyNever(() => clipManager.saveClipToLibrary(any()));
-        },
-      );
+            expect(await retained.future, same(clip));
+            expect(bloc.state.isRecording, isFalse);
+            verify(() => cameraService.stopRecording()).called(1);
+            verifyNever(
+              () => clipManager.addClip(
+                video: video,
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+                secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              ),
+            );
+            verifyNever(() => clipManager.saveClipToLibrary(any()));
+          },
+        );
+      }
     });
 
     group('native auto-stop callback', () {

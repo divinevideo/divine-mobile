@@ -9,6 +9,15 @@ class LibraryReactionProgressHost extends StatefulWidget {
 
   final Widget child;
 
+  /// Claims the next reaction from this Library, including its preview exit.
+  static bool Function() claimReaction(BuildContext context) {
+    final host = context
+        .findAncestorStateOfType<_LibraryReactionProgressHostState>();
+    if (host == null) return () => context.mounted;
+    final request = host._reactionRequest = Object();
+    return () => host.mounted && identical(host._reactionRequest, request);
+  }
+
   /// Attaches [progress] to the owning Library or layout screen.
   ///
   /// The returned callback clears only this invocation's progress.
@@ -27,6 +36,7 @@ class _LibraryReactionProgressHostState
     extends State<LibraryReactionProgressHost> {
   final _controller = OverlayPortalController();
   Widget? _progress;
+  late Object _reactionRequest;
 
   VoidCallback _show(Widget progress) {
     _progress = progress;

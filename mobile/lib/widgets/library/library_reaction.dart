@@ -50,6 +50,7 @@ Future<void> recordLibraryReaction(
   BuildContext context,
   WidgetRef ref,
   DivineVideoClip source, {
+  Future<void>? previewClosed,
   SplitScreenCellPicker? recordWithCamera,
   LibraryReactionLayout? showLayout,
   LibraryReactionMerge? mergeTakes,
@@ -61,6 +62,10 @@ Future<void> recordLibraryReaction(
   )?
   openEditor,
 }) async {
+  final isLatestRequest = LibraryReactionProgressHost.claimReaction(context);
+  if (previewClosed != null) await previewClosed;
+  if (!context.mounted || !isLatestRequest()) return;
+
   final router = GoRouter.maybeOf(context);
   bool hasCreationRoute() =>
       router != null &&
@@ -82,6 +87,7 @@ Future<void> recordLibraryReaction(
 
   bool isActive() =>
       context.mounted &&
+      isLatestRequest() &&
       isCurrentAccount() &&
       identical(ref.read(clipManagerProvider.notifier), manager);
 
@@ -137,7 +143,15 @@ Future<void> recordLibraryReaction(
     return;
   }
   await publish.clearAll();
-  if (!context.mounted || !canOpenCamera() || manager.clips.isNotEmpty) {
+  // Clearing the previous clip session advances its generation once.
+  var reactionGeneration = sourceGeneration + 1;
+  bool ownsReaction() =>
+      isActive() && manager.isSessionCurrent(reactionGeneration);
+
+  if (!context.mounted ||
+      !canOpenCamera() ||
+      !ownsReaction() ||
+      manager.clips.isNotEmpty) {
     return;
   }
   final reaction = LibraryReactionCubit(
@@ -242,7 +256,8 @@ Future<void> recordLibraryReaction(
     required double cellAspectRatio,
     required int maxClips,
   }) async {
-    final generation = manager.sessionGeneration;
+    if (!ownsReaction()) return null;
+    final generation = reactionGeneration;
     final initialIds = manager.clips.map((clip) => clip.id).toSet();
     // Keep the original account's stores even when this route has left.
     final library = ref.read(clipLibraryServiceProvider);
@@ -316,6 +331,10 @@ Future<void> recordLibraryReaction(
         takeIds,
         generation: generation,
       );
+      if (removed.isNotEmpty) {
+        // A cancelled nested take leaves its Layout open for another attempt.
+        reactionGeneration = generation + 1;
+      }
       final paths = [
         for (final clip in removed)
           if (!clip.isStopMotion) ...[
@@ -350,7 +369,7 @@ Future<void> recordLibraryReaction(
     // Extraction waits for camera processing and its enriched library save.
     // Even a cancelled take stays in the library, outside this timeline.
     final takes =
-        isActive() &&
+        ownsReaction() &&
             cameraContext.mounted &&
             ModalRoute.of(cameraContext)?.isCurrent != false
         ? await withProgress(
@@ -362,7 +381,7 @@ Future<void> recordLibraryReaction(
     if (takes == null) {
       if (retentionFailed) abandon();
       if (cameraContext.mounted &&
-          isActive() &&
+          ownsReaction() &&
           ModalRoute.of(cameraContext)?.isCurrent != false) {
         ScaffoldMessenger.of(cameraContext).showSnackBar(
           DivineSnackbarContainer.snackBar(
@@ -373,7 +392,7 @@ Future<void> recordLibraryReaction(
       }
       return null;
     }
-    if (!isActive() || result != true || takes.isEmpty) return null;
+    if (!ownsReaction() || result != true || takes.isEmpty) return null;
     if (analytics.activeRecorderMode(analyticsSession) case final mode?) {
       unawaited(
         analytics.recordingCompleted(
@@ -419,13 +438,14 @@ Future<void> recordLibraryReaction(
     required double cellAspectRatio,
     required int maxClips,
   }) async {
+    if (!ownsReaction()) return null;
     final takes = await capture(
       captureContext,
       cellAspectRatio: cellAspectRatio,
       maxClips: maxClips,
     );
     if (!captureContext.mounted ||
-        !isActive() ||
+        !ownsReaction() ||
         ModalRoute.of(captureContext)?.isCurrent == false ||
         takes == null ||
         takes.isEmpty) {
@@ -439,7 +459,7 @@ Future<void> recordLibraryReaction(
       () => reaction.combine(takes),
     );
     if (!captureContext.mounted ||
-        !isActive() ||
+        !ownsReaction() ||
         ModalRoute.of(captureContext)?.isCurrent == false) {
       return null;
     }
@@ -462,7 +482,7 @@ Future<void> recordLibraryReaction(
       maxClips: 1,
     );
     if (!context.mounted ||
-        !isActive() ||
+        !ownsReaction() ||
         takes == null ||
         takes.isEmpty ||
         ModalRoute.of(context)?.isCurrent == false) {
@@ -483,7 +503,7 @@ Future<void> recordLibraryReaction(
             ));
     if (result == null) return;
     if (!context.mounted ||
-        !isActive() ||
+        !ownsReaction() ||
         ModalRoute.of(context)?.isCurrent == false) {
       await reaction.cleanupFiles(
         result.ownedFilePaths.whereType<String>().toList(),
@@ -495,7 +515,7 @@ Future<void> recordLibraryReaction(
     // be replaced by another session, just as the camera keeps every take.
     final saved = await manager.saveClipToLibrary(result);
     if (!context.mounted ||
-        !isActive() ||
+        !ownsReaction() ||
         ModalRoute.of(context)?.isCurrent == false) {
       await reaction.cleanupFiles(
         result.ownedFilePaths.whereType<String>().toList(),
@@ -507,7 +527,7 @@ Future<void> recordLibraryReaction(
         result.ownedFilePaths.whereType<String>().toList(),
       );
       if (context.mounted &&
-          isActive() &&
+          ownsReaction() &&
           ModalRoute.of(context)?.isCurrent != false) {
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
