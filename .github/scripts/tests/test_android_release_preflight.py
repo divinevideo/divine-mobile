@@ -1,18 +1,36 @@
 """Exercise the release workflow's evidence collector and real shared allocator."""
+
 import json
 import os
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
+from xml.etree import ElementTree
 
 from release_train_fakes import MemoryLedgerStore
-from release_train.ledger import BOOTSTRAP_PATH
+
+# isort: split
 import allocate_build_identity
 import release_identity
+from release_train.ledger import BOOTSTRAP_PATH
 
 SHA = 'a' * 40
+
+
+class AndroidManifestTest(unittest.TestCase):
+    def test_portrait_orientation_does_not_filter_play_devices(self):
+        root = Path(__file__).resolve().parents[3]
+        path = root / 'mobile/android/app/src/main/AndroidManifest.xml'
+        manifest = ElementTree.parse(path).getroot()
+        android = '{http://schemas.android.com/apk/res/android}'
+        features = [
+            feature.get(android + 'required')
+            for feature in manifest.findall('uses-feature')
+            if feature.get(android + 'name') == 'android.hardware.screen.portrait'
+        ]
+        self.assertEqual(features, ['false'])
 
 
 class AndroidReleasePreflightTest(unittest.TestCase):
