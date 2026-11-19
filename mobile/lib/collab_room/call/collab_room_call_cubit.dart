@@ -7,6 +7,8 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/collab_room/call/collab_room_call.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Where this device is in the call.
 enum CollabRoomCallStatus {
@@ -104,11 +106,25 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
         others: state.others,
         callKey: _callKey,
       );
-      _changes = call.changes.listen((snapshot) {
-        if (identical(_call, call)) {
-          emitIfOpen(state.copyWith(call: snapshot));
-        }
-      });
+      _changes = call.changes.listen(
+        (snapshot) {
+          if (identical(_call, call)) {
+            emitIfOpen(state.copyWith(call: snapshot));
+          }
+        },
+        // The call gave up on its own, say once the relays stopped carrying
+        // it: hang up and say so, rather than show a call nobody can hear.
+        onError: (Object error, StackTrace stackTrace) {
+          if (!identical(_call, call) || _closing) return;
+          addError(error, stackTrace);
+          runDetached(
+            _fail(),
+            'hang up a collab room call that failed',
+            logName: 'CollabRoomCallCubit',
+            category: LogCategory.video,
+          );
+        },
+      );
       await call.start();
       if (identical(_call, call)) {
         emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joined));
@@ -186,6 +202,11 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     }
     emitIfOpen(state.copyWith(others: others));
     _call?.updateOthers(others);
+  }
+
+  Future<void> _fail() async {
+    await _hangUp();
+    emitIfOpen(state.copyWith(status: CollabRoomCallStatus.failed));
   }
 
   Future<void> _hangUp() {

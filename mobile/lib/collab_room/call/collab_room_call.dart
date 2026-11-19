@@ -155,6 +155,12 @@ abstract interface class CollabRoomCall {
   Future<void> stop();
 }
 
+/// Opens one WebRTC connection with [configuration]: [createPeerConnection]
+/// in the app, a stand-in in tests.
+typedef CollabRoomPeerConnectionFactory = Future<RTCPeerConnection> Function(
+  Map<String, dynamic> configuration,
+);
+
 /// Creates the call of a room for [me] with [others].
 typedef CollabRoomCallFactory = CollabRoomCall Function({
   required String me,
@@ -177,7 +183,19 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     required String callKey,
     required NostrSigner accountSigner,
     required CollabRoomCallTransport transport,
+    CollabRoomPeerConnectionFactory createConnection = _createPeerConnection,
+    Duration gatherTimeout = const Duration(seconds: 3),
+    Duration answerTimeout = const Duration(seconds: 8),
+    List<Duration> relayRetryDelays = const [
+      Duration(seconds: 2),
+      Duration(seconds: 5),
+      Duration(seconds: 15),
+    ],
   }) : _me = me,
+       _createConnection = createConnection,
+       _gatherTimeout = gatherTimeout,
+       _answerTimeout = answerTimeout,
+       _relayRetryDelays = relayRetryDelays,
        _others = {...others},
        _channel = CollabRoomCallChannel(
          callKey,
@@ -186,6 +204,10 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
        ),
        _transport = transport,
        _session = _newSession();
+
+  static Future<RTCPeerConnection> _createPeerConnection(
+    Map<String, dynamic> configuration,
+  ) => createPeerConnection(configuration);
 
   static String _newSession() {
     final random = Random.secure();
@@ -204,20 +226,43 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   };
 
   /// How long to wait for the network paths before sending what was found.
-  static const _gatherTimeout = Duration(seconds: 3);
+  final Duration _gatherTimeout;
 
   /// How long to keep gathering once a path through the internet is found.
   static const _candidateGrace = Duration(milliseconds: 250);
+
+  /// How long an offer waits for its answer before it is made again. The
+  /// relays can lose either message, and nothing else would ever ask again:
+  /// the pair would wait until someone left and came back.
+  final Duration _answerTimeout;
+
+  /// How often a pair sets its connection up again before giving up.
+  static const _maxRetries = 2;
+
+  /// How long to wait before listening again, by attempt, once the relays
+  /// closed the call's subscription. Past the last, the call has failed.
+  final List<Duration> _relayRetryDelays;
+
+  /// How far back a renewed subscription reads, for what was sent while it
+  /// was down.
+  static const _relayLookBack = 30;
 
   final String _me;
   final Set<String> _others;
   final CollabRoomCallChannel _channel;
   final CollabRoomCallTransport _transport;
+  final CollabRoomPeerConnectionFactory _createConnection;
   final String _session;
   final _changes = StreamController<CollabRoomCallSnapshot>.broadcast();
   final _peers = <String, _Peer>{};
 
   StreamSubscription<Event>? _subscription;
+
+  /// Brings the subscription back after the relays closed it.
+  Timer? _relayRetry;
+
+  /// Closed subscriptions in a row with nothing new heard in between.
+  int _relayFailures = 0;
   MediaStream? _audio;
   MediaStream? _video;
   Future<void>? _openingAudio;
@@ -249,12 +294,44 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     if (_stopped) return;
     await _device(() => Helper.setSpeakerphoneOn(true));
     if (_stopped) return;
-    final since = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 5;
-    _subscription = _transport
-        .watch(_channel.pubkey, since: since)
-        .listen(_onEvent, onError: _onTransportError);
+    _listen(since: _nowSeconds() - 5);
     await _hello();
     _emit();
+  }
+
+  static int _nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+  void _listen({required int since}) {
+    _subscription = _transport
+        .watch(_channel.pubkey, since: since)
+        .listen(_onEvent, onError: _onTransportError, onDone: _onTransportDone);
+  }
+
+  /// The relays closed the subscription, say because every one refused it:
+  /// listen again a little later, and give the call up after a few tries in
+  /// a row, so it never shows as joined while it hears nobody.
+  void _onTransportDone() {
+    if (_stopped) return;
+    if (_relayFailures >= _relayRetryDelays.length) {
+      Log.warning(
+        'Call messages stopped for good',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      if (!_changes.isClosed) {
+        _changes.addError(
+          const CollabRoomCallException('The relays stopped carrying the call'),
+        );
+      }
+      return;
+    }
+    _relayRetry = Timer(_relayRetryDelays[_relayFailures++], () {
+      if (_stopped) return;
+      _listen(since: _nowSeconds() - _relayLookBack);
+      // Whoever joined or answered meanwhile was not heard: say hello again,
+      // so each pair still waiting sets up anew.
+      _enqueue(_hello);
+    });
   }
 
   Future<void> _openAudio() async {
@@ -370,6 +447,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    _relayRetry?.cancel();
     final hadSubscription = _subscription != null;
     await _subscription?.cancel();
     final audio = _audio;
@@ -420,6 +498,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   void _onEvent(Event event) {
     if (!_seen.add(event.id)) return;
+    _relayFailures = 0;
     _enqueue(() async {
       final signal = await _channel.open(event, others: _others);
       if (_stopped || signal == null || !signal.isFor(_me)) return;
@@ -537,6 +616,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
                 RTCSignalingState.RTCSignalingStateHaveLocalOffer) {
           return;
         }
+        peer.answerWait?.cancel();
         await connection.setRemoteDescription(
           RTCSessionDescription(signal.sdp, 'answer'),
         );
@@ -563,7 +643,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   }
 
   Future<RTCPeerConnection> _connection(_Peer peer) async {
-    final connection = await createPeerConnection(_iceServers);
+    final connection = await _createConnection(_iceServers);
     // Taken out of the call meanwhile, perhaps back already as a new peer:
     // a connection kept on the old one would never be closed.
     if (_stopped || !identical(_peers[peer.pubkey], peer)) {
@@ -583,7 +663,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
             state == RTCPeerConnectionState.RTCPeerConnectionStateConnected;
         if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed &&
             collabRoomCallOffers(_me, peer.pubkey) &&
-            peer.retries < 2) {
+            peer.retries < _maxRetries) {
           peer.retries++;
           _enqueue(() async {
             if (!identical(peer.connection, connection)) return;
@@ -630,6 +710,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     await connection.setLocalDescription(await connection.createOffer());
     final offer = await gathered;
     if (offer?.sdp == null) return;
+    // Armed before sending, so an offer the relays turned down is made again
+    // too.
+    _awaitAnswer(peer, connection);
     await _send(
       CollabRoomCallSignal(
         type: CollabRoomCallSignalType.offer,
@@ -679,6 +762,30 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     );
   }
 
+  /// Makes the offer on [connection] again if its answer has not come in
+  /// [_answerTimeout], within the pair's retries.
+  void _awaitAnswer(_Peer peer, RTCPeerConnection connection) {
+    peer.answerWait?.cancel();
+    peer.answerWait = Timer(_answerTimeout, () {
+      _enqueue(() async {
+        if (!identical(peer.connection, connection) ||
+            connection.signalingState !=
+                RTCSignalingState.RTCSignalingStateHaveLocalOffer ||
+            peer.retries >= _maxRetries) {
+          return;
+        }
+        peer.retries++;
+        Log.info(
+          'No call answer from ${pubkeyForLogs(peer.pubkey)}: offering again',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        await _resetPeer(peer, keepRetries: true);
+        await _offer(peer);
+      });
+    });
+  }
+
   /// The local description once the network paths worth sending are found.
   ///
   /// Every path goes inside the offer or answer, so this waits for them, but
@@ -715,7 +822,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   Future<void> _resetPeer(_Peer peer, {bool keepRetries = false}) async {
     final connection = peer.connection;
     final stream = peer.stream;
+    peer.answerWait?.cancel();
     peer
+      ..answerWait = null
       ..connection = null
       ..videoSender = null
       ..stream = null
@@ -836,6 +945,9 @@ class _Peer {
   /// When [session] first spoke, in the peer's Unix seconds.
   int sessionSince = 0;
   RTCPeerConnection? connection;
+
+  /// Makes the offer again when its answer does not come.
+  Timer? answerWait;
   RTCRtpSender? videoSender;
   MediaStream? stream;
   bool connected = false;

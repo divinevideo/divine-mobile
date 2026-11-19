@@ -111,6 +111,23 @@ void main() {
     );
 
     blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'hangs up and says so when the call gives up on its own',
+      build: build,
+      act: (cubit) async {
+        await cubit.join();
+        call.controller.addError(
+          const CollabRoomCallException('The relays stopped carrying the call'),
+        );
+        await pumpEventQueue();
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, CollabRoomCallStatus.failed);
+        expect(call.log, ['start', 'stop']);
+      },
+      errors: () => [isA<CollabRoomCallException>()],
+    );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
       'mutes and turns the camera on',
       build: build,
       act: (cubit) async {
