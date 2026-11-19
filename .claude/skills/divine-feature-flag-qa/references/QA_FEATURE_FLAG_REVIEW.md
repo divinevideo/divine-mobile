@@ -1,6 +1,6 @@
 # QA brief: decide what Divine should release, fix, keep controlled, or retire
 
-Snapshot prepared 2026-11-19. Refresh inventories, deployment checks, and linked PR/issue states for the actual review target; historical blockers below are not current assertions.
+Snapshot prepared 2026-11-19. Refresh inventories, deployment checks, and linked PR/issue states for the actual review target; historical blockers below are not current assertions. Links into divine-funnelcake and divine-context need Divine organization access.
 
 ## Assignment
 
