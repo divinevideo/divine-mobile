@@ -439,6 +439,39 @@ void main() {
       },
     );
 
+    test('keeps the short video when a normal video shares its d tag', () {
+      const pubkey =
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      final tags = [
+        ['d', 'shared-video'],
+        ['url', 'https://example.com/video.mp4'],
+      ];
+      final short = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        tags,
+        'Short video',
+        createdAt: 1000,
+      );
+      service.handleEventForTesting(short, SubscriptionType.discovery);
+      final normal = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableNormalVideo,
+        tags,
+        'Edited normal video',
+        createdAt: 2000,
+      );
+
+      service.updateVideoEvent(
+        VideoEvent.fromNostrEvent(normal, permissive: true),
+      );
+
+      expect(
+        service.discoveryVideos.map((video) => video.id),
+        contains(short.id),
+      );
+    });
+
     test('notifies update listeners about a video it does not hold', () {
       // A feed fed over REST, such as Home, holds videos this service never
       // saw; it still has to learn that its copy was republished (#11250).

@@ -159,10 +159,13 @@ void main() {
       );
     }
 
-    Event createSignedEvent(List<List<String>> tags) {
+    Event createSignedEvent(
+      List<List<String>> tags, {
+      int kind = NIP71VideoKinds.addressableShortVideo,
+    }) {
       return Event(
         testPubkey,
-        NIP71VideoKinds.getPreferredAddressableKind(),
+        kind,
         tags,
         existingEvent.content,
         createdAt: 1700000001,
@@ -628,7 +631,7 @@ void main() {
           capturedKind = invocation.namedArguments[#kind] as int;
           capturedContent = invocation.namedArguments[#content] as String;
           capturedCreatedAt = invocation.namedArguments[#createdAt] as int;
-          return createSignedEvent(capturedTags);
+          return createSignedEvent(capturedTags, kind: capturedKind);
         });
         when(
           () => mockNostrClient.publishEventAwaitOk(
@@ -800,7 +803,7 @@ void main() {
       test('publishes under the address kind of the video', () async {
         relaysAnswer(LatestVideoRevisionFound(newest(kind: 34235)));
 
-        await publisher.republishWithSubtitles(
+        final result = await publisher.republishWithSubtitles(
           existingEvent: existingEvent.copyWith(eventKind: 34235),
           textTrackRef: textTrackRef,
         );
@@ -811,6 +814,8 @@ void main() {
           ),
         ).called(1);
         expect(capturedKind, 34235);
+        expect(result?.eventKind, 34235);
+        verify(() => mockVideoEventService.updateVideoEvent(result!)).called(1);
       });
 
       for (final (name, revision) in [

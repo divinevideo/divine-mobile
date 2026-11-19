@@ -1209,7 +1209,7 @@ class VideoEventPublisher {
         EventPublishOutcome.published;
     if (!published) return null;
 
-    final updatedVideo = VideoEvent.fromNostrEvent(event);
+    final updatedVideo = VideoEvent.fromNostrEvent(event, permissive: true);
 
     try {
       _personalEventCache?.cacheUserEvent(event);

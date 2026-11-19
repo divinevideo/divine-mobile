@@ -529,7 +529,10 @@ class VideoMetadataUpdateService {
 
       _personalEventCache.cacheUserEvent(event);
 
-      final updatedVideoEvent = VideoEvent.fromNostrEvent(event);
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(
+        event,
+        permissive: true,
+      );
       _videoEventService.updateVideoEvent(updatedVideoEvent);
 
       final inviteFailureCount = await _sendCollaboratorInvites(

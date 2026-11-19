@@ -121,7 +121,7 @@ void main() {
       capturedCreatedAt = invocation.namedArguments[#createdAt] as int? ?? 0;
       return Event(
         _ownerPubkey,
-        NIP71VideoKinds.addressableShortVideo,
+        invocation.namedArguments[#kind] as int,
         capturedTags,
         invocation.namedArguments[#content] as String,
         createdAt: capturedCreatedAt,
@@ -1145,12 +1145,31 @@ void main() {
           eventKind: NIP71VideoKinds.addressableNormalVideo,
         );
 
-        await service.updateVideo(
+        final result = await service.updateVideo(
           originalVideo: opened,
           editorState: editorStateFromPublishedVideo(opened),
           initialCollaboratorPubkeys: const {},
         );
 
+        expect(
+          result,
+          isA<VideoUpdateSuccess>().having(
+            (success) => success.updatedEvent.eventKind,
+            'updated video kind',
+            NIP71VideoKinds.addressableNormalVideo,
+          ),
+        );
+        verify(
+          () => mockVideoEventService.updateVideoEvent(
+            any(
+              that: isA<VideoEvent>().having(
+                (video) => video.eventKind,
+                'event kind',
+                34235,
+              ),
+            ),
+          ),
+        ).called(1);
         verify(
           () => mockVideosRepository.fetchLatestVideoRevision(
             '34235:$_ownerPubkey:video-d-tag',
