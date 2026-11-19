@@ -18,6 +18,7 @@ import 'package:divine_camera/divine_camera.dart'
         DivineVideoStabilizationMode,
         PhotoCaptureResult,
         RemoteRecorderState,
+        RemoteRecordTrigger,
         VideoRecordingResult;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, VideoClip;
@@ -433,6 +434,7 @@ class VideoRecorderBloc
   Object? _publishedRemoteRecorder;
   bool _remotePreviewReady = true;
   int _lifecycleRevision = 0;
+  bool _previewResumeFailed = false;
 
   /// How long the zoom ruler stays visible after the last pinch activity
   /// before the auto-hide timer clears it.
@@ -546,6 +548,7 @@ class VideoRecorderBloc
     VideoRecorderInitializeRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final lifecycleRevision = _lifecycleRevision;
     // Re-initialization marks the end of any navigation teardown, so release
     // the navigation recording lock up front — this covers the camera-init
     // error returns below too, which previously left the recorder locked until
@@ -729,6 +732,13 @@ class VideoRecorderBloc
     }
 
     await _setupRemoteRecordControl();
+    if (_previewResumeFailed &&
+        lifecycleRevision == _lifecycleRevision &&
+        !_isClosing) {
+      _previewResumeFailed = false;
+      _remotePreviewReady = true;
+      _syncRemoteRecorder(state);
+    }
 
     Log.info(
       '✅ Video recorder initialized successfully',
@@ -751,6 +761,7 @@ class VideoRecorderBloc
     Emitter<VideoRecorderBlocState> emit,
   ) async {
     final revision = ++_lifecycleRevision;
+    _previewResumeFailed = false;
     final resumed = event.state == AppLifecycleState.resumed;
     // Upload intentionally keeps the preview paused. Track the foreground
     // transition anyway so switching back to a capture tab enables the remote.
@@ -773,6 +784,7 @@ class VideoRecorderBloc
       );
       addError(e, stackTrace);
       if (!resumed || revision != _lifecycleRevision || _isClosing) return;
+      _previewResumeFailed = true;
       // A camera that does not come back would leave a black preview. Show
       // the initialization error instead; the next initialize (leaving and
       // returning to the Upload tab, or reopening the recorder) recovers.
@@ -1104,10 +1116,10 @@ class VideoRecorderBloc
     }
   }
 
-  Future<void> _onRecordingToggleRequested(
+  void _onRecordingToggleRequested(
     VideoRecorderRecordingToggleRequested event,
     Emitter<VideoRecorderBlocState> emit,
-  ) async {
+  ) {
     if (_cameraService.isSwitchingCamera) {
       Log.debug(
         '🎮 toggleRecording ignored - camera switch in progress',
@@ -3345,7 +3357,31 @@ class VideoRecorderBloc
       name: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
-    add(const VideoRecorderRecordingToggleRequested());
+    switch (event.trigger) {
+      case RemoteRecordTrigger.watch:
+        // Older Watch builds cannot identify the displayed action.
+        return;
+      case RemoteRecordTrigger.watchStart:
+        if (!state.isCameraInitialized ||
+            state.isShutterActive ||
+            state.hasRecordingInFlight ||
+            state.recordingState != VideoRecorderState.idle) {
+          return;
+        }
+      case RemoteRecordTrigger.watchStop:
+        if (!state.isCameraInitialized ||
+            !state.isShutterActive ||
+            state.isStoppingRecording)
+          return;
+      case RemoteRecordTrigger.volumeUp:
+      case RemoteRecordTrigger.volumeDown:
+      case RemoteRecordTrigger.bluetooth:
+        break;
+    }
+    _onRecordingToggleRequested(
+      const VideoRecorderRecordingToggleRequested(),
+      emit,
+    );
   }
 
   Future<void> _onAutoStopped(
@@ -3386,9 +3422,9 @@ class VideoRecorderBloc
   }
 
   Future<void> _setupRemoteRecordControl() async {
-    _cameraService.setOnRemoteRecordTrigger(() {
+    _cameraService.setOnRemoteRecordTrigger((trigger) {
       if (isClosed) return;
-      add(const _VideoRecorderRemoteRecordTriggered());
+      add(_VideoRecorderRemoteRecordTriggered(trigger));
     });
 
     final success = await _cameraService.setRemoteRecordControlEnabled(

@@ -548,7 +548,9 @@ final class _VideoRecorderCameraStateChanged extends VideoRecorderEvent {
 /// Bluetooth media key). Dispatched from the
 /// `CameraService.setOnRemoteRecordTrigger` callback.
 final class _VideoRecorderRemoteRecordTriggered extends VideoRecorderEvent {
-  const _VideoRecorderRemoteRecordTriggered();
+  const _VideoRecorderRemoteRecordTriggered(this.trigger);
+
+  final RemoteRecordTrigger trigger;
 }
 
 /// Internal event: the camera auto-stopped recording on its own, without a

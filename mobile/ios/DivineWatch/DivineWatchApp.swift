@@ -12,7 +12,7 @@ struct DivineWatchApp: App {
     WindowGroup {
       RemoteShutterView(
         recorder: phone.recorder,
-        isPhoneReachable: phone.isPhoneReachable,
+        isPhoneReachable: phone.isPhoneReachable && !phone.isShutterPending,
         onToggleRecording: { phone.toggleRecording() }
       )
       .onReceive(phone.deliveryFailures) {

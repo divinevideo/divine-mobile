@@ -15,11 +15,15 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     enum Wire {
         static let available = "available"
         static let command = "command"
-        static let toggleRecording = "toggleRecording"
+    }
+
+    enum Action: String {
+        case start = "watchStart"
+        case stop = "watchStop"
     }
 
     private let session: WCSession?
-    private let onToggleRecording: () -> Void
+    private let onShutterAction: (Action) -> Void
     private let onWatchRemoteChanged: ([String: Any]?) -> Void
     private let onWatchAppChanged: (Bool) -> Void
 
@@ -31,7 +35,7 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     private var payload: [String: Any] = [Wire.available: false]
 
     /// - Parameters:
-    ///   - onToggleRecording: Called on the main queue when the Watch's
+    ///   - onShutterAction: Called on the main queue when the Watch's
     ///     shutter is tapped.
     ///   - onWatchRemoteChanged: Called on the main queue with the recorder
     ///     state a Watch remote can show, or `nil` when the recorder is closed
@@ -39,12 +43,12 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     ///   - onWatchAppChanged: Called on the main queue when a paired Watch
     ///     gains or loses the Watch app.
     init(
-        onToggleRecording: @escaping () -> Void,
+        onShutterAction: @escaping (Action) -> Void,
         onWatchRemoteChanged: @escaping ([String: Any]?) -> Void,
         onWatchAppChanged: @escaping (Bool) -> Void
     ) {
         self.session = WCSession.isSupported() ? WCSession.default : nil
-        self.onToggleRecording = onToggleRecording
+        self.onShutterAction = onShutterAction
         self.onWatchRemoteChanged = onWatchRemoteChanged
         self.onWatchAppChanged = onWatchAppChanged
         super.init()
@@ -90,9 +94,10 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     }
 
     private func handle(message: [String: Any]) {
-        guard message[Wire.command] as? String == Wire.toggleRecording else { return }
+        guard let command = message[Wire.command] as? String,
+              let action = Action(rawValue: command) else { return }
         DispatchQueue.main.async { [weak self] in
-            self?.onToggleRecording()
+            self?.onShutterAction(action)
         }
     }
 
