@@ -109,10 +109,13 @@ PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
     settings: const RouteSettings(name: 'video_recorder'),
     barrierDismissible: true,
     barrierColor: VineTheme.transparent,
+    pageBuilder: (_, _, _) => recorder,
     // The camera records in portrait, even over an editor turned sideways.
-    pageBuilder: (_, _, _) => PortraitOrientationLock(child: recorder),
+    // Locked around the transition, so the page stays the recorder itself.
     transitionsBuilder: (_, animation, _, child) {
-      return FadeTransition(opacity: animation, child: child);
+      return PortraitOrientationLock(
+        child: FadeTransition(opacity: animation, child: child),
+      );
     },
   );
 }
