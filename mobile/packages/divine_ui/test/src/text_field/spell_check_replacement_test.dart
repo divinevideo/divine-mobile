@@ -142,6 +142,22 @@ void main() {
       expect(controller.text, 'hello wrld');
     }, variant: const TargetPlatformVariant({TargetPlatform.iOS}));
 
+    testWidgets('does not offer a suggestion whose range overruns the text', (
+      tester,
+    ) async {
+      final controller = TextEditingController.fromValue(
+        const TextEditingValue(
+          text: 'hello wrld',
+          selection: TextSelection.collapsed(offset: 8),
+        ),
+      );
+      final state = await pumpField(tester, controller);
+      state.spellCheckResults = const SpellCheckResults('hello wrld', [
+        SuggestionSpan(TextRange(start: 6, end: 12), ['world']),
+      ]);
+      expect(toolbar(state).buttonItems, isEmpty);
+    }, variant: const TargetPlatformVariant({TargetPlatform.iOS}));
+
     testWidgets('does not offer delayed results for older text', (
       tester,
     ) async {
