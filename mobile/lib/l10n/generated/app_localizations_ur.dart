@@ -4954,7 +4954,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navProfile => 'پروفائل';
 
   @override
-  String get navProfileLongPressHint => 'بگ کی رپورٹ کریں';
+  String get navProfileLongPressHint => 'بگ کی رپورٹ کرنے';
 
   @override
   String get navMyProfile => 'میرا پروفائل';

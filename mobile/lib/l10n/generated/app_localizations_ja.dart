@@ -4647,7 +4647,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navProfile => 'プロフィール';
 
   @override
-  String get navProfileLongPressHint => 'バグを報告';
+  String get navProfileLongPressHint => 'バグを報告する';
 
   @override
   String get navMyProfile => 'マイプロフィール';

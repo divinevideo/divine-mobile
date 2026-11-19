@@ -5009,7 +5009,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
-  String get navProfileLongPressHint => 'Bug melden';
+  String get navProfileLongPressHint => 'Melden eines Bugs';
 
   @override
   String get navMyProfile => 'Mein Profil';

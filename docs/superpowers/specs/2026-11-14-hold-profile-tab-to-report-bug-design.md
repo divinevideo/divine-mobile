@@ -176,9 +176,7 @@ have to move.
 
 ### Strings (`mobile/lib/l10n/app_*.arb`, 23 locales)
 
-- New: the TalkBack hint fragment that completes "Double-tap and hold to …"
-  (a sentence-case verb phrase, e.g. "Report a bug", capitalised like
-  `inboxConversationTileLongPressHint`).
+- New: the action fragment inserted into [TalkBack's localized long-press hint](https://github.com/google/talkback/tree/master/talkback/src/main/res). Use the grammatical form the locale's template requires.
 - New: the tip line. The Profile tab shows the user's avatar and no word, so
   the copy must describe it ("your profile picture in the bottom bar"), not
   "the Profile tab". It must also stay true for people who cannot see the bar

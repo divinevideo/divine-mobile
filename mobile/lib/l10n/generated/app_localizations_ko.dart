@@ -4664,7 +4664,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navProfile => '프로필';
 
   @override
-  String get navProfileLongPressHint => '버그 신고하기';
+  String get navProfileLongPressHint => '버그 신고';
 
   @override
   String get navMyProfile => '내 프로필';

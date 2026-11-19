@@ -377,11 +377,11 @@ In `app_en.arb`, insert directly after `navProfile`:
 ```json
 "navProfileLongPressHint": "Report a bug",
 "@navProfileLongPressHint": {
-  "description": "TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a verb phrase completing Android's 'Double-tap and hold to …', in the register mobile/docs/LOCALIZATION_STYLE_GUIDE.md sets for the locale."
+  "description": "TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a fragment that fits TalkBack's localized long-press hint (English: 'Double-tap and hold to …'). Follow the locale's register in mobile/docs/LOCALIZATION_STYLE_GUIDE.md."
 },
 ```
 
-Mirror it into the other 22 locales, in the register `mobile/docs/LOCALIZATION_STYLE_GUIDE.md` sets for each locale rather than another key's form (`inboxConversationTileLongPressHint` is familiar in `am` and `te`, where the guide asks for the polite form). Then run `mise exec -- flutter gen-l10n`.
+Mirror it into the other 22 locales. Use the grammatical form required by each [TalkBack hint template](https://github.com/google/talkback/tree/master/talkback/src/main/res) and follow the app's localization style guide. Then run `mise exec -- flutter gen-l10n`.
 
 - [ ] **Step 2: Write the failing tests**
 

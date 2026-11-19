@@ -5088,7 +5088,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
-  String get navProfileLongPressHint => 'Raportează un bug';
+  String get navProfileLongPressHint => 'raportarea unui bug';
 
   @override
   String get navMyProfile => 'Profilul meu';

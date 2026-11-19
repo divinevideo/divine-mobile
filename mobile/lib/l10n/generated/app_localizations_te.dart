@@ -5113,7 +5113,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navProfile => 'ప్రొఫైల్';
 
   @override
-  String get navProfileLongPressHint => 'బగ్‌ను నివేదించండి';
+  String get navProfileLongPressHint => 'బగ్‌ను నివేదించడం';
 
   @override
   String get navMyProfile => 'నా ప్రొఫైల్';

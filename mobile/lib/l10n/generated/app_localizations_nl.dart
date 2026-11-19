@@ -4962,7 +4962,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get navProfile => 'Profiel';
 
   @override
-  String get navProfileLongPressHint => 'Bug melden';
+  String get navProfileLongPressHint => 'melden dat er een bug is';
 
   @override
   String get navMyProfile => 'Mijn profiel';

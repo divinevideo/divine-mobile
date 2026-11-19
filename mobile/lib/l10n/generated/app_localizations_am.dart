@@ -4826,7 +4826,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navProfile => 'መገለጫ';
 
   @override
-  String get navProfileLongPressHint => 'ሳንካ ሪፖርት ያድርጉ';
+  String get navProfileLongPressHint => 'ሳንካ ሪፖርት';
 
   @override
   String get navMyProfile => 'የእኔ መገለጫ';
