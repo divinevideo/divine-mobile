@@ -6534,7 +6534,6 @@
   "collabRoomCallFailed": "تعذّر بدء المكالمة. يُرجى التحقق من السماح لـ Divine باستخدام الميكروفون.",
   "collabRoomCallUnreachable": "تعذّر الوصول إلى الآخرين. يُرجى التحقق من الاتصال والمحاولة مجددًا.",
   "collabRoomCallJoin": "انضم إلى المكالمة",
-  "collabRoomCallLeave": "غادر المكالمة",
   "collabRoomCallCameraFailed": "تعذّر تشغيل الكاميرا.",
   "collabRoomCallMuted": "مكتوم",
   "collabRoomSwapSeatHint": "النقر على مكانين في التخطيط لتبديلهما.",

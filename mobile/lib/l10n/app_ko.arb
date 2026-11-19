@@ -6080,7 +6080,6 @@
   "collabRoomCallFailed": "통화를 시작하지 못했어요. Divine이 마이크를 쓸 수 있는지 확인해 주세요.",
   "collabRoomCallUnreachable": "다른 사람들과 연결하지 못했어요. 연결을 확인하고 다시 해 보세요.",
   "collabRoomCallJoin": "통화 참여",
-  "collabRoomCallLeave": "통화 나가기",
   "collabRoomCallCameraFailed": "카메라를 켜지 못했어요.",
   "collabRoomCallMuted": "음소거됨",
   "collabRoomSwapSeatHint": "레이아웃에서 두 자리를 탭하면 서로 바뀌어요.",

@@ -16703,9 +16703,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get collabRoomCallJoin => 'Sertai panggilan';
 
   @override
-  String get collabRoomCallLeave => 'Keluar panggilan';
-
-  @override
   String get collabRoomCallCameraFailed =>
       'Kamera anda tidak dapat dihidupkan.';
 

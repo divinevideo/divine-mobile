@@ -16301,9 +16301,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomCallJoin => 'ጥሪውን ተቀላቀል';
 
   @override
-  String get collabRoomCallLeave => 'ጥሪውን ልቀቅ';
-
-  @override
   String get collabRoomCallCameraFailed => 'ካሜራዎን ማብራት አልተቻለም።';
 
   @override

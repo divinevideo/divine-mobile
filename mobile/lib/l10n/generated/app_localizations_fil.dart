@@ -16850,9 +16850,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get collabRoomCallJoin => 'Sumali sa call';
 
   @override
-  String get collabRoomCallLeave => 'Umalis sa call';
-
-  @override
   String get collabRoomCallCameraFailed => 'Hindi ma-on ang camera mo.';
 
   @override

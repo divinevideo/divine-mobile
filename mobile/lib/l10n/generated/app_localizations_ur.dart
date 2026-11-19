@@ -16703,9 +16703,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get collabRoomCallJoin => 'کال میں شامل ہوں';
 
   @override
-  String get collabRoomCallLeave => 'کال چھوڑیں';
-
-  @override
   String get collabRoomCallCameraFailed => 'آپ کا کیمرہ آن نہیں ہو سکا۔';
 
   @override

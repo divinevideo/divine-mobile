@@ -17082,9 +17082,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get collabRoomCallJoin => 'కాల్‌లో చేరండి';
 
   @override
-  String get collabRoomCallLeave => 'కాల్ నుండి వెళ్లండి';
-
-  @override
   String get collabRoomCallCameraFailed => 'మీ కెమెరా ఆన్ చేయలేకపోయాం.';
 
   @override

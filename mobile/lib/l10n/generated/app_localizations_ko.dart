@@ -15943,9 +15943,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomCallJoin => '통화 참여';
 
   @override
-  String get collabRoomCallLeave => '통화 나가기';
-
-  @override
   String get collabRoomCallCameraFailed => '카메라를 켜지 못했어요.';
 
   @override

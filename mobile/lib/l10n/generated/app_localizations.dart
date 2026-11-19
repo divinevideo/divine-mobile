@@ -27939,12 +27939,6 @@ abstract class AppLocalizations {
   /// **'Join the call'**
   String get collabRoomCallJoin;
 
-  /// Button in the editor that leaves the Together room's voice call while editing your part.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave the call'**
-  String get collabRoomCallLeave;
-
   /// Shown when the camera for a Together room's call could not be opened.
   ///
   /// In en, this message translates to:

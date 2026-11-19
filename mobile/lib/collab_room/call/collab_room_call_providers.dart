@@ -121,10 +121,19 @@ CollabRoomCallId? collabRoomPartCallId(CollabRoomPartContext? part) {
   return (roomId: part.roomId, callKey: callKey, me: me);
 }
 
-/// Leaves the call of the part being filmed, if the editor joined it, so the
-/// camera can take the microphone back.
-Future<void> leaveCollabRoomPartCall(WidgetRef ref) async {
+/// Steps the call of the part being filmed aside, so the camera or the
+/// voice-over recorder can take the microphone.
+Future<void> stepAsideCollabRoomPartCall(WidgetRef ref) async {
   final id = collabRoomPartCallId(ref.read(collabRoomPartProvider));
-  if (id == null) return;
-  await ref.read(collabRoomCallProvider(id)).leave();
+  if (id == null || !ref.exists(collabRoomCallProvider(id))) return;
+  await ref.read(collabRoomCallProvider(id)).stepAside();
+}
+
+/// Brings the call of the part being edited back once the microphone is free
+/// again. A room whose screen holds no call has nobody to talk to: nothing
+/// happens then.
+Future<void> comeBackCollabRoomPartCall(WidgetRef ref) async {
+  final id = collabRoomPartCallId(ref.read(collabRoomPartProvider));
+  if (id == null || !ref.exists(collabRoomCallProvider(id))) return;
+  await ref.read(collabRoomCallProvider(id)).comeBack();
 }

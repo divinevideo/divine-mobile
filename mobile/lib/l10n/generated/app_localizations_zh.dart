@@ -15731,9 +15731,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomCallJoin => '加入通话';
 
   @override
-  String get collabRoomCallLeave => '离开通话';
-
-  @override
   String get collabRoomCallCameraFailed => '无法打开你的摄像头。';
 
   @override

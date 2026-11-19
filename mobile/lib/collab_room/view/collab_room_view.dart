@@ -837,17 +837,19 @@ class _Actions extends ConsumerWidget {
     await navigator.maybePop();
   }
 
-  /// Films the part with the call paused: the camera and microphone belong
-  /// to the recorder meanwhile. Someone can choose to rejoin in the editor.
+  /// Films the part with the call stepped aside: the camera and microphone
+  /// belong to the recorder meanwhile. The editor brings the call back, and
+  /// so does the room once the part is done.
   Future<void> _filmPart(
     BuildContext context,
     WidgetRef ref,
     CollabRoom room,
   ) async {
     final call = context.read<CollabRoomCallCubit?>();
-    await call?.leave();
+    await call?.stepAside();
     if (!context.mounted) return;
     await openCollabRoomPartRecorder(context, ref, room);
+    await call?.comeBack();
   }
 
   /// Asks before leaving: only the host can bring someone back.

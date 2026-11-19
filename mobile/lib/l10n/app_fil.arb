@@ -5564,7 +5564,6 @@
   "collabRoomCallFailed": "Hindi masimulan ang call. I-check kung puwedeng gamitin ng Divine ang mic mo.",
   "collabRoomCallUnreachable": "Hindi maabot ang iba. I-check ang connection mo at subukan ulit.",
   "collabRoomCallJoin": "Sumali sa call",
-  "collabRoomCallLeave": "Umalis sa call",
   "collabRoomCallCameraFailed": "Hindi ma-on ang camera mo.",
   "collabRoomCallMuted": "Naka-mute",
   "collabRoomSwapSeatHint": "I-tap ang dalawang puwesto sa layout para pagpalitin sila.",

@@ -16925,9 +16925,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get collabRoomCallJoin => 'Entra nella chiamata';
 
   @override
-  String get collabRoomCallLeave => 'Esci dalla chiamata';
-
-  @override
   String get collabRoomCallCameraFailed =>
       'Impossibile accendere la fotocamera.';
 

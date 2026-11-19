@@ -16749,9 +16749,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collabRoomCallJoin => 'انضم إلى المكالمة';
 
   @override
-  String get collabRoomCallLeave => 'غادر المكالمة';
-
-  @override
   String get collabRoomCallCameraFailed => 'تعذّر تشغيل الكاميرا.';
 
   @override

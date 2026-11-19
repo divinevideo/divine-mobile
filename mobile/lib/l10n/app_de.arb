@@ -6534,7 +6534,6 @@
   "collabRoomCallFailed": "Der Call ließ sich nicht starten. Prüf, ob Divine dein Mikrofon nutzen darf.",
   "collabRoomCallUnreachable": "Die anderen sind nicht erreichbar. Prüf deine Verbindung und versuch's nochmal.",
   "collabRoomCallJoin": "Call beitreten",
-  "collabRoomCallLeave": "Call verlassen",
   "collabRoomCallCameraFailed": "Deine Kamera ließ sich nicht einschalten.",
   "collabRoomCallMuted": "Stumm",
   "collabRoomSwapSeatHint": "Tippe zwei Plätze im Layout an, um sie zu tauschen.",

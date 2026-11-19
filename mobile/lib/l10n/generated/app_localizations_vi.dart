@@ -16650,9 +16650,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get collabRoomCallJoin => 'Tham gia cuộc gọi';
 
   @override
-  String get collabRoomCallLeave => 'Rời cuộc gọi';
-
-  @override
   String get collabRoomCallCameraFailed => 'Không bật được camera của bạn.';
 
   @override

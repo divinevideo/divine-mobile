@@ -6534,7 +6534,6 @@
   "collabRoomCallFailed": "通話を開始できませんでした。Divine がマイクを使えるか確認してください。",
   "collabRoomCallUnreachable": "他の参加者につながりませんでした。接続を確認してもう一度お試しください。",
   "collabRoomCallJoin": "通話に参加",
-  "collabRoomCallLeave": "通話から抜ける",
   "collabRoomCallCameraFailed": "カメラをオンにできませんでした。",
   "collabRoomCallMuted": "ミュート中",
   "collabRoomSwapSeatHint": "レイアウトの2か所をタップすると入れ替わります。",

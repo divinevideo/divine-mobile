@@ -200,9 +200,9 @@ Future<void> _openVideoEditorFromRecorder(
 
   await navigation;
   if (!context.mounted || bloc.isClosed) return;
-  // A room part's editor may have joined the room's call, which holds the
+  // A room part's editor brought the room's call back, which holds the
   // microphone the camera is about to open.
-  await leaveCollabRoomPartCall(ref);
+  await stepAsideCollabRoomPartCall(ref);
   if (!context.mounted || bloc.isClosed) return;
   bloc.add(const VideoRecorderInitializeRequested());
 }

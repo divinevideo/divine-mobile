@@ -16626,9 +16626,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get collabRoomCallJoin => 'Görüşmeye katıl';
 
   @override
-  String get collabRoomCallLeave => 'Görüşmeden çık';
-
-  @override
   String get collabRoomCallCameraFailed => 'Kameran açılamadı.';
 
   @override

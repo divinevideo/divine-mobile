@@ -6534,7 +6534,6 @@
   "collabRoomCallFailed": "Panggilan tidak bisa dimulai. Pastikan Divine boleh memakai mikrofonmu.",
   "collabRoomCallUnreachable": "Tidak bisa terhubung ke yang lain. Cek koneksimu dan coba lagi.",
   "collabRoomCallJoin": "Gabung panggilan",
-  "collabRoomCallLeave": "Keluar dari panggilan",
   "collabRoomCallCameraFailed": "Kameramu tidak bisa dinyalakan.",
   "collabRoomCallMuted": "Dibisukan",
   "collabRoomSwapSeatHint": "Ketuk dua tempat di tata letak untuk menukarnya.",

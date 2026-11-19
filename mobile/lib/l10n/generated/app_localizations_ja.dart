@@ -15924,9 +15924,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomCallJoin => '通話に参加';
 
   @override
-  String get collabRoomCallLeave => '通話から抜ける';
-
-  @override
   String get collabRoomCallCameraFailed => 'カメラをオンにできませんでした。';
 
   @override

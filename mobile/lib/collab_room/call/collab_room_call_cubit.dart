@@ -1,5 +1,5 @@
-// ABOUTME: The room screen's side of a Together call: joining with the
-// ABOUTME: microphone on, muting, the camera, and who is connected
+// ABOUTME: The room screen's side of a Together call: joining on its own,
+// ABOUTME: stepping aside for the camera, muting, and who is connected
 
 import 'dart:async';
 
@@ -37,6 +37,7 @@ class CollabRoomCallState extends Equatable {
     this.status = CollabRoomCallStatus.idle,
     this.call = const CollabRoomCallSnapshot(),
     this.cameraFailed = false,
+    this.steppedAside = false,
   });
 
   /// The other people in the room.
@@ -51,24 +52,35 @@ class CollabRoomCallState extends Equatable {
   /// Whether the camera could not be opened the last time it was asked.
   final bool cameraFailed;
 
+  /// Whether the call is out of the way of the camera or the voice-over
+  /// recorder, which need the microphone: it does not join on its own then.
+  final bool steppedAside;
+
   /// Returns a copy with the given fields replaced.
   CollabRoomCallState copyWith({
     Set<String>? others,
     CollabRoomCallStatus? status,
     CollabRoomCallSnapshot? call,
     bool? cameraFailed,
+    bool? steppedAside,
   }) => CollabRoomCallState(
     others: others ?? this.others,
     status: status ?? this.status,
     call: call ?? this.call,
     cameraFailed: cameraFailed ?? this.cameraFailed,
+    steppedAside: steppedAside ?? this.steppedAside,
   );
 
   @override
-  List<Object?> get props => [others, status, call, cameraFailed];
+  List<Object?> get props => [others, status, call, cameraFailed, steppedAside];
 }
 
 /// Runs this device's side of a room's call.
+///
+/// The call joins on its own as soon as someone else is in the room, so the
+/// people in it can talk without asking for it. It steps aside while the
+/// camera or the voice-over recorder needs the microphone, and comes back
+/// after them; leaving the room leaves the call.
 class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     with CloseGuardedEmit<CollabRoomCallState> {
   /// Creates a cubit for [me] in the call of [callKey] with [others].
@@ -145,8 +157,8 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     }
   }
 
-  /// Leaves the call and releases the microphone and camera, for filming a
-  /// part or leaving the room.
+  /// Leaves the call and releases the microphone and camera, when nobody
+  /// else is left or the room closed.
   Future<void> leave() async {
     await _hangUp();
     emitIfOpen(
@@ -155,6 +167,23 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
         call: const CollabRoomCallSnapshot(),
       ),
     );
+  }
+
+  /// Leaves the call while the camera or the voice-over recorder needs the
+  /// microphone. It does not join on its own until [comeBack].
+  Future<void> stepAside() async {
+    emitIfOpen(state.copyWith(steppedAside: true));
+    await leave();
+  }
+
+  /// Joins again after [stepAside], or after the call failed, once the
+  /// microphone is free.
+  Future<void> comeBack() async {
+    emitIfOpen(state.copyWith(steppedAside: false));
+    // A hang-up still under way would turn the join away.
+    await _stopping;
+    if (isClosed || state.steppedAside) return;
+    await join();
   }
 
   /// Mutes or unmutes the microphone.
@@ -210,6 +239,29 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     }
     emitIfOpen(state.copyWith(others: others));
     _call?.updateOthers(others);
+    // Someone to talk to: join without being asked, unless the call stepped
+    // aside or gave up, which only [comeBack] or the mic button undo.
+    if (state.status == CollabRoomCallStatus.idle &&
+        !state.steppedAside &&
+        others.isNotEmpty) {
+      runDetached(
+        _joinOnOwn(),
+        'join the collab room call',
+        logName: 'CollabRoomCallCubit',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  Future<void> _joinOnOwn() async {
+    // A hang-up still under way would turn the join away.
+    await _stopping;
+    if (isClosed ||
+        state.steppedAside ||
+        state.status != CollabRoomCallStatus.idle) {
+      return;
+    }
+    await join();
   }
 
   Future<void> _giveUp() async {

@@ -172,17 +172,68 @@ void main() {
     );
 
     blocTest<CollabRoomCallCubit, CollabRoomCallState>(
-      'leaves and joins again for filming a part',
+      'joins on its own once someone else is in the room',
+      build: () => build(others: {}),
+      act: (cubit) async {
+        cubit.othersChanged({_sam});
+        await pumpEventQueue();
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, CollabRoomCallStatus.joined);
+        expect(created.single, {_sam});
+      },
+    );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'stays out while stepped aside for the camera, then comes back',
       build: build,
       act: (cubit) async {
         await cubit.join();
-        await cubit.leave();
-        await cubit.join();
+        await cubit.stepAside();
+        // Someone joining meanwhile does not take the microphone back.
+        cubit.othersChanged({_sam, _kai});
+        await pumpEventQueue();
+        expect(cubit.state.status, CollabRoomCallStatus.idle);
+        await cubit.comeBack();
       },
       verify: (cubit) {
-        expect(call.log, ['start', 'stop', 'start', 'stop']);
         expect(cubit.state.status, CollabRoomCallStatus.joined);
+        expect(cubit.state.steppedAside, isFalse);
+        expect(created, [
+          {_sam},
+          {_sam, _kai},
+        ]);
+        expect(call.log, ['start', 'stop', 'start', 'stop']);
       },
+    );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'comes back after a hang-up that is still under way',
+      build: build,
+      act: (cubit) async {
+        await cubit.join();
+        unawaited(cubit.stepAside());
+        await cubit.comeBack();
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, CollabRoomCallStatus.joined);
+        expect(call.log, ['start', 'stop', 'start', 'stop']);
+      },
+    );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'does not try again on its own after the call failed',
+      build: () => build(fake: _FakeCall(unreachable: true)),
+      act: (cubit) async {
+        await cubit.join();
+        cubit.othersChanged({_sam, _kai});
+        await pumpEventQueue();
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, CollabRoomCallStatus.unreachable);
+        expect(created, hasLength(1));
+      },
+      errors: () => [isA<CollabRoomCallException>()],
     );
 
     blocTest<CollabRoomCallCubit, CollabRoomCallState>(

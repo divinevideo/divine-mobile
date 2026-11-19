@@ -16722,9 +16722,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get collabRoomCallJoin => 'Gå med i samtalet';
 
   @override
-  String get collabRoomCallLeave => 'Lämna samtalet';
-
-  @override
   String get collabRoomCallCameraFailed => 'Det gick inte att slå på kameran.';
 
   @override

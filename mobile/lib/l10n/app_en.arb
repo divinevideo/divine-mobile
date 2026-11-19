@@ -13978,10 +13978,6 @@
   "@collabRoomCallJoin": {
     "description": "Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part."
   },
-  "collabRoomCallLeave": "Leave the call",
-  "@collabRoomCallLeave": {
-    "description": "Button in the editor that leaves the Together room's voice call while editing your part."
-  },
   "collabRoomCallCameraFailed": "Couldn't turn your camera on.",
   "@collabRoomCallCameraFailed": {
     "description": "Shown when the camera for a Together room's call could not be opened."

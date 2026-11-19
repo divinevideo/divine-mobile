@@ -16855,9 +16855,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get collabRoomCallJoin => 'Влез в разговора';
 
   @override
-  String get collabRoomCallLeave => 'Излез от разговора';
-
-  @override
   String get collabRoomCallCameraFailed => 'Камерата не можа да се включи.';
 
   @override

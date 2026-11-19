@@ -6651,7 +6651,6 @@
   "collabRoomCallFailed": "Разговорът не можа да започне. Провери дали Divine може да ползва микрофона ти.",
   "collabRoomCallUnreachable": "Не успяхме да се свържем с останалите. Провери връзката си и опитай пак.",
   "collabRoomCallJoin": "Влез в разговора",
-  "collabRoomCallLeave": "Излез от разговора",
   "collabRoomCallCameraFailed": "Камерата не можа да се включи.",
   "collabRoomCallMuted": "Заглушен",
   "collabRoomSwapSeatHint": "Докосни две места в оформлението, за да ги размениш.",

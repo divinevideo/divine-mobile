@@ -16793,9 +16793,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get collabRoomCallJoin => 'Doe mee aan het gesprek';
 
   @override
-  String get collabRoomCallLeave => 'Verlaat het gesprek';
-
-  @override
   String get collabRoomCallCameraFailed => 'Je camera kon niet aan.';
 
   @override

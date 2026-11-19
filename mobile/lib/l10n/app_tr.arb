@@ -6534,7 +6534,6 @@
   "collabRoomCallFailed": "Görüşme başlatılamadı. Divine'ın mikrofonunu kullanabildiğinden emin ol.",
   "collabRoomCallUnreachable": "Diğerlerine ulaşılamadı. Bağlantını kontrol edip tekrar dene.",
   "collabRoomCallJoin": "Görüşmeye katıl",
-  "collabRoomCallLeave": "Görüşmeden çık",
   "collabRoomCallCameraFailed": "Kameran açılamadı.",
   "collabRoomCallMuted": "Sessizde",
   "collabRoomSwapSeatHint": "Yerlerini değiştirmek için düzende iki yere dokun.",

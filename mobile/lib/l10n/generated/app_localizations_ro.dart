@@ -17036,9 +17036,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get collabRoomCallJoin => 'Intră în apel';
 
   @override
-  String get collabRoomCallLeave => 'Ieși din apel';
-
-  @override
   String get collabRoomCallCameraFailed => 'Camera nu a putut fi pornită.';
 
   @override

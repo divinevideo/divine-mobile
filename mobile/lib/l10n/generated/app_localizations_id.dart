@@ -16592,9 +16592,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get collabRoomCallJoin => 'Gabung panggilan';
 
   @override
-  String get collabRoomCallLeave => 'Keluar dari panggilan';
-
-  @override
   String get collabRoomCallCameraFailed => 'Kameramu tidak bisa dinyalakan.';
 
   @override

@@ -7835,7 +7835,6 @@
   "collabRoomCallFailed": "无法开始通话。请检查 Divine 是否可以使用你的麦克风。",
   "collabRoomCallUnreachable": "无法连接到其他人。请检查网络后重试。",
   "collabRoomCallJoin": "加入通话",
-  "collabRoomCallLeave": "离开通话",
   "collabRoomCallCameraFailed": "无法打开你的摄像头。",
   "collabRoomCallMuted": "已静音",
   "collabRoomSwapSeatHint": "点按布局中的两个位置即可交换。",

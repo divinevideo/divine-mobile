@@ -134,8 +134,8 @@ class CollabRoomCallControls extends StatelessWidget {
       _ => null,
     };
     final inCall = state.status == CollabRoomCallStatus.joined;
-    // Out of a call that failed or was left, the mic button joins again —
-    // say once the camera let go of the microphone.
+    // The call joins on its own; out of a call that failed, the mic button
+    // tries again.
     final canJoin =
         state.status == CollabRoomCallStatus.idle ||
         state.status == CollabRoomCallStatus.failed ||
@@ -167,7 +167,7 @@ class CollabRoomCallControls extends StatelessWidget {
                     : !canJoin || state.others.isEmpty
                     ? null
                     : () => runDetached(
-                        cubit.join(),
+                        cubit.comeBack(),
                         'rejoin the collab room call',
                         logName: 'CollabRoomCallControls',
                         category: LogCategory.video,
@@ -185,13 +185,6 @@ class CollabRoomCallControls extends StatelessWidget {
                     : l10n.collabRoomCallCameraOn,
                 onPressed: inCall ? cubit.toggleCamera : null,
               ),
-              if (!canJoin)
-                DivineIconButton(
-                  icon: DivineIconName.signOut,
-                  type: DivineIconButtonType.secondary,
-                  semanticLabel: l10n.collabRoomCallLeave,
-                  onPressed: cubit.leave,
-                ),
             ],
           ),
           if (notice != null)
@@ -284,9 +277,10 @@ class _CollabRoomLiveVideoState extends State<CollabRoomLiveVideo> {
   }
 }
 
-/// The call button of a part's editor: joins the room's call to talk while
-/// editing, or leaves it. Shows nothing outside a part or for a room without a
-/// call.
+/// The call button of a part's editor: the room's call comes back on its own
+/// in the editor, and this mutes or unmutes the microphone, or tries again
+/// after the call failed. Shows nothing outside a part or for a room without
+/// a call.
 class CollabRoomEditorCallButton extends ConsumerWidget {
   /// Creates the button.
   const CollabRoomEditorCallButton({super.key});
@@ -310,28 +304,37 @@ class CollabRoomEditorCallButton extends ConsumerWidget {
       selector: _EditorCall.of,
       builder: (context, phase) {
         final l10n = context.l10n;
-        final inCall = phase != _EditorCall.out;
         return VideoEditorToolbarChip(
-          icon: inCall ? .microphone : .microphoneSlash,
+          icon: phase == _EditorCall.live ? .microphone : .microphoneSlash,
           loading: phase == _EditorCall.connecting,
           label: switch (phase) {
             _EditorCall.out => l10n.collabRoomCallJoin,
             _EditorCall.connecting => l10n.collabRoomCallConnecting,
-            _EditorCall.connected => l10n.collabRoomCallLeave,
+            _EditorCall.live => l10n.collabRoomCallMute,
+            _EditorCall.muted => l10n.collabRoomCallUnmute,
           },
-          // While connecting the label says so, but a tap leaves the call.
-          semanticHint: phase == _EditorCall.connecting
-              ? l10n.collabRoomCallLeave
-              : null,
           liveRegion: true,
-          onTap: () => runDetached(
-            inCall ? call.leave() : call.join(),
-            inCall
-                ? 'leave the collab room call from the editor'
-                : 'join the collab room call from the editor',
-            logName: 'CollabRoomEditorCallButton',
-            category: LogCategory.video,
-          ),
+          onTap: () {
+            switch (phase) {
+              // Connecting finishes on its own.
+              case _EditorCall.connecting:
+                return;
+              case _EditorCall.out:
+                runDetached(
+                  call.comeBack(),
+                  'rejoin the collab room call from the editor',
+                  logName: 'CollabRoomEditorCallButton',
+                  category: LogCategory.video,
+                );
+              case _EditorCall.live || _EditorCall.muted:
+                runDetached(
+                  call.toggleMic(),
+                  'mute the collab room call from the editor',
+                  logName: 'CollabRoomEditorCallButton',
+                  category: LogCategory.video,
+                );
+            }
+          },
         );
       },
     );
@@ -339,20 +342,22 @@ class CollabRoomEditorCallButton extends ConsumerWidget {
 }
 
 /// Where the editor's button sees the call: joined only counts once someone
-/// can be heard, so the wait for the first connection shows as such.
+/// can be heard, so the wait for the first connection shows as such. Only a
+/// call that failed counts as out: the call joins on its own otherwise.
 enum _EditorCall {
   out,
   connecting,
-  connected;
+  live,
+  muted;
 
   static _EditorCall of(CollabRoomCallState state) => switch (state.status) {
-    CollabRoomCallStatus.idle ||
-    CollabRoomCallStatus.failed ||
-    CollabRoomCallStatus.unreachable => out,
-    CollabRoomCallStatus.joining => connecting,
+    CollabRoomCallStatus.failed || CollabRoomCallStatus.unreachable => out,
+    // The call joins on its own as the editor opens.
+    CollabRoomCallStatus.idle || CollabRoomCallStatus.joining => connecting,
     CollabRoomCallStatus.joined
-        when state.call.peers.values.any((peer) => peer.connected) =>
-      connected,
-    CollabRoomCallStatus.joined => connecting,
+        when !state.call.peers.values.any((peer) => peer.connected) =>
+      connecting,
+    CollabRoomCallStatus.joined when state.call.micOn => live,
+    CollabRoomCallStatus.joined => muted,
   };
 }
