@@ -1176,6 +1176,43 @@ void main() {
         });
       });
 
+      test('sweep times a tracked activity from when its post went live, '
+          'not from when its upload started', () {
+        fakeAsync((async) {
+          final repo = build(async);
+          final id = started(async, repo);
+          platform.emit(PushTokenChanged(activityId: id, token: 'tok-1'));
+          // A long upload: the post only goes live 80 minutes in.
+          async.elapse(const Duration(minutes: 80));
+          unawaited(
+            repo.markLive(
+              key: 'draft-1',
+              postCoordinate: _coordA,
+              postEventId: _eventA,
+            ),
+          );
+          async.elapse(const Duration(minutes: 20));
+          platform.running = [
+            _running(
+              id,
+              owner: _ownerA,
+              startedAt: t0,
+              coordinate: _coordA,
+              eventId: _eventA,
+            ),
+          ];
+          unawaited(repo.sweep(currentOwnerPubkey: _ownerA));
+          async.flushMicrotasks();
+          expect(platform.endedIds, isEmpty);
+
+          // Window end (live + 60) plus the 30-minute summary has passed.
+          async.elapse(const Duration(minutes: 70));
+          unawaited(repo.sweep(currentOwnerPubkey: _ownerA));
+          async.flushMicrotasks();
+          expect(platform.endedIds, [id]);
+        });
+      });
+
       test('sweep ends everything listed when signed out, telling no one', () {
         fakeAsync((async) {
           final repo = build(async);

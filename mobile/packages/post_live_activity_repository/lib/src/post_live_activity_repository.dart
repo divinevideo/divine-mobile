@@ -262,7 +262,9 @@ class PostLiveActivityRepository {
   /// every app foreground.
   ///
   /// Ends on the device another owner's activities, all of them when
-  /// signed out (null), and any past `startedAt` + 90 minutes. Re-adopts
+  /// signed out (null), and any past its window end + 30 minutes: the
+  /// window runs from going live for a tracked activity, and from
+  /// `startedAt` for one this launch is not tracking. Re-adopts
   /// the current owner's untracked live activity while the toggle and the
   /// feature allow it and its window has not passed, and ends it otherwise.
   /// Ends an untracked activity with no post identity that started over 15
@@ -276,7 +278,12 @@ class PostLiveActivityRepository {
       final current =
           currentOwnerPubkey != null &&
           pubkeysEqual(activity.ownerPubkey, currentOwnerPubkey);
-      final windowEnd = activity.startedAt.add(LiveActivityRegistration.window);
+      // A tracked activity's window runs from when its post went live, so a
+      // long upload does not cut it short; an untracked one only has the
+      // activity's own start to go on.
+      final windowEnd =
+          _byId[activity.id]?.windowEndsAt ??
+          activity.startedAt.add(LiveActivityRegistration.window);
       if (!current || !now.isBefore(windowEnd.add(_summaryPeriod))) {
         await _endActivity(activity.id, tellServer: false);
       } else if (!_byId.containsKey(activity.id) &&
