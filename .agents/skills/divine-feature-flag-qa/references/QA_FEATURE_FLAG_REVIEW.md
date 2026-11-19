@@ -24,7 +24,7 @@ Authoritative starting sources:
 - [Build defaults and environment keys](https://github.com/divinevideo/divine-mobile/blob/be97ddad3474c1db7ab94923fb16a44ad308060c/mobile/lib/features/feature_flags/services/build_configuration.dart)
 - [Find people implementation/release context](https://github.com/divinevideo/divine-mobile/pull/11157)
 
-The feature-flags README has an obsolete inventory; use current code and observed behavior. Trace each flag to its actual UI/service call sites. Identify dead flags, incomplete implementations, additional gates outside the central registry, and platform-specific behavior. Internal flags need Developer Mode for local overrides. Reset overrides when establishing defaults.
+The feature-flags README has an obsolete inventory; use current code and observed behavior. Trace each flag to its actual UI/service call sites. Identify dead flags, incomplete implementations, additional gates outside the central registry, and platform-specific behavior. Internal flags need Developer Mode for local overrides. Reset overrides when establishing defaults, with Developer Mode on: with it off, Reset All leaves stored overrides of internal flags in place, and they take effect again as soon as Developer Mode is turned on.
 
 ## Starting inventory
 
