@@ -734,7 +734,7 @@ void main() {
           'https://cdn.example.com/subs-en-old.vtt',
           'wss://relay.divine.video',
           'captions',
-          'en',
+          'EN',
         ];
         relaysAnswer(
           LatestVideoRevisionFound(

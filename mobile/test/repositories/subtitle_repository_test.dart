@@ -198,7 +198,7 @@ void main() {
       ).called(1);
     });
 
-    test('keeps the language the edited subtitles are tagged with', () async {
+    test('keeps the region in the selected caption language', () async {
       when(
         () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
       ).thenAnswer(
@@ -226,7 +226,19 @@ void main() {
       ).thenAnswer((_) async => _updatedVideo);
 
       await repo.publishEditedSubtitles(
-        video: _video.copyWith(textTrackLang: 'ja'),
+        video: _video.copyWith(
+          textTrackRef: 'https://media.divine.video/portuguese.vtt',
+          textTrackLang: 'pt',
+          nostrEventTags: const [
+            [
+              'text-track',
+              'https://media.divine.video/portuguese.vtt',
+              '',
+              'captions',
+              'pt-BR',
+            ],
+          ],
+        ),
         cues: _cues,
       );
 
@@ -235,7 +247,7 @@ void main() {
           video: any(named: 'video'),
           vttContent: any(named: 'vttContent'),
           blossomUrl: any(named: 'blossomUrl'),
-          lang: 'ja',
+          lang: 'pt-BR',
         ),
       ).called(1);
       verify(
@@ -243,7 +255,7 @@ void main() {
           existingEvent: any(named: 'existingEvent'),
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
-          textTrackLang: 'ja',
+          textTrackLang: 'pt-BR',
         ),
       ).called(1);
     });

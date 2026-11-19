@@ -1230,10 +1230,10 @@ class VideoEventPublisher {
   /// no type or language.
   static bool _isReplacedCaptionTrack(List<String> tag, String lang) {
     final type = tag.length > 3 ? tag[3] : '';
-    final trackLang = tag.length > 4 ? tag[4] : '';
+    final trackLang = tag.length > 4 ? tag[4].trim().toLowerCase() : '';
     return tag.first == 'text-track' &&
         (type.isEmpty || type == 'captions' || type == 'subtitles') &&
-        (trackLang.isEmpty || trackLang == lang);
+        (trackLang.isEmpty || trackLang == lang.trim().toLowerCase());
   }
 
   /// Publishes a Kind 39307 subtitle event for [video] and returns its

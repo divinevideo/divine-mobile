@@ -102,7 +102,7 @@ class SubtitleRepository {
       throw SubtitleEditException('Video has no addressable identifier');
     }
 
-    final trackLang = lang ?? video.textTrackLang ?? 'en';
+    final trackLang = lang ?? _editedTrackLanguage(video) ?? 'en';
     final vtt = SubtitleService.generateVtt(cues);
     final bytes = Uint8List.fromList(utf8.encode(vtt));
 
@@ -132,5 +132,20 @@ class SubtitleRepository {
       throw SubtitleEditException('Video republish failed');
     }
     return updatedVideo;
+  }
+
+  static String? _editedTrackLanguage(VideoEvent video) {
+    // The playback model exposes the base language for translation. Editing
+    // needs the full language of the selected reference to replace that track.
+    for (final tag in video.nostrEventTags) {
+      if (tag.length < 5 ||
+          tag.first != 'text-track' ||
+          tag[1] != video.textTrackRef) {
+        continue;
+      }
+      final language = tag[4].trim();
+      if (language.isNotEmpty) return language;
+    }
+    return video.textTrackLang;
   }
 }
