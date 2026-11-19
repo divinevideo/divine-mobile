@@ -190,8 +190,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   /// does not fit is dropped and flagged with
   /// [TagsPickerNotice.tagLimitReached], which wins over
   /// [TagsPickerNotice.tagTooLong] because no new tag fits until one is
-  /// removed. A tag the video already has is not a rejection and leaves a
-  /// limit notice in place.
+  /// removed, and a limit notice already showing stays for any commit until
+  /// then. A tag the video already has is not a rejection.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
     var droppedForLength = false;
@@ -214,12 +214,10 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
       }
       updated.add(tag);
     }
-    final notice = droppedForLimit
+    final notice = droppedForLimit || _keepsLimitNotice
         ? TagsPickerNotice.tagLimitReached
         : droppedForLength
         ? TagsPickerNotice.tagTooLong
-        : _keepsLimitNotice
-        ? state.notice
         : TagsPickerNotice.none;
     return state.copyWith(selectedTags: updated, notice: notice);
   }
