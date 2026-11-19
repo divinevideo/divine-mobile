@@ -336,6 +336,41 @@ void main() {
   // Overview section
   // ---------------------------------------------------------------------------
   group('_OverviewSection (via $MetadataExpandedSheet)', () {
+    for (final (appearance, theme) in [
+      ('dark', VineTheme.theme),
+      ('light', VineTheme.lightTheme),
+    ]) {
+      testWidgetsWithSurfaceSize(
+        'shows the Classic Vine chip in the $appearance sheet without other badges',
+        (tester) async {
+          final video =
+              _makeVideo(
+                publishedAt: '1451606400',
+                rawTags: const {'platform': 'vine'},
+              ).copyWith(
+                videoUrl: 'https://media.divine.video/${'a' * 64}.mp4',
+                isArchiveVerificationUnknown: true,
+              );
+
+          await tester.pumpWidget(
+            buildSubject(
+              child: MetadataExpandedSheet(video: video),
+              theme: theme,
+            ),
+          );
+
+          final l10n = _l10n(tester);
+          expect(find.byType(MetadataBadgesRow), findsOneWidget);
+          expect(find.text(l10n.commentsEmptyClassicVineTitle), findsOneWidget);
+          expect(find.text(l10n.metadataBadgeNotDivine), findsNothing);
+          expect(
+            find.textContaining(l10n.metadataBadgeHumanMade),
+            findsNothing,
+          );
+        },
+      );
+    }
+
     testWidgetsWithSurfaceSize(
       'renders fetched parent context for a video reply',
       (tester) async {
@@ -1012,6 +1047,41 @@ void main() {
   // Badges row
   // ---------------------------------------------------------------------------
   group(MetadataBadgesRow, () {
+    testWidgetsWithSurfaceSize(
+      'labels a Vine from late 2017 even without server verification',
+      (tester) async {
+        final video = _makeVideo(
+          createdAt: 1514764799,
+          rawTags: const {'platform': 'vine'},
+        );
+        await tester.pumpWidget(
+          buildSubject(child: MetadataBadgesRow(video: video)),
+        );
+
+        expect(
+          find.text(_l10n(tester).commentsEmptyClassicVineTitle),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize('does not label a video from 2018', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        createdAt: 1514764800,
+        rawTags: const {'platform': 'vine'},
+      );
+      await tester.pumpWidget(
+        buildSubject(child: MetadataBadgesRow(video: video)),
+      );
+
+      expect(
+        find.text(_l10n(tester).commentsEmptyClassicVineTitle),
+        findsNothing,
+      );
+    });
+
     testWidgetsWithSurfaceSize('renders Human-Made badge when hasProofMode', (
       tester,
     ) async {

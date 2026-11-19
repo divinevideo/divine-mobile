@@ -1,5 +1,5 @@
 // ABOUTME: Non-interactive badge labels row for the metadata expanded sheet.
-// ABOUTME: Shows Human-Made (with tier) and Not Divine badges separated by
+// ABOUTME: Shows Classic Vine, Human-Made and Not Divine badges separated by
 // ABOUTME: muted dot separators. Rendered inline inside the header section
 // ABOUTME: between the title and the description, so this widget contributes
 // ABOUTME: only the wrap of labels — the surrounding container owns padding.
@@ -15,7 +15,7 @@ import 'package:openvine/utils/proofmode_helpers.dart';
 /// Row of non-interactive badge labels rendered between the title and
 /// description in the metadata expanded sheet.
 ///
-/// Confirmed badges: "Human-Made" (with tier superscript) and "Not Divine".
+/// Labels: "Classic Vine", "Human-Made" (with tier) and "Not Divine".
 /// Future: "No AI", "Don't try this at home" (content warnings).
 ///
 /// Returns [SizedBox.shrink] when no badges apply.
@@ -29,6 +29,10 @@ class MetadataBadgesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badges = <Widget>[];
+
+    if (video.isClassicVine) {
+      badges.add(const _ClassicVineChip());
+    }
 
     if (video.shouldShowProofModeBadge) {
       badges.add(const _HumanMadeBadge());
@@ -53,6 +57,23 @@ class MetadataBadgesRow extends StatelessWidget {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: children,
+    );
+  }
+}
+
+/// Display-only archive label using the metadata sheet's pill styling.
+class _ClassicVineChip extends StatelessWidget {
+  const _ClassicVineChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: context.vineColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: _TextBadge(label: context.l10n.commentsEmptyClassicVineTitle),
     );
   }
 }

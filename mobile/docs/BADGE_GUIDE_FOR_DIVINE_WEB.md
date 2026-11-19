@@ -65,7 +65,7 @@ Important:
 
 - A `platform: vine` tag on its own is not a trigger, except on a row the server could not check
 - A verified archive Vine shows neither `Human Made` nor `Not Divine Hosted`, even when it also has proof tags
-- Mobile's badge row (`MetadataBadgesRow`) renders no separate `Original` chip; the status shows as that suppression
+- Mobile's metadata badge row (`MetadataBadgesRow`) also displays `Classic Vine` for Vine-origin videos whose original publish date is in 2017 or earlier (`video.isClassicVine`). It prefers `published_at` over a later import/event date, requires a positive timestamp, and works without archive verification. This display label does not grant trust, OG Viner recognition, or audio reuse; those decisions retain their existing verification rules.
 
 ### 3. `Not Divine Hosted`
 

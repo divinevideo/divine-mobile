@@ -1631,6 +1631,21 @@ class VideoEvent {
     return rawTags['platform'] == 'vine';
   }
 
+  /// Whether to display the Classic Vine chip for a video from 2017 or earlier.
+  ///
+  /// Prefer the original publish date over a later import or event date. This
+  /// display label does not grant archive verification or audio reuse.
+  bool get isClassicVine {
+    if (!isOriginalVine && !isVerifiedArchive) return false;
+
+    final originalPublishedAt =
+        int.tryParse(publishedAt ?? '') ??
+        int.tryParse(rawTags['published_at'] ?? '') ??
+        createdAt;
+    return originalPublishedAt > 0 &&
+        originalPublishedAt < _classicVineCutoffUtcSeconds;
+  }
+
   /// Whether trust decisions (the "verified only" preference, the Not Divine
   /// and Human-Made badges) treat this video as an archived Vine.
   ///
@@ -1731,6 +1746,9 @@ class VideoEvent {
   }
 
   static const int _vineShutdownAtUtcSeconds = 1484611200;
+
+  // January 1, 2018 UTC: the Classic Vine display label includes all of 2017.
+  static const int _classicVineCutoffUtcSeconds = 1514764800;
 
   /// Whether [key] names a video URL inside an `imeta` tag.
   ///
