@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -202,7 +203,13 @@ void main() {
             ],
           );
           addTearDown(nested.dispose);
-          await tester.pumpWidget(MaterialApp.router(routerConfig: nested));
+          await tester.pumpWidget(
+            MaterialApp.router(
+              routerConfig: nested,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          );
 
           DeepLinkCoordinator(
             router: nested,
