@@ -744,6 +744,11 @@ void main() {
           textTrackRef: textTrackRef,
         );
 
+        final firstTrack = capturedTags.firstWhere(
+          (tag) => tag.first == 'text-track',
+        );
+        expect(firstTrack[1], textTrackRef);
+        expect(firstTrack[4], 'en');
         expect(_containsTag(capturedTags, spanish), isTrue);
         expect(_containsTag(capturedTags, oldEnglish), isFalse);
         expect(
