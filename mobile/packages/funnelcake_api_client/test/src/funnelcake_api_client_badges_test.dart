@@ -48,6 +48,9 @@ void main() {
                     'thumbnail': '',
                     'created_at': 1700000000,
                     'kind': 34236,
+                    'moderation_labels': ['violence'],
+                    'verified_archive': true,
+                    'archive_provenance_available': true,
                     'tags': <Object>[],
                   },
                 ],
@@ -68,7 +71,11 @@ void main() {
       expect(result.single.definition.toJson(), _badge);
       expect(result.single.holderCount, 12);
       expect(result.single.followerCount, 7);
-      expect(result.single.videos.single.id, 'a' * 64);
+      final clip = result.single.videos.single;
+      expect(clip.id, 'a' * 64);
+      expect(clip.moderationLabels, ['violence']);
+      expect(clip.verifiedArchive, isTrue);
+      expect(clip.archiveProvenanceAvailable, isTrue);
     });
 
     test('hands off to relay fallback after one failed request', () async {

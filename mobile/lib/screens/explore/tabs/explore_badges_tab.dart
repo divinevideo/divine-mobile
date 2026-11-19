@@ -383,6 +383,11 @@ class _BadgeClips extends ConsumerWidget {
           'content': '',
         }),
         permissive: true,
+      ).copyWith(
+        moderationLabels: clip.moderationLabels,
+        isVerifiedArchive: clip.verifiedArchive,
+        isArchiveVerificationUnknown:
+            !clip.verifiedArchive && !clip.archiveProvenanceAvailable,
       );
     } on Exception {
       return null;

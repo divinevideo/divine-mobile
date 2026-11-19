@@ -17,6 +17,9 @@ typedef BadgeVideoPreview = ({
   int createdAt,
   int kind,
   List<List<String>> tags,
+  List<String> moderationLabels,
+  bool verifiedArchive,
+  bool archiveProvenanceAvailable,
 });
 
 /// Parses the bounded discovery page without treating malformed data as empty.
@@ -47,6 +50,12 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
                   thumbnail: video['thumbnail'] as String,
                   createdAt: video['created_at'] as int,
                   kind: video['kind'] as int,
+                  moderationLabels: List<String>.from(
+                    video['moderation_labels'] as List<dynamic>,
+                  ),
+                  verifiedArchive: video['verified_archive'] as bool,
+                  archiveProvenanceAvailable:
+                      video['archive_provenance_available'] as bool,
                   tags: (video['tags'] as List<dynamic>)
                       .map((tag) => List<String>.from(tag as List<dynamic>))
                       .toList(growable: false),

@@ -178,6 +178,9 @@ void main() {
           thumbnail: '',
           createdAt: 1700000000,
           kind: 34236,
+          moderationLabels: const <String>[],
+          verifiedArchive: false,
+          archiveProvenanceAvailable: true,
           tags: const [
             ['d', 'clip'],
             ['url', 'https://media.divine.video/clip.mp4'],
@@ -197,6 +200,9 @@ void main() {
                   thumbnail: '',
                   createdAt: 1700000000,
                   kind: 34236,
+                  moderationLabels: const <String>[],
+                  verifiedArchive: false,
+                  archiveProvenanceAvailable: true,
                   tags: const [
                     ['d', 'clip'],
                     ['url', 'https://media.divine.video/clip.mp4'],
@@ -209,6 +215,9 @@ void main() {
                   thumbnail: '',
                   createdAt: 1700000000,
                   kind: 34236,
+                  moderationLabels: const <String>[],
+                  verifiedArchive: false,
+                  archiveProvenanceAvailable: true,
                   tags: const [
                     ['d', 'clip'],
                     ['url', 'https://media.divine.video/clip.mp4'],

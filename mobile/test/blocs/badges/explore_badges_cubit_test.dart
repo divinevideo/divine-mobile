@@ -68,6 +68,9 @@ void main() {
           thumbnail: '',
           createdAt: 1700000000,
           kind: 34236,
+          moderationLabels: const <String>[],
+          verifiedArchive: false,
+          archiveProvenanceAvailable: true,
           tags: const [
             ['d', 'clip'],
             ['url', 'https://media.divine.video/clip.mp4'],
@@ -127,6 +130,38 @@ void main() {
         expect(cubit.state.definitions, [definitions.first]);
       },
     );
+
+    test('keeps external cards through a failed indexed refresh', () async {
+      final indexed = _IndexedRepository();
+      final relay = Nip58BadgeDefinition(
+        event: _definition.event,
+        coordinate: '30009:$_issuer:external',
+        dTag: 'external',
+      );
+      var apiReads = 0;
+      var relayReads = 0;
+      final nextRelayRead = Completer<List<Nip58BadgeDefinition>>();
+      when(indexed.loadIndexedDiscovery).thenAnswer((_) async {
+        if (apiReads++ > 0) throw TimeoutException('discovery API');
+        return [(definition: _definition, videos: [])];
+      });
+      when(indexed.loadPublicDefinitions)
+          .thenAnswer((_) async => [_definition]);
+      when(indexed.loadFederatedDiscovery).thenAnswer(
+        (_) => relayReads++ == 0 ? Future.value([relay]) : nextRelayRead.future,
+      );
+      final cubit = ExploreBadgesCubit(repository: indexed);
+      addTearDown(cubit.close);
+      await cubit.load();
+      await pumpEventQueue();
+      expect(cubit.state.definitions, [_definition, relay]);
+
+      await cubit.refresh();
+      expect(cubit.state.definitions, [_definition, relay]);
+      nextRelayRead.complete([]);
+      await pumpEventQueue();
+      expect(cubit.state.definitions, [_definition]);
+    });
 
     test('superseded discovery cannot overwrite a newer refresh', () async {
       final first = Completer<List<Nip58BadgeDefinition>>();
