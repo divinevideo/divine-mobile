@@ -1052,10 +1052,13 @@ void main() {
       (tester) async {
         final repository = _MockPostLiveActivityRepository();
         ProviderContainer? signedInto;
+        // Captured, not asserted in the stub: the swap catches and logs a
+        // failure from endLocally, so an expect there could never fail.
+        final currentAtEnd = <ProviderContainer?>[];
         when(
           () => repository.endLocally(ownerPubkey: any(named: 'ownerPubkey')),
         ).thenAnswer((_) async {
-          expectSync(controller.currentContainer, same(signedInto));
+          currentAtEnd.add(controller.currentContainer);
         });
         overrideLiveActivity(repository);
         final initial = await pumpHost(tester);
@@ -1076,6 +1079,8 @@ void main() {
         verifyNever(
           () => repository.endLocally(ownerPubkey: targetHex),
         );
+        expect(signedInto, isNotNull);
+        expect(currentAtEnd, [same(signedInto)]);
       },
     );
 
