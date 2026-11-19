@@ -805,13 +805,17 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
           );
           if (!state.recorderMode.recordsVideo) {
             context.read<VideoRecorderBloc>().add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
             );
           } else if (previous != null && !previous.recordsVideo) {
             if (state.isCameraInitialized) {
               context.read<VideoRecorderBloc>().add(
                 const VideoRecorderAppLifecycleChanged(
                   AppLifecycleState.resumed,
+                  isTabTransition: true,
                 ),
               );
             } else {
