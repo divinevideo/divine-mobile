@@ -617,6 +617,59 @@ void main() {
         },
       );
 
+      test(
+        'leaves no room update pending when the published copy was not kept',
+        () async {
+          // No signed event came back, so nothing could be kept to retry the
+          // room's update from. Reporting it pending would keep the copy,
+          // still saved as publishing, and offer the live video again.
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+            readyUpload: _createPendingUpload(
+              status: UploadStatus.readyToPublish,
+              videoId: 'room-video',
+            ),
+          );
+          final notifications = <String>[];
+          final roomService = VideoPublishService(
+            uploadManager: mockUploadManager,
+            authService: mockAuthService,
+            videoEventPublisher: mockVideoEventPublisher,
+            blossomService: mockBlossomService,
+            draftService: mockDraftService,
+            onProgressChanged: ({required draftId, required progress}) {},
+            isDmRestricted: () => false,
+            onCollabVideoPublished: (roomId, address) async {
+              notifications.add(address);
+              throw const FileSystemException('Busy');
+            },
+          );
+          final draft = DivineVideoDraft.create(
+            clips: _createTestDraft().clips,
+            title: 'Together',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            collabRoomId: '0123456789abcdef0123456789abcdef',
+          );
+
+          final result = await roomService.publishVideo(draft: draft);
+
+          expect(notifications, hasLength(1));
+          expect(
+            result,
+            isA<PublishSuccess>().having(
+              (r) => r.collabRoomNotificationPending,
+              'collabRoomNotificationPending',
+              isFalse,
+            ),
+          );
+        },
+      );
+
       test('reports the published video d tag on success', () async {
         // The post-publish confirmation links to /video/<stableId> and
         // builds its share URL from this. Without it the success result

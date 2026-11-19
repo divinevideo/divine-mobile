@@ -495,7 +495,11 @@ class VideoPublishService {
       final signedBody = publishedEvent == null
           ? null
           : jsonEncode(publishedEvent!.toJson());
-      await _roomNotification.record(draft, signedBody, pubkey);
+      final recorded = await _roomNotification.record(
+        draft,
+        signedBody,
+        pubkey,
+      );
       final inviteWarnings = await timeline.measure(
         PublishPhases.invites,
         () => _sendCollaboratorInvites(
@@ -531,7 +535,9 @@ class VideoPublishService {
         signedEventBody: signedBody,
         inviteWarnings: inviteWarnings,
         audioReuseDegraded: audioReuseDegraded,
-        collabRoomNotificationPending: !notified,
+        // Only a kept copy can retry the room's update; an unkept one is
+        // still saved as publishing and must go with the source draft.
+        collabRoomNotificationPending: recorded && !notified,
       );
     } catch (e, stackTrace) {
       return _handleUploadError(e, stackTrace, draft);

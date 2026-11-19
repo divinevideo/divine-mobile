@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -52,7 +53,7 @@ void main() {
           send: null,
         );
 
-        await notification.record(draft, body, pubkey);
+        expect(await notification.record(draft, body, pubkey), isTrue);
 
         final saved =
             verify(() => storage.saveDraft(captureAny())).captured.single
@@ -63,5 +64,31 @@ void main() {
         expect(saved.publishedVideoEvent, body);
       },
     );
+
+    test('reports nothing kept when the copy could not be saved', () async {
+      final storage = _MockDraftStorageService();
+      when(
+        () => storage.saveDraft(any()),
+      ).thenThrow(const FileSystemException('Disk full'));
+      final notification = PublishedRoomNotification(
+        storage: storage,
+        currentPubkey: () => pubkey,
+        send: null,
+      );
+
+      expect(await notification.record(draft, body, pubkey), isFalse);
+    });
+
+    test('keeps nothing once the account changed', () async {
+      final storage = _MockDraftStorageService();
+      final notification = PublishedRoomNotification(
+        storage: storage,
+        currentPubkey: () => 'b' * 64,
+        send: null,
+      );
+
+      expect(await notification.record(draft, body, pubkey), isFalse);
+      verifyNever(() => storage.saveDraft(any()));
+    });
   });
 }

@@ -23,7 +23,12 @@ class PublishedRoomNotification {
   final Future<void> Function(String roomId, String videoAddress)? _send;
 
   /// Retains the successful video while its room notification is outstanding.
-  Future<void> record(
+  ///
+  /// Returns whether the published copy was kept. Without it a pending room
+  /// notification has nothing to be retried from: the copy is still saved as
+  /// `publishing`, and keeping it would offer the live video for publishing
+  /// again.
+  Future<bool> record(
     DivineVideoDraft draft,
     String? signedEventBody,
     String pubkey,
@@ -31,7 +36,7 @@ class PublishedRoomNotification {
     if (draft.collabRoomId == null ||
         signedEventBody == null ||
         _currentPubkey() != pubkey) {
-      return;
+      return false;
     }
     try {
       await _storage.saveDraft(
@@ -40,6 +45,7 @@ class PublishedRoomNotification {
           publishedVideoEvent: signedEventBody,
         ),
       );
+      return true;
     } on Object catch (error, stackTrace) {
       Log.warning(
         'Could not record the published Together video',
@@ -47,6 +53,7 @@ class PublishedRoomNotification {
         error: error,
         stackTrace: stackTrace,
       );
+      return false;
     }
   }
 
