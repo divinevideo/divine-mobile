@@ -15,6 +15,7 @@ import 'package:models/models.dart'
 import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
 import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -356,6 +357,19 @@ class VideoMetadataUpdateService {
         identifiers: edits.collaboratorPubkeys,
         creatorIdentifier: _authService.currentPublicKeyHex,
       );
+      if (collaboratorPubkeys.length > VideoEditorConstants.maxCollaborators) {
+        final existingCollaborators = canonicalCollaboratorPubkeys(
+          identifiers: video.collaboratorPubkeys,
+          creatorIdentifier: _authService.currentPublicKeyHex,
+        );
+        if (collaboratorPubkeys.difference(existingCollaborators).isNotEmpty) {
+          // Do not silently discard either device's collaborator choices.
+          throw const _VideoUpdateException(
+            VideoMetadataUpdateError.generic,
+            'Concurrent edits exceed the collaborator limit',
+          );
+        }
+      }
       bool isPromotedMentionPTag(List<String> tag) {
         if (tag.length < 4 ||
             tag.first != 'p' ||
