@@ -632,27 +632,37 @@ class VideoDmOutbox {
         await currentAttempt.waitForSigner(waitUntilReady(currentAttempt));
       }
       currentAttempt.throwIfCancelled();
-      final result = await currentAttempt.waitFor(
-        _sendService().sendVideo(
-          recipientPubkey: entry.recipientPubkey,
+      void onPhase(DmVideoSendPhase phase) {
+        if (!currentAttempt.isActive) return;
+        if (phase == DmVideoSendPhase.uploading) {
+          currentAttempt.startUpload();
+        } else if (phase == DmVideoSendPhase.sending) {
+          currentAttempt.beginPublication();
+        }
+        _onPhase(id, phase);
+      }
+
+      final service = _sendService();
+      final uploaded = await currentAttempt.waitFor(
+        service.uploadVideo(
           videoFile: File(entry.localPath),
           mimeType: videoDmMimeTypeFor(entry.localPath),
-          extraTags: extraTags,
           cancellation: currentAttempt,
-          onPhase: (phase) {
-            if (!currentAttempt.isActive) return;
-            if (phase == DmVideoSendPhase.uploading) {
-              currentAttempt.startUpload();
-            } else if (phase == DmVideoSendPhase.sending) {
-              currentAttempt.beginPublication();
-            }
-            _onPhase(id, phase);
-          },
+          onPhase: onPhase,
           onUploadProgress: (fraction) {
             if (!currentAttempt.isActive) return;
             currentAttempt.uploadProgress(fraction);
             _onUploadProgress(id, fraction);
           },
+        ),
+      );
+      final result = await currentAttempt.waitFor(
+        service.publishVideo(
+          recipientPubkey: entry.recipientPubkey,
+          uploaded: uploaded,
+          extraTags: extraTags,
+          cancellation: currentAttempt,
+          onPhase: onPhase,
         ),
       );
       if (result case NIP17SendSuccess(:final rumorEventId)) {
@@ -675,6 +685,14 @@ class VideoDmOutbox {
         name: _logName,
         category: LogCategory.video,
         error: VideoDmSendFailure(result.error ?? 'unknown'),
+      );
+      return _markFailed(id, OutgoingVideoDmFailure.failed);
+    } on DmVideoUploadFailed catch (error) {
+      Log.warning(
+        'Video DM $id was not uploaded',
+        name: _logName,
+        category: LogCategory.video,
+        error: VideoDmSendFailure(error.reason),
       );
       return _markFailed(id, OutgoingVideoDmFailure.failed);
     } on DmVideoSendCancelled catch (error) {

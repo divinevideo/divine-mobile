@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show NIP17SendResult;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -132,25 +131,21 @@ void main() {
           dmVideoSendServiceProvider,
         ) as _MockDmVideoSendService;
         when(
-          () => current.sendVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
+          () => current.uploadVideo(
             videoFile: any(named: 'videoFile'),
             mimeType: any(named: 'mimeType'),
-            extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
             cancellation: any(named: 'cancellation'),
           ),
-        ).thenAnswer((_) => Completer<NIP17SendResult>().future);
+        ).thenAnswer((_) => Completer<DmVideoUpload>().future);
         ready(container, first);
         await pumpEventQueue();
         expect(container.read(videoDmOutboxProvider), same(outbox));
         verify(
-          () => current.sendVideo(
-            recipientPubkey: second,
+          () => current.uploadVideo(
             videoFile: any(named: 'videoFile'),
             mimeType: any(named: 'mimeType'),
-            extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
             cancellation: any(named: 'cancellation'),
@@ -194,16 +189,14 @@ void main() {
       final current =
           container.read(dmVideoSendServiceProvider) as _MockDmVideoSendService;
       when(
-        () => current.sendVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
+        () => current.uploadVideo(
           videoFile: any(named: 'videoFile'),
           mimeType: any(named: 'mimeType'),
-          extraTags: any(named: 'extraTags'),
           onPhase: any(named: 'onPhase'),
           onUploadProgress: any(named: 'onUploadProgress'),
           cancellation: any(named: 'cancellation'),
         ),
-      ).thenAnswer((_) => Completer<NIP17SendResult>().future);
+      ).thenAnswer((_) => Completer<DmVideoUpload>().future);
 
       outbox.sendVideo(
         conversationId: 'c',
@@ -213,11 +206,9 @@ void main() {
 
       await pumpEventQueue();
       verify(
-        () => current.sendVideo(
-          recipientPubkey: second,
+        () => current.uploadVideo(
           videoFile: any(named: 'videoFile'),
           mimeType: any(named: 'mimeType'),
-          extraTags: any(named: 'extraTags'),
           onPhase: any(named: 'onPhase'),
           onUploadProgress: any(named: 'onUploadProgress'),
           cancellation: any(named: 'cancellation'),
@@ -263,11 +254,9 @@ void main() {
         // Nothing was handed to any send service: the outgoing account's
         // video never leaves under the incoming account's keys.
         verifyNever(
-          () => serviceAfterSwitch.sendVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
+          () => serviceAfterSwitch.uploadVideo(
             videoFile: any(named: 'videoFile'),
             mimeType: any(named: 'mimeType'),
-            extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
             cancellation: any(named: 'cancellation'),
@@ -286,11 +275,9 @@ void main() {
           ) as _MockDmVideoSendService;
           final attempts = <DmVideoSendCancellation>[];
           when(
-            () => service.sendVideo(
-              recipientPubkey: any(named: 'recipientPubkey'),
+            () => service.uploadVideo(
               videoFile: any(named: 'videoFile'),
               mimeType: any(named: 'mimeType'),
-              extraTags: any(named: 'extraTags'),
               onPhase: any(named: 'onPhase'),
               onUploadProgress: any(named: 'onUploadProgress'),
               cancellation: any(named: 'cancellation'),
@@ -300,7 +287,7 @@ void main() {
               invocation.namedArguments[#cancellation]
                   as DmVideoSendCancellation,
             );
-            return Completer<NIP17SendResult>().future;
+            return Completer<DmVideoUpload>().future;
           });
           final outbox = container.read(videoDmOutboxProvider);
           final entries = recordConversation(outbox, 'c');

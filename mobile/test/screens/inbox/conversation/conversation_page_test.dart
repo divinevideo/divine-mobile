@@ -174,16 +174,25 @@ void main() {
         registerFallbackValue((DmVideoSendPhase _) {});
         registerFallbackValue((double _) {});
         final l10n = lookupAppLocalizations(const Locale('en'));
+        const uploaded = DmVideoUpload(
+          fileUrl: 'https://media.example/clip',
+          fileMetadata: DmFileMetadata(
+            fileType: 'video/mp4',
+            encryptionAlgorithm: 'aes-gcm',
+            decryptionKey: 'key',
+            decryptionNonce: 'nonce',
+            fileHash: 'hash',
+          ),
+        );
+        registerFallbackValue(uploaded);
         final sendService = _MockDmVideoSendService();
-        final result = Completer<NIP17SendResult>();
+        final upload = Completer<DmVideoUpload>();
         void Function(DmVideoSendPhase)? onPhase;
         void Function(double)? onUploadProgress;
         when(
-          () => sendService.sendVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
+          () => sendService.uploadVideo(
             videoFile: any(named: 'videoFile'),
             mimeType: any(named: 'mimeType'),
-            extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
             cancellation: any(named: 'cancellation'),
@@ -195,8 +204,23 @@ void main() {
           onUploadProgress =
               invocation.namedArguments[#onUploadProgress]
                   as void Function(double)?;
-          return result.future;
+          return upload.future;
         });
+        when(
+          () => sendService.publishVideo(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            uploaded: any(named: 'uploaded'),
+            extraTags: any(named: 'extraTags'),
+            onPhase: any(named: 'onPhase'),
+            cancellation: any(named: 'cancellation'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: 'rumor-1',
+            messageEventId: 'wrap-1',
+            recipientPubkey: otherPubkey,
+          ),
+        );
         final outbox = VideoDmOutbox(
           sendService: () => sendService,
           readFrame: (_) async => null,
@@ -242,13 +266,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(l10n.dmPendingVideoUploading('50%')), findsOneWidget);
 
-        result.complete(
-          NIP17SendResult.success(
-            rumorEventId: 'rumor-1',
-            messageEventId: 'wrap-1',
-            recipientPubkey: otherPubkey,
-          ),
-        );
+        upload.complete(uploaded);
         await tester.pumpAndSettle();
         // Sent while its row has not arrived: the bubble stays, without its
         // upload status.
