@@ -26,7 +26,8 @@ Future<Event?> newestVideoRevision(
   required String logName,
 }) async {
   final kind = video.eventKind ?? NIP71VideoKinds.addressableShortVideo;
-  final address = '$kind:${video.pubkey}:${video.stableId}';
+  final address =
+      video.addressableId ?? '$kind:${video.pubkey}:${video.stableId}';
   if (repository == null) {
     Log.warning(
       'Not republishing $address: no repository to read its newest revision',
@@ -37,7 +38,23 @@ Future<Event?> newestVideoRevision(
   }
   switch (await repository.fetchLatestVideoRevision(address)) {
     case LatestVideoRevisionFound(:final event):
-      return event;
+      // A healthy relay can still hold an older revision, for example when
+      // Funnelcake indexed a publish that has not reached this relay yet.
+      // Compare only a known Nostr timestamp, since createdAt may be the
+      // video's display date on an older cache row.
+      final openedCreatedAt = video.eventCreatedAt;
+      if (openedCreatedAt == null ||
+          event.createdAt > openedCreatedAt ||
+          (event.createdAt == openedCreatedAt &&
+              event.id.compareTo(video.id) <= 0)) {
+        return event;
+      }
+      Log.warning(
+        'Not republishing $address: the relay revision predates the opened one',
+        name: logName,
+        category: LogCategory.video,
+      );
+      return null;
     case LatestVideoRevisionUnknown():
       Log.warning(
         'Not republishing $address: a relay did not answer in full',
