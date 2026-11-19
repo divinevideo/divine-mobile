@@ -9145,6 +9145,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Đổi tỷ lệ khung hình';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Đèn flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Lật';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Tỷ lệ khung hình';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Hẹn giờ';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Khung ma';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Lưới';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Camera kép';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Hiện tùy chọn camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ẩn tùy chọn camera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Chống rung';
 
   @override

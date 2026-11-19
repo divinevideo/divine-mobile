@@ -327,6 +327,12 @@ final class VideoRecorderGridLinesToggled extends VideoRecorderEvent {
   const VideoRecorderGridLinesToggled();
 }
 
+/// Unfolds the capture rail to list every control with its name, or folds it
+/// back to flash, lens and aspect ratio.
+final class VideoRecorderActionRailToggled extends VideoRecorderEvent {
+  const VideoRecorderActionRailToggled();
+}
+
 /// Turns dual-camera capture on or off: every take records the front and the
 /// back camera, and the viewfinder shows the second one in a small window.
 final class VideoRecorderDualCameraToggled extends VideoRecorderEvent {

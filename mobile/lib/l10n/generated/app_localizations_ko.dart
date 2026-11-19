@@ -8752,6 +8752,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => '화면 비율 전환';
 
   @override
+  String get videoRecorderRailFlashLabel => '플래시';
+
+  @override
+  String get videoRecorderRailFlipLabel => '뒤집기';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => '화면 비율';
+
+  @override
+  String get videoRecorderRailTimerLabel => '타이머';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => '고스트 프레임';
+
+  @override
+  String get videoRecorderRailGridLabel => '그리드';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => '듀얼 카메라';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => '카메라 옵션 표시';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => '카메라 옵션 숨기기';
+
+  @override
   String get videoRecorderStabilizationLabel => '흔들림 보정';
 
   @override

@@ -10,8 +10,8 @@ tags:
 # Three of the six controls here — aspect ratio, lens and flash — are the
 # unconditional ones every rail renders, so they are the same per-control utils
 # driveCaptureRail sequences, in the same order. Two more — the ghost-frame
-# toggle, which capture also renders, and the grid toggle, which it does not —
-# are the two classic also renders, so they are per-control utils too. The
+# and grid toggles, which capture renders as well — are the two classic also
+# renders, so they are per-control utils too. The
 # sixth, the timer, is not driven here. What is local to this file is only the
 # order they run in.
 #
@@ -33,12 +33,21 @@ tags:
 #   stills do not become a clip until the assemble on "next". The mode assert
 #   this closes on does, though — it pins next and undo absent — so the flow
 #   still runs this before the shutter tests.
+#
+# The rail opens folded, with only flash, the lens switch and aspect ratio on
+# it, so the ghost frame and the grid need it unfolded. It is folded back
+# before the mode assert, which expects the state the recorder opened in.
 #Steps:
+# 0. Unfold the rail
 # 1. Ghost frame: off -> on -> off
 # 2. Grid: on -> off -> on
 # 3. Aspect ratio: Vertical -> Square -> Vertical
 # 4. Camera: Back -> Front -> Back
 # 5. Flash (if present): Off -> On -> Auto -> Off
+# 6. Fold the rail
+
+# 0. The ghost frame and the grid are only listed unfolded.
+- runFlow: ../utils/unfoldCaptureRail.yaml
 
 # 1. Ghost frame (onion-skin). Driven first here, unlike classic: this rail is
 # vertical and on the right, so the confirmation snackbar floating at the
@@ -56,6 +65,9 @@ tags:
 
 # 5. Flash, if the active lens has a unit.
 - runFlow: ../utils/driveFlashControl.yaml
+
+# 6. Fold the rail again.
+- runFlow: ../utils/foldCaptureRail.yaml
 
 # The ghost-frame toggle raises a 4-second confirmation snackbar per tap, and
 # it floats over the bottom of the screen — the record and undo buttons

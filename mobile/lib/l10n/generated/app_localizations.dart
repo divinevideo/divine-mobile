@@ -15365,6 +15365,60 @@ abstract class AppLocalizations {
   /// **'Toggle aspect ratio'**
   String get videoRecorderToggleAspectRatioLabel;
 
+  /// Short visible name of the camera's flash control, shown next to its icon while the recorder's control rail is unfolded over the viewfinder.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get videoRecorderRailFlashLabel;
+
+  /// Short visible name of the control that switches between the front and back camera, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip'**
+  String get videoRecorderRailFlipLabel;
+
+  /// Short visible name of the control that switches between a vertical and a square frame, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Aspect ratio'**
+  String get videoRecorderRailAspectRatioLabel;
+
+  /// Short visible name of the countdown timer control (the stop-motion interval in Stop Motion), shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Timer'**
+  String get videoRecorderRailTimerLabel;
+
+  /// Short visible name of the control that overlays the last clip faintly on the viewfinder, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ghost frame'**
+  String get videoRecorderRailGhostFrameLabel;
+
+  /// Short visible name of the rule-of-thirds grid control, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get videoRecorderRailGridLabel;
+
+  /// Short visible name of the control that records with the front and the back camera at once, shown next to its icon while the recorder's control rail is unfolded.
+  ///
+  /// In en, this message translates to:
+  /// **'Dual camera'**
+  String get videoRecorderRailDualCameraLabel;
+
+  /// Screen-reader label of the button that unfolds the recorder's control rail to list every camera control. Read while the rail is folded.
+  ///
+  /// In en, this message translates to:
+  /// **'Show camera options'**
+  String get videoRecorderRailShowOptionsLabel;
+
+  /// Screen-reader label of the same button while the rail is unfolded: tapping it folds the rail back to flash, camera switch and aspect ratio.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide camera options'**
+  String get videoRecorderRailHideOptionsLabel;
+
   /// No description provided for @videoRecorderStabilizationLabel.
   ///
   /// In en, this message translates to:

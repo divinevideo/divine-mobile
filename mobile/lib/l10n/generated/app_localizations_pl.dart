@@ -9410,6 +9410,33 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Przełącz proporcje';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Lampa błyskowa';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Odwróć';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Proporcje';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Klatka odniesienia';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Siatka';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dwa aparaty';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Pokaż opcje aparatu';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Ukryj opcje aparatu';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilizacja';
 
   @override

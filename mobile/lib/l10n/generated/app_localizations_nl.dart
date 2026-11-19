@@ -9233,6 +9233,33 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Beeldverhouding wisselen';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flitser';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Omdraaien';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Beeldverhouding';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Spookframe';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Raster';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Twee camera\'s';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Camera-opties tonen';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Camera-opties verbergen';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisatie';
 
   @override

@@ -9194,6 +9194,33 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Togol nisbah aspek';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Denyar';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Terbalikkan';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Nisbah aspek';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Pemasa';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Bingkai hantu';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dwi kamera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Tunjukkan pilihan kamera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Sembunyikan pilihan kamera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Penstabilan';
 
   @override

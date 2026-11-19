@@ -1214,6 +1214,55 @@ void main() {
       );
     });
 
+    group('VideoRecorderActionRailToggled', () {
+      setUp(stubRecorderDefaults);
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'unfolds the capture rail and folds it again',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const VideoRecorderActionRailToggled());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderActionRailToggled());
+        },
+        expect: () => const [
+          VideoRecorderBlocState(isActionRailExpanded: true),
+          VideoRecorderBlocState(),
+        ],
+      );
+
+      test('a starting take folds the rail', () async {
+        when(
+          () => cameraService.startRecording(
+            maxDuration: any(named: 'maxDuration'),
+          ),
+        ).thenAnswer((_) async => true);
+        final bloc = buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              isCameraInitialized: true,
+              canRecord: true,
+              isActionRailExpanded: true,
+            ),
+          );
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoRecorderRecordingStartRequested());
+        final starting = await bloc.stream.firstWhere(
+          (state) => state.isStartingRecording,
+        );
+
+        expect(starting.isActionRailExpanded, isFalse);
+      });
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'a late options tap cannot reopen the rail while a take starts',
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(isStartingRecording: true),
+        act: (bloc) => bloc.add(const VideoRecorderActionRailToggled()),
+        expect: () => <VideoRecorderBlocState>[],
+      );
+    });
+
     group('VideoRecorderShowLastClipOverlayToggled', () {
       setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
@@ -2810,6 +2859,23 @@ void main() {
         ],
       );
 
+      // A lens flip re-syncs, and the rail it was tapped on stays open.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the capture rail unfolded',
+        build: buildBlocCapturingUpdateState,
+        seed: () => const VideoRecorderBlocState(isActionRailExpanded: true),
+        act: (_) => updateStateCallback(forceCameraRebuild: true),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having((s) => s.cameraRebuildCount, 'cameraRebuildCount', 1)
+              .having(
+                (s) => s.isActionRailExpanded,
+                'isActionRailExpanded',
+                isTrue,
+              ),
+        ],
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps the navigation lock until the next initialize',
         build: buildBlocCapturingUpdateState,
@@ -4364,6 +4430,39 @@ void main() {
             enabled: any(named: 'enabled'),
           ),
         ).thenAnswer((_) async => true);
+      });
+
+      group('grid', () {
+        // Capture is the mode a new recorder starts in, so opening on it
+        // switches no mode; the grid choice still has to apply.
+        test('shows the remembered grid when opening on capture', () async {
+          when(
+            () => prefs.getBool('camera_grid_lines_enabled'),
+          ).thenReturn(true);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          expect(bloc.state.showGridLines, isFalse);
+
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          expect(bloc.state.showGridLines, isTrue);
+        });
+
+        test('keeps the grid off when the user turned it off', () async {
+          when(
+            () => prefs.getBool('camera_grid_lines_enabled'),
+          ).thenReturn(false);
+          final bloc = buildBloc()
+            ..emit(const VideoRecorderBlocState(showGridLines: true));
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          expect(bloc.state.showGridLines, isFalse);
+        });
       });
 
       group('remote record trigger', () {

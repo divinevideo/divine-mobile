@@ -9208,6 +9208,33 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبديل نسبة العرض إلى الارتفاع';
 
   @override
+  String get videoRecorderRailFlashLabel => 'الفلاش';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'قلب';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'نسبة الأبعاد';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'المؤقت';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'الإطار الشبحي';
+
+  @override
+  String get videoRecorderRailGridLabel => 'الشبكة';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'كاميرا مزدوجة';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'إظهار خيارات الكاميرا';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'إخفاء خيارات الكاميرا';
+
+  @override
   String get videoRecorderStabilizationLabel => 'تثبيت الفيديو';
 
   @override

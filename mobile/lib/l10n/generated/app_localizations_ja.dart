@@ -8733,6 +8733,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'アスペクト比を切り替え';
 
   @override
+  String get videoRecorderRailFlashLabel => 'フラッシュ';
+
+  @override
+  String get videoRecorderRailFlipLabel => '反転';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'アスペクト比';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'タイマー';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'ゴーストフレーム';
+
+  @override
+  String get videoRecorderRailGridLabel => 'グリッド';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'デュアルカメラ';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'カメラオプションを表示';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'カメラオプションを非表示';
+
+  @override
   String get videoRecorderStabilizationLabel => '手ぶれ補正';
 
   @override

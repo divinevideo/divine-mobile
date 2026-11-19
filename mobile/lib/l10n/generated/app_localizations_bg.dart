@@ -9275,6 +9275,33 @@ class AppLocalizationsBg extends AppLocalizations {
       'Превключване на пропорциите';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Светкавица';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Обръщане';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Пропорции';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Таймер';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Призрачна рамка';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Мрежа';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Две камери';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Покажи опциите на камерата';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Скрий опциите на камерата';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Стабилизация';
 
   @override

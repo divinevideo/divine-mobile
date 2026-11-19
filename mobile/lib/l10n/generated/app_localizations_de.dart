@@ -9314,6 +9314,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Seitenverhältnis wechseln';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Blitz';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Umdrehen';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Seitenverhältnis';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Geisterbild';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Raster';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Beide Kameras';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Kameraoptionen einblenden';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Kameraoptionen ausblenden';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisierung';
 
   @override

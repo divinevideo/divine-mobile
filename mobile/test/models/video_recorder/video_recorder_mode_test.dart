@@ -60,8 +60,8 @@ void main() {
     });
 
     group('supportGridLines', () {
-      test('capture does not support grid lines', () {
-        expect(VideoRecorderMode.capture.supportGridLines, isFalse);
+      test('capture supports grid lines', () {
+        expect(VideoRecorderMode.capture.supportGridLines, isTrue);
       });
 
       test('classic supports grid lines', () {

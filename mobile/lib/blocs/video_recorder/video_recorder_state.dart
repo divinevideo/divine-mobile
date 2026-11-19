@@ -91,6 +91,7 @@ class VideoRecorderBlocState extends Equatable {
     this.initializationError,
     this.showLastClipOverlay = false,
     this.showGridLines = false,
+    this.isActionRailExpanded = false,
     this.isStartingRecording = false,
     this.isStoppingRecording = false,
     this.pendingStopAfterStart = false,
@@ -246,6 +247,13 @@ class VideoRecorderBlocState extends Equatable {
 
   /// Whether to show the rule-of-thirds grid overlay on the camera preview.
   final bool showGridLines;
+
+  /// Whether the capture rail lists every control with its name, rather than
+  /// only flash, lens and aspect ratio.
+  ///
+  /// Folds back when a take or a stop-motion interval starts, and a recorder
+  /// opened anew starts folded.
+  final bool isActionRailExpanded;
 
   /// True while [VideoRecorderRecordingStartRequested] is in-flight (between
   /// pressing record and the camera reporting the first keyframe).
@@ -508,6 +516,7 @@ class VideoRecorderBlocState extends Equatable {
     CameraInitializationError? initializationError,
     bool? showLastClipOverlay,
     bool? showGridLines,
+    bool? isActionRailExpanded,
     bool? isStartingRecording,
     bool? isStoppingRecording,
     bool? pendingStopAfterStart,
@@ -576,6 +585,7 @@ class VideoRecorderBlocState extends Equatable {
       initializationError: initializationError ?? this.initializationError,
       showLastClipOverlay: showLastClipOverlay ?? this.showLastClipOverlay,
       showGridLines: showGridLines ?? this.showGridLines,
+      isActionRailExpanded: isActionRailExpanded ?? this.isActionRailExpanded,
       isStartingRecording: isStartingRecording ?? this.isStartingRecording,
       isStoppingRecording: isStoppingRecording ?? this.isStoppingRecording,
       pendingStopAfterStart:
@@ -646,6 +656,7 @@ class VideoRecorderBlocState extends Equatable {
     initializationError,
     showLastClipOverlay,
     showGridLines,
+    isActionRailExpanded,
     isStartingRecording,
     isStoppingRecording,
     pendingStopAfterStart,

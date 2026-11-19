@@ -9107,6 +9107,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'En-boy oranını değiştir';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flaş';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Çevir';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'En-boy oranı';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Zamanlayıcı';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Hayalet kare';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Izgara';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Çift kamera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel => 'Kamera seçeneklerini göster';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel => 'Kamera seçeneklerini gizle';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Sabitleme';
 
   @override

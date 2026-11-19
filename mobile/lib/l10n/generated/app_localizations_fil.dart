@@ -9257,6 +9257,35 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'I-toggle ang aspect ratio';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'I-flip';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Aspect ratio';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Ghost frame';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dalawang camera';
+
+  @override
+  String get videoRecorderRailShowOptionsLabel =>
+      'Ipakita ang mga opsyon ng camera';
+
+  @override
+  String get videoRecorderRailHideOptionsLabel =>
+      'Itago ang mga opsyon ng camera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Estabilisasyon';
 
   @override

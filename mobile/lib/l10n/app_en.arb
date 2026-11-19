@@ -6676,6 +6676,42 @@
   "videoRecorderToggleFlashLabel": "Toggle flash",
   "videoRecorderCycleTimerLabel": "Cycle timer",
   "videoRecorderToggleAspectRatioLabel": "Toggle aspect ratio",
+  "videoRecorderRailFlashLabel": "Flash",
+  "@videoRecorderRailFlashLabel": {
+    "description": "Short visible name of the camera's flash control, shown next to its icon while the recorder's control rail is unfolded over the viewfinder."
+  },
+  "videoRecorderRailFlipLabel": "Flip",
+  "@videoRecorderRailFlipLabel": {
+    "description": "Short visible name of the control that switches between the front and back camera, shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailAspectRatioLabel": "Aspect ratio",
+  "@videoRecorderRailAspectRatioLabel": {
+    "description": "Short visible name of the control that switches between a vertical and a square frame, shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailTimerLabel": "Timer",
+  "@videoRecorderRailTimerLabel": {
+    "description": "Short visible name of the countdown timer control (the stop-motion interval in Stop Motion), shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailGhostFrameLabel": "Ghost frame",
+  "@videoRecorderRailGhostFrameLabel": {
+    "description": "Short visible name of the control that overlays the last clip faintly on the viewfinder, shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailGridLabel": "Grid",
+  "@videoRecorderRailGridLabel": {
+    "description": "Short visible name of the rule-of-thirds grid control, shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailDualCameraLabel": "Dual camera",
+  "@videoRecorderRailDualCameraLabel": {
+    "description": "Short visible name of the control that records with the front and the back camera at once, shown next to its icon while the recorder's control rail is unfolded."
+  },
+  "videoRecorderRailShowOptionsLabel": "Show camera options",
+  "@videoRecorderRailShowOptionsLabel": {
+    "description": "Screen-reader label of the button that unfolds the recorder's control rail to list every camera control. Read while the rail is folded."
+  },
+  "videoRecorderRailHideOptionsLabel": "Hide camera options",
+  "@videoRecorderRailHideOptionsLabel": {
+    "description": "Screen-reader label of the same button while the rail is unfolded: tapping it folds the rail back to flash, camera switch and aspect ratio."
+  },
   "videoRecorderStabilizationLabel": "Stabilization",
   "videoRecorderStabilizationModeOff": "Off",
   "videoRecorderStabilizationModeStandard": "Standard",
