@@ -341,6 +341,14 @@ const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 /// sent before another stalled — before the whole resolution is abandoned.
 const Duration _dmInboxOutboxSettleMargin = Duration(milliseconds: 250);
 
+/// Longest a file message send waits for a relay to connect when none is.
+///
+/// A file message is published only after its upload finished, so failing it
+/// the moment no relay is connected throws that upload away over a socket that
+/// is usually a couple of seconds from reconnecting (#10436). Short, because
+/// the sender is watching a send that has not finished yet.
+const Duration dmFileSendRelayWait = Duration(seconds: 10);
+
 /// Most write relays the outbox leg dials for one recipient. Each is a cold
 /// connection on the send path, chosen by the person being messaged.
 const int _dmInboxOutboxRelayCap = 4;
@@ -11968,6 +11976,8 @@ class DmRepository {
       ...extraTags,
     ];
 
+    await _awaitConnectedRelayForFileSend();
+
     // Routed like a text message: to the recipient's kind-10050 inbox, the
     // default pool only when they advertise none, and confirmed by a relay
     // `OK` rather than a socket write (#9883). An unreadable inbox publishes
@@ -12046,6 +12056,36 @@ class DmRepository {
     }
 
     return result;
+  }
+
+  /// Waits up to [dmFileSendRelayWait] for a relay to connect when none is,
+  /// so a reconnect in progress does not leave the recipient's inbox
+  /// unreadable and fail a file send whose upload already finished (#10436).
+  ///
+  /// Returns at once when a relay is connected. When none connects in time it
+  /// returns anyway and the send goes on to fail as it would have.
+  Future<void> _awaitConnectedRelayForFileSend() async {
+    if (_nostrClient.connectedRelayCount > 0) return;
+    Log.info(
+      'No relay connected for a file message; waiting up to '
+      '${dmFileSendRelayWait.inSeconds}s for one',
+      category: LogCategory.system,
+    );
+    try {
+      await _nostrClient.relayStatusStream
+          .where((statuses) => statuses.values.any((s) => s.isConnected))
+          .timeout(dmFileSendRelayWait)
+          .first;
+    } on TimeoutException {
+      Log.warning(
+        'No relay connected within ${dmFileSendRelayWait.inSeconds}s; '
+        'sending the file message anyway',
+        category: LogCategory.system,
+      );
+    } on StateError {
+      // The status stream closed without a connected relay: the client is
+      // shutting down, and the send fails on its own below.
+    }
   }
 
   // -------------------------------------------------------------------------
