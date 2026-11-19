@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Cancelar este vídeo?",
   "collabRoomCancelConfirmBody": "A sala fecha para todo mundo.",
   "collabRoomPickNewLayout": "Alguém saiu. Escolha um layout para quem ficou.",
+  "collabRoomPickLayoutForAll": "Alguém entrou. Escolha um layout para todo mundo.",
   "collabRoomComposing": "Juntando tudo…",
   "collabRoomComposeFailed": "Não foi possível juntar o vídeo. Tente de novo.",
   "collabRoomPosted": "Este vídeo está no ar. Mandaram bem, galera!",

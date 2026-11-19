@@ -7778,6 +7778,7 @@
   "collabRoomCancelConfirmTitle": "取消这个视频？",
   "collabRoomCancelConfirmBody": "房间将对所有人关闭。",
   "collabRoomPickNewLayout": "有人退出了。请为剩下的人选择一个布局。",
+  "collabRoomPickLayoutForAll": "有人加入了。请为所有人选择一个布局。",
   "collabRoomComposing": "正在合成…",
   "collabRoomComposeFailed": "视频合成失败，请重试。",
   "collabRoomPosted": "这个视频已发布。大家辛苦了！",

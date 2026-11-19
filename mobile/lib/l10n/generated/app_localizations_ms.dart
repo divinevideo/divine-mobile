@@ -16505,6 +16505,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Ada yang keluar. Pilih susun atur untuk yang masih ada.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Ada yang menyertai. Pilih susun atur untuk semua.';
+
+  @override
   String get collabRoomComposing => 'Sedang menggabungkan…';
 
   @override

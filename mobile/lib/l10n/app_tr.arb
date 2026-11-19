@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Bu video iptal edilsin mi?",
   "collabRoomCancelConfirmBody": "Oda herkes için kapanır.",
   "collabRoomPickNewLayout": "Biri ayrıldı. Kalanlar için bir düzen seç.",
+  "collabRoomPickLayoutForAll": "Biri katıldı. Herkes için bir düzen seç.",
   "collabRoomComposing": "Birleştiriliyor…",
   "collabRoomComposeFailed": "Video birleştirilemedi. Tekrar dene.",
   "collabRoomPosted": "Bu video yayında. Herkes harikaydı!",

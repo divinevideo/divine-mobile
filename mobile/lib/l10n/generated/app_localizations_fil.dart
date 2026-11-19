@@ -16647,6 +16647,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'May umalis. Pumili ng layout para sa mga natira.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'May sumali. Pumili ng layout para sa lahat.';
+
+  @override
   String get collabRoomComposing => 'Pinagsasama…';
 
   @override

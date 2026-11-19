@@ -7778,6 +7778,7 @@
   "collabRoomCancelConfirmTitle": "Batalkan video ini?",
   "collabRoomCancelConfirmBody": "Bilik ditutup untuk semua orang.",
   "collabRoomPickNewLayout": "Ada yang keluar. Pilih susun atur untuk yang masih ada.",
+  "collabRoomPickLayoutForAll": "Ada yang menyertai. Pilih susun atur untuk semua.",
   "collabRoomComposing": "Sedang menggabungkan…",
   "collabRoomComposeFailed": "Video tidak dapat digabungkan. Cuba lagi.",
   "collabRoomPosted": "Video ini dah keluar. Syabas, semua!",

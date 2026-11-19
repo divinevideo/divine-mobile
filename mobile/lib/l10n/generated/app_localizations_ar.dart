@@ -16544,6 +16544,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collabRoomPickNewLayout => 'خرج أحدهم. اختيار تخطيط لمن تبقّى.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'انضم أحدهم. اختيار تخطيط يناسب الجميع.';
+
+  @override
   String get collabRoomComposing => 'جارٍ الدمج…';
 
   @override

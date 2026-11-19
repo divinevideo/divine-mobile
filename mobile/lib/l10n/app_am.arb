@@ -6530,6 +6530,7 @@
   "collabRoomCancelConfirmTitle": "ይህ ቪዲዮ ይሰረዝ?",
   "collabRoomCancelConfirmBody": "ክፍሉ ለሁሉም ይዘጋል።",
   "collabRoomPickNewLayout": "አንድ ሰው ወጥቷል። ለቀሩት ሰዎች አቀማመጥ ይምረጡ።",
+  "collabRoomPickLayoutForAll": "አንድ ሰው ተቀላቅሏል። ለሁሉም የሚስማማ አቀማመጥ ይምረጡ።",
   "collabRoomComposing": "በማገናኘት ላይ…",
   "collabRoomComposeFailed": "ቪዲዮውን ማገናኘት አልተቻለም። እንደገና ይሞክሩ።",
   "collabRoomPosted": "ይህ ቪዲዮ ታትሟል። ሁላችሁም ጥሩ ሠርታችኋል!",

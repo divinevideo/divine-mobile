@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Deze video afblazen?",
   "collabRoomCancelConfirmBody": "De ruimte sluit voor iedereen.",
   "collabRoomPickNewLayout": "Iemand is weg. Kies een indeling voor wie er nog is.",
+  "collabRoomPickLayoutForAll": "Er is iemand bijgekomen. Kies een indeling voor iedereen.",
   "collabRoomComposing": "Samenvoegen…",
   "collabRoomComposeFailed": "De video kon niet worden samengevoegd. Probeer het opnieuw.",
   "collabRoomPosted": "Deze video staat online. Goed gedaan, allemaal!",

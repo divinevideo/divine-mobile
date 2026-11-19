@@ -5507,6 +5507,7 @@
   "collabRoomCancelConfirmTitle": "Kanselahin ang video na ito?",
   "collabRoomCancelConfirmBody": "Magsasara ang room para sa lahat.",
   "collabRoomPickNewLayout": "May umalis. Pumili ng layout para sa mga natira.",
+  "collabRoomPickLayoutForAll": "May sumali. Pumili ng layout para sa lahat.",
   "collabRoomComposing": "Pinagsasama…",
   "collabRoomComposeFailed": "Hindi napagsama ang video. Subukan ulit.",
   "collabRoomPosted": "Live na ang video na ito. Ang galing ninyong lahat!",

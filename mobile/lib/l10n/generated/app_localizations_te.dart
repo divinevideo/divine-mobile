@@ -16882,6 +16882,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎవరో వెళ్లిపోయారు. మిగిలినవారికి సరిపోయే లేఅవుట్ ఎంచుకోండి.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'ఎవరో చేరారు. అందరికీ సరిపోయే లేఅవుట్ ఎంచుకోండి.';
+
+  @override
   String get collabRoomComposing => 'కలుపుతోంది…';
 
   @override

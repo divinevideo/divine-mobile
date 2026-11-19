@@ -15736,6 +15736,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomPickNewLayout => '抜けた人がいます。残っている人に合うレイアウトを選んでください。';
 
   @override
+  String get collabRoomPickLayoutForAll => '参加した人がいます。全員に合うレイアウトを選んでください。';
+
+  @override
   String get collabRoomComposing => 'つなげています…';
 
   @override

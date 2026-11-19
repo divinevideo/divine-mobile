@@ -16109,6 +16109,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomPickNewLayout => 'አንድ ሰው ወጥቷል። ለቀሩት ሰዎች አቀማመጥ ይምረጡ።';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'አንድ ሰው ተቀላቅሏል። ለሁሉም የሚስማማ አቀማመጥ ይምረጡ።';
+
+  @override
   String get collabRoomComposing => 'በማገናኘት ላይ…';
 
   @override

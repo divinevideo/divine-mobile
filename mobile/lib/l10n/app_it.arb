@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Annullare questo video?",
   "collabRoomCancelConfirmBody": "La stanza si chiude per tutti.",
   "collabRoomPickNewLayout": "Qualcuno è uscito. Scegli un layout per chi è rimasto.",
+  "collabRoomPickLayoutForAll": "Si è aggiunto qualcuno. Scegli un layout per tutti.",
   "collabRoomComposing": "Montaggio in corso…",
   "collabRoomComposeFailed": "Impossibile montare il video. Riprova.",
   "collabRoomPosted": "Questo video è online. Bel lavoro, tutti!",

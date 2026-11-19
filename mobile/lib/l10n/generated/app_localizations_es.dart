@@ -16702,6 +16702,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Alguien quedó afuera. Elegí un diseño para quienes siguen.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Se sumó alguien. Elegí un diseño para todos.';
+
+  @override
   String get collabRoomComposing => 'Armando el video…';
 
   @override

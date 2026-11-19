@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "إلغاء هذا الفيديو؟",
   "collabRoomCancelConfirmBody": "ستُغلق الغرفة للجميع.",
   "collabRoomPickNewLayout": "خرج أحدهم. اختيار تخطيط لمن تبقّى.",
+  "collabRoomPickLayoutForAll": "انضم أحدهم. اختيار تخطيط يناسب الجميع.",
   "collabRoomComposing": "جارٍ الدمج…",
   "collabRoomComposeFailed": "تعذّر دمج الفيديو. يُرجى المحاولة مجددًا.",
   "collabRoomPosted": "نُشر هذا الفيديو. عمل رائع من الجميع!",

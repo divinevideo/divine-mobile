@@ -7778,6 +7778,7 @@
   "collabRoomCancelConfirmTitle": "Hủy video này?",
   "collabRoomCancelConfirmBody": "Phòng sẽ đóng với tất cả mọi người.",
   "collabRoomPickNewLayout": "Có người đã rời. Chọn bố cục cho những người còn lại.",
+  "collabRoomPickLayoutForAll": "Có người mới tham gia. Chọn bố cục cho mọi người.",
   "collabRoomComposing": "Đang ghép…",
   "collabRoomComposeFailed": "Không ghép được video. Hãy thử lại.",
   "collabRoomPosted": "Video này đã lên sóng. Mọi người làm tốt lắm!",

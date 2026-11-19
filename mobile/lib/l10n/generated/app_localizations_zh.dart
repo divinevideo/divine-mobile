@@ -15546,6 +15546,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomPickNewLayout => '有人退出了。请为剩下的人选择一个布局。';
 
   @override
+  String get collabRoomPickLayoutForAll => '有人加入了。请为所有人选择一个布局。';
+
+  @override
   String get collabRoomComposing => '正在合成…';
 
   @override

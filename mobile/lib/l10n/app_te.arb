@@ -9401,6 +9401,7 @@
   "collabRoomCancelConfirmTitle": "ఈ వీడియోను రద్దు చేయాలా?",
   "collabRoomCancelConfirmBody": "రూమ్ అందరికీ మూసివేయబడుతుంది.",
   "collabRoomPickNewLayout": "ఎవరో వెళ్లిపోయారు. మిగిలినవారికి సరిపోయే లేఅవుట్ ఎంచుకోండి.",
+  "collabRoomPickLayoutForAll": "ఎవరో చేరారు. అందరికీ సరిపోయే లేఅవుట్ ఎంచుకోండి.",
   "collabRoomComposing": "కలుపుతోంది…",
   "collabRoomComposeFailed": "వీడియోను కలపలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
   "collabRoomPosted": "ఈ వీడియో ప్రచురితమైంది. అందరూ బాగా చేశారు!",

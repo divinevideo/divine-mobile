@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Anulezi acest video?",
   "collabRoomCancelConfirmBody": "Camera se închide pentru toată lumea.",
   "collabRoomPickNewLayout": "Cineva a ieșit. Alege un aspect pentru cei rămași.",
+  "collabRoomPickLayoutForAll": "S-a alăturat cineva. Alege un aspect pentru toți.",
   "collabRoomComposing": "Le punem cap la cap…",
   "collabRoomComposeFailed": "Videoul nu a putut fi asamblat. Încearcă din nou.",
   "collabRoomPosted": "Videoul ăsta e online. Bravo tuturor!",

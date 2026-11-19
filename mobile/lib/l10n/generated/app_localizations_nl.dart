@@ -16591,6 +16591,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Iemand is weg. Kies een indeling voor wie er nog is.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Er is iemand bijgekomen. Kies een indeling voor iedereen.';
+
+  @override
   String get collabRoomComposing => 'Samenvoegen…';
 
   @override

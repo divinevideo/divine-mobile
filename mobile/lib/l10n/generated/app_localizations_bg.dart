@@ -16656,6 +16656,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Някой излезе. Избери оформление за останалите.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Някой се присъедини. Избери оформление за всички.';
+
+  @override
   String get collabRoomComposing => 'Сглобяване…';
 
   @override

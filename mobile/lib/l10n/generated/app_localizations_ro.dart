@@ -16835,6 +16835,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cineva a ieșit. Alege un aspect pentru cei rămași.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'S-a alăturat cineva. Alege un aspect pentru toți.';
+
+  @override
   String get collabRoomComposing => 'Le punem cap la cap…';
 
   @override

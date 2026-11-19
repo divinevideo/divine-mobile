@@ -6023,6 +6023,7 @@
   "collabRoomCancelConfirmTitle": "이 영상을 취소할까요?",
   "collabRoomCancelConfirmBody": "모두에게 방이 닫혀요.",
   "collabRoomPickNewLayout": "누군가 빠졌어요. 남은 사람에게 맞는 레이아웃을 골라 주세요.",
+  "collabRoomPickLayoutForAll": "누군가 들어왔어요. 모두에게 맞는 레이아웃을 골라 주세요.",
   "collabRoomComposing": "합치는 중…",
   "collabRoomComposeFailed": "영상을 합치지 못했어요. 다시 해 보세요.",
   "collabRoomPosted": "영상이 올라갔어요. 모두 수고했어요!",

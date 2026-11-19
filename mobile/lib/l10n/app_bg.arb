@@ -6594,6 +6594,7 @@
   "collabRoomCancelConfirmTitle": "Да отменим ли това видео?",
   "collabRoomCancelConfirmBody": "Стаята се затваря за всички.",
   "collabRoomPickNewLayout": "Някой излезе. Избери оформление за останалите.",
+  "collabRoomPickLayoutForAll": "Някой се присъедини. Избери оформление за всички.",
   "collabRoomComposing": "Сглобяване…",
   "collabRoomComposeFailed": "Видеото не можа да се сглоби. Опитай пак.",
   "collabRoomPosted": "Видеото е публикувано. Браво на всички!",

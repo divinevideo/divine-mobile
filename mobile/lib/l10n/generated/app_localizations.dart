@@ -27597,6 +27597,12 @@ abstract class AppLocalizations {
   /// **'Someone\'s out. Pick a layout for who\'s still here.'**
   String get collabRoomPickNewLayout;
 
+  /// Shown to the host while filming when someone joined the collaborative video room and the layout no longer has a cell for everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone joined. Pick a layout that fits everyone.'**
+  String get collabRoomPickLayoutForAll;
+
   /// Shown while everyone's parts are combined into one split-screen video.
   ///
   /// In en, this message translates to:

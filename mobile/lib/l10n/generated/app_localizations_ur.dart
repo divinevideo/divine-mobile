@@ -16504,6 +16504,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کوئی نکل گیا ہے۔ باقی لوگوں کے لیے لے آؤٹ چنیں۔';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'کوئی شامل ہو گیا ہے۔ سب کے لیے لے آؤٹ چنیں۔';
+
+  @override
   String get collabRoomComposing => 'جوڑا جا رہا ہے…';
 
   @override

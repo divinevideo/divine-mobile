@@ -16523,6 +16523,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Någon är borta. Välj en layout för de som är kvar.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Någon har anslutit. Välj en layout för alla.';
+
+  @override
   String get collabRoomComposing => 'Sätter ihop…';
 
   @override

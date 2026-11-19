@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "この動画を中止しますか？",
   "collabRoomCancelConfirmBody": "全員のルームが閉じます。",
   "collabRoomPickNewLayout": "抜けた人がいます。残っている人に合うレイアウトを選んでください。",
+  "collabRoomPickLayoutForAll": "参加した人がいます。全員に合うレイアウトを選んでください。",
   "collabRoomComposing": "つなげています…",
   "collabRoomComposeFailed": "動画をつなげられませんでした。もう一度お試しください。",
   "collabRoomPosted": "この動画は公開されました。みんなお疲れさまでした！",

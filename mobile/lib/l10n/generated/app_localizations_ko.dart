@@ -15754,6 +15754,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomPickNewLayout => '누군가 빠졌어요. 남은 사람에게 맞는 레이아웃을 골라 주세요.';
 
   @override
+  String get collabRoomPickLayoutForAll => '누군가 들어왔어요. 모두에게 맞는 레이아웃을 골라 주세요.';
+
+  @override
   String get collabRoomComposing => '합치는 중…';
 
   @override

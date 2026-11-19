@@ -13736,6 +13736,10 @@
   "@collabRoomPickNewLayout": {
     "description": "Shown to the host when the number of people in a collaborative video room no longer fits its layout."
   },
+  "collabRoomPickLayoutForAll": "Someone joined. Pick a layout that fits everyone.",
+  "@collabRoomPickLayoutForAll": {
+    "description": "Shown to the host while filming when someone joined the collaborative video room and the layout no longer has a cell for everyone."
+  },
   "collabRoomComposing": "Putting it together…",
   "@collabRoomComposing": {
     "description": "Shown while everyone's parts are combined into one split-screen video."

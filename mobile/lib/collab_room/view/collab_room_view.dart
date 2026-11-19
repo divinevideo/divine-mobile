@@ -535,7 +535,9 @@ class _Notice extends StatelessWidget {
         l10n.collabRoomInviteCardBody,
       CollabRoomPhase.lobby => l10n.collabRoomWaitingForHost,
       CollabRoomPhase.recording when room.isAuthor && !state.layoutFits =>
-        l10n.collabRoomPickNewLayout,
+        room.participants.length > (room.layoutPreset?.cellCount ?? 0)
+            ? l10n.collabRoomPickLayoutForAll
+            : l10n.collabRoomPickNewLayout,
       CollabRoomPhase.recording
           when !room.parts.containsKey(room.ownerPubkey) =>
         l10n.collabRoomFilmHint,

@@ -28,6 +28,7 @@ class _MockCollabRoomCubit extends MockCubit<CollabRoomState>
 const _author =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const _kai = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
 CollabRoom _room({
   required String owner,
@@ -188,6 +189,71 @@ void main() {
         expect(find.text(l10n.collabRoomFilmPartButton), findsOneWidget);
         expect(find.text(l10n.collabRoomLeaveButton), findsOneWidget);
         expect(find.text(l10n.collabRoomComposeButton), findsNothing);
+      });
+
+      testWidgets('a layout to pick again once someone left', (tester) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(
+              owner: _author,
+              phase: CollabRoomPhase.recording,
+              samStatus: CollabRoomMemberStatus.left,
+              layout: 'sideBySide',
+            ),
+          ),
+        );
+        expect(find.text(l10n.collabRoomPickNewLayout), findsOneWidget);
+      });
+
+      testWidgets('a layout to pick again once someone joined', (tester) async {
+        // Kai joined while filming, invited back by the host: no cell yet.
+        final room = foldCollabRooms([
+          DmMessage(
+            id: '1' * 64,
+            conversationId: DmRepository.computeConversationId([
+              _author,
+              _sam,
+            ]),
+            senderPubkey: _author,
+            content: 'text',
+            createdAt: 1,
+            giftWrapId: '2' * 64,
+            tags: collabRoomTags(
+              roomId: '0' * 32,
+              type: CollabRoomMessageType.invite,
+              recipientPubkey: _sam,
+              snapshot: const CollabRoomSnapshot(
+                revision: 0,
+                phase: CollabRoomPhase.recording,
+                layout: 'sideBySide',
+                members: [
+                  CollabRoomMember(
+                    pubkey: _author,
+                    status: CollabRoomMemberStatus.joined,
+                    cell: 0,
+                  ),
+                  CollabRoomMember(
+                    pubkey: _sam,
+                    status: CollabRoomMemberStatus.joined,
+                    cell: 1,
+                  ),
+                  CollabRoomMember(
+                    pubkey: _kai,
+                    status: CollabRoomMemberStatus.joined,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ], ownerPubkey: _author).single;
+        await pump(
+          tester,
+          CollabRoomState(status: CollabRoomStatus.ready, room: room),
+        );
+        expect(find.text(l10n.collabRoomPickLayoutForAll), findsOneWidget);
+        expect(find.text(l10n.collabRoomPickNewLayout), findsNothing);
       });
 
       testWidgets('a posted room with nothing left to do', (tester) async {

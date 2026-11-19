@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Ställa in den här videon?",
   "collabRoomCancelConfirmBody": "Rummet stängs för alla.",
   "collabRoomPickNewLayout": "Någon är borta. Välj en layout för de som är kvar.",
+  "collabRoomPickLayoutForAll": "Någon har anslutit. Välj en layout för alla.",
   "collabRoomComposing": "Sätter ihop…",
   "collabRoomComposeFailed": "Det gick inte att sätta ihop videon. Försök igen.",
   "collabRoomPosted": "Videon är ute. Snyggt jobbat, allihop!",

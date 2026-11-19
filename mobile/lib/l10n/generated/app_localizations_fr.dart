@@ -16768,6 +16768,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Quelqu\'un est parti. Choisis une mise en page pour celles et ceux qui restent.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Quelqu\'un est arrivé. Choisis une mise en page pour tout le monde.';
+
+  @override
   String get collabRoomComposing => 'Assemblage en cours…';
 
   @override

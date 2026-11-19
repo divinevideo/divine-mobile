@@ -16454,6 +16454,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Có người đã rời. Chọn bố cục cho những người còn lại.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Có người mới tham gia. Chọn bố cục cho mọi người.';
+
+  @override
   String get collabRoomComposing => 'Đang ghép…';
 
   @override

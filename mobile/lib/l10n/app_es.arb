@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "¿Cancelar este video?",
   "collabRoomCancelConfirmBody": "La sala se cierra para todos.",
   "collabRoomPickNewLayout": "Alguien quedó afuera. Elegí un diseño para quienes siguen.",
+  "collabRoomPickLayoutForAll": "Se sumó alguien. Elegí un diseño para todos.",
   "collabRoomComposing": "Armando el video…",
   "collabRoomComposeFailed": "No se pudo armar el video. Probá de nuevo.",
   "collabRoomPosted": "Este video ya está publicado. ¡Bien hecho, equipo!",

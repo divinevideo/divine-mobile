@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Annuler cette vidéo ?",
   "collabRoomCancelConfirmBody": "Le salon ferme pour tout le monde.",
   "collabRoomPickNewLayout": "Quelqu'un est parti. Choisis une mise en page pour celles et ceux qui restent.",
+  "collabRoomPickLayoutForAll": "Quelqu'un est arrivé. Choisis une mise en page pour tout le monde.",
   "collabRoomComposing": "Assemblage en cours…",
   "collabRoomComposeFailed": "Impossible d'assembler la vidéo. Réessaie.",
   "collabRoomPosted": "Cette vidéo est en ligne. Bravo à toute l'équipe !",

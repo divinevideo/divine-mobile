@@ -16700,6 +16700,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Jemand ist raus. Wähle ein Layout für alle, die noch da sind.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Jemand ist dazugekommen. Wähle ein Layout, das für alle passt.';
+
+  @override
   String get collabRoomComposing => 'Wird zusammengesetzt…';
 
   @override

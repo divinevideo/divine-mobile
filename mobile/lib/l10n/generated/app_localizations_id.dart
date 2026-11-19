@@ -16394,6 +16394,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Ada yang keluar. Pilih tata letak untuk yang masih ada.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Ada yang bergabung. Pilih tata letak untuk semua.';
+
+  @override
   String get collabRoomComposing => 'Menyatukan…';
 
   @override

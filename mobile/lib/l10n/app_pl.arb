@@ -6477,6 +6477,7 @@
   "collabRoomCancelConfirmTitle": "Odwołać to wideo?",
   "collabRoomCancelConfirmBody": "Pokój zamknie się dla wszystkich.",
   "collabRoomPickNewLayout": "Ktoś odpadł. Wybierz układ dla tych, którzy zostali.",
+  "collabRoomPickLayoutForAll": "Ktoś dołączył. Wybierz układ dla wszystkich.",
   "collabRoomComposing": "Składanie w całość…",
   "collabRoomComposeFailed": "Nie udało się złożyć wideo. Spróbuj ponownie.",
   "collabRoomPosted": "To wideo jest opublikowane. Świetna robota, ekipo!",

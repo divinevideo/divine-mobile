@@ -16848,6 +16848,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ktoś odpadł. Wybierz układ dla tych, którzy zostali.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Ktoś dołączył. Wybierz układ dla wszystkich.';
+
+  @override
   String get collabRoomComposing => 'Składanie w całość…';
 
   @override

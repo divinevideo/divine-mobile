@@ -16430,6 +16430,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Biri ayrıldı. Kalanlar için bir düzen seç.';
 
   @override
+  String get collabRoomPickLayoutForAll =>
+      'Biri katıldı. Herkes için bir düzen seç.';
+
+  @override
   String get collabRoomComposing => 'Birleştiriliyor…';
 
   @override
