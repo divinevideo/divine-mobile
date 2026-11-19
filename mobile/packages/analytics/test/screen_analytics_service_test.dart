@@ -104,6 +104,22 @@ void main() {
         expect(service.activeSessionCount, 0);
       });
 
+      test('markDataLoaded records once per session, not per rebuild', () {
+        final sink = RecordingAnalyticsEventSink();
+        ScreenAnalyticsService(history: PageLoadHistory(), sink: sink)
+          ..startScreenLoad('profile_view')
+          ..markDataLoaded('profile_view')
+          ..markDataLoaded('profile_view')
+          ..markDataLoaded('profile_view')
+          ..startScreenLoad('profile_view')
+          ..markDataLoaded('profile_view');
+
+        expect(
+          sink.events.where((event) => event.name == 'screen_data_loaded'),
+          hasLength(2),
+        );
+      });
+
       test('endScreen removes session', () {
         service.startScreenLoad('HomeScreen');
         expect(service.activeSessionCount, 1);

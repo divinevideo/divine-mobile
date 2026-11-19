@@ -256,6 +256,11 @@ class CameraController: NSObject {
     /// deactivating it under a running `finishWriting` fails the file with
     /// "Operation Interrupted" (#10195). Main queue only.
     private var isFinalizingRecording = false
+    // Main-thread ownership of a stop initiated by the camera. A Flutter
+    // stop may take over the same completion while the writer finalizes.
+    private typealias RecordingStopCompletion = ([String: Any]?, String?) -> Void
+    private var automaticStopCompletion: RecordingStopCompletion?
+    private var canClaimAutomaticStop = false
     private var isPaused: Bool = false
     /// Set by `suspendAudioCapture()` and cleared by everything that reopens
     /// the mic on purpose — `resumeAudioCapture()`, the record tap and
@@ -853,7 +858,7 @@ class CameraController: NSObject {
                 + "captured so far",
             name: "DivineCamera.Recording"
         )
-        stopRecording(drainPipeline: false) { [weak self] result, error in
+        stopRecordingForEvent(drainPipeline: false) { [weak self] result, error in
             if result == nil {
                 DivineCameraLog.shared.error(
                     "Recording interrupted with nothing to salvage: "
@@ -3545,7 +3550,7 @@ class CameraController: NSObject {
         maxDurationTimer?.invalidate()
         maxDurationTimer = nil
         
-        stopRecording { [weak self] result, error in
+        stopRecordingForEvent { [weak self] result, error in
             if result == nil {
                 DivineCameraLog.shared.error(
                     "Auto-stop finished with nothing to save: "
@@ -3568,6 +3573,30 @@ class CameraController: NSObject {
         )
     }
     
+    private func stopRecordingForEvent(
+        drainPipeline: Bool = true,
+        completion: @escaping RecordingStopCompletion
+    ) {
+        automaticStopCompletion = completion
+        canClaimAutomaticStop = true
+        finishRecordingRequest(drainPipeline: drainPipeline) { [weak self] result, error in
+            guard let self else { return }
+            let delivery = self.automaticStopCompletion
+            self.automaticStopCompletion = nil
+            self.canClaimAutomaticStop = false
+            delivery?(result, error)
+        }
+    }
+
+    func stopRecording(completion: @escaping ([String: Any]?, String?) -> Void) {
+        if canClaimAutomaticStop {
+            automaticStopCompletion = completion
+            canClaimAutomaticStop = false
+            return
+        }
+        finishRecordingRequest(completion: completion)
+    }
+
     /// Stops video recording and returns the result.
     ///
     /// The clip ends at the moment of the call, on capture time. Frames
@@ -3576,9 +3605,9 @@ class CameraController: NSObject {
     /// waited for, so the last second the user filmed is not cut. Pass
     /// `drainPipeline: false` when no further frame can arrive (the app lost
     /// the camera), so the file is finalized immediately.
-    func stopRecording(
+    private func finishRecordingRequest(
         drainPipeline: Bool = true,
-        completion: @escaping ([String: Any]?, String?) -> Void
+        completion: @escaping RecordingStopCompletion
     ) {
         guard isRecording, let writer = assetWriter else {
             completion(nil, "Not recording")

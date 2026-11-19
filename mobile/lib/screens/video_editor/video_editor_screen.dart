@@ -104,7 +104,6 @@ import 'package:unified_logger/unified_logger.dart';
 /// screen, and a non-opaque route kept the editor — its video textures,
 /// colour filter and live icons — composited under every camera frame. A
 /// transition route still paints the editor while the fade runs.
-@visibleForTesting
 PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
   return PageRouteBuilder<bool>(
     settings: const RouteSettings(name: 'video_recorder'),
@@ -123,7 +122,12 @@ PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
 /// Manages the [VideoEditorMainBloc] and [VideoEditorStickerBloc] lifecycle,
 /// precaches sticker images, and coordinates the editor canvas with toolbars.
 class VideoEditorScreen extends ConsumerStatefulWidget {
-  const VideoEditorScreen({super.key, this.draftId, this.fromLibrary = false});
+  const VideoEditorScreen({
+    super.key,
+    this.draftId,
+    this.fromLibrary = false,
+    this.analyticsSession,
+  });
 
   /// Optional draft ID to load an existing draft.
   final String? draftId;
@@ -131,6 +135,9 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Whether the editor was opened from the Library screen (its clips or
   /// drafts tab).
   final bool fromLibrary;
+
+  /// Continues the funnel of the reaction that opened this editor.
+  final CreationAnalyticsSession? analyticsSession;
 
   /// Route name for this screen.
   static const routeName = 'video-editor';
@@ -285,6 +292,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ),
     );
     _creationAnalyticsTracker = ref.read(creationAnalyticsTrackerProvider);
+    if (widget.analyticsSession case final session?) {
+      // The timeline is usable before the provider finishes initialization.
+      _runDetached(
+        _creationAnalyticsTracker.claimEditorSession(session),
+        'continue reaction creation in the editor',
+      );
+    }
     Log.info(
       '🎬 Initialized (draftId: ${widget.draftId}, fromLibrary: ${widget.fromLibrary})',
       name: 'VideoEditorScreen',
@@ -393,18 +407,20 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         .initialize(draftId: widget.draftId);
 
     if (!mounted) return;
-    final clips = ref.read(clipManagerProvider).clips;
-    final tracker = _creationAnalyticsTracker;
-    final recorderMode =
-        tracker.activeMode ??
-        (isStopMotionComposition(clips)
-            ? VideoRecorderMode.stopMotion
-            : VideoRecorderMode.fromName(
-                ref
-                    .read(sharedPreferencesProvider)
-                    .getString(VideoRecorderMode.persistenceKey),
-              ));
-    await tracker.editorOpened(recorderMode);
+    if (widget.analyticsSession == null) {
+      final clips = ref.read(clipManagerProvider).clips;
+      final tracker = _creationAnalyticsTracker;
+      final recorderMode =
+          tracker.activeMode ??
+          (isStopMotionComposition(clips)
+              ? VideoRecorderMode.stopMotion
+              : VideoRecorderMode.fromName(
+                  ref
+                      .read(sharedPreferencesProvider)
+                      .getString(VideoRecorderMode.persistenceKey),
+                ));
+      await tracker.editorOpened(recorderMode);
+    }
 
     Log.info(
       '🎬 Video editor initialized successfully',
@@ -481,7 +497,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   @override
   void dispose() {
     _readyTrace.left();
-    if (widget.fromLibrary || widget.draftId != null) {
+    if (widget.analyticsSession case final session?) {
+      _runDetached(
+        _creationAnalyticsTracker.abandonEditorSession(session),
+        'record abandoned reaction editor',
+      );
+    } else if (widget.fromLibrary || widget.draftId != null) {
       _runDetached(
         _creationAnalyticsTracker.creationAbandoned(),
         'record abandoned creation',
@@ -684,10 +705,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       maxChildSize: 1,
       initialChildSize: 0.9,
       minChildSize: VineTheme.bottomSheetDismissFloor,
-      buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: LibraryScreen.clipsTabIndex,
-        selectionMode: true,
-        allowsMixedClipTypes: true,
+      buildScrollBody: (scrollController) => LibraryScreen.editorPicker(
         editorClips: currentClips,
         scrollController: scrollController,
       ),

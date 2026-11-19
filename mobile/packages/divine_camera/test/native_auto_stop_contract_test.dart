@@ -44,7 +44,10 @@ void main() {
         );
 
         _expectSwiftSendsEveryResult(
-          declarationAt(autoStop, 'stopRecording { [weak self] result, error'),
+          declarationAt(
+            autoStop,
+            'stopRecordingForEvent { [weak self] result, error',
+          ),
           send: 'self?.sendAutoStopEvent(result: result)',
         );
       });
@@ -58,7 +61,8 @@ void main() {
         _expectSwiftSendsEveryResult(
           declarationAt(
             salvage,
-            'stopRecording(drainPipeline: false) { [weak self] result, error',
+            'stopRecordingForEvent(drainPipeline: false) '
+            '{ [weak self] result, error',
           ),
           send: 'self?.sendAutoStopEvent(result: result)',
         );
@@ -76,7 +80,7 @@ void main() {
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
           declarationAt(controllerSource, 'private fun autoStopRecording()'),
-          'stopArbiter.beginStop { result, error ->',
+          'stopArbiter.beginStop(automatic = true) { result, error ->',
         );
 
         expect(callback, contains(send));

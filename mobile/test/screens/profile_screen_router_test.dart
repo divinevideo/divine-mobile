@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/router/router.dart';
@@ -419,6 +421,43 @@ void main() {
           await tester.pump(const Duration(seconds: 3));
         });
       }
+    });
+
+    group('screen load analytics', () {
+      setUp(stubProfileDependencies);
+
+      testWidgets('records one own profile data load once videos arrive', (
+        tester,
+      ) async {
+        final history = PageLoadHistory();
+
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          extraOverrides: [
+            screenAnalyticsServiceProvider.overrideWithValue(
+              ScreenAnalyticsService(
+                history: history,
+                sink: const NoOpAnalyticsEventSink(),
+              ),
+            ),
+          ],
+        );
+        await tester.pump();
+
+        expect(
+          history.records.where(
+            (record) =>
+                record.screenName == 'own_profile' &&
+                record.dataLoadedMs != null,
+          ),
+          hasLength(1),
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
     });
 
     group('Library button', () {

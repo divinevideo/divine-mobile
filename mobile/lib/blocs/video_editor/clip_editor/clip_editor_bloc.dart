@@ -15,6 +15,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/aspect_ratio_switch.dart';
 import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
@@ -1599,6 +1600,19 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       return;
     }
 
+    // The composition keeps one shape even after reordering. Reframe each
+    // incoming copy from its own saved frame, keeping its source and credits.
+    final ratio = state.clips.firstOrNull?.targetAspectRatio;
+    final fitted = ratio == null
+        ? imported
+        : [
+            for (final clip in imported)
+              if (clip.targetAspectRatio == ratio)
+                clip
+              else
+                ...clipsWithAspectRatio([clip], ratio),
+          ];
+
     Log.info(
       '📚 Added ${imported.length} library clip(s), '
       '$setIndex of them assembled from stills',
@@ -1610,7 +1624,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // volume change or thumbnail refresh can still have landed meanwhile.
     emit(
       state.copyWith(
-        clips: List.unmodifiable([...state.clips, ...imported]),
+        clips: List.unmodifiable([...state.clips, ...fitted]),
         isImportingLibraryClips: false,
         clearLibraryImportRenderId: true,
         lastLibraryImportResult: ClipLibraryImportSuccess(

@@ -1,7 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -89,9 +88,13 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
                           semanticIdentifier: SemanticIds.cameraCloseButton,
                           size: .small,
                           type: .ghostOverMedia,
-                          onPressed: () => fromEditor
-                              ? context.pop(false)
-                              : closeVideoRecorder(context, ref),
+                          onPressed: () async {
+                            if (fromEditor) {
+                              await Navigator.of(context).maybePop(false);
+                            } else {
+                              closeVideoRecorder(context, ref);
+                            }
+                          },
                         ),
                       ),
                     ),
@@ -116,9 +119,16 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
                                     appendToComposition: !fromEditor,
                                   ),
                                 )
-                              : () => fromEditor
-                                    ? context.pop(true)
-                                    : openVideoEditorFromRecorder(context, ref),
+                              : () async {
+                                  if (fromEditor) {
+                                    await Navigator.of(context).maybePop(true);
+                                  } else {
+                                    await openVideoEditorFromRecorder(
+                                      context,
+                                      ref,
+                                    );
+                                  }
+                                },
                         ),
                       ),
                     ),

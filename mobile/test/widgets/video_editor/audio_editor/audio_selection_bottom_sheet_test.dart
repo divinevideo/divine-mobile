@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
@@ -13,6 +14,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -23,6 +25,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/observability/sound_picker_telemetry.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -40,8 +43,10 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show RankedSounds, SoundsRepository;
+    show RankedSounds, SoundSearchRelays, SoundsRepository;
 
+import '../../../helpers/recording_analytics_event_sink.dart';
+import '../../../helpers/recording_performance_monitor.dart';
 import '../../../helpers/scroll.dart';
 
 AudioEvent _createTestAudioEvent({
@@ -154,6 +159,7 @@ void main() {
         usageCounts: const <String, int>{},
       ),
       Map<String, List<AudioEvent>> searchResults = const {},
+      SoundSearchRelays searchRelays = SoundSearchRelays.answered,
       List<String>? relaySearches,
       AudioEvent? consentSound,
       bool? consentResult,
@@ -164,6 +170,9 @@ void main() {
       Set<String> blockedSoundAuthors = const {},
       double spaceBelow = 0,
       Locale? locale,
+      SoundPickerTelemetry? telemetry,
+      Completer<List<AudioEvent>>? pendingSearch,
+      bool routed = false,
     }) {
       final blocklist = _MockContentBlocklistRepository();
       when(() => blocklist.currentState).thenAnswer(
@@ -191,6 +200,27 @@ void main() {
             ...savedSoundRecords,
           ],
           missingFileSoundIds: missingFileSoundIds,
+        ),
+      );
+      final picker = Scaffold(
+        // Like every host of the picker, so the keyboard overlaps it rather
+        // than shrinking it.
+        resizeToAvoidBottomInset: false,
+        body: Column(
+          children: [
+            Expanded(
+              child: AudioSelectionBottomSheet(
+                scrollController: scrollController,
+                audioService: audioService,
+                pickAudioFile: pickAudioFile,
+                localAudioImportService: localAudioImportService,
+                telemetry: telemetry,
+              ),
+            ),
+            // What a host lays out below the picker, as the recorder does its
+            // mode wheel.
+            SizedBox(height: spaceBelow),
+          ],
         ),
       );
       return BlocProvider<SavedSoundsBloc>.value(
@@ -266,34 +296,37 @@ void main() {
             // repository, and with it a Nostr client, inside a widget test.
             soundSearchResultsProvider.overrideWith((ref, query) async {
               if (query.isNotEmpty) relaySearches?.add(query);
-              return searchResults[query] ?? const [];
+              final sounds = pendingSearch != null && query.isNotEmpty
+                  ? await pendingSearch.future
+                  : searchResults[query] ?? const <AudioEvent>[];
+              return (sounds: sounds, relays: searchRelays);
             }),
           ],
-          child: MaterialApp(
-            locale: locale,
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              // Like every host of the picker, so the keyboard overlaps it
-              // rather than shrinking it.
-              resizeToAvoidBottomInset: false,
-              body: Column(
-                children: [
-                  Expanded(
-                    child: AudioSelectionBottomSheet(
-                      scrollController: scrollController,
-                      audioService: audioService,
-                      pickAudioFile: pickAudioFile,
-                      localAudioImportService: localAudioImportService,
-                    ),
+          child: routed
+              // Above a page to return to, as in the app, so Done can pop.
+              ? MaterialApp.router(
+                  locale: locale,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  routerConfig: GoRouter(
+                    initialLocation: '/picker',
+                    routes: [
+                      GoRoute(
+                        path: '/',
+                        builder: (_, _) => const SizedBox(),
+                        routes: [
+                          GoRoute(path: 'picker', builder: (_, _) => picker),
+                        ],
+                      ),
+                    ],
                   ),
-                  // What a host lays out below the picker, as the recorder
-                  // does its mode wheel.
-                  SizedBox(height: spaceBelow),
-                ],
-              ),
-            ),
-          ),
+                )
+              : MaterialApp(
+                  locale: locale,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: picker,
+                ),
         ),
       );
     }
@@ -2775,6 +2808,418 @@ void main() {
 
         expect(find.text('Reusable'), findsOneWidget);
         expect(find.text('Refused'), findsNothing);
+      });
+    });
+
+    group('telemetry', () {
+      late RecordingAnalyticsEventSink sink;
+      late RecordingPerformanceMonitor monitor;
+      late SoundPickerTelemetry telemetry;
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      setUp(() {
+        sink = RecordingAnalyticsEventSink();
+        monitor = RecordingPerformanceMonitor();
+        telemetry = SoundPickerTelemetry(
+          surfaceTracker: SurfacePerformanceTracker(
+            history: PageLoadHistory(),
+            sink: sink,
+          ),
+          analytics: sink,
+          performanceMonitor: monitor,
+        );
+      });
+
+      List<Map<String, Object>> surfaceLoads() =>
+          sink.parametersOf('surface_load');
+      List<Map<String, Object>> picks() => sink.parametersOf('sound_selected');
+
+      Matcher tabLoad(String tab, String result) => allOf(
+        containsPair(AnalyticsParam.tab, tab),
+        containsPair(AnalyticsParam.result, result),
+      );
+
+      group('tab loads', () {
+        testWidgets('reports For you showing its list when the picker opens', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              forYouSounds: testSounds,
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(surfaceLoads(), [tabLoad('for_you', 'success')]);
+          expect(
+            surfaceLoads().single,
+            containsPair(AnalyticsParam.entryPoint, 'sheet_open'),
+          );
+          expect(
+            surfaceLoads().single,
+            containsPair(AnalyticsParam.itemCount, testSounds.length),
+          );
+        });
+
+        testWidgets('reports a tab switched to while it loads, once', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              popularSounds: (sounds: testSounds, usageCounts: const {}),
+              // Holds the lists behind the open one, so Popular loads when
+              // it opens.
+              forYouCovers: Completer(),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabForYou));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pumpAndSettle();
+
+          expect(surfaceLoads(), [
+            tabLoad('for_you', SurfaceLoadResult.empty),
+            tabLoad('popular', SurfaceLoadResult.success),
+          ]);
+          final popular = surfaceLoads().last;
+          expect(
+            popular,
+            containsPair(AnalyticsParam.entryPoint, 'tab_switch'),
+          );
+          expect(popular, containsPair(AnalyticsParam.initialCount, 0));
+        });
+
+        testWidgets('reports a tab loaded behind the open one as loaded when '
+            'it opens', (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              popularSounds: (sounds: testSounds, usageCounts: const {}),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pumpAndSettle();
+
+          expect(
+            surfaceLoads().last,
+            containsPair(AnalyticsParam.initialCount, testSounds.length),
+          );
+        });
+
+        testWidgets('reports a tab left before its list showed as dismissed', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: const AsyncLoading(),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            surfaceLoads(),
+            contains(tabLoad('newest', SurfaceLoadResult.dismissed)),
+          );
+        });
+
+        testWidgets('reports a list that failed to load', (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncError(
+                Exception('relay down'),
+                StackTrace.empty,
+              ),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          expect(
+            surfaceLoads().last,
+            tabLoad('newest', SurfaceLoadResult.failure),
+          );
+        });
+
+        testWidgets('reports the open tab dismissed when the picker closes '
+            'before its list shows', (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: const AsyncLoading(),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          expect(surfaceLoads(), hasLength(1));
+
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump();
+
+          expect(
+            surfaceLoads().last,
+            tabLoad('newest', SurfaceLoadResult.dismissed),
+          );
+        });
+      });
+
+      group('search', () {
+        testWidgets('times the search Newest sends for the debounced query', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchResults: {
+                'rain': [_createTestAudioEvent(id: 'rain', title: 'Rain')],
+              },
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          // Typed faster than the debounce, so only the last query is sent.
+          await tester.enterText(find.byType(TextField).first, 'ra');
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.enterText(find.byType(TextField).first, 'Rain');
+          await tester.pumpAndSettle(const Duration(milliseconds: 400));
+
+          final trace = monitor.traces.single;
+          expect(trace.name, SoundPickerTelemetry.searchTraceName);
+          expect(trace.attributes, {
+            'outcome': 'results',
+            'result_bucket': '1_10',
+          });
+          expect(trace.metrics, {'result_count': 1});
+          expect(trace.stops, 1);
+        });
+
+        testWidgets(
+          'reports cached matches shown for a timed-out search as a fallback',
+          (tester) async {
+            await tester.pumpWidget(
+              buildWidget(
+                trendingSoundsAsync: AsyncValue.data(testSounds),
+                searchResults: {
+                  'rain': [
+                    _createTestAudioEvent(
+                      id: 'rain',
+                      title: 'Rain on a tin roof',
+                    ),
+                  ],
+                },
+                searchRelays: SoundSearchRelays.timedOut,
+                telemetry: telemetry,
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.exploreTabNew));
+            await tester.pumpAndSettle();
+
+            await tester.enterText(find.byType(TextField).first, 'rain');
+            await tester.pumpAndSettle(const Duration(milliseconds: 400));
+
+            // The picker still lists what it has; only the trace says so.
+            expect(find.text('Rain on a tin roof'), findsOneWidget);
+            expect(monitor.traces.single.attributes, {
+              'outcome': 'fallback',
+              'reason': 'timed_out',
+              'result_bucket': '1_10',
+            });
+          },
+        );
+
+        testWidgets('does not time the local search of the other tabs', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.enterText(find.byType(TextField).first, 'rain');
+          await tester.pumpAndSettle(const Duration(milliseconds: 400));
+
+          expect(monitor.traces, isEmpty);
+        });
+
+        testWidgets('reports a search left for another tab as abandoned', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              pendingSearch: Completer(),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'rain');
+          await tester.pump(const Duration(seconds: 1));
+          expect(monitor.traces.single.stops, 0);
+
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pumpAndSettle();
+
+          expect(monitor.traces.single.attributes, {'outcome': 'abandoned'});
+          expect(monitor.traces.single.stops, 1);
+        });
+      });
+
+      group('picks', () {
+        testWidgets('reports a sound the reuse check refuses', (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              consentSound: testSounds[1],
+              consentResult: false,
+              audioService: _stubbedAudioService(),
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Beta Song'));
+          await tester.pumpAndSettle();
+
+          expect(picks(), [
+            {'source': 'newest', 'outcome': 'reuse_blocked', 'searched': 0},
+          ]);
+        });
+
+        testWidgets('reports a sound whose file fails to download, once', (
+          tester,
+        ) async {
+          final audioService = _stubbedAudioService();
+          const betaUrl = 'https://example.com/audio/sound-2.mp3';
+          when(() => audioService.loadAudio(betaUrl)).thenAnswer(
+            (_) async => throw RemoteAudioDownloadException(
+              Uri.parse(betaUrl),
+              statusCode: 503,
+            ),
+          );
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              audioService: audioService,
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Beta Song'));
+          await tester.pumpAndSettle();
+          // Playing it again tries the download again.
+          tester
+              .widget<AudioEditorSelectionOverlay>(
+                find.byType(AudioEditorSelectionOverlay),
+              )
+              .onTogglePlayState();
+          await tester.pumpAndSettle();
+
+          verify(() => audioService.loadAudio(betaUrl)).called(3);
+          expect(picks(), [
+            {'source': 'newest', 'outcome': 'download_failed', 'searched': 0},
+          ]);
+        });
+
+        testWidgets('reports a file the import refuses', (tester) async {
+          final importService = _MockLocalAudioImportService();
+          when(
+            () => importService.importAudioFile(
+              sourcePath: any(named: 'sourcePath'),
+              displayName: any(named: 'displayName'),
+            ),
+          ).thenAnswer(
+            (_) async => throw const LocalAudioImportException(
+              'unsupported',
+              reason: LocalAudioImportFailureReason.unsupportedType,
+            ),
+          );
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: const AsyncValue.data([]),
+              pickAudioFile: () async => XFile('/picked/song.ogg'),
+              localAudioImportService: importService,
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.videoEditorAudioImportAudio));
+          await tester.pumpAndSettle();
+
+          expect(picks(), [
+            {'source': 'import', 'outcome': 'failed', 'searched': 0},
+          ]);
+        });
+
+        testWidgets('reports a sound attached with the tab it was picked from '
+            'and whether a search found it', (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              audioService: _stubbedAudioService(),
+              telemetry: telemetry,
+              routed: true,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'beta');
+          await tester.pumpAndSettle(const Duration(milliseconds: 400));
+          await tester.tap(find.text('Beta Song'));
+          await tester.pumpAndSettle();
+          expect(picks(), isEmpty);
+
+          // The tab open when Done is tapped does not matter.
+          await tester.tap(find.text(l10n.exploreTabForYou));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorAudioUseSound));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+          expect(picks(), [
+            {'source': 'newest', 'outcome': 'attached', 'searched': 1},
+          ]);
+        });
       });
     });
   });

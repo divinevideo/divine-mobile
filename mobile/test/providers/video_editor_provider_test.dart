@@ -4268,9 +4268,8 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       mockDraftStorage = _MockDraftStorageService();
-      when(
-        () => mockDraftStorage.draftExists(any()),
-      ).thenAnswer((_) async => false);
+      when(mockDraftStorage.deleteAutosavedDraft)
+          .thenAnswer((_) async => false);
       container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -4285,7 +4284,6 @@ void main() {
 
     test('returns saved and clears isSavingDraft on success', () async {
       when(() => mockDraftStorage.saveDraft(any())).thenAnswer((_) async {});
-      when(() => mockDraftStorage.deleteDraft(any())).thenAnswer((_) async {});
 
       final result = await container
           .read(videoEditorProvider.notifier)
@@ -4401,17 +4399,13 @@ void main() {
       // later wipe a new session's recovery point. So a stalled cleanup keeps
       // isSavingDraft true and the save unresolved rather than being dropped.
       when(() => mockDraftStorage.saveDraft(any())).thenAnswer((_) async {});
-      when(
-        () => mockDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => true);
-
       fakeAsync((async) {
         // Create the completer inside the fake zone so completing it later is
         // driven by `async.flushMicrotasks()` rather than the root zone.
-        final cleanup = Completer<void>();
-        when(
-          () => mockDraftStorage.deleteDraft(any()),
-        ).thenAnswer((_) => cleanup.future);
+        final cleanup = Completer<bool>();
+        when(mockDraftStorage.deleteAutosavedDraft).thenAnswer(
+          (_) => cleanup.future,
+        );
 
         final notifier = container.read(videoEditorProvider.notifier);
         DraftSaveOutcome? result;
@@ -4439,7 +4433,7 @@ void main() {
           reason: 'the autosave cleanup is not abandoned on a timeout',
         );
 
-        cleanup.complete();
+        cleanup.complete(true);
         async.flushMicrotasks();
 
         expect(result, equals(DraftSaveOutcome.saved));
@@ -4475,9 +4469,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       mockDraftStorage = _MockDraftStorageService();
       database = AppDatabase.test(NativeDatabase.memory());
-      when(
-        () => mockDraftStorage.draftExists(any()),
-      ).thenAnswer((_) async => false);
+      when(mockDraftStorage.deleteAutosavedDraft)
+          .thenAnswer((_) async => false);
       container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -4559,21 +4552,14 @@ void main() {
     });
 
     test('deletes autosave instead of persisting a zero-clip draft', () async {
-      when(
-        () => mockDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => true);
-      when(
-        () => mockDraftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async {});
+      when(mockDraftStorage.deleteAutosavedDraft).thenAnswer((_) async => true);
 
       final result = await container
           .read(videoEditorProvider.notifier)
           .autosaveChanges();
 
       expect(result, isFalse);
-      verify(
-        () => mockDraftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
-      ).called(1);
+      verify(mockDraftStorage.deleteAutosavedDraft).called(1);
       verifyNever(
         () => mockDraftStorage.saveDraft(
           any(),
@@ -4590,9 +4576,7 @@ void main() {
             .read(videoEditorProvider.notifier)
             .removeAutosavedDraft();
 
-        verify(
-          () => mockDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
-        ).called(1);
+        verify(mockDraftStorage.deleteAutosavedDraft).called(1);
         verifyNever(() => mockDraftStorage.deleteDraft(any()));
       },
     );
@@ -4684,6 +4668,30 @@ void main() {
       expect(kept.id, isNot(VideoEditorConstants.autoSaveId));
       expect(kept.clips.map((clip) => clip.id), [sessionClip.id]);
       expect(kept.title, 'Half-finished idea');
+      verifyNever(() => mockDraftStorage.deleteDraft(any()));
+    });
+
+    test('does not copy a draft returned after its owner changes', () async {
+      final lookup = Completer<DivineVideoDraft?>();
+      final lookupStarted = Completer<void>();
+      var isCurrent = true;
+      stubAutosaveRow(autosave());
+      stubSaveDraft();
+      when(
+        () => mockDraftStorage.getDraftById(VideoEditorConstants.autoSaveId),
+      ).thenAnswer((_) {
+        lookupStarted.complete();
+        return lookup.future;
+      });
+      final notifier = container.read(videoEditorProvider.notifier);
+      final keeping = notifier.keepAutosaveAsDraft(isCurrent: () => isCurrent);
+      final result = expectLater(keeping, throwsStateError);
+      await lookupStarted.future;
+      isCurrent = false;
+      lookup.complete(autosave());
+      await result;
+
+      verifyNever(() => mockDraftStorage.saveDraft(any()));
       verifyNever(() => mockDraftStorage.deleteDraft(any()));
     });
 
@@ -4798,6 +4806,118 @@ void main() {
         ]);
       });
     });
+    for (final alreadyWriting in [false, true]) {
+      test(
+        'refuses a stale draft after an autosave write fails '
+        '(alreadyWriting=$alreadyWriting) and retries the latest edit',
+        () async {
+          var stored = autosave(title: 'Older edit');
+          final written = <DivineVideoDraft>[];
+          final write = Completer<void>();
+          var failAutosave = true;
+          final failure = Exception('Autosave write refused');
+          when(
+            () => mockDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
+          ).thenAnswer((_) async => true);
+          when(
+            () =>
+                mockDraftStorage.getDraftById(VideoEditorConstants.autoSaveId),
+          ).thenAnswer((_) async => stored);
+          when(
+            () => mockDraftStorage.deleteDraft(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockDraftStorage.saveDraft(
+              any(),
+              deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+              ownedFilesMemo: any(named: 'ownedFilesMemo'),
+            ),
+          ).thenAnswer((invocation) async {
+            final draft =
+                invocation.positionalArguments.single as DivineVideoDraft;
+            if (draft.id != VideoEditorConstants.autoSaveId) {
+              written.add(draft);
+              return;
+            }
+            if (failAutosave) await write.future;
+            stored = draft;
+          });
+
+          container.read(clipManagerProvider.notifier).replaceClips([
+            sessionClip,
+          ], autosave: false);
+          final notifier = container.read(videoEditorProvider.notifier)
+            ..updateMetadata(title: 'Latest edit');
+          final running = alreadyWriting
+              ? notifier.flushPendingAutosave()
+              : null;
+          final keep = notifier.keepAutosaveAsDraft();
+          final failed = expectLater(keep, throwsA(same(failure)));
+          await pumpEventQueue();
+          write.completeError(failure);
+          await failed;
+          if (running != null) expect(await running, isFalse);
+          expect(stored.title, 'Older edit');
+          expect(written, isEmpty);
+          expect(container.read(videoEditorProvider).title, 'Latest edit');
+          verifyNever(() => mockDraftStorage.deleteDraft(any()));
+
+          failAutosave = false;
+          final kept = await notifier.keepAutosaveAsDraft();
+
+          expect(written.single.id, kept);
+          expect(written.single.title, 'Latest edit');
+          expect(stored.title, 'Latest edit');
+        },
+      );
+    }
+
+    test(
+      'a failed reaction retention protects the autosave until retry succeeds',
+      () async {
+        stubAutosaveRow(autosave());
+        stubSaveDraft();
+        when(mockDraftStorage.deleteAutosavedDraft)
+            .thenAnswer((_) async => true);
+        final notifier = container.read(videoEditorProvider.notifier);
+        container.read(clipManagerProvider.notifier).replaceClips([
+          sessionClip,
+        ], autosave: false);
+        notifier.updateMetadata(title: 'New project');
+        final firstWrite = Completer<void>();
+        var writes = 0;
+        final firstAttempt = notifier.retainAbandonedReaction(
+          () async {
+            if (++writes == 1) await firstWrite.future;
+          },
+        );
+        final failed = expectLater(firstAttempt, throwsException);
+
+        final pendingRemoval = notifier.removeAutosavedDraft();
+        final pendingOverwrite = notifier.flushPendingAutosave();
+        await pumpEventQueue();
+        verifyNever(mockDraftStorage.deleteAutosavedDraft);
+        expect(writes, 1);
+
+        firstWrite.completeError(Exception('Both destination writes refused'));
+        await failed;
+        await pendingRemoval;
+        expect(await pendingOverwrite, isFalse);
+        verifyNever(mockDraftStorage.deleteAutosavedDraft);
+        verifyNever(
+          () => mockDraftStorage.saveDraft(
+            any(),
+            deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+            ownedFilesMemo: any(named: 'ownedFilesMemo'),
+          ),
+        );
+
+        await notifier.removeAutosavedDraft();
+        expect(writes, 2);
+        verify(mockDraftStorage.deleteAutosavedDraft).called(1);
+      },
+    );
+
     test('discardKeptDraft deletes only the kept draft', () async {
       when(() => mockDraftStorage.deleteDraft(any())).thenAnswer((_) async {});
 
@@ -5536,15 +5656,8 @@ void main() {
             selectedApproach: 'video',
           ),
         );
-        when(() => mockDraftStorage.draftExists(any())).thenAnswer(
-          (invocation) => realDraftStorage.draftExists(
-            invocation.positionalArguments.first as String,
-          ),
-        );
-        when(() => mockDraftStorage.deleteDraft(any())).thenAnswer(
-          (invocation) => realDraftStorage.deleteDraft(
-            invocation.positionalArguments.first as String,
-          ),
+        when(mockDraftStorage.deleteAutosavedDraft).thenAnswer(
+          (_) => realDraftStorage.deleteAutosavedDraft(),
         );
 
         final notifier = container.read(videoEditorProvider.notifier);

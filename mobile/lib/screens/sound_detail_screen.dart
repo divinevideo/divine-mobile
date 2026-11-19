@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -1233,7 +1234,7 @@ class _VideosGridContentState extends ConsumerState<_VideosGridContent> {
       ref
           .read(screenAnalyticsServiceProvider)
           .markDataLoaded(
-            'sound_detail',
+            PageLoadObserver.screenNameOf(context),
             dataMetrics: {'video_count': events.length},
           );
     }

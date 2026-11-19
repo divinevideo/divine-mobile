@@ -72,7 +72,15 @@ class _RecordingTraceMonitor implements PerformanceTraceMonitor {
   }
 }
 
-class _MockClipManager extends Mock implements ClipManagerNotifier {}
+class _MockClipManager extends Mock implements ClipManagerNotifier {
+  int generation = 0;
+
+  @override
+  int get sessionGeneration => generation;
+
+  @override
+  bool isSessionCurrent(int expected) => generation == expected;
+}
 
 /// Uses the real recording timer and addClip; library I/O is outside this test.
 class _RecordingClipManager extends ClipManagerNotifier {
@@ -283,13 +291,16 @@ void main() {
 
   /// Builds a bloc with all dependencies wired to the mocks.
   VideoRecorderBloc buildBloc({
+    ReactionRecordingOwner? reactionRecordingOwner,
+    ReadClipManager? readClipManager,
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
     ReadVideoEditorState readVideoEditorState = VideoEditorProviderState.new,
   }) {
     return VideoRecorderBloc(
-      readClipManager: () => clipManager,
+      readClipManager: readClipManager ?? () => clipManager,
+      reactionRecordingOwner: reactionRecordingOwner,
       readVideoEditor: () => videoEditor,
       readVideoEditorState: readVideoEditorState,
       readSharedPreferences: () => prefs,
@@ -1682,7 +1693,7 @@ void main() {
         ).thenAnswer((_) async => true);
       });
 
-      VideoRecorderBloc buildCountdownBloc() =>
+      VideoRecorderBloc buildCountdownBloc({bool libraryReaction = false}) =>
           VideoRecorderBloc(
             readClipManager: () => clipManager,
             readVideoEditor: () => videoEditor,
@@ -1690,6 +1701,13 @@ void main() {
             readSharedPreferences: () => prefs,
             cameraService: cameraService,
             countdownSoundServiceFactory: () => countdownSounds,
+            reactionRecordingOwner: libraryReaction
+                ? (
+                    clipManager: clipManager,
+                    isCurrent: () => true,
+                    retain: (_) async {},
+                  )
+                : null,
           )..emit(
             const VideoRecorderBlocState(timerDuration: TimerDuration.three),
           );
@@ -1753,6 +1771,32 @@ void main() {
 
           expect(bloc.state.isCapturingFootage, isTrue);
 
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
+
+      test('cancels a Library countdown before opening the mic', () {
+        fakeAsync((async) {
+          final bloc = buildCountdownBloc(libraryReaction: true);
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          async.flushMicrotasks();
+          expect(bloc.state.countdownValue, 3);
+          verify(cameraService.suspendAudioCapture).called(1);
+
+          // The screen sends Stop when system Back interrupts a pending take.
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          async.flushMicrotasks();
+          expect(bloc.state.hasRecordingInFlight, isFalse);
+          expect(bloc.state.countdownValue, 0);
+          expect(bloc.state.pendingStopAfterStart, isFalse);
+          async.elapse(const Duration(seconds: 3));
+          verifyNever(cameraService.resumeAudioCapture);
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
           unawaited(bloc.close());
           async.flushMicrotasks();
         });
@@ -2071,8 +2115,279 @@ void main() {
       );
     });
 
+    group('Library reaction recording ownership', () {
+      setUp(stubRecorderDefaults);
+
+      test(
+        'recovers a stopped take if its first write fails after close',
+        () async {
+          final retained = <DivineVideoClip>[];
+          final firstWrite = Completer<bool>();
+          final nativeVideo = _MockEditorVideo();
+          when(nativeVideo.safeFilePath).thenAnswer(
+            (_) => Completer<String>().future,
+          );
+          when(() => clipManager.recordingElapsed).thenReturn(
+            const Duration(seconds: 2),
+          );
+          final take = DivineVideoClip(
+            id: 'stopped-take',
+            video: nativeVideo,
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          when(cameraService.stopRecording)
+              .thenAnswer((_) async => nativeVideo);
+          when(
+            () => clipManager.addClip(
+              video: nativeVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+              secondaryRecording: any(named: 'secondaryRecording'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          ).thenReturn(take);
+          when(() => clipManager.saveClipToLibrary(take)).thenAnswer(
+            (_) => firstWrite.future,
+          );
+          registerFallbackValue(Future<void>.value());
+          when(() => clipManager.trackClipEnrichment(any(), any()))
+              .thenReturn(null);
+
+          var isCurrent = true;
+          final bloc =
+              buildBloc(
+                reactionRecordingOwner: (
+                  clipManager: clipManager,
+                  isCurrent: () => isCurrent,
+                  retain: (clip) async => retained.add(clip),
+                ),
+              )..emit(
+                const VideoRecorderBlocState(recordingState: .recording),
+              );
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await pumpEventQueue();
+          expect(bloc.state.isRecording, isFalse);
+          verify(() => clipManager.saveClipToLibrary(take)).called(1);
+          isCurrent = false;
+          await bloc.close();
+
+          firstWrite.complete(false);
+          await pumpEventQueue();
+          expect(retained, [take]);
+        },
+      );
+
+      for (final stage in ['stopping', 'recording', 'starting']) {
+        test(
+          'retains the original account’s take when the recorder is $stage',
+          () async {
+            final nativeStop = Completer<EditorVideo?>();
+            final stopRequested = Completer<void>();
+            final nativeStart = Completer<bool>();
+            final startRequested = Completer<void>();
+            final retained = Completer<DivineVideoClip>();
+            final releaseRetention = Completer<void>();
+            final video = EditorVideo.file('/tmp/reaction_take.mp4');
+            const duration = Duration(seconds: 2);
+            final clip = DivineVideoClip(
+              id: 'reaction_take',
+              video: video,
+              duration: duration,
+              recordedAt: DateTime.utc(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            );
+            when(() => clipManager.recordingElapsed).thenReturn(duration);
+            clipManager.generation = 1;
+            when(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ).thenAnswer((_) {
+              startRequested.complete();
+              return nativeStart.future;
+            });
+            when(() => cameraService.stopRecording()).thenAnswer((_) {
+              stopRequested.complete();
+              return nativeStop.future;
+            });
+            when(
+              () => clipManager.buildRecordedClip(
+                video: video,
+                duration: stage == 'starting'
+                    ? any(named: 'duration')
+                    : duration,
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              ),
+            ).thenReturn(clip);
+
+            var isCurrent = true;
+            final bloc = buildBloc(
+              readClipManager: () {
+                if (!isCurrent) throw StateError('Account container disposed');
+                return clipManager;
+              },
+              reactionRecordingOwner: (
+                clipManager: clipManager,
+                isCurrent: () => isCurrent,
+                retain: (clip) async {
+                  retained.complete(clip);
+                  if (stage == 'stopping') await releaseRetention.future;
+                },
+              ),
+            );
+            if (stage == 'starting') {
+              bloc.add(const VideoRecorderRecordingStartRequested());
+              await startRequested.future;
+            } else {
+              bloc.emit(
+                const VideoRecorderBlocState(
+                  recordingState: VideoRecorderState.recording,
+                ),
+              );
+            }
+            if (stage == 'stopping') {
+              addTearDown(bloc.close);
+              bloc.add(const VideoRecorderRecordingStopRequested());
+              await stopRequested.future;
+              isCurrent = false;
+              final closing = bloc.close();
+              nativeStop.complete(video);
+              await retained.future;
+              try {
+                verifyNever(() => cameraService.dispose());
+              } finally {
+                releaseRetention.complete();
+              }
+              await closing;
+            } else {
+              final closing = bloc.close();
+              final firstCameraAction = Future.any([
+                stopRequested.future.then((_) => 'stop'),
+                closing.then((_) => 'close'),
+              ]);
+              if (stage == 'starting') {
+                isCurrent = false;
+                clipManager.generation++;
+                nativeStart.complete(true);
+              }
+              final action = await firstCameraAction;
+              nativeStop.complete(video);
+              expect(action, 'stop');
+              await closing;
+              verify(() => cameraService.dispose()).called(1);
+            }
+
+            expect(await retained.future, same(clip));
+            expect(bloc.state.isRecording, isFalse);
+            verify(() => cameraService.stopRecording()).called(1);
+            if (stage == 'starting') {
+              verifyNever(() => clipManager.startRecording());
+              verifyNever(() => clipManager.resetRecording());
+            }
+            verifyNever(
+              () => clipManager.addClip(
+                video: video,
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+                secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              ),
+            );
+            verifyNever(() => clipManager.saveClipToLibrary(any()));
+          },
+        );
+      }
+    });
+
     group('native auto-stop callback', () {
       setUp(stubRecorderDefaults);
+      test(
+        'retains a native auto-stop result delivered during reaction startup',
+        () async {
+          final wakelock = _GatedWakelockPlatform();
+          final previousWakelock = wakelockPlusPlatformInstance;
+          wakelockPlusPlatformInstance = wakelock;
+          addTearDown(() => wakelockPlusPlatformInstance = previousWakelock);
+          late void Function(EditorVideo? video) autoStop;
+          final video = _MockEditorVideo();
+          when(video.safeFilePath)
+              .thenAnswer((_) => Completer<String>().future);
+          when(() => clipManager.recordingElapsed).thenReturn(Duration.zero);
+          when(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(cameraService.stopRecording).thenAnswer((_) async => null);
+          when(
+            () => clipManager.addClip(
+              video: video,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+              secondaryRecording: any(named: 'secondaryRecording'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'salvaged',
+              video: video,
+              duration: const Duration(milliseconds: 400),
+              recordedAt: DateTime.utc(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(() => clipManager.saveClipToLibrary(any()))
+              .thenAnswer((_) async => true);
+          final bloc = buildBloc(
+            reactionRecordingOwner: (
+              clipManager: clipManager,
+              isCurrent: () => true,
+              retain: (_) async {},
+            ),
+            cameraServiceFactory:
+                ({
+                  required onUpdateState,
+                  required onAutoStopped,
+                  onScreenFlashChanged,
+                }) {
+                  autoStop = onAutoStopped;
+                  return cameraService;
+                },
+          );
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          await pumpEventQueue();
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+          expect(bloc.state.isStartingRecording, isTrue);
+          autoStop(video);
+          await pumpEventQueue();
+          wakelock.enableGate.complete();
+          await pumpEventQueue();
+          verify(() => clipManager.saveClipToLibrary(any())).called(1);
+          verifyNever(cameraService.stopRecording);
+        },
+      );
+
       test(
         'processes a recovered clip outside recording-limit modes (#9210)',
         () async {
@@ -2808,132 +3123,150 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'saves the common track end after detached enrichment settles',
-        setUp: () {
-          docsDir = Directory.systemTemp.createTempSync('rec_enrich_docs');
-          originalPathProvider = PathProviderPlatform.instance;
-          PathProviderPlatform.instance = MockPathProviderPlatform()
-            ..setApplicationDocumentsPath(docsDir.path)
-            ..setTemporaryPath(docsDir.path);
+      for (final leftSession in [false, true]) {
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          leftSession
+              ? 'departed enrichment never updates or saves into a newer session'
+              : 'saves the common track end after detached enrichment settles',
+          setUp: () {
+            docsDir = Directory.systemTemp.createTempSync('rec_enrich_docs');
+            originalPathProvider = PathProviderPlatform.instance;
+            PathProviderPlatform.instance = MockPathProviderPlatform()
+              ..setApplicationDocumentsPath(docsDir.path)
+              ..setTemporaryPath(docsDir.path);
 
-          workCopyRead = false;
-          final editor = _MockProVideoEditor();
-          when(() => editor.getMetadata(any())).thenAnswer((_) async {
-            workCopyRead = true;
-            return VideoMetadata(
+            workCopyRead = false;
+            final editor = _MockProVideoEditor();
+            when(() => editor.getMetadata(any())).thenAnswer((_) async {
+              workCopyRead = true;
+              if (leftSession) clipManager.generation++;
+              return VideoMetadata(
+                duration: const Duration(milliseconds: 6033),
+                audioDuration: const Duration(milliseconds: 5998),
+                extension: 'mp4',
+                fileSize: 1024,
+                resolution: const Size(720, 1280),
+                rotation: 0,
+                bitrate: 2000000,
+              );
+            });
+            when(() => editor.getThumbnails(any())).thenAnswer(
+              (_) async => [
+                Uint8List.fromList(const [1, 2, 3]),
+              ],
+            );
+            when(
+              () => editor.getSingleThumbnail(any()),
+            ).thenAnswer((_) async => Uint8List.fromList(const [1, 2, 3]));
+            originalProVideoEditor = ProVideoEditor.instance;
+            ProVideoEditor.instance = editor;
+
+            recordingFile = File('${docsDir.path}/recording.mp4')
+              ..writeAsStringSync('recorded clip');
+            final recorded = _MockEditorVideo();
+            when(
+              recorded.safeFilePath,
+            ).thenAnswer((_) async => recordingFile.path);
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => recorded);
+
+            var currentClip = DivineVideoClip(
+              id: 'aligned-clip',
+              video: recorded,
               duration: const Duration(milliseconds: 6033),
-              audioDuration: const Duration(milliseconds: 5998),
-              extension: 'mp4',
-              fileSize: 1024,
-              resolution: const Size(720, 1280),
-              rotation: 0,
-              bitrate: 2000000,
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
             );
-          });
-          when(() => editor.getThumbnails(any())).thenAnswer(
-            (_) async => [
-              Uint8List.fromList(const [1, 2, 3]),
-            ],
-          );
-          when(
-            () => editor.getSingleThumbnail(any()),
-          ).thenAnswer((_) async => Uint8List.fromList(const [1, 2, 3]));
-          originalProVideoEditor = ProVideoEditor.instance;
-          ProVideoEditor.instance = editor;
-
-          recordingFile = File('${docsDir.path}/recording.mp4')
-            ..writeAsStringSync('recorded clip');
-          final recorded = _MockEditorVideo();
-          when(
-            recorded.safeFilePath,
-          ).thenAnswer((_) async => recordingFile.path);
-          when(
-            () => cameraService.stopRecording(),
-          ).thenAnswer((_) async => recorded);
-
-          var currentClip = DivineVideoClip(
-            id: 'aligned-clip',
-            video: recorded,
-            duration: const Duration(milliseconds: 6033),
-            recordedAt: DateTime(2024),
-            targetAspectRatio: model.AspectRatio.vertical,
-            originalAspectRatio: 9 / 16,
-          );
-          when(
-            () => clipManager.addClip(
-              video: any(named: 'video'),
-              originalAspectRatio: any(named: 'originalAspectRatio'),
-              targetAspectRatio: any(named: 'targetAspectRatio'),
-              lensMetadata: any(named: 'lensMetadata'),
-              limitClipDuration: any(named: 'limitClipDuration'),
-              captureChromaKey: any(named: 'captureChromaKey'),
+            when(
+              () => clipManager.addClip(
+                video: any(named: 'video'),
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+                captureChromaKey: any(named: 'captureChromaKey'),
+              ),
+            ).thenReturn(currentClip);
+            when(() => clipManager.updateClipDuration(any(), any()))
+                .thenAnswer((
+                  invocation,
+                ) {
+                  currentClip = currentClip.copyWith(
+                    duration: invocation.positionalArguments[1] as Duration,
+                  );
+                });
+            when(
+              () => clipManager.updateThumbnail(
+                clipId: any(named: 'clipId'),
+                thumbnailPath: any(named: 'thumbnailPath'),
+                thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              ),
+            ).thenAnswer((_) {});
+            when(
+              () => clipManager.updateGhostFrame(
+                clipId: any(named: 'clipId'),
+                ghostFramePath: any(named: 'ghostFramePath'),
+              ),
+            ).thenAnswer((_) {});
+            var clipsReadCount = 0;
+            when(() => clipManager.clips).thenAnswer((_) {
+              clipsReadCount += 1;
+              // Skip preloading in this unit test; the final enrichment lookup
+              // still sees the clip after the duration update.
+              return clipsReadCount == 1 ? const [] : [currentClip];
+            });
+            when(
+              () => clipManager.saveClipToLibrary(any()),
+            ).thenAnswer((_) async => true);
+          },
+          tearDown: () {
+            ProVideoEditor.instance = originalProVideoEditor;
+            PathProviderPlatform.instance = originalPathProvider;
+            if (docsDir.existsSync()) docsDir.deleteSync(recursive: true);
+          },
+          build: () => buildBloc()
+            ..emit(
+              const VideoRecorderBlocState(
+                recordingState: VideoRecorderState.recording,
+              ),
             ),
-          ).thenReturn(currentClip);
-          when(() => clipManager.updateClipDuration(any(), any())).thenAnswer((
-            invocation,
-          ) {
-            currentClip = currentClip.copyWith(
-              duration: invocation.positionalArguments[1] as Duration,
+          act: (bloc) async {
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            await enrichmentSettled();
+          },
+          verify: (_) {
+            if (leftSession) {
+              verifyNever(() => clipManager.updateClipDuration(any(), any()));
+              verify(() => clipManager.saveClipToLibrary(any())).called(1);
+              expect(
+                File('${recordingFile.path}.work.mp4').existsSync(),
+                isFalse,
+              );
+              return;
+            }
+            verify(
+              () => clipManager.updateClipDuration(
+                'aligned-clip',
+                const Duration(milliseconds: 5998),
+              ),
+            ).called(1);
+            final savedClips = verify(
+              () => clipManager.saveClipToLibrary(captureAny()),
+            ).captured.cast<DivineVideoClip>();
+            expect(savedClips, hasLength(2));
+            expect(
+              savedClips.last.duration,
+              equals(const Duration(milliseconds: 5998)),
             );
-          });
-          when(
-            () => clipManager.updateThumbnail(
-              clipId: any(named: 'clipId'),
-              thumbnailPath: any(named: 'thumbnailPath'),
-              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
-            ),
-          ).thenAnswer((_) {});
-          when(
-            () => clipManager.updateGhostFrame(
-              clipId: any(named: 'clipId'),
-              ghostFramePath: any(named: 'ghostFramePath'),
-            ),
-          ).thenAnswer((_) {});
-          var clipsReadCount = 0;
-          when(() => clipManager.clips).thenAnswer((_) {
-            clipsReadCount += 1;
-            // Skip preloading in this unit test; the final enrichment lookup
-            // still sees the clip after the duration update.
-            return clipsReadCount == 1 ? const [] : [currentClip];
-          });
-          when(
-            () => clipManager.saveClipToLibrary(any()),
-          ).thenAnswer((_) async => true);
-        },
-        tearDown: () {
-          ProVideoEditor.instance = originalProVideoEditor;
-          PathProviderPlatform.instance = originalPathProvider;
-          if (docsDir.existsSync()) docsDir.deleteSync(recursive: true);
-        },
-        build: () => buildBloc()
-          ..emit(
-            const VideoRecorderBlocState(
-              recordingState: VideoRecorderState.recording,
-            ),
-          ),
-        act: (bloc) async {
-          bloc.add(const VideoRecorderRecordingStopRequested());
-          await enrichmentSettled();
-        },
-        verify: (_) {
-          verify(
-            () => clipManager.updateClipDuration(
-              'aligned-clip',
-              const Duration(milliseconds: 5998),
-            ),
-          ).called(1);
-          final savedClips = verify(
-            () => clipManager.saveClipToLibrary(captureAny()),
-          ).captured.cast<DivineVideoClip>();
-          expect(savedClips, hasLength(2));
-          expect(
-            savedClips.last.duration,
-            equals(const Duration(milliseconds: 5998)),
-          );
-          expect(File('${recordingFile.path}.work.mp4').existsSync(), isFalse);
-        },
-      );
+            expect(
+              File('${recordingFile.path}.work.mp4').existsSync(),
+              isFalse,
+            );
+          },
+        );
+      }
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps the poster of a take the editor keyed before enrichment',

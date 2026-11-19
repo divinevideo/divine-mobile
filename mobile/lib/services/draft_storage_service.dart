@@ -839,6 +839,41 @@ class DraftStorageService {
     }
   }
 
+  /// Removes this account's recovery draft or an ownerless legacy draft.
+  /// Returns whether the row was removed. The shared autosave ID can already
+  /// refer to another account's draft by the time this operation runs.
+  Future<bool> deleteAutosavedDraft() async {
+    // Keep the draft if its media directory cannot be resolved.
+    final documentsPath = await getDocumentsPath();
+    final deleted = await _draftsDao.deleteOwnedDraftWithClips(
+      VideoEditorConstants.autoSaveId,
+      ownerPubkey: ownerPubkey,
+    );
+    if (deleted == null) return false;
+
+    final draft = _tryParseDraftRow(
+      row: deleted.row,
+      clipRows: deleted.clips,
+      documentsPath: documentsPath,
+    );
+    if (draft == null) {
+      await _cleanUnreadableDraftFiles(
+        deleted.row,
+        deleted.clips,
+        documentsPath,
+      );
+    } else {
+      await _cleanDeletedDraftFiles(
+        draft,
+        DetachedClipLayerData.ownedFilePathsInHistory(
+          draft.editorStateHistory,
+          documentsPath,
+        ),
+      );
+    }
+    return true;
+  }
+
   /// Delete a draft by ID and remove associated video/thumbnail files
   Future<void> deleteDraft(String id) async {
     // Fetch draft before deleting so we can clean up files. Read across
@@ -866,7 +901,13 @@ class DraftStorageService {
     // reference scan in FileCleanupService no longer sees this draft's clips
     // and can reclaim their media (DraftsDao.deleteDraft removes both rows).
     await _draftsDao.deleteDraft(id);
+    await _cleanDeletedDraftFiles(draft, detachedClipPaths);
+  }
 
+  Future<void> _cleanDeletedDraftFiles(
+    DivineVideoDraft draft,
+    Set<String> detachedClipPaths,
+  ) async {
     // Ghost frames live only in the clip `data` blob, so — like draft-local
     // audio — the indexed-column check can't tell that a surviving draft (e.g.
     // a duplicate sharing this draft's clips) still references them. This
@@ -925,6 +966,15 @@ class DraftStorageService {
     if (row == null) return;
     final documentsPath = await getDocumentsPath();
     final clipRows = await _clipsDao.getClipsByDraftId(id);
+    await _draftsDao.deleteDraft(id);
+    await _cleanUnreadableDraftFiles(row, clipRows, documentsPath);
+  }
+
+  Future<void> _cleanUnreadableDraftFiles(
+    DraftRow row,
+    List<ClipRow> clipRows,
+    String documentsPath,
+  ) async {
     final clips = <DivineVideoClip>[];
     final indexedPaths = <String?>[
       resolvePath(row.renderedFilePath, documentsPath),
@@ -954,7 +1004,6 @@ class DraftStorageService {
 
     // Unreadable editor metadata cannot safely identify extra owned assets.
     // Retain those for the existing orphan-file cleanup rather than guess.
-    await _draftsDao.deleteDraft(id);
     await FileCleanupService.deleteRecordingClipsFiles(
       clips,
       draftsDao: _draftsDao,

@@ -2,10 +2,13 @@
 // ABOUTME: Validates state updates and provider lifecycle
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show Color, Offset;
 
+import 'package:db_client/db_client.dart';
 import 'package:divine_camera/divine_camera.dart'
     show DivineCameraLens, VideoRecordingResult;
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,10 +18,12 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -29,8 +34,12 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/recording_gallery_backup_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../mocks/mock_path_provider_platform.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
@@ -75,9 +84,9 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       mockDraftStorageService = _MockDraftStorageService();
       mockClipLibraryService = _MockClipLibraryService();
-      when(
-        () => mockDraftStorageService.deleteDraft(any()),
-      ).thenAnswer((_) async {});
+      when(mockDraftStorageService.deleteAutosavedDraft).thenAnswer(
+        (_) async => false,
+      );
       when(
         () => mockClipLibraryService.softDelete(
           any(),
@@ -127,6 +136,38 @@ void main() {
     });
 
     group('resetRecording', () {
+      for (final clearWholeSession in [false, true]) {
+        test(
+          'clears the old recording clock with '
+          '${clearWholeSession ? 'clearSessionClips' : 'clearClips'}',
+          () {
+            fakeAsync((async) {
+              final notifier = container.read(clipManagerProvider.notifier)
+                ..startRecording();
+              async.elapse(const Duration(milliseconds: 50));
+              expect(
+                container.read(clipManagerProvider).activeRecordingDuration,
+                greaterThan(Duration.zero),
+              );
+
+              if (clearWholeSession) {
+                unawaited(notifier.clearSessionClips());
+                async.flushMicrotasks();
+              } else {
+                notifier.clearClips();
+              }
+              async.elapse(const Duration(milliseconds: 50));
+
+              expect(notifier.recordingElapsed, Duration.zero);
+              expect(
+                container.read(clipManagerProvider).activeRecordingDuration,
+                Duration.zero,
+              );
+            });
+          },
+        );
+      }
+
       test('keeps a late auto-stop take at its frozen duration', () {
         fakeAsync((async) {
           final notifier = container.read(clipManagerProvider.notifier)
@@ -289,6 +330,27 @@ void main() {
           async.flushMicrotasks();
           expect(clip.processingCompleter!.isCompleted, isTrue);
         });
+      });
+
+      test('late trim completion leaves a reimported clip alone', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = notifier.addClip(
+          video: EditorVideo.file('/takes/reaction.mp4'),
+          duration:
+              VideoEditorConstants.maxDuration + const Duration(seconds: 1),
+          originalAspectRatio: 9 / 16,
+          targetAspectRatio: .vertical,
+          limitClipDuration: true,
+        );
+        expect(take.processingCompleter!.isCompleted, isFalse);
+
+        notifier.clearClips();
+        final reimported = take.copyWith(targetAspectRatio: .square);
+        notifier.replaceClips([reimported], autosave: false);
+        completeTrim(true);
+        expect(await take.processingCompleter!.future, isTrue);
+
+        expect(notifier.clips.single, same(reimported));
       });
 
       test('settles background work when disposed during trim', () async {
@@ -619,20 +681,15 @@ void main() {
 
       test('deletes the autosave draft by default', () async {
         final notifier = container.read(clipManagerProvider.notifier);
-        when(
-          () => mockDraftStorageService.draftExists(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).thenAnswer((_) async => true);
+        when(mockDraftStorageService.deleteAutosavedDraft).thenAnswer(
+          (_) async => true,
+        );
         addClip(notifier);
 
         await notifier.clearAll();
 
-        verify(
-          () => mockDraftStorageService.deleteDraft(
-            VideoEditorConstants.autoSaveId,
-          ),
-        ).called(greaterThanOrEqualTo(1));
+        verify(mockDraftStorageService.deleteAutosavedDraft)
+            .called(greaterThanOrEqualTo(1));
       });
 
       test('leaves the autosave draft untouched when keeping it', () async {
@@ -643,7 +700,7 @@ void main() {
 
         // The shared `draft_autosave` slot is never touched — the editor's
         // save path relies on that, having already reaped it itself.
-        verifyNever(() => mockDraftStorageService.deleteDraft(any()));
+        verifyNever(mockDraftStorageService.deleteAutosavedDraft);
         // ...and the session still empties, which is what cures the inherited
         // aspect ratio. The flag only decides the draft's fate.
         expect(container.read(clipManagerProvider).clips, isEmpty);
@@ -726,6 +783,261 @@ void main() {
 
       // Total duration should account for all clips
       expect(state.totalDuration, equals(const Duration(seconds: 6)));
+    });
+
+    group('extractClips', () {
+      test('abandonment deletes a persisted autosave without deleting its library take', () async {
+        final directory = Directory.systemTemp.createTempSync(
+          'abandoned_reaction_',
+        );
+        final database = AppDatabase.test(NativeDatabase.memory());
+        final previous = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(directory.path);
+        resetCachedDocumentsPath();
+        final drafts = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        final library = ClipLibraryService(
+          clipsDao: database.clipsDao,
+          draftsDao: database.draftsDao,
+          clipCategoriesDao: database.clipCategoriesDao,
+        );
+        final ownContainer = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await SharedPreferences.getInstance(),
+            ),
+            databaseProvider.overrideWithValue(database),
+            draftStorageServiceProvider.overrideWithValue(drafts),
+            clipLibraryServiceProvider.overrideWithValue(library),
+          ],
+        );
+        addTearDown(() async {
+          ownContainer.dispose();
+          await database.close();
+          PathProviderPlatform.instance = previous;
+          resetCachedDocumentsPath();
+          if (directory.existsSync()) directory.deleteSync(recursive: true);
+        });
+        final file = File('${directory.path}/take.mp4')
+          ..writeAsBytesSync([1, 2, 3]);
+        final take = DivineVideoClip(
+          id: 'captured',
+          video: EditorVideo.file(file.path),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        await library.saveClip(take);
+        await drafts.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [take],
+            title: '',
+            description: '',
+            hashtags: {},
+            selectedApproach: 'video',
+          ),
+        );
+        expect(
+          await database.draftsDao.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+          isNotNull,
+        );
+        final notifier = ownContainer.read(clipManagerProvider.notifier);
+        notifier.replaceClips([take]);
+        final removed = database.draftsDao
+            .watchDraftById(VideoEditorConstants.autoSaveId)
+            .firstWhere((row) => row == null);
+        notifier.abandonExtraction({
+          take.id,
+        }, generation: notifier.sessionGeneration);
+        await removed;
+        expect(
+          await database.draftsDao.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+          isNull,
+        );
+        expect(await database.clipsDao.getClipById(take.id), isNotNull);
+        expect(file.existsSync(), isTrue);
+        expect(
+          await ownContainer
+              .read(videoEditorProvider.notifier)
+              .flushPendingAutosave(),
+          isFalse,
+        );
+      });
+
+      test('abandonment removes an existing recovery draft and cancels its debounce', () async {
+        var recoveryExists = true;
+        final deleted = Completer<void>();
+        when(mockDraftStorageService.deleteAutosavedDraft)
+            .thenAnswer((_) async {
+              if (!recoveryExists) return false;
+              recoveryExists = false;
+              deleted.complete();
+              return true;
+            });
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = DivineVideoClip(
+          id: 'captured',
+          video: EditorVideo.file('/documents/captured.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        notifier.replaceClips([take]);
+        expect(recoveryExists, isTrue);
+        notifier.abandonExtraction({
+          take.id,
+        }, generation: notifier.sessionGeneration);
+        await pumpEventQueue();
+        expect(recoveryExists, isFalse);
+        expect(deleted.isCompleted, isTrue);
+        expect(
+          await container
+              .read(videoEditorProvider.notifier)
+              .flushPendingAutosave(),
+          isFalse,
+        );
+        verifyNever(
+          () => mockClipLibraryService.softDelete(
+            any(),
+            clearDraftId: any(named: 'clearDraftId'),
+          ),
+        );
+      });
+
+      test('leaving preparation immediately releases takes and keeps a new session stable', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        DivineVideoClip clip(String id) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file('/documents/$id.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final take = clip('captured');
+        notifier.replaceClips([take], autosave: false);
+        final generation = notifier.sessionGeneration;
+        final gate = Completer<void>();
+        notifier.trackClipEnrichment(take.id, gate.future);
+        final extraction = notifier.extractClips({take.id});
+        final released = notifier.abandonExtraction({
+          take.id,
+        }, generation: generation);
+        expect(released.single, same(take));
+        expect(notifier.clips, isEmpty);
+        expect(gate.isCompleted, isFalse);
+        final next = clip('new-session');
+        notifier.replaceClips([next], autosave: false);
+        gate.complete();
+        expect(await extraction, isEmpty);
+        expect(notifier.clips.single, same(next));
+        expect(
+          notifier.abandonExtraction({next.id}, generation: generation),
+          isEmpty,
+        );
+        expect(notifier.clips.single, same(next));
+      });
+
+      test(
+        'same-session extraction keeps enriched metadata and unrelated clips',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          DivineVideoClip clip(String id) => DivineVideoClip(
+            id: id,
+            video: EditorVideo.file('/documents/$id.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          final take = clip('captured');
+          final keeper = clip('keeper');
+          notifier.replaceClips([take, keeper], autosave: false);
+          final gate = Completer<void>();
+          notifier.trackClipEnrichment(take.id, gate.future);
+          final extraction = notifier.extractClips({take.id});
+          final enriched = take.copyWith(duration: const Duration(seconds: 3));
+          notifier.replaceClips([enriched, keeper], autosave: false);
+          expect(notifier.clips, hasLength(2));
+          gate.complete();
+          final extracted = await extraction;
+          expect(extracted, hasLength(1));
+          expect(extracted.single, same(enriched));
+          expect(notifier.clips.single, same(keeper));
+        },
+      );
+
+      test(
+        'late extraction does not touch a rebuilt provider session',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = DivineVideoClip(
+            id: 'captured',
+            video: EditorVideo.file('/documents/captured.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          notifier.replaceClips([take], autosave: false);
+          final gate = Completer<void>();
+          notifier.trackClipEnrichment(take.id, gate.future);
+          final extraction = notifier.extractClips({take.id});
+          container.invalidate(clipManagerProvider);
+          final current = container.read(clipManagerProvider.notifier);
+          final reimported = take.copyWith(targetAspectRatio: .square);
+          current.replaceClips([reimported], autosave: false);
+          expect(current.clips.single, same(reimported));
+          gate.complete();
+          expect(await extraction, isEmpty);
+          expect(current.clips.single, same(reimported));
+        },
+      );
+
+      for (final clearWholeSession in [true, false]) {
+        test(
+          'late extraction cannot remove a reimported take after '
+          '${clearWholeSession ? 'clearSessionClips' : 'clearClips'}',
+          () async {
+            final notifier = container.read(clipManagerProvider.notifier);
+            final take = DivineVideoClip(
+              id: 'captured',
+              video: EditorVideo.file('/documents/captured.mp4'),
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            );
+            notifier.replaceClips([take], autosave: false);
+            final gate = Completer<void>();
+            notifier.trackClipEnrichment(take.id, gate.future);
+            final extraction = notifier.extractClips({take.id});
+            if (clearWholeSession) {
+              await notifier.clearSessionClips();
+            } else {
+              notifier.clearClips();
+            }
+            final reimported = take.copyWith(targetAspectRatio: .square);
+            notifier.replaceClips([reimported], autosave: false);
+            expect(notifier.clips.single, same(reimported));
+            gate.complete();
+            final extracted = await extraction;
+            expect(notifier.clips, hasLength(1));
+            expect(notifier.clips.single, same(reimported));
+            expect(extracted, isEmpty);
+          },
+        );
+      }
     });
 
     group('clearClips', () {
@@ -1185,6 +1497,89 @@ void main() {
               .clip
               .proofManifestJson,
           isNotNull,
+        );
+      });
+
+      test('keeps late camera proofs off a reimported timeline take', () async {
+        const mainPath = '/documents/VID_1.mp4';
+        const recordingHash = 'main-proof-hash';
+        final bothStarted = Completer<void>();
+        final mainProof = Completer<NativeProofData?>();
+        final secondProof = Completer<NativeProofData?>();
+        final requestedPaths = <String>{};
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) {
+              requestedPaths.add(file.path);
+              if (requestedPaths.length == 2) bothStarted.complete();
+              return file.path == mainPath
+                  ? mainProof.future
+                  : secondProof.future;
+            };
+        when(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: any(named: 'clipId'),
+            fileName: any(named: 'fileName'),
+            sha256: any(named: 'sha256'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockClipLibraryService.saveClip(any()),
+        ).thenAnswer((_) async {});
+        final backgroundWork = container.read(editorBackgroundWorkProvider);
+        final notifier = container.read(clipManagerProvider.notifier);
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file(mainPath),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+        );
+        await notifier.saveClipToLibrary(clip);
+        await bothStarted.future;
+        expect(requestedPaths, {mainPath, second.filePath});
+
+        final generation = notifier.sessionGeneration;
+        expect(notifier.abandonExtraction({clip.id}, generation: generation), [
+          clip,
+        ]);
+        final reimported = clip.copyWith(volume: 0.5);
+        notifier.insertClip(0, reimported);
+        notifier.cacheMergeOutput('/documents/new-project-merge.mp4');
+        mainProof.complete(const NativeProofData(videoHash: recordingHash));
+        secondProof.complete(
+          const NativeProofData(videoHash: 'second-proof-hash'),
+        );
+        await backgroundWork.settle();
+
+        verify(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: clip.id,
+            fileName: 'VID_1.mp4',
+            sha256: recordingHash,
+          ),
+        ).called(1);
+        final current = notifier.getClipById(clip.id)!;
+        expect(
+          [
+            current.proofManifestJson,
+            current.secondaryCamera!.clip.proofManifestJson,
+          ],
+          [null, null],
+        );
+        expect(current, same(reimported));
+        expect(
+          container.read(clipManagerProvider).mergeOutputPath,
+          '/documents/new-project-merge.mp4',
         );
       });
 
@@ -1837,6 +2232,78 @@ void main() {
         expect(rendered, [take.id]);
       });
 
+      test(
+        'lets a new project request the shared bake for its own take',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          renderGate = Completer<void>();
+
+          final oldBake = notifier.bakeCapturedChromaKey(take);
+          await pumpEventQueue();
+          notifier.abandonExtraction({
+            take.id,
+          }, generation: notifier.sessionGeneration);
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+          final requestedBake = notifier.bakeCapturedChromaKey(reimported);
+          renderGate!.complete();
+          await Future.wait([oldBake, requestedBake]);
+
+          expect(rendered, [take.id]);
+          expect(
+            notifier.clips.single.video?.file?.path,
+            '/documents/keyed.mp4',
+          );
+          expect(notifier.clips.single.volume, 0.5);
+          verify(() => mockClipLibraryService.saveClip(any())).called(1);
+        },
+      );
+
+      test(
+        'saves a late bake to the library without changing a reimport',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          renderGate = Completer<void>();
+
+          final bake = notifier.bakeCapturedChromaKey(take);
+          await pumpEventQueue();
+          expect(rendered, [take.id]);
+          final generation = notifier.sessionGeneration;
+          expect(
+            notifier.abandonExtraction({take.id}, generation: generation),
+            [
+              take,
+            ],
+          );
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+          notifier.cacheMergeOutput('/documents/new-project-merge.mp4');
+
+          renderGate!.complete();
+          expect((await bake).video?.file?.path, '/documents/keyed.mp4');
+
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.single
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          expect(notifier.clips.single, same(reimported));
+          expect(
+            container.read(clipManagerProvider).mergeOutputPath,
+            '/documents/new-project-merge.mp4',
+          );
+        },
+      );
+
       test('hands back a take it already keyed without rendering', () async {
         final notifier = container.read(clipManagerProvider.notifier);
         final take = recordTake(notifier);
@@ -1980,10 +2447,15 @@ void main() {
           when(
             () => mockClipLibraryService.getClipById(take.id),
           ).thenAnswer((_) async => take);
+          final generation = notifier.sessionGeneration;
           // Leaving the recorder right after the take clears the session.
           notifier.clearClips();
 
-          await notifier.bakeRecordedTake(take.id);
+          await notifier.bakeRecordedTake(
+            take,
+            generation: generation,
+            after: Future<void>.value(),
+          );
 
           expect(rendered, [take.id]);
           final saved =
@@ -1993,6 +2465,39 @@ void main() {
                   as DivineVideoClip;
           expect(saved.video?.file?.path, '/documents/keyed.mp4');
           expect(saved.chromaKey, key);
+        },
+      );
+
+      test(
+        'bakes the original library take after the recorder moves on',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          final generation = notifier.sessionGeneration;
+          final rawSaved = Completer<void>();
+          final bake = notifier.bakeRecordedTake(
+            take,
+            generation: generation,
+            after: rawSaved.future,
+          );
+          notifier.abandonExtraction({take.id}, generation: generation);
+          final reimported = take.copyWith(volume: 0.5);
+          notifier.insertClip(0, reimported);
+
+          expect(rendered, isEmpty);
+          rawSaved.complete();
+          await bake;
+
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.single
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          expect(notifier.clips.single, same(reimported));
         },
       );
     });

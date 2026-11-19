@@ -25,6 +25,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/creation_session_guard.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -34,8 +35,18 @@ import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
+import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// Whether the library is stacked above an active creation screen.
+bool _coversCreationSession(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  return router != null &&
+      hasCreationSessionInRouteStack(
+        router.routerDelegate.currentConfiguration,
+      );
+}
 
 /// Which tabs the library shows.
 enum LibraryTabsMode {
@@ -145,6 +156,20 @@ class LibraryScreen extends ConsumerWidget {
     this.cropGuideAspectRatio,
     this.maxSelectedClips,
   });
+
+  /// The timeline picker accepts every shape and previews the composition's
+  /// crop. Import fits a copy to that shape; the library source stays intact.
+  factory LibraryScreen.editorPicker({
+    required List<DivineVideoClip> editorClips,
+    ScrollController? scrollController,
+  }) => LibraryScreen(
+    initialTabIndex: clipsTabIndex,
+    selectionMode: true,
+    allowsMixedClipTypes: true,
+    editorClips: editorClips,
+    scrollController: scrollController,
+    cropGuideAspectRatio: editorClips.firstOrNull?.targetAspectRatio.value,
+  );
 
   /// Index of the tab to show when the screen opens: [draftsTabIndex],
   /// [clipsTabIndex], [fromOthersTabIndex] or [soundsTabIndex]. A tab the
@@ -270,6 +295,7 @@ class LibraryScreen extends ConsumerWidget {
           aspectRatio: aspectRatio,
           child: view,
         ),
+        null when !selectionMode => LibraryReactionProgressHost(child: view),
         null => view,
       },
     );
@@ -942,6 +968,12 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
+                            // Any pushed library can cover a live creation
+                            // session, including an upload-failure action.
+                            offersRecordReaction:
+                                !widget.selectionMode &&
+                                widget.tabsMode == LibraryTabsMode.allTabs &&
+                                !_coversCreationSession(context),
                             onCreateVideo: createVideo,
                           ),
                         ),
@@ -996,6 +1028,7 @@ double? libraryTargetAspectRatioForSelection({
 class _LibraryContent extends StatelessWidget {
   const _LibraryContent({
     required this.showScheduledSection,
+    required this.offersRecordReaction,
     required this.tabs,
     required this.tabController,
     required this.selectionMode,
@@ -1007,6 +1040,9 @@ class _LibraryContent extends StatelessWidget {
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
   final bool showScheduledSection;
+
+  /// Forwarded to [ClipsTab.offersRecordReaction].
+  final bool offersRecordReaction;
   final List<_LibraryTab> tabs;
   final TabController tabController;
   final bool selectionMode;
@@ -1067,6 +1103,7 @@ class _LibraryContent extends StatelessWidget {
                   targetAspectRatio: targetAspectRatio,
                   backgroundColor: tabBackgroundColor,
                   showScheduledSection: showScheduledSection,
+                  offersRecordReaction: offersRecordReaction,
                 ),
         ),
       ],
@@ -1325,6 +1362,7 @@ class _SelectionBody extends StatelessWidget {
 class _TabBody extends StatefulWidget {
   const _TabBody({
     required this.showScheduledSection,
+    required this.offersRecordReaction,
     required this.tabController,
     required this.tabs,
     required this.selectionEnabled,
@@ -1339,6 +1377,9 @@ class _TabBody extends StatefulWidget {
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
   final bool showScheduledSection;
+
+  /// Forwarded to [ClipsTab.offersRecordReaction].
+  final bool offersRecordReaction;
   final double? targetAspectRatio;
 
   @override
@@ -1396,6 +1437,7 @@ class _TabBodyState extends State<_TabBody> {
                 showRecordButton: false,
                 backgroundColor: widget.backgroundColor,
                 showCategoryManagement: true,
+                offersRecordReaction: widget.offersRecordReaction,
               ),
               _LibraryTab.sounds => const SoundsTab(),
             },

@@ -11515,6 +11515,12 @@ abstract class AppLocalizations {
   /// **'Clips'**
   String get libraryTabClips;
 
+  /// Library clip preview action: record a new clip and combine it with this clip in a side-by-side layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Record reaction'**
+  String get libraryRecordReaction;
+
   /// Library tab listing clips imported from other people's videos, such as classic Vines, kept apart from the user's own clips.
   ///
   /// In en, this message translates to:

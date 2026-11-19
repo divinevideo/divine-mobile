@@ -17,6 +17,16 @@ class PageLoadObserver extends NavigatorObserver {
 
   final ScreenAnalyticsService _analytics;
 
+  /// The screen name this observer keys the load session of [context]'s
+  /// route by.
+  ///
+  /// A screen completes its load with [ScreenAnalyticsService.markDataLoaded],
+  /// which drops a name it has no session for without a trace. Deriving the
+  /// name from the route keeps the two from drifting apart, and covers a
+  /// screen shown under more than one route.
+  static String screenNameOf(BuildContext context) =>
+      AnalyticsSurface.routeSurfaceName(ModalRoute.settingsOf(context)?.name);
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);

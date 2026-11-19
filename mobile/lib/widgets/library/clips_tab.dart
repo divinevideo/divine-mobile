@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/widgets/library/clip_category_chips.dart';
 import 'package:openvine/widgets/library/clip_gallery_save.dart';
 import 'package:openvine/widgets/library/drag_select_region.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
+import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/library/trashed_clips_list.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
@@ -40,6 +42,7 @@ class ClipsTab extends StatelessWidget {
     this.scrollController,
     this.gridTopPadding = 0,
     this.showCategoryManagement = false,
+    this.offersRecordReaction = false,
     super.key,
   });
 
@@ -86,6 +89,12 @@ class ClipsTab extends StatelessWidget {
   /// the whole truth about where a clip appears.
   final bool showCategoryManagement;
 
+  /// Whether a clip's preview offers Record reaction.
+  ///
+  /// Only the standalone library sets this. The recorder's library sits on a
+  /// live camera session, which starting a reaction would clear.
+  final bool offersRecordReaction;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -104,6 +113,7 @@ class ClipsTab extends StatelessWidget {
             targetAspectRatio: targetAspectRatio,
             scrollController: scrollController,
             gridTopPadding: gridTopPadding,
+            offersRecordReaction: offersRecordReaction,
           ),
         ),
       ],
@@ -171,6 +181,7 @@ class _ClipsBody extends StatelessWidget {
     required this.targetAspectRatio,
     required this.scrollController,
     required this.gridTopPadding,
+    required this.offersRecordReaction,
   });
 
   final ClipOwnershipScope? scope;
@@ -180,6 +191,7 @@ class _ClipsBody extends StatelessWidget {
   final double? targetAspectRatio;
   final ScrollController? scrollController;
   final double gridTopPadding;
+  final bool offersRecordReaction;
 
   /// How long one filter's content takes to fade into the next.
   static const _filterFadeDuration = Duration(milliseconds: 180);
@@ -205,6 +217,7 @@ class _ClipsBody extends StatelessWidget {
           targetAspectRatio: targetAspectRatio,
           scrollController: scrollController,
           gridTopPadding: gridTopPadding,
+          offersRecordReaction: offersRecordReaction,
         );
 
         // A cross-fade holds the outgoing filter's grid on screen alongside
@@ -238,7 +251,7 @@ class _ClipsBody extends StatelessWidget {
 
 /// The clip content for one filter: the grid, the trash list, or the state
 /// that stands in for them.
-class _FilterContent extends StatelessWidget {
+class _FilterContent extends ConsumerWidget {
   const _FilterContent({
     required this.state,
     required this.clips,
@@ -248,6 +261,7 @@ class _FilterContent extends StatelessWidget {
     required this.targetAspectRatio,
     required this.scrollController,
     required this.gridTopPadding,
+    required this.offersRecordReaction,
   });
 
   /// Captured rather than watched, so the outgoing child of a cross-fade
@@ -262,9 +276,10 @@ class _FilterContent extends StatelessWidget {
   final double? targetAspectRatio;
   final ScrollController? scrollController;
   final double gridTopPadding;
+  final bool offersRecordReaction;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // The trash bin has its own list, loading, and empty states — the
     // grid below only ever renders active clips.
     if (state.isShowingTrash) {
@@ -311,7 +326,7 @@ class _FilterContent extends StatelessWidget {
           return;
         }
         runDetached(
-          _showClipPreview(context, clip),
+          _showClipPreview(context, ref, clip),
           'open saved clip preview',
           logName: 'ClipsTab',
           category: LogCategory.ui,
@@ -322,19 +337,47 @@ class _FilterContent extends StatelessWidget {
 
   Future<void> _showClipPreview(
     BuildContext context,
+    WidgetRef ref,
     DivineVideoClip clip,
   ) async {
-    await Navigator.push(
-      context,
-      videoClipPreviewRoute(
-        clip: clip,
-        // Saved like a selection, so a copy without proof is named too.
-        onSaveToGallery: () async {
-          await saveClipsToGallery(context, [clip]);
-        },
-        onDelete: () => _confirmDeleteClip(context, clip),
-      ),
+    late final TransitionRoute<void> route;
+    route = videoClipPreviewRoute(
+      clip: clip,
+      // Saved like a selection, so a copy without proof is named too.
+      onSaveToGallery: () async {
+        await saveClipsToGallery(context, [clip]);
+      },
+      onDelete: () => _confirmDeleteClip(context, clip),
+      onRecordReaction:
+          offersRecordReaction &&
+              LibraryClipTypeFilter.reactionCompatible.matches(clip)
+          ? () {
+              route.navigator?.pop();
+              if (!context.mounted) return;
+              final clipsBloc = context.read<ClipsLibraryBloc>();
+              runDetached(
+                recordLibraryReaction(
+                  context,
+                  ref,
+                  clip,
+                  // Let the preview's looping decoder go before opening the
+                  // camera, but claim the new reaction on the original tap.
+                  previewClosed: route.completed,
+                ).whenComplete(() {
+                  // New takes need not change libraryRevision. Refresh when
+                  // the camera/layout/editor returns with its saved takes.
+                  if (context.mounted && !clipsBloc.isClosed) {
+                    clipsBloc.add(const ClipsLibraryClipsChanged());
+                  }
+                }),
+                'record library reaction',
+                logName: 'ClipsTab',
+                category: LogCategory.ui,
+              );
+            }
+          : null,
     );
+    await Navigator.of(context).push(route);
   }
 
   Future<void> _confirmDeleteClip(

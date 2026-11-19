@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
@@ -1025,6 +1026,26 @@ void main() {
     });
 
     group('editor and metadata', () {
+      test('the editor receives the exact in-memory reaction session', () {
+        final router = _videoRouter();
+        final session = CreationAnalyticsSession();
+        final location = const VideoEditorRouteData(
+          from: VideoEditorScreen.libraryOrigin,
+        ).location;
+
+        VideoEditorScreen editorFor(Object? extra) =>
+            (_build(
+                  router,
+                  location,
+                  extra: extra,
+                ) as ReleaseCachedImagesOnDispose).child
+                as VideoEditorScreen;
+
+        expect(editorFor(session).analyticsSession, same(session));
+        expect(editorFor(null).analyticsSession, isNull);
+        expect(editorFor({'session': 'restored'}).analyticsSession, isNull);
+      });
+
       test('the editor reads its origin from the URL', () {
         VideoEditorScreen editorAt(String location) =>
             (_build(

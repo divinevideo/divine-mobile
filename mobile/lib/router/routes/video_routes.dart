@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -239,6 +240,7 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
   const VideoEditorRouteData({
     @TypedQueryParameter(name: VideoEditorScreen.originQueryParameter)
     this.from,
+    this.$extra,
   });
 
   /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor.
@@ -246,11 +248,15 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
   /// it only sets the `entry` of the `editor_ready` performance trace.
   final String? from;
 
+  /// The in-memory analytics session of a confirmed library reaction, if any.
+  final Object? $extra;
+
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       ReleaseCachedImagesOnDispose(
         child: VideoEditorScreen(
           fromLibrary: from == VideoEditorScreen.libraryOrigin,
+          analyticsSession: extraAs<CreationAnalyticsSession>($extra),
         ),
       );
 }

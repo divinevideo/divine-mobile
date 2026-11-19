@@ -6762,6 +6762,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryTabClips => 'Clip';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Từ người khác';
 
   @override

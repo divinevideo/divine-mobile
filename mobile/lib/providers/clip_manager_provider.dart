@@ -19,6 +19,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -58,12 +59,17 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   Timer? _recordingDurationTimer;
   final Stopwatch _recordStopwatch = clock.stopwatch();
   final List<DivineVideoClip> _clips = [];
+  int _sessionGeneration = 0;
   Timer? _pendingDeletionTimer;
   final Map<String, Future<void>> _clipEnrichment = {};
 
-  /// Chroma-key bakes still running, by clip id, so a second request for the
-  /// same take joins the first instead of rendering it again.
-  final Map<String, Future<DivineVideoClip>> _capturedChromaKeyBakes = {};
+  /// A recorder and editor can share a render of the same take. The source
+  /// and account matter because a later project can reuse a library clip ID.
+  final Map<
+    ({String id, String? path, ClipChromaKey? key, String? owner}),
+    Future<DivineVideoClip>
+  >
+  _capturedChromaKeyBakes = {};
 
   /// Nullable rather than `late`, which would throw a
   /// `LateInitializationError` in two ways. Riverpod reuses this notifier
@@ -90,6 +96,47 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Returns an unmodifiable view of all clips.
   List<DivineVideoClip> get clips => List.unmodifiable(_clips);
 
+  /// The elapsed capture time, including after stopping the timer.
+  Duration get recordingElapsed => _recordStopwatch.elapsed;
+
+  /// Ownership stamp for work that must not change a later capture session.
+  int get sessionGeneration => _sessionGeneration;
+
+  bool isSessionCurrent(int generation) =>
+      generation == _sessionGeneration && ref.mounted;
+
+  /// Drops abandoned capture takes from the working timeline immediately.
+  /// Their library copies stay intact; recovery follows the remaining timeline.
+  List<DivineVideoClip> abandonExtraction(
+    Set<String> clipIds, {
+    required int generation,
+  }) {
+    if (!isSessionCurrent(generation)) return [];
+    final removed = _clips.where((clip) => clipIds.contains(clip.id)).toList();
+    if (removed.isEmpty) return [];
+    _sessionGeneration++;
+    _clips.removeWhere((clip) => clipIds.contains(clip.id));
+    state = state.copyWith(
+      clips: List.unmodifiable(_clips),
+      clearMergeOutputPath: true,
+      clearSelection: clipIds.contains(state.selectedClipId),
+      clearPreview: clipIds.contains(state.previewingClipId),
+    );
+    // Reconcile the recovery draft now, not after an enrichment that might
+    // never finish. Flushing also cancels the old session's debounce; autosave
+    // serializes behind any write already in flight and deletes empty drafts.
+    _triggerAutosave();
+    runProviderDetached(
+      ref
+          .read(videoEditorProvider.notifier)
+          .flushPendingAutosave()
+          .then<void>((_) {}),
+      'persist the timeline after abandoning reaction takes',
+      logName: 'ClipManagerNotifier',
+    );
+    return removed;
+  }
+
   /// Tracks metadata and library work without blocking the next recording.
   ///
   /// Work tracked for a clip that still has work pending joins it, so a
@@ -111,15 +158,27 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Waits for recorded takes to finish processing, then moves them out of
   /// the timeline without deleting their saved library copies.
-  Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+  Future<List<DivineVideoClip>> extractClips(
+    Set<String> clipIds, {
+    Future<void> Function(List<DivineVideoClip>)? retain,
+  }) async {
+    final generation = _sessionGeneration;
     final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
     for (final take in takes) {
       await take.processingCompleter?.future;
       await _clipEnrichment[take.id];
     }
+    // A departed camera can finish after another project reimports the same
+    // library id. It must not remove that project's copy or touch a disposed
+    // notifier when the original take's enrichment settles.
+    if (generation != _sessionGeneration || !ref.mounted) return [];
     final finished = [
       for (final take in takes) getClipById(take.id) ?? take,
     ];
+    if (retain != null) {
+      await retain(finished);
+      if (!isSessionCurrent(generation)) return [];
+    }
     replaceClips([
       for (final clip in clips)
         if (!clipIds.contains(clip.id)) clip,
@@ -158,6 +217,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   ClipManagerState build() {
     _backgroundWork = ref.read(editorBackgroundWorkProvider);
     ref.onDispose(() {
+      _sessionGeneration++;
       _recordingDurationTimer?.cancel();
       _pendingDeletionTimer?.cancel();
       _pendingDeletionTimer = null;
@@ -209,6 +269,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Start recording timer for active clip duration tracking.
   void startRecording() {
+    _recordingDurationTimer?.cancel();
     _recordStopwatch
       ..reset()
       ..start();
@@ -292,6 +353,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     VideoRecordingResult? secondaryRecording,
     Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
   }) {
+    final generation = _sessionGeneration;
     // A new recording supersedes any pending undo from a previous tap.
     if (state.pendingDeletion != null) {
       _cancelPendingDeletionTimer();
@@ -310,31 +372,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     // Proof generation runs independently and does not block the UI.
     final processingCompleter = isClipTooLong ? Completer<bool>() : null;
 
-    var clip = DivineVideoClip(
-      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+    var clip = buildRecordedClip(
       video: video,
       duration: isClipTooLong ? remainingDuration : clipDuration,
-      recordedAt: .now(),
-      thumbnailPath: thumbnailPath,
-      targetAspectRatio: targetAspectRatio,
       originalAspectRatio: originalAspectRatio,
+      targetAspectRatio: targetAspectRatio,
+      thumbnailPath: thumbnailPath,
       processingCompleter: processingCompleter,
       lensMetadata: lensMetadata,
       captureChromaKey: captureChromaKey,
+      secondaryRecording: secondaryRecording,
+      secondaryPipCenter: secondaryPipCenter,
     );
-    if (secondaryRecording != null) {
-      clip = clip.copyWith(
-        secondaryCamera: SecondaryCameraTake(
-          clip: _secondaryCameraClip(
-            ownerId: clip.id,
-            recording: secondaryRecording,
-            mainDuration: clip.duration,
-            targetAspectRatio: targetAspectRatio,
-          ),
-          pipCenter: secondaryPipCenter,
-        ),
-      );
-    }
 
     // Asynchronously trim the clip if it exceeds remaining duration
     if (isClipTooLong) {
@@ -346,7 +395,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             // The render outlives this notifier, and this is the only signal
             // that releases proof generation waiting on the trimmed file.
             processingCompleter!.complete(success);
-            if (!ref.mounted) return;
+            if (!isSessionCurrent(generation)) return;
 
             /// If the clip exists already we use the newest thumbnail
             /// from that clip.
@@ -385,11 +434,58 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
-    _editorBackgroundWork.track(_generateClipProof(clip));
+    _editorBackgroundWork.track(_generateClipProof(clip, generation));
     if (clip.secondaryCamera case final second?) {
-      final proof = _generateSecondaryCameraProof(clip.id, second.clip);
+      final proof = _generateSecondaryCameraProof(
+        clip.id,
+        second.clip,
+        generation,
+      );
       _editorBackgroundWork.track(proof);
       trackClipEnrichment(second.clip.id, proof);
+    }
+
+    return clip;
+  }
+
+  /// Builds a take without changing the timeline. A reaction can still store
+  /// the original camera result after its project has been replaced.
+  DivineVideoClip buildRecordedClip({
+    required EditorVideo video,
+    required Duration duration,
+    required double originalAspectRatio,
+    required model.AspectRatio targetAspectRatio,
+    String? thumbnailPath,
+    Completer<bool>? processingCompleter,
+    CameraLensMetadata? lensMetadata,
+    ClipChromaKey? captureChromaKey,
+    VideoRecordingResult? secondaryRecording,
+    Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
+  }) {
+    var clip = DivineVideoClip(
+      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+      video: video,
+      duration: duration,
+      recordedAt: .now(),
+      thumbnailPath: thumbnailPath,
+      targetAspectRatio: targetAspectRatio,
+      originalAspectRatio: originalAspectRatio,
+      processingCompleter: processingCompleter,
+      lensMetadata: lensMetadata,
+      captureChromaKey: captureChromaKey,
+    );
+    if (secondaryRecording != null) {
+      clip = clip.copyWith(
+        secondaryCamera: SecondaryCameraTake(
+          clip: _secondaryCameraClip(
+            ownerId: clip.id,
+            recording: secondaryRecording,
+            mainDuration: clip.duration,
+            targetAspectRatio: targetAspectRatio,
+          ),
+          pipCenter: secondaryPipCenter,
+        ),
+      );
     }
 
     return clip;
@@ -534,23 +630,25 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Waits for any pending processing (e.g. trimming) to finish first,
   /// then generates the proof and updates the clip via [refreshClip].
   /// Failures are logged but do not block clip usage.
-  Future<void> _generateClipProof(DivineVideoClip clip) => _proveRecording(
-    clip,
-    apply: (proofManifestJson, recordingSha256) {
-      // Merge with latest clip state (thumbnail may have been updated).
-      // If the clip was deleted while proof generation was in progress,
-      // it is not brought back.
-      final current = getClipById(clip.id);
-      if (current == null) return;
-      refreshClip(
-        current.copyWith(
-          proofManifestJson: proofManifestJson,
-          recordingSha256: recordingSha256,
-        ),
+  Future<void> _generateClipProof(DivineVideoClip clip, int generation) =>
+      _proveRecording(
+        clip,
+        generation: generation,
+        apply: (proofManifestJson, recordingSha256) {
+          // Merge with latest clip state (thumbnail may have been updated).
+          // If the clip was deleted while proof generation was in progress,
+          // it is not brought back.
+          final current = getClipById(clip.id);
+          if (current == null) return;
+          refreshClip(
+            current.copyWith(
+              proofManifestJson: proofManifestJson,
+              recordingSha256: recordingSha256,
+            ),
+          );
+          _triggerAutosave();
+        },
       );
-      _triggerAutosave();
-    },
-  );
 
   /// Generates the proof of the second camera's recording of the clip
   /// [ownerId] and writes it onto that take.
@@ -561,8 +659,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   Future<void> _generateSecondaryCameraProof(
     String ownerId,
     DivineVideoClip secondary,
+    int generation,
   ) => _proveRecording(
     secondary,
+    generation: generation,
     isLibraryRecording: false,
     apply: (proofManifestJson, recordingSha256) {
       final current = getClipById(ownerId)?.secondaryCamera?.clip;
@@ -584,6 +684,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// up to the gallery.
   Future<void> _proveRecording(
     DivineVideoClip clip, {
+    required int generation,
     required void Function(String proofManifestJson, String? recordingSha256)
     apply,
     bool isLibraryRecording = true,
@@ -616,7 +717,11 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             ? proofData.videoHash
             : null;
 
-        apply(jsonEncode(proofData), recordingSha256);
+        // A later session can reimport the same clip and take IDs. Only the
+        // recording's session may update the timeline and its recovery draft.
+        if (isSessionCurrent(generation)) {
+          apply(jsonEncode(proofData), recordingSha256);
+        }
 
         // The recorder saved the take to the clip library before its proof
         // came back, and the take can be picked from there long after it
@@ -1170,6 +1275,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Clear all clips without deleting files or autosave.
   void clearClips() {
+    _resetCaptureSession();
     _cancelPendingDeletionTimer();
     final clipCount = _clips.length;
     _clips.clear();
@@ -1194,6 +1300,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   }
 
   void _clearLocalClipState() {
+    _resetCaptureSession();
     final clipCount = _clips.length;
     _clips.clear();
     Log.info(
@@ -1202,6 +1309,15 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       category: .video,
     );
     state = ClipManagerState();
+  }
+
+  void _resetCaptureSession() {
+    _sessionGeneration++;
+    _recordingDurationTimer?.cancel();
+    _recordingDurationTimer = null;
+    _recordStopwatch
+      ..stop()
+      ..reset();
   }
 
   /// Remove all clips and reset state.
@@ -1307,29 +1423,59 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   ///
   /// Throws whatever the bake throws; the take then keeps its raw footage and
   /// the key it was recorded with, so the next request tries again.
-  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) {
-    final held = getClipById(clip.id);
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) =>
+      _startCapturedChromaKeyBake(
+        clip,
+        generation: _sessionGeneration,
+        clipLibrary: ref.read(clipLibraryServiceProvider),
+      );
+
+  Future<DivineVideoClip> _startCapturedChromaKeyBake(
+    DivineVideoClip clip, {
+    required int generation,
+    required ClipLibraryService clipLibrary,
+  }) {
+    final sourcePath = clip.video?.file?.path;
+    final held = isSessionCurrent(generation) && _isCurrentLibrary(clipLibrary)
+        ? getClipById(clip.id)
+        : null;
     if (held != null &&
         held.chromaKey != null &&
-        !held.hasPendingCaptureChromaKey) {
+        held.chromaKey == clip.captureChromaKey &&
+        held.chromaKeySourcePath == sourcePath) {
       return Future.value(held);
     }
-    final running = _capturedChromaKeyBakes[clip.id];
-    if (running != null) return running;
+    final source = (
+      id: clip.id,
+      path: sourcePath,
+      key: clip.captureChromaKey,
+      owner: clipLibrary.ownerPubkey,
+    );
+    final running = _capturedChromaKeyBakes[source];
+    if (running != null) {
+      return running.then((keyed) {
+        _applyCapturedChromaKeyToTimeline(
+          clip,
+          keyed,
+          generation: generation,
+          clipLibrary: clipLibrary,
+        );
+        return keyed;
+      });
+    }
 
-    // The library as it is now, while the take's own account is signed in:
-    // one read when the bake lands could belong to whoever signed in since.
     final bake = _bakeCapturedChromaKey(
       clip,
-      clipLibrary: ref.read(clipLibraryServiceProvider),
+      generation: generation,
+      clipLibrary: clipLibrary,
     );
-    _capturedChromaKeyBakes[clip.id] = bake;
+    _capturedChromaKeyBakes[source] = bake;
     _editorBackgroundWork.track(
       bake
           .then<void>((_) {}, onError: (Object _) {})
           .whenComplete(
             () => _capturedChromaKeyBakes.removeWhere(
-              (id, running) => id == clip.id && identical(running, bake),
+              (key, running) => key == source && identical(running, bake),
             ),
           ),
     );
@@ -1338,24 +1484,41 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   Future<DivineVideoClip> _bakeCapturedChromaKey(
     DivineVideoClip clip, {
+    required int generation,
     required ClipLibraryService clipLibrary,
   }) async {
     final keyed = await ref.read(capturedChromaKeyBakerProvider).bake(clip);
     if (!ref.mounted) return keyed;
 
-    // Signed out, or signed in as someone else, since the bake started: the
-    // session and its autosave are no longer the take's account's to write.
-    // Only the take's own library row gets the keyed file.
-    final accountChanged =
-        ref.read(clipLibraryServiceProvider).ownerPubkey !=
-        clipLibrary.ownerPubkey;
-    if (accountChanged) {
-      await applyChromaKeyBakeToLibrary(
-        raw: clip,
-        baked: keyed,
-        clipLibrary: clipLibrary,
-      );
-      return keyed;
+    _applyCapturedChromaKeyToTimeline(
+      clip,
+      keyed,
+      generation: generation,
+      clipLibrary: clipLibrary,
+    );
+    if (await applyChromaKeyBakeToLibrary(
+          raw: clip,
+          baked: keyed,
+          clipLibrary: clipLibrary,
+        ) &&
+        _isCurrentLibrary(clipLibrary)) {
+      state = state.copyWith(libraryRevision: state.libraryRevision + 1);
+    }
+    return keyed;
+  }
+
+  bool _isCurrentLibrary(ClipLibraryService library) =>
+      ref.mounted &&
+      ref.read(clipLibraryServiceProvider).ownerPubkey == library.ownerPubkey;
+
+  void _applyCapturedChromaKeyToTimeline(
+    DivineVideoClip clip,
+    DivineVideoClip keyed, {
+    required int generation,
+    required ClipLibraryService clipLibrary,
+  }) {
+    if (!isSessionCurrent(generation) || !_isCurrentLibrary(clipLibrary)) {
+      return;
     }
 
     // Only a take still waiting on the very footage that was keyed: one the
@@ -1363,6 +1526,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     // is left alone.
     bool waitsOnThisBake(DivineVideoClip held) =>
         held.hasPendingCaptureChromaKey &&
+        held.captureChromaKey == clip.captureChromaKey &&
         held.video?.file?.path == clip.video?.file?.path;
 
     final index = _clips.indexWhere((c) => c.id == clip.id);
@@ -1383,32 +1547,38 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         ),
       );
     }
-
-    if (await applyChromaKeyBakeToLibrary(
-          raw: clip,
-          baked: keyed,
-          clipLibrary: clipLibrary,
-        ) &&
-        ref.mounted) {
-      state = state.copyWith(libraryRevision: state.libraryRevision + 1);
-    }
-    return keyed;
   }
 
-  /// Bakes the key the take [clipId] was recorded with, wherever the take is
-  /// now: in the session, deleted but still inside the undo window, or only
-  /// in the library once the recorder has moved on from it.
-  ///
-  /// For the recorder, right after a take. Does nothing when the take is
-  /// gone or already keyed. Throws whatever [bakeCapturedChromaKey] throws.
-  Future<void> bakeRecordedTake(String clipId) async {
-    final pending = state.pendingDeletion;
-    final clip =
-        getClipById(clipId) ??
-        (pending?.clip.id == clipId ? pending!.clip : null) ??
-        await ref.read(clipLibraryServiceProvider).getClipById(clipId);
-    if (clip == null || !clip.hasPendingCaptureChromaKey) return;
-    await bakeCapturedChromaKey(clip);
+  /// Bakes the original recording after its raw saves settle. Once the
+  /// project leaves [generation], only the original library row is eligible.
+  Future<void> bakeRecordedTake(
+    DivineVideoClip recorded, {
+    required int generation,
+    required Future<void> after,
+  }) async {
+    final clipLibrary = ref.read(clipLibraryServiceProvider);
+    await after;
+    if (!ref.mounted) return;
+    DivineVideoClip? clip;
+    if (isSessionCurrent(generation) && _isCurrentLibrary(clipLibrary)) {
+      final pending = state.pendingDeletion?.clip;
+      clip =
+          getClipById(recorded.id) ??
+          (pending?.id == recorded.id ? pending : null);
+    }
+    clip ??= await clipLibrary.getClipById(recorded.id);
+    if (!ref.mounted ||
+        clip == null ||
+        !clip.hasPendingCaptureChromaKey ||
+        clip.captureChromaKey != recorded.captureChromaKey ||
+        clip.video?.file?.path != recorded.video?.file?.path) {
+      return;
+    }
+    await _startCapturedChromaKeyBake(
+      clip,
+      generation: generation,
+      clipLibrary: clipLibrary,
+    );
   }
 
   /// Holds chroma-key bakes back while the camera records — see
