@@ -439,6 +439,30 @@ void main() {
       },
     );
 
+    test('notifies update listeners about a video it does not hold', () {
+      // A feed fed over REST, such as Home, holds videos this service never
+      // saw; it still has to learn that its copy was republished (#11250).
+      final updates = <VideoEvent>[];
+      service.addVideoUpdateListener(updates.add);
+      final republished = VideoEvent.fromNostrEvent(
+        sdk.Event(
+          'f' * 64,
+          NIP71VideoKinds.addressableShortVideo,
+          [
+            ['d', 'rest-only-video'],
+            ['url', 'https://example.com/video.mp4'],
+            ['title', 'Edited elsewhere'],
+          ],
+          '',
+          createdAt: 3000,
+        ),
+      );
+
+      service.updateVideoEvent(republished);
+
+      expect(updates.map((v) => v.id), [republished.id]);
+    });
+
     test(
       'updateVideoEvent preserves nostrLikeCount from existing video',
       () {

@@ -77,6 +77,7 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/utils/video_update_stream.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -1018,6 +1019,7 @@ VideosRepository videosRepository(Ref ref) {
     blockFilter: createBlockedAuthorFilter(ref),
     deletedFilter: videoEventService.isVideoEventKnownDeleted,
     removedVideoIds: videoEventService.removedVideoIds,
+    replacedVideos: videoUpdatesOf(videoEventService),
     contentFilter: (video) =>
         nsfwFilter(video) ||
         VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(

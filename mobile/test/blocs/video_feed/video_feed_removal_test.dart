@@ -87,6 +87,7 @@ void main() {
       videos = _MockVideosRepository();
       removals = StreamController<String>.broadcast();
       when(() => videos.removedVideoIds).thenAnswer((_) => removals.stream);
+      when(() => videos.replacedVideos).thenAnswer((_) => const Stream.empty());
       when(() => videos.isVideoKnownDeleted(any())).thenReturn(false);
     });
 
@@ -314,6 +315,9 @@ void main() {
         when(() => videos.removedVideoIds).thenAnswer((_) => retired.stream);
         when(() => replacement.removedVideoIds)
             .thenAnswer((_) => current.stream);
+        when(
+          () => replacement.replacedVideos,
+        ).thenAnswer((_) => const Stream.empty());
         when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
         when(() => replacement.applyContentPreferences(any())).thenAnswer(
           (call) => call.positionalArguments.single as List<VideoEvent>,

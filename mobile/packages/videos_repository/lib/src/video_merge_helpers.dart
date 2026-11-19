@@ -8,6 +8,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:models/models.dart' show VideoEvent;
+
 /// Merges raw video tags with primary-wins semantics on duplicate keys
 /// (`{...secondary, ...primary}`), except `views` and distinct viewers: the
 /// higher parsed non-negative count wins (#3384). Distinct viewers are read
@@ -69,4 +71,32 @@ int? _parseNonNegativeIntTag(String? raw) {
 int? mergeNullableEngagementMax(int? primary, int? secondary) {
   if (primary == null && secondary == null) return null;
   return math.max(primary ?? 0, secondary ?? 0);
+}
+
+/// [republished] as it should replace [existing] in a feed or cache after
+/// its owner republished the video (an edit, new subtitles, a sound).
+///
+/// **Timestamp preservation** — when neither version has a `published_at`
+/// tag (common for classic Vine imports), the original `createdAt` /
+/// `timestamp` values are kept so the video retains its chronological
+/// position in feeds.
+///
+/// **Runtime like-count carry-forward** — [VideoEvent.nostrLikeCount] is
+/// injected at runtime after a relay batch query; it is never written into
+/// the Nostr event body. Without this carry-forward a metadata edit drops the
+/// displayed count to zero until the next batch re-fetch completes, which
+/// then overwrites the carried value.
+VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
+  var merged = (existing.publishedAt == null && republished.publishedAt == null)
+      ? republished.copyWith(
+          createdAt: existing.createdAt,
+          timestamp: existing.timestamp,
+        )
+      : republished;
+
+  if (merged.nostrLikeCount == null && existing.nostrLikeCount != null) {
+    merged = merged.copyWith(nostrLikeCount: existing.nostrLikeCount);
+  }
+
+  return merged;
 }
