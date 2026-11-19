@@ -86,19 +86,20 @@ final class VideoFeedRefreshRequested extends VideoFeedEvent {
 
 /// Request an auto-refresh of the home feed.
 ///
-/// Dispatched by the UI on app resume (background → foreground).
-/// The bloc will only perform the refresh if:
-/// - The current feed source type is [VideoFeedSourceType.following] or
-///   [VideoFeedSourceType.forYou]
-/// - Enough time has passed since the last successful load
+/// On app resume, refreshes Following, For You or New when the previous load
+/// is old enough. Returning to the Home tab reopens New regardless of age.
 ///
 /// Refreshing For You on resume addresses the "feed stays the same after
 /// reopening the app" report (issue #3861).
 final class VideoFeedAutoRefreshRequested extends VideoFeedEvent {
-  const VideoFeedAutoRefreshRequested();
+  const VideoFeedAutoRefreshRequested() : isHomeTabReturn = false;
+
+  const VideoFeedAutoRefreshRequested.homeTabReturn() : isHomeTabReturn = true;
+
+  final bool isHomeTabReturn;
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [isHomeTabReturn];
 }
 
 /// The following list changed.

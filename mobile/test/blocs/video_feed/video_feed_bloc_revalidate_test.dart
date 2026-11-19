@@ -115,13 +115,70 @@ void main() {
         ).thenAnswer((_) async => HomeFeedResult(videos: [_video('rec')]));
       });
 
-      VideoFeedBloc buildBloc() => VideoFeedBloc(
+      VideoFeedBloc buildBloc({
+        Duration autoRefreshMinInterval = Duration.zero,
+      }) => VideoFeedBloc(
         videosRepository: videosRepository,
         followRepository: followRepository,
         curatedListRepository: curatedListRepository,
         feedTuningRepository: feedTuningRepository,
         homeFeedCache: homeFeedCache,
-        autoRefreshMinInterval: Duration.zero,
+        autoRefreshMinInterval: autoRefreshMinInterval,
+      );
+
+      test('Home tab return reopens New even after a recent load', () async {
+        final watched = _video('a' * 64).copyWith(createdAt: 2000);
+        final older = _video('b' * 64).copyWith(
+          createdAt: 1000,
+          pubkey: '1' * 64,
+        );
+        final newest = _video('c' * 64).copyWith(createdAt: 3000);
+        var reads = 0;
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            revalidate: true,
+          ),
+        ).thenAnswer((_) async {
+          if (reads++ == 0) return HomeFeedResult(videos: [watched, older]);
+          return HomeFeedResult(videos: [newest, watched, older]);
+        });
+        final bloc = buildBloc(autoRefreshMinInterval: const Duration(days: 1));
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+        expect(bloc.state.videos, [watched, older]);
+        bloc.add(const VideoFeedActiveIndexChanged(1));
+        await pumpEventQueue();
+        expect(bloc.state.currentIndex, 1);
+
+        bloc.add(const VideoFeedAutoRefreshRequested());
+        await pumpEventQueue();
+        expect(reads, 1);
+
+        bloc.add(const VideoFeedAutoRefreshRequested.homeTabReturn());
+        await pumpEventQueue();
+        expect(bloc.state.videos, [newest, watched, older]);
+        expect(bloc.state.currentIndex, 0);
+        expect(reads, 2);
+      });
+
+      feedBlocTest(
+        'Home tab return preserves playback in For You',
+        build: buildBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('first'), _video('active')],
+          currentIndex: 1,
+        ),
+        act: (bloc) => bloc.add(
+          const VideoFeedAutoRefreshRequested.homeTabReturn(),
+        ),
+        expect: () => <VideoFeedBlocState>[],
+        verify: (bloc) {
+          expect(bloc.state.videos[bloc.state.currentIndex].id, 'active');
+        },
       );
 
       test(
@@ -446,7 +503,7 @@ void main() {
         feedBlocTest(
           resume
               ? 'reopens New at the newest post on foreground refresh'
-              : 'reopens New at the newest post on tab return',
+              : 'reopens New at the newest post after switching feed modes',
           setUp: () {
             when(
               () => homeFeedCache.readVideos(pubkey: null, mode: 'latest'),

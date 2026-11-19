@@ -1282,9 +1282,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
-  /// Handle auto-refresh request (dispatched by UI on app resume).
+  /// Reopen New on a Home tab return or refresh an eligible feed on resume.
   ///
-  /// Only refreshes when:
+  /// On app resume, only refreshes when:
   /// - The current feed source type is [VideoFeedSourceType.following],
   ///   [VideoFeedSourceType.forYou], or [VideoFeedSourceType.newVideos]
   /// - The data is stale (last refresh was longer ago than
@@ -1297,17 +1297,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedAutoRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    _refreshFollowedPeopleLists();
-    if (state.source.type != VideoFeedSourceType.following &&
-        state.source.type != VideoFeedSourceType.forYou &&
-        state.source.type != VideoFeedSourceType.newVideos) {
-      return;
-    }
+    final source = state.source;
+    final isNew = source.type == VideoFeedSourceType.newVideos;
+    if (event.isHomeTabReturn) {
+      if (!isNew || state.isLoading) return;
+    } else {
+      _refreshFollowedPeopleLists();
+      if (!isNew &&
+          source.type != VideoFeedSourceType.following &&
+          source.type != VideoFeedSourceType.forYou) {
+        return;
+      }
 
-    final lastRefresh = _lastRefreshedAt;
-    if (lastRefresh != null &&
-        DateTime.now().difference(lastRefresh) < _autoRefreshMinInterval) {
-      return;
+      final lastRefresh = _lastRefreshedAt;
+      if (lastRefresh != null &&
+          DateTime.now().difference(lastRefresh) < _autoRefreshMinInterval) {
+        return;
+      }
     }
 
     emit(
@@ -1325,18 +1331,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
 
     final feedLoad = _feedTracker?.startFeedLoad(
-      state.source.mode.name,
+      source.mode.name,
       reason: FeedLoadReason.refresh,
     );
 
     await _loadVideos(
-      state.source,
+      source,
       emit,
       feedLoad: feedLoad,
       // New bypasses the repository cache without requesting its
       // pull-to-refresh relay merge.
-      skipCache: state.source.type != VideoFeedSourceType.newVideos,
-      revalidate: state.source.type == VideoFeedSourceType.newVideos,
+      skipCache: !isNew,
+      revalidate: isNew,
       startsNewFeedSession: true,
     );
   }

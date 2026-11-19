@@ -6,8 +6,8 @@
 
 **Architecture:** The repository keeps watched videos in New across cache, API,
 and relay reads. The Home feed starts New from a fresh first page on cold
-start, mode selection, and foreground refresh when due. Other feeds keep
-their resume windows and filtering.
+start, mode selection, return to the Home tab, and foreground refresh when
+due. Other feeds keep their resume windows and filtering.
 
 **Tech Stack:** Dart, Flutter test, mocktail.
 

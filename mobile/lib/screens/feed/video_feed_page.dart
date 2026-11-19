@@ -383,7 +383,17 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
     // orthogonal case where a full-screen route covers the shell (e.g. profile
     // → fullscreen video → pop back to profile), which the active tab alone
     // cannot detect.
-    ref.listen(activeBranchIndexProvider, (_, _) => _syncFeedActive());
+    ref.listen(activeBranchIndexProvider, (previous, current) {
+      _syncFeedActive();
+      if (previous != null &&
+          previous != 0 &&
+          current == 0 &&
+          !ref.read(shellObscuredProvider)) {
+        context.read<VideoFeedBloc>().add(
+          const VideoFeedAutoRefreshRequested.homeTabReturn(),
+        );
+      }
+    });
     ref.listen(shellObscuredProvider, (_, _) => _syncFeedActive());
     ref.listen(overlayVisibilityProvider, (_, _) => _syncFeedActive());
 

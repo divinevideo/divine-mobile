@@ -1494,10 +1494,20 @@ void main() {
         setBranchIndex(tester, 1); // Explore
         await tester.pump();
         expect(feedVideos(tester).isActive, isFalse);
+        verifyNever(
+          () => videoFeedBloc.add(
+            const VideoFeedAutoRefreshRequested.homeTabReturn(),
+          ),
+        );
 
         setBranchIndex(tester, 0); // back to Home
         await tester.pump();
         expect(feedVideos(tester).isActive, isTrue);
+        verify(
+          () => videoFeedBloc.add(
+            const VideoFeedAutoRefreshRequested.homeTabReturn(),
+          ),
+        ).called(1);
 
         await drainAndDispose(tester);
       });

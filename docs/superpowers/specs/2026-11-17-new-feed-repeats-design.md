@@ -7,8 +7,9 @@ including watched videos and the viewer's own videos. Returning to New,
 refreshing it, or reading its cached first page must not remove a video because
 it was watched. Preserve content filtering, deduplication, source selection,
 hydration, and cursor pagination. Home New starts at the top when a feed
-session opens or revalidates. A relay fallback sorts each returned window
-by publication time and keeps the relay revision cursor for subsequent reads.
+session opens or revalidates, including when the user returns from another
+bottom-navigation tab. A relay fallback sorts each returned window by
+publication time and keeps the relay revision cursor for subsequent reads.
 
 ## Approaches
 
