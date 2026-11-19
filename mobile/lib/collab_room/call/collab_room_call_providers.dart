@@ -43,8 +43,17 @@ collabRoomCallProvider = Provider.autoDispose
               transport: NostrCollabRoomCallTransport(client),
             ),
       );
+      // The call seals every message with the account's signer and sends it
+      // through the client, so it waits for the session to be able to sign:
+      // a Keycast identity is known before its signer is.
+      bool canSign() {
+        final session = ref.read(nostrSessionProvider);
+        return session.isReadyForActiveClient && session.pubkey == id.me;
+      }
+
       void syncPeers(CollabRoom? room) {
         if (room == null ||
+            !canSign() ||
             client.publicKey != id.me ||
             room.ownerPubkey != id.me ||
             room.callKey != id.callKey ||
@@ -81,6 +90,10 @@ collabRoomCallProvider = Provider.autoDispose
         roomProvider,
         (_, next) => syncPeers(next.value),
         fireImmediately: true,
+      );
+      ref.listen(
+        nostrSessionProvider,
+        (_, _) => syncPeers(ref.read(roomProvider).value),
       );
       final blocks = blocklist.changes.listen(
         (_) => syncPeers(ref.read(roomProvider).value),
