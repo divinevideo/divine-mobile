@@ -89,6 +89,30 @@ void main() {
       expect(sent.single, equals(_eventId));
     });
 
+    test('keeps an explicit note pinned to its event ID', () async {
+      const requested =
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      // Simulate the legacy API resolving a same-author d tag equal to the
+      // requested hex ID when the exact event ID is absent.
+      when(() => funnelcake.getVideoEvent(requested)).thenAnswer(
+        (_) async => Event.fromJson({
+          ..._videoEvent().toJson(),
+          'tags': [
+            ['d', requested],
+            ['url', 'https://cdn.divine.video/fixture.mp4'],
+          ],
+        }),
+      );
+
+      final result = await build().fetchVideoWithStatsForRouteId(
+        Nip19.encodeNoteId(requested),
+        expectedAuthor: _pubkey,
+      );
+
+      expect(result, isNull);
+      verify(() => funnelcake.getVideoEvent(requested)).called(1);
+    });
+
     test('still resolves an addressable id by its d tag', () async {
       // An addressable reference carries no event id, so the d tag is the only
       // identifier the REST route can use — preferring the event id must not

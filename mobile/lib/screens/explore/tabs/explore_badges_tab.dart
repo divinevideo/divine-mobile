@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show NIP71VideoKinds, VideoEvent;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Nip19;
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -13,6 +15,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -342,10 +345,19 @@ class _BadgeClips extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visible = [
-      for (final video in videos)
-        if (!ref.watch(profileVanishedProvider(video.pubkey))) video,
-    ];
+    if (videos.isEmpty) return const SizedBox.shrink();
+    ref.watch(blocklistVersionProvider);
+    ref.watch(videoProvenanceFilterVersionProvider);
+    final repository = ref.watch(videosRepositoryProvider);
+    final visible = <BadgeVideoPreview>[];
+    for (final clip in videos) {
+      if (ref.watch(profileVanishedProvider(clip.pubkey))) continue;
+      final video = _previewEvent(clip);
+      if (video == null || !repository.canShowUnblurredPreview(video)) {
+        continue;
+      }
+      visible.add(clip);
+    }
     if (visible.isEmpty) return const SizedBox.shrink();
     return Row(
       spacing: 6,
@@ -356,6 +368,25 @@ class _BadgeClips extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  VideoEvent? _previewEvent(BadgeVideoPreview clip) {
+    if (!NIP71VideoKinds.isAcceptableVideoKind(clip.kind)) return null;
+    try {
+      return VideoEvent.fromNostrEvent(
+        Event.fromJson({
+          'id': clip.id,
+          'pubkey': clip.pubkey,
+          'created_at': clip.createdAt,
+          'kind': clip.kind,
+          'tags': clip.tags,
+          'content': '',
+        }),
+        permissive: true,
+      );
+    } on Exception {
+      return null;
+    }
   }
 }
 
@@ -380,7 +411,7 @@ class _BadgeClip extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => VideoDetailRouteData(
-            id: video.id,
+            id: Nip19.encodeNoteId(video.id),
             author: video.pubkey,
           ).push<void>(context),
           child: AspectRatio(

@@ -21,6 +21,7 @@ class ExploreBadgesState extends Equatable {
   const ExploreBadgesState({
     this.status = ExploreBadgesStatus.initial,
     this.definitions = const [],
+    this.federatedDefinitions = const [],
     this.hiddenIssuers = const {},
     this.refreshFailures = 0,
     this.visibleCount = pageSize,
@@ -40,8 +41,11 @@ class ExploreBadgesState extends Equatable {
   /// Loading status of [definitions].
   final ExploreBadgesStatus status;
 
-  /// Public definitions, newest first, deduplicated by issuer and identifier.
+  /// Ranked public definitions, deduplicated by issuer and identifier.
   final List<Nip58BadgeDefinition> definitions;
+
+  /// Last completed supplemental discovery, retained during refresh.
+  final List<Nip58BadgeDefinition> federatedDefinitions;
 
   /// Issuers excluded from the gallery and preview requests.
   final Set<String> hiddenIssuers;
@@ -90,6 +94,7 @@ class ExploreBadgesState extends Equatable {
   ExploreBadgesState copyWith({
     ExploreBadgesStatus? status,
     List<Nip58BadgeDefinition>? definitions,
+    List<Nip58BadgeDefinition>? federatedDefinitions,
     Set<String>? hiddenIssuers,
     int? refreshFailures,
     int? visibleCount,
@@ -105,6 +110,7 @@ class ExploreBadgesState extends Equatable {
     return ExploreBadgesState(
       status: status ?? this.status,
       definitions: definitions ?? this.definitions,
+      federatedDefinitions: federatedDefinitions ?? this.federatedDefinitions,
       hiddenIssuers: hiddenIssuers ?? this.hiddenIssuers,
       refreshFailures: refreshFailures ?? this.refreshFailures,
       visibleCount: visibleCount ?? this.visibleCount,
@@ -123,6 +129,7 @@ class ExploreBadgesState extends Equatable {
   List<Object?> get props => [
     status,
     definitions,
+    federatedDefinitions,
     hiddenIssuers,
     refreshFailures,
     visibleCount,

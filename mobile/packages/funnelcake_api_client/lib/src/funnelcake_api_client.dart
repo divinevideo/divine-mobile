@@ -179,15 +179,14 @@ class FunnelcakeApiClient {
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) => _retryRead(
+  Future<http.Response> _get(Uri uri) => _retryRead(uri, () => _sendGet(uri));
+
+  Future<http.Response> _sendGet(Uri uri) => _httpClient.get(
     uri,
-    () => _httpClient.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        ...buildDivineClientHeaders(appVersion: _appVersion),
-      },
-    ),
+    headers: {
+      'Accept': 'application/json',
+      ...buildDivineClientHeaders(appVersion: _appVersion),
+    },
   );
 
   /// Retries an idempotent read within one shared timeout budget.
@@ -2353,7 +2352,7 @@ class FunnelcakeApiClient {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
     final uri = Uri.parse('$_baseUrl/api/badges/discovery?limit=48');
     try {
-      final response = await _get(uri);
+      final response = await _sendGet(uri).timeout(_timeout);
       if (response.statusCode != 200) {
         throw FunnelcakeApiException(
           message: 'Badge discovery unavailable',

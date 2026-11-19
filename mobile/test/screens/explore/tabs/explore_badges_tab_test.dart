@@ -17,6 +17,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 import '../../../helpers/url_launcher_test_double.dart';
@@ -760,6 +762,12 @@ void main() {
                   pubkey: author,
                   title: 'A community clip',
                   thumbnail: '',
+                  createdAt: 1700000000,
+                  kind: 34236,
+                  tags: const [
+                    ['d', 'clip'],
+                    ['url', 'https://media.divine.video/clip.mp4'],
+                  ],
                 ),
               ],
             },
@@ -801,7 +809,71 @@ void main() {
         await tester.tap(find.bySemanticsLabel('A community clip'));
         await tester.pumpAndSettle();
         semantics.dispose();
-        expect(find.text('$videoId:$author'), findsOneWidget);
+        expect(
+          find.text('${Nip19.encodeNoteId(videoId)}:$author'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('hides clip titles and artwork that need a warning', (
+        tester,
+      ) async {
+        final repository = VideosRepository(
+          nostrClient: createMockNostrService(),
+          warningLabelsResolver: (video) =>
+              video.title == 'Needs a warning' ? const ['violence'] : const [],
+        );
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            videoPreviews: {
+              _definition.coordinate: [
+                for (final (index, title) in [
+                  (1, 'Needs a warning'),
+                  (2, 'Visible clip'),
+                ])
+                  (
+                    id: index.toRadixString(16).padLeft(64, '0'),
+                    pubkey: 'b' * 64,
+                    title: title,
+                    thumbnail: '',
+                    createdAt: 1700000000,
+                    kind: 34236,
+                    tags: [
+                      ['d', 'clip-$index'],
+                      ['url', 'https://media.divine.video/clip.mp4'],
+                      ['title', title],
+                    ],
+                  ),
+              ],
+            },
+          ),
+        );
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(repository),
+            ],
+            child: testMaterialApp(
+              home: Scaffold(
+                body: BlocProvider<ExploreBadgesCubit>.value(
+                  value: cubit,
+                  child: const ExploreBadgesView(),
+                ),
+              ),
+            ),
+          ),
+        );
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpAndSettle();
+          expect(find.bySemanticsLabel('Visible clip'), findsOneWidget);
+          expect(find.bySemanticsLabel('Needs a warning'), findsNothing);
+        } finally {
+          semantics.dispose();
+        }
       });
 
       testWidgets('refresh failure reset shows no duplicate snackbar', (
