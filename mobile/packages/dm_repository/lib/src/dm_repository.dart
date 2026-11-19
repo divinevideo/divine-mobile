@@ -13,6 +13,7 @@ import 'package:account_state_repository/account_state_repository.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/src/build_mode.dart';
+import 'package:dm_repository/src/collab_room.dart';
 import 'package:dm_repository/src/collaborator_invite_recovery.dart';
 import 'package:dm_repository/src/compute.dart';
 import 'package:dm_repository/src/dm_batch_send_budget.dart';
@@ -13298,6 +13299,16 @@ class DmRepository {
     if (owner == null) return Stream.value(const []);
     return _directMessagesDao
         .watchApplicationMessages(ownerPubkey: owner, marker: 'divine')
+        .map((rows) => rows.map(_messageFromRow).toList());
+  }
+
+  /// Owner-scoped one-to-one history of collaborative recording rooms, in
+  /// both directions, oldest first. Fold it with [foldCollabRooms].
+  Stream<List<DmMessage>> watchCollabRoomMessages() {
+    final owner = _ownerPubkey;
+    if (owner == null) return Stream.value(const []);
+    return _directMessagesDao
+        .watchApplicationMessages(ownerPubkey: owner, marker: collabRoomTagName)
         .map((rows) => rows.map(_messageFromRow).toList());
   }
 

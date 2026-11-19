@@ -1,3 +1,4 @@
+export 'src/collab_room.dart';
 export 'src/collaborator_invite_recovery.dart';
 export 'src/dm_batch_send_budget.dart';
 export 'src/dm_decrypt_isolate.dart';
