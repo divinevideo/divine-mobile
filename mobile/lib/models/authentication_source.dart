@@ -25,3 +25,19 @@ enum AuthenticationSource {
         AuthenticationSource.none;
   }
 }
+
+/// Whether an account signed in through [source] signs without asking the
+/// person each time.
+///
+/// An external signer (Amber, a NIP-46 bunker, a browser extension) can
+/// prompt for every signature, so work that signs on its own, unasked, is
+/// limited to the sources that never prompt.
+bool signsWithoutPrompting(AuthenticationSource source) => switch (source) {
+  AuthenticationSource.divineOAuth ||
+  AuthenticationSource.importedKeys ||
+  AuthenticationSource.automatic => true,
+  AuthenticationSource.none ||
+  AuthenticationSource.bunker ||
+  AuthenticationSource.amber ||
+  AuthenticationSource.nip07 => false,
+};

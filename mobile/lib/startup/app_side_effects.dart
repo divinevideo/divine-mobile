@@ -11,6 +11,7 @@ import 'package:openvine/providers/feed_playback_performance_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/notification_activity_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -117,6 +118,9 @@ class AppRootSideEffects extends ConsumerWidget {
     ref.watch(notificationPreferencesDirtySyncBridgeProvider);
     ref.watch(pushNotificationSyncProvider);
     ref.watch(notificationActivitySyncProvider);
+    // Binds the post Live Activity to this account and ends it when the
+    // account leaves; off iOS the repository is null and this does nothing.
+    ref.watch(postLiveActivitySyncProvider);
 
     return child;
   }

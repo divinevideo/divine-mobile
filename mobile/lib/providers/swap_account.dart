@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -47,6 +48,7 @@ typedef AccountSignIn = Future<void> Function(
 );
 
 const _accountSwitchPushCleanupTimeout = Duration(seconds: 15);
+const _accountSwitchLiveActivityEndTimeout = Duration(seconds: 5);
 
 /// How long the swap waits for the outgoing account's kept video DMs to be
 /// pruned, the same budget sign-out gives its own cleanups.
@@ -221,6 +223,30 @@ Future<void> _defaultSignIn(
       );
 }
 
+/// Ends the outgoing account's post Live Activities on the device once the
+/// switch has committed, whether or not that account had a push coordinator.
+///
+/// Best effort: the target account is already live, so a failure or a stall
+/// is logged and never turns the committed switch into a rollback.
+Future<void> _endOutgoingLiveActivities(
+  DeviceScope deviceScope,
+  String? outgoingPubkey,
+) async {
+  final repository = deviceScope.postLiveActivity?.repository;
+  if (repository == null || outgoingPubkey == null) return;
+  try {
+    await repository
+        .endLocally(ownerPubkey: outgoingPubkey)
+        .timeout(_accountSwitchLiveActivityEndTimeout);
+  } catch (error) {
+    Log.warning(
+      'Ending the outgoing account post Live Activities failed for '
+      '${pubkeyForLogs(outgoingPubkey)}: $error',
+      name: 'swapAccount',
+    );
+  }
+}
+
 String? _currentRouterLocation(AccountSwitchController controller) {
   final current = controller.currentContainer;
   if (current == null) return null;
@@ -356,6 +382,8 @@ Future<void> swapAccount({
     final sessionSnapshot = AccountSessionSnapshot.capture(
       deviceScope.sharedPreferences,
     );
+    // Read before sign-in: the outgoing account is still the live identity.
+    final outgoingPubkey = currentAuthService.currentPublicKeyHex;
     final outgoingPushCoordinator =
         current != null && current.exists(pushNotificationSyncProvider)
         ? current.read(pushNotificationSyncProvider)
@@ -480,6 +508,14 @@ Future<void> swapAccount({
       );
       targetSubmitted = true;
       final incomingCommit = await commitFuture;
+      // Detached so a stalled platform call never delays the activation
+      // commit below; the helper bounds and logs its own failure.
+      runDetached(
+        _endOutgoingLiveActivities(deviceScope, outgoingPubkey),
+        'end the outgoing account post Live Activities',
+        logName: 'swapAccount',
+        category: LogCategory.system,
+      );
       await incomingAuth.commitAccountSwitchActivation(
         hostIsCurrent: () => incomingCommit.isCurrent,
       );
