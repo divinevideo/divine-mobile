@@ -43,8 +43,8 @@ enum OutgoingVideoDmFailure {
   /// archived Vine, so it was not sent.
   clipNotVerified,
 
-  /// The send did not complete. Retrying publishes a recently finished upload
-  /// again, or otherwise redoes the whole pipeline.
+  /// The send did not complete. Retrying publishes a finished upload again,
+  /// or otherwise redoes the whole pipeline.
   failed,
 }
 

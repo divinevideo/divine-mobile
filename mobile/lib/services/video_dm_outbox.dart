@@ -35,15 +35,6 @@ String videoDmMimeTypeFor(String path) {
   return dmVideoMimeTypesByExtension[extension] ?? 'video/mp4';
 }
 
-/// How old a finished upload may be for a retry of its entry to reuse it.
-///
-/// Bounds how old a blob a retry may still point at: a retry after this
-/// uploads the video again. It does not shorten how long the upload, and its
-/// decryption key, stay in memory; that ends when the entry is sent or
-/// removed, when a retry finds the upload this old, or when the outbox is
-/// disposed.
-const videoDmKeptUploadMaxAge = Duration(hours: 1);
-
 /// Whether the file at `path` is the exact file of a published Vine post.
 ///
 /// Throws when that cannot be told.
@@ -96,8 +87,8 @@ class _ClipBatchJob extends _OutboxJob {
 /// preparation and uploads; a publication already in flight keeps its result.
 ///
 /// A send whose upload finished keeps that upload in memory until the entry is
-/// sent or dropped, so a retry within [videoDmKeptUploadMaxAge] of the upload
-/// publishes it again instead of uploading the video a second time.
+/// sent or dropped, or the outbox is disposed, so a retry publishes it again
+/// instead of uploading the video a second time.
 class VideoDmOutbox {
   /// Creates a [VideoDmOutbox].
   ///
@@ -174,24 +165,11 @@ class VideoDmOutbox {
   final Set<DmVideoSendCancellation> _attempts = {};
   final Map<String, File> _ownedVideos = {};
 
-  /// Finished uploads by entry id with when each finished, kept until their
-  /// entry is sent or dropped, or a retry finds the upload too old to reuse
-  /// (see [videoDmKeptUploadMaxAge]). Held here rather than on
-  /// [OutgoingVideoDm] because each carries the video's decryption key, which
-  /// stays out of UI state.
-  final Map<String, ({DmVideoUpload upload, DateTime keptAt})> _uploads = {};
-
-  /// The upload kept for entry [id], or null when there is none or it is at
-  /// least [videoDmKeptUploadMaxAge] old, in which case it is dropped.
-  DmVideoUpload? _keptUpload(String id) {
-    final kept = _uploads[id];
-    if (kept == null) return null;
-    if (_now().difference(kept.keptAt) < videoDmKeptUploadMaxAge) {
-      return kept.upload;
-    }
-    _uploads.remove(id);
-    return null;
-  }
+  /// Finished uploads by entry id, kept until their entry is sent or dropped,
+  /// or the outbox is disposed. Held here rather than on [OutgoingVideoDm]
+  /// because each carries the video's decryption key, which stays out of UI
+  /// state.
+  final Map<String, DmVideoUpload> _uploads = {};
 
   DmVideoSendCancellation _newAttempt() {
     final attempt = DmVideoSendCancellation(
@@ -366,9 +344,8 @@ class VideoDmOutbox {
   }
 
   /// Queues failed entry [id] again, at the back of the queue. When its upload
-  /// finished less than [videoDmKeptUploadMaxAge] ago, only the publication is
-  /// redone, with the same upload; otherwise the whole pipeline is, and a clip
-  /// is checked again on its own first. Does nothing unless the entry exists
+  /// finished, only the publication is redone, with the same upload; otherwise
+  /// the whole pipeline is, and a clip is checked again on its own first. Does nothing unless the entry exists
   /// and [OutgoingVideoDm.canRetry].
   void retry(String id) {
     if (_disposed) return;
@@ -486,7 +463,7 @@ class VideoDmOutbox {
   Future<void> _runVideo(String id) async {
     final entry = _entry(id);
     if (entry == null) return;
-    final failure = await _sendEntry(entry, kept: _keptUpload(id));
+    final failure = await _sendEntry(entry, kept: _uploads[id]);
     if (failure == null) _releaseOwnedVideo(id);
     _emitOutcome(
       entry,
@@ -531,9 +508,8 @@ class VideoDmOutbox {
     }
 
     // A clip whose upload finished was checked before it was uploaded; it is
-    // neither read nor checked again. Read once, so a clip that skipped the
-    // check cannot find its upload expired by the time it is sent.
-    final kept = {for (final entry in batch) entry.id: _keptUpload(entry.id)};
+    // neither read nor checked again.
+    final kept = {for (final entry in batch) entry.id: _uploads[entry.id]};
     final unchecked = [
       for (final entry in batch)
         if (kept[entry.id] == null) entry,
@@ -785,11 +761,7 @@ class VideoDmOutbox {
               },
             ),
           );
-      // Stamped once, when the upload finished: publishing it again does not
-      // renew its age.
-      if (kept == null && !_disposed) {
-        _uploads[id] = (upload: uploaded, keptAt: _now());
-      }
+      if (kept == null && !_disposed) _uploads[id] = uploaded;
       final result = await currentAttempt.waitFor(
         service.publishVideo(
           recipientPubkey: entry.recipientPubkey,
