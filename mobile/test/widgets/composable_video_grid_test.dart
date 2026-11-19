@@ -1385,6 +1385,7 @@ void main() {
         required VideoEvent video,
         required String nostrClientPubkey,
         String? authServicePubkey,
+        Set<String>? selectedVideoIds,
       }) async {
         final mockNostr = createMockNostrService();
         when(() => mockNostr.publicKey).thenReturn(nostrClientPubkey);
@@ -1409,6 +1410,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: [video],
+                  selectedVideoIds: selectedVideoIds,
                   onVideoTap: (videos, index) {},
                 ),
               ),
@@ -1580,6 +1582,35 @@ void main() {
         );
         handle.dispose();
       });
+
+      testWidgets(
+        'advertises no long-press action on an owned video in selection mode',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            final video = videoBy(_ownPubkey);
+            await pumpGridFor(
+              tester,
+              video: video,
+              nostrClientPubkey: _ownPubkey,
+              authServicePubkey: _ownPubkey,
+              selectedVideoIds: {video.id},
+            );
+
+            expect(
+              tileNode(
+                tester,
+              ).getSemanticsData().hasAction(SemanticsAction.longPress),
+              isFalse,
+              reason:
+                  'In selection mode a tap toggles the tile, so the owner '
+                  'menu would fight the selection gesture.',
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
     });
 
     group('disposal', () {
