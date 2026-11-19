@@ -30,8 +30,10 @@ class _MockSwitchController extends Mock implements AccountSwitchController {}
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeRepository extends Fake implements PostLiveActivityRepository {
+  // Starts false, unlike the real repository, so a test expecting true
+  // proves the sync wrote it.
   @override
-  bool featureEnabled = true;
+  bool featureEnabled = false;
 
   final calls = <String>[];
 
