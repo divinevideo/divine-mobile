@@ -8,4 +8,4 @@ ShortLinkClient sends JSON to https://gateway.divine.video/api/links without an 
 
 Repeated Copy/Share via events are dropped while the same action is pending. Action results from a dismissed modal cannot pop the source page or trigger a late platform share. No new UI state or translations are introduced.
 
-Receiving is already merged separately. These client defaults take effect in the next app build; Android association changes also require a native store release. Public links redirect to canonical web URLs for clients without short-link handling. Disabling creation/sending preserves existing public redirects.
+Receiving is already merged separately. This client behavior takes effect in the next app build; Android association changes also require a native store release. Public links redirect to canonical web URLs for clients without short-link handling. Disabling creation at the gateway preserves existing public redirects.
