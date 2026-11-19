@@ -115,54 +115,108 @@ void main() {
         ).thenAnswer((_) async => HomeFeedResult(videos: [_video('rec')]));
       });
 
-      VideoFeedBloc buildBloc() => VideoFeedBloc(
+      VideoFeedBloc buildBloc({
+        Duration autoRefreshMinInterval = Duration.zero,
+      }) => VideoFeedBloc(
         videosRepository: videosRepository,
         followRepository: followRepository,
         curatedListRepository: curatedListRepository,
         feedTuningRepository: feedTuningRepository,
         homeFeedCache: homeFeedCache,
+        autoRefreshMinInterval: autoRefreshMinInterval,
       );
 
-      test('caps the cached New window and its fresh splice', () async {
-        final cached = [
-          _video('a' * 64),
-          _video('b' * 64),
-          _video('c' * 64),
-          _video('d' * 64).copyWith(pubkey: '1' * 64),
-        ];
-        final fresh = [
-          _video('e' * 64),
-          _video('f' * 64),
-          _video('1' * 64).copyWith(pubkey: '2' * 64),
-        ];
-        when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
-            .thenAnswer((_) async => cached);
+      test('Home tab return reopens New even after a recent load', () async {
+        final watched = _video('a' * 64).copyWith(createdAt: 2000);
+        final older = _video('b' * 64).copyWith(
+          createdAt: 1000,
+          pubkey: '1' * 64,
+        );
+        final newest = _video('c' * 64).copyWith(createdAt: 3000);
+        var reads = 0;
         when(
           () => videosRepository.getNewVideos(
-            until: any(named: 'until'),
-            skipCache: any(named: 'skipCache'),
-            revalidate: any(named: 'revalidate'),
+            limit: any(named: 'limit'),
+            revalidate: true,
           ),
-        ).thenAnswer((_) => freshResult.future);
-        final bloc = buildBloc();
+        ).thenAnswer((_) async {
+          if (reads++ == 0) return HomeFeedResult(videos: [watched, older]);
+          return HomeFeedResult(videos: [newest, watched, older]);
+        });
+        final bloc = buildBloc(autoRefreshMinInterval: const Duration(days: 1));
         addTearDown(bloc.close);
-        final cachedReady = bloc.stream.firstWhere((s) => s.videos.isNotEmpty);
 
         bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
-        final cachedState = await cachedReady;
-
-        expect(cachedState.videos, [cached[0], cached[1], cached[3]]);
-        freshResult.complete(HomeFeedResult(videos: fresh, hasMore: false));
         await pumpEventQueue();
-        expect(bloc.state.videos, [cached[0], cached[1], fresh[2]]);
-        expect(cached, hasLength(4));
-        expect(fresh, hasLength(3));
+        expect(bloc.state.videos, [watched, older]);
+        bloc.add(const VideoFeedActiveIndexChanged(1));
+        await pumpEventQueue();
+        expect(bloc.state.currentIndex, 1);
+
+        bloc.add(const VideoFeedAutoRefreshRequested());
+        await pumpEventQueue();
+        expect(reads, 1);
+
+        bloc.add(const VideoFeedAutoRefreshRequested.homeTabReturn());
+        await pumpEventQueue();
+        expect(bloc.state.videos, [newest, watched, older]);
+        expect(bloc.state.currentIndex, 0);
+        expect(reads, 2);
       });
 
+      feedBlocTest(
+        'Home tab return preserves playback in For You',
+        build: buildBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('first'), _video('active')],
+          currentIndex: 1,
+        ),
+        act: (bloc) => bloc.add(
+          const VideoFeedAutoRefreshRequested.homeTabReturn(),
+        ),
+        expect: () => <VideoFeedBlocState>[],
+        verify: (bloc) {
+          expect(bloc.state.videos[bloc.state.currentIndex].id, 'active');
+        },
+      );
+
       test(
-        'late cached-window pagination cannot replace a fresh cursor',
+        'starts New in publication order despite an old resume window',
         () async {
-          final cached = _video(''.padLeft(64, 'a')).copyWith(createdAt: 1000);
+          final cached = _video('a' * 64).copyWith(createdAt: 1000);
+          final watched = _video('b' * 64).copyWith(createdAt: 2000);
+          final newest = _video('c' * 64).copyWith(createdAt: 3000);
+          when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
+              .thenAnswer((_) async => [cached]);
+          when(
+            () => videosRepository.getNewVideos(
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer((_) => freshResult.future);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+          await pumpEventQueue();
+          final initialVideos = bloc.state.videos;
+          freshResult.complete(
+            HomeFeedResult(videos: [newest, watched, cached]),
+          );
+          await pumpEventQueue();
+
+          expect(initialVideos, isEmpty);
+          expect(bloc.state.videos, [newest, watched]);
+          expect(bloc.state.currentIndex, 0);
+        },
+      );
+
+      test(
+        'late New pagination cannot replace a revalidated cursor',
+        () async {
+          final initial = _video(''.padLeft(64, 'a')).copyWith(createdAt: 1000);
           final fresh = _video(''.padLeft(64, 'b')).copyWith(createdAt: 9000);
           final stale = _video(''.padLeft(64, 'c')).copyWith(createdAt: 999);
           final next = _video(''.padLeft(64, 'd')).copyWith(
@@ -171,8 +225,7 @@ void main() {
           );
           final oldPage = Completer<HomeFeedResult>();
           final oldPageStarted = Completer<void>();
-          when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
-              .thenAnswer((_) async => [cached]);
+          var firstPageReads = 0;
           when(
             () => videosRepository.getNewVideos(
               limit: any(named: 'limit'),
@@ -183,6 +236,11 @@ void main() {
             ),
           ).thenAnswer((call) {
             if (call.namedArguments[#revalidate] == true) {
+              if (firstPageReads++ == 0) {
+                return Future.value(
+                  HomeFeedResult(videos: [initial], hasMore: true),
+                );
+              }
               return freshResult.future;
             }
             if (call.namedArguments[#cursor] == 'p:fresh') {
@@ -197,17 +255,18 @@ void main() {
           });
           final bloc = buildBloc();
           addTearDown(bloc.close);
-          final cachedReady = bloc.stream.firstWhere(
+          final initialReady = bloc.stream.firstWhere(
             (s) => s.videos.isNotEmpty,
           );
           bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
-          await cachedReady;
+          await initialReady;
           bloc.add(const VideoFeedLoadMoreRequested());
           await oldPageStarted.future;
 
           final freshReady = bloc.stream.firstWhere(
             (s) => s.paginationCursor == 'p:fresh',
           );
+          bloc.add(const VideoFeedAutoRefreshRequested());
           freshResult.complete(
             HomeFeedResult(
               videos: [fresh],
@@ -226,14 +285,13 @@ void main() {
           await pumpEventQueue();
 
           expect(bloc.state.paginationCursor, 'p:fresh');
-          expect(bloc.state.videos.map((v) => v.id), [cached.id, fresh.id]);
+          expect(bloc.state.videos.map((v) => v.id), [fresh.id]);
           expect(bloc.state.isLoadingMore, isFalse);
 
           final nextReady = bloc.stream.firstWhere((s) => !s.hasMore);
           bloc.add(const VideoFeedLoadMoreRequested());
           await nextReady;
           expect(bloc.state.videos.map((v) => v.id), [
-            cached.id,
             fresh.id,
             next.id,
           ]);
@@ -441,78 +499,83 @@ void main() {
         },
       );
 
-      feedBlocTest(
-        'switches directly to cached content before revalidation completes',
-        setUp: () {
-          when(
-            () => homeFeedCache.readVideos(pubkey: null, mode: 'latest'),
-          ).thenAnswer((_) async => [_video('cached')]);
-          when(
-            () => videosRepository.getNewVideos(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
-              skipCache: any(named: 'skipCache'),
-              revalidate: any(named: 'revalidate'),
-            ),
-          ).thenAnswer((_) => freshResult.future);
-          addTearDown(() {
-            if (!freshResult.isCompleted) {
-              freshResult.complete(const HomeFeedResult(videos: []));
-            }
-          });
-        },
-        build: buildBloc,
-        seed: () => VideoFeedBlocState(
-          status: VideoFeedStatus.success,
-          mode: FeedMode.classic,
-          videos: [_video('previous-source')],
-          feedSessionRevision: 4,
-        ),
-        act: (bloc) async {
-          bloc.add(const VideoFeedModeChanged(FeedMode.latest));
-          await bloc.stream.firstWhere(
-            (state) => state.videos.singleOrNull?.id == 'cached',
-          );
-          freshResult.complete(HomeFeedResult(videos: [_video('fresh')]));
-        },
-        expect: () => [
-          isA<VideoFeedBlocState>()
-              .having((state) => state.mode, 'mode', FeedMode.latest)
-              .having((state) => state.feedSessionRevision, 'feed session', 5)
-              .having(
-                (state) => state.status,
-                'status',
-                VideoFeedStatus.success,
-              )
-              .having(
-                (state) => state.videos.map((video) => video.id),
-                'cached videos',
-                ['cached'],
+      for (final resume in [false, true]) {
+        feedBlocTest(
+          resume
+              ? 'reopens New at the newest post on foreground refresh'
+              : 'reopens New at the newest post after switching feed modes',
+          setUp: () {
+            when(
+              () => homeFeedCache.readVideos(pubkey: null, mode: 'latest'),
+            ).thenAnswer((_) async => [_video('old-resume')]);
+            when(
+              () => videosRepository.getNewVideos(
+                limit: any(named: 'limit'),
+                until: any(named: 'until'),
+                skipCache: any(named: 'skipCache'),
+                revalidate: any(named: 'revalidate'),
               ),
-          isA<VideoFeedBlocState>()
-              .having((state) => state.mode, 'mode', FeedMode.latest)
-              .having((state) => state.feedSessionRevision, 'feed session', 5)
-              .having(
-                (state) => state.status,
-                'status',
-                VideoFeedStatus.success,
-              )
-              .having(
-                (state) => state.videos.map((video) => video.id),
-                'fresh videos spliced after cache',
-                ['cached', 'fresh'],
+            ).thenAnswer((_) => freshResult.future);
+          },
+          build: buildBloc,
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            mode: resume ? FeedMode.latest : FeedMode.classic,
+            videos: [_video('previous-source'), _video('previous-next')],
+            currentIndex: 1,
+            feedSessionRevision: 4,
+          ),
+          act: (bloc) async {
+            bloc.add(
+              resume
+                  ? const VideoFeedAutoRefreshRequested()
+                  : const VideoFeedModeChanged(FeedMode.latest),
+            );
+            await pumpEventQueue();
+            freshResult.complete(
+              HomeFeedResult(
+                videos: [
+                  _video('newest').copyWith(createdAt: 3000),
+                  _video('already-watched').copyWith(createdAt: 2000),
+                ],
               ),
-        ],
-        verify: (_) {
-          verify(
-            () => videosRepository.getNewVideos(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
-              revalidate: true,
-            ),
-          ).called(1);
-        },
-      );
+            );
+          },
+          expect: () => [
+            isA<VideoFeedBlocState>()
+                .having((state) => state.mode, 'mode', FeedMode.latest)
+                .having(
+                  (state) => state.status,
+                  'status',
+                  VideoFeedStatus.loading,
+                )
+                .having((state) => state.videos, 'videos', isEmpty),
+            isA<VideoFeedBlocState>()
+                .having((state) => state.mode, 'mode', FeedMode.latest)
+                .having((state) => state.feedSessionRevision, 'feed session', 5)
+                .having(
+                  (state) => state.status,
+                  'status',
+                  VideoFeedStatus.success,
+                )
+                .having((state) => state.currentIndex, 'index', 0)
+                .having(
+                  (state) => state.videos.map((video) => video.id),
+                  'newest-first videos',
+                  ['newest', 'already-watched'],
+                ),
+          ],
+          verify: (_) {
+            verify(
+              () => videosRepository.getNewVideos(
+                limit: any(named: 'limit'),
+                until: any(named: 'until'),
+                revalidate: true,
+              ),
+            ).called(1);
+          },
+        );
+      }
 
       // For You start revalidates without `skipCache`: `skipCache` would
       // draw a new recommendation session seed and reshuffle the session,
