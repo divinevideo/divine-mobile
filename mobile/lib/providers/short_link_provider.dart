@@ -4,9 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/short_link_client.dart';
 
+/// Whether this build runs in a browser. Overridden in tests, where [kIsWeb]
+/// is always false.
+final shortLinkIsWebProvider = Provider<bool>((ref) => kIsWeb);
+
+/// The external-share shortener, or null on Flutter web, where the gateway
+/// does not allow the deployment origin. Callers then share the full URL.
 final shortLinkClientProvider = Provider<ShortLinkClient?>((ref) {
-  // The gateway does not allow the Flutter web origin yet.
-  if (kIsWeb) {
+  if (ref.watch(shortLinkIsWebProvider)) {
     return null;
   }
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();

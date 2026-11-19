@@ -15,6 +15,20 @@ void main() {
   const shortened = 'https://divine.video/l/Abc12345';
 
   group('shortLinkClientProvider', () {
+    test('web builds keep full URLs without creating an HTTP client', () {
+      final container = ProviderContainer(
+        overrides: [
+          shortLinkIsWebProvider.overrideWithValue(true),
+          instrumentedHttpClientFactoryProvider.overrideWith(
+            (ref) => throw StateError('web must not create an HTTP client'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(shortLinkClientProvider), isNull);
+    });
+
     test(
       'creates short links without feature flags or authentication',
       () async {
