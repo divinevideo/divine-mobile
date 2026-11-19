@@ -18,7 +18,6 @@ import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
-import 'package:openvine/services/bug_report_log_summary.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
@@ -704,26 +703,29 @@ void main() {
       setUp(() {
         router = MockGoRouter();
         when(
-          () => router.push<Object?>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => router.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
       });
 
-      testWidgets('a press-and-hold opens Report a Bug, marked as the hold', (
-        tester,
-      ) async {
-        await pumpSubjectWithRouter(tester, router);
-        await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
-        await tester.pump();
-        verify(
-          () => router.push<Object?>(
-            RoutePaths.supportReportBugFromProfileHold,
-            extra: any(named: 'extra'),
-          ),
-        ).called(1);
-        verifyNever(() => router.go(any(), extra: any(named: 'extra')));
-      });
+      testWidgets(
+        'a press-and-hold opens the standard report URL with its tip hidden',
+        (
+          tester,
+        ) async {
+          await pumpSubjectWithRouter(tester, router);
+          await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+          await tester.pump();
+          verify(
+            () => router.push<void>(
+              RoutePaths.supportReportBug,
+              extra: true,
+            ),
+          ).called(1);
+          verifyNever(() => router.go(any(), extra: any(named: 'extra')));
+        },
+      );
 
-      testWidgets('does not add the entry method to report diagnostics', (
+      testWidgets('does not log a successful shortcut activation', (
         tester,
       ) async {
         final logCapture = LogCaptureService();
@@ -734,8 +736,10 @@ void main() {
         await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
         await tester.pump();
 
-        final summary = buildLogsSummary(logCapture.getRecentLogs());
-        expect(summary ?? '', isNot(contains('held profile tab')));
+        final navigationLogs = logCapture.getRecentLogs().where(
+          (entry) => entry.name == 'Navigation',
+        );
+        expect(navigationLogs, isEmpty);
       });
 
       testWidgets('does not offer the report shortcut on desktop', (
@@ -748,10 +752,7 @@ void main() {
         await tester.pump();
 
         verifyNever(
-          () => router.push<Object?>(
-            RoutePaths.supportReportBugFromProfileHold,
-            extra: any(named: 'extra'),
-          ),
+          () => router.push<void>(any(), extra: any(named: 'extra')),
         );
         final semantics = tester.getSemantics(profileTab).getSemanticsData();
         expect(semantics.hasAction(SemanticsAction.longPress), isFalse);
@@ -774,10 +775,7 @@ void main() {
           ),
         ).called(1);
         verifyNever(
-          () => router.push<Object?>(
-            RoutePaths.supportReportBugFromProfileHold,
-            extra: any(named: 'extra'),
-          ),
+          () => router.push<void>(any(), extra: any(named: 'extra')),
         );
       });
 
@@ -787,9 +785,9 @@ void main() {
         await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
         await tester.pump();
         verify(
-          () => router.push<Object?>(
-            RoutePaths.supportReportBugFromProfileHold,
-            extra: any(named: 'extra'),
+          () => router.push<void>(
+            RoutePaths.supportReportBug,
+            extra: true,
           ),
         ).called(1);
         expect(profileRetapCubit.state, isZero);
@@ -854,7 +852,7 @@ void main() {
       );
 
       testWidgets(
-        "TalkBack's double-tap and hold opens the report, marked as the hold",
+        "TalkBack's double-tap and hold opens the report with its tip hidden",
         (tester) async {
           final handle = tester.ensureSemantics();
           await pumpSubjectWithRouter(tester, router);
@@ -866,9 +864,9 @@ void main() {
           await tester.pump();
 
           verify(
-            () => router.push<Object?>(
-              RoutePaths.supportReportBugFromProfileHold,
-              extra: any(named: 'extra'),
+            () => router.push<void>(
+              RoutePaths.supportReportBug,
+              extra: true,
             ),
           ).called(1);
           handle.dispose();
@@ -894,9 +892,9 @@ void main() {
           node.owner!.performAction(node.id, SemanticsAction.customAction, id);
           await tester.pump();
           verify(
-            () => router.push<Object?>(
-              RoutePaths.supportReportBugFromProfileHold,
-              extra: any(named: 'extra'),
+            () => router.push<void>(
+              RoutePaths.supportReportBug,
+              extra: true,
             ),
           ).called(1);
           handle.dispose();
@@ -916,7 +914,7 @@ void main() {
           logCapture = LogCaptureService();
           await logCapture.clearAllLogs();
           when(
-            () => router.push<Object?>(any(), extra: any(named: 'extra')),
+            () => router.push<void>(any(), extra: any(named: 'extra')),
           ).thenAnswer((_) async => throw StateError('push failed'));
         });
 
@@ -942,7 +940,7 @@ void main() {
           expect(logs.single.category, LogCategory.ui);
           expect(
             logs.single.message,
-            'Failed to open the bug report from bottom navigation: '
+            'Failed to open the bug report: '
             'Bad state: push failed',
           );
           expect(

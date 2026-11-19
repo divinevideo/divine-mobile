@@ -558,28 +558,27 @@ RouteBase get $bugReportRouteData => GoRouteData.$route(
 
 mixin $BugReportRouteData on GoRouteData {
   static BugReportRouteData _fromState(GoRouterState state) =>
-      BugReportRouteData(entry: state.uri.queryParameters['entry']);
+      BugReportRouteData($extra: state.extra as Object?);
 
   BugReportRouteData get _self => this as BugReportRouteData;
 
   @override
-  String get location => GoRouteData.$location(
-    '/support-center/report-bug',
-    queryParams: {if (_self.entry != null) 'entry': _self.entry},
-  );
+  String get location => GoRouteData.$location('/support-center/report-bug');
 
   @override
-  void go(BuildContext context) => context.go(location);
+  void go(BuildContext context) => context.go(location, extra: _self.$extra);
 
   @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+  Future<T?> push<T>(BuildContext context) =>
+      context.push<T>(location, extra: _self.$extra);
 
   @override
   void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
+      context.pushReplacement(location, extra: _self.$extra);
 
   @override
-  void replace(BuildContext context) => context.replace(location);
+  void replace(BuildContext context) =>
+      context.replace(location, extra: _self.$extra);
 }
 
 RouteBase get $featureRequestRouteData => GoRouteData.$route(

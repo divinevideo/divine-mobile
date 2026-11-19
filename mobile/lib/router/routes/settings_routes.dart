@@ -336,14 +336,13 @@ class SupportCenterRouteData extends GoRouteData with $SupportCenterRouteData {
   name: BugReportScreen.routeName,
 )
 class BugReportRouteData extends GoRouteData with $BugReportRouteData {
-  const BugReportRouteData({
-    @TypedQueryParameter(name: RoutePaths.supportReportBugEntryParameter)
-    this.entry,
-  });
+  const BugReportRouteData({this.$extra});
 
-  /// How the form was opened; [RoutePaths.supportReportBugProfileHoldEntry]
-  /// marks the Profile-tab hold, and the form then skips its tip about it.
-  final String? entry;
+  /// Opens the same form with its shortcut tip hidden.
+  const BugReportRouteData.withoutShortcutTip() : $extra = true;
+
+  /// Optional display hint. The form still works from its ordinary URL.
+  final Object? $extra;
 
   /// Presents as a full-screen modal on iOS, so the edge swipe cannot dismiss
   /// a half-written report.
@@ -361,8 +360,7 @@ class BugReportRouteData extends GoRouteData with $BugReportRouteData {
         currentScreen: routeSnapshot.currentScreen,
         recentScreens: routeSnapshot.recentScreens,
         userPubkey: container.read(authServiceProvider).currentPublicKeyHex,
-        showProfileHoldTip:
-            entry != RoutePaths.supportReportBugProfileHoldEntry,
+        showProfileHoldTip: extraAs<bool>($extra) != true,
       ),
     );
   }

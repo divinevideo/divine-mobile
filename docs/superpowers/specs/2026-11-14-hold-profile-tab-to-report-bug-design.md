@@ -21,7 +21,7 @@ the bottom bar.
 ## What we are building
 
 1. **Press and hold the Profile tab** (the avatar at the right of the bottom
-   bar) on any screen that shows the bottom bar. After the standard hold
+   bar) on any Android or iOS app screen that shows the bottom bar. After the standard hold
    (500 ms) the phone gives a light haptic tap and the Report a Bug form opens.
    A quick tap on the Profile tab keeps doing what it does today.
 2. **The form is the existing Report a Bug screen**, full screen, with the
@@ -134,8 +134,8 @@ have to move.
 
 - `_ProfileTabButton` passes an `onLongPress` to its `_TabSlot`, following the
   camera button's haptic and detached navigation. It calls
-  `HapticFeedback.lightImpact()` directly, then pushes the report location with
-  `runDetached` so navigation failures are logged.
+  `HapticFeedback.lightImpact()` directly, then pushes the report using `BugReportRouteData.withoutShortcutTip()` and
+  `runDetached` to log navigation failures.
 - `_TabSlot` gains two optional semantics inputs and forwards them to its
   `Semantics` widget:
   - `onLongPressHint` → TalkBack reads "Double-tap and hold to <hint>". Flutter
@@ -146,8 +146,8 @@ have to move.
     actions menu next to the long press, naming the shortcut twice. Flutter's
     iOS bridge drops `CustomSemanticsAction.overridingAction`, so the iOS
     action has to be a plain `CustomSemanticsAction(label: ...)`.
-- The hold, the hint and the action are attached unconditionally: the bar only
-  exists for signed-in people (see Constraints).
+- The shortcut and its semantics are available in the native Android and iOS
+  apps. The bar only exists for signed-in people (see Constraints).
 
 ### Route (`mobile/lib/router/routes/settings_routes.dart`)
 
@@ -163,20 +163,13 @@ have to move.
   `arguments` (path and query parameters), `restorationId: state.pageKey.value`.
   `fadeUpwardsPage` in `mobile/lib/router/fade_upwards_page.dart` is the
   in-repo model.
-- `buildPage` reads the hold marker, a typed query parameter, and passes
-  `showProfileHoldTip` to `BugReportScreen` (true unless the marker is
-  present). It keeps snapshotting `supportRouteTrailProvider` as today.
-- The marker is a query parameter, not `extra`: `extra` is a warm-start cache
-  only in this repo. The redirect compares `state.matchedLocation` (path only),
-  and the trail tests `uri.path`, so a query string changes neither.
-- The location comes from `RoutePaths` (a constant or builder), never a literal.
-  A new `RoutePaths` member must also be listed in
-  `mobile/test/router/route_locations_resolve_test.dart`.
+- The shortcut opens the standard report URL with an optional display hint in `extra`. The form reads it with `extraAs<bool>` and shows the tip for ordinary URL entries. The trail still snapshots `supportRouteTrailProvider`.
+- The display hint stays out of navigation URLs and their diagnostic logs.
 
 ### Form (`mobile/lib/widgets/bug_report_dialog.dart`)
 
 - `BugReportScreen` gains `showProfileHoldTip` (default `true`) and renders one
-  short muted line when it is set, styled like the existing
+  short muted line on native mobile when it is set, styled like the existing
   `bugReportDiagnosticsNotice` (`VineTheme.bodySmallFont`,
   `context.vineColors.mutedText`).
 - Nothing else in the form changes. The public-post notice stays first.
@@ -227,21 +220,19 @@ have to move.
 Automated:
 
 - `mobile/test/widgets/vine_bottom_nav_test.dart`: holding Profile pushes the
-  report location with the hold marker and does not navigate to the profile;
+  standard report URL with its tip hidden and does not navigate to the profile;
   a tap still navigates to the profile; the Profile tab exposes a long-press
   semantics action whose performance pushes the report; on Android the hint
   is set and no custom action is present; on iOS (platform override) the
   custom action is present, labelled from `supportReportBug`, and performing it
   pushes the report. The camera hold tests stay green.
 - Route: on iOS the report route builds a full-screen-dialog page and on
-  Android a regular one; its page name resolves to the route's name; the hold
-  marker turns the tip off and its absence leaves it on.
+  Android a regular one; its page name resolves to the route's name; the display
+  hint turns the tip off and its absence leaves it on.
 - `mobile/test/widgets/bug_report_dialog_test.dart`: the tip renders by
   default and not when `showProfileHoldTip` is false, asserted through
   `AppLocalizations`, not hardcoded English.
-- `support_route_trail_provider_test.dart`: a report location carrying the hold
-  marker is still treated as a support path, so the current screen stays the
-  screen the user held from.
+- The settings route tests verify that opening the form with the display hint still passes the latest non-support screen and its trail to the form.
 - `test/l10n/arb_consistency_test.dart`, `flutter analyze lib test
   integration_test`, and the Guards (`bash scripts/ci/run_guards.sh` from
   `mobile/`).
@@ -291,7 +282,6 @@ versions. Test targets:
 ## Left to the builder
 
 - Final wording of the two new strings and their translations.
-- The name of the hold marker and of the `RoutePaths` member or builder.
 - Where the tip line sits in the form (suggested: under the diagnostics notice,
   so it does not push the fields down).
 - How the page builder detects iOS (`Theme.of(context).platform` or

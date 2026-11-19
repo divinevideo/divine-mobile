@@ -1,7 +1,7 @@
 // ABOUTME: Tests the settings routes registered by settingsRoutes.
 // ABOUTME: Pins paths, names, nesting, badge locations, redirects, provider
 // ABOUTME: reads, the Account Status hint, the developer-options slide, and
-// ABOUTME: the bug report's iOS modal page and Profile-hold marker.
+// ABOUTME: the bug report's iOS modal page and shortcut tip.
 
 import 'dart:async';
 
@@ -143,8 +143,12 @@ Widget _build(String location, {Object? extra, BuildContext? context}) {
 }
 
 /// The page the route [location] matches builds, read through [context].
-Page<dynamic> _page(String location, BuildContext context) {
-  final (:route, :state) = _resolve(location);
+Page<dynamic> _page(
+  String location,
+  BuildContext context, {
+  Object? extra,
+}) {
+  final (:route, :state) = _resolve(location, extra: extra);
   return route.pageBuilder!(context, state);
 }
 
@@ -344,13 +348,9 @@ void main() {
         (const AccountStatusRouteData(), '/settings/account-status'),
         (const SupportCenterRouteData(), '/support-center'),
         (const BugReportRouteData(), '/support-center/report-bug'),
-        // The bottom bar pushes the constant, so the typed hold location must
-        // match it.
         (
-          const BugReportRouteData(
-            entry: RoutePaths.supportReportBugProfileHoldEntry,
-          ),
-          RoutePaths.supportReportBugFromProfileHold,
+          const BugReportRouteData.withoutShortcutTip(),
+          '/support-center/report-bug',
         ),
         (const FeatureRequestRouteData(), '/support-center/request-feature'),
         (const LegalRouteData(), '/legal'),
@@ -914,9 +914,13 @@ void main() {
         supportRouteTrailProvider.overrideWith(_FixedTrail.new),
       ];
 
-      /// The form the page at [location] holds.
-      BugReportScreen formAt(String location, BuildContext context) =>
-          (_page(location, context) as MaterialPage<void>).child
+      /// The form built for the report URL and optional display hint.
+      BugReportScreen formAt(BuildContext context, {Object? extra}) =>
+          (_page(
+                BugReportScreen.path,
+                context,
+                extra: extra,
+              ) as MaterialPage<void>).child
               as BugReportScreen;
 
       testWidgets('on iOS an edge swipe does not close the report', (
@@ -983,8 +987,8 @@ void main() {
 
           expect(
             formAt(
-              RoutePaths.supportReportBugFromProfileHold,
               context,
+              extra: true,
             ).showProfileHoldTip,
             isFalse,
           );
@@ -997,7 +1001,7 @@ void main() {
         final context = await _scopedContext(tester, overrides());
 
         expect(
-          formAt(BugReportScreen.path, context).showProfileHoldTip,
+          formAt(context).showProfileHoldTip,
           isTrue,
         );
       });
@@ -1007,8 +1011,8 @@ void main() {
         (tester) async {
           final context = await _scopedContext(tester, overrides());
           final form = formAt(
-            RoutePaths.supportReportBugFromProfileHold,
             context,
+            extra: true,
           );
 
           expect(form.currentScreen, equals('profile'));

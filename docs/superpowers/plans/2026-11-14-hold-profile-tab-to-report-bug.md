@@ -9,9 +9,9 @@
 - **PR 1** deletes `ShakeDetectorService`, its test and `sensors_plus`.
 - **PR 2** adds four things on the existing `/support-center/report-bug` route:
   - a hold handler and semantics on the Profile tab in `VineBottomNav`;
-  - a `?entry=profile-hold` marker on the route URL;
+  - an optional display hint passed by the typed report route;
   - an `iosModalPage` helper that makes the route a full-screen dialog on iOS only;
-  - a tip line in `BugReportScreen` that the marker hides.
+  - a tip line in `BugReportScreen` that the display hint hides.
 
 No new state, providers, packages or native code.
 
@@ -255,56 +255,19 @@ Run from `mobile/`:
 
 ---
 
-### Task 4: Mark the hold in the report URL and present the form as an iOS modal
+### Task 4: Hide the shortcut tip on hold and present the form as an iOS modal
 
 **Files:**
-- Modify: `mobile/lib/router/route_paths.dart` (after `supportReportBug`, line 112)
-- Modify: `mobile/lib/router/routes/settings_routes.dart` (`BugReportRouteData`: an `entry` query parameter, `build` → `buildPage`) and the regenerated `settings_routes.g.dart`
-- Modify: `mobile/test/router/route_locations_resolve_test.dart` (`_locations` and `_notLocations`)
-- Modify: `mobile/test/router/providers/support_route_trail_provider_test.dart`
-- Modify: `mobile/test/router/routes/settings_routes_test.dart`
+- Modify: `mobile/lib/router/routes/settings_routes.dart` (`BugReportRouteData` and its regenerated part).
+- Modify: `mobile/test/router/routes/settings_routes_test.dart`.
 
 **Interfaces:**
 - Consumes: `iosModalPage` (Task 2) and `BugReportScreen.showProfileHoldTip` (Task 3).
-- Produces, on `RoutePaths`:
-  - `static const supportReportBugEntryParameter = 'entry';`
-  - `static const supportReportBugProfileHoldEntry = 'profile-hold';`
-  - `static const supportReportBugFromProfileHold = '$supportReportBug?$supportReportBugEntryParameter=$supportReportBugProfileHoldEntry';`, which is `/support-center/report-bug?entry=profile-hold`
+- Produces: `BugReportRouteData.withoutShortcutTip()`, which opens the existing form with a display hint in `extra`.
 
-- [ ] **Step 1: Add the three constants**
+- [ ] **Step 1: Write the route tests**
 
-Add them to `RoutePaths` with a doc comment: the query marks a Report a Bug opened by holding the Profile tab, and the form then skips its shortcut tip.
-
-- [ ] **Step 2: Register them in the resolve test**
-
-- Add `'supportReportBugFromProfileHold': [RoutePaths.supportReportBugFromProfileHold],` to `_locations`.
-- Add `'supportReportBugEntryParameter'` and `'supportReportBugProfileHoldEntry'` to `_notLocations`.
-
-Run: `mise exec -- flutter test test/router/route_locations_resolve_test.dart`
-Expected: pass.
-
-- [ ] **Step 3: Pin the trail behaviour**
-
-Add this to `group('SupportRouteTrail')`. It passes immediately, because `_isSupportPath` reads `uri.path`; it guards that a report opened by the hold still names the screen it was held from.
-
-```dart
-test('treats the hold-marked report location as support', () async {
-  final snapshot = await visit([
-    '/home/0',
-    RoutePaths.supportReportBugFromProfileHold,
-  ]);
-  expect(snapshot.currentScreen, 'home');
-  expect(snapshot.recentScreens, ['home']);
-});
-```
-
-- [ ] **Step 4: Write the failing route tests**
-
-Add `group('bug report page')` to `test/router/routes/settings_routes_test.dart`, after `group('support forms')`, reusing the file's harness:
-- `overrides()` returns `authServiceProvider` and `bugReportServiceProvider` mocks with nothing stubbed, and `supportRouteTrailProvider.overrideWith(_FixedTrail.new)`.
-- `_page(location, context)` resolves `location` in the settings table and calls the route's `pageBuilder` with a context from `_scopedContext(tester, overrides())`. `formAt(location, context)` returns the `BugReportScreen` that page holds.
-- In `group('locations')`, add `BugReportRouteData(entry: RoutePaths.supportReportBugProfileHoldEntry)` with the expected location `RoutePaths.supportReportBugFromProfileHold`, the constant the bottom bar pushes.
-- `group('support forms')` reads the bug report through `_page`, since the route no longer implements `build`.
+Use the existing settings route harness. Check that both typed constructors resolve to `/support-center/report-bug`. Pass the optional hint through the matched route state and assert it hides the tip while preserving the route trail. Check that the ordinary URL shows the tip.
 
 The first test checks the iOS behaviour, not the flag. On a regular Cupertino
 page, a drag from the left edge pops the route; on the modal page it must not.
@@ -353,7 +316,7 @@ testWidgets('hides the shortcut tip when the Profile-tab hold opened it', (
 ) async {
   final context = await _scopedContext(tester, overrides());
   expect(
-    formAt(RoutePaths.supportReportBugFromProfileHold, context)
+    formAt(context, extra: true)
         .showProfileHoldTip,
     isFalse,
   );
@@ -361,34 +324,34 @@ testWidgets('hides the shortcut tip when the Profile-tab hold opened it', (
 
 testWidgets('shows the shortcut tip for every other way in', (tester) async {
   final context = await _scopedContext(tester, overrides());
-  expect(formAt(BugReportScreen.path, context).showProfileHoldTip, isTrue);
+  expect(formAt(context).showProfileHoldTip, isTrue);
 });
 ```
 
-- [ ] **Step 5: Run and see it fail**
+- [ ] **Step 2: Run and see it fail**
 
 Run: `mise exec -- flutter test test/router/routes/settings_routes_test.dart`
 Expected:
-- the file does not compile until `BugReportRouteData` takes `entry`; with only that added, the page tests fail because the route still implements `build`, so its `buildPage` returns go_router's `NoOpPage`;
+- the file does not compile until `BugReportRouteData.withoutShortcutTip()` exists; with only that added, the page tests fail because the route still implements `build`, so its `buildPage` returns go_router's `NoOpPage`;
 - the edge-swipe test fails because the swipe pops the form (`BugReportScreen` not found).
 
-- [ ] **Step 6: Implement**
+- [ ] **Step 3: Implement**
 
-- Give `BugReportRouteData` the constructor parameter `{@TypedQueryParameter(name: RoutePaths.supportReportBugEntryParameter) this.entry}` and `final String? entry;`.
+- Give `BugReportRouteData` a nullable `Object? $extra` and a named constructor that sets the display hint.
 - Override `buildPage` instead of `build`, returning `iosModalPage(state: state, child: BugReportScreen(...))`.
 - Keep the existing trail snapshot, service and pubkey reads through `ProviderScope.containerOf`.
-- Add `showProfileHoldTip: entry != RoutePaths.supportReportBugProfileHoldEntry`.
+- Read the optional hint with `extraAs<bool>`. The ordinary URL and unrecognized extras show the tip.
 - Regenerate with the full `mise exec -- dart run build_runner build --delete-conflicting-outputs` and commit `settings_routes.g.dart`.
 
-- [ ] **Step 7: Run the route-adjacent suites**
+- [ ] **Step 4: Run the route-adjacent suites**
 
 Run from `mobile/`:
 - `mise exec -- flutter test test/router/routes/settings_routes_test.dart test/router/route_locations_resolve_test.dart test/router/providers/support_route_trail_provider_test.dart test/router/flat_route_cold_entry_back_test.dart test/router/app_router_redirect_test.dart test/widgets/bug_report_dialog_test.dart test/widgets/delete_account_dialog_test.dart test/screens/settings/support_center_screen_test.dart` → all pass
 - `bash scripts/check_literal_navigation_paths.sh && bash scripts/check_hand_written_route_ceiling.sh` → pass
 
-- [ ] **Step 8: Commit** (after `/verify`)
+- [ ] **Step 5: Commit** (after `/verify`)
 
-`feat(support): open the report form as a modal on iOS and mark the hold entry`
+`feat(support): open the report form as a modal on iOS and hide the redundant tip`
 
 ---
 
@@ -400,7 +363,7 @@ Run from `mobile/`:
 - Test: `mobile/test/widgets/vine_bottom_nav_test.dart`
 
 **Interfaces:**
-- Consumes: `RoutePaths.supportReportBugFromProfileHold` (Task 4) and the existing ARB key `supportReportBug`. `RoutePaths` is not exported by `router.dart`, so import `package:openvine/router/route_paths.dart`.
+- Consumes: `BugReportRouteData.withoutShortcutTip()` (Task 4) and the existing ARB key `supportReportBug`.
 - Produces:
   - `_TabSlot({..., String? onLongPressHint, Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions})`, forwarded to its `Semantics`;
   - `_ProfileTabButton({..., required VoidCallback onLongPress})`;
@@ -426,22 +389,22 @@ Create a new `group('profile tab hold')` inside `group('VineBottomNav interactio
 
 ```dart
 router = MockGoRouter();
-when(() => router.push<Object?>(any(), extra: any(named: 'extra')))
-    .thenAnswer((_) async => null);
+when(() => router.push<void>(any(), extra: any(named: 'extra')))
+    .thenAnswer((_) async {});
 ```
 
 `l10n` below is `lookupAppLocalizations(const Locale('en'))`.
 
 ```dart
-testWidgets('a press-and-hold opens Report a Bug, marked as the hold', (
+testWidgets('a press-and-hold opens the standard report URL with its tip hidden', (
   tester,
 ) async {
   await pumpSubjectWithRouter(tester, router);
   await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
   await tester.pump();
-  verify(() => router.push<Object?>(
-    RoutePaths.supportReportBugFromProfileHold,
-    extra: any(named: 'extra'),
+  verify(() => router.push<void>(
+    RoutePaths.supportReportBug,
+    extra: true,
   )).called(1);
   verifyNever(() => router.go(any(), extra: any(named: 'extra')));
 });
@@ -450,8 +413,8 @@ testWidgets('a tap does not open the report', (tester) async {
   await pumpSubjectWithRouter(tester, router);
   await tester.tap(find.bySemanticsIdentifier('profile_tab'));
   await tester.pump();
-  verifyNever(() => router.push<Object?>(
-    RoutePaths.supportReportBugFromProfileHold,
+  verifyNever(() => router.push<void>(
+    RoutePaths.supportReportBug,
     extra: any(named: 'extra'),
   ));
 });
@@ -462,9 +425,9 @@ testWidgets('holding while already on Profile opens the report and does '
   await pumpSubjectWithRouter(tester, router, currentIndex: 3);
   await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
   await tester.pump();
-  verify(() => router.push<Object?>(
-    RoutePaths.supportReportBugFromProfileHold,
-    extra: any(named: 'extra'),
+  verify(() => router.push<void>(
+    RoutePaths.supportReportBug,
+    extra: true,
   )).called(1);
   expect(profileRetapCubit.state, isZero);
 });
@@ -520,9 +483,9 @@ testWidgets('offers VoiceOver a Report a Bug action that opens the report', (
   expect(node.getSemanticsData().customSemanticsActionIds, contains(id));
   node.owner!.performAction(node.id, SemanticsAction.customAction, id);
   await tester.pump();
-  verify(() => router.push<Object?>(
-    RoutePaths.supportReportBugFromProfileHold,
-    extra: any(named: 'extra'),
+  verify(() => router.push<void>(
+    RoutePaths.supportReportBug,
+    extra: true,
   )).called(1);
   handle.dispose();
 }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
@@ -531,7 +494,7 @@ testWidgets('offers VoiceOver a Report a Bug action that opens the report', (
 Add one more test in a nested `group('when opening the report fails')`. Mirror the `setUp`/`tearDown` of the camera group's `group('when opening the camera fails')` in its own group. Do not lift that setup to a shared level: it would add shared-setUp stubs.
 - Test name: `'a press-and-hold logs and reports the failure'`.
 - Push stub throws `StateError('push failed')`.
-- Expect exactly one `Navigation` error log with the message `'Failed to open the bug report from bottom navigation: Bad state: push failed'`, in `LogCategory.ui`.
+- Expect exactly one `Navigation` error log with the message `'Failed to open the bug report: Bad state: push failed'`, in `LogCategory.ui`.
 - Expect the recorded crash report to be a `Reportable<Object>` wrapping a `StateError`.
 
 - [ ] **Step 3: Run and see it fail**
@@ -543,13 +506,13 @@ Expected: the new tests fail: nothing is pushed on hold, no hint, no custom acti
 
 - `_TabSlot`: add `onLongPressHint` and `customSemanticsActions`, and pass both to its `Semantics`.
 - `_ProfileTabButton`: add `required this.onLongPress` and pass it to `_TabSlot` with:
-  - `onLongPressHint: context.l10n.navProfileLongPressHint`;
+  - Use the hold and hint on native mobile only. Use `context.l10n.navProfileLongPressHint` for the hint.
   - `customSemanticsActions: defaultTargetPlatform == TargetPlatform.iOS ? {CustomSemanticsAction(label: context.l10n.supportReportBug): onLongPress} : null`.
 
   Add a one-line comment on why the custom action is iOS-only: TalkBack would list it twice, and iOS ignores hint overrides.
 - `VineBottomNav._handleProfileHold(context)`, following the camera hold:
   1. `unawaited(HapticFeedback.lightImpact())`
-  2. `runDetached(context.push(RoutePaths.supportReportBugFromProfileHold), 'open the bug report from bottom navigation', logName: 'Navigation', category: LogCategory.ui)`
+  2. `runDetached(const BugReportRouteData.withoutShortcutTip().push<void>(context), 'open the bug report', logName: 'Navigation', category: LogCategory.ui)`
 
   Wire it as `onLongPress: () => _handleProfileHold(context)`.
 
@@ -657,7 +620,7 @@ Rebase on fresh `origin/main` if Task 6 ended more than a few hours ago, then ru
 
 It contains:
 - a summary and why (#8955);
-- what changed: the hold, screen readers, the iOS slide-up, the tip, the URL marker;
+- what changed: the hold, screen readers, the iOS slide-up, the tip and its in-app display hint;
 - the platform behaviour table from the spec;
 - the tests;
 - the Task 6 results;

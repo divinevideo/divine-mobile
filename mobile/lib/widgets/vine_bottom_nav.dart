@@ -21,8 +21,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/navigation/tab_identity.dart';
-import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -118,8 +118,8 @@ class VineBottomNav extends ConsumerWidget {
   void _handleProfileHold(BuildContext context) {
     unawaited(HapticFeedback.lightImpact());
     runDetached(
-      context.push(RoutePaths.supportReportBugFromProfileHold),
-      'open the bug report from bottom navigation',
+      const BugReportRouteData.withoutShortcutTip().push<void>(context),
+      'open the bug report',
       logName: 'Navigation',
       category: LogCategory.ui,
     );
