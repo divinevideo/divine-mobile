@@ -21,6 +21,7 @@ import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
+import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
@@ -1121,10 +1122,11 @@ void main() {
       Duration readMarkerDebounceDelay = const Duration(seconds: 3),
       String Function()? sendBatchIdGenerator,
       bool Function()? receivesPeerRooms,
+      NIP17MessageService? messageService,
     }) {
       return DmRepository(
         nostrClient: mockNostrClient,
-        messageService: mockMessageService,
+        messageService: messageService ?? mockMessageService,
         directMessagesDao: mockDirectMessagesDao,
         conversationsDao: mockConversationsDao,
         outgoingDmsDao: outgoingDmsDao,
@@ -17320,6 +17322,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17346,6 +17349,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17363,6 +17367,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17444,6 +17449,7 @@ void main() {
             content: 'https://blossom.example.com/file.enc',
             eventKind: EventKind.fileMessage,
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17511,6 +17517,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17591,6 +17598,7 @@ void main() {
               content: any(named: 'content'),
               eventKind: any(named: 'eventKind'),
               additionalTags: any(named: 'additionalTags'),
+              createdAt: any(named: 'createdAt'),
               targetRelays: any(named: 'targetRelays'),
               selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17725,6 +17733,199 @@ void main() {
         );
       });
 
+      group('rumor created_at (#10436)', () {
+        Future<NIP17SendResult> anyPrivateMessage({Object? createdAt}) =>
+            mockMessageService.sendPrivateMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              eventKind: any(named: 'eventKind'),
+              additionalTags: any(named: 'additionalTags'),
+              createdAt: createdAt == null
+                  ? any(named: 'createdAt')
+                  : createdAt as int,
+              targetRelays: any(named: 'targetRelays'),
+              selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+            );
+
+        Future<NIP17SendResult> sendFile({
+          int? createdAt,
+          void Function(int createdAt)? onRumorCreatedAt,
+        }) => createRepository().sendFileMessage(
+          recipientPubkey: _validPubkeyB,
+          fileUrl: 'https://blossom.example.com/file.enc',
+          fileMetadata: testFileMetadata,
+          createdAt: createdAt,
+          onRumorCreatedAt: onRumorCreatedAt,
+        );
+
+        test(
+          'builds the rumor with the createdAt it is given and reports it',
+          () async {
+            when(anyPrivateMessage).thenAnswer(
+              (_) async => const NIP17SendResult.failure('relay rejected'),
+            );
+            final reported = <int>[];
+
+            await sendFile(
+              createdAt: 1700000000,
+              onRumorCreatedAt: reported.add,
+            );
+
+            verify(() => anyPrivateMessage(createdAt: 1700000000)).called(1);
+            expect(reported, equals([1700000000]));
+          },
+        );
+
+        test(
+          'stamps a send given no createdAt with the time now and reports '
+          'that time',
+          () async {
+            when(anyPrivateMessage).thenAnswer(
+              (_) async => const NIP17SendResult.failure('relay rejected'),
+            );
+            final reported = <int>[];
+            int nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+            final before = nowSeconds();
+            await sendFile(onRumorCreatedAt: reported.add);
+            final after = nowSeconds();
+
+            final stamped =
+                verify(
+                      () => mockMessageService.sendPrivateMessage(
+                        recipientPubkey: any(named: 'recipientPubkey'),
+                        content: any(named: 'content'),
+                        eventKind: any(named: 'eventKind'),
+                        additionalTags: any(named: 'additionalTags'),
+                        createdAt: captureAny(named: 'createdAt'),
+                        targetRelays: any(named: 'targetRelays'),
+                        selfWrapTargetRelays: any(
+                          named: 'selfWrapTargetRelays',
+                        ),
+                        awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                        selfWrapOnSoftUnconfirmed: any(
+                          named: 'selfWrapOnSoftUnconfirmed',
+                        ),
+                      ),
+                    ).captured.single
+                    as int;
+            expect(stamped, inInclusiveRange(before, after));
+            expect(reported, equals([stamped]));
+          },
+        );
+
+        test('reports the createdAt even when the send then throws', () async {
+          when(anyPrivateMessage).thenThrow(StateError('wrap build failed'));
+          final reported = <int>[];
+
+          await expectLater(
+            sendFile(createdAt: 1700000000, onRumorCreatedAt: reported.add),
+            throwsStateError,
+          );
+
+          expect(reported, equals([1700000000]));
+        });
+
+        test(
+          'a retry given the created_at the first attempt reported puts the '
+          'same rumor on the wire, as the recipient unwraps it',
+          () async {
+            final senderPrivateKey = generatePrivateKey();
+            final senderPubkey = getPublicKey(senderPrivateKey);
+            final recipientPrivateKey = generatePrivateKey();
+            final recipientPubkey = getPublicKey(recipientPrivateKey);
+            final wraps = <Event>[];
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+                diagnosticTag: any(named: 'diagnosticTag'),
+              ),
+            ).thenAnswer((invocation) async {
+              final wrap = invocation.positionalArguments.first as Event;
+              wraps.add(wrap);
+              return PublishOutcome(
+                eventId: wrap.id,
+                acceptedBy: const [],
+                rejectedBy: const {'wss://relay.divine.video': 'blocked'},
+                noResponseFrom: const [],
+              );
+            });
+            final repository = createRepository(
+              userPubkey: senderPubkey,
+              messageService: NIP17MessageService(
+                signer: LocalNostrSigner(senderPrivateKey),
+                senderPublicKey: senderPubkey,
+                nostrService: mockNostrClient,
+              ),
+            );
+            final reported = <int>[];
+            Future<NIP17SendResult> send({int? createdAt}) =>
+                repository.sendFileMessage(
+                  recipientPubkey: recipientPubkey,
+                  fileUrl: 'https://blossom.example.com/file.enc',
+                  fileMetadata: testFileMetadata,
+                  createdAt: createdAt,
+                  onRumorCreatedAt: reported.add,
+                );
+
+            // A first attempt made long before the retry.
+            final first = await send(createdAt: 1700000000);
+            final retry = await send(createdAt: reported.single);
+
+            expect(first.success, isFalse);
+            expect(retry.success, isFalse);
+            expect(wraps, hasLength(2));
+            final reader = Nostr(
+              LocalNostrSigner(recipientPrivateKey),
+              [],
+              (url) => throw UnimplementedError('no relays in this test'),
+            );
+            final rumors = [
+              for (final wrap in wraps)
+                await GiftWrapUtil.getRumorEvent(reader, wrap),
+            ];
+            expect(rumors[0], isNotNull);
+            expect(rumors[1]!.id, equals(rumors[0]!.id));
+            expect(rumors[0]!.createdAt, equals(1700000000));
+            expect(rumors[1]!.createdAt, equals(1700000000));
+            expect(reported, equals([1700000000, 1700000000]));
+            // Only the gift wrap is rebuilt.
+            expect(wraps[1].id, isNot(equals(wraps[0].id)));
+          },
+        );
+
+        test('reports nothing when no rumor is built', () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
+            ),
+          ).thenAnswer((_) async => unansweredList(timedOut: true));
+          final reported = <int>[];
+
+          final result = await sendFile(onRumorCreatedAt: reported.add);
+
+          expect(result.success, isFalse);
+          expect(reported, isEmpty);
+          verifyNever(anyPrivateMessage);
+        });
+      });
+
       test('appends extraTags to the rumor and persists them', () async {
         when(
           () => mockMessageService.sendPrivateMessage(
@@ -17732,6 +17933,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17813,6 +18015,7 @@ void main() {
                     content: any(named: 'content'),
                     eventKind: EventKind.fileMessage,
                     additionalTags: captureAny(named: 'additionalTags'),
+                    createdAt: any(named: 'createdAt'),
                     targetRelays: any(named: 'targetRelays'),
                     selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
                     awaitRecipientOk: any(named: 'awaitRecipientOk'),

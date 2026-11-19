@@ -11566,6 +11566,13 @@ class DmRepository {
   /// app-level markers the recipient's client reads back from
   /// [DmMessage.tags]. They must not repeat a file tag this method writes.
   ///
+  /// [createdAt] is the rumor's `created_at`, the time now when omitted.
+  /// [onRumorCreatedAt] receives the `created_at` the rumor is built with,
+  /// before it is published, and is not called when no rumor is built. A
+  /// caller retrying the same file passes that value back as [createdAt], so
+  /// the retry keeps the first attempt's rumor id even when that attempt
+  /// threw (A′ in `mobile/docs/NIP17_RETRY_CONTRACT.md`).
+  ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
   /// metadata is missing.
@@ -11576,6 +11583,8 @@ class DmRepository {
     required DmFileMetadata fileMetadata,
     String? replyToId,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -11634,11 +11643,14 @@ class DmRepository {
       );
     }
 
+    final rumorCreatedAt = createdAt ?? DmClock.now().nowSeconds;
+    onRumorCreatedAt?.call(rumorCreatedAt);
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      createdAt: rumorCreatedAt,
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,

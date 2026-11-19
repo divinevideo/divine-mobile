@@ -110,29 +110,53 @@ class _MockContentDeletionService extends Mock
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _ControlledVideoSend extends Fake implements DmVideoSendService {
+  final upload = Completer<DmVideoUpload>();
   final result = Completer<NIP17SendResult>();
   final paths = <String>[];
   DmVideoSendCancellation? attempt;
 
-  /// Reports a later phase of the running send, such as publication.
-  void Function(DmVideoSendPhase)? reportPhase;
+  /// Finishes the running upload, so the send moves on to publication.
+  void finishUpload() => upload.complete(
+    const DmVideoUpload(
+      fileUrl: 'https://media.example/one',
+      fileMetadata: DmFileMetadata(
+        fileType: 'video/mp4',
+        encryptionAlgorithm: 'aes-gcm',
+        decryptionKey: 'key',
+        decryptionNonce: 'nonce',
+        fileHash: 'hash',
+      ),
+    ),
+  );
 
   @override
-  Future<NIP17SendResult> sendVideo({
-    required String recipientPubkey,
+  Future<DmVideoUpload> uploadVideo({
     required File videoFile,
     required String mimeType,
     String? blurhash,
     String? dimensions,
-    List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase)? onPhase,
     void Function(double)? onUploadProgress,
     DmVideoSendCancellation? cancellation,
   }) {
     paths.add(videoFile.path);
     attempt = cancellation;
-    reportPhase = onPhase;
     onPhase?.call(DmVideoSendPhase.uploading);
+    return upload.future;
+  }
+
+  @override
+  Future<NIP17SendResult> publishVideo({
+    required String recipientPubkey,
+    required DmVideoUpload uploaded,
+    List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
+    void Function(DmVideoSendPhase)? onPhase,
+    DmVideoSendCancellation? cancellation,
+  }) {
+    cancellation?.beginPublication();
+    onPhase?.call(DmVideoSendPhase.sending);
     return result.future;
   }
 }
@@ -1641,7 +1665,8 @@ void main() {
         await tester.pump();
         // Publication is irreversible: the shared DM rows must not be cleared
         // under it.
-        service.reportPhase!(DmVideoSendPhase.sending);
+        service.finishUpload();
+        await tester.pump();
         var signedIn = false;
 
         // Settled rather than awaited by an expectation, so a failure below

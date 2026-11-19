@@ -1522,12 +1522,18 @@ class NIP17MessageService {
   /// keep working unchanged. New callers that need to enqueue a durable
   /// queue row keyed by the rumor's id should call [buildRumor] +
   /// [sendRumor] directly so the queue insert happens between the two.
+  ///
+  /// [createdAt] is the rumor's `created_at`, the time now when omitted. A
+  /// retry passes the first attempt's, so the same content and tags give the
+  /// same rumor id and the recipient keeps one copy (A′ in
+  /// `mobile/docs/NIP17_RETRY_CONTRACT.md`).
   @useResult
   Future<NIP17SendResult> sendPrivateMessage({
     required String recipientPubkey,
     required String content,
     int eventKind = EventKind.privateDirectMessage,
     List<List<String>> additionalTags = const [],
+    int? createdAt,
     List<String>? targetRelays,
     List<String>? selfWrapTargetRelays,
     bool awaitRecipientOk = false,
@@ -1538,6 +1544,7 @@ class NIP17MessageService {
       content: content,
       eventKind: eventKind,
       additionalTags: additionalTags,
+      createdAt: createdAt,
     );
     return sendRumor(
       rumorEvent: rumor,
