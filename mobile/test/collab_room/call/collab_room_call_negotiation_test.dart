@@ -138,6 +138,32 @@ void main() {
     late StreamController<int> made;
     late WebRtcCollabRoomCall call;
 
+    /// A call that says hello again after [helloRetryDelays], by default
+    /// never, so each test sees only the messages it is about.
+    WebRtcCollabRoomCall makeCall({
+      List<Duration> helloRetryDelays = const [],
+    }) => WebRtcCollabRoomCall(
+      me: me,
+      others: {other},
+      callKey: callKey,
+      accountSigner: LocalNostrSigner(meKey),
+      transport: transport,
+      gatherTimeout: Duration.zero,
+      answerTimeout: _answerTimeout,
+      relayRetryDelays: const [
+        Duration(milliseconds: 10),
+        Duration(milliseconds: 10),
+        Duration(milliseconds: 10),
+      ],
+      helloRetryDelays: helloRetryDelays,
+      createConnection: (_) async {
+        final connection = _FakePeerConnection();
+        connections.add(connection);
+        made.add(connections.length);
+        return connection;
+      },
+    );
+
     setUp(() {
       messenger.setMockMethodCallHandler(channel, (call) async {
         if (call.method != 'getUserMedia') return null;
@@ -165,26 +191,7 @@ void main() {
       other = keys.getPublicKey(otherKey);
       connections = [];
       made = StreamController<int>.broadcast();
-      call = WebRtcCollabRoomCall(
-        me: me,
-        others: {other},
-        callKey: callKey,
-        accountSigner: LocalNostrSigner(meKey),
-        transport: transport,
-        gatherTimeout: Duration.zero,
-        answerTimeout: _answerTimeout,
-        relayRetryDelays: const [
-          Duration(milliseconds: 10),
-          Duration(milliseconds: 10),
-          Duration(milliseconds: 10),
-        ],
-        createConnection: (_) async {
-          final connection = _FakePeerConnection();
-          connections.add(connection);
-          made.add(connections.length);
-          return connection;
-        },
-      );
+      call = makeCall();
     });
 
     tearDown(() async {
@@ -273,6 +280,59 @@ void main() {
           throwsA(isA<TimeoutException>()),
         );
         expect(connections, hasLength(3));
+      });
+    });
+
+    group('a hello nobody answers', () {
+      setUp(() async {
+        await call.stop();
+        call = makeCall(
+          helloRetryDelays: const [
+            Duration(milliseconds: 20),
+            Duration(milliseconds: 20),
+          ],
+        );
+      });
+
+      Future<List<CollabRoomCallSignalType>> sentTypes() async => [
+        for (final event in transport.sent)
+          (await theirChannel().open(event, others: {me}))!.type,
+      ];
+
+      test('is said twice more', () async {
+        await call.start();
+        await transport.sending
+            .take(2)
+            .last
+            .timeout(const Duration(seconds: 5));
+        await pumpEventQueue();
+
+        await expectLater(
+          transport.sending.first.timeout(_quiet),
+          throwsA(isA<TimeoutException>()),
+        );
+        expect(await sentTypes(), [
+          CollabRoomCallSignalType.hello,
+          CollabRoomCallSignalType.hello,
+          CollabRoomCallSignalType.hello,
+        ]);
+      });
+
+      test('is not said again once they are heard', () async {
+        await call.start();
+        final offered = nextOffer();
+        await hello();
+        await offered.timeout(const Duration(seconds: 5));
+
+        await expectLater(
+          transport.sending
+              .asyncMap((event) => theirChannel().open(event, others: {me}))
+              .firstWhere(
+                (signal) => signal?.type == CollabRoomCallSignalType.hello,
+              )
+              .timeout(_quiet),
+          throwsA(isA<TimeoutException>()),
+        );
       });
     });
 

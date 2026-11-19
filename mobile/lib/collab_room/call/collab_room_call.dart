@@ -193,11 +193,16 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       Duration(seconds: 5),
       Duration(seconds: 15),
     ],
+    List<Duration> helloRetryDelays = const [
+      Duration(seconds: 4),
+      Duration(seconds: 10),
+    ],
   }) : _me = me,
        _createConnection = createConnection,
        _gatherTimeout = gatherTimeout,
        _answerTimeout = answerTimeout,
        _relayRetryDelays = relayRetryDelays,
+       _helloRetryDelays = helloRetryDelays,
        _others = {...others},
        _channel = CollabRoomCallChannel(
          callKey,
@@ -245,6 +250,12 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   /// closed the call's subscription. Past the last, the call has failed.
   final List<Duration> _relayRetryDelays;
 
+  /// How long to wait, by attempt, before saying hello again to whoever has
+  /// not been heard from. A relay can drop what reaches a new subscription in
+  /// its first moments, such as the reply to this device's first hello, and
+  /// a device that offers and never hears that reply would never offer.
+  final List<Duration> _helloRetryDelays;
+
   /// How far back a subscription reads (seconds): for what was sent while a
   /// renewed one was down, and from the start for a peer whose clock runs
   /// behind. Each message carries its sender's time, so a phone a few seconds
@@ -264,6 +275,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   /// Brings the subscription back after the relays closed it.
   Timer? _relayRetry;
+
+  /// Says hello again to whoever has not been heard from.
+  Timer? _helloRetry;
 
   /// Closed subscriptions in a row with nothing new heard in between.
   int _relayFailures = 0;
@@ -304,6 +318,21 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     _listen(since: _nowSeconds() - _relayLookBack);
     await _hello();
     _emit();
+    _retryHello(0);
+  }
+
+  void _retryHello(int attempt) {
+    if (attempt >= _helloRetryDelays.length) return;
+    _helloRetry = Timer(_helloRetryDelays[attempt], () {
+      if (_stopped) return;
+      final unheard = {
+        for (final pubkey in _others)
+          if (_peers[pubkey]?.session == null) pubkey,
+      };
+      if (unheard.isEmpty) return;
+      _enqueue(() => _hello(recipients: unheard));
+      _retryHello(attempt + 1);
+    });
   }
 
   static int _nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -455,6 +484,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     if (_stopped) return;
     _stopped = true;
     _relayRetry?.cancel();
+    _helloRetry?.cancel();
     final hadSubscription = _subscription != null;
     await _subscription?.cancel();
     final audio = _audio;
