@@ -8,7 +8,7 @@ description: |
   human to set up accounts or attach images. Covers iOS simulator + LOCAL
   Docker stack + Maestro/idb + secret-gist hosting.
 author: Claude Code
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Real-app screenshots for a PR
@@ -60,7 +60,7 @@ navigation map below before dumping.
 | Messages inbox | `tapOn: {id: inbox_tab}` opens **Notifications** first, then `tapOn: "Messages\nMessages"`; empty state is `"No messages yet"` |
 | Appearance → Light | from the own profile: `id: settings_button` → `id: settings_app_preferences_tile` → `"Appearance\nChoose how Divine looks on this device"` → `"Light"` (or `"Dark"`, `"System default"`); back out with `id: back_button` ×3 |
 | Someone's profile | `openLink: divine:///profile/<npub>` + optional `Open`. It opens full screen with no tab bar; leave it with `tapOn: {id: profile_back_button}`, not `back_button` |
-| DM thread | on their profile, `tapOn: "Message"` (a mail icon labelled "Message" until you follow them, then a button with that text; the tap matches both); composer `"Say something…"`; leave with `tapOn: {id: back_button}`. The first bubble in a run of messages is labelled `"<time>\n<text>"` (e.g. `"Now\nhello"`) and later ones just `"<text>"`, so wait for it with a regex: `extendedWaitUntil: {visible: ".*hello.*"}`. Text: type, then `tapOn: {id: dm_message_send_button}`, which appears only once there is text. Video: `tapOn: {id: dm_attach_video_button}` → `"Video from your gallery"`; picking a video sends it straight away |
+| DM thread | on their profile, `tapOn: "Message"` (a mail icon labelled "Message" until you follow them, then a button with that text; the tap matches both); composer `"Say something…"`; leave with `tapOn: {id: back_button}`. The first bubble in a run of messages is labelled `"<time>\n<text>"` (e.g. `"Now\nhello"`) and later ones just `"<text>"`, so wait for it with a regex: `extendedWaitUntil: {visible: ".*hello.*"}`. Text: type, then `tapOn: {id: dm_message_send_button}`, which appears only once there is text. Video: `tapOn: {id: dm_attach_video_button}` → `"Video from your gallery"`; picking a video sends it straight away A sent video is a 248×350 card at the bottom right, newest last; tap it by its label from `maestro hierarchy` rather than by guessed coordinates, which easily miss its play button. |
 
 The magenta line above the tab bar marks the LOCAL environment; where it is on screen,
 mention it in the caption rather than cropping it. Screens without the tab bar, such as
@@ -96,7 +96,7 @@ create whatever else the screen needs yourself.
 | A video you just published is missing from the feeds or a profile grid | The stack's refresh-interval tuning did not run, so REST read models refresh every 5–60 minutes. `sim_up.sh` runs it even when `up.sh` fails; if you started the stack another way, run `docker compose -f local_stack/docker-compose.yml run --rm funnelcake-local-tuning`. |
 | DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
 | Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
-| A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor a04e156363b5be9269a2e806199daaa2a60a042e HEAD`; if it fails, reach the profile through search instead. |
+| A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor "$(gh pr view 11017 --repo divinevideo/divine-mobile --json mergeCommit -q .mergeCommit.oid)" HEAD`; if it fails, reach the profile through search instead. |
 | `sim_up.sh` stops with "Docker is not answering within 20s" | Docker Desktop is hung: `docker info` never returns, and every later call would wait forever. Quit Docker Desktop; if `com.docker.backend` lingers, `pkill -TERM -f com.docker.backend`; then `open -a Docker` and run `sim_up.sh` again. |
 | `sim_up.sh` stops with "docker info failed" | Usually Docker Desktop is not running. `open -a Docker`, wait until `docker info` answers, and run `sim_up.sh` again; the lines after the error are what `docker info` reported. |
 | Maestro asks which device to use, or drives another simulator | More than one device is booted. Pass `--device <UDID>` to every `maestro` call. |
@@ -104,6 +104,8 @@ create whatever else the screen needs yourself.
 | Pressing Enter in the composer doesn't send | The field is multiline. Tap `id: dm_message_send_button`. |
 | Notification permission sheet covers the app | `new_device_account.yaml` dismisses it. If it appears later, tap `Don’t Allow`. |
 | Every local upload finishes too fast to screenshot | Pause the Blossom proxy (see the quick reference), then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
+| A sent DM video shows a gradient, and tapping it says "Couldn't open this video" | On LOCAL this is expected: DM videos are only downloaded over HTTPS (`mobile/lib/services/dm_video_decryptor.dart`), and the local Blossom server is plain HTTP, so the app refuses before any request. Capture the sent bubble, but don't claim playback or a sent-card frame from a LOCAL run. |
+| You need a failed video DM | Pause the Blossom proxy before the send. After 2 minutes with no upload progress (`videoDmUploadInactivityTimeout`) the bubble fails with Retry and Remove. When you unpause, the stalled upload is answered `PUT /upload 400`, which is harmless. |
 | Seeded videos never load | The running stack was seeded for the Android emulator (`BLOSSOM_PUBLIC_URL` defaults to `10.0.2.2`). Only a stack `sim_up.sh` starts itself is seeded for the iOS simulator; publish your own videos instead. |
 | A profile header shows the previous profile's name | Known app bug (#11043): opening one profile over another reuses the name. Navigate Home first if it matters for the shot. Delete this row once #11043 is closed. |
 | `nak event` hangs | It reads an event from stdin whenever stdin is a pipe, or the relay never sent `OK`. The scripts give it `< /dev/null` and wrap it in `perl -e 'alarm …'`. Do the same for ad-hoc calls. |
