@@ -59,12 +59,13 @@ Future<void> recordLibraryReaction(
   openEditor,
 }) async {
   final router = GoRouter.maybeOf(context);
-  if (router != null &&
+  bool hasCreationRoute() =>
+      router != null &&
       hasCreationSessionInRouteStack(
         router.routerDelegate.currentConfiguration,
-      )) {
-    return;
-  }
+      );
+
+  if (hasCreationRoute()) return;
   final editor = ref.read(videoEditorProvider.notifier);
   final publish = ref.read(videoPublishProvider.notifier);
   final manager = ref.read(clipManagerProvider.notifier);
@@ -78,17 +79,22 @@ Future<void> recordLibraryReaction(
       ref.read(authServiceProvider).currentPublicKeyHex == owner &&
       identical(ref.read(clipManagerProvider.notifier), manager);
 
+  bool canOpenCamera() =>
+      isActive() &&
+      ModalRoute.of(context)?.isCurrent != false &&
+      !hasCreationRoute();
+
   // A full recorder session must not consume the reaction's recording budget.
   // Keep edited work as a named draft before clearing its active session.
   final keptDraftId = await editor.keepAutosaveAsDraft();
-  if (!context.mounted ||
-      !isActive() ||
-      ModalRoute.of(context)?.isCurrent == false) {
+  if (!canOpenCamera()) {
     if (keptDraftId != null) await editor.discardKeptDraft(keptDraftId);
     return;
   }
   await publish.clearAll();
-  if (!context.mounted || !isActive() || manager.clips.isNotEmpty) return;
+  if (!context.mounted || !canOpenCamera() || manager.clips.isNotEmpty) {
+    return;
+  }
   final reaction = LibraryReactionCubit(
     deferFileCleanup: editor.deferFileCleanup,
     bakeCapturedChromaKey: manager.bakeCapturedChromaKey,

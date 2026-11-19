@@ -154,9 +154,10 @@ class _Editor extends VideoEditorNotifier {
 }
 
 class _Publish extends VideoPublishNotifier {
-  _Publish(this.events, this.manager);
+  _Publish(this.events, this.manager, {this.clearGate});
   final List<String> events;
   final _Manager manager;
+  final Completer<void>? clearGate;
 
   @override
   VideoPublishProviderState build() => const VideoPublishProviderState();
@@ -165,6 +166,7 @@ class _Publish extends VideoPublishNotifier {
   Future<void> clearAll({bool keepAutosavedDraft = false}) async {
     events.add('clear session');
     manager.clear();
+    await clearGate?.future;
   }
 }
 
@@ -200,6 +202,7 @@ void main() {
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
       NavigatorObserver? observer,
+      Completer<void>? clearGate,
       Future<void> Function(CreationAnalyticsSession)? onOpenEditor,
       bool reducedMotion = false,
       bool pushed = false,
@@ -234,7 +237,9 @@ void main() {
             creationAnalyticsTrackerProvider.overrideWithValue(tracker),
             clipManagerProvider.overrideWith(() => manager),
             videoEditorProvider.overrideWith(() => editor),
-            videoPublishProvider.overrideWith(() => _Publish(events, manager)),
+            videoPublishProvider.overrideWith(
+              () => _Publish(events, manager, clearGate: clearGate),
+            ),
           ],
           child: MaterialApp(
             navigatorObservers: [?observer],
@@ -436,6 +441,46 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets(
+      'pending session cleanup cannot open a camera over a newer route',
+      (
+        tester,
+      ) async {
+        final clearGate = Completer<void>();
+        var cameraPushes = 0;
+        await start(
+          tester,
+          record: null,
+          layout: (_, _, _, _) async =>
+              fail('the old route cannot open Layout'),
+          clearGate: clearGate,
+          observer: _CameraReplyObserver((_, navigator) {
+            cameraPushes++;
+            navigator.pop(false);
+          }),
+        );
+        expect(events, ['keep draft', 'clear session']);
+        expect(clearGate.isCompleted, isFalse);
+        final library = tester.element(find.text('react'));
+        Navigator.of(library).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('newer route')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(library.mounted, isTrue);
+        expect(ModalRoute.of(library)?.isCurrent, isFalse);
+        expect(find.text('newer route'), findsOneWidget);
+
+        clearGate.complete();
+        await tester.pumpAndSettle();
+
+        expect(cameraPushes, 0);
+        expect(find.text('newer route'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     for (final confirmed in [true, false]) {
       testWidgets(
