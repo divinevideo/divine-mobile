@@ -525,17 +525,20 @@ class VideoRecorderBloc
           ? _finishedStillCaptures
           : 0;
       final takeDuration = clipManager.activeRecordingDuration;
-      // A take being finalized is not in the clips yet, but its time is
-      // already spent.
-      final recorded = isTakeRunning
-          ? totalDuration
-          : totalDuration + takeDuration;
+      final (recorded, remoteBudget) = recorder.recorderMode.capturesStills
+          ? _stillsProgress(recorder, clipManager)
+          // A take being finalized is not in the clips yet, but its time is
+          // already spent.
+          : (
+              isTakeRunning ? totalDuration : totalDuration + takeDuration,
+              budget,
+            );
       remote = RemoteRecorderState(
         recorded: recorded,
         activeTakeStartedAt: isTakeRunning
             ? clock.now().subtract(takeDuration)
             : null,
-        budget: budget,
+        budget: remoteBudget,
         modeName: recorder.recorderMode.label,
         isShutterActive: isShutterActive,
         isShutterEnabled: isShutterEnabled,
@@ -546,6 +549,7 @@ class VideoRecorderBloc
         isShutterActive,
         isShutterEnabled,
         recorded,
+        remoteBudget,
         recorder.recorderMode,
         stillShutterCount,
       );
@@ -558,6 +562,27 @@ class VideoRecorderBloc
       logName: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
+  }
+
+  /// The iPhone's shot budget as clip time, so a remote fills its progress
+  /// the way the recorder's shot counter does: stills taken against the most
+  /// this session fits, each held for the composition's hold.
+  ///
+  /// The stills are not in the clips until the session ends, so the clip
+  /// time recorded so far would not move while the user shoots.
+  (Duration, Duration) _stillsProgress(
+    VideoRecorderBlocState recorder,
+    ClipManagerNotifier clipManager,
+  ) {
+    final framesPerImage = StopMotionFrameOps.captureFramesPerImageFor(
+      clipManager.clips,
+    );
+    final still = StopMotionFrameOps.framesPerImageToDuration(framesPerImage);
+    final maxStills = StopMotionFrameOps.maxCaptureFramesAfter(
+      clipManager.totalDuration,
+      framesPerImage: framesPerImage,
+    );
+    return (still * recorder.stopMotionFrameCount, still * maxStills);
   }
 
   void _releaseChromaKeyBakes() {
