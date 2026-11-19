@@ -2348,6 +2348,34 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the ranked public badge gallery and video previews in one read.
+  Future<List<IndexedBadgeCard>> getBadgeDiscovery() async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse('$_baseUrl/api/badges/discovery?limit=48');
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Badge discovery unavailable',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      return parseBadgeDiscoveryResponse(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException(
+        'Invalid badge discovery response',
+        cause: error,
+      );
+    }
+  }
+
   /// Fetches a page of raw badge definition events published by [issuer].
   ///
   /// [limit] is the page size (the API accepts 1 through 100). [cursor] is

@@ -163,6 +163,167 @@ void main() {
   });
   tearDown(() => repository.dispose());
 
+  group('loadIndexedDiscovery', () {
+    test(
+      'uses server order without relay reads and hides blocked videos',
+      () async {
+        final official = definition(key2, at: 1);
+        final community = definition(key1, at: 100);
+        final hiddenAuthor = '9' * 64;
+        hidden.add(hiddenAuthor);
+        final clip = (
+          id: 'a' * 64,
+          pubkey: issuer1,
+          title: 'Clip',
+          thumbnail: '',
+        );
+        when(api.getBadgeDiscovery).thenAnswer(
+          (_) async => [
+            (
+              definition: official,
+              holderCount: 1,
+              followerCount: 2,
+              videos: [
+                (
+                  id: 'b' * 64,
+                  pubkey: hiddenAuthor,
+                  title: 'Hidden',
+                  thumbnail: '',
+                ),
+                (
+                  id: 'invalid',
+                  pubkey: issuer2,
+                  title: 'Invalid',
+                  thumbnail: '',
+                ),
+                clip,
+              ],
+            ),
+            (
+              definition: community,
+              holderCount: 50,
+              followerCount: 10,
+              videos: [],
+            ),
+            (
+              definition: community,
+              holderCount: 50,
+              followerCount: 10,
+              videos: [],
+            ),
+            for (var i = 0; i < 4; i++)
+              (
+                definition: definition(key1, identifier: 'badge-$i'),
+                holderCount: 0,
+                followerCount: 0,
+                videos: [],
+              ),
+          ],
+        );
+        final indexed = await repository.loadIndexedDiscovery();
+        expect(indexed.map((card) => card.definition.event.id).take(2), [
+          official.id,
+          community.id,
+        ]);
+        expect(indexed.first.videos, [clip]);
+        expect(
+          indexed.where((card) => card.definition.event.pubkey == issuer1),
+          hasLength(3),
+        );
+        expect(requests, isEmpty);
+      },
+    );
+
+    test('rejects corrupt signed data and filters hidden issuers', () async {
+      final hiddenBadge = definition(key1);
+      hidden.add(issuer1);
+      when(api.getBadgeDiscovery).thenAnswer(
+        (_) async => [
+          (
+            definition: hiddenBadge,
+            holderCount: 0,
+            followerCount: 0,
+            videos: [],
+          ),
+        ],
+      );
+      expect(await repository.loadIndexedDiscovery(), isEmpty);
+      hiddenBadge.sig = '';
+      await expectLater(
+        repository.loadIndexedDiscovery(),
+        throwsFormatException,
+      );
+    });
+
+    test('a result arriving after disposal is discarded', () async {
+      final pending = Completer<List<IndexedBadgeCard>>();
+      when(api.getBadgeDiscovery).thenAnswer((_) => pending.future);
+      final load = repository.loadIndexedDiscovery();
+      await repository.dispose();
+      pending.complete([
+        (
+          definition: definition(key1),
+          holderCount: 0,
+          followerCount: 0,
+          videos: [],
+        ),
+      ]);
+      expect(await load, isEmpty);
+    });
+  });
+
+  group('loadFederatedDiscovery', () {
+    test('does no cross-relay work for a primary-only connection', () async {
+      when(() => client.configuredRelays).thenReturn(['wss://relay.example']);
+      expect(await repository.loadFederatedDiscovery(), isEmpty);
+      expect(requests, isEmpty);
+    });
+
+    test(
+      'discovers external definitions and checks deletion on both sources',
+      () async {
+        const external = 'wss://external.example';
+        when(
+          () => client.configuredRelays,
+        ).thenReturn(['wss://relay.example', external]);
+        when(() => client.isRelayAllowed(external)).thenReturn(true);
+        final externalBadge = definition(key1);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: [external],
+            relayTypes: RelayType.onlyTemp,
+            useCache: false,
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: true,
+            maxCollectedEvents: 300,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              QueryResult(events: [externalBadge], endedBy: QueryEnd.complete),
+        );
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: ['wss://relay.example', external],
+            relayTypes: RelayType.onlyTemp,
+            useCache: false,
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: true,
+            maxCollectedEvents: 1000,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const QueryResult(events: [], endedBy: QueryEnd.complete),
+        );
+        expect(
+          (await repository.loadFederatedDiscovery()).single.event.id,
+          externalBadge.id,
+        );
+      },
+    );
+  });
+
   group('loadPublicDefinitions', () {
     test(
       'keeps pinned catalogue definitions outside a flooded recency window',

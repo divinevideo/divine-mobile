@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -30,7 +32,11 @@ import '../../../helpers/url_launcher_test_double.dart';
 class _MockExploreBadgesCubit extends MockCubit<ExploreBadgesState>
     implements ExploreBadgesCubit {}
 
-class _MockBadgeRepository extends Mock implements BadgeRepository {}
+class _MockBadgeRepository extends Mock implements BadgeRepository {
+  @override
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async =>
+      throw const FunnelcakeNotConfiguredException();
+}
 
 void main() {
   setUpAll(
@@ -355,6 +361,19 @@ void main() {
       },
     );
 
+    testWidgets('shows a direct path from each badge to its videos', (
+      tester,
+    ) async {
+      when(() => cubit.state).thenReturn(
+        ExploreBadgesState(
+          status: ExploreBadgesStatus.loaded,
+          definitions: [_definition],
+        ),
+      );
+      await tester.pumpWidget(buildSubject());
+      expect(find.text(l10n.profileVideosLabel), findsOneWidget);
+    });
+
     testWidgets('an empty gallery offers a mouse-accessible retry', (
       tester,
     ) async {
@@ -645,7 +664,7 @@ void main() {
             ExploreBadgesState(
               status: ExploreBadgesStatus.loaded,
               definitions: [
-                for (var i = 0; i < 12; i++)
+                for (var i = 0; i < 24; i++)
                   Nip58BadgeDefinition(
                     event: _definition.event,
                     coordinate: '30009:$_issuer:group-$i',
@@ -723,6 +742,66 @@ void main() {
           find.text(BadgeCoordinate.parse(_definition.coordinate)!.toNaddr()),
           findsOneWidget,
         );
+      });
+
+      testWidgets('plays the selected clip using its exact event and author', (
+        tester,
+      ) async {
+        final videoId = 'a' * 64;
+        final author = 'b' * 64;
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            videoPreviews: {
+              _definition.coordinate: [
+                (
+                  id: videoId,
+                  pubkey: author,
+                  title: 'A community clip',
+                  thumbnail: '',
+                ),
+              ],
+            },
+          ),
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => Scaffold(
+                body: BlocProvider<ExploreBadgesCubit>.value(
+                  value: cubit,
+                  child: const ExploreBadgesView(),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: VideoDetailScreen.path,
+              builder: (_, state) => Scaffold(
+                body: Text(
+                  '${state.pathParameters['id']}:${state.uri.queryParameters['author']}',
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        final semantics = tester.ensureSemantics();
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('A community clip'));
+        await tester.pumpAndSettle();
+        semantics.dispose();
+        expect(find.text('$videoId:$author'), findsOneWidget);
       });
 
       testWidgets('refresh failure reset shows no duplicate snackbar', (

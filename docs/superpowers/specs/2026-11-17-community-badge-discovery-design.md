@@ -42,6 +42,10 @@ The user has approved the community-discovery direction and Lists inspiration. T
 - Keep the existing community subscription separate, including the notice that the subscription list is public. Subscribing never silently bulk-follows accounts and never confers badge membership.
 - Keep existing edit/award/revoke/delete ownership controls. Do not introduce self-join, invitations or new membership protocol.
 
+## Video-first discovery update
+
+Explore shows playable previews from accepted badge holders before badge management. The official Diviner of the Day, Week and Month awards lead, followed by other official badges and then community badges ranked by accepted holders and community follows. The gallery starts from one Funnelcake response. Configured external relays can add communities after the indexed page renders. The existing relay path remains available when the index is unavailable. Badge detail continues to expose the full video feed, people, follow and report actions.
+
 ## Discovery and architecture
 
 - Add a public discovery read to the owning badge_repository package. Remove Explore's exclusive dependency on the official issuer allowlist. Preserve the existing issuer-specific catalogue API for callers that genuinely need it.

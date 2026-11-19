@@ -1,4 +1,4 @@
-// ABOUTME: Public badge communities in an artwork-led discovery gallery.
+// ABOUTME: Explore badge communities and play clips from their members.
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -12,12 +12,18 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
+import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:text_sanitizer/text_sanitizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Discover community-issued badges without requiring an account.
@@ -138,7 +144,7 @@ class ExploreBadgesView extends StatelessWidget {
                 constraints.maxWidth < 360 ||
                     MediaQuery.textScalerOf(context).scale(14) > 20
                 ? 1
-                : 2;
+                : (constraints.maxWidth / 310).floor().clamp(2, 4);
             final loading =
                 isVisibilityPending ||
                 state.status == ExploreBadgesStatus.initial ||
@@ -152,7 +158,6 @@ class ExploreBadgesView extends StatelessWidget {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
                   if (onVisibilityRetry != null ||
                       (!isVisibilityPending &&
                           state.status == ExploreBadgesStatus.failure))
@@ -271,6 +276,8 @@ class ExploreBadgesView extends StatelessWidget {
                           : const SizedBox(height: 8),
                     ),
                   ),
+                  if (!loading)
+                    const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
                 ],
               ),
             );
@@ -293,14 +300,116 @@ class _BadgePreviewCard extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) cubit.loadPreview(coordinate);
     });
-    return BlocSelector<ExploreBadgesCubit, ExploreBadgesState, List<String>>(
-      selector: (state) => state.previews[coordinate] ?? const [],
-      builder: (context, members) => BadgeCommunityCard(
-        key: ValueKey(coordinate),
-        definition: definition,
-        memberPubkeys: members,
-        onTap: () => context.push<void>(
-          BadgeDetailScreen.pathFor(BadgeCoordinate.parse(coordinate)!),
+    final parsed = BadgeCoordinate.parse(coordinate)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        BlocSelector<
+          ExploreBadgesCubit,
+          ExploreBadgesState,
+          List<BadgeVideoPreview>
+        >(
+          selector: (state) => state.videoPreviews[coordinate] ?? const [],
+          builder: (context, videos) => _BadgeClips(videos: videos),
+        ),
+        BlocSelector<ExploreBadgesCubit, ExploreBadgesState, List<String>>(
+          selector: (state) => state.previews[coordinate] ?? const [],
+          builder: (context, members) => BadgeCommunityCard(
+            key: ValueKey(coordinate),
+            definition: definition,
+            memberPubkeys: members,
+            compactArtwork: true,
+            onTap: () => context.push<void>(BadgeDetailScreen.pathFor(parsed)),
+          ),
+        ),
+        DivineButton(
+          label: context.l10n.profileVideosLabel,
+          leadingIcon: DivineIconName.playCircle,
+          type: DivineButtonType.secondary,
+          onPressed: () =>
+              context.push<void>(BadgeVideosScreen.pathFor(parsed)),
+        ),
+      ],
+    );
+  }
+}
+
+class _BadgeClips extends ConsumerWidget {
+  const _BadgeClips({required this.videos});
+
+  final List<BadgeVideoPreview> videos;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visible = [
+      for (final video in videos)
+        if (!ref.watch(profileVanishedProvider(video.pubkey))) video,
+    ];
+    if (visible.isEmpty) return const SizedBox.shrink();
+    return Row(
+      spacing: 6,
+      children: [
+        for (var index = 0; index < visible.length; index++)
+          Expanded(
+            child: _BadgeClip(video: visible[index], index: index),
+          ),
+      ],
+    );
+  }
+}
+
+class _BadgeClip extends StatelessWidget {
+  const _BadgeClip({required this.video, required this.index});
+
+  final BadgeVideoPreview video;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = sanitizeUtf16(video.title).trim();
+    final label = title.isEmpty
+        ? context.l10n.profileVideoThumbnailLabel(index + 1)
+        : title;
+    return Semantics(
+      label: label,
+      button: true,
+      child: Material(
+        color: context.vineColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => VideoDetailRouteData(
+            id: video.id,
+            author: video.pubkey,
+          ).push<void>(context),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (isUsableNetworkImageUrl(video.thumbnail))
+                  VineCachedImage(
+                    imageUrl: video.thumbnail,
+                    memCacheWidth: 360,
+                  ),
+                Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.vineColors.surfaceContainerHigh,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: DivineIcon(
+                        icon: DivineIconName.playCircle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
