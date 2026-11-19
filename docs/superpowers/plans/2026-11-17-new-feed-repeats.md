@@ -4,8 +4,10 @@
 
 **Goal:** Keep watched videos visible in New, in publication order.
 
-**Architecture:** Change only the New path in VideosRepository. Cache, API and
-relay results share the same policy. Other feed filtering remains unchanged.
+**Architecture:** The repository keeps watched videos in New across cache, API,
+and relay reads. The Home feed starts New from a fresh first page on cold
+start, mode selection, and foreground refresh when due. Other feeds keep
+their resume windows and filtering.
 
 **Tech Stack:** Dart, Flutter test, mocktail.
 
@@ -25,7 +27,8 @@ relay results share the same policy. Other feed filtering remains unchanged.
 - Cached results must survive watching every video without an automatic refetch.
 - Refresh and session revalidation must retain watched recent posts.
 - New must load even when seen history cannot initialize.
-- Relay fallback must retain watched posts in chronological order.
+- Relay fallback sorts each returned window by publication time and uses
+  the raw revision clock for its continuation cursor.
 
 ## Task 1: Return watched videos through every New path
 

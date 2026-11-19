@@ -1622,30 +1622,49 @@ void main() {
         },
       );
 
-      test('relay top-up retains every row consumed by its cursor', () async {
-        final events = List.generate(
-          3,
-          (index) => _createVideoEvent(
-            id: index.toRadixString(16).padLeft(64, '0'),
-            pubkey: ''.padLeft(64, 'f'),
-            videoUrl: 'https://example.com/$index.mp4',
-            createdAt: 2000 - index * 100,
-          ),
-        );
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer((call) async {
-          final boundary =
-              (call.positionalArguments.first as List<Filter>).single.until;
-          return boundary == null
-              ? [events.first, events.first]
-              : events.sublist(1);
-        });
+      test(
+        'relay top-up retains rows and orders them by publication',
+        () async {
+          final events = List.generate(
+            3,
+            (index) => _createVideoEvent(
+              id: index.toRadixString(16).padLeft(64, '0'),
+              pubkey: ''.padLeft(64, 'f'),
+              videoUrl: 'https://example.com/$index.mp4',
+              createdAt: 2000 - index * 100,
+              extraTags: index == 0
+                  ? const [
+                      ['published_at', '100'],
+                    ]
+                  : const [],
+            ),
+          );
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+            call,
+          ) async {
+            final boundary =
+                (call.positionalArguments.first as List<Filter>).single.until;
+            return boundary == null
+                ? [events.first, events.first]
+                : events.sublist(1);
+          });
 
-        final result = await repository.getNewVideos(limit: 2);
+          final result = await repository.getNewVideos(limit: 2);
 
-        expect(result.videos.map((video) => video.id), events.map((e) => e.id));
-        expect(result.paginationCursor, 'relay:1799');
-        expect(result.hasMore, isTrue);
-      });
+          expect(result.videos.map((video) => video.createdAt), [
+            1900,
+            1800,
+            100,
+          ]);
+          expect(result.videos.map((video) => video.id), [
+            events[1].id,
+            events[2].id,
+            events[0].id,
+          ]);
+          expect(result.paginationCursor, 'relay:1799');
+          expect(result.hasMore, isTrue);
+        },
+      );
 
       test('relay top-up stops after an exhausted raw page', () async {
         final event = _createVideoEvent(

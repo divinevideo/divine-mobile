@@ -1242,7 +1242,7 @@ class VideosRepository {
       final events = await _nostrClient.queryEvents([filter]);
       if (events.isEmpty) break;
 
-      final videos = _transformAndFilter(events);
+      final videos = _transformAndFilter(events, sortByCreatedAt: false);
       _appendUniqueVideos(visible, videos, seenVideoKeys: seenVideoKeys);
       if (events.length < limit) break;
 
@@ -1251,6 +1251,10 @@ class VideosRepository {
       cursor = nextCursor;
       nextBefore = nextCursor;
     }
+
+    // Raw batches are ordered by revision time, including edits to old posts.
+    // Sort the complete returned page by original publication time.
+    visible.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     // The boundary advances past every raw event consumed, including filtered
     // revisions. Never derive it from VideoEvent.createdAt (publication time),
