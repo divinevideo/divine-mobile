@@ -2557,6 +2557,7 @@ void _runMethodChannelTests() {
           budget: const Duration(milliseconds: 6300),
           modeName: 'Capture',
           isShutterActive: true,
+          isShutterEnabled: false,
           stillShutterCount: 3,
         ),
       );
@@ -2569,6 +2570,7 @@ void _runMethodChannelTests() {
         'budgetMs': 6300,
         'modeName': 'Capture',
         'shutterActive': true,
+        'shutterEnabled': false,
         'stillShutterCount': 3,
       });
     });
