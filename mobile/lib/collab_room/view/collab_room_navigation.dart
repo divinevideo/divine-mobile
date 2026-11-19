@@ -5,8 +5,10 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart' show ScaffoldMessenger, SnackBar;
 import 'package:openvine/collab_room/collab_room_layout.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -18,6 +20,35 @@ import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Saves the camera session the account left unfinished as a draft, before a
+/// room flow takes the camera over and starts from an empty one: otherwise
+/// its clips would only be left in the clip library, out of their session.
+///
+/// Returns whether the room flow may go on: when there was nothing to keep,
+/// or it was kept. A save that failed stops the flow rather than lose it.
+@visibleForTesting
+Future<bool> keepUnfinishedCameraSession(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  if (ref.read(clipManagerProvider).clips.isEmpty) return true;
+  final outcome = await ref
+      .read(videoEditorProvider.notifier)
+      .saveAsDraft(enforceCreateNewDraft: true);
+  if (!context.mounted) return false;
+  final kept = outcome == DraftSaveOutcome.saved;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        kept
+            ? context.l10n.uploadFailureSheetSavedToDraftsSnackbar
+            : context.l10n.videoMetadataFailedToSaveSnackbar,
+      ),
+    ),
+  );
+  return kept;
+}
+
 /// Opens the camera to film the account's part of [room], cut to the shape
 /// of its cell. Returns once the part flow ends: the part was handed in, or
 /// the camera was closed.
@@ -28,6 +59,8 @@ Future<void> openCollabRoomPartRecorder(
 ) async {
   final cellAspectRatio = room.cellAspectRatioOf(room.ownerPubkey);
   if (cellAspectRatio == null) return;
+  if (!await keepUnfinishedCameraSession(context, ref)) return;
+  if (!context.mounted) return;
   // A part is a session of its own: start from an empty camera.
   await ref
       .read(videoPublishProvider.notifier)
@@ -61,6 +94,8 @@ Future<void> openCollabRoomPost(
   CollabRoom room,
   DivineVideoClip clip,
 ) async {
+  if (!await keepUnfinishedCameraSession(context, ref)) return;
+  if (!context.mounted) return;
   await ref
       .read(videoPublishProvider.notifier)
       .clearAll(keepAutosavedDraft: true);
