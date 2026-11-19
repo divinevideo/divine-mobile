@@ -1252,6 +1252,7 @@ class VideoEventPublisher {
     if (vineId == null || vineId.isEmpty) return null;
     return publishSubtitleTrack(
       vineId: vineId,
+      videoKind: video.referenceKind,
       vttContent: vttContent,
       blossomUrl: blossomUrl,
       lang: lang,
@@ -1273,19 +1274,21 @@ class VideoEventPublisher {
     required String vttContent,
     required String blossomUrl,
     String lang = 'en',
+    int? videoKind,
   }) async {
     final pubkey = _authService?.currentPublicKeyHex;
     if (pubkey == null || vineId.isEmpty) return null;
 
     final dTag = 'subtitles:$vineId';
-    final videoKind = NIP71VideoKinds.getPreferredAddressableKind();
+    final parentKind =
+        videoKind ?? NIP71VideoKinds.getPreferredAddressableKind();
 
     final event = await _authService?.createAndSignEvent(
       kind: NIP71VideoKinds.subtitleEventKind,
       content: vttContent,
       tags: [
         ['d', dTag],
-        ['a', '$videoKind:$pubkey:$vineId'],
+        ['a', '$parentKind:$pubkey:$vineId'],
         ['url', blossomUrl],
         ['m', 'text/vtt'],
         ['l', lang],

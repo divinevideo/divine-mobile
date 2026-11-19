@@ -933,7 +933,7 @@ void main() {
         );
 
         final ref = await publisher.publishSubtitleEvent(
-          video: existingEvent,
+          video: existingEvent.copyWith(eventKind: 34235),
           vttContent: 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nhi\n',
           blossomUrl: 'https://media.divine.video/abc123',
         );
@@ -949,6 +949,7 @@ void main() {
         ).captured;
         expect(captured[0], equals(39307));
         final tags = (captured[2] as List).cast<List<String>>();
+        expect(tags, contains(equals(['a', '34235:$testPubkey:test-vine-id'])));
         expect(
           _containsTag(tags, ['d', 'subtitles:test-vine-id']),
           isTrue,
