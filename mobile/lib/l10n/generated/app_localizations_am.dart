@@ -8971,6 +8971,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'ምጥጥን ቀያይር';
 
   @override
+  String get videoRecorderRailFlashLabel => 'ብልጭታ';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'ካሜራ ቀይር';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'ምጥጥን';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'ሰዓት ቆጣሪ';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Ghost ፍሬም';
+
+  @override
+  String get videoRecorderRailGridLabel => 'ፍርግርግ';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'ሁለት ካሜራ';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'የካሜራ አማራጮች';
+
+  @override
   String get videoRecorderStabilizationLabel => 'ማረጋጊያ';
 
   @override

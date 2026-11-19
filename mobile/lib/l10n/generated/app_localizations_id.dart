@@ -9089,6 +9089,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Ganti rasio aspek';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Balik';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Rasio aspek';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Frame hantu';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Kamera ganda';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Opsi kamera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisasi';
 
   @override

@@ -9397,6 +9397,30 @@ class AppLocalizationsRo extends AppLocalizations {
       'Schimbă raportul de aspect';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Bliț';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Întoarce';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Raport de aspect';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Temporizator';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Cadru fantomă';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grilă';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Cameră dublă';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Opțiuni cameră';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilizare';
 
   @override

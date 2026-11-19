@@ -4,10 +4,10 @@ appId: co.openvine.app.staging
 #control rail (capture), drive every control and leave each one
 #back on its default.
 #
-# Three of the six controls are unconditional and are shared with every other
-# mode that renders a rail, so they live in their own utils and this file
-# sequences them. The ghost-frame toggle is shared with stop-motion and
-# classic, so it has its own util too. Timer and stabilization are rendered
+# Three of the seven controls are unconditional and are shared with every
+# other mode that renders a rail, so they live in their own utils and this file
+# sequences them. The ghost-frame and grid toggles are shared with stop-motion
+# and classic, so they have their own utils too. Timer and stabilization are rendered
 # only by the modes that declare `supportsCountdownTimer` /
 # `supportsVideoStabilization`, so they stay here. The color mask and dual
 # camera are not driven: whether they show depends on the device, which has to
@@ -37,14 +37,24 @@ appId: co.openvine.app.staging
 # than on the code. A guarded block prints "SKIPPED" in the run output, so a
 # skipped control is visible rather than silently counted as covered.
 #
+# The rail opens folded, showing only flash, the lens switch and aspect ratio,
+# so this unfolds it first and folds it back last: the caller gets the rail
+# in the state the recorder opened it in.
+#
 # Leaves no mode assertion behind — the caller adds its own.
 #Steps:
+# 0. Unfold the rail
 # 1. Aspect ratio: Vertical -> Square -> Vertical
 # 2. Timer: Off -> 3 seconds -> 10 seconds -> Off
 # 3. Camera: Back -> Front -> Back
 # 4. Flash (if present): Off -> On -> Auto -> Off
 # 5. Stabilization (if supported): Standard -> Off -> Standard
-# 6. Ghost frame: off -> on -> off
+# 6. Grid: on -> off -> on
+# 7. Ghost frame: off -> on -> off
+# 8. Fold the rail
+
+# 0. Timer, stabilization and the ghost frame are only listed unfolded.
+- runFlow: unfoldCaptureRail.yaml
 
 # 1. Aspect ratio flips between two states.
 - runFlow: driveAspectRatioControl.yaml
@@ -134,10 +144,19 @@ appId: co.openvine.app.staging
             text: ".*Off.*"
           timeout: 10000
 
-# 6. Ghost frame (onion-skin), deliberately last. Each tap raises a 4-second
+# 6. Grid overlay. Its precondition, a grid that starts on, holds from a
+# fresh install: the preference defaults to on, and capture runs before the
+# stop-motion and classic flows that also toggle it.
+- runFlow: driveGridControl.yaml
+
+# 7. Ghost frame (onion-skin), deliberately last. Each tap raises a 4-second
 # confirmation snackbar that floats over the bottom of the screen, which is
 # where the stabilization sheet in step 5 opens its options.
 - runFlow: driveGhostFrameControl.yaml
+
+# 8. Fold the rail again. The button that does it is the last control on the
+# unfolded rail, well above where the ghost frame's banner floats.
+- runFlow: foldCaptureRail.yaml
 
 # Let the banner go before handing over: it also floats over the record and
 # delete buttons the recording tests tap next.

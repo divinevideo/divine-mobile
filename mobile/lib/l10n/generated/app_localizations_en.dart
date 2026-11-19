@@ -9277,6 +9277,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Toggle aspect ratio';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Flip';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Aspect ratio';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Ghost frame';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grid';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dual camera';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Camera options';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilization';
 
   @override

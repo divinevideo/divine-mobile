@@ -9299,6 +9299,30 @@ class AppLocalizationsIt extends AppLocalizations {
       'Cambia rapporto d\'aspetto';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Capovolgi';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Rapporto d\'aspetto';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Fotogramma fantasma';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Griglia';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Doppia fotocamera';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Opzioni fotocamera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilizzazione';
 
   @override

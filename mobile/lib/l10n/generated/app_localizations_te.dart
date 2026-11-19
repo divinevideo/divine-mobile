@@ -9442,6 +9442,30 @@ class AppLocalizationsTe extends AppLocalizations {
       'కారక నిష్పత్తిని టోగుల్ చేయండి';
 
   @override
+  String get videoRecorderRailFlashLabel => 'ఫ్లాష్';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'ఫ్లిప్';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'కారక నిష్పత్తి';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'టైమర్';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'గోస్ట్ ఫ్రేమ్';
+
+  @override
+  String get videoRecorderRailGridLabel => 'గ్రిడ్';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'డ్యూయల్ కెమెరా';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'కెమెరా ఎంపికలు';
+
+  @override
   String get videoRecorderStabilizationLabel => 'స్థిరీకరణ';
 
   @override

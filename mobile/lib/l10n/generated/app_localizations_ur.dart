@@ -9184,6 +9184,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'ایسپیکٹ ریشو ٹوگل کریں';
 
   @override
+  String get videoRecorderRailFlashLabel => 'فلیش';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'پلٹیں';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'ایسپیکٹ ریشو';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'ٹائمر';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'گھوسٹ فریم';
+
+  @override
+  String get videoRecorderRailGridLabel => 'گرڈ';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'ڈوئل کیمرہ';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'کیمرہ کے اختیارات';
+
+  @override
   String get videoRecorderStabilizationLabel => 'استحکام';
 
   @override

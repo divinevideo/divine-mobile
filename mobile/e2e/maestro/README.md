@@ -215,25 +215,34 @@ bar, its own action rows, and no record button at all.
 | `camera_timer_button` | ✅ | ✅ | — |
 | `camera_stabilization_button` | ✅ | — | — |
 | `camera_ghost_frame_button` | ✅ | ✅ | ✅ |
-| `camera_grid_button` | — | ✅ | ✅ |
+| `camera_grid_button` | ✅ | ✅ | ✅ |
 | `camera_dual_camera_button` | device | — | — |
 | `camera_color_mask_button` | device | — | — |
+| `camera_rail_options_button` | ✅ | ✅ | — |
+
+The capture stack's rail opens **folded**: flash, the lens switch, aspect
+ratio and `camera_rail_options_button`, which unfolds it to list every other
+control and folds it again. The rest are not built while it is folded, so a
+flow taps the options button (`utils/unfoldCaptureRail`) before it drives or
+asserts one of them, and folds the rail back (`utils/foldCaptureRail`) before
+it hands over. A take or a stop-motion interval folds it as well.
 
 The color mask button is on capture's rail only where the renderer can key the
 viewfinder live, and the dual-camera button only where the device can run both
 cameras at once, so no assert mentions either. While the mask is on, the rail
 also drops stabilization, the ghost frame and dual camera.
 
-Stop-motion's rail and capture's **overlap without either containing
-the other** — both have the timer and the ghost frame, but only capture has
-stabilization and only stop-motion has the grid — so each assert already fails
-on the other's viewfinder on the rail alone. What settles
+Stop-motion's rail is **contained in capture's** — both have the timer, the
+ghost frame and the grid, and only capture has stabilization — so
+`assertCaptureMode` fails on a stop-motion viewfinder on the rail alone, and
+`assertStopMotionMode` fails on a capture one through its stabilization leak
+guard. What settles
 which viewfinder is up before either gets that far is the mode wheel's
 `selected` state, asserted on the first line of all three files.
 
 So the lines those two asserts carry — `assertStopMotionMode` pinning
-stabilization and the sound chip absent, `assertCaptureMode` pinning grid and
-the budget absent — are **leak guards**, not mode separators: they fail when a
+stabilization and the sound chip absent, `assertCaptureMode` pinning the
+budget absent — are **leak guards**, not mode separators: they fail when a
 control starts rendering in a mode that does not declare it, which nothing else
 in the suite would catch. `camera_classic_shutter`, pinned absent by both
 capture-stack asserts, is the same kind of line: the record button is already
@@ -246,9 +255,9 @@ rail*, the two capture-stack modes drive them with the same three files —
 `utils/driveAspectRatioControl`, `utils/driveLensControl`,
 `utils/driveFlashControl`. Capture wraps those in
 `utils/driveCaptureRail.yaml`, which adds the stabilization control it alone
-renders, the timer and the ghost toggle. The grid toggle (`supportGridLines`)
-is shared by stop-motion and classic, and the ghost toggle
-(`supportsGhostFrame`) by those two plus capture, so they are
+renders, the timer, the grid and the ghost toggle. The grid toggle
+(`supportGridLines`) and the ghost toggle (`supportsGhostFrame`) are shared by
+capture, stop-motion and classic, so they are
 per-control utils on the same rule — `utils/driveGridControl`,
 `utils/driveGhostFrameControl`. Each mode's
 `…Controls` test is a sequence of those utils plus its own mode assert, and

@@ -9327,6 +9327,30 @@ class AppLocalizationsFr extends AppLocalizations {
       'Changer le format d\'image';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Retourner';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Format d\'image';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Minuteur';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Cadre fantôme';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grille';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Double caméra';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Options de la caméra';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisation';
 
   @override

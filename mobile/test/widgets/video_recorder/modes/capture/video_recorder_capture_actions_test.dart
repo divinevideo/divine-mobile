@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:bloc_test/bloc_test.dart';
@@ -66,6 +67,9 @@ void main() {
       List<DivineVideoClip>? clips,
       bool isDualCameraSupported = false,
       bool isDualCameraEnabled = false,
+      // Unfolded by default: most groups below drive a control that only the
+      // unfolded rail lists.
+      bool isActionRailExpanded = true,
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -91,6 +95,7 @@ void main() {
           canRecord: true,
           isDualCameraSupported: isDualCameraSupported,
           isDualCameraEnabled: isDualCameraEnabled,
+          isActionRailExpanded: isActionRailExpanded,
         ),
       );
 
@@ -119,19 +124,20 @@ void main() {
         expect(find.byType(VideoRecorderCaptureActions), findsOneWidget);
       });
 
-      testWidgets('renders six action buttons', (tester) async {
+      testWidgets('renders eight buttons unfolded', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        // Flash, timer, ghost frame, aspect ratio, switch camera, stabilization
-        expect(find.byType(InkWell), findsNWidgets(6));
+        // Flash, switch camera, aspect ratio, timer, ghost frame, grid,
+        // stabilization, and the button that folds the rail.
+        expect(find.byType(InkWell), findsNWidgets(8));
       });
 
       testWidgets('renders Tooltip for each button', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(Tooltip), findsNWidgets(6));
+        expect(find.byType(Tooltip), findsNWidgets(8));
       });
 
       testWidgets('renders a baked icon for each button', (tester) async {
@@ -140,7 +146,234 @@ void main() {
 
         // Baked once instead of a colour-filtered SVG re-rasterized with
         // every camera frame.
-        expect(find.byType(ShadowedDivineIcon), findsNWidgets(6));
+        expect(find.byType(ShadowedDivineIcon), findsNWidgets(8));
+      });
+    });
+
+    group('folding', () {
+      Finder optionsButton() =>
+          findByTooltip(l10n.videoRecorderRailMoreOptionsLabel);
+
+      double top(WidgetTester tester, Finder finder) =>
+          tester.getCenter(finder).dy;
+
+      testWidgets(
+        'folded, offers flash, lens and aspect ratio, then the options button',
+        (tester) async {
+          await tester.pumpWidget(buildWidget(isActionRailExpanded: false));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(InkWell), findsNWidgets(4));
+          final flash = top(
+            tester,
+            findByTooltip(l10n.videoRecorderToggleFlashLabel),
+          );
+          final lens = top(
+            tester,
+            findByTooltip(l10n.videoRecorderSwitchCameraLabel),
+          );
+          final ratio = top(
+            tester,
+            findByTooltip(l10n.videoRecorderToggleAspectRatioLabel),
+          );
+          final options = top(tester, optionsButton());
+          expect(flash, lessThan(lens));
+          expect(lens, lessThan(ratio));
+          expect(ratio, lessThan(options));
+        },
+      );
+
+      testWidgets('folded, shows no names', (tester) async {
+        await tester.pumpWidget(buildWidget(isActionRailExpanded: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoRecorderRailFlashLabel), findsNothing);
+        expect(find.text(l10n.videoRecorderRailFlipLabel), findsNothing);
+        expect(
+          find.text(l10n.videoRecorderRailAspectRatioLabel),
+          findsNothing,
+        );
+      });
+
+      testWidgets('unfolded, names every control', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        for (final name in [
+          l10n.videoRecorderRailFlashLabel,
+          l10n.videoRecorderRailFlipLabel,
+          l10n.videoRecorderRailAspectRatioLabel,
+          l10n.videoRecorderRailTimerLabel,
+          l10n.videoRecorderRailGhostFrameLabel,
+          l10n.videoRecorderRailGridLabel,
+          l10n.videoRecorderStabilizationLabel,
+        ]) {
+          expect(find.text(name), findsOneWidget, reason: name);
+        }
+      });
+
+      testWidgets('unfolded, lists the options button last', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        final ratio = top(
+          tester,
+          findByTooltip(l10n.videoRecorderToggleAspectRatioLabel),
+        );
+        final timer = top(
+          tester,
+          findByTooltip(l10n.videoRecorderCycleTimerLabel),
+        );
+        final stabilization = top(
+          tester,
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
+        );
+        final options = top(tester, optionsButton());
+        expect(ratio, lessThan(timer));
+        expect(stabilization, lessThan(options));
+      });
+
+      testWidgets('the options button unfolds the rail', (tester) async {
+        await tester.pumpWidget(buildWidget(isActionRailExpanded: false));
+        await tester.pumpAndSettle();
+
+        await tester.tap(optionsButton());
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderActionRailToggled()),
+        ).called(1);
+      });
+
+      testWidgets('the options button folds an unfolded rail', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(optionsButton());
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderActionRailToggled()),
+        ).called(1);
+      });
+
+      testWidgets("tapping a control's name triggers it", (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.videoRecorderRailFlashLabel));
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderFlashToggled()),
+        ).called(1);
+      });
+
+      testWidgets('comes back folded after a take', (tester) async {
+        final widget = buildWidget();
+        final unfolded = recorderBloc.state;
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        whenListen(recorderBloc, states.stream, initialState: unfolded);
+        await tester.pumpWidget(widget);
+        await tester.pumpAndSettle();
+        expect(findByTooltip(l10n.videoRecorderCycleTimerLabel), findsOne);
+
+        // What the recorder emits for a take: the start folds the rail.
+        states
+          ..add(
+            unfolded.copyWith(
+              recordingState: VideoRecorderState.recording,
+              isStartingRecording: true,
+              isActionRailExpanded: false,
+            ),
+          )
+          ..add(
+            unfolded.copyWith(
+              recordingState: VideoRecorderState.recording,
+              isStartingRecording: false,
+              isActionRailExpanded: false,
+            ),
+          )
+          ..add(unfolded.copyWith(isActionRailExpanded: false));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(InkWell), findsNWidgets(4));
+        expect(findByTooltip(l10n.videoRecorderCycleTimerLabel), findsNothing);
+        expect(find.text(l10n.videoRecorderRailFlashLabel), findsNothing);
+      });
+
+      for (final expanded in [false, true]) {
+        testWidgets('announces the rail as ${expanded ? '' : 'not '}unfolded', (
+          tester,
+        ) async {
+          final handle = tester.ensureSemantics();
+          await tester.pumpWidget(buildWidget(isActionRailExpanded: expanded));
+          await tester.pumpAndSettle();
+
+          final node = tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.cameraRailOptionsButton),
+          );
+          expect(node.label, l10n.videoRecorderRailMoreOptionsLabel);
+          expect(node.flagsCollection.isButton, isTrue);
+          expect(
+            node.flagsCollection.isExpanded,
+            expanded ? Tristate.isTrue : Tristate.isFalse,
+          );
+
+          handle.dispose();
+        });
+      }
+
+      // The stabilization name is its label word for word, so a name leaking
+      // into the semantics tree would make it read twice.
+      testWidgets('keeps the names out of what a screen reader reads', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(isVideoStabilizationSupported: true),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(l10n.videoRecorderStabilizationLabel),
+          findsOneWidget,
+        );
+
+        final node = tester.getSemantics(
+          find.bySemanticsIdentifier(SemanticIds.cameraStabilizationButton),
+        );
+        expect(node.label, l10n.videoRecorderStabilizationLabel);
+
+        handle.dispose();
+      });
+
+      testWidgets('shows the names at once under reduced motion', (
+        tester,
+      ) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        await tester.pumpWidget(buildWidget());
+
+        final fade = tester.widget<Opacity>(
+          find.ancestor(
+            of: find.text(l10n.videoRecorderRailFlashLabel),
+            matching: find.byType(Opacity),
+          ),
+        );
+        expect(fade.opacity, 1);
+      });
+
+      testWidgets('fades the names in otherwise', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final fade = tester.widget<Opacity>(
+          find.ancestor(
+            of: find.text(l10n.videoRecorderRailFlashLabel),
+            matching: find.byType(Opacity),
+          ),
+        );
+        expect(fade.opacity, 0);
       });
     });
 
@@ -536,13 +769,13 @@ void main() {
     });
 
     group('grid lines button', () {
-      testWidgets('is hidden in capture mode', (tester) async {
+      testWidgets('is shown in capture mode', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
         expect(
           findByTooltip(l10n.videoRecorderToggleGridLabel),
-          findsNothing,
+          findsOneWidget,
         );
       });
 
@@ -802,9 +1035,11 @@ void main() {
           SemanticIds.cameraFlashButton,
           SemanticIds.cameraTimerButton,
           SemanticIds.cameraGhostFrameButton,
+          SemanticIds.cameraGridButton,
           SemanticIds.cameraAspectRatioButton,
           SemanticIds.cameraSwitchCameraButton,
           SemanticIds.cameraStabilizationButton,
+          SemanticIds.cameraRailOptionsButton,
         ]) {
           expect(
             find.bySemanticsIdentifier(identifier),
@@ -832,6 +1067,7 @@ void main() {
           SemanticIds.cameraTimerButton,
           SemanticIds.cameraGhostFrameButton,
           SemanticIds.cameraGridButton,
+          SemanticIds.cameraRailOptionsButton,
         ]) {
           expect(
             find.bySemanticsIdentifier(identifier),
@@ -843,27 +1079,10 @@ void main() {
         handle.dispose();
       });
 
-      // assertCaptureMode and assertStopMotionMode each pin the other mode's
-      // controls absent, so a control that starts rendering in the wrong mode
-      // fails an E2E run rather than passing quietly. Nothing else here would
-      // catch it — every other test in this file asserts presence.
-      testWidgets('keeps the stop-motion grid out of capture mode', (
-        tester,
-      ) async {
-        final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          buildWidget(isVideoStabilizationSupported: true),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          find.bySemanticsIdentifier(SemanticIds.cameraGridButton),
-          findsNothing,
-        );
-
-        handle.dispose();
-      });
-
+      // assertStopMotionMode pins stabilization absent, so a control that
+      // starts rendering in the wrong mode fails an E2E run rather than
+      // passing quietly. Nothing else here would catch it — every other test
+      // in this file asserts presence.
       testWidgets('keeps stabilization out of stop-motion mode', (
         tester,
       ) async {

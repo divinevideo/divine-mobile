@@ -13,6 +13,26 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_chroma_key_settings.dart';
 
+/// Width of the pill behind the rail's icons: each icon is 24 wide with 8 of
+/// padding around it, and the pill leaves 4 on either side.
+const double _railPillWidth = 4 + 8 + 24 + 8 + 4;
+
+/// How long the rail takes to unfold or fold, and its names to fade in.
+const Duration _railAnimationDuration = Duration(milliseconds: 220);
+
+/// Shadow under the controls' names, so they stay readable over a bright
+/// viewfinder.
+const List<Shadow> _railCaptionShadows = [
+  Shadow(color: VineTheme.scrim50, blurRadius: 6),
+  Shadow(color: VineTheme.shadow25, offset: Offset(0, 1), blurRadius: 2),
+];
+
+/// The camera controls on the right edge of the capture viewfinder.
+///
+/// Folded, the rail offers flash, lens and aspect ratio, and a fourth button
+/// that unfolds it. Unfolded, it lists every control the mode offers, each
+/// with its name next to the icon, and the unfold button moves to the bottom
+/// to fold it again. A take or a stop-motion interval folds it as well.
 class VideoRecorderCaptureActions extends ConsumerWidget {
   const VideoRecorderCaptureActions({super.key});
 
@@ -30,8 +50,9 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         isShutterActive: b.state.isShutterActive,
         hasRecordingInFlight: b.state.hasRecordingInFlight,
         showGridLines: b.state.showGridLines,
+        isRailExpanded: b.state.isActionRailExpanded,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
-        capturesStills: b.state.recorderMode.capturesStills,
+        supportsGrid: b.state.recorderMode.supportGridLines,
         supportsGhostFrame: b.state.supportsGhostFrame,
         supportsStabilization: b.state.supportsVideoStabilization,
         offersChromaKey: b.state.offersChromaKey,
@@ -40,6 +61,66 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
       ),
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
+    // Only listed while the rail is unfolded, so they always show their name.
+    final moreOptions = <Widget>[
+      if (state.supportsTimer)
+        _RailButton(
+          key: const ValueKey(SemanticIds.cameraTimerButton),
+          icon: state.timer.icon,
+          label: l10n.videoRecorderCycleTimerLabel,
+          caption: l10n.videoRecorderRailTimerLabel,
+          identifier: SemanticIds.cameraTimerButton,
+          value: _timerDurationValue(l10n, state.timer),
+          onTap: () => context.read<VideoRecorderBloc>().add(
+            const VideoRecorderTimerCycled(),
+          ),
+        ),
+      if (state.supportsGhostFrame)
+        const _GhostFrameButton(
+          key: ValueKey(SemanticIds.cameraGhostFrameButton),
+        ),
+      if (state.supportsGrid)
+        _RailButton(
+          key: const ValueKey(SemanticIds.cameraGridButton),
+          icon: .gridNine,
+          label: l10n.videoRecorderToggleGridLabel,
+          caption: l10n.videoRecorderRailGridLabel,
+          identifier: SemanticIds.cameraGridButton,
+          toggled: state.showGridLines,
+          onTap: () => context.read<VideoRecorderBloc>().add(
+            const VideoRecorderGridLinesToggled(),
+          ),
+        ),
+      if (state.supportsDualCamera)
+        _RailButton(
+          key: const ValueKey(SemanticIds.cameraDualCameraButton),
+          icon: .pictureInPicture,
+          label: l10n.videoRecorderToggleDualCameraLabel,
+          caption: l10n.videoRecorderRailDualCameraLabel,
+          identifier: SemanticIds.cameraDualCameraButton,
+          toggled: state.isDualCameraEnabled,
+          // Rebuilding the camera session ends a take, so the recorder
+          // refuses it while one is in flight.
+          onTap: !state.hasRecordingInFlight
+              ? () => context.read<VideoRecorderBloc>().add(
+                  const VideoRecorderDualCameraToggled(),
+                )
+              : null,
+        ),
+      // Dual capture runs without stabilization; the saved mode returns with
+      // one camera.
+      if (state.supportsStabilization && !state.isDualCameraEnabled)
+        const _StabilizationButton(
+          key: ValueKey(SemanticIds.cameraStabilizationButton),
+        ),
+      if (state.offersChromaKey)
+        const _ColorMaskButton(
+          key: ValueKey(SemanticIds.cameraColorMaskButton),
+        ),
+    ];
+    final isExpanded = state.isRailExpanded && moreOptions.isNotEmpty;
 
     return SafeArea(
       top: false,
@@ -50,98 +131,119 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 220),
           opacity: state.isShutterActive ? 0 : 1,
-          child: Container(
-            margin: const .symmetric(horizontal: 16),
-            padding: const .symmetric(vertical: 12, horizontal: 4),
-            decoration: ShapeDecoration(
-              color: VineTheme.scrim35,
-              shape: RoundedRectangleBorder(borderRadius: .circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: .min,
-              spacing: 8,
+          child: Padding(
+            padding: const .only(right: 16),
+            child: Stack(
               children: [
-                _IconButton(
-                  icon: state.flashMode.icon,
-                  label: l10n.videoRecorderToggleFlashLabel,
-                  identifier: SemanticIds.cameraFlashButton,
-                  value: _flashModeValue(l10n, state.flashMode),
-                  onTap: state.hasFlash
-                      ? () => context.read<VideoRecorderBloc>().add(
-                          const VideoRecorderFlashToggled(),
-                        )
-                      : null,
-                ),
-                if (state.supportsTimer)
-                  _IconButton(
-                    icon: state.timer.icon,
-                    label: l10n.videoRecorderCycleTimerLabel,
-                    identifier: SemanticIds.cameraTimerButton,
-                    value: _timerDurationValue(l10n, state.timer),
-                    onTap: () => context.read<VideoRecorderBloc>().add(
-                      const VideoRecorderTimerCycled(),
+                // Behind the icons only: the names sit on the viewfinder.
+                const Positioned(
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: _railPillWidth,
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: VineTheme.scrim35,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: .all(.circular(20)),
+                      ),
                     ),
                   ),
-                if (state.supportsGhostFrame) const _GhostFrameButton(),
-                if (state.capturesStills)
-                  _IconButton(
-                    icon: .gridNine,
-                    label: l10n.videoRecorderToggleGridLabel,
-                    identifier: SemanticIds.cameraGridButton,
-                    toggled: state.showGridLines,
-                    onTap: () => context.read<VideoRecorderBloc>().add(
-                      const VideoRecorderGridLinesToggled(),
+                ),
+                AnimatedSize(
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : _railAnimationDuration,
+                  curve: Curves.easeOutCubic,
+                  alignment: .topRight,
+                  child: Padding(
+                    // Leaves room for the names' shadow, which the animation
+                    // would clip otherwise.
+                    padding: const .fromLTRB(16, 12, 0, 12),
+                    child: Column(
+                      mainAxisSize: .min,
+                      crossAxisAlignment: .end,
+                      spacing: 8,
+                      children: [
+                        _RailButton(
+                          key: const ValueKey(SemanticIds.cameraFlashButton),
+                          icon: state.flashMode.icon,
+                          label: l10n.videoRecorderToggleFlashLabel,
+                          caption: isExpanded
+                              ? l10n.videoRecorderRailFlashLabel
+                              : null,
+                          identifier: SemanticIds.cameraFlashButton,
+                          value: _flashModeValue(l10n, state.flashMode),
+                          onTap: state.hasFlash
+                              ? () => context.read<VideoRecorderBloc>().add(
+                                  const VideoRecorderFlashToggled(),
+                                )
+                              : null,
+                        ),
+                        _RailButton(
+                          key: const ValueKey(
+                            SemanticIds.cameraSwitchCameraButton,
+                          ),
+                          icon: .arrowsClockwise,
+                          label: l10n.videoRecorderSwitchCameraLabel,
+                          caption: isExpanded
+                              ? l10n.videoRecorderRailFlipLabel
+                              : null,
+                          identifier: SemanticIds.cameraSwitchCameraButton,
+                          value: DivineCameraLens.allCamerasFaceUser
+                              ? null
+                              : state.isFrontCamera
+                              ? l10n.videoRecorderCameraValueFront
+                              : l10n.videoRecorderCameraValueBack,
+                          // The recorder refuses a flip while a take starts
+                          // or finishes, so show it disabled instead of
+                          // dropping the tap.
+                          onTap:
+                              state.canSwitchCamera &&
+                                  !state.hasRecordingInFlight
+                              ? () => context.read<VideoRecorderBloc>().add(
+                                  const VideoRecorderCameraSwitched(),
+                                )
+                              : null,
+                        ),
+                        _RailButton(
+                          key: const ValueKey(
+                            SemanticIds.cameraAspectRatioButton,
+                          ),
+                          icon: state.aspectRatio == .square
+                              ? .cropSquare
+                              : .cropPortrait,
+                          label: l10n.videoRecorderToggleAspectRatioLabel,
+                          caption: isExpanded
+                              ? l10n.videoRecorderRailAspectRatioLabel
+                              : null,
+                          identifier: SemanticIds.cameraAspectRatioButton,
+                          value: _aspectRatioValue(l10n, state.aspectRatio),
+                          onTap: !hasClips
+                              ? () => context.read<VideoRecorderBloc>().add(
+                                  const VideoRecorderAspectRatioToggled(),
+                                )
+                              : null,
+                        ),
+                        if (isExpanded) ...moreOptions,
+                        if (moreOptions.isNotEmpty)
+                          _RailButton(
+                            key: const ValueKey(
+                              SemanticIds.cameraRailOptionsButton,
+                            ),
+                            icon: .caretDown,
+                            label: l10n.videoRecorderRailMoreOptionsLabel,
+                            identifier: SemanticIds.cameraRailOptionsButton,
+                            expanded: isExpanded,
+                            iconTurns: isExpanded ? 0.5 : 0,
+                            onTap: () => context.read<VideoRecorderBloc>().add(
+                              const VideoRecorderActionRailToggled(),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                _IconButton(
-                  icon: state.aspectRatio == .square
-                      ? .cropSquare
-                      : .cropPortrait,
-                  label: l10n.videoRecorderToggleAspectRatioLabel,
-                  identifier: SemanticIds.cameraAspectRatioButton,
-                  value: _aspectRatioValue(l10n, state.aspectRatio),
-                  onTap: !hasClips
-                      ? () => context.read<VideoRecorderBloc>().add(
-                          const VideoRecorderAspectRatioToggled(),
-                        )
-                      : null,
                 ),
-                _IconButton(
-                  icon: .arrowsClockwise,
-                  label: l10n.videoRecorderSwitchCameraLabel,
-                  identifier: SemanticIds.cameraSwitchCameraButton,
-                  value: DivineCameraLens.allCamerasFaceUser
-                      ? null
-                      : state.isFrontCamera
-                      ? l10n.videoRecorderCameraValueFront
-                      : l10n.videoRecorderCameraValueBack,
-                  // The recorder refuses a flip while a take starts or
-                  // finishes, so show it disabled instead of dropping the tap.
-                  onTap: state.canSwitchCamera && !state.hasRecordingInFlight
-                      ? () => context.read<VideoRecorderBloc>().add(
-                          const VideoRecorderCameraSwitched(),
-                        )
-                      : null,
-                ),
-                if (state.supportsDualCamera)
-                  _IconButton(
-                    icon: .pictureInPicture,
-                    label: l10n.videoRecorderToggleDualCameraLabel,
-                    identifier: SemanticIds.cameraDualCameraButton,
-                    toggled: state.isDualCameraEnabled,
-                    // Rebuilding the camera session ends a take, so the
-                    // recorder refuses it while one is in flight.
-                    onTap: !state.hasRecordingInFlight
-                        ? () => context.read<VideoRecorderBloc>().add(
-                            const VideoRecorderDualCameraToggled(),
-                          )
-                        : null,
-                  ),
-                // Dual capture runs without stabilization; the saved mode
-                // returns with one camera.
-                if (state.supportsStabilization && !state.isDualCameraEnabled)
-                  const _StabilizationButton(),
-                if (state.offersChromaKey) const _ColorMaskButton(),
               ],
             ),
           ),
@@ -154,16 +256,17 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
 /// Toggles the ghost-frame (onion-skin) overlay on the capture rail, mirroring
 /// the classic-mode ghost toggle.
 class _GhostFrameButton extends StatelessWidget {
-  const _GhostFrameButton();
+  const _GhostFrameButton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final isVisible = context.select(
       (VideoRecorderBloc b) => b.state.showLastClipOverlay,
     );
-    return _IconButton(
+    return _RailButton(
       icon: .ghost,
       label: context.l10n.videoRecorderToggleGhostFrameLabel,
+      caption: context.l10n.videoRecorderRailGhostFrameLabel,
       identifier: SemanticIds.cameraGhostFrameButton,
       toggled: isVisible,
       onTap: () {
@@ -190,16 +293,17 @@ class _GhostFrameButton extends StatelessWidget {
 /// Turning it on opens the settings straight away: the wall and the backdrop
 /// are set there, and the sheet is also where the mask is turned off.
 class _ColorMaskButton extends StatelessWidget {
-  const _ColorMaskButton();
+  const _ColorMaskButton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final isEnabled = context.select(
       (VideoRecorderBloc b) => b.state.isChromaKeyEnabled,
     );
-    return _IconButton(
+    return _RailButton(
       icon: .selection,
       label: context.l10n.videoEditorChromaKeyLabel,
+      caption: context.l10n.videoEditorChromaKeyLabel,
       identifier: SemanticIds.cameraColorMaskButton,
       toggled: isEnabled,
       highlighted: isEnabled,
@@ -220,7 +324,7 @@ class _ColorMaskButton extends StatelessWidget {
 /// Disabled when the active camera reports no stabilization support
 /// (e.g. front camera on some devices, macOS, Linux).
 class _StabilizationButton extends StatelessWidget {
-  const _StabilizationButton();
+  const _StabilizationButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -230,9 +334,10 @@ class _StabilizationButton extends StatelessWidget {
         b.state.videoStabilizationMode,
       ),
     );
-    return _IconButton(
+    return _RailButton(
       icon: .stabilization,
       label: context.l10n.videoRecorderStabilizationLabel,
+      caption: context.l10n.videoRecorderStabilizationLabel,
       identifier: SemanticIds.cameraStabilizationButton,
       value: _stabilizationModeLabel(context.l10n, mode),
       onTap: isSupported ? () => _showStabilizationMenu(context) : null,
@@ -313,20 +418,32 @@ String _aspectRatioValue(AppLocalizations l10n, model.AspectRatio ratio) {
   };
 }
 
-class _IconButton extends StatelessWidget {
-  const _IconButton({
+/// One control on the capture rail: its icon on the rail's pill, and while
+/// the rail is unfolded its name to the left, which takes the tap as well.
+class _RailButton extends StatelessWidget {
+  const _RailButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.caption,
     this.identifier,
     this.value,
     this.toggled,
+    this.expanded,
+    this.iconTurns,
     this.highlighted = false,
+    super.key,
   });
 
+  /// What a screen reader announces, and the long-press tooltip.
   final String label;
   final DivineIconName icon;
   final VoidCallback? onTap;
+
+  /// Short name drawn next to the icon, or `null` to show the icon alone.
+  ///
+  /// Never announced: [label] already says what the control does.
+  final String? caption;
 
   /// Stable `Semantics(identifier:)` anchor for E2E tests. Never announced,
   /// so it carries no meaning for a screen-reader user — that is [label].
@@ -340,12 +457,42 @@ class _IconButton extends StatelessWidget {
   /// "on"/"off" (e.g. the grid overlay).
   final bool? toggled;
 
+  /// Whether the section this control opens is open, for a control that
+  /// unfolds one.
+  final bool? expanded;
+
+  /// Turns the icon by this fraction of a full turn, animated when it
+  /// changes; `null` leaves the icon as drawn.
+  final double? iconTurns;
+
   /// Draws the icon in the brand green, for a control whose effect is easy to
   /// miss in the viewfinder while it is on.
   final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
+    final alpha = onTap != null ? 255 : 100;
+    final caption = this.caption;
+    // Drawn over the live preview, so it is re-rasterized on every camera
+    // frame: a live tinted SVG is a colour-filter saveLayer each time, the
+    // baked glyph is one image draw.
+    Widget iconWidget = ShadowedDivineIcon(
+      icon: icon,
+      color: (highlighted ? VineTheme.vineGreen : VineTheme.whiteText)
+          .withAlpha(alpha),
+      shadows: const [],
+    );
+    if (iconTurns case final turns?) {
+      iconWidget = AnimatedRotation(
+        turns: turns,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : _railAnimationDuration,
+        curve: Curves.easeOutCubic,
+        child: iconWidget,
+      );
+    }
+
     return Semantics(
       identifier: identifier,
       button: true,
@@ -353,6 +500,7 @@ class _IconButton extends StatelessWidget {
       label: label,
       value: value,
       toggled: toggled,
+      expanded: expanded,
       child: Tooltip(
         message: label,
         // The label above already carries the message; without this the
@@ -360,19 +508,53 @@ class _IconButton extends StatelessWidget {
         excludeFromSemantics: true,
         child: InkWell(
           onTap: onTap,
-          child: Padding(
-            padding: const .all(8),
-            // Drawn over the live preview, so it is re-rasterized on every
-            // camera frame: a live tinted SVG is a colour-filter saveLayer each
-            // time, the baked glyph is one image draw.
-            child: ShadowedDivineIcon(
-              icon: icon,
-              color: (highlighted ? VineTheme.vineGreen : VineTheme.whiteText)
-                  .withAlpha(onTap != null ? 255 : 100),
-              shadows: const [],
-            ),
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 8,
+            children: [
+              if (caption != null)
+                Flexible(
+                  child: ExcludeSemantics(
+                    child: _RailCaption(text: caption, alpha: alpha),
+                  ),
+                ),
+              Padding(
+                // The pill's inset plus the icon's own padding.
+                padding: const .symmetric(horizontal: 12, vertical: 8),
+                child: iconWidget,
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A rail control's name, faded in as the rail unfolds.
+class _RailCaption extends StatelessWidget {
+  const _RailCaption({required this.text, required this.alpha});
+
+  final String text;
+
+  /// Matches the icon, dimmed for a control that is unavailable.
+  final int alpha;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : _railAnimationDuration,
+      builder: (context, opacity, child) =>
+          Opacity(opacity: opacity, child: child),
+      child: Text(
+        text,
+        textAlign: .end,
+        style: VineTheme.labelLargeFont(
+          color: VineTheme.whiteText.withAlpha(alpha),
+        ).copyWith(shadows: _railCaptionShadows),
       ),
     );
   }

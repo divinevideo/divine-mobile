@@ -314,6 +314,7 @@ class VideoRecorderBloc
     on<VideoRecorderResetRequested>(_onResetRequested);
     on<VideoRecorderShowLastClipOverlayToggled>(_onShowLastClipOverlayToggled);
     on<VideoRecorderGridLinesToggled>(_onGridLinesToggled);
+    on<VideoRecorderActionRailToggled>(_onActionRailToggled);
     on<VideoRecorderDualCameraToggled>(
       _onDualCameraToggled,
       // Each toggle rebuilds the native capture session; a tap that lands
@@ -514,6 +515,13 @@ class VideoRecorderBloc
           showGridLines: _gridLinesEnabledFor(VideoRecorderMode.stopMotion),
           timerDuration: _timerDurationCarriedTo(VideoRecorderMode.stopMotion),
         ),
+      );
+    } else {
+      // The recorder kept its mode, so the switch above did not apply that
+      // mode's remembered grid choice. A recorder opened on the default mode
+      // would otherwise start without its grid.
+      emit(
+        state.copyWith(showGridLines: _gridLinesEnabledFor(state.recorderMode)),
       );
     }
 
@@ -1064,6 +1072,8 @@ class VideoRecorderBloc
         isStartingRecording: true,
         baseZoomLevel: state.zoomLevel,
         clearStoppedTakePath: true,
+        // The rail hides while the take runs, and comes back folded.
+        isActionRailExpanded: false,
       ),
     );
     unawaited(HapticService.recordingFeedback());
@@ -2407,6 +2417,13 @@ class VideoRecorderBloc
     await _readSharedPreferences().setBool(_kGridLinesEnabledKey, enabled);
   }
 
+  void _onActionRailToggled(
+    VideoRecorderActionRailToggled event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(state.copyWith(isActionRailExpanded: !state.isActionRailExpanded));
+  }
+
   /// Whether a grid-supporting [mode] should show the grid: the user's last
   /// persisted choice, defaulting to on.
   bool _gridLinesEnabledFor(VideoRecorderMode mode) =>
@@ -2784,7 +2801,12 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
     emit(
-      state.copyWith(isIntervalCaptureRunning: true, countdownValue: seconds),
+      state.copyWith(
+        isIntervalCaptureRunning: true,
+        countdownValue: seconds,
+        // The rail hides while the loop runs, and comes back folded.
+        isActionRailExpanded: false,
+      ),
     );
     _armIntervalCaptureTick();
     unawaited(HapticService.recordingFeedback());
@@ -3003,11 +3025,11 @@ class VideoRecorderBloc
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
-  /// was entered from), overlay and grid toggles, the timer setting, the take
-  /// in flight, the navigation lock and the editor navigation in progress, the
-  /// remote record pause, the stop-motion session and interval loop, the
-  /// chroma-key setup, the dual-camera choice and window position, and (while
-  /// initialized) the screen flash carry over;
+  /// was entered from), overlay and grid toggles, the open or folded capture
+  /// rail, the timer setting, the take in flight, the navigation lock and the
+  /// editor navigation in progress, the remote record pause, the stop-motion
+  /// session and interval loop, the chroma-key setup, the dual-camera choice
+  /// and window position, and (while initialized) the screen flash carry over;
   /// flash resets to `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
@@ -3057,6 +3079,8 @@ class VideoRecorderBloc
         recorderMode: state.recorderMode,
         modeBeforeUpload: state.modeBeforeUpload,
         showGridLines: state.showGridLines,
+        // A flip re-syncs, and the rail it was tapped on stays open.
+        isActionRailExpanded: state.isActionRailExpanded,
         // The native take outlives a re-sync. Reading idle here would hide the
         // stop button and let the shutter start a second take on top of it.
         recordingState: state.recordingState,

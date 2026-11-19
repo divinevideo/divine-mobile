@@ -8643,6 +8643,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => '切换宽高比';
 
   @override
+  String get videoRecorderRailFlashLabel => '闪光灯';
+
+  @override
+  String get videoRecorderRailFlipLabel => '翻转';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => '宽高比';
+
+  @override
+  String get videoRecorderRailTimerLabel => '倒计时';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => '洋葱皮';
+
+  @override
+  String get videoRecorderRailGridLabel => '网格';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => '双摄像头';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => '相机选项';
+
+  @override
   String get videoRecorderStabilizationLabel => '防抖';
 
   @override

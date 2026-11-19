@@ -170,6 +170,19 @@ void main() {
         });
       });
 
+      test('folds the capture rail when the loop starts', () {
+        fakeAsync((async) {
+          final bloc = buildBloc();
+          bloc.emit(bloc.state.copyWith(isActionRailExpanded: true));
+          tapShutter(bloc, async);
+
+          expect(bloc.state.isIntervalCaptureRunning, isTrue);
+          expect(bloc.state.isActionRailExpanded, isFalse);
+
+          closeBloc(bloc, async);
+        });
+      });
+
       test('takes a still every interval and beeps for each one', () {
         fakeAsync((async) {
           final bloc = buildBloc();

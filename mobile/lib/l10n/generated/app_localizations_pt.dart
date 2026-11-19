@@ -9270,6 +9270,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Alternar proporção';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Flash';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Inverter';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Proporção';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Temporizador';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Quadro fantasma';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Grade';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Câmera dupla';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Opções da câmera';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Estabilização';
 
   @override

@@ -9181,6 +9181,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoRecorderToggleAspectRatioLabel => 'Växla bildförhållande';
 
   @override
+  String get videoRecorderRailFlashLabel => 'Blixt';
+
+  @override
+  String get videoRecorderRailFlipLabel => 'Vänd';
+
+  @override
+  String get videoRecorderRailAspectRatioLabel => 'Bildförhållande';
+
+  @override
+  String get videoRecorderRailTimerLabel => 'Timer';
+
+  @override
+  String get videoRecorderRailGhostFrameLabel => 'Spökram';
+
+  @override
+  String get videoRecorderRailGridLabel => 'Rutnät';
+
+  @override
+  String get videoRecorderRailDualCameraLabel => 'Dubbelkamera';
+
+  @override
+  String get videoRecorderRailMoreOptionsLabel => 'Kameraalternativ';
+
+  @override
   String get videoRecorderStabilizationLabel => 'Stabilisering';
 
   @override
