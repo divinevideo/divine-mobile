@@ -904,7 +904,7 @@ void main() {
       }
 
       blocTest<VideoSearchBloc, VideoSearchState>(
-        'takes the archive verdict of a newer revision of a result',
+        'keeps a revision verdict off another revision of the same address',
         setUp: () {
           when(
             () => mockVideosRepository.deduplicateVideosPreservingOrder(any()),
@@ -950,7 +950,7 @@ void main() {
               .having(
                 (s) => s.videos.single.isVerifiedArchive,
                 'isVerifiedArchive',
-                isTrue,
+                isFalse,
               ),
         ],
       );
