@@ -2427,19 +2427,36 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) {
     final republished = event.video;
-    final address = republished.feedDedupKey;
-    var changed = false;
-    final videos = state.videos.map((video) {
-      if (video.feedDedupKey != address ||
-          !_isNewerRevision(republished, than: video)) {
-        return video;
-      }
-      changed = true;
-      return mergeRepublishedVideo(video, republished);
-    }).toList();
-    if (!changed) return;
+    final address = republished.addressableId;
+    if (address == null) return;
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          _isNewerRevision(republished, than: video),
+    );
+    if (index == -1) return;
 
-    emit(state.copyWith(videos: videos));
+    final previous = state.videos[index];
+    final allowed = _removalRepository.applyContentPreferences([republished]);
+    if (allowed.isEmpty) {
+      _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
+      return;
+    }
+    final videos = [...state.videos];
+    videos[index] = mergeRepublishedVideo(previous, allowed.single);
+    final listSources = Map.of(state.videoListSources);
+    final listOnlyIds = {...state.listOnlyVideoIds};
+    if (listSources.remove(previous.id) case final sources?) {
+      listSources[republished.id] = sources;
+    }
+    if (listOnlyIds.remove(previous.id)) listOnlyIds.add(republished.id);
+    emit(
+      state.copyWith(
+        videos: videos,
+        videoListSources: listSources,
+        listOnlyVideoIds: listOnlyIds,
+      ),
+    );
 
     if (_usesHomeFeedCache(state.source)) {
       _resumeManager.persistNow(

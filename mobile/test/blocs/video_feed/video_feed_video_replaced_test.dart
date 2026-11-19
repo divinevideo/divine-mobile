@@ -65,6 +65,10 @@ VideoEvent _revision(
 );
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(_revision('0'));
+    registerFallbackValue(<VideoEvent>[]);
+  });
   group(VideoFeedVideoReplaced, () {
     late _MockVideosRepository videos;
     late StreamController<VideoEvent> replacements;
@@ -77,6 +81,10 @@ void main() {
       when(() => videos.removedVideoIds)
           .thenAnswer((_) => const Stream.empty());
       when(() => videos.replacedVideos).thenAnswer((_) => replacements.stream);
+      when(() => videos.isVideoKnownDeleted(any())).thenReturn(false);
+      when(() => videos.applyContentPreferences(any())).thenAnswer(
+        (call) => call.positionalArguments.single as List<VideoEvent>,
+      );
     });
 
     tearDown(() => replacements.close());
@@ -98,17 +106,34 @@ void main() {
           _revision('1'),
           _revision('2', dTag: 'other'),
         ],
+        videoListSources: {
+          '1' * 64: {'list'},
+        },
+        listOnlyVideoIds: {'1' * 64},
       ),
       act: (_) => replacements.add(
         _revision('3', createdAt: 1700000500, title: 'Edited'),
       ),
       wait: Duration.zero,
       expect: () => [
-        isA<VideoFeedBlocState>().having(
-          (state) => state.videos.map((v) => (v.id, v.title)).toList(),
-          'videos',
-          [('3' * 64, 'Edited'), ('2' * 64, 'Title')],
-        ),
+        isA<VideoFeedBlocState>()
+            .having(
+              (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+              'videos',
+              [('3' * 64, 'Edited'), ('2' * 64, 'Title')],
+            )
+            .having(
+              (state) => state.videoListSources,
+              'list provenance',
+              {
+                '3' * 64: {'list'},
+              },
+            )
+            .having(
+              (state) => state.listOnlyVideoIds,
+              'list-only revisions',
+              {'3' * 64},
+            ),
       ],
     );
 
@@ -136,6 +161,31 @@ void main() {
       ),
       wait: Duration.zero,
       expect: () => <VideoFeedBlocState>[],
+    );
+
+    feedBlocTest(
+      'removes a video whose edited revision is hidden by content preferences',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [
+          _revision('1'),
+          _revision('2', dTag: 'other'),
+        ],
+      ),
+      act: (_) {
+        final edited = _revision('3', createdAt: 1700000500);
+        when(() => videos.applyContentPreferences([edited])).thenReturn([]);
+        replacements.add(edited);
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((video) => video.id),
+          'visible revisions',
+          ['2' * 64],
+        ),
+      ],
     );
 
     test('saves the updated window so a cold start shows it too', () async {
