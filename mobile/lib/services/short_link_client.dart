@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:openvine/utils/short_link_url.dart';
 
+/// Asks the short-link gateway for permanent `/l/` links to external shares.
 class ShortLinkClient {
   ShortLinkClient({required http.Client client}) : _client = client;
 
@@ -15,6 +16,9 @@ class ShortLinkClient {
   final _aborts = <Completer<void>>{};
   bool _closed = false;
 
+  /// The short link for [target], or [target] itself when it is not a
+  /// shortener destination, the client is closed, or creation fails or takes
+  /// longer than two seconds. Never throws.
   Future<String> shorten(String target) {
     if (_closed || !isShortLinkDestination(target)) {
       return Future.value(target);
@@ -97,6 +101,8 @@ class ShortLinkClient {
     return shortUrl;
   }
 
+  /// Aborts pending requests and drops cached links; later [shorten] calls
+  /// return their target.
   void close() {
     _closed = true;
     for (final abort in _aborts) {
