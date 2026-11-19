@@ -177,13 +177,14 @@ class VaultKeyService {
   /// Returns the newest genuine vault key event for [pubkey], or `null`
   /// only when the relay pool was reachable and confirmed there is none.
   ///
-  /// A query that never reached a relay or timed out cannot distinguish
-  /// "no vault key exists" from "we could not ask" — treating the former
-  /// as the answer would let [obtain] generate a second key over a first
-  /// one it never actually saw. [NostrClient.queryEvents] discards that
-  /// distinction (it collapses a failed lookup to an empty list), so this
-  /// uses [NostrClient.queryEventsDetailed] and fails closed on
-  /// `noRelays`/`timedOut` instead.
+  /// A query that did not hear from every relay cannot distinguish "no
+  /// vault key exists" from "the relay holding it did not answer" —
+  /// treating the former as the answer would let [obtain] generate a second
+  /// key over a first one it never actually saw. So the read waits for
+  /// every relay to settle: without that, a relay still silent after the
+  /// pool's settle window, or one that ends the read with `CLOSED`, comes
+  /// back as an empty answer with `timedOut: false` (#8997). It fails
+  /// closed on `noRelays`/`timedOut`.
   Future<Event?> _fetchRemote(String pubkey) async {
     final ({List<Event> events, bool timedOut, bool noRelays}) result;
     try {
@@ -199,6 +200,7 @@ class VaultKeyService {
         // exist on the relay right now" — only a live relay answer counts
         // as confirmation the vault key is absent.
         useCache: false,
+        requireAllRelaysSettled: true,
       );
     } catch (e) {
       throw VaultKeyUnavailableException(

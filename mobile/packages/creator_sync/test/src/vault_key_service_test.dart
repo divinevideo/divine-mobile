@@ -77,6 +77,7 @@ void main() {
         () => client.queryEventsDetailed(
           any(),
           useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer((_) async => _confirmed([...stored]));
       when(() => signer.nip44Encrypt(pubkey, any())).thenAnswer(
@@ -121,6 +122,7 @@ void main() {
         () => client.queryEventsDetailed(
           any(),
           useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       );
     });
@@ -132,6 +134,7 @@ void main() {
         () => client.queryEventsDetailed(
           any(),
           useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
         (_) async => _confirmed([
@@ -195,6 +198,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed([
@@ -284,6 +288,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
           ).thenAnswer((_) async => _confirmed(ordering));
 
@@ -324,6 +329,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed(
@@ -363,6 +369,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async {
           if (stored.isEmpty) return _confirmed(const []);
@@ -396,6 +403,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
 
@@ -424,6 +432,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => stored.isEmpty
@@ -449,6 +458,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed(
@@ -518,6 +528,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async {
           queryCount++;
@@ -554,6 +565,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenThrow(StateError('relay unreachable'));
 
@@ -572,6 +584,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: true),
@@ -602,6 +615,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: true, noRelays: false),
@@ -620,11 +634,47 @@ void main() {
       },
     );
 
+    test(
+      'throws rather than forking when a relay still owes its answer',
+      () async {
+        // A relay that stays silent past the pool's settle window, or ends
+        // the read with CLOSED, arrives from a default read as an empty
+        // answer with `timedOut: false`; only a fully settled read reports
+        // it as `timedOut: true` (#8997). The stubs answer each read shape
+        // the way the client does for that same relay.
+        final stored = stubStoringRelay();
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) async => _confirmed([...stored]));
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+
+        await expectLater(
+          service.obtain(),
+          throwsA(isA<VaultKeyUnavailableException>()),
+        );
+        verifyNever(() => client.publishEvent(any()));
+        verifyNever(() => signer.nip44Encrypt(any(), any()));
+        expect(await cache.read(pubkey), isNull);
+      },
+    );
+
     test('throws when the signer cannot unwrap the remote key', () async {
       when(
         () => client.queryEventsDetailed(
           any(),
           useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
         (_) async => _confirmed([
@@ -660,6 +710,7 @@ void main() {
         () => client.queryEventsDetailed(
           any(),
           useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       );
     });
@@ -716,6 +767,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed([
@@ -749,6 +801,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed([
@@ -782,6 +835,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
           (_) async => _confirmed([
@@ -815,6 +869,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
         when(
@@ -838,6 +893,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
         when(() => signer.nip44Encrypt(pubkey, any())).thenAnswer((
@@ -867,6 +923,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
         when(
@@ -890,6 +947,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
         when(
@@ -914,6 +972,7 @@ void main() {
           () => client.queryEventsDetailed(
             any(),
             useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer((_) async => _confirmed(const []));
         when(
