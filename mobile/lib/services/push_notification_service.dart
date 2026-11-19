@@ -176,20 +176,29 @@ class PushNotificationService {
     String userPubkey,
     LiveActivityRegistration registration, {
     required bool notificationsAuthorized,
-  }) => _registerCurrentToken(
-    userPubkey,
-    extraPayload: {
-      'notificationsAuthorized': notificationsAuthorized,
-      'liveActivity': registration.liveActivityWire(),
-    },
-    action: 'live activity',
-  );
+  }) async {
+    // The registration is signed by the current account, so it must be that
+    // account's own activity.
+    if (!pubkeysEqual(registration.ownerPubkey, userPubkey)) {
+      return PushRegistrationResult.terminalFailure;
+    }
+    return _registerCurrentToken(
+      userPubkey,
+      extraPayload: {
+        'notificationsAuthorized': notificationsAuthorized,
+        'liveActivity': registration.liveActivityWire(),
+      },
+      action: 'live activity',
+      recordsTimezone: false,
+    );
+  }
 
   Future<PushRegistrationResult> _registerCurrentToken(
     String userPubkey, {
     FutureOr<bool> Function()? isCurrent,
     Map<String, Object?> extraPayload = const {},
     String action = 'registration',
+    bool recordsTimezone = true,
   }) async {
     if (kIsWeb) return PushRegistrationResult.terminalFailure;
 
@@ -234,6 +243,7 @@ class PushNotificationService {
       isCurrent: isCurrent,
       extraPayload: extraPayload,
       action: action,
+      recordsTimezone: recordsTimezone,
     );
   }
 
@@ -471,6 +481,7 @@ class PushNotificationService {
     FutureOr<bool> Function()? isCurrent,
     Map<String, Object?> extraPayload = const {},
     String action = 'registration',
+    bool recordsTimezone = true,
   }) async {
     final identity = _authService.currentIdentity;
     if (identity == null || identity.pubkey != userPubkey) {
@@ -557,7 +568,10 @@ class PushNotificationService {
 
     final outcome = await _publishPushControlEvent(event, action);
     if (outcome.confirmed) {
-      _registeredTimezone = timezone;
+      // A Live Activity registration does not refresh the device's
+      // notification timezone, so it must not hide a later change from
+      // registrationTimezoneChanged().
+      if (recordsTimezone) _registeredTimezone = timezone;
       return PushRegistrationResult.published;
     }
     if (outcome.rejectedBy.isNotEmpty) {

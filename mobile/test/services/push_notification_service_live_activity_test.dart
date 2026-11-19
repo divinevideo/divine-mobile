@@ -202,6 +202,58 @@ void main() {
       verifyNever(() => signer.nip44Encrypt(any(), any()));
     });
 
+    test('does not publish a registration owned by another account', () async {
+      final foreign = LiveActivityRegistration.forPost(
+        activityId: 'activity-2',
+        ownerPubkey: 'f' * 64,
+        activityPushToken: 'activity-push-token',
+        postCoordinate: '34236:${'f' * 64}:d',
+        postEventIds: const ['event-id-2'],
+        postedAt: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+        showFirstRunNote: false,
+      );
+
+      final result = await buildService().registerLiveActivity(
+        testPubkey,
+        foreign,
+        notificationsAuthorized: true,
+      );
+
+      expect(result, PushRegistrationResult.terminalFailure);
+      verifyNever(() => signer.nip44Encrypt(any(), any()));
+      verifyNever(
+        () => nostrClient.publishEventAwaitOk(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+          timeout: any(named: 'timeout'),
+        ),
+      );
+    });
+
+    test('does not hide a timezone change from the notification '
+        'registration', () async {
+      var timezone = 'Pacific/Auckland';
+      final service = PushNotificationService(
+        authService: authService,
+        nostrClient: nostrClient,
+        notificationService: _MockNotificationService(),
+        environmentConfig: environment,
+        getToken: () async => 'fcm-token',
+        timeZoneIdentifier: () async => timezone,
+        timeZoneOffsetMinutes: () => -300,
+      );
+      await service.register(testPubkey);
+      timezone = 'Pacific/Fiji';
+
+      await service.registerLiveActivity(
+        testPubkey,
+        registration,
+        notificationsAuthorized: true,
+      );
+
+      expect(await service.registrationTimezoneChanged(), isTrue);
+    });
+
     test('does not publish for another account', () async {
       final result = await buildService().registerLiveActivity(
         'f' * 64,
