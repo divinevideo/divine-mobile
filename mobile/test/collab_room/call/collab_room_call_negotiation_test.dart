@@ -13,6 +13,7 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call.dart';
 import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
+import 'package:sound_service/sound_service.dart';
 
 class _FakeSender extends Fake implements RTCRtpSender {}
 
@@ -228,6 +229,27 @@ void main() {
       }
       throw StateError('No offer was sent');
     }
+
+    group('the audio session', () {
+      test('is held for the call from start to stop', () async {
+        expect(AudioSessionService.isHeldByCall, isFalse);
+
+        await call.start();
+        // The editor's playback setup, made while the call comes back,
+        // must not take the call's microphone and speaker.
+        expect(AudioSessionService.isHeldByCall, isTrue);
+
+        await call.stop();
+        expect(AudioSessionService.isHeldByCall, isFalse);
+      });
+
+      test('is not held by a call stopped before it started', () async {
+        await call.stop();
+        await call.start();
+
+        expect(AudioSessionService.isHeldByCall, isFalse);
+      });
+    });
 
     group('an offer whose answer never comes', () {
       test('is made again on a new connection', () async {

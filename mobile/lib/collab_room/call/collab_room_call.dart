@@ -13,6 +13,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
+import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/collab_room/call/collab_room_call_signal.dart'
@@ -290,6 +291,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   Future<void>? _openingVideo;
   bool _micOn = true;
   bool _stopped = false;
+  bool _holdsAudioSession = false;
   CollabRoomCallLobby? _lobby;
   final _lobbyTimes = <String, int>{};
 
@@ -311,6 +313,11 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   @override
   Future<void> start() async {
     if (_stopped) return;
+    // From here until stop, the app's playback setups leave the audio
+    // session to the call: the editor's, set up while the call comes back,
+    // would otherwise take the microphone and the speaker away.
+    _holdsAudioSession = true;
+    AudioSessionService.holdForCall();
     await (_openingAudio = _openAudio());
     if (_stopped) return;
     await _device(() => Helper.setSpeakerphoneOn(true));
@@ -501,6 +508,10 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       ]);
       if (audio != null) await _handBackAndroidAudio();
     } finally {
+      if (_holdsAudioSession) {
+        _holdsAudioSession = false;
+        AudioSessionService.releaseFromCall();
+      }
       await _changes.close();
       if (hadSubscription) unawaited(_sayGoodbye());
     }
