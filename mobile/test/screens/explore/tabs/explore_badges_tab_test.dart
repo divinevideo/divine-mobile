@@ -764,6 +764,9 @@ void main() {
                   thumbnail: '',
                   createdAt: 1700000000,
                   kind: 34236,
+                  moderationLabels: const <String>[],
+                  verifiedArchive: false,
+                  archiveProvenanceAvailable: true,
                   tags: const [
                     ['d', 'clip'],
                     ['url', 'https://media.divine.video/clip.mp4'],
@@ -822,6 +825,7 @@ void main() {
           nostrClient: createMockNostrService(),
           warningLabelsResolver: (video) =>
               video.title == 'Needs a warning' ? const ['violence'] : const [],
+          contentFilter: (video) => video.moderationLabels.contains('violence'),
         );
         when(() => cubit.state).thenReturn(
           ExploreBadgesState(
@@ -832,6 +836,7 @@ void main() {
                 for (final (index, title) in [
                   (1, 'Needs a warning'),
                   (2, 'Visible clip'),
+                  (3, 'Hidden by resolved label'),
                 ])
                   (
                     id: index.toRadixString(16).padLeft(64, '0'),
@@ -840,6 +845,11 @@ void main() {
                     thumbnail: '',
                     createdAt: 1700000000,
                     kind: 34236,
+                    moderationLabels: index == 3
+                        ? const ['violence']
+                        : const <String>[],
+                    verifiedArchive: false,
+                    archiveProvenanceAvailable: true,
                     tags: [
                       ['d', 'clip-$index'],
                       ['url', 'https://media.divine.video/clip.mp4'],
@@ -871,6 +881,10 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.bySemanticsLabel('Visible clip'), findsOneWidget);
           expect(find.bySemanticsLabel('Needs a warning'), findsNothing);
+          expect(
+            find.bySemanticsLabel('Hidden by resolved label'),
+            findsNothing,
+          );
         } finally {
           semantics.dispose();
         }

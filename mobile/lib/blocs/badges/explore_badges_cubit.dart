@@ -59,7 +59,19 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       if (indexed == null) {
         final definitions = await _repository.loadPublicDefinitions();
         if (!_isCurrent(generation)) return;
-        _applyDefinitions(definitions, generation, const {});
+        final retained = state.federatedDefinitions;
+        final refreshSupplement =
+            retained.isNotEmpty || state.videoPreviews.isNotEmpty;
+        _applyDefinitions(
+          refreshSupplement
+              ? _mergeDefinitions(definitions, retained)
+              : definitions,
+          generation,
+          const {},
+        );
+        if (refreshSupplement) {
+          unawaited(_appendFederated(generation, definitions));
+        }
         return;
       }
 
