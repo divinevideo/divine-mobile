@@ -49,6 +49,7 @@ VideoStats _stats(
   String? videoUrl,
 }) => VideoStats(
   rawTags: platform != null ? {'platform': platform} : const {},
+  isArchiveVerificationUnknown: platform == 'vine',
   id: id,
   pubkey: pubkey ?? 'pubkey-$id',
   createdAt: DateTime.fromMillisecondsSinceEpoch(

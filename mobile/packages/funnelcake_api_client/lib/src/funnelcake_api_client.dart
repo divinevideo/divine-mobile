@@ -2931,6 +2931,96 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Reads a private Classics page with immediate, request-only feedback.
+  ///
+  /// The endpoint is additive: 404 means the rollout is disabled or the server
+  /// predates it. Repositories own the archive fallback in that case.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeNotFoundException] if the endpoint is disabled or absent.
+  /// - [FunnelcakeApiException] for any other non-200 response.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] if the client is disposed, the transport fails,
+  ///   or the response is malformed.
+  Future<RecommendationsResponse> getClassicRecommendations({
+    required ClassicRecommendationsRequest request,
+    String? userPubkey,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (_isDisposed) {
+      throw const FunnelcakeException(
+        'Classic recommendations client disposed',
+      );
+    }
+    final uri = Uri.parse(
+      '$_baseUrl/api/v2/videos/classics/recommendations',
+    ).replace(queryParameters: _videoQueryParameters(const {}));
+    // Retry belongs to the owning session, which can re-read consent and
+    // identity. A transport backoff must not replay prior private context after
+    // that context has been withdrawn.
+    final http.Response response;
+    try {
+      response = await _httpClient
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-store',
+              ...buildDivineClientHeaders(appVersion: _appVersion),
+              if (userPubkey != null && userPubkey.isNotEmpty)
+                'X-Pubkey': userPubkey,
+            },
+            body: jsonEncode(request.toJson()),
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on Exception catch (error) {
+      throw FunnelcakeException(
+        'Failed to fetch classic recommendations: $error',
+        cause: error,
+      );
+    }
+    if (response.statusCode == 404) {
+      throw FunnelcakeNotFoundException(
+        resource: 'Classic recommendations',
+        url: uri.toString(),
+      );
+    }
+    if (response.statusCode != 200) {
+      throw FunnelcakeApiException(
+        message: 'Failed to fetch classic recommendations',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    }
+    try {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      final (:items, :hasMore, :nextCursor) = _unwrapListResponse(raw);
+      return RecommendationsResponse(
+        videos: items
+            .map((item) => VideoStats.fromJson(item as Map<String, dynamic>))
+            .where((video) => video.id.isNotEmpty && video.videoUrl.isNotEmpty)
+            .toList(),
+        source: raw['source'] as String? ?? 'unknown',
+        hasMore: hasMore ?? nextCursor != null,
+        nextCursor: nextCursor,
+      );
+    } on FormatException {
+      throw const FunnelcakeException(
+        'Invalid classic recommendations response',
+      );
+      // Malformed external JSON can fail typed model casts as well as decoding.
+      // ignore: avoid_catching_errors
+    } on TypeError {
+      throw const FunnelcakeException(
+        'Invalid classic recommendations response',
+      );
+    }
+  }
+
   /// Fetches personalized video recommendations for a user.
   ///
   /// [pubkey] is the user's public key (hex format).

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -39,6 +40,8 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 class VideoFeedPage extends ConsumerWidget {
   /// Route name for this screen.
@@ -85,6 +88,7 @@ class VideoFeedPage extends ConsumerWidget {
       videoProvenanceFilterVersionProvider,
     );
     final videosRepository = ref.watch(videosRepositoryProvider);
+    final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -131,6 +135,9 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
+                  classicSession: useAdaptiveClassics
+                      ? _homeClassicSession(ref, viewerPubkey)
+                      : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,
@@ -350,6 +357,9 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
     final isObscured = ref.read(shellObscuredProvider);
     final hasOverlay = ref.read(overlayVisibilityProvider).hasVisibleOverlay;
 
+    context.read<VideoFeedBloc>().add(
+      VideoFeedVisibilityChanged(isHomeRoute && !isObscured),
+    );
     final shouldBeActive = isHomeRoute && !isObscured && !hasOverlay;
     if (shouldBeActive == _isNewFeedActive) return;
     setState(() => _isNewFeedActive = shouldBeActive);
@@ -762,4 +772,51 @@ class _KeyboardStableBottomInsetState
       child: widget.child,
     );
   }
+}
+
+/// Builds Home's Classics session against the current analytics service.
+///
+/// [analyticsServiceProvider] rebuilds, disposing the old service, at
+/// Nostr-ready for the same account, and Home keeps its feed across that. The
+/// session therefore follows [analyticsServiceIdentityStreamProvider] rather
+/// than the instance built with the page. Reads use the tracked instance, not
+/// the provider: the old service emits a privacy change synchronously while it
+/// is disposed, and Riverpod rejects re-reading the provider inside that
+/// disposal. Such a read sees the disposed service and sends no identity.
+ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+  var analytics = ref.read(analyticsServiceProvider);
+  return ClassicFeedSession(
+    loadPage: (request) {
+      final requestAnalytics = analytics;
+      final contextId = requestAnalytics.privacyGeneration;
+      final allowed = requestAnalytics.initializedAnalyticsConsent;
+      return ref
+          .read(videosRepositoryProvider)
+          .getClassicRecommendations(
+            request: request,
+            userPubkey: allowed ? viewerPubkey : null,
+            isCurrent: () =>
+                contextId == requestAnalytics.privacyGeneration &&
+                allowed == requestAnalytics.initializedAnalyticsConsent,
+          );
+    },
+    canPersonalize: () => analytics.initializedAnalyticsConsent,
+    // Each listener tracks the current service; transforms of the identity
+    // stream are single-subscription, so one chain per listener.
+    feedback: ref
+        .read(analyticsServiceIdentityStreamProvider)
+        .doOnData((current) => analytics = current)
+        .switchMap((current) => current.recommendationFeedback),
+    privacyChanges: ref
+        .read(analyticsServiceIdentityStreamProvider)
+        .doOnData((current) => analytics = current)
+        .switchMap((current) => current.privacyChanges),
+    filter: (videos) {
+      final repository = ref.read(videosRepositoryProvider);
+      return repository
+          .applyContentPreferences(videos)
+          .where((video) => !repository.isVideoKnownDeleted(video))
+          .toList();
+    },
+  )..setActive(active: false);
 }

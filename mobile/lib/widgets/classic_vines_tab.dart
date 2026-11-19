@@ -263,9 +263,9 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
                 PooledFullscreenVideoFeedRouteData(
                   video: videos[index].id,
                   $extra: PooledFullscreenVideoFeedArgs(
-                    source: const ClassicVinesViewSource(),
+                    source: ClassicVinesViewSource(anchor: videos[index]),
                     feedRepository: ref.read(feedRepositoryProvider),
-                    initialIndex: index,
+                    initialIndex: 0,
                     initialVideoId: videos[index].id,
                     contextTitle: context.l10n.exploreTabClassics,
                     trafficSource: ViewTrafficSource.discoveryClassic,

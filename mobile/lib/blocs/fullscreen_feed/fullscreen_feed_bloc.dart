@@ -114,6 +114,7 @@ class FullscreenFeedBloc
     VideoHideFilter? hideFilter,
     UnavailableVideoFilter? unavailableFilter,
     FeedTuningRepository? feedTuningRepository,
+    void Function(ClassicFeedFeedback)? recommendationFeedback,
   }) : _videosStream = videosStream,
        _initialVideoId = initialVideoId,
        _initialStableId = initialStableId,
@@ -129,6 +130,7 @@ class FullscreenFeedBloc
        _hideFilter = hideFilter,
        _unavailableFilter = unavailableFilter,
        _feedTuningRepository = feedTuningRepository,
+       _recommendationFeedback = recommendationFeedback,
        super(FullscreenFeedState(currentIndex: initialIndex)) {
     on<FullscreenFeedStarted>(_onStarted);
     on<FullscreenFeedHasMoreChanged>(_onHasMoreChanged);
@@ -170,6 +172,7 @@ class FullscreenFeedBloc
   final VideoHideFilter? _hideFilter;
   final UnavailableVideoFilter? _unavailableFilter;
   final FeedTuningRepository? _feedTuningRepository;
+  final void Function(ClassicFeedFeedback)? _recommendationFeedback;
   StreamSubscription<bool>? _hasMoreSubscription;
   StreamSubscription<String>? _removedIdsSubscription;
   int _tuningActionSequence = 0;
@@ -203,6 +206,15 @@ class FullscreenFeedBloc
       direction: event.direction,
     );
 
+    if (isClosed || emit.isDone) return;
+    _recommendationFeedback?.call(
+      ClassicFeedInteraction(
+        videoId: event.videoId,
+        signal: event.direction == FeedTuningDirection.more
+            ? ClassicFeedSignal.positive
+            : ClassicFeedSignal.less,
+      ),
+    );
     emit(
       state.copyWith(
         lastTuningAction: FullscreenFeedTuningAction(
@@ -220,7 +232,14 @@ class FullscreenFeedBloc
     FullscreenFeedTuningUndoRequested event,
     Emitter<FullscreenFeedState> emit,
   ) async {
+    final action = state.lastTuningAction;
     await _feedTuningRepository?.undo(event.feedTuningEventId);
+    if (isClosed || emit.isDone) return;
+    if (action?.publishedEventId == event.feedTuningEventId) {
+      _recommendationFeedback?.call(
+        ClassicFeedInteractionRetracted(videoId: action!.videoId),
+      );
+    }
   }
 
   /// Handle feed started - subscribe to the videos stream using emit.forEach.

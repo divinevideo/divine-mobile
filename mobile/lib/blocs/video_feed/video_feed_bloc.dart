@@ -56,6 +56,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    ClassicFeedSession? classicSession,
     HashtagSubscriptionRepository? hashtagSubscriptionRepository,
     PeopleListsRepository? peopleListsRepository,
     ProfileRepository? profileRepository,
@@ -79,6 +80,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Stream<VideosRepository>? removalRepositoryStream,
   }) : _videosRepository = videosRepository,
        _removalRepository = videosRepository,
+       _classicSession = classicSession,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
        _hashtagSubscriptionRepository = hashtagSubscriptionRepository,
@@ -107,6 +109,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
+    on<VideoFeedClassicsSessionChanged>(_onClassicsSessionChanged);
+    on<VideoFeedVisibilityChanged>((event, emit) {
+      _classicSession?.setActive(
+        active:
+            event.visible && state.source.type == VideoFeedSourceType.classic,
+      );
+    });
+    _classicSessionSubscription = _classicSession?.stream.listen((snapshot) {
+      if (!_isClosing && !isClosed) {
+        add(VideoFeedClassicsSessionChanged(snapshot));
+      }
+    });
     on<VideoFeedModeChanged>(_onModeChanged);
     on<VideoFeedSourceChanged>(_onSourceChanged);
     on<VideoFeedLoadMoreRequested>(
@@ -146,6 +160,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           return;
         }
         _removalRepository = repository;
+        _classicSession?.reapplyFilters(
+          keep: (video) => !repository.isVideoKnownDeleted(video),
+        );
         _watchRemovedVideoIds(repository.removedVideoIds);
         // Tombstones hydrate before the service is published, and broadcasts
         // do not replay. Reconcile its snapshot as well as future removals.
@@ -174,6 +191,40 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   StreamSubscription<VideosRepository>? _removalRepositorySubscription;
   int _removalGeneration = 0;
   final _pendingRemovalCancellations = <Future<void>>{};
+  final ClassicFeedSession? _classicSession;
+  StreamSubscription<ClassicFeedSessionState>? _classicSessionSubscription;
+
+  void _onClassicsSessionChanged(
+    VideoFeedClassicsSessionChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    if (state.source.type != VideoFeedSourceType.classic ||
+        state.status != VideoFeedStatus.success) {
+      return;
+    }
+    final snapshot = _classicSession?.state ?? event.snapshot;
+    final videos = _withoutRemovedVideos(
+      _removalRepository.applyContentPreferences(snapshot.videos),
+    );
+    final activeKey = state.videos.isEmpty
+        ? null
+        : state
+              .videos[state.currentIndex.clamp(0, state.videos.length - 1)]
+              .feedDedupKey;
+    final activeIndex = activeKey == null
+        ? 0
+        : videos.indexWhere((video) => video.feedDedupKey == activeKey);
+    emit(
+      state.copyWith(
+        videos: videos,
+        currentIndex: activeIndex < 0 ? 0 : activeIndex,
+        hasMore: snapshot.hasMore,
+        paginationCursor: snapshot.cursor,
+        clearPaginationCursor: snapshot.cursor == null,
+      ),
+    );
+  }
+
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
   final HashtagSubscriptionRepository? _hashtagSubscriptionRepository;
@@ -276,8 +327,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
-  /// All four home modes (For You, Following, New, Classics) are served from
-  /// and written to the cache so cold start shows the last feed instantly. The
+  /// For You, Following, New and archive-only Classics are served from and
+  /// written to the cache so cold start shows the last feed instantly.
+  /// Adaptive Classics (a [ClassicFeedSession] is attached) is not: the session
+  /// owns that queue. The
   /// `forYou` staleness concern from #3861 is handled differently now: the
   /// cached feed is positioned at the user's last index and everything past
   /// the active video is replaced with fresh server data on every load
@@ -289,7 +342,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
       source.type == VideoFeedSourceType.newVideos ||
-      source.type == VideoFeedSourceType.classic;
+      (source.type == VideoFeedSourceType.classic && _classicSession == null);
 
   /// Whether [source] can paginate via an opaque server cursor rather than a
   /// `createdAt` "until" timestamp.
@@ -344,6 +397,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       video: target,
       direction: event.direction,
     );
+    if (_isClosing || emit.isDone) return;
+    if (state.source.type == VideoFeedSourceType.classic) {
+      _classicSession?.recordInteraction(
+        ClassicFeedInteraction(
+          videoId: event.videoId,
+          signal: event.direction == FeedTuningDirection.more
+              ? ClassicFeedSignal.positive
+              : ClassicFeedSignal.less,
+        ),
+      );
+    }
     final sequence = state.tuningActionSequence + 1;
 
     emit(
@@ -364,7 +428,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedTuningUndoRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final action = state.lastTuningAction;
     await _feedTuningRepository?.undo(event.feedTuningEventId);
+    if (action?.publishedEventId == event.feedTuningEventId) {
+      _classicSession?.forgetInteraction(action!.videoId);
+    }
   }
 
   /// Handle feed started event.
@@ -792,28 +860,30 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   Future<void> close() async {
     _isClosing = true;
     _modePreferences._release();
-    // Flush any swipe still inside the debounce window before tearing down, so
-    // the last move isn't lost on dispose.
+    // Flush the last swipe before detaching its persistence owner.
     _resumeManager.dispose();
-    final repositoryCancelled = _removalRepositorySubscription?.cancel();
+    // Start every teardown before waiting: one stream's asynchronous drain
+    // must not keep the Bloc or unrelated repository listeners alive.
+    final cleanup = <Future<void>?>[
+      _removalRepositorySubscription?.cancel(),
+      _removedIdsSubscription?.cancel(),
+      ..._pendingRemovalCancellations,
+      _classicSessionSubscription?.cancel(),
+      _classicSession?.dispose(),
+      _hashtagsSubscription?.cancel(),
+      _followingSubscription?.cancel(),
+      _curatedListsSubscription?.cancel(),
+      _followedPeopleListsSubscription?.cancel(),
+      _badgeSubscriptionsSubscription?.cancel(),
+      super.close(),
+    ];
     _removalRepositorySubscription = null;
-    final removedIdsCancelled = _removedIdsSubscription?.cancel();
     _removedIdsSubscription = null;
-    await _hashtagsSubscription?.cancel();
-    await _followingSubscription?.cancel();
-    await _curatedListsSubscription?.cancel();
-    await _followedPeopleListsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
-    await _badgeSubscriptionsSubscription?.cancel();
     _badgeSubscriptionsSubscription = null;
-    await super.close();
-    await Future.wait([
-      ?repositoryCancelled,
-      ?removedIdsCancelled,
-      ..._pendingRemovalCancellations,
-    ]);
+    await Future.wait(cleanup.nonNulls);
   }
 
   Future<void> _onHashtagsChanged(
@@ -855,6 +925,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         )) {
       return;
     }
+    _classicSession?.setActive(
+      active: source.type == VideoFeedSourceType.classic,
+    );
     _pendingRestoredPeopleList = null;
     _pendingRestoredCuratedList = null;
     final selectionSequence = ++_sourceSelectionSequence;
@@ -1658,6 +1731,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool isRemoved(VideoEvent video) =>
         video.id.toLowerCase() == videoId ||
         _removalRepository.isVideoKnownDeleted(video);
+    _classicSession?.reapplyFilters(keep: (video) => !isRemoved(video));
     final removedBeforeCursor = state.videos
         .take(state.currentIndex)
         .where(isRemoved)
@@ -1739,6 +1813,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     String? pubkey,
     Emitter<VideoFeedBlocState> emit,
   ) {
+    if (state.source.type == VideoFeedSourceType.classic &&
+        _classicSession != null) {
+      _classicSession.reapplyFilters();
+      _onClassicsSessionChanged(
+        VideoFeedClassicsSessionChanged(_classicSession.state),
+        emit,
+      );
+      return;
+    }
     if (pubkey != null) {
       final filtered = state.videos.where((v) => v.pubkey != pubkey).toList();
       if (filtered.length != state.videos.length) {
@@ -1847,7 +1930,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               currentIndex: state.currentIndex,
             )
           : validVideos;
-      final displayedVideos = source.type == VideoFeedSourceType.newVideos
+      final displayedVideos =
+          source.type == VideoFeedSourceType.classic && _classicSession != null
+          ? _withoutRemovedVideos(_classicSession.state.videos)
+          : source.type == VideoFeedSourceType.newVideos
           ? filterNewFeedVideos(mergedVideos)
           : mergedVideos;
 
@@ -1859,6 +1945,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         state.copyWith(
           status: VideoFeedStatus.success,
           videos: displayedVideos,
+          currentIndex:
+              source.type == VideoFeedSourceType.classic &&
+                  _classicSession != null
+              ? _classicSession.state.currentIndex
+              : state.currentIndex,
           coordination: state.coordination.copyWith(
             newVideosUntil: source.type == VideoFeedSourceType.newVideos
                 ? _oldestTimestamp(result.videos)
@@ -2066,6 +2157,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) {
     final index = event.index < 0 ? 0 : event.index;
+    if (state.source.type == VideoFeedSourceType.classic) {
+      if (index < state.videos.length) {
+        _classicSession?.activateVideo(state.videos[index]);
+      }
+    }
     if (state.currentIndex == index) return;
     emit(state.copyWith(currentIndex: index));
 
@@ -2117,8 +2213,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// [revalidate] bypasses the in-memory cache read only, for session-start
   /// revalidation: it does not reseed For You recommendations and does not
   /// trigger the New feed's pull-to-refresh relay merge. Classics ignores
-  /// it — that source keeps its deliberate 15-minute cache so re-entry
-  /// resumes the same stable opening.
+  /// it: the adaptive session keeps its own queue, and the archive-only path
+  /// keeps its deliberate 15-minute cache so re-entry resumes the same
+  /// opening.
   Future<HomeFeedResult> _fetchVideosForSource(
     VideoFeedSource source, {
     int? until,
@@ -2175,14 +2272,19 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    // Classics is offset-paginated behind an opaque cursor and has no
-    // time-window pagination, so `until` does not apply. `revalidate` does
-    // not apply either: the source's 15-minute first-page cache exists so
-    // re-entry resumes the same opening, and bypassing it would re-shuffle.
-    VideoFeedSourceType.classic => _videosRepository.getClassicVideos(
-      cursor: paginationCursor,
-      skipCache: skipCache,
-    ),
+    // Classics paginates by an opaque cursor, so `until` does not apply.
+    // `revalidate` does not either: the adaptive session keeps its own queue,
+    // and the archive-only path's 15-minute first-page cache exists so
+    // re-entry resumes the same opening.
+    VideoFeedSourceType.classic =>
+      _classicSession == null
+          ? _videosRepository.getClassicVideos(
+              cursor: paginationCursor,
+              skipCache: skipCache,
+            )
+          : paginationCursor == null
+          ? _classicSession.loadInitial(refresh: skipCache)
+          : _classicSession.loadMore(),
   };
 
   Future<HomeFeedResult> _fetchHashtagVideos(

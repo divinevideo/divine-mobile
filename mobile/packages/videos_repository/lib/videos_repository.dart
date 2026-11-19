@@ -8,6 +8,7 @@ library;
 
 export 'src/author_feed_result.dart';
 export 'src/badge_video_pager.dart';
+export 'src/classic_feed_session.dart';
 export 'src/db_video_local_storage.dart';
 export 'src/following_video_feed_session.dart';
 export 'src/home_feed_result.dart';

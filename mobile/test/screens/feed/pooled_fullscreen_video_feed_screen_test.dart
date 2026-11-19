@@ -27,6 +27,7 @@ import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -37,6 +38,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -69,6 +71,16 @@ import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
 
 class _MockDiscoveryVideosRepository extends Mock implements VideosRepository {}
+
+const _classicsViewer =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+/// A signed-in identity, so Classics has a viewer it could send.
+class _KnownViewerSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() =>
+      const NostrSessionReadiness.identityKnown(pubkey: _classicsViewer);
+}
 
 class MockFullscreenFeedBloc
     extends MockBloc<FullscreenFeedEvent, FullscreenFeedState>
@@ -214,6 +226,9 @@ class _PopCountingObserver extends NavigatorObserver {
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(const ClassicRecommendationsRequest(seed: 'test'));
+  });
   group('PooledFullscreenVideoFeedScreen', () {
     group('fullscreen video media alignment', () {
       test('centers contained 1 x 1 / landscape videos in the viewport', () {
@@ -484,6 +499,163 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'selected Classics retain Classics attribution after the anchor',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final page = Completer<HomeFeedResult>();
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((_) => page.future);
+        when(() => repository.removedVideoIds)
+            .thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                adaptiveClassicsEnabledProvider.overrideWithValue(true),
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+                consumptionAnalyticsTrackerProvider.overrideWithValue(
+                  ConsumptionAnalyticsTracker(analytics: () => analytics),
+                ),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(anchor: videos.first),
+                feedRepository: StaticFeedRepository(),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final bloc = tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+        expect(bloc.state.videos, [videos.first]);
+        page.complete(
+          HomeFeedResult(
+            videos: [videos.last],
+            hasMore: false,
+            recommendationPageCount: 1,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(nativeFeed(tester).videos, videos);
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.trafficSource,
+          },
+          {
+            for (final video in videos)
+              video.id: ViewTrafficSource.discoveryClassic,
+          },
+        );
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        await tester.pump();
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .single
+              .parameters['feed_type'],
+          'classics',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'selected Classics send no viewer while analytics consent is off',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final viewers = <String?>[];
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((call) async {
+          viewers.add(call.namedArguments[#userPubkey] as String?);
+          return const HomeFeedResult(videos: [], hasMore: false);
+        });
+        when(
+          () => repository.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                adaptiveClassicsEnabledProvider.overrideWithValue(true),
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+                nostrSessionProvider.overrideWith(_KnownViewerSession.new),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(anchor: videos.first),
+                feedRepository: StaticFeedRepository(),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(FullscreenFeedContent)),
+        );
+        expect(container.read(nostrSessionProvider).pubkey, _classicsViewer);
+        expect(viewers, isNotEmpty);
+        expect(viewers, everyElement(isNull));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     testWidgets(
       'a single-video route appends For You without replacing its anchor',

@@ -625,6 +625,7 @@ Widget testProviderScope({
 
 /// Standard fixtures a caller's own override replaces instead of duplicating.
 final List<Object> _replaceableStandardOverrides = [
+  analyticsServiceProvider,
   userRankingSignalsLoaderProvider,
   ownFollowListRankingSignalsLoaderProvider,
   profileFeedRetryTriggersProvider,
