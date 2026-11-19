@@ -3957,6 +3957,19 @@ void main() {
         act: (bloc) => bloc.add(const VideoRecorderResetRequested()),
         expect: () => const [VideoRecorderBlocState()],
       );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the pause of a sheet that is still open',
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              zoomLevel: 3,
+              remoteRecordPauseCount: 1,
+            ),
+          ),
+        act: (bloc) => bloc.add(const VideoRecorderResetRequested()),
+        expect: () => const [VideoRecorderBlocState(remoteRecordPauseCount: 1)],
+      );
     });
 
     group('VideoRecorderRecorderModeSet', () {

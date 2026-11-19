@@ -96,7 +96,7 @@ class VideoRecorderBlocState extends Equatable {
     this.pendingStopAfterStart = false,
     this.recordingLockedForNavigation = false,
     this.editorNavigationInProgress = false,
-    this.isRemoteRecordPaused = false,
+    this.remoteRecordPauseCount = 0,
     this.baseZoomLevel = 1.0,
     this.snappedTo1x = false,
     this.lastRawZoom = 1.0,
@@ -284,14 +284,21 @@ class VideoRecorderBlocState extends Equatable {
   /// "next" in that window would push a second editor over the first.
   final bool editorNavigationInProgress;
 
-  /// True while a sheet over the preview, such as the sound picker or the
-  /// autosave offer, has paused remote record control.
+  /// How many sheets over the preview, such as the sound picker or the
+  /// autosave offer, currently hold remote record control paused.
+  ///
+  /// A count rather than a flag because the sheets can overlap: the autosave
+  /// offer waits on an asynchronous lookup and can open over another sheet,
+  /// and closing it must not resume control under the one still open.
+  final int remoteRecordPauseCount;
+
+  /// True while any sheet over the preview has paused remote record control.
   ///
   /// Kept apart from whether remote control is on: those sheets can open
   /// while the camera is still starting, before setup turns remote control
   /// on, and setup must keep it paused then, or a volume or Bluetooth press
   /// would start a take behind the sheet.
-  final bool isRemoteRecordPaused;
+  bool get isRemoteRecordPaused => remoteRecordPauseCount > 0;
 
   /// Zoom level captured at the start of the current pinch gesture.
   ///
@@ -513,7 +520,7 @@ class VideoRecorderBlocState extends Equatable {
     bool? pendingStopAfterStart,
     bool? recordingLockedForNavigation,
     bool? editorNavigationInProgress,
-    bool? isRemoteRecordPaused,
+    int? remoteRecordPauseCount,
     double? baseZoomLevel,
     bool? snappedTo1x,
     double? lastRawZoom,
@@ -584,7 +591,8 @@ class VideoRecorderBlocState extends Equatable {
           recordingLockedForNavigation ?? this.recordingLockedForNavigation,
       editorNavigationInProgress:
           editorNavigationInProgress ?? this.editorNavigationInProgress,
-      isRemoteRecordPaused: isRemoteRecordPaused ?? this.isRemoteRecordPaused,
+      remoteRecordPauseCount:
+          remoteRecordPauseCount ?? this.remoteRecordPauseCount,
       baseZoomLevel: baseZoomLevel ?? this.baseZoomLevel,
       snappedTo1x: snappedTo1x ?? this.snappedTo1x,
       lastRawZoom: lastRawZoom ?? this.lastRawZoom,
@@ -651,7 +659,7 @@ class VideoRecorderBlocState extends Equatable {
     pendingStopAfterStart,
     recordingLockedForNavigation,
     editorNavigationInProgress,
-    isRemoteRecordPaused,
+    remoteRecordPauseCount,
     baseZoomLevel,
     snappedTo1x,
     lastRawZoom,
