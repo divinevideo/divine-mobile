@@ -2,8 +2,11 @@
 // ABOUTME: Verifies drafts are kept before recording and only confirmed layouts open.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:analytics/analytics.dart';
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
@@ -23,6 +27,8 @@ import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -32,10 +38,15 @@ import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../mocks/mock_path_provider_platform.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -191,7 +202,9 @@ class _Editor extends VideoEditorNotifier {
   VideoEditorProviderState build() => VideoEditorProviderState();
 
   @override
-  Future<String?> keepAutosaveAsDraft() async {
+  Future<String?> keepAutosaveAsDraft({
+    Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
+  }) async {
     events.add('keep draft');
     return keepGate?.future ?? 'kept-draft';
   }
@@ -347,6 +360,147 @@ void main() {
       );
       unawaited(
         tracker.recordingStarted(.capture, session: recorder.analyticsSession),
+      );
+    }
+
+    for (final rejectWrites in [false, true]) {
+      testWidgets(
+        'clearing keeps autosave-only Library sources (save fails: $rejectWrites)',
+        (tester) async {
+          final documents = Directory.systemTemp.createTempSync(
+            'library_reaction_sources_',
+          );
+          final previousPaths = PathProviderPlatform.instance;
+          PathProviderPlatform.instance = MockPathProviderPlatform()
+            ..setApplicationDocumentsPath(documents.path);
+          resetCachedDocumentsPath();
+          final database = AppDatabase.test(NativeDatabase.memory());
+          final actualLibrary = ClipLibraryService(
+            clipsDao: database.clipsDao,
+            draftsDao: database.draftsDao,
+            clipCategoriesDao: database.clipCategoriesDao,
+            ownerPubkey: owner,
+          );
+          final drafts = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+            ownerPubkey: owner,
+          );
+          SharedPreferences.setMockInitialValues({});
+          final container = ProviderContainer(
+            overrides: [
+              authServiceProvider.overrideWithValue(auth),
+              creationAnalyticsTrackerProvider.overrideWithValue(tracker),
+              databaseProvider.overrideWithValue(database),
+              draftStorageServiceProvider.overrideWithValue(drafts),
+              clipLibraryServiceProvider.overrideWithValue(
+                rejectWrites
+                    ? (_RecordingLibrary()..rejectWrites = true)
+                    : actualLibrary,
+              ),
+              sharedPreferencesProvider.overrideWithValue(
+                await SharedPreferences.getInstance(),
+              ),
+            ],
+          );
+          addTearDown(() async {
+            container.dispose();
+            await database.close();
+            PathProviderPlatform.instance = previousPaths;
+            resetCachedDocumentsPath();
+            documents.deleteSync(recursive: true);
+          });
+
+          final takeIds = ['source', 'other'];
+          final files = [
+            for (final id in takeIds)
+              File('${documents.path}/$id.mp4')..writeAsBytesSync([1, 2, 3]),
+          ];
+          final autosave = DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [
+              for (var index = 0; index < takeIds.length; index++)
+                _clip(takeIds[index]).copyWith(
+                  video: EditorVideo.file(files[index].path),
+                ),
+            ],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+          );
+          expect(autosave.hasBeenEdited, isFalse);
+          late DivineVideoClip source;
+          await tester.runAsync(() async {
+            await drafts.saveDraft(autosave);
+            final visible = await actualLibrary.getAllClips();
+            expect(visible.map((clip) => clip.id), unorderedEquals(takeIds));
+            expect(await database.clipsDao.getClipById('source'), isNull);
+            expect(await database.clipsDao.getClipById('other'), isNull);
+            source = visible.singleWhere((clip) => clip.id == 'source');
+          });
+
+          late BuildContext context;
+          late WidgetRef ref;
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: Consumer(
+                    builder: (consumerContext, consumerRef, _) {
+                      context = consumerContext;
+                      ref = consumerRef;
+                      return const SizedBox();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+          var cameraOpens = 0;
+          await tester.runAsync(
+            () => recordLibraryReaction(
+              context,
+              ref,
+              source,
+              cleanupAbandoned: (_) async {},
+              recordWithCamera:
+                  (_, {required cellAspectRatio, required maxClips}) async {
+                    cameraOpens++;
+                    return null;
+                  },
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(cameraOpens, rejectWrites ? 0 : 1);
+          if (rejectWrites) {
+            expect(
+              find.text(context.l10n.videoMetadataFailedToSaveSnackbar),
+              findsOneWidget,
+            );
+          }
+          await tester.runAsync(() async {
+            final row = await database.draftsDao.getDraftById(
+              VideoEditorConstants.autoSaveId,
+            );
+            expect(row, rejectWrites ? isNotNull : isNull);
+            expect(
+              (await actualLibrary.getAllClips()).map((clip) => clip.id),
+              unorderedEquals(takeIds),
+            );
+            for (final file in files) {
+              expect(file.existsSync(), isTrue);
+            }
+            if (!rejectWrites) {
+              expect(await database.clipsDao.getClipById('source'), isNotNull);
+              expect(await database.clipsDao.getClipById('other'), isNotNull);
+            }
+          });
+        },
       );
     }
 

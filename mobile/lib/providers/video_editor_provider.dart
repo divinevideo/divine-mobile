@@ -1544,13 +1544,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// the same session moving to the Drafts tab rather than a duplicate
   /// project.
   ///
-  /// Returns the id of the draft it wrote, or `null` when there was nothing
-  /// to keep. A caller that then gives up before replacing the autosave
+  /// [retainUneditedClips] can preserve Library footage before the caller
+  /// clears an autosave that needs no named draft.
+  ///
+  /// Returns the id of the draft it wrote, or `null` when it wrote no named
+  /// draft. A caller that then gives up before replacing the autosave
   /// passes that id to [discardKeptDraft], or the session is listed twice.
   ///
   /// Throws when the draft store fails; nothing is deleted, so the autosave
   /// is still there.
-  Future<String?> keepAutosaveAsDraft() async {
+  Future<String?> keepAutosaveAsDraft({
+    Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
+  }) async {
     if (_reactionRetentions.isNotEmpty) await _settleReactionRetentions();
     Future<bool>? pendingSave() => _autosaveTimer?.isActive ?? false
         ? flushPendingAutosave()
@@ -1575,7 +1580,13 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     final autosave = await _draftService.getDraftById(
       VideoEditorConstants.autoSaveId,
     );
-    if (autosave == null || !autosave.hasBeenEdited) return null;
+    if (autosave == null) return null;
+    if (!autosave.hasBeenEdited) {
+      if (retainUneditedClips != null && autosave.clips.isNotEmpty) {
+        await retainUneditedClips(autosave.clips);
+      }
+      return null;
+    }
     final kept = autosave.duplicate().copyWith(
       challengeContext: autosave.challengeContext,
       scheduledAt: autosave.scheduledAt,

@@ -26,9 +26,11 @@ import 'package:openvine/models/video_publish/video_publish_provider_state.dart'
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/clip_category_chips.dart';
 import 'package:openvine/widgets/library/clips_tab.dart';
@@ -49,6 +51,8 @@ class _MockClipsLibraryBloc
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
 class _EmptyClipManager extends ClipManagerNotifier {
   @override
@@ -71,7 +75,9 @@ class _GatedEditor extends VideoEditorNotifier {
   VideoEditorProviderState build() => VideoEditorProviderState();
 
   @override
-  Future<String?> keepAutosaveAsDraft() {
+  Future<String?> keepAutosaveAsDraft({
+    Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
+  }) {
     onKeep();
     return keepGate.future;
   }
@@ -1147,6 +1153,9 @@ void main() {
               overrides: [
                 authServiceProvider.overrideWithValue(auth),
                 databaseProvider.overrideWithValue(_MockAppDatabase()),
+                clipLibraryServiceProvider.overrideWithValue(
+                  _MockClipLibraryService(),
+                ),
                 clipManagerProvider.overrideWith(_EmptyClipManager.new),
                 videoEditorProvider.overrideWith(() => editor),
                 videoPublishProvider.overrideWith(_IdlePublish.new),

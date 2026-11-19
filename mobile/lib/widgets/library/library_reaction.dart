@@ -88,10 +88,23 @@ Future<void> recordLibraryReaction(
       !hasCreationRoute();
 
   // A full recorder session must not consume the reaction's recording budget.
-  // Keep edited work as a named draft before clearing its active session.
+  // Keep edits in a draft and give unedited footage its own Library rows
+  // before clearing the autosave that may be the only reference to it.
   final String? keptDraftId;
   try {
-    keptDraftId = await editor.keepAutosaveAsDraft();
+    final library = ref.read(clipLibraryServiceProvider);
+    keptDraftId = await editor.keepAutosaveAsDraft(
+      retainUneditedClips: (clips) async {
+        if (!isActive()) {
+          throw StateError('The reaction source account changed');
+        }
+        for (final clip in clips) {
+          if (!clip.isPlaceholder && !clip.isFreezeFrame) {
+            await library.retainClip(clip);
+          }
+        }
+      },
+    );
   } catch (error, stackTrace) {
     Log.warning(
       'Could not keep the active draft before recording a library reaction',
