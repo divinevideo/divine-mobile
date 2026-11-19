@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
@@ -68,6 +69,7 @@ void main() {
     });
 
     void stubClips({required Duration total, Duration take = Duration.zero}) {
+      when(() => clipManager.clips).thenReturn(const []);
       when(() => clipManager.totalDuration).thenReturn(total);
       when(() => clipManager.activeRecordingDuration).thenReturn(take);
     }
@@ -218,6 +220,33 @@ void main() {
         expect(state.isShutterActive, isFalse);
       },
     );
+
+    test('mirrors the shot budget while stop-motion stills are taken', () {
+      stubClips(total: Duration.zero);
+      const stopMotion = VideoRecorderBlocState(
+        isCameraInitialized: true,
+        recorderMode: VideoRecorderMode.stopMotion,
+      );
+      final bloc = buildBloc()
+        ..emit(stopMotion.copyWith(stopMotionFrames: ['1.jpg', '2.jpg']));
+      addTearDown(bloc.close);
+      final still = StopMotionFrameOps.framesPerImageToDuration(
+        StopMotionFrameOps.defaultFramesPerImage,
+      );
+
+      bloc.emit(
+        stopMotion.copyWith(stopMotionFrames: ['1.jpg', '2.jpg', '3.jpg']),
+      );
+
+      expect(published, hasLength(2));
+      final state = published.last!;
+      expect(state.recorded, equals(still * 3));
+      expect(
+        state.budget,
+        equals(still * StopMotionFrameOps.maxCaptureFrames),
+      );
+      expect(state.activeTakeStartedAt, isNull);
+    });
 
     test('reports an active shutter during the countdown before a take', () {
       stubClips(total: const Duration(seconds: 2));

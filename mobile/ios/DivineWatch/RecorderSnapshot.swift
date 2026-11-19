@@ -8,13 +8,15 @@ struct RecorderSnapshot: Equatable {
   /// Mirrors `VideoEditorConstants.maxDuration` in the Flutter app.
   static let defaultBudget: TimeInterval = 6.3
 
-  /// Combined length of the clips already recorded.
+  /// Combined length of the clips already recorded. In Stop Motion, the clip
+  /// time the stills taken so far are held for.
   var recordedDuration: TimeInterval = 0
 
   /// When the take in progress started, or `nil` while none is running.
   var activeTakeStartedAt: Date?
 
-  /// Clip length the strip fills against.
+  /// Clip length the strip fills against. In Stop Motion, the clip time of
+  /// the most stills the session fits.
   var budget: TimeInterval = RecorderSnapshot.defaultBudget
 
   /// The recorder mode in use, as the iPhone's mode wheel names it

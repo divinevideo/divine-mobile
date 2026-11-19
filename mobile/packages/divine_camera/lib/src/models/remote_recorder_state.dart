@@ -17,13 +17,15 @@ class RemoteRecorderState {
     this.stillShutterCount = 0,
   });
 
-  /// Combined length of the clips already recorded.
+  /// Combined length of the clips already recorded. In stop motion, the clip
+  /// time the stills taken so far are held for.
   final Duration recorded;
 
   /// When the take in progress started, or `null` while none is running.
   final DateTime? activeTakeStartedAt;
 
-  /// Clip length the remote fills its progress against.
+  /// Clip length the remote fills its progress against. In stop motion, the
+  /// clip time of the most stills the session fits.
   final Duration budget;
 
   /// Name of the recorder mode in use, as the recorder shows it.
