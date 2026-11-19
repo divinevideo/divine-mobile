@@ -564,6 +564,9 @@ class BackgroundPublishBloc
       );
     } catch (error, stackTrace) {
       _logLiveActivityFailure('mark live', error, stackTrace);
+      // A post that cannot be addressed never goes live; without this the
+      // activity would sit on "Posting…" until it went stale.
+      _endLiveActivity(draftId);
     }
   }
 

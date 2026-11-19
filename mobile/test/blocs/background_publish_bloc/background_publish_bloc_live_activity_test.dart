@@ -344,6 +344,35 @@ void main() {
       expect(repo.calls, contains('end d1'));
     });
 
+    test('ends it when the signed event cannot be addressed', () async {
+      final bloc = build();
+      addTearDown(bloc.close);
+
+      bloc.add(
+        BackgroundPublishRequested(
+          draft: _draft('d1'),
+          publishmentProcess: Future.value(
+            PublishSuccess(
+              stableId: 'stable',
+              eventId: _eventId,
+              signedEventBody: jsonEncode({
+                'id': _eventId,
+                'kind': 34236,
+                'pubkey': _owner,
+                'tags': [
+                  ['d', 42],
+                ],
+              }),
+            ),
+          ),
+        ),
+      );
+      await settle();
+
+      expect(repo.lives, isEmpty);
+      expect(repo.calls, contains('end d1'));
+    });
+
     test(
       'a publish that settles before the start returns still goes live',
       () async {
