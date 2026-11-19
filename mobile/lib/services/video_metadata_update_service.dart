@@ -13,6 +13,7 @@ import 'package:models/models.dart'
         clipSourceCreditTagMarker,
         withSoundCreditLines;
 import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
+import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
@@ -95,7 +96,7 @@ const _editRebuiltTagNames = {
 /// Whether [tag] is rebuilt by the edit flow instead of copied verbatim.
 ///
 /// Every other tag on the original event — audio-attribution `e` tags,
-/// engagement counts, expiration, client, relay hints, ProofMode/C2PA
+/// engagement counts, expiration, relay hints, ProofMode/C2PA
 /// provenance, reply threading, subtitle text-tracks, … — is preserved
 /// unchanged so a metadata edit does not drop data it does not own. The tags
 /// come from the newest revision on the relays, so a tag another device added
@@ -236,7 +237,7 @@ sendPostPublishCollaboratorInvites({
 /// Orchestrates the video-metadata-edit republish flow.
 ///
 /// Responsibilities:
-/// - Extracts video URLs from the original event's imeta tags.
+/// - Preserves the original event's imeta variants and updates the thumbnail.
 /// - Optionally uploads a new thumbnail to Blossom.
 /// - Assembles the replacement NIP-71 Nostr event.
 /// - Signs the event and publishes it, succeeding only once a relay accepts it.
@@ -349,62 +350,31 @@ class VideoMetadataUpdateService {
       final tags = <List<String>>[];
 
       // Required 'd' tag — must match the original to replace the event.
-      tags.add(['d', video.stableId]);
+      tags.add(['d', latest.dTagValue]);
 
-      final videoUrls = _extractVideoUrls(
-        originalTags,
-        fallbackUrl: video.videoUrl,
-      );
-      if (videoUrls.isEmpty) {
-        throw const _VideoUpdateException(
-          VideoMetadataUpdateError.noPlayableVideoUrl,
-          'Cannot update video: no valid HTTP video URLs found',
-        );
-      }
-
-      final imetaComponents = <String>[];
-      for (final url in videoUrls) {
-        imetaComponents.add('url $url');
-      }
-      imetaComponents.add('m video/mp4');
-
+      final imetaTags = _imetaTagsForEdit(originalTags, fallback: video);
+      String? uploadedThumbnailUrl;
       if (newThumbnailFile != null) {
         final uploadResult = await _blossomService.uploadImage(
           imageFile: newThumbnailFile,
           nostrPubkey: _authService.currentPublicKeyHex ?? '',
         );
         if (uploadResult.success && uploadResult.cdnUrl != null) {
-          imetaComponents.add('image ${uploadResult.cdnUrl!}');
+          uploadedThumbnailUrl = uploadResult.cdnUrl;
         } else {
           Log.error(
             'Thumbnail upload failed during video update; keeping original',
             name: 'VideoMetadataUpdateService',
             category: LogCategory.video,
           );
-          if (video.thumbnailUrl != null) {
-            imetaComponents.add('image ${video.thumbnailUrl!}');
-          }
         }
-      } else if (video.thumbnailUrl != null) {
-        imetaComponents.add('image ${video.thumbnailUrl!}');
       }
-
-      if (video.blurhash != null) {
-        imetaComponents.add('blurhash ${video.blurhash!}');
-      }
-      if (video.dimensions != null) {
-        imetaComponents.add('dim ${video.dimensions!}');
-      }
-      if (video.sha256 != null) {
-        imetaComponents.add('x ${video.sha256!}');
-      }
-      if (video.fileSize != null) {
-        imetaComponents.add('size ${video.fileSize!}');
-      }
-
-      if (imetaComponents.isNotEmpty) {
-        tags.add(['imeta', ...imetaComponents]);
-      }
+      final thumbnailUrl = uploadedThumbnailUrl;
+      tags.addAll(
+        thumbnailUrl == null
+            ? imetaTags
+            : imetaTags.map((tag) => _replaceImetaThumbnail(tag, thumbnailUrl)),
+      );
 
       // Always written, even empty: the relay rejects a video event with no
       // `title` tag, and first publish writes `["title", ""]` for untitled
@@ -523,7 +493,7 @@ class VideoMetadataUpdateService {
         kind: latest.kind,
         content: content,
         tags: tags,
-        createdAt: nextReplacementCreatedAt(video),
+        createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
       );
 
       if (event == null) {
@@ -578,47 +548,64 @@ class VideoMetadataUpdateService {
     }
   }
 
-  /// Extracts all valid HTTP video URLs from the event's imeta tags.
-  ///
-  /// Handles both the legacy space-separated format
-  /// (`['imeta', 'url https://...', ...]`) and the current key-value pair
-  /// format (`['imeta', 'url', 'https://...', ...]`).
-  ///
-  /// Falls back to [fallbackUrl] when no imeta tag carries an HTTP URL.
-  List<String> _extractVideoUrls(
-    List<List<String>> tags, {
-    required String? fallbackUrl,
+  /// Keeps media variants separate so URLs, MIME types, and hashes stay
+  /// associated with their own rendition. A legacy top-level video URL
+  /// can provide the playable media when no imeta tag has one.
+  static List<List<String>> _imetaTagsForEdit(
+    List<List<String>> originalTags, {
+    required VideoEvent fallback,
   }) {
-    final urls = <String>[];
-    for (final tag in tags) {
-      if (tag.isEmpty || tag[0] != 'imeta') continue;
-      if (tag.length > 1 && tag[1].contains(' ')) {
-        // Legacy space-separated format.
-        for (var i = 1; i < tag.length; i++) {
-          final spaceIdx = tag[i].indexOf(' ');
-          if (spaceIdx > 0) {
-            final key = tag[i].substring(0, spaceIdx);
-            final value = tag[i].substring(spaceIdx + 1);
-            if (key == 'url' && _isHttpUrl(value) && !urls.contains(value)) {
-              urls.add(value);
-            }
+    final imetaTags = <List<String>>[];
+    var hasPlayableUrl = false;
+    for (final tag in originalTags) {
+      if (tag.isEmpty || tag.first != 'imeta') continue;
+      final filtered = <String>['imeta'];
+      var removedLocalUrl = false;
+      parseImetaTag(tag, (key, value) {
+        if (key == 'url') {
+          if (!_isHttpUrl(value)) {
+            removedLocalUrl = true;
+            return;
           }
+          hasPlayableUrl = true;
         }
-      } else {
-        // Current key-value pair format.
-        for (var i = 1; i < tag.length - 1; i += 2) {
-          if (tag[i] == 'url' &&
-              _isHttpUrl(tag[i + 1]) &&
-              !urls.contains(tag[i + 1])) {
-            urls.add(tag[i + 1]);
-          }
-        }
-      }
+        filtered.add('$key $value');
+      });
+      if (removedLocalUrl && filtered.length == 1) continue;
+      imetaTags.add(removedLocalUrl ? filtered : tag);
     }
-    if (urls.isEmpty && _isHttpUrl(fallbackUrl)) {
-      urls.add(fallbackUrl!);
+    if (hasPlayableUrl) return imetaTags;
+    final url = fallback.videoUrl;
+    if (!_isHttpUrl(url)) {
+      throw const _VideoUpdateException(
+        VideoMetadataUpdateError.noPlayableVideoUrl,
+        'Cannot update video: no valid HTTP video URLs found',
+      );
     }
-    return urls;
+    return [
+      [
+        'imeta',
+        'url $url',
+        'm video/mp4',
+        if (fallback.thumbnailUrl case final thumbnail?) 'image $thumbnail',
+        if (fallback.blurhash case final blurhash?) 'blurhash $blurhash',
+        if (fallback.dimensions case final dimensions?) 'dim $dimensions',
+        if (fallback.sha256 case final sha256?) 'x $sha256',
+        if (fallback.fileSize case final fileSize?) 'size $fileSize',
+      ],
+      ...imetaTags,
+    ];
+  }
+
+  static List<String> _replaceImetaThumbnail(
+    List<String> tag,
+    String thumbnailUrl,
+  ) {
+    final updated = ['imeta'];
+    parseImetaTag(tag, (key, value) {
+      if (key != 'image' && key != 'thumb') updated.add('$key $value');
+    });
+    return updated..add('image $thumbnailUrl');
   }
 
   static bool _isHttpUrl(String? url) {
