@@ -70,21 +70,14 @@ class _AnnouncementDetailPage extends ConsumerWidget {
         builder: (context, state) => Consumer(
           builder: (context, ref, _) {
             final action = state.announcement?.action;
-            final Uri? destination;
-            if (action is UpdateAppAnnouncementAction && !kIsWeb) {
-              destination = announcementActionDestination(
-                action,
-                PushDeviceMetadata.resolve(
-                  platform: defaultTargetPlatform,
-                  source: ref.watch(installSourceProvider),
-                  appVersion: ref.watch(appVersionProvider),
-                ),
-              );
-            } else {
-              destination = action is ContestAnnouncementAction
-                  ? action.url
-                  : null;
-            }
+            final device = action is UpdateAppAnnouncementAction && !kIsWeb
+                ? PushDeviceMetadata.resolve(
+                    platform: defaultTargetPlatform,
+                    source: ref.watch(installSourceProvider),
+                    appVersion: ref.watch(appVersionProvider),
+                  )
+                : null;
+            final destination = announcementActionDestination(action, device);
             return AnnouncementDetailScreen(
               announcement: state.announcement,
               status: state.status,

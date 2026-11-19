@@ -11,7 +11,7 @@ import 'package:openvine/services/push_device_metadata.dart';
 /// Contest URLs were already validated by the catalog parser.
 Uri? announcementActionDestination(
   AnnouncementAction? action,
-  PushDeviceMetadata device,
+  PushDeviceMetadata? device,
 ) {
   switch (action) {
     case ContestAnnouncementAction(:final url):
@@ -21,6 +21,7 @@ Uri? announcementActionDestination(
       :final channel,
       :final version,
     ):
+      if (device == null) return null;
       final current = device.appVersion;
       if (device.platform != platform ||
           device.installChannel != channel ||

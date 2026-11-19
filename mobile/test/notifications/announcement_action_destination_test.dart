@@ -30,6 +30,7 @@ void main() {
         ),
         Uri.parse(DownloadUrls.zapstore),
       );
+      expect(announcementActionDestination(action, null), isNull);
       for (final metadata in [
         device(TargetPlatform.android, InstallSource.zapstore, '1.3.0'),
         device(TargetPlatform.android, InstallSource.zapstore, '1.4.0'),
@@ -83,7 +84,7 @@ void main() {
       expect(
         announcementActionDestination(
           ContestAnnouncementAction(url: url),
-          device(TargetPlatform.iOS, InstallSource.appStore, '1.2.3'),
+          null,
         ),
         url,
       );
