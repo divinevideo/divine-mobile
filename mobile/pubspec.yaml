@@ -81,6 +81,7 @@ workspace:
   - packages/people_lists_repository
   - packages/permissions_service
   - packages/poll_repository
+  - packages/post_live_activity_repository
   - packages/publishing_suggestions
   - packages/profile_repository
   - packages/reposts_repository
@@ -320,6 +321,9 @@ dependencies:
 
   # Poll Repository - NIP-88 polls, quizzes and sliders on videos
   poll_repository:
+
+  # Post Live Activity Repository - rules for the just-published post Live Activity
+  post_live_activity_repository:
 
   # Video Responses Repository - a video's video replies and Add yours answers
   video_responses_repository:

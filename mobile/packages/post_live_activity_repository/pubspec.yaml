@@ -1,0 +1,25 @@
+name: post_live_activity_repository
+description: >
+  Rules for the post Live Activity: when to start, update and end it, and when
+  to register it with the push service.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.5
+  nostr_sdk:
+    path: ../nostr_sdk
+  shared_preferences: ^2.5.3
+  unified_logger:
+    path: ../unified_logger
+
+dev_dependencies:
+  fake_async: ^1.3.3
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^10.2.0
