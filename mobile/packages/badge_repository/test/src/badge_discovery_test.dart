@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _Client extends Mock implements NostrClient {}
 
@@ -290,12 +291,15 @@ void main() {
       );
     });
 
-    test('a stalled pinned catalogue shares the window deadline', () async {
+    test('a hung catalogue shares the recent window deadline', () async {
       await repository.dispose();
+      repository = await makeRepository(
+        pinnedIssuers: [issuer2],
+        stopwatchFactory: () => app_clock.clock.stopwatch(),
+      );
       fakeAsync((clock) {
-        final window = Completer<QueryResult>();
         final catalogue = Completer<BadgeDefinitionsResponse>();
-        final community = definition(key1);
+        final recent = Completer<QueryResult>();
         when(
           () => api.getBadgeDefinitions(issuer: issuer2),
         ).thenAnswer((_) => catalogue.future);
@@ -309,37 +313,45 @@ void main() {
             requireAllRelaysSettled: true,
             maxCollectedEvents: 300,
           ),
-        ).thenAnswer((_) => window.future);
-
+        ).thenAnswer((_) => recent.future);
         List<Nip58BadgeDefinition>? result;
         unawaited(
-          makeRepository(
-                pinnedIssuers: [issuer2],
-                stopwatchFactory: app_clock.clock.stopwatch,
-              )
-              .then((created) {
-                repository = created;
-                return repository.loadPublicDefinitions();
-              })
-              .then((value) => result = value),
+          repository.loadPublicDefinitions().then((value) => result = value),
         );
-        clock
-          ..flushMicrotasks()
-          ..elapse(const Duration(seconds: 6));
-        window.complete(
-          QueryResult(events: [community], endedBy: QueryEnd.complete),
+        clock.flushMicrotasks();
+        verify(() => api.getBadgeDefinitions(issuer: issuer2)).called(1);
+        clock.elapse(const Duration(seconds: 7));
+        recent.complete(
+          QueryResult(
+            events: [definition(key1), definition(key2)],
+            endedBy: QueryEnd.complete,
+          ),
         );
         clock.flushMicrotasks();
         expect(result, isNull);
+        clock.elapse(const Duration(seconds: 3));
+        expect(
+          result?.map((badge) => badge.event.pubkey),
+          unorderedEquals([issuer1, issuer2]),
+        );
+        expect(
+          LogCaptureService().getRecentLogs().map((entry) => entry.message),
+          contains(
+            'Pinned badge catalogue unavailable for ${pubkeyForLogs(issuer2)}',
+          ),
+        );
 
-        clock.elapse(const Duration(seconds: 4));
-        expect(result?.single.event.id, community.id);
-        verify(() => api.getBadgeDefinitions(issuer: issuer2)).called(1);
         catalogue.complete(
-          BadgeDefinitionsResponse(badges: [definition(key2)]),
+          BadgeDefinitionsResponse(
+            badges: [definition(key2, identifier: 'too-late')],
+            nextCursor: 'next-page',
+          ),
         );
         clock.flushMicrotasks();
-        expect(result?.single.event.id, community.id);
+        expect(result, hasLength(2));
+        verifyNever(
+          () => api.getBadgeDefinitions(issuer: issuer2, cursor: 'next-page'),
+        );
         verifyNever(
           () => client.readAllEvents(
             any(),
@@ -351,20 +363,26 @@ void main() {
     });
 
     test(
-      'pinned issuers settle before a slow community exhausts the budget',
+      'a stalled community deletion read leaves official badges visible',
       () async {
         await repository.dispose();
+        repository = await makeRepository(
+          pinnedIssuers: [issuer2],
+          stopwatchFactory: () => app_clock.clock.stopwatch(),
+        );
+        final official = definition(key2);
+        events = [
+          definition(key1),
+          for (var i = 3; i < 6; i++) definition(i.toString().padLeft(64, '0')),
+        ];
+        when(() => api.getBadgeDefinitions(issuer: issuer2)).thenAnswer(
+          (_) async => BadgeDefinitionsResponse(badges: [official]),
+        );
         fakeAsync((clock) {
-          final pinned = definition(key2);
-          events = [
-            definition(key1),
-            for (var i = 3; i < 6; i++)
-              definition(i.toString().padLeft(64, '0')),
-          ];
+          final slow = Completer<QueryResult>();
+          final communities = Completer<QueryResult>();
           const settled = QueryResult(events: [], endedBy: QueryEnd.complete);
-          when(
-            () => api.getBadgeDefinitions(issuer: issuer2),
-          ).thenAnswer((_) async => BadgeDefinitionsResponse(badges: [pinned]));
+          final deletionOrder = <String>[];
           when(
             () => client.readEvents(
               any(),
@@ -375,36 +393,39 @@ void main() {
               requireAllRelaysSettled: true,
               maxCollectedEvents: 1000,
             ),
-          ).thenAnswer((call) {
+          ).thenAnswer((call) async {
             final filters = call.positionalArguments.single as List<Filter>;
-            requests.addAll(filters);
             final issuer = filters.first.authors!.single;
-            if (issuer == issuer1) return Completer<QueryResult>().future;
-            return Future<QueryResult>.delayed(
-              Duration(seconds: issuer == issuer2 ? 4 : 7),
-              () => settled,
-            );
+            deletionOrder.add(issuer);
+            if (issuer == issuer1) return slow.future;
+            return issuer == issuer2 ? settled : communities.future;
           });
-
           List<Nip58BadgeDefinition>? result;
           unawaited(
-            makeRepository(
-                  pinnedIssuers: [issuer2],
-                  stopwatchFactory: app_clock.clock.stopwatch,
-                )
-                .then((created) {
-                  repository = created;
-                  return repository.loadPublicDefinitions();
-                })
-                .then((value) => result = value),
+            repository.loadPublicDefinitions().then((value) => result = value),
           );
           clock.flushMicrotasks();
-          expect(requests[1].authors, [issuer2]);
-          clock.elapse(const Duration(seconds: 10));
-          expect(result?.map((d) => d.event.id).toSet(), {
-            ...events.skip(1).take(2).map((event) => event.id),
-            pinned.id,
-          });
+          expect(deletionOrder, hasLength(5));
+          expect(deletionOrder.take(2), [issuer2, issuer1]);
+          expect(result, isNull);
+          clock.elapse(const Duration(seconds: 7));
+          communities.complete(settled);
+          clock.elapse(const Duration(seconds: 3));
+          final expected = unorderedEquals([
+            official.id,
+            ...events.skip(1).map((event) => event.id),
+          ]);
+          expect(result?.map((badge) => badge.event.id), expected);
+          expect(
+            LogCaptureService().getRecentLogs().map((entry) => entry.message),
+            containsAll([
+              'Omitted badge issuer ${pubkeyForLogs(issuer1)}: deletion read failed',
+              'Badge discovery omitted 1 of 5 issuers',
+            ]),
+          );
+          slow.complete(settled);
+          clock.flushMicrotasks();
+          expect(result?.map((badge) => badge.event.id), expected);
         });
       },
     );
@@ -464,6 +485,88 @@ void main() {
     );
 
     test(
+      'a worker error falls back, while a false result rejects the event',
+      () async {
+        await repository.dispose();
+        final verifier = _Verifier();
+        final genuine = definition(key1);
+        final rejected = definition(key2);
+        final forged = definition(key1, identifier: 'forged')..sig = '0' * 128;
+        when(() => verifier.verify(any())).thenAnswer((call) async {
+          final raw = call.positionalArguments.single as Map<String, dynamic>;
+          if (raw['id'] == rejected.id) return false;
+          throw StateError('worker failed');
+        });
+        repository = await makeRepository(spawner: () async => verifier);
+        events = [genuine, rejected, forged];
+        expect(
+          (await repository.loadPublicDefinitions()).single.event.id,
+          genuine.id,
+        );
+      },
+    );
+
+    for (final checkingDeletion in [false, true]) {
+      test(
+        'disposing the worker discards discovery during a '
+        '${checkingDeletion ? 'deletion' : 'definition'} check',
+        () async {
+          await repository.dispose();
+          final verifier = _Verifier();
+          final started = Completer<void>();
+          final verified = Completer<bool>();
+          when(() => verifier.verify(any())).thenAnswer((_) {
+            started.complete();
+            return verified.future;
+          });
+          when(verifier.close).thenAnswer((_) {
+            if (!verified.isCompleted) {
+              verified.completeError(StateError('worker closed'));
+            }
+          });
+          repository = await makeRepository(spawner: () async => verifier);
+          final candidate = definition(key1);
+          if (checkingDeletion) {
+            candidate.markSignatureVerified();
+            deletions = [deletion(key1, candidate)];
+          }
+          events = [candidate];
+
+          final loading = repository.loadPublicDefinitions();
+          final expectation = expectLater(loading, completion(isEmpty));
+          await started.future;
+          await repository.dispose();
+          await expectation;
+        },
+      );
+    }
+
+    test(
+      'skips signature work for deletions that cannot remove a badge',
+      () async {
+        await repository.dispose();
+        final verifier = _Verifier();
+        final candidate = definition(key1)..markSignatureVerified();
+        final applicable = deletion(key1, candidate, at: 99, address: false);
+        final verifiedIds = <String>[];
+        when(() => verifier.verify(any())).thenAnswer((call) async {
+          final raw = call.positionalArguments.single as Map<String, dynamic>;
+          verifiedIds.add(raw['id'] as String);
+          return true;
+        });
+        repository = await makeRepository(spawner: () async => verifier);
+        events = [candidate];
+        deletions = [
+          deletion(key1, candidate, at: 99),
+          deletion(key1, definition(key2)),
+          applicable,
+        ];
+        expect(await repository.loadPublicDefinitions(), isEmpty);
+        expect(verifiedIds, [applicable.id]);
+      },
+    );
+
+    test(
       'disposal before the initial relay answer never creates a worker',
       () async {
         await repository.dispose();
@@ -498,79 +601,6 @@ void main() {
         );
         expect(await loading, isEmpty);
         expect(spawns, 0);
-      },
-    );
-
-    test('checks deletion targets and timestamps before verifying', () async {
-      await repository.dispose();
-      final verifier = _Verifier();
-      when(() => verifier.verify(any())).thenAnswer((_) async => true);
-      repository = await makeRepository(spawner: () async => verifier);
-      final candidate = definition(key1)..markSignatureVerified();
-      final effectiveDeletion = deletion(
-        key1,
-        candidate,
-        at: 90,
-        address: false,
-      );
-      events = [candidate];
-      deletions = [
-        deletion(key1, definition(key2)),
-        deletion(key1, candidate, at: 90),
-        effectiveDeletion,
-        deletion(key1, candidate, at: 110),
-      ];
-
-      expect(await repository.loadPublicDefinitions(), isEmpty);
-      expect(
-        verify(() => verifier.verify(captureAny())).captured,
-        [effectiveDeletion.toJson()],
-      );
-    });
-
-    test(
-      'a live repository verifies signatures locally after a worker error',
-      () async {
-        await repository.dispose();
-        final verifier = _Verifier();
-        when(() => verifier.verify(any())).thenAnswer(
-          (_) async => throw StateError('worker failed'),
-        );
-        repository = await makeRepository(spawner: () async => verifier);
-        final genuine = definition(key1);
-        events = [genuine, definition(key2)..sig = '0' * 128];
-
-        expect(
-          (await repository.loadPublicDefinitions()).single.event.id,
-          genuine.id,
-        );
-      },
-    );
-
-    test(
-      'a worker closed during verification does not fail discovery',
-      () async {
-        await repository.dispose();
-        final verifier = _Verifier();
-        final verifying = Completer<void>();
-        final signature = Completer<bool>();
-        when(() => verifier.verify(any())).thenAnswer((_) {
-          verifying.complete();
-          return signature.future;
-        });
-        when(verifier.close).thenAnswer(
-          (_) => signature.completeError(StateError('worker closed')),
-        );
-        repository = await makeRepository(spawner: () async => verifier);
-        events = [definition(key1)];
-        final loading = repository.loadPublicDefinitions();
-        await verifying.future;
-        final checkedLoad = expectLater(loading, completion(isEmpty));
-
-        await repository.dispose();
-        repository = await makeRepository();
-        await checkedLoad;
-        verify(verifier.close).called(1);
       },
     );
 
@@ -610,42 +640,59 @@ void main() {
       },
     );
 
-    test('a pending signature check stops at the deletion deadline', () async {
-      await repository.dispose();
-      fakeAsync((clock) {
-        final verified = Completer<bool>();
-        final verifier = _Verifier();
-        when(() => verifier.verify(any())).thenAnswer((_) => verified.future);
-        events = [definition(key1)..markSignatureVerified()];
-        deletions = [deletion(key1, events.single)];
-        Object? failure;
-        unawaited(
-          makeRepository(
-                spawner: () async => verifier,
-                stopwatchFactory: app_clock.clock.stopwatch,
-              )
-              .then((created) {
-                repository = created;
-                return repository.loadPublicDefinitions();
-              })
-              .then<void>(
-                (_) => fail('Expected an incomplete deletion read'),
-                onError: (Object error) => failure = error,
-              ),
-        );
-        clock.flushMicrotasks();
-        expect(failure, isNull);
-        clock.elapse(const Duration(seconds: 10));
-        expect(failure, isA<BadgeReadIncompleteException>());
-        verified.complete(true);
-        clock.flushMicrotasks();
-        var disposed = false;
-        unawaited(repository.dispose().then((_) => disposed = true));
-        clock.flushMicrotasks();
-        expect(disposed, isTrue);
-      });
-      repository = await makeRepository();
-    });
+    for (final timerFiresFirst in [false, true]) {
+      test(
+        timerFiresFirst
+            ? 'an expired verifier timer omits the issuer before stopwatch expiry'
+            : 'a pending signature check stops at the deletion deadline',
+        () async {
+          await repository.dispose();
+          fakeAsync((clock) {
+            final verified = Completer<bool>();
+            final verifier = _Verifier();
+            when(
+              () => verifier.verify(any()),
+            ).thenAnswer((_) => verified.future);
+            events = [definition(key1)..markSignatureVerified()];
+            deletions = [deletion(key1, events.single)];
+            Object? failure;
+            final timer = _MutableStopwatch()
+              ..elapsedValue = const Duration(seconds: 9, microseconds: 999999);
+            unawaited(
+              makeRepository(
+                    spawner: () async => verifier,
+                    stopwatchFactory: timerFiresFirst
+                        ? () => timer
+                        : app_clock.clock.stopwatch,
+                  )
+                  .then((created) {
+                    repository = created;
+                    return repository.loadPublicDefinitions();
+                  })
+                  .then<void>(
+                    (_) => fail('Expected an incomplete deletion read'),
+                    onError: (Object error) => failure = error,
+                  ),
+            );
+            clock.flushMicrotasks();
+            expect(failure, isNull);
+            clock.elapse(
+              timerFiresFirst
+                  ? const Duration(microseconds: 1)
+                  : const Duration(seconds: 10),
+            );
+            expect(failure, isA<BadgeReadIncompleteException>());
+            verified.complete(true);
+            clock.flushMicrotasks();
+            var disposed = false;
+            unawaited(repository.dispose().then((_) => disposed = true));
+            clock.flushMicrotasks();
+            expect(disposed, isTrue);
+          });
+          repository = await makeRepository();
+        },
+      );
+    }
 
     test(
       'disposal during worker startup closes the late worker exactly once',
@@ -821,6 +868,26 @@ void main() {
         events = [definition(key1), definition(key2)];
         deletions = [deletion(key1, events.first)];
         incompleteIssuers.add(issuer2);
+        await expectLater(
+          repository.loadPublicDefinitions(),
+          throwsA(isA<BadgeReadIncompleteException>()),
+        );
+      },
+    );
+
+    test(
+      'retry is offered when the only settled issuer becomes hidden',
+      () async {
+        await repository.dispose();
+        repository = await makeRepository(
+          stopwatchFactory: () {
+            // The omission phase starts after both definitions were collected.
+            hidden.add(issuer2);
+            return Stopwatch();
+          },
+        );
+        events = [definition(key1), definition(key2)];
+        incompleteIssuers.add(issuer1);
         await expectLater(
           repository.loadPublicDefinitions(),
           throwsA(isA<BadgeReadIncompleteException>()),

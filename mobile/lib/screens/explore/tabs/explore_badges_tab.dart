@@ -51,26 +51,36 @@ class ExploreBadgesTab extends ConsumerWidget {
   }
 }
 
-class _BadgeVisibilityGate extends ConsumerWidget {
+class _BadgeVisibilityGate extends ConsumerStatefulWidget {
   const _BadgeVisibilityGate();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BadgeVisibilityGate> createState() =>
+      _BadgeVisibilityGateState();
+}
+
+class _BadgeVisibilityGateState extends ConsumerState<_BadgeVisibilityGate> {
+  @override
+  void initState() {
+    super.initState();
     final cubit = context.read<ExploreBadgesCubit>();
-    ref.listen(vanishedProfilePubkeysProvider, (_, next) {
-      if (next case AsyncError(:final error, :final stackTrace)
-          when !next.isLoading) {
+    ref.listenManual(vanishedProfilePubkeysProvider, (_, next) {
+      if (next.error case final error?) {
         Log.warning(
-          'Could not load vanished badge issuers',
+          'Badge discovery could not load vanish markers',
           name: 'ExploreBadgesTab',
           category: LogCategory.ui,
           error: error,
-          stackTrace: stackTrace,
+          stackTrace: next.stackTrace,
         );
       }
       final vanished = next.value;
       if (vanished != null) cubit.updateHiddenIssuers(vanished);
-    });
+    }, fireImmediately: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final visibility = ref.watch(
       vanishedProfilePubkeysProvider.select(
         (snapshot) => (
