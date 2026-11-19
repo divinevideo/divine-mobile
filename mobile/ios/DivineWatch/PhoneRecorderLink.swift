@@ -117,8 +117,8 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       self.recorder = snapshot
-      // The tap was handled once the shutter flips, or once a still was
-      // taken, which leaves the shutter as it was.
+      // A video tap flips the shutter. A still leaves it unchanged and
+      // acknowledges completion through the capture count.
       if snapshot?.isShutterActive != self.pendingStop
         || snapshot?.stillShutterCount != self.pendingStillShutterCount {
         self.clearPending()
