@@ -98,7 +98,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     if let startedAtMs = payload[Wire.activeTakeStartedAtMs] as? Double {
       snapshot.activeTakeStartedAt = Date(timeIntervalSince1970: startedAtMs / 1000)
     }
-    if let budgetMs = payload[Wire.budgetMs] as? Double, budgetMs > 0 {
+    if let budgetMs = payload[Wire.budgetMs] as? Double, budgetMs >= 0 {
       snapshot.budget = budgetMs / 1000
     }
     if let modeName = payload[Wire.modeName] as? String {

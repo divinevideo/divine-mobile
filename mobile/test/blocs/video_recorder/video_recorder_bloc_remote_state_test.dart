@@ -248,6 +248,21 @@ void main() {
       expect(state.activeTakeStartedAt, isNull);
     });
 
+    test('publishes zero shot budget for a full Stop Motion composition', () {
+      stubClips(total: VideoEditorConstants.maxDuration);
+      const stopMotion = VideoRecorderBlocState(
+        isCameraInitialized: true,
+        recorderMode: VideoRecorderMode.stopMotion,
+      );
+      final bloc = buildBloc()
+        ..emit(stopMotion.copyWith(stopMotionFrames: ['1.jpg']));
+      addTearDown(bloc.close);
+
+      final snapshot = published.single!;
+      expect(snapshot.toMap()['budgetMs'], 0);
+      expect(snapshot.recorded, greaterThan(Duration.zero));
+    });
+
     test('reports an active shutter during the countdown before a take', () {
       stubClips(total: const Duration(seconds: 2));
       final bloc = buildBloc()..emit(openRecorder);
