@@ -13,7 +13,6 @@ import 'package:models/models.dart'
         clipSourceCreditTagMarker,
         withSoundCreditLines;
 import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
-import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
@@ -25,15 +24,11 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
+import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart'
-    show
-        LatestVideoRevisionAbsent,
-        LatestVideoRevisionFound,
-        LatestVideoRevisionUnknown,
-        VideosRepository;
+import 'package:videos_repository/videos_repository.dart' show VideosRepository;
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
 sealed class VideoUpdateResult {
@@ -303,7 +298,11 @@ class VideoMetadataUpdateService {
         );
       }
 
-      final latest = await _latestRevision(originalVideo);
+      final latest = await newestVideoRevision(
+        _videosRepository,
+        originalVideo,
+        logName: 'VideoMetadataUpdateService',
+      );
       if (latest == null) return const VideoUpdateOriginalUnavailable();
       final isOpenedRevision = latest.id == originalVideo.id;
       final video = isOpenedRevision
@@ -576,34 +575,6 @@ class VideoMetadataUpdateService {
             ? e.reason
             : VideoMetadataUpdateError.generic,
       );
-    }
-  }
-
-  /// The newest revision at [video]'s address, or null when a relay did not
-  /// answer in full or none holds a revision there.
-  ///
-  /// Throws [ArgumentError] when [video] is not an addressable video.
-  Future<Event?> _latestRevision(VideoEvent video) async {
-    final kind = video.eventKind ?? NIP71VideoKinds.addressableShortVideo;
-    final address = '$kind:${video.pubkey}:${video.stableId}';
-    final revision = await _videosRepository.fetchLatestVideoRevision(address);
-    switch (revision) {
-      case LatestVideoRevisionFound(:final event):
-        return event;
-      case LatestVideoRevisionUnknown():
-        Log.warning(
-          'Not republishing $address: a relay did not answer in full',
-          name: 'VideoMetadataUpdateService',
-          category: LogCategory.video,
-        );
-        return null;
-      case LatestVideoRevisionAbsent():
-        Log.warning(
-          'Not republishing $address: no relay holds a revision of it',
-          name: 'VideoMetadataUpdateService',
-          category: LogCategory.video,
-        );
-        return null;
     }
   }
 

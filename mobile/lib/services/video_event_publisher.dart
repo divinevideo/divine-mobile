@@ -26,7 +26,6 @@ import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/video_event_tag_source.dart';
 import 'package:openvine/services/video_publish/proofmode_publish_tagger.dart';
 import 'package:openvine/services/video_publish/publish_timeline.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
@@ -35,10 +34,12 @@ import 'package:openvine/services/video_publish/video_event_tags.dart';
 import 'package:openvine/services/video_publish/video_imeta_builder.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
+import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:poll_repository/poll_repository.dart' show Poll, PollKind;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart' show VideosRepository;
 
 export 'package:openvine/services/video_publish/signed_event_relay_publisher.dart'
     show outerPublishTimeoutFor;
@@ -73,6 +74,7 @@ class VideoEventPublisher {
     PublishedEventLocalEcho? publishedEventLocalEcho,
     ProofModePublishTagger? proofModeTagger,
     SoundSilenceTrimmer? soundSilenceTrimmer,
+    VideosRepository Function()? videosRepositoryGetter,
   }) : assert(
          proofModeTagger == null || iosDeviceAttestationService == null,
          'An injected proofModeTagger ignores iosDeviceAttestationService; '
@@ -85,6 +87,7 @@ class VideoEventPublisher {
        _videoEventService = videoEventService,
        _profileStatsDao = profileStatsDao,
        _publishedEventLocalEcho = publishedEventLocalEcho,
+       _videosRepositoryGetter = videosRepositoryGetter,
        _relayPublisher = SignedEventRelayPublisher(
          nostrClient: nostrService,
          eventApiClient: eventApiClient,
@@ -123,6 +126,10 @@ class VideoEventPublisher {
   /// Makes the published event readable before any relay can serve it back.
   /// Null disables the write (tests, callers with no storage wired).
   final PublishedEventLocalEcho? _publishedEventLocalEcho;
+
+  /// Reads the newest revision a republish rebuilds from, resolved at call
+  /// time so this long-lived publisher does not rebuild with the repository.
+  final VideosRepository Function()? _videosRepositoryGetter;
   final SignedEventRelayPublisher _relayPublisher;
   late final VideoAudioPublisher _audioPublisher;
   final ProofModePublishTagger _proofModeTagger;
@@ -1037,8 +1044,11 @@ class VideoEventPublisher {
     isOperationCurrent: isOperationCurrent,
   );
 
-  /// Replaces only audio-sharing tags on a signed, addressable owner video.
-  /// Throws [SoundReusePublicationException] if signing or publication fails.
+  /// Replaces only audio-sharing tags on a signed, addressable owner video,
+  /// rebuilt from the newest revision the relays hold (#11250).
+  ///
+  /// Throws [SoundReusePublicationException] if the newest revision cannot be
+  /// read, or signing or publication fails.
   Future<VideoEvent> republishWithAudioReuse({
     required VideoEvent existingEvent,
     required String audioEventId,
@@ -1057,10 +1067,13 @@ class VideoEventPublisher {
         'Invalid sound-sharing account or event',
       );
     }
-    final originalTags = sourceOriginalVideoTags(
-      video: existingEvent,
-      personalEventCache: _personalEventCache,
-    );
+    final latest = await _newestRevisionOf(existingEvent);
+    if (latest == null) {
+      throw const SoundReusePublicationException(
+        'Newest revision of the source video unavailable',
+      );
+    }
+    final originalTags = Nip89ClientTag.withoutClientTag(latest.tags);
     final dTags = originalTags
         .where((t) => t.isNotEmpty && t[0] == 'd')
         .toList();
@@ -1084,10 +1097,10 @@ class VideoEventPublisher {
           ..add(['allow_audio_reuse', 'true'])
           ..add(['e', audioEventId, audioRelayHint, 'audio']);
     final event = await auth.createAndSignEvent(
-      kind: kind!,
-      content: existingEvent.content,
+      kind: latest.kind,
+      content: latest.content,
       tags: tags,
-      createdAt: nextReplacementCreatedAt(existingEvent),
+      createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
     );
     if (isOperationCurrent?.call() == false ||
         event == null ||
@@ -1113,10 +1126,14 @@ class VideoEventPublisher {
 
   /// Republish a video event with added text-track tags for subtitles.
   ///
-  /// Strips any existing text-track tags from the original event, then emits
-  /// one tag per ref ([textTrackRef] followed by each entry in
-  /// [extraTextTrackRefs]) for read-time redundancy. Returns the updated
-  /// video event after relay acceptance, or `null` if publishing failed.
+  /// Rebuilds from the newest revision the relays hold, not [existingEvent]
+  /// (#11250). Its caption tracks in [textTrackLang], and any that name no
+  /// language, are replaced by one tag per ref ([textTrackRef] followed by
+  /// each entry in [extraTextTrackRefs]) for read-time redundancy; tracks in
+  /// other languages and other kinds of track stay. Returns the updated
+  /// video event after relay acceptance, or `null` if [existingEvent] is not
+  /// the signed-in account's, the newest revision cannot be read, or
+  /// publishing failed.
   ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
@@ -1126,15 +1143,24 @@ class VideoEventPublisher {
     List<String> extraTextTrackRefs = const [],
     String textTrackLang = 'en',
   }) async {
-    // Start from the original Nostr event tags, stripping old text-track tags.
-    final tags =
-        sourceOriginalVideoTags(
-              video: existingEvent,
-              personalEventCache: _personalEventCache,
-            )
-            .where((t) => t.isNotEmpty && t.first != 'text-track')
-            .map(List<String>.from)
-            .toList();
+    final owner = _authService?.currentPublicKeyHex;
+    if (owner == null || owner != existingEvent.pubkey) {
+      Log.error(
+        'Cannot republish subtitles for video ${existingEvent.id}: '
+        "it is not the signed-in account's",
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    final latest = await _newestRevisionOf(existingEvent);
+    if (latest == null) return null;
+    final tags = Nip89ClientTag.withoutClientTag(latest.tags)
+        .where(
+          (t) => t.isNotEmpty && !_isReplacedCaptionTrack(t, textTrackLang),
+        )
+        .map(List<String>.from)
+        .toList();
 
     if (!tags.any((tag) => tag.length >= 2 && tag.first == 'd')) {
       Log.error(
@@ -1153,10 +1179,10 @@ class VideoEventPublisher {
 
     // Sign the updated event
     final event = await _authService?.createAndSignEvent(
-      kind: NIP71VideoKinds.getPreferredAddressableKind(),
-      content: existingEvent.content,
+      kind: latest.kind,
+      content: latest.content,
       tags: tags,
-      createdAt: nextReplacementCreatedAt(existingEvent),
+      createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
     );
 
     if (event == null) {
@@ -1189,6 +1215,35 @@ class VideoEventPublisher {
     }
 
     return updatedVideo;
+  }
+
+  /// The newest revision of [video] on the relays, or null when the relays
+  /// cannot say or there is no repository to ask.
+  Future<Event?> _newestRevisionOf(VideoEvent video) async {
+    final repository = _videosRepositoryGetter?.call();
+    if (repository == null) {
+      Log.warning(
+        'Not republishing video ${video.id}: '
+        'no repository to read its newest revision from',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    return newestVideoRevision(repository, video, logName: _logName);
+  }
+
+  /// Whether [tag] is a caption track a subtitle republish in [lang]
+  /// replaces: a captions or subtitles `text-track` in [lang], or one naming
+  /// no type or language.
+  static bool _isReplacedCaptionTrack(List<String> tag, String lang) {
+    if (tag.first != 'text-track') return false;
+    final type = tag.length > 3 ? tag[3] : '';
+    if (type.isNotEmpty && type != 'captions' && type != 'subtitles') {
+      return false;
+    }
+    final trackLang = tag.length > 4 ? tag[4] : '';
+    return trackLang.isEmpty || trackLang == lang;
   }
 
   /// Publishes a Kind 39307 subtitle event for [video] and returns its
