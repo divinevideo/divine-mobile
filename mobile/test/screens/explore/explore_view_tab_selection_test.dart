@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
@@ -358,6 +359,8 @@ void main() {
 
       repository.requests.single.result.complete(const FeaturedTabsSnapshot());
       await tester.pump();
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      expect(find.text(_l10n.commonSomethingWentWrong), findsNothing);
       expect(find.text(_l10n.featuredFeedUnavailable), findsNothing);
       expect(find.text('Adult spotlight'), findsNothing);
 
@@ -419,6 +422,9 @@ void main() {
       tester.binding
         ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
         ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      // The retry's emit reaches the gate in a microtask, too late for the
+      // first pump to draw; the second renders it.
       await tester.pump();
       expect(repository.requests, hasLength(3));
       expect(find.text(_l10n.featuredFeedUnavailable), findsOneWidget);

@@ -23,14 +23,18 @@ void main() {
     when(() => ageVerificationService.isAdultContentVerified).thenReturn(false);
   });
 
-  ProviderContainer createContainer() {
+  ProviderContainer createContainer({
+    AuthState authState = AuthState.authenticated,
+    Duration? Function(int retryCount, Object error)? retry,
+  }) {
     final container = ProviderContainer(
       overrides: [
         ageVerificationServiceProvider.overrideWithValue(
           ageVerificationService,
         ),
-        currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+        currentAuthStateProvider.overrideWithValue(authState),
       ],
+      retry: retry,
     );
     addTearDown(container.dispose);
     return container;
@@ -59,6 +63,60 @@ void main() {
       expect(
         container.read(featuredTabAgeGateProvider),
         FeaturedTabAudience.loading,
+      );
+    });
+
+    for (final authState in [AuthState.checking, AuthState.authenticating]) {
+      test('stays loading while auth is ${authState.name}, even for a '
+          'verified device', () async {
+        when(
+          () => ageVerificationService.isAdultContentVerified,
+        ).thenReturn(true);
+        final container = createContainer(authState: authState);
+        expect(
+          await container.read(featuredTabViewerIsAdultProvider.future),
+          isTrue,
+        );
+
+        expect(
+          container.read(featuredTabAgeGateProvider),
+          FeaturedTabAudience.loading,
+        );
+      });
+    }
+
+    test(
+      'gates a signed-out viewer even when the device is verified',
+      () async {
+        when(
+          () => ageVerificationService.isAdultContentVerified,
+        ).thenReturn(true);
+        final container = createContainer(authState: AuthState.unauthenticated);
+        expect(
+          await container.read(featuredTabViewerIsAdultProvider.future),
+          isTrue,
+        );
+
+        expect(
+          container.read(featuredTabAgeGateProvider),
+          FeaturedTabAudience.unverified,
+        );
+      },
+    );
+
+    test('reports a verification lookup failure as failed', () async {
+      when(
+        () => ageVerificationService.initialized,
+      ).thenAnswer((_) async => throw StateError('verification unavailable'));
+      final container = createContainer(retry: (_, _) => null);
+      await expectLater(
+        container.read(featuredTabViewerIsAdultProvider.future),
+        throwsStateError,
+      );
+
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.failed,
       );
     });
 
