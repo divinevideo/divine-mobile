@@ -606,9 +606,10 @@ void main() {
           await openPicker(tester, tags: tenTags);
 
           await submit(tester, 'news');
+          // The first rejection is announced by the hint's live region.
+          expect(announcements, isEmpty);
           await pressReturn(tester);
 
-          // The first rejection is announced by the hint's live region.
           expect(
             announcements.where((message) => message == limitWarning),
             hasLength(1),
@@ -649,6 +650,7 @@ void main() {
           final announcements = captureAnnouncements(tester);
           await openPicker(tester, tags: tenTags);
           await submit(tester, 'news');
+          expect(announcements, isEmpty);
 
           await tester.enterText(field(), 'other ');
           await tester.pump();
@@ -685,6 +687,7 @@ void main() {
             final announcements = captureAnnouncements(tester);
             await openPicker(tester, tags: tenTags);
             await submit(tester, 'news');
+            expect(announcements, isEmpty);
 
             await tester.enterText(field(), 'tag3 other tag4 ');
             await tester.pump();
