@@ -286,6 +286,13 @@ void main() {
           expect(badgeFor(cached), findsOneWidget);
           expect(cache.isOgViner(cached.pubkey), isTrue);
           expect(bloc.state.videos.single.isVerifiedArchive, isTrue);
+          expect(
+            tester
+                .widget<SearchVideoTile>(find.byType(SearchVideoTile))
+                .video
+                .isVerifiedArchive,
+            isTrue,
+          );
         },
       );
 

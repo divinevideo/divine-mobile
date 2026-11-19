@@ -130,9 +130,14 @@ class _VideosGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = context.select((VideoSearchBloc bloc) => bloc.state.status);
-    final videos = context.select((VideoSearchBloc bloc) => bloc.state.videos);
-    final query = context.select((VideoSearchBloc bloc) => bloc.state.query);
+    // Select the list by identity so same-ID API replacements reach the tiles.
+    final (status, videos, query) = context.select(
+      (VideoSearchBloc bloc) => (
+        bloc.state.status,
+        bloc.state.videos,
+        bloc.state.query,
+      ),
+    );
 
     if ((status == VideoSearchStatus.initial ||
             status == VideoSearchStatus.searching) &&
