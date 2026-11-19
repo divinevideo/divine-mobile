@@ -81,6 +81,30 @@ void main() {
       expect(result, same(newest));
     });
 
+    test('refuses a relay revision older than the opened event', () async {
+      final older = Event(
+        _owner,
+        34236,
+        [
+          ['d', 'my-video'],
+        ],
+        'older relay revision',
+        createdAt: 1700000000,
+      );
+      when(
+        () => repository.fetchLatestVideoRevision(any()),
+      ).thenAnswer((_) async => LatestVideoRevisionFound(older));
+
+      final opened = _video().copyWith(eventCreatedAt: 1700000001);
+      final result = await newestVideoRevision(
+        repository,
+        opened,
+        logName: 'test',
+      );
+
+      expect(result, isNull);
+    });
+
     test('returns null when there is no repository to ask', () async {
       final result = await newestVideoRevision(
         null,
