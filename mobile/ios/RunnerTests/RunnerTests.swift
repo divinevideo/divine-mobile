@@ -1962,12 +1962,12 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, light rays, anamorphic, prism, window light, spotlight,
-/// particles, the intros and outros, tilt-shift, swirl, ripple, fluted glass,
-/// the tunnels, zoom blur, spin blur, comic, 8-bit, 3D glasses, riso print,
-/// watercolour, oil paint, pencil sketch, neon edges, stained glass, ASCII,
-/// thermal camera, night vision, X-ray, pop art, bricks, cross-stitch and
-/// paper cut are drawn with Metal kernels on iOS and macOS
+/// Light leak, light rays, anamorphic, prism, window light, spotlight, disco,
+/// laser, lightning, particles, the intros and outros, tilt-shift, swirl,
+/// ripple, fluted glass, the tunnels, zoom blur, spin blur, comic, 8-bit, 3D
+/// glasses, riso print, watercolour, oil paint, pencil sketch, neon edges,
+/// stained glass, ASCII, thermal camera, night vision, X-ray, pop art, bricks,
+/// cross-stitch and paper cut are drawn with Metal kernels on iOS and macOS
 /// (`ShaderVideoEffect`), and with the same shaders in GLSL on Android and in
 /// the effects picker (`shaders/*.frag`). These tests check every pixel each
 /// kernel draws against its shader's formulas computed here on the CPU, so a
@@ -2092,6 +2092,111 @@ final class ShaderVideoEffectTests: XCTestCase {
       let difference = compare(effect, seconds: seconds, expected)
       XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
     }
+  }
+
+  func testDiscoDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.6, 4.6)] {
+      let effect = DiscoVideoEffect(params: ["intensity": intensity])
+      let lights = PartyLights.at(beatsUs: nil, effectTimeUs: Int64(seconds * 1_000_000))
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.disco(
+          px, py, intensity: intensity, phase: lights.phase, stage: lights.step,
+          blend: lights.mix)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // A pixel right on the edge between two spots' cells can take either
+      // spot, on the GPU and here; a change to the spots, their colours or the
+      // dimming moves far more.
+      XCTAssertLessThan(difference.share, 0.004, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testLaserDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.7, 2.2)] {
+      let effect = LaserVideoEffect(params: ["intensity": intensity])
+      let lights = PartyLights.at(beatsUs: nil, effectTimeUs: Int64(seconds * 1_000_000))
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.laser(
+          px, py, intensity: intensity, phase: lights.phase, stage: lights.step,
+          blend: lights.mix)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testLightningDrawsWhatTheAndroidShaderDraws() {
+    let shape: [Double] = [
+      0.4, 0.3, 0.46, 0.37, 0.52, 0.43, 0.57, 0.63, 0.55, 0.6, 0.31, 0.24, 0.2, 1,
+    ]
+    for (intensity, seconds) in [(1.0, 0.03), (0.5, 0.12)] {
+      let effect = LightningVideoEffect(params: [
+        "intensity": intensity, "strikesUs": [0], "bolts": shape,
+      ])
+      let since = Int64(seconds * 1_000_000)
+      let flash = LightningStrikes.flash(intensity: intensity, sinceUs: since)
+      let bolt = LightningStrikes.bolt(intensity: intensity, sinceUs: since)
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.lightning(px, py, flash: flash, bolt: bolt, shape: shape)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testLightningLeavesTheFrameAloneBetweenStrikes() {
+    let shape = [Double](repeating: 0.5, count: LightningStrikes.boltValues)
+    let effect = LightningVideoEffect(params: [
+      "intensity": 1.0, "strikesUs": [500_000], "bolts": shape,
+    ])
+    for us: Int64 in [0, 499_999, 1_200_000] {
+      let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: us)
+      XCTAssertTrue(output === frame, "\(us) us")
+    }
+    let struck = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 520_000)
+    XCTAssertFalse(struck === frame)
+  }
+
+  func testPartyLightsChangeColourAndTurnOnTheBeat() {
+    func at(_ us: Int64, _ beats: [Int64]?) -> [Double] {
+      let lights = PartyLights.at(beatsUs: beats, effectTimeUs: us)
+      return [lights.step, lights.mix, lights.phase]
+    }
+    let beats: [Int64] = [1_000_000, 1_500_000, 1_600_000]
+    let cases: [(Int64, [Int64]?, [Double])] = [
+      // All through: a new colour every 1.5 s, blended over 200 ms.
+      (0, nil, [0, 1, 0]),
+      (1_600_000, nil, [1, 0.5, 1.6]),
+      // Before the first beat the first colours move on.
+      (500_000, beats, [0, 1, 0.5]),
+      // Each beat brings new colours and turns the movement round.
+      (1_100_000, beats, [1, 0.5, 0.9]),
+      // A beat 100 ms later cuts the blend to 100 ms.
+      (1_550_000, beats, [2, 0.5, 0.55]),
+      (2_000_000, beats, [3, 1, 0.2]),
+    ]
+    for (us, beats, expected) in cases {
+      let got = at(us, beats)
+      for k in 0..<3 {
+        XCTAssertEqual(got[k], expected[k], accuracy: 1e-9, "\(us) us, value \(k)")
+      }
+    }
+  }
+
+  func testLightningFlashesOncePerStrikeAndFadesBack() {
+    let strikes: [Int64] = [500_000, 2_000_000]
+    XCTAssertNil(LightningStrikes.index(strikesUs: strikes, effectTimeUs: 400_000))
+    XCTAssertEqual(LightningStrikes.index(strikesUs: strikes, effectTimeUs: 600_000), 0)
+    XCTAssertEqual(LightningStrikes.index(strikesUs: strikes, effectTimeUs: 2_000_000), 1)
+    XCTAssertEqual(LightningStrikes.flash(intensity: 0.8, sinceUs: 0), 0.8, accuracy: 1e-9)
+    XCTAssertEqual(
+      LightningStrikes.flash(intensity: 0.8, sinceUs: 160_000), 0.8 * exp(-1.0) * (1 - 160.0 / 700),
+      accuracy: 1e-9)
+    XCTAssertEqual(LightningStrikes.flash(intensity: 0.8, sinceUs: 700_000), 0)
+    XCTAssertEqual(LightningStrikes.bolt(intensity: 0.8, sinceUs: 30_000), 0.87, accuracy: 1e-9)
+    XCTAssertEqual(LightningStrikes.bolt(intensity: 0.8, sinceUs: 135_000), 0.435, accuracy: 1e-9)
+    XCTAssertEqual(LightningStrikes.bolt(intensity: 0.8, sinceUs: 210_000), 0)
+    XCTAssertEqual(LightningStrikes.bolt(intensity: 0, sinceUs: 0), 0)
   }
 
   func testIntroOutroDrawsWhatTheAndroidShaderDraws() {
@@ -2520,6 +2625,12 @@ final class ShaderVideoEffectTests: XCTestCase {
       PrismVideoEffect(params: ["intensity": 0]),
       WindowLightVideoEffect(params: ["intensity": 0]),
       SpotlightVideoEffect(params: ["intensity": 0]),
+      DiscoVideoEffect(params: ["intensity": 0]),
+      LaserVideoEffect(params: ["intensity": 0]),
+      LightningVideoEffect(params: [
+        "intensity": 0, "strikesUs": [0],
+        "bolts": [Double](repeating: 0.5, count: LightningStrikes.boltValues),
+      ]),
       ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
       TiltShiftVideoEffect(params: ["intensity": 0]),
       SwirlVideoEffect(params: ["intensity": 0]),
@@ -2953,6 +3064,138 @@ final class ShaderVideoEffectTests: XCTestCase {
     for k in 0..<3 {
       let lit: Double = max(warmColor[k] * warm, coolColor[k] * cool)
       out[k] = clamp(base[k] * (1 - dark + dark * lit))
+    }
+    return out
+  }
+
+  /// One of the party lights' colours; see `PartyLights.color`.
+  private func partyColor(_ stage: Double, _ group: Double) -> [Double] {
+    let offsets: [Double] = [0, 2.0 / 3.0, 1.0 / 3.0]
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let hue: Double = fract(0.08 + stage * 0.381966 + group / 3 + offsets[k])
+      let channel: Double = clamp(abs(hue * 6 - 3) - 1)
+      out[k] = 1 + (channel - 1) * 0.8
+    }
+    return out
+  }
+
+  private func disco(
+    _ px: Double, _ py: Double, intensity: Double, phase: Double, stage: Double, blend: Double
+  ) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let ballX: Double = 0.5 * w
+    let ballY: Double = h + 0.35 * l
+    let dx: Double = px - ballX
+    let dy: Double = py - ballY
+    let spacing: Double = 0.085 * l
+    let ring: Double = ((dx * dx + dy * dy).squareRoot() / spacing).rounded(.down)
+    let odd: Double = ring - 2 * (ring / 2).rounded(.down)
+    let cell: Double = 1.1 / (ring + 0.5)
+    let spin: Double = 0.25 * phase
+    let turn: Double = atan2(dx, -dy) + spin
+    let index: Double = (turn / cell + 0.5 * odd).rounded(.down)
+    let centreTurn: Double = (index + 0.5 - 0.5 * odd) * cell - spin
+    let radius: Double = (ring + 0.5) * spacing
+    let centreX: Double = ballX + radius * sin(centreTurn)
+    let centreY: Double = ballY - radius * cos(centreTurn)
+    let size: Double = 0.018 * l * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371))
+    let qx: Double = (px - centreX) / size
+    let qy: Double = (py - centreY) / size
+    let r2: Double = qx * qx + qy * qy
+    let spot: Double = exp(-r2 * r2 * r2)
+    let sum: Double = index + ring
+    let group: Double = sum - 3 * (sum / 3).rounded(.down)
+    let color: [Double] = mix(partyColor(stage - 1, group), partyColor(stage, group), blend)
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let light: Double = intensity * spot * color[k] * (0.25 + 0.75 * base[k])
+      out[k] = clamp(base[k] * (1 - 0.4 * intensity) + light)
+    }
+    return out
+  }
+
+  private func laser(
+    _ px: Double, _ py: Double, intensity: Double, phase: Double, stage: Double, blend: Double
+  ) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let dx: Double = px - 0.5 * w
+    let dy: Double = py - (h + 0.02 * l)
+    let dist: Double = (dx * dx + dy * dy).squareRoot()
+    let angle: Double = atan2(dx, -dy)
+    let aim: Double = 0.5 * sin(0.8 * phase)
+    let spread: Double = 0.14 + 0.05 * sin(0.45 * phase + 1.3)
+    let first: [Double] = mix(partyColor(stage - 1, 0), partyColor(stage, 0), blend)
+    let second: [Double] = mix(partyColor(stage - 1, 1.5), partyColor(stage, 1.5), blend)
+    let core: Double = 0.0022 * l
+    let glow: Double = 0.012 * l
+    var light = [Double](repeating: 0, count: 3)
+    for i in 0..<7 {
+      let offset: Double = angle - aim - (Double(i) - 3) * spread
+      let across: Double = dist * abs(sin(offset))
+      let beam: Double = exp(-across * across / (core * core)) + 0.35 * exp(-across / glow)
+      let color: [Double] = i % 2 == 0 ? first : second
+      for k in 0..<3 { light[k] += beam * color[k] }
+    }
+    let fade: Double = 1 / (1 + dist / (0.8 * l))
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      out[k] = clamp(base[k] * (1 - 0.35 * intensity) + intensity * fade * light[k])
+    }
+    return out
+  }
+
+  private func lightning(
+    _ px: Double, _ py: Double, flash: Double, bolt: Double, shape: [Double]
+  ) -> [Double] {
+    let base: [Double] = tap(px, py)
+    if flash <= 0 && bolt <= 0 { return base }
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let top: Double = h + 0.02 * l
+    let rise: Double = (top - shape[1] * h) / 8
+    var xs: [Double] = [shape[0] * w]
+    var ys: [Double] = [top]
+    for i in 1...8 {
+      xs.append(shape[1 + i] * w)
+      ys.append(top - Double(i) * rise)
+    }
+    var trunk: Double = .infinity
+    for i in 0..<8 {
+      trunk = min(trunk, segment(px, py, xs[i], ys[i], xs[i + 1], ys[i + 1]))
+    }
+    let branchXs: [Double] = [xs[3], shape[10] * w, shape[11] * w, shape[12] * w]
+    let branchYs: [Double] = [ys[3], top - 4 * rise, top - 5 * rise, top - 6 * rise]
+    var side: Double = .infinity
+    for i in 0..<3 {
+      side = min(
+        side, segment(px, py, branchXs[i], branchYs[i], branchXs[i + 1], branchYs[i + 1]))
+    }
+    let lineWidth: Double = 0.003 * l
+    let trunkEnd: Double = clamp((py - ys[8]) / (2 * rise))
+    let sideEnd: Double = clamp((py - branchYs[3]) / (2 * rise))
+    let trunkCore: Double = (0.3 + 0.7 * trunkEnd) * exp(-trunk * trunk / (lineWidth * lineWidth))
+    let sideCore: Double =
+      0.7 * shape[13] * sideEnd * exp(-side * side / (0.36 * lineWidth * lineWidth))
+    let trunkGlow: Double = (0.3 + 0.7 * trunkEnd) * exp(-trunk / (0.035 * l))
+    let sideGlow: Double = 0.5 * shape[13] * sideEnd * exp(-side / (0.025 * l))
+    let core: Double = min(trunkCore + sideCore, 1)
+    let glow: Double = trunkGlow + sideGlow
+    let tint: [Double] = [0.78, 0.86, 1.0]
+    let coreColor: [Double] = [0.95, 0.97, 1.0]
+    let glowColor: [Double] = [0.55, 0.65, 1.0]
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let lit: Double = base[k] * (1 + 0.9 * flash * tint[k]) + 0.22 * flash * tint[k]
+      let light: Double = bolt * (core * coreColor[k] + 0.6 * glow * glowColor[k])
+      out[k] = clamp(lit + light)
     }
     return out
   }

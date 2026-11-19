@@ -87,7 +87,10 @@ extension CompleteParametersEquality on CompleteParameters {
   /// The content warnings the edit's effects make mandatory; see
   /// [requiredContentLabelsForEffects].
   Set<ContentLabel> get requiredContentWarnings =>
-      requiredContentLabelsForEffects(videoEffectsFromCompleteMeta);
+      requiredContentLabelsForEffects(
+        videoEffectsFromCompleteMeta,
+        customEffects: customVideoEffectsFromCompleteMeta,
+      );
 
   /// Restores [DivineVideoClip] objects from the completion metadata.
   ///

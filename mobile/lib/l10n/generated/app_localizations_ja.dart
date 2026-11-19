@@ -8933,6 +8933,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'スポットライト';
 
   @override
+  String get videoEditorEffectDisco => 'ディスコ';
+
+  @override
+  String get videoEditorEffectLaser => 'レーザー';
+
+  @override
+  String get videoEditorEffectLightning => '稲妻';
+
+  @override
   String get videoEditorEffectSnow => '雪';
 
   @override

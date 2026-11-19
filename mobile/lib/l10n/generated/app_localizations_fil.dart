@@ -9460,6 +9460,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Spotlight';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Kidlat';
+
+  @override
   String get videoEditorEffectSnow => 'Niyebe';
 
   @override

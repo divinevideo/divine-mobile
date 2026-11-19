@@ -3,12 +3,14 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/draft_content_warning_extensions.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
   group('DraftContentWarnings', () {
     DivineVideoDraft draft({
       List<VideoEffect> effects = const [],
+      List<EditorVideoEffect> entries = const [],
       String? contentWarning,
     }) => DivineVideoDraft.create(
       clips: const [],
@@ -21,6 +23,7 @@ void main() {
         'meta': {
           VideoEditorConstants.effectsStateHistoryKey: [
             for (final effect in effects) effect.toMap(),
+            for (final entry in entries) entry.toMap(),
           ],
         },
       },
@@ -38,6 +41,20 @@ void main() {
         ContentLabel.nudity,
         ContentLabel.flashingLights,
       });
+    });
+
+    test('adds flashing lights to a draft with lightning', () {
+      final stormy = draft(
+        entries: [
+          EditorVideoEffect.of(
+            id: 'lightning',
+            type: EditorEffectType.lightning,
+            intensity: 0.7,
+          ),
+        ],
+      );
+
+      expect(stormy.requiredContentWarnings, {ContentLabel.flashingLights});
     });
 
     test('publishes only the picks without a flashing effect', () {

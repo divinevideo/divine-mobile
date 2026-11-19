@@ -451,6 +451,9 @@ void main() {
           l10n.videoEditorEffectPrism,
           l10n.videoEditorEffectWindowLight,
           l10n.videoEditorEffectSpotlight,
+          l10n.videoEditorEffectDisco,
+          l10n.videoEditorEffectLaser,
+          l10n.videoEditorEffectLightning,
           l10n.videoEditorEffectTealOrange,
           l10n.videoEditorEffectBleachBypass,
           l10n.videoEditorEffectSilver,
@@ -572,6 +575,11 @@ void main() {
         ),
         [0.8, IntroOutroLook.curtain.startingIntensity, 3.0, 0.3],
       );
+      // The lightning tile fills the shader's four vec4 uniforms: how bright
+      // the flash and the bolt are, then the shape of the first bolt.
+      final lightning = shaderTileOf(EditorEffectType.lightning)!;
+      expect(lightning.values, hasLength(2 + lightningBoltValueCount));
+      expect(lightning.values.skip(2), lightningBolt(0));
     });
 
     test('holds a tile where its effect starts, plays it, and holds it '

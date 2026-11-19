@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show CustomVideoEffect, VideoEffect;
@@ -610,6 +611,23 @@ void main() {
             startTime: Duration.zero,
             endTime: _s3,
           ),
+        ]);
+      });
+    });
+
+    group('withoutFlashingEffects', () {
+      test('leaves out the strobe and lightning, and keeps the rest', () {
+        final result = const EditorOverlaySnapshot(
+          effects: [VideoEffect.strobe(), VideoEffect.vhs()],
+          customEffects: [
+            CustomVideoEffect(id: lightningVideoEffectId),
+            CustomVideoEffect(id: discoVideoEffectId),
+          ],
+        ).withoutFlashingEffects();
+
+        expect(result.effects, const [VideoEffect.vhs()]);
+        expect(result.customEffects, const [
+          CustomVideoEffect(id: discoVideoEffectId),
         ]);
       });
     });

@@ -9350,6 +9350,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Đèn rọi';
 
   @override
+  String get videoEditorEffectDisco => 'Disco';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Tia chớp';
+
+  @override
   String get videoEditorEffectSnow => 'Tuyết';
 
   @override

@@ -582,14 +582,17 @@ flutter:
     - shaders/chroma_key.frag
     - shaders/comic.frag
     - shaders/cross_stitch.frag
+    - shaders/disco.frag
     - shaders/drops.frag
     - shaders/eight_bit.frag
     - shaders/fisheye.frag
     - shaders/fluted_glass.frag
     - shaders/intro_outro.frag
+    - shaders/laser.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
     - shaders/light_rays.frag
+    - shaders/lightning.frag
     - shaders/look.frag
     - shaders/neon_edges.frag
     - shaders/night_vision.frag

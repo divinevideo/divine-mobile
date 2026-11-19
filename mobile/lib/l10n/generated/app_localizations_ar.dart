@@ -9413,6 +9413,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'بقعة ضوء';
 
   @override
+  String get videoEditorEffectDisco => 'ديسكو';
+
+  @override
+  String get videoEditorEffectLaser => 'ليزر';
+
+  @override
+  String get videoEditorEffectLightning => 'برق';
+
+  @override
   String get videoEditorEffectSnow => 'ثلج';
 
   @override

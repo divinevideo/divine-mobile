@@ -15737,6 +15737,24 @@ abstract class AppLocalizations {
   /// **'Spotlight'**
   String get videoEditorEffectSpotlight;
 
+  /// Name of a video effect: coloured spots from a mirror ball sweep over the slightly dimmed picture, changing colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Disco'**
+  String get videoEditorEffectDisco;
+
+  /// Name of a video effect: thin coloured laser beams fan out from the top of the picture and sweep across it.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser'**
+  String get videoEditorEffectLaser;
+
+  /// Name of a video effect: the picture flashes blue-white with a lightning bolt, then fades back.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning'**
+  String get videoEditorEffectLightning;
+
   /// Name of a video effect: snowflakes fall over the picture.
   ///
   /// In en, this message translates to:

@@ -47,6 +47,18 @@ const windowLightVideoEffectId = 'divine.windowLight';
 /// native `SpotlightVideoEffect` on Android, iOS and macOS.
 const spotlightVideoEffectId = 'divine.spotlight';
 
+/// The id Divine's disco lights are registered under with pro_video_editor,
+/// by the native `DiscoVideoEffect` on Android, iOS and macOS.
+const discoVideoEffectId = 'divine.disco';
+
+/// The id Divine's laser show is registered under with pro_video_editor, by
+/// the native `LaserVideoEffect` on Android, iOS and macOS.
+const laserVideoEffectId = 'divine.laser';
+
+/// The id Divine's lightning is registered under with pro_video_editor, by
+/// the native `LightningVideoEffect` on Android, iOS and macOS.
+const lightningVideoEffectId = 'divine.lightning';
+
 /// The ids Divine's falling and floating particles are registered under with
 /// pro_video_editor, one per style, all drawn by the native
 /// `ParticlesVideoEffect` on Android, iOS and macOS.
@@ -377,6 +389,21 @@ class EditorEffectType {
   /// over it.
   static const spotlight = EditorEffectType.custom(spotlightVideoEffectId);
 
+  /// Disco: coloured spots from a mirror ball sweep over the picture, which
+  /// is slightly dimmed around them, all the time or changing colour and
+  /// direction on each beat.
+  static const disco = EditorEffectType.custom(discoVideoEffectId);
+
+  /// Laser: thin coloured beams fan out from the top of the picture and sweep
+  /// across it, changing colour all the time or colour and direction on each
+  /// beat.
+  static const laser = EditorEffectType.custom(laserVideoEffectId);
+
+  /// Lightning: the picture flashes blue-white with a short bolt, then fades
+  /// back, at irregular intervals or on the beat; see
+  /// [lightningStrikesOnOutput]. It flashes.
+  static const lightning = EditorEffectType.custom(lightningVideoEffectId);
+
   /// Snow: soft flakes fall over the picture.
   static const snow = EditorEffectType.custom(snowVideoEffectId);
 
@@ -601,6 +628,9 @@ class EditorEffectType {
     prism,
     windowLight,
     spotlight,
+    disco,
+    laser,
+    lightning,
     snow,
     rain,
     leaves,
@@ -672,19 +702,27 @@ class EditorEffectType {
   /// A stable name: the built-in effect's name, or the custom effect's id.
   String get name => builtIn?.name ?? customId!;
 
-  /// Whether this type flashes; see [isFlashingVideoEffect].
-  bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
+  /// Whether this type flashes; see [isFlashingVideoEffect] and
+  /// [isFlashingCustomVideoEffect].
+  bool get isFlashing => switch (builtIn) {
+    final builtIn? => isFlashingVideoEffect(builtIn),
+    null => isFlashingCustomVideoEffect(customId!),
+  };
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects only the zoom blur and the spin blur have a hit, and the
-  /// tunnels take one step deeper on each beat; the others play all through
-  /// their window.
+  /// custom effects the zoom blur, the spin blur and lightning have a hit,
+  /// the tunnels take one step deeper on each beat, and disco and laser change
+  /// colour and direction on each beat; the others play all through their
+  /// window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
       : customId == zoomBlurVideoEffectId ||
             customId == spinBlurVideoEffectId ||
             customId == tunnelVideoEffectId ||
-            customId == spiralTunnelVideoEffectId;
+            customId == spiralTunnelVideoEffectId ||
+            customId == discoVideoEffectId ||
+            customId == laserVideoEffectId ||
+            customId == lightningVideoEffectId;
 
   /// The category the effects picker lists this type under.
   ///
@@ -724,7 +762,10 @@ class EditorEffectType {
       anamorphicVideoEffectId ||
       prismVideoEffectId ||
       windowLightVideoEffectId ||
-      spotlightVideoEffectId => EditorEffectCategory.light,
+      spotlightVideoEffectId ||
+      discoVideoEffectId ||
+      laserVideoEffectId ||
+      lightningVideoEffectId => EditorEffectCategory.light,
       echoVideoEffectId ||
       zoomBlurVideoEffectId ||
       spinBlurVideoEffectId => EditorEffectCategory.motion,
@@ -925,6 +966,16 @@ class EditorVideoEffect extends Equatable {
   /// right where the window ends. See [customVideoEffectRenderParams].
   static const durationParam = 'durationUs';
 
+  /// The param lightning reads when it strikes from, when it is rendered:
+  /// microseconds after the start of its window, in order. See
+  /// [lightningStrikesOnOutput] and [customVideoEffectRenderParams].
+  static const strikesParam = 'strikesUs';
+
+  /// The param lightning reads the shape of each bolt from, when it is
+  /// rendered: [lightningBoltValueCount] values per strike, in the order of
+  /// [strikesParam]. See [lightningBolt].
+  static const boltsParam = 'bolts';
+
   /// Identifies the effect on the timeline and across undo steps.
   final String id;
 
@@ -954,11 +1005,7 @@ class EditorVideoEffect extends Equatable {
   /// How strong the effect is, from 0 to 1; for an intro or outro, the
   /// structure of its look (see [IntroOutroLook]).
   double get intensity =>
-      effect?.intensity ??
-      ((custom!.params[intensityParam] as num?)?.toDouble() ?? 1).clamp(
-        0.0,
-        1.0,
-      );
+      effect?.intensity ?? customVideoEffectIntensity(custom!);
 
   /// Where the effect starts on the editor timeline; `null` from the start.
   Duration? get startTime => effect?.startTime ?? custom?.startTime;
@@ -1068,22 +1115,39 @@ List<CustomVideoEffect> looksLast(Iterable<CustomVideoEffect> effects) => [
 ///
 /// An effect on the beat fires on the [beats], on the exported video, that
 /// fall in its window, and is left out when none does; see
-/// [customVideoEffectRenderParams].
+/// [customVideoEffectRenderParams]. Lightning strikes where
+/// [lightningStrikesOnOutput] says, keeping clear of the flashes of the
+/// built-in [flashingEffects], on the exported video as
+/// [videoEffectsOnOutput] times them.
 List<CustomVideoEffect> customVideoEffectsOnOutput(
   List<CustomVideoEffect> effects,
   TransitionTimelineMap timelineMap, {
   List<Duration> beats = const [],
-}) => [
-  for (final effect in effects)
-    if (customVideoEffectRenderParams(effect, timelineMap, beats)
-        case final params?)
-      CustomVideoEffect(
-        id: effect.id,
-        params: params,
-        startTime: timelineMap.editorToOutputOrNull(effect.startTime),
-        endTime: timelineMap.editorToOutputOrNull(effect.endTime),
-      ),
-];
+  List<VideoEffect> flashingEffects = const [],
+}) {
+  final strikes = lightningStrikesOnOutput(
+    effects,
+    timelineMap,
+    beats: beats,
+    flashingEffects: flashingEffects,
+  );
+  return [
+    for (final effect in effects)
+      if (customVideoEffectRenderParams(
+            effect,
+            timelineMap,
+            beats,
+            strikes: strikes[effect],
+          )
+          case final params?)
+        CustomVideoEffect(
+          id: effect.id,
+          params: params,
+          startTime: timelineMap.editorToOutputOrNull(effect.startTime),
+          endTime: timelineMap.editorToOutputOrNull(effect.endTime),
+        ),
+  ];
+}
 
 /// The params a renderer draws [effect] with, its window on the editor
 /// timeline.
@@ -1099,14 +1163,40 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// timeline is not the exported video's, [toPlayer] maps a time on the editor
 /// timeline onto the player's, and the beats are counted on it.
 ///
-/// Returns `null` for an effect on the beat without a beat in its window,
-/// which is left out, as a built-in one is.
+/// Lightning, on the beat or not, gets the times it strikes at instead, under
+/// [EditorVideoEffect.strikesParam], counted the same way, and the shape of
+/// each bolt, under [EditorVideoEffect.boltsParam]. They are [strikes], on the
+/// exported video, which [lightningStrikesOnOutput] times against the other
+/// flashes of the video; without them it is timed as if it were the only one.
+///
+/// Returns `null` for an effect on the beat without a beat in its window, or
+/// lightning without a strike, which is left out, as a built-in one is.
 Map<String, Object?>? customVideoEffectRenderParams(
   CustomVideoEffect effect,
   TransitionTimelineMap timelineMap,
   List<Duration> beats, {
   Duration Function(Duration editorTime)? toPlayer,
+  List<Duration>? strikes,
 }) {
+  if (effect.id == lightningVideoEffectId) {
+    final times =
+        strikes ??
+        lightningStrikesOnOutput([effect], timelineMap, beats: beats)[effect]!;
+    if (times.isEmpty) return null;
+    return {
+      ...effect.params,
+      EditorVideoEffect.strikesParam: _offsetsInWindow(
+        effect,
+        timelineMap,
+        times,
+        toPlayer: toPlayer,
+      ),
+      EditorVideoEffect.boltsParam: [
+        for (var index = 0; index < times.length; index++)
+          ...lightningBolt(index),
+      ],
+    };
+  }
   if (effect.params[EditorVideoEffect.onBeatParam] != true) {
     if (EditorEffectType.custom(effect.id).isIntroOutro) {
       return {
@@ -1131,20 +1221,188 @@ Map<String, Object?>? customVideoEffectRenderParams(
       ),
     };
   }
-  final editorStart = effect.startTime ?? Duration.zero;
-  final start = timelineMap.editorToOutput(editorStart);
+  final start = timelineMap.editorToOutput(effect.startTime ?? Duration.zero);
   final end = timelineMap.editorToOutputOrNull(effect.endTime);
-  final playerStart = toPlayer?.call(editorStart);
-  final offsets = [
+  final offsets = _offsetsInWindow(effect, timelineMap, [
     for (final beat in [...beats]..sort())
-      if (beat >= start && (end == null || beat < end))
-        (playerStart == null
-                ? beat - start
-                : toPlayer!(timelineMap.outputToEditor(beat)) - playerStart)
-            .inMicroseconds,
-  ];
+      if (beat >= start && (end == null || beat < end)) beat,
+  ], toPlayer: toPlayer);
   if (offsets.isEmpty) return null;
   return {...effect.params, EditorVideoEffect.beatsParam: offsets};
+}
+
+/// [times], on the exported video, as microseconds after the start of the
+/// window of [effect]: on the exported video, or on the player's timeline when
+/// [toPlayer] maps a time on the editor timeline onto one.
+List<int> _offsetsInWindow(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap,
+  List<Duration> times, {
+  Duration Function(Duration editorTime)? toPlayer,
+}) {
+  final editorStart = effect.startTime ?? Duration.zero;
+  final start = timelineMap.editorToOutput(editorStart);
+  final playerStart = toPlayer?.call(editorStart);
+  return [
+    for (final time in times)
+      (playerStart == null
+              ? time - start
+              : toPlayer!(timelineMap.outputToEditor(time)) - playerStart)
+          .inMicroseconds,
+  ];
+}
+
+/// How long after the start of its window lightning that does not follow the
+/// beat first strikes.
+const lightningFirstStrike = Duration(milliseconds: 300);
+
+/// The gaps between the strikes of lightning that does not follow the beat,
+/// in turn, so it strikes at irregular intervals; they fill the longest video
+/// and start over for a longer window. Each is long enough that lightning on
+/// its own never flashes more than twice in a second, which leaves room for a
+/// flash transition; see [minimumFlashTransitionGap].
+const lightningStrikeGaps = [
+  Duration(milliseconds: 1400),
+  Duration(milliseconds: 800),
+  Duration(milliseconds: 2100),
+  Duration(milliseconds: 1100),
+  Duration(milliseconds: 1700),
+];
+
+/// Where each lightning effect of [effects] strikes on the exported video, by
+/// effect (compared by identity); other effects are left out.
+///
+/// On the beat it strikes on the [beats], on the exported video, in its
+/// window, skipping those closer than [minimumFlashGap] to the one before, as
+/// a built-in flashing effect does. Otherwise it first strikes
+/// [lightningFirstStrike] after its start and then after each of
+/// [lightningStrikeGaps] in turn. Its window ends where the video loops at the
+/// latest.
+///
+/// A strike that would put more than three flashes into one second of the
+/// looping video, across its loop point too, is dropped. The flash
+/// transitions on [timelineMap], the flashes of the built-in
+/// [flashingEffects], on the exported video as [videoEffectsOnOutput] times
+/// them, and the strikes of the lightning before it in [effects] all count
+/// toward those three, and stay: in each second with a fourth flash, the
+/// latest strike of the effect in it goes, until none has. They already keep
+/// to three a second among themselves, so dropping strikes always gets there.
+Map<CustomVideoEffect, List<Duration>> lightningStrikesOnOutput(
+  List<CustomVideoEffect> effects,
+  TransitionTimelineMap timelineMap, {
+  List<Duration> beats = const [],
+  List<VideoEffect> flashingEffects = const [],
+}) {
+  final result = Map<CustomVideoEffect, List<Duration>>.identity();
+  if (!effects.any((effect) => effect.id == lightningVideoEffectId)) {
+    return result;
+  }
+  final loopPoint = timelineMap.loopPoint;
+  final others = [
+    ...timelineMap.flashes,
+    ..._flashOnsets(flashingEffects, loopPoint),
+  ];
+  for (final effect in effects) {
+    if (effect.id != lightningVideoEffectId) continue;
+    var strikes = _lightningCandidates(effect, timelineMap, beats);
+    while (true) {
+      Duration? drop;
+      for (final crowded in _crowdedSeconds([
+        ...others,
+        ...strikes,
+      ], loopPoint)) {
+        Duration? latestAt;
+        for (final strike in strikes) {
+          final at = _lastOccurrenceIn(strike, crowded, loopPoint);
+          if (at != null && (latestAt == null || at > latestAt)) {
+            latestAt = at;
+            drop = strike;
+          }
+        }
+        if (drop != null) break;
+      }
+      if (drop == null) break;
+      strikes = [
+        for (final strike in strikes)
+          if (strike != drop) strike,
+      ];
+    }
+    result[effect] = strikes;
+    if (customVideoEffectIntensity(effect) > 0) others.addAll(strikes);
+  }
+  return result;
+}
+
+/// Where the lightning [effect] would strike on the exported video on its own,
+/// before [lightningStrikesOnOutput] thins the strikes out.
+List<Duration> _lightningCandidates(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap,
+  List<Duration> beats,
+) {
+  final (:start, :end) = _outputWindow(effect, timelineMap);
+  if (effect.params[EditorVideoEffect.onBeatParam] == true) {
+    return _spacedForFlashing([
+      for (final beat in beats)
+        if (beat >= start && beat < end) beat,
+    ]);
+  }
+  final strikes = <Duration>[];
+  var at = start + lightningFirstStrike;
+  for (var gap = 0; at < end; gap++) {
+    strikes.add(at);
+    at += lightningStrikeGaps[gap % lightningStrikeGaps.length];
+  }
+  return strikes;
+}
+
+/// How many values describe one bolt of lightning; see [lightningBolt].
+const lightningBoltValueCount = 14;
+
+/// The shape of the bolt lightning draws on its strike number [index], from 0,
+/// as [lightningBoltValueCount] values the native `LightningVideoEffect` and
+/// the picker tile's `shaders/lightning.frag` read; each strike looks
+/// different, and the same in the preview and the export.
+///
+/// The bolt runs from just above the top edge down through eight zigzag
+/// steps of equal height. The values are, in shares of the frame with y up
+/// from the bottom: where it enters the top, where it ends, 55% to 85% of the
+/// way down; the across positions of its eight corners; the across positions
+/// of the three corners of a thinner branch that forks off at its third
+/// corner and ends level with its sixth; and 1 when the bolt has that branch,
+/// 0 when not.
+///
+/// Drawn from a small linear congruential generator seeded by [index], whose
+/// numbers stay exact as doubles, so it gives the same bolt on every
+/// platform.
+List<double> lightningBolt(int index) {
+  var state = (index * 7919 + 4421) % 65537;
+  double next() {
+    state = (75 * state + 74) % 65537;
+    return state / 65537;
+  }
+
+  double step(double from, double shift, double random, double low) =>
+      (from + shift + (random - 0.5) * 0.14).clamp(low, 1 - low);
+
+  final top = 0.25 + 0.5 * next();
+  final bottom = 0.15 + 0.3 * next();
+  final corners = <double>[];
+  var x = top;
+  for (var i = 0; i < 8; i++) {
+    x = step(x, 0, next(), 0.04);
+    corners.add(x);
+  }
+  // The branch leans away from the middle of the frame.
+  final lean = corners[2] < 0.5 ? -0.05 : 0.05;
+  final branch = <double>[];
+  var y = corners[2];
+  for (var i = 0; i < 3; i++) {
+    y = step(y, lean, next(), 0.02);
+    branch.add(y);
+  }
+  final hasBranch = next() < 0.7 ? 1.0 : 0.0;
+  return [top, bottom, ...corners, ...branch, hasBranch];
 }
 
 /// How long one step of a tunnel takes at [intensity] when nothing else
@@ -1221,19 +1479,31 @@ int introOutroDurationUs(
   TransitionTimelineMap timelineMap, {
   Duration Function(Duration editorTime)? toPlayer,
 }) {
-  final editorStart = effect.startTime ?? Duration.zero;
-  final start = timelineMap.editorToOutput(editorStart);
-  final loopPoint = timelineMap.loopPoint;
-  final requestedEnd = timelineMap.editorToOutputOrNull(effect.endTime);
-  final end = requestedEnd == null || requestedEnd > loopPoint
-      ? loopPoint
-      : requestedEnd;
+  final (:start, :end) = _outputWindow(effect, timelineMap);
   final output = end - start;
   return (
     output: output,
     rendered: toPlayer == null
         ? output
-        : toPlayer(timelineMap.outputToEditor(end)) - toPlayer(editorStart),
+        : toPlayer(timelineMap.outputToEditor(end)) -
+              toPlayer(effect.startTime ?? Duration.zero),
+  );
+}
+
+/// The window of [effect] on the exported video, ending where the video loops
+/// at the latest.
+({Duration start, Duration end}) _outputWindow(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap,
+) {
+  final start = timelineMap.editorToOutput(effect.startTime ?? Duration.zero);
+  final loopPoint = timelineMap.loopPoint;
+  final requestedEnd = timelineMap.editorToOutputOrNull(effect.endTime);
+  return (
+    start: start,
+    end: requestedEnd == null || requestedEnd > loopPoint
+        ? loopPoint
+        : requestedEnd,
   );
 }
 
@@ -1468,16 +1738,8 @@ List<VideoEffect> _withinFlashLimit(
         final effect = current[i];
         if (!isFlashingVideoEffect(effect.type)) continue;
         for (final beat in effect.triggers) {
-          // A short video may repeat several times within this second. Find
-          // the last occurrence without expanding every repetition.
-          final repeat =
-              (crowded.inMicroseconds + 999999 - beat.inMicroseconds) ~/
-              loopPoint.inMicroseconds;
-          final at = beat + loopPoint * repeat;
-          if (repeat >= 0 &&
-              at >= crowded &&
-              at < crowded + const Duration(seconds: 1) &&
-              (latestAt == null || at > latestAt)) {
+          final at = _lastOccurrenceIn(beat, crowded, loopPoint);
+          if (at != null && (latestAt == null || at > latestAt)) {
             latestAt = at;
             latest = (effect: i, beat: beat);
           }
@@ -1501,6 +1763,21 @@ List<VideoEffect> _withinFlashLimit(
   }
 }
 
+/// Where [time], repeating every [loopPoint] as the video loops, last occurs
+/// within the second from [from], or `null` when it does not occur in it.
+///
+/// A short video may repeat several times within the second; this finds the
+/// last occurrence without expanding every repetition.
+Duration? _lastOccurrenceIn(Duration time, Duration from, Duration loopPoint) {
+  final repeat =
+      (from.inMicroseconds + 999999 - time.inMicroseconds) ~/
+      loopPoint.inMicroseconds;
+  final at = time + loopPoint * repeat;
+  return repeat >= 0 && at >= from && at < from + const Duration(seconds: 1)
+      ? at
+      : null;
+}
+
 /// Where the seconds of the looping video start that hold more than three
 /// flashes, in order.
 ///
@@ -1511,11 +1788,20 @@ Iterable<Duration> _crowdedFlashSeconds(
   List<VideoEffect> effects,
   Duration loopPoint,
   List<Duration> transitionFlashes,
-) sync* {
+) => _crowdedSeconds([
+  ..._flashOnsets(effects, loopPoint),
+  ...transitionFlashes,
+], loopPoint);
+
+/// Where the flashes of the flashing ones of [effects] start on the video,
+/// which loops at [loopPoint]: where a frame turns clearly whiter or turns
+/// negative, sampled at the rate the renderers place beats at.
+List<Duration> _flashOnsets(List<VideoEffect> effects, Duration loopPoint) {
   final flashing = [
     for (final effect in effects)
       if (isFlashingVideoEffect(effect.type)) effect,
   ];
+  if (flashing.isEmpty) return const [];
   const step = Duration(microseconds: 1000000 ~/ 120);
   ({double flash, double invert}) sample(Duration at) {
     final frame = VideoEffect.resolve(flashing, at);
@@ -1537,12 +1823,19 @@ Iterable<Duration> _crowdedFlashSeconds(
     }
     before = now;
   }
-  onsets
-    ..addAll(transitionFlashes)
-    ..sort();
-  for (final onset in onsets) {
+  return onsets;
+}
+
+/// Where the seconds of the video, which loops at [loopPoint], start that
+/// hold more than three of the flashes starting at [onsets], in order.
+Iterable<Duration> _crowdedSeconds(
+  List<Duration> onsets,
+  Duration loopPoint,
+) sync* {
+  final sorted = [...onsets]..sort();
+  for (final onset in sorted) {
     var inSecond = 0;
-    for (final other in onsets) {
+    for (final other in sorted) {
       final distance =
           (other - onset).inMicroseconds % loopPoint.inMicroseconds;
       if (distance < Duration.microsecondsPerSecond) {
@@ -1586,14 +1879,36 @@ Duration _roundDown(Duration value, Duration step) {
 bool isFlashingVideoEffect(VideoEffectType type) =>
     type == VideoEffectType.strobe || type == VideoEffectType.negativeFlash;
 
-/// The content warnings a video with [effects] must carry, whatever the
-/// creator picks: [ContentLabel.flashingLights] when any of them flashes.
+/// Whether the effect Divine registered under [id] flashes: lightning.
+///
+/// Like a built-in flashing effect (see [isFlashingVideoEffect]), only one
+/// flashing effect may run at a time, and [lightningStrikesOnOutput] keeps its
+/// strikes within three flashes a second together with the video's other
+/// flashes.
+bool isFlashingCustomVideoEffect(String id) => id == lightningVideoEffectId;
+
+/// How strong the custom [effect] is, from 0 to 1: its intensity param, or 1
+/// without one.
+double customVideoEffectIntensity(CustomVideoEffect effect) =>
+    ((effect.params[EditorVideoEffect.intensityParam] as num?)?.toDouble() ?? 1)
+        .clamp(0.0, 1.0);
+
+/// The content warnings a video with the built-in [effects] and the
+/// [customEffects] Divine renders itself must carry, whatever the creator
+/// picks: [ContentLabel.flashingLights] when any of them flashes.
 ///
 /// Derived from the effects every time rather than stored with the creator's
 /// own picks, so the warning goes away again with the last flashing effect.
 Set<ContentLabel> requiredContentLabelsForEffects(
-  Iterable<VideoEffect> effects,
-) => effects.any((e) => isFlashingVideoEffect(e.type) && e.intensity > 0)
+  Iterable<VideoEffect> effects, {
+  Iterable<CustomVideoEffect> customEffects = const [],
+}) =>
+    effects.any((e) => isFlashingVideoEffect(e.type) && e.intensity > 0) ||
+        customEffects.any(
+          (e) =>
+              isFlashingCustomVideoEffect(e.id) &&
+              customVideoEffectIntensity(e) > 0,
+        )
     ? const {ContentLabel.flashingLights}
     : const {};
 

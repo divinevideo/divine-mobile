@@ -973,6 +973,11 @@ class VideoEditorRenderService {
     final videoSize =
         renderResolution ??
         VideoEditorConstants.quality.resolutionForAspectRatio(aspectRatio);
+    final effects = buildVideoEffects(
+      effects: effectEntries,
+      timelineMap: timelineMap,
+      beats: beats,
+    );
 
     final task = VideoRenderData(
       id: taskId,
@@ -998,14 +1003,11 @@ class VideoEditorRenderService {
         filterStates: parameters?.filterStates ?? const [],
         timelineMap: timelineMap,
       ),
-      effects: buildVideoEffects(
-        effects: effectEntries,
-        timelineMap: timelineMap,
-        beats: beats,
-      ),
+      effects: effects,
       // The looks after the effects editor's other effects, and Adjust after
       // all of them, as in the preview; see looksLast and
-      // adjustVideoEffectsOf for why.
+      // adjustVideoEffectsOf for why. Lightning keeps clear of the flashes of
+      // the built-in effects.
       customEffects: customVideoEffectsOnOutput(
         [
           ...looksLast(
@@ -1015,6 +1017,7 @@ class VideoEditorRenderService {
         ],
         timelineMap,
         beats: beats,
+        flashingEffects: effects,
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

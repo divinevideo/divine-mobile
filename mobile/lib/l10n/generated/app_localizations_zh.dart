@@ -8852,6 +8852,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectSpotlight => '聚光灯';
 
   @override
+  String get videoEditorEffectDisco => '迪斯科';
+
+  @override
+  String get videoEditorEffectLaser => '激光';
+
+  @override
+  String get videoEditorEffectLightning => '闪电';
+
+  @override
   String get videoEditorEffectSnow => '雪花';
 
   @override

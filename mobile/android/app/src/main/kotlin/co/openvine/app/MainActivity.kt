@@ -21,14 +21,17 @@ import co.openvine.app.videoeffects.AsciiVideoEffect
 import co.openvine.app.videoeffects.BricksVideoEffect
 import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.CrossStitchVideoEffect
+import co.openvine.app.videoeffects.DiscoVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.EightBitVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
 import co.openvine.app.videoeffects.FlutedGlassVideoEffect
 import co.openvine.app.videoeffects.IntroOutroVideoEffect
+import co.openvine.app.videoeffects.LaserVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
 import co.openvine.app.videoeffects.LightRaysVideoEffect
+import co.openvine.app.videoeffects.LightningVideoEffect
 import co.openvine.app.videoeffects.LookVideoEffect
 import co.openvine.app.videoeffects.NeonEdgesVideoEffect
 import co.openvine.app.videoeffects.NightVisionVideoEffect
@@ -147,6 +150,9 @@ class MainActivity : FlutterFragmentActivity() {
         PrismVideoEffect.register()
         WindowLightVideoEffect.register()
         SpotlightVideoEffect.register()
+        DiscoVideoEffect.register()
+        LaserVideoEffect.register()
+        LightningVideoEffect.register()
         ParticlesVideoEffect.register()
         TiltShiftVideoEffect.register()
         SwirlVideoEffect.register()

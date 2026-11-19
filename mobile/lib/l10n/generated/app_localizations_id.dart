@@ -9300,6 +9300,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectSpotlight => 'Lampu Sorot';
 
   @override
+  String get videoEditorEffectDisco => 'Disko';
+
+  @override
+  String get videoEditorEffectLaser => 'Laser';
+
+  @override
+  String get videoEditorEffectLightning => 'Petir';
+
+  @override
   String get videoEditorEffectSnow => 'Salju';
 
   @override
