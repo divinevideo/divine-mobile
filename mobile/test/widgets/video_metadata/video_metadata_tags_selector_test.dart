@@ -556,6 +556,19 @@ void main() {
           expect(chip('news'), findsNothing);
         });
 
+        testWidgets('announces the first rejection through a live region', (
+          tester,
+        ) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          expect(
+            tester.getSemantics(find.text(limitWarning)),
+            isSemantics(isLiveRegion: true, label: limitWarning),
+          );
+        });
+
         testWidgets(
           'removing a tag after a rejection clears the warning and lets the '
           'tag in',
