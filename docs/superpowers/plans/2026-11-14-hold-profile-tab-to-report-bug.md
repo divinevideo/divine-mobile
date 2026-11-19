@@ -583,12 +583,12 @@ Run from `mobile/`:
   - The phones are shared with other sessions.
   - Agree which staging test account to sign in with.
 
-- [ ] **Step 4: Galaxy S23, Android 17 (adb serial `RFCX70Z29TB`)**
+- [ ] **Step 4: Galaxy S23, Android 17 (adb)**
 
-Run `mise exec -- flutter run --debug -d RFCX70Z29TB --dart-define=DEFAULT_ENV=STAGING`, which installs `co.openvine.app.staging`, and sign in. With `ADB=$ANDROID_HOME/platform-tools/adb`, check each of these:
-  - **Hold opens the form.** Find the Profile tab bounds with `$ADB -s RFCX70Z29TB exec-out uiautomator dump /dev/tty`. Hold with `$ADB -s RFCX70Z29TB shell input swipe X Y X Y 1000`. A new dump shows the Report a Bug title and the public-post notice.
-  - **The hold vibrates.** `$ADB -s RFCX70Z29TB shell dumpsys vibrator_manager` lists a vibration from `co.openvine.app.staging` at the hold time.
-  - **Back closes it.** `$ADB -s RFCX70Z29TB shell input keyevent KEYCODE_BACK` closes the form and returns to the same screen (Review Focus 3).
+Set `ANDROID_DEVICE_ID` to the test device from `adb devices`. Run `mise exec -- flutter run --debug -d "$ANDROID_DEVICE_ID" --dart-define=DEFAULT_ENV=STAGING`, which installs `co.openvine.app.staging`, and sign in. With `ADB=$ANDROID_HOME/platform-tools/adb`, check each of these:
+  - **Hold opens the form.** Find the Profile tab bounds with `$ADB -s "$ANDROID_DEVICE_ID" exec-out uiautomator dump /dev/tty`. Hold with `$ADB -s "$ANDROID_DEVICE_ID" shell input swipe X Y X Y 1000`. A new dump shows the Report a Bug title and the public-post notice.
+  - **The hold vibrates.** `$ADB -s "$ANDROID_DEVICE_ID" shell dumpsys vibrator_manager` lists a vibration from `co.openvine.app.staging` at the hold time.
+  - **Back closes it.** `$ADB -s "$ANDROID_DEVICE_ID" shell input keyevent KEYCODE_BACK` closes the form and returns to the same screen (Review Focus 3).
   - **A tap still opens the profile**, with no form.
   - **Two quick holds open one form** (Review Focus 2): two swipes back to back, then one back press returns to the feed.
   - **A covered bar does nothing** (Review Focus 5): open a share sheet, then hold where the tab is.
@@ -596,20 +596,20 @@ Run `mise exec -- flutter run --debug -d RFCX70Z29TB --dart-define=DEFAULT_ENV=S
   - **TalkBack** (with the user's go-ahead). Turn it on:
 
     ```
-    $ADB -s RFCX70Z29TB shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
-    $ADB -s RFCX70Z29TB shell settings put secure accessibility_enabled 1
+    $ADB -s "$ANDROID_DEVICE_ID" shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+    $ADB -s "$ANDROID_DEVICE_ID" shell settings put secure accessibility_enabled 1
     ```
 
     The user touches the Profile tab, hears "double-tap and hold to report a bug", double-taps and holds, and sees the form. TalkBack's actions menu lists the shortcut once. Then restore the phone's previous state (both were off):
 
     ```
-    $ADB -s RFCX70Z29TB shell settings delete secure enabled_accessibility_services
-    $ADB -s RFCX70Z29TB shell settings put secure accessibility_enabled 0
+    $ADB -s "$ANDROID_DEVICE_ID" shell settings delete secure enabled_accessibility_services
+    $ADB -s "$ANDROID_DEVICE_ID" shell settings put secure accessibility_enabled 0
     ```
 
-- [ ] **Step 5: iPhone 17 Pro Max, iOS 27.0.1, over USB (UDID `00008150-00195C563AB9401C`)**
+- [ ] **Step 5: iPhone 17 Pro Max, iOS 27.0.1, over USB (physical device)**
 
-Before the first iOS build of the session, read the iOS build-cache memory: seed SourcePackages and Pods from a sibling worktree if GitHub is slow. Run `mise exec -- flutter run --debug -d 00008150-00195C563AB9401C --dart-define=DEFAULT_ENV=STAGING`, which installs `co.openvine.app.staging`. The user checks by hand:
+Before the first iOS build of the session, read the iOS build-cache memory: seed SourcePackages and Pods from a sibling worktree if GitHub is slow. Set `IOS_DEVICE_ID` to the test device from `flutter devices`. Run `mise exec -- flutter run --debug -d "$IOS_DEVICE_ID" --dart-define=DEFAULT_ENV=STAGING`, which installs `co.openvine.app.staging`. The user checks by hand:
   - Holding the Profile tab gives a light tap, and the form slides up from the bottom.
   - Swiping in from the left edge does nothing.
   - Cancel and the arrow each close the form and return to the same screen (Review Focus 3).
