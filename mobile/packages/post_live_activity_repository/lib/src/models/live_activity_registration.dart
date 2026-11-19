@@ -90,13 +90,13 @@ class LiveActivityRegistration extends Equatable {
 
   /// The `liveActivity` object of the registration request.
   Map<String, Object?> liveActivityWire() => {
-    'activityId': activityId,
-    'pushToken': activityPushToken,
+    'activityPushToken': activityPushToken,
     'postCoordinate': postCoordinate,
     'postEventIds': postEventIds,
     'postedAt': postedAt.millisecondsSinceEpoch ~/ 1000,
     'windowEndsAt': windowEndsAt.millisecondsSinceEpoch ~/ 1000,
     'showFirstRunNote': showFirstRunNote,
+    'state': state.name,
   };
 
   @override

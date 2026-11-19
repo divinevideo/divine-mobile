@@ -40,15 +40,16 @@ void main() {
       expect(
         registration().liveActivityWire(),
         equals({
-          'activityId': 'a1',
-          'pushToken': 'tok',
+          'activityPushToken': 'tok',
           'postCoordinate': '34236:owner:d',
           'postEventIds': ['e1', 'e2'],
           'postedAt': postedAt.millisecondsSinceEpoch ~/ 1000,
           'windowEndsAt': windowEnd.millisecondsSinceEpoch ~/ 1000,
           'showFirstRunNote': true,
+          'state': 'active',
         }),
       );
+      expect(registration().ended().liveActivityWire()['state'], 'ended');
     });
   });
 

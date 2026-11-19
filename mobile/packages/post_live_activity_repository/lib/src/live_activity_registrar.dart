@@ -21,7 +21,7 @@ enum LiveActivityRegistrarResult {
 
 /// Sends activity registrations to the push service.
 // A port: the app's push service implements it, and tests fake it.
-// ignore: one_member_abstracts
+// ignore: one_member_abstracts, a single-method port is the intended shape.
 abstract interface class LiveActivityRegistrar {
   /// Registers [registration] with the push service.
   Future<LiveActivityRegistrarResult> register(
