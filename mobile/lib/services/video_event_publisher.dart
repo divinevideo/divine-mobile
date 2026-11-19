@@ -1067,7 +1067,11 @@ class VideoEventPublisher {
         'Invalid sound-sharing account or event',
       );
     }
-    final latest = await _newestRevisionOf(existingEvent);
+    final latest = await newestVideoRevision(
+      _videosRepositoryGetter?.call(),
+      existingEvent,
+      logName: _logName,
+    );
     if (latest == null) {
       throw const SoundReusePublicationException(
         'Newest revision of the source video unavailable',
@@ -1143,31 +1147,39 @@ class VideoEventPublisher {
     List<String> extraTextTrackRefs = const [],
     String textTrackLang = 'en',
   }) async {
-    final owner = _authService?.currentPublicKeyHex;
-    if (owner == null || owner != existingEvent.pubkey) {
+    final ownsVideo = _authService?.currentPublicKeyHex == existingEvent.pubkey;
+    if (!ownsVideo) {
       Log.error(
         'Cannot republish subtitles for video ${existingEvent.id}: '
         "it is not the signed-in account's",
         name: _logName,
         category: LogCategory.video,
       );
-      return null;
     }
-    final latest = await _newestRevisionOf(existingEvent);
-    if (latest == null) return null;
-    final tags = Nip89ClientTag.withoutClientTag(latest.tags)
-        .where(
-          (t) => t.isNotEmpty && !_isReplacedCaptionTrack(t, textTrackLang),
-        )
-        .map(List<String>.from)
-        .toList();
+    final latest = ownsVideo
+        ? await newestVideoRevision(
+            _videosRepositoryGetter?.call(),
+            existingEvent,
+            logName: _logName,
+          )
+        : null;
+    final tags = [
+      for (final tag in Nip89ClientTag.withoutClientTag(latest?.tags ?? []))
+        if (tag.isNotEmpty && !_isReplacedCaptionTrack(tag, textTrackLang))
+          List<String>.from(tag),
+    ];
 
-    if (!tags.any((tag) => tag.length >= 2 && tag.first == 'd')) {
-      Log.error(
-        'Cannot republish subtitles for video ${existingEvent.id}: missing d tag',
-        name: _logName,
-        category: LogCategory.video,
-      );
+    // The reason a revision is missing was logged where it was looked up.
+    if (latest == null ||
+        !tags.any((tag) => tag.length >= 2 && tag.first == 'd')) {
+      if (latest != null) {
+        Log.error(
+          'Cannot republish subtitles for video ${existingEvent.id}: '
+          'missing d tag',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
       return null;
     }
 
@@ -1217,33 +1229,15 @@ class VideoEventPublisher {
     return updatedVideo;
   }
 
-  /// The newest revision of [video] on the relays, or null when the relays
-  /// cannot say or there is no repository to ask.
-  Future<Event?> _newestRevisionOf(VideoEvent video) async {
-    final repository = _videosRepositoryGetter?.call();
-    if (repository == null) {
-      Log.warning(
-        'Not republishing video ${video.id}: '
-        'no repository to read its newest revision from',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
-    return newestVideoRevision(repository, video, logName: _logName);
-  }
-
   /// Whether [tag] is a caption track a subtitle republish in [lang]
   /// replaces: a captions or subtitles `text-track` in [lang], or one naming
   /// no type or language.
   static bool _isReplacedCaptionTrack(List<String> tag, String lang) {
-    if (tag.first != 'text-track') return false;
     final type = tag.length > 3 ? tag[3] : '';
-    if (type.isNotEmpty && type != 'captions' && type != 'subtitles') {
-      return false;
-    }
     final trackLang = tag.length > 4 ? tag[4] : '';
-    return trackLang.isEmpty || trackLang == lang;
+    return tag.first == 'text-track' &&
+        (type.isEmpty || type == 'captions' || type == 'subtitles') &&
+        (trackLang.isEmpty || trackLang == lang);
   }
 
   /// Publishes a Kind 39307 subtitle event for [video] and returns its

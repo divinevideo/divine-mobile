@@ -81,6 +81,16 @@ void main() {
       expect(result, same(newest));
     });
 
+    test('returns null when there is no repository to ask', () async {
+      final result = await newestVideoRevision(
+        null,
+        _video(),
+        logName: 'test',
+      );
+
+      expect(result, isNull);
+    });
+
     for (final (name, revision) in [
       ('no relay answered in full', const LatestVideoRevisionUnknown()),
       ('no relay holds a revision', const LatestVideoRevisionAbsent()),
