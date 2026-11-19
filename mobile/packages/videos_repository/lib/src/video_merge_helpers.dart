@@ -102,7 +102,7 @@ VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
     authorAvatar: republished.authorAvatar ?? existing.authorAvatar,
     rawTags: mergeVideoRawTagsPrimaryWins(republished.rawTags, {
       for (final key in const ['views', 'unique_views', 'unique_viewers'])
-        if (existing.rawTags[key] case final count?) key: count,
+        key: ?existing.rawTags[key],
     }),
     categories: republished.categories.isEmpty ? existing.categories : null,
     moderationLabels: {
