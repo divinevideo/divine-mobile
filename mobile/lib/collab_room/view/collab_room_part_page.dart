@@ -24,7 +24,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Wires the editor's render and a [CollabRoomPartCubit] for [roomId].
-class CollabRoomPartPage extends ConsumerWidget {
+class CollabRoomPartPage extends ConsumerStatefulWidget {
   /// Creates the part page.
   const CollabRoomPartPage({required this.roomId, super.key});
 
@@ -38,44 +38,62 @@ class CollabRoomPartPage extends ConsumerWidget {
   final String roomId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CollabRoomPartPage> createState() => _CollabRoomPartPageState();
+}
+
+class _CollabRoomPartPageState extends ConsumerState<CollabRoomPartPage> {
+  /// Set once the part is in and the page is on its way out. Ending the flow
+  /// marks the part finished and clears the render while the page still
+  /// slides away; it keeps showing the part instead of an error or a spinner.
+  bool _leaving = false;
+
+  /// The render last shown, for the way out.
+  DivineVideoClip? _shownClip;
+
+  @override
+  Widget build(BuildContext context) {
+    final roomId = widget.roomId;
     final part = ref.watch(collabRoomPartProvider);
-    if (part == null || !part.isActive || part.roomId != roomId) {
-      return RouteErrorScreen(message: context.l10n.collabRoomMissing);
-    }
     final liveRoom = ref.watch(collabRoomLiveProvider(roomId));
-    if (liveRoom.isLoading) {
-      return const Scaffold(
-        body: Center(child: DivineCircularProgressIndicator()),
-      );
-    }
-    final room = liveRoom.value;
-    if (room == null ||
-        part.me != room.ownerPubkey ||
-        part.inviteRevision != room.me?.inviteRevision ||
-        room.phase != CollabRoomPhase.recording ||
-        room.me?.status != CollabRoomMemberStatus.joined) {
-      return RouteErrorScreen(message: context.l10n.collabRoomMissing);
-    }
-    final service = ref.watch(collabRoomServiceProvider);
     final (:clip, :failed) = ref.watch(
       videoEditorProvider.select(
         (s) => (clip: s.finalRenderedClip, failed: s.renderFailed),
       ),
     );
+    if (!_leaving) {
+      if (part == null || !part.isActive || part.roomId != roomId) {
+        return RouteErrorScreen(message: context.l10n.collabRoomMissing);
+      }
+      if (liveRoom.isLoading) {
+        return const Scaffold(
+          body: Center(child: DivineCircularProgressIndicator()),
+        );
+      }
+      final room = liveRoom.value;
+      if (room == null ||
+          part.me != room.ownerPubkey ||
+          part.inviteRevision != room.me?.inviteRevision ||
+          room.phase != CollabRoomPhase.recording ||
+          room.me?.status != CollabRoomMemberStatus.joined) {
+        return RouteErrorScreen(message: context.l10n.collabRoomMissing);
+      }
+      _shownClip = clip;
+    }
+    final service = ref.watch(collabRoomServiceProvider);
+    final shown = _shownClip;
     return BlocProvider(
       key: ValueKey((service, roomId)),
       create: (_) => CollabRoomPartCubit(
         service: service,
         roomId: roomId,
-        inviteRevision: part.inviteRevision,
+        inviteRevision: part?.inviteRevision ?? 0,
       ),
       child: BlocListener<CollabRoomPartCubit, CollabRoomPartState>(
         listenWhen: (previous, current) => previous.status != current.status,
         listener: (context, state) {
           switch (state.status) {
             case CollabRoomPartStatus.sent:
-              _returnToRoom(context, ref);
+              _returnToRoom(context);
             case CollabRoomPartStatus.failed:
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(context.l10n.collabRoomPartSendFailed)),
@@ -98,10 +116,10 @@ class CollabRoomPartPage extends ConsumerWidget {
             );
           },
           child: _UploadsAhead(
-            videoPath: clip?.video?.file?.path,
+            videoPath: shown?.video?.file?.path,
             child: CollabRoomPartView(
-              renderedClip: clip,
-              renderFailed: failed,
+              renderedClip: shown,
+              renderFailed: !_leaving && failed,
               onRetryRender: () => runDetached(
                 ref.read(videoEditorProvider.notifier).startRenderVideo(),
                 'render the collab room part again',
@@ -117,7 +135,8 @@ class CollabRoomPartPage extends ConsumerWidget {
 
   /// Ends the part flow and goes back to the room, below the camera and the
   /// editor.
-  void _returnToRoom(BuildContext context, WidgetRef ref) {
+  void _returnToRoom(BuildContext context) {
+    setState(() => _leaving = true);
     // Finished, not cleared: the recorder animating out keeps its cell
     // instead of rebuilding as a plain camera that offers a draft back.
     ref.read(collabRoomPartProvider.notifier).finish();
