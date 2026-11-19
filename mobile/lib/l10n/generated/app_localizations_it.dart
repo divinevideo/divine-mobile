@@ -5070,6 +5070,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get navProfile => 'Profilo';
 
   @override
+  String get navProfileLongPressHint => 'segnalare un bug';
+
+  @override
   String get navMyProfile => 'Il mio profilo';
 
   @override
@@ -8327,6 +8330,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Le info sul dispositivo e i log saranno inclusi automaticamente.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Scorciatoia: quando la barra in basso è visibile, tieni premuta la tua foto profilo per segnalare un bug da qualsiasi schermata.';
 
   @override
   String get bugReportSuccessMessage =>

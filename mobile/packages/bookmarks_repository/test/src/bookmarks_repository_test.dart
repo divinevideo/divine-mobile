@@ -35,6 +35,8 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<Filter>[]);
+    registerFallbackValue(<String>[]);
+    registerFallbackValue(Duration.zero);
   });
 
   group(BookmarksRepository, () {
@@ -81,8 +83,26 @@ void main() {
       return Event(pubkey, 10003, tags, content, createdAt: createdAt);
     }
 
+    /// Answers a read asked again on new connections, which a full-settlement
+    /// read that timed out with relays connected makes (#9335).
+    void stubFreshConnections({
+      required List<Event> events,
+      bool timedOut = false,
+      bool noRelays = false,
+    }) {
+      when(
+        () => nostrClient.queryEventsOnFreshConnections(
+          any(),
+          timeout: any(named: 'timeout'),
+          requiredRelays: any(named: 'requiredRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+    }
+
     /// Makes the relay answer a kind-10003 query with [events], in both
-    /// reconcile modes.
+    /// reconcile modes, and on new connections too.
     void stubRelay({
       required List<Event> events,
       bool timedOut = false,
@@ -96,6 +116,11 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+      stubFreshConnections(
+        events: events,
+        timedOut: timedOut,
+        noRelays: noRelays,
       );
     }
 
@@ -117,6 +142,13 @@ void main() {
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
       );
+      if (fullSettlement) {
+        stubFreshConnections(
+          events: events,
+          timedOut: timedOut,
+          noRelays: noRelays,
+        );
+      }
     }
 
     /// Puts [eventIds] in the SharedPreferences snapshot a service reads at
@@ -196,6 +228,10 @@ void main() {
       pubkey = getPublicKey(privateKeyHex);
       identity = LocalNostrSigner(privateKeyHex);
       nostrClient = _MockNostrClient();
+      when(() => nostrClient.configuredRelays).thenReturn(const []);
+      when(
+        () => nostrClient.relayStatusStream,
+      ).thenAnswer((_) => const Stream.empty());
       signer = _MockBookmarkSigner();
       signedTags = null;
       signedContent = null;
@@ -246,6 +282,56 @@ void main() {
         .toList();
 
     group('syncGlobalBookmarks', () {
+      test('keeps a relay added and removed during the first read in the '
+          'required retry set', () async {
+        const other = 'wss://other.example';
+        const home = 'wss://home.example';
+        final changes =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        addTearDown(changes.close);
+        when(() => nostrClient.configuredRelays).thenReturn(const [other]);
+        when(() => nostrClient.relayStatusStream).thenAnswer(
+          (_) => changes.stream,
+        );
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          changes
+            ..add({home: RelayConnectionStatus.connected(home)})
+            ..add({other: RelayConnectionStatus.connected(other)});
+          await pumpEventQueue();
+          return (events: <Event>[], timedOut: true, noRelays: false);
+        });
+        when(
+          () => nostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+            requiredRelays: any(named: 'requiredRelays'),
+          ),
+        ).thenAnswer((invocation) async {
+          final required =
+              invocation.namedArguments[#requiredRelays] as List<String>;
+          // Only the home relay holds the unseen list and cannot answer.
+          // Dropping it would let the other's empty answer permit a publish.
+          return (
+            events: <Event>[],
+            timedOut: required.contains(home),
+            noRelays: false,
+          );
+        });
+
+        final synced = await createService().syncGlobalBookmarks(
+          requireAuthoritative: true,
+        );
+
+        expect(synced, isFalse);
+        expect(changes.hasListener, isFalse);
+      });
+
       test('adopts the relay list when the local cache is empty', () async {
         stubRelay(
           events: [
@@ -262,6 +348,31 @@ void main() {
           equals(['video-a', 'video-b']),
         );
       });
+
+      test(
+        'does not ask again on new connections when a read that does not '
+        'need every relay times out',
+        () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(['video-a']),
+            ],
+            timedOut: true,
+          );
+          final service = createService();
+
+          final synced = await service.syncGlobalBookmarks();
+
+          expect(synced, isFalse);
+          verifyNever(
+            () => nostrClient.queryEventsOnFreshConnections(
+              any(),
+              timeout: any(named: 'timeout'),
+              requiredRelays: any(named: 'requiredRelays'),
+            ),
+          );
+        },
+      );
 
       test('keeps the newest event when the relay returns several', () async {
         final older = Event(

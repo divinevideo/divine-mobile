@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/saved_caption_styles/saved_caption_styles_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/caption_preview_cues.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/saved_caption_style.dart';
 import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
@@ -28,10 +29,12 @@ const _previewHeight = 56.0;
 ///
 /// [currentCustomStyle] is what "Save current style" stores. When the track
 /// is on a built-in preset there is nothing to save, so the action is
-/// hidden and the sheet only offers the styles already saved.
+/// hidden and the sheet only offers the styles already saved. The style
+/// previews loop [previewCues].
 Future<CaptionCustomStyle?> showSavedCaptionStylesSheet(
   BuildContext context, {
   CaptionCustomStyle? currentCustomStyle,
+  CaptionPreviewCues previewCues = CaptionPreviewCues.fallback,
 }) {
   return VineBottomSheet.show<CaptionCustomStyle>(
     context: context,
@@ -41,6 +44,7 @@ Future<CaptionCustomStyle?> showSavedCaptionStylesSheet(
     ),
     buildScrollBody: (scrollController) => SavedCaptionStylesSheetPage(
       currentCustomStyle: currentCustomStyle,
+      previewCues: previewCues,
       scrollController: scrollController,
     ),
   );
@@ -54,12 +58,16 @@ class SavedCaptionStylesSheetPage extends ConsumerWidget {
   /// Creates the page.
   const SavedCaptionStylesSheetPage({
     this.currentCustomStyle,
+    this.previewCues = CaptionPreviewCues.fallback,
     this.scrollController,
     super.key,
   });
 
   /// The caption track's current custom style, offered for saving.
   final CaptionCustomStyle? currentCustomStyle;
+
+  /// The cues the style previews loop through.
+  final CaptionPreviewCues previewCues;
 
   /// Sheet-provided controller so drag-to-resize keeps working.
   final ScrollController? scrollController;
@@ -78,6 +86,7 @@ class SavedCaptionStylesSheetPage extends ConsumerWidget {
       },
       child: SavedCaptionStylesSheetView(
         currentCustomStyle: currentCustomStyle,
+        previewCues: previewCues,
         scrollController: scrollController,
       ),
     );
@@ -92,12 +101,16 @@ class SavedCaptionStylesSheetView extends StatefulWidget {
   /// Creates the view.
   const SavedCaptionStylesSheetView({
     this.currentCustomStyle,
+    this.previewCues = CaptionPreviewCues.fallback,
     this.scrollController,
     super.key,
   });
 
   /// The caption track's current custom style, offered for saving.
   final CaptionCustomStyle? currentCustomStyle;
+
+  /// The cues the style previews loop through.
+  final CaptionPreviewCues previewCues;
 
   /// Sheet-provided controller so drag-to-resize keeps working.
   final ScrollController? scrollController;
@@ -208,6 +221,7 @@ class _SavedCaptionStylesSheetViewState
             return _SavedStyleRow(
               key: ValueKey(saved.id),
               saved: saved,
+              cues: widget.previewCues,
               controller: _controller,
               onTap: () => _apply(saved.style),
               onManage: () => _manage(saved),
@@ -336,6 +350,7 @@ class _LoadFailure extends StatelessWidget {
 class _SavedStyleRow extends StatelessWidget {
   const _SavedStyleRow({
     required this.saved,
+    required this.cues,
     required this.controller,
     required this.onTap,
     required this.onManage,
@@ -344,6 +359,7 @@ class _SavedStyleRow extends StatelessWidget {
   });
 
   final SavedCaptionStyle saved;
+  final CaptionPreviewCues cues;
   final AnimationController controller;
   final VoidCallback onTap;
   final VoidCallback onManage;
@@ -386,6 +402,7 @@ class _SavedStyleRow extends StatelessWidget {
                               animation: controller,
                               builder: (context, _) => CaptionStylePreview(
                                 style: style,
+                                cues: cues,
                                 loopValue: controller.value,
                                 loopMs: _loopMs,
                                 width: _previewWidth,

@@ -188,6 +188,13 @@ class BookmarksRepository {
   /// rather than an error, so a miss is not taken as final.
   static const videoAddressRetryInterval = Duration(minutes: 10);
 
+  /// How long a save waits for the list read asked again on new connections.
+  ///
+  /// The slowest such read measured on a phone took 4.6 s (#9335). Past this
+  /// the save gives up, since the video's other actions stay locked while it
+  /// waits.
+  static const freshConnectionReadTimeout = Duration(seconds: 6);
+
   /// When a completed [_resolveVideoAddresses] call last found nothing for
   /// each event id, so an id that never resolves is not looked up on every
   /// sync.
@@ -861,18 +868,71 @@ class BookmarksRepository {
   /// regardless of settlement, so leaving it on would let a stale locally-held
   /// kind-10003 stand in for a relay answer — and the next publish would
   /// resurrect a list the user had already emptied.
+  ///
+  /// An authoritative read that a relay did not settle on the shared
+  /// connections asks every relay again on new ones, and still needs each of
+  /// them to settle there. Divine's relay serves one connection's requests in
+  /// order, so the shared connection can hold the read behind a slow request
+  /// for minutes while a new one answers in a second or two (#9335).
+  /// The retry conservatively needs every relay configured during the read:
+  /// the first read can reconnect one, then lose it before it answers. A
+  /// configured relay that remains unreachable therefore blocks the retry.
   Future<({List<Event>? events, BookmarkToggleFailure? failure})>
   _readRemoteGlobalBookmarks(
     String pubkey, {
     required bool requireAuthoritative,
   }) async {
-    final result = await _nostrClient.queryEventsDetailed(
-      [
-        Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
-      ],
-      useCache: !requireAuthoritative,
-      requireAllRelaysSettled: requireAuthoritative,
-    );
+    final filters = [
+      Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
+    ];
+    // Connectivity can change during reconnect or query-pool waits. Keep all
+    // configured relays so one that connected and then dropped cannot vanish
+    // from the retry and allow a replacement of a list we never saw.
+    final requiredRelays = <String>{
+      if (requireAuthoritative) ..._nostrClient.configuredRelays,
+    };
+    // Status snapshots include newly configured relays, even while connecting.
+    // Keep their identities after removal too: a list they did not answer
+    // before leaving is still unknown.
+    final relayChanges = requireAuthoritative
+        ? _nostrClient.relayStatusStream.listen(
+            (statuses) => requiredRelays.addAll(statuses.keys),
+          )
+        : null;
+    late ({List<Event> events, bool timedOut, bool noRelays}) result;
+    try {
+      result = await _nostrClient.queryEventsDetailed(
+        filters,
+        useCache: !requireAuthoritative,
+        requireAllRelaysSettled: requireAuthoritative,
+      );
+    } finally {
+      // The manager owns this broadcast source. Removing our listener is
+      // synchronous; its source cleanup must not hold the list read open.
+      relayChanges?.cancel().ignore();
+    }
+
+    if (requireAuthoritative && result.timedOut && !result.noRelays) {
+      Log.info(
+        'Authoritative bookmark read did not settle on the shared '
+        'connections - asking every relay again on new connections',
+        name: 'BookmarksRepository',
+        category: LogCategory.system,
+      );
+      final fresh = await _nostrClient.queryEventsOnFreshConnections(
+        filters,
+        timeout: freshConnectionReadTimeout,
+        requiredRelays: {
+          ...requiredRelays,
+          ..._nostrClient.configuredRelays,
+        }.toList(),
+      );
+      result = (
+        events: [...result.events, ...fresh.events],
+        timedOut: fresh.timedOut,
+        noRelays: fresh.noRelays,
+      );
+    }
 
     if (result.timedOut || result.noRelays) {
       Log.warning(

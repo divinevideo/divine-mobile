@@ -17,6 +17,7 @@ import 'package:openvine/services/bug_report_log_summary.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/widgets/image_attachment_picker.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 import 'package:openvine/widgets/support_form_actions.dart';
@@ -34,6 +35,7 @@ class BugReportScreen extends StatefulWidget {
     this.userPubkey,
     this.submitBugReport,
     this.buildLogsSummary = buildLogsSummaryOffMain,
+    this.showProfileHoldTip = true,
   });
 
   static const routeName = 'support-report-bug';
@@ -45,6 +47,12 @@ class BugReportScreen extends StatefulWidget {
   final String? userPubkey;
   final SubmitBugReportAction? submitBugReport;
   final BuildLogsSummary buildLogsSummary;
+
+  /// Whether to teach the Profile-tab hold shortcut in the native mobile app.
+  ///
+  /// False when that hold opened the form, since the tip would only repeat
+  /// what the user just did.
+  final bool showProfileHoldTip;
 
   @override
   State<BugReportScreen> createState() => _BugReportScreenState();
@@ -74,6 +82,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
         currentScreen: widget.currentScreen,
         recentScreens: widget.recentScreens,
         userPubkey: widget.userPubkey,
+        showProfileHoldTip: widget.showProfileHoldTip,
       ),
     );
   }
@@ -103,12 +112,14 @@ class _BugReportView extends StatelessWidget {
     this.currentScreen,
     this.recentScreens = const [],
     this.userPubkey,
+    this.showProfileHoldTip = true,
   });
 
   final BugReportFields fields;
   final String? currentScreen;
   final List<String> recentScreens;
   final String? userPubkey;
+  final bool showProfileHoldTip;
 
   @override
   Widget build(BuildContext context) {
@@ -203,6 +214,13 @@ class _BugReportView extends StatelessWidget {
                           color: context.vineColors.mutedText,
                         ),
                       ),
+                      if (showProfileHoldTip && isNativeMobilePlatform)
+                        Text(
+                          l10n.bugReportProfileHoldTip,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.mutedText,
+                          ),
+                        ),
                     ],
                   ),
                 ),

@@ -4999,6 +4999,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'melaporkan pepijat';
+
+  @override
   String get navMyProfile => 'Profil Saya';
 
   @override
@@ -8232,6 +8235,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Maklumat peranti dan log akan disertakan secara automatik.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: apabila bar bawah kelihatan, tekan dan tahan gambar profil anda untuk melaporkan pepijat dari mana-mana skrin.';
 
   @override
   String get bugReportSuccessMessage =>
