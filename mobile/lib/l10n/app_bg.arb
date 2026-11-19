@@ -4514,6 +4514,7 @@
   "videoMetadataTagsPickerNoResults": "Няма съвпадащи тагове",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Хаштаговете могат да са до {max} знак.} other{Хаштаговете могат да са до {max} знака.}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Можеш да добавиш до {max} хаштаг.} other{Можеш да добавиш до {max} хаштага.}}",
+  "videoMetadataTagsPickerTagLimitRemoveCount": "{max, plural, one{Можеш да добавиш до {max} хаштаг.} other{Можеш да добавиш до {max} хаштага.}} {count, plural, one{Премахни един, за да освободиш място.} other{Премахни {count}, за да освободиш място.}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} от {max} знак} other{{count} от {max} знака}}",
   "videoMetadataTagsPickerAddTag": "Добавяне на „#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {

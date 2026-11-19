@@ -1,3 +1,5 @@
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
@@ -335,15 +337,28 @@ void main() {
       final tooLongCopy = l10n.videoMetadataTagsPickerTagTooLong(
         HashtagExtractor.maxHashtagLength,
       );
+      final limitStanding = l10n.videoMetadataTagsPickerTagLimitReached(
+        HashtagExtractor.maxHashtagsPerVideo,
+      );
+      final limitWarning = l10n.videoMetadataTagsPickerTagLimitRemoveCount(
+        HashtagExtractor.maxHashtagsPerVideo,
+        1,
+      );
 
       Future<void> openPicker(
         WidgetTester tester, {
         Set<String> tags = const {},
+        List<String> stickerHashtags = const [],
       }) async {
         await tester.pumpWidget(
           _buildTestApp(
             hashtagRepository: hashtagRepository,
-            videoEditorState: VideoEditorProviderState(tags: tags),
+            videoEditorState: VideoEditorProviderState(
+              tags: tags,
+              editorEditingParameters: stickerHashtags.isEmpty
+                  ? null
+                  : _withHashtagStickers(stickerHashtags),
+            ),
           ),
         );
         await tester.tap(
@@ -483,8 +498,302 @@ void main() {
         await tester.enterText(find.byType(TextField).last, 'eleven ');
         await tester.pump();
         expect(find.text('eleven'), findsNothing);
+        expect(find.text(limitWarning), findsOneWidget);
+        expect(find.text(limitStanding), findsNothing);
 
         await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      group('committing a tag', () {
+        final tenTags = {for (var i = 0; i < 10; i++) 'tag$i'};
+
+        Finder field() => find.byType(TextField).last;
+        String fieldText(WidgetTester tester) =>
+            tester.widget<TextField>(field()).controller!.text;
+        Finder chip(String tag) =>
+            find.bySemanticsLabel(l10n.videoMetadataDeleteTagHint(tag));
+
+        // `done` unfocuses the field, so each press refocuses it first, as a
+        // person taps the field again before pressing return.
+        Future<void> pressReturn(WidgetTester tester) async {
+          await tester.showKeyboard(field());
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+        }
+
+        Future<void> submit(WidgetTester tester, String text) async {
+          await tester.enterText(field(), text);
+          await pressReturn(tester);
+        }
+
+        List<String> captureAnnouncements(WidgetTester tester) {
+          final announcements = <String>[];
+          tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                (message) async {
+                  final data = message! as Map<Object?, Object?>;
+                  if (data['type'] == 'announce') {
+                    final payload = data['data']! as Map<Object?, Object?>;
+                    announcements.add(payload['message']! as String);
+                  }
+                  return null;
+                },
+              );
+          addTearDown(
+            () => tester.binding.defaultBinaryMessenger
+                .setMockDecodedMessageHandler<Object?>(
+                  SystemChannels.accessibility,
+                  null,
+                ),
+          );
+          return announcements;
+        }
+
+        testWidgets('at the limit keeps the tag and explains why', (
+          tester,
+        ) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          expect(find.text(limitWarning), findsOneWidget);
+          expect(find.text(limitStanding), findsNothing);
+          expect(fieldText(tester), equals('news'));
+          expect(chip('news'), findsNothing);
+        });
+
+        testWidgets('shows the warning in the warning colour', (tester) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          final warning = find.text(limitWarning);
+          expect(
+            tester.widget<Text>(warning).style?.color,
+            equals(tester.element(warning).vineColors.accentWarning),
+          );
+        });
+
+        testWidgets(
+          'past the limit, says how many tags to remove to make room',
+          (tester) async {
+            // Caption hashtags can take a post's own tags to 10 without
+            // counting its sticker hashtags (#11244).
+            await openPicker(
+              tester,
+              tags: tenTags,
+              stickerHashtags: const ['summer', 'beach'],
+            );
+
+            await submit(tester, 'news');
+
+            expect(
+              find.text(
+                l10n.videoMetadataTagsPickerTagLimitRemoveCount(
+                  HashtagExtractor.maxHashtagsPerVideo,
+                  3,
+                ),
+              ),
+              findsOneWidget,
+            );
+            expect(find.text(limitWarning), findsNothing);
+          },
+        );
+
+        group('when sticker hashtags alone fill the limit', () {
+          final tenStickers = [for (var i = 0; i < 10; i++) 'sticker$i'];
+
+          testWidgets(
+            'warns with the limit alone, since removing a tag here cannot '
+            'make room',
+            (tester) async {
+              await openPicker(tester, stickerHashtags: tenStickers);
+
+              await submit(tester, 'news');
+
+              final warning = find.text(limitStanding);
+              expect(warning, findsOneWidget);
+              expect(
+                tester.widget<Text>(warning).style?.color,
+                equals(tester.element(warning).vineColors.accentWarning),
+              );
+              expect(fieldText(tester), equals('news'));
+            },
+          );
+
+          testWidgets(
+            'announces the first rejection, which leaves the text unchanged',
+            (tester) async {
+              final announcements = captureAnnouncements(tester);
+              await openPicker(tester, stickerHashtags: tenStickers);
+
+              await submit(tester, 'news');
+
+              expect(announcements, equals([limitStanding]));
+            },
+          );
+        });
+
+        testWidgets('announces the first rejection through a live region', (
+          tester,
+        ) async {
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+
+          expect(
+            tester.getSemantics(find.text(limitWarning)),
+            isSemantics(isLiveRegion: true, label: limitWarning),
+          );
+        });
+
+        testWidgets(
+          'removing a tag after a rejection clears the warning and lets the '
+          'tag in',
+          (tester) async {
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+            expect(find.text(limitWarning), findsOneWidget);
+
+            await tester.tap(chip('tag0'), warnIfMissed: false);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 250));
+
+            expect(find.text(limitWarning), findsNothing);
+            expect(fieldText(tester), equals('news'));
+
+            await pressReturn(tester);
+
+            expect(chip('news'), findsOneWidget);
+            expect(fieldText(tester), isEmpty);
+          },
+        );
+
+        testWidgets('below the limit still clears the field', (tester) async {
+          await openPicker(tester, tags: tenTags.take(9).toSet());
+
+          await submit(tester, 'news');
+
+          expect(chip('news'), findsOneWidget);
+          expect(fieldText(tester), isEmpty);
+          expect(find.text(limitWarning), findsNothing);
+        });
+
+        testWidgets('announces a repeat rejection', (tester) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+
+          await submit(tester, 'news');
+          // The first rejection is announced by the hint's live region.
+          expect(announcements, isEmpty);
+          await pressReturn(tester);
+
+          expect(
+            announcements.where((message) => message == limitWarning),
+            hasLength(1),
+          );
+        });
+
+        testWidgets('with an empty field at the limit says nothing new', (
+          tester,
+        ) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+
+          await pressReturn(tester);
+
+          expect(find.text(limitStanding), findsOneWidget);
+          expect(find.text(limitWarning), findsNothing);
+          expect(announcements, isEmpty);
+        });
+
+        testWidgets(
+          'after a rejection, a tag the video already has is not announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await submit(tester, 'tag3');
+
+            expect(announcements, isEmpty);
+            expect(find.text(limitWarning), findsOneWidget);
+            expect(fieldText(tester), isEmpty);
+          },
+        );
+
+        testWidgets('a repeat rejection ended with a space is announced', (
+          tester,
+        ) async {
+          final announcements = captureAnnouncements(tester);
+          await openPicker(tester, tags: tenTags);
+          await submit(tester, 'news');
+          expect(announcements, isEmpty);
+
+          await tester.enterText(field(), 'news ');
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(
+            announcements.where((message) => message == limitWarning),
+            hasLength(1),
+          );
+          expect(find.text(limitWarning), findsOneWidget);
+        });
+
+        testWidgets(
+          'after a rejection, a tag the video already has ended with a space '
+          'keeps the warning and is not announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await tester.enterText(field(), 'tag3 ');
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(announcements, isEmpty);
+            expect(find.text(limitWarning), findsOneWidget);
+          },
+        );
+
+        testWidgets(
+          'after a rejection, a pasted list with one new tag among tags the '
+          'video already has is announced',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+            expect(announcements, isEmpty);
+
+            await tester.enterText(field(), 'tag3 other tag4 ');
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(
+              announcements.where((message) => message == limitWarning),
+              hasLength(1),
+            );
+            expect(find.text(limitWarning), findsOneWidget);
+          },
+        );
+
+        testWidgets(
+          'with an empty field after a rejection does not announce again',
+          (tester) async {
+            final announcements = captureAnnouncements(tester);
+            await openPicker(tester, tags: tenTags);
+            await submit(tester, 'news');
+
+            await submit(tester, '');
+
+            expect(find.text(limitWarning), findsOneWidget);
+            expect(announcements, isEmpty);
+          },
+        );
       });
     });
   });
@@ -561,3 +870,24 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 }
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
+
+/// Editor parameters carrying one hashtag sticker per entry of [hashtags].
+CompleteParameters _withHashtagStickers(List<String> hashtags) =>
+    CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
+      layers: [
+        for (final hashtag in hashtags)
+          WidgetLayer(
+            widget: const SizedBox(),
+            meta: SocialStickerData(
+              kind: SocialStickerKind.hashtag,
+              hashtag: hashtag,
+            ).toMeta(),
+            exportConfigs: WidgetLayerExportConfigs(
+              meta: SocialStickerData(
+                kind: SocialStickerKind.hashtag,
+                hashtag: hashtag,
+              ).toMeta(),
+            ),
+          ),
+      ],
+    );

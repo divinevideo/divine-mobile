@@ -6449,6 +6449,7 @@
   "videoMetadataTagsPickerNoResults": "没有匹配的标签",
   "videoMetadataTagsPickerTagTooLong": "{max, plural, other{话题标签最多 {max} 个字符。}}",
   "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{最多可以添加 {max} 个话题标签。}}",
+  "videoMetadataTagsPickerTagLimitRemoveCount": "{max, plural, other{最多可以添加 {max} 个话题标签。}}{count, plural, other{删除 {count} 个即可腾出位置。}}",
   "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} 个字符}}",
   "videoMetadataTagsPickerAddTag": "添加“#{tag}”",
   "@videoMetadataTagsPickerAddTag": {

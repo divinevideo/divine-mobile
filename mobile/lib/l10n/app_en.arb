@@ -10643,6 +10643,18 @@
       }
     }
   },
+  "videoMetadataTagsPickerTagLimitRemoveCount": "{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}} {count, plural, one{Remove one to make room.} other{Remove {count} to make room.}}",
+  "@videoMetadataTagsPickerTagLimitRemoveCount": {
+    "description": "Warning under the tags picker field when a tag was not added because the video already has the maximum number of hashtags. The first sentence states the limit; the second says how many of the video's tags to remove before another one fits.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}",
   "@videoMetadataTagsPickerCharacterCount": {
     "description": "Screen-reader label for the tags picker character counter, which is shown visually as count/max.",
