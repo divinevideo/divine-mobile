@@ -227,6 +227,26 @@ void main() {
       expect(under.mask, isNull);
       expect(window.mask, isNotNull);
       expect(window.clips.single.transform!.fit, SegmentFit.fill);
+
+      // The matte is a disc, not the window's square: the corners of what it
+      // keeps are clear and its middle is solid.
+      final codec = await ui.instantiateImageCodec(window.mask!.byteArray!);
+      final matte = (await codec.getNextFrame()).image;
+      final rgba = (await matte.toByteData())!;
+      int alpha(int x, int y) => rgba.getUint8((y * matte.width + x) * 4 + 3);
+      var (left, top, right, bottom) = (matte.width, matte.height, 0, 0);
+      for (var y = 0; y < matte.height; y++) {
+        for (var x = 0; x < matte.width; x++) {
+          if (alpha(x, y) < 128) continue;
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+        }
+      }
+      expect(alpha((left + right) ~/ 2, (top + bottom) ~/ 2), 255);
+      expect(alpha(left, top), 0);
+      expect(alpha(right, bottom), 0);
     });
 
     test(
