@@ -9,7 +9,6 @@ import 'package:bloc/bloc.dart';
 import 'package:collection/collection.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart' as model show AspectRatio;
 import 'package:nostr_sdk/aid.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/collab_room/collab_room_composer.dart';
@@ -107,7 +106,6 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
         room: room,
         layout: layout,
         clearLayout: layout == null,
-        aspectRatio: inLobby ? null : room.frameAspectRatio,
         clearPendingSeats: !keepPending,
       ),
     );
@@ -332,12 +330,6 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     );
   }
 
-  /// Picks the frame shape, as the author, before filming starts.
-  void aspectRatioPicked(model.AspectRatio aspectRatio) {
-    if (state.room?.phase != CollabRoomPhase.lobby) return;
-    emitIfOpen(state.copyWith(aspectRatio: aspectRatio));
-  }
-
   /// Picks whose sound the video plays, as the author.
   void soundPicked(String pubkey) {
     emitIfOpen(state.copyWith(soundPubkey: pubkey));
@@ -365,7 +357,6 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
         revision: revision,
         phase: CollabRoomPhase.recording,
         layout: layout.name,
-        aspectRatio: state.aspectRatio.name,
         members: members,
       ),
     );

@@ -77,7 +77,6 @@ class CollabRoomState extends Equatable {
     this.status = CollabRoomStatus.loading,
     this.room,
     this.layout,
-    this.aspectRatio = model.AspectRatio.vertical,
     this.soundPubkey,
     this.action = CollabRoomAction.none,
     this.actionStatus = CollabRoomActionStatus.idle,
@@ -99,9 +98,6 @@ class CollabRoomState extends Equatable {
   /// The layout the author is about to film in. Follows the room's own once
   /// filming started.
   final SplitScreenLayoutPreset? layout;
-
-  /// The frame shape the author picked in the lobby.
-  final model.AspectRatio aspectRatio;
 
   /// Whose sound the author picked for the video; the room's own until then.
   final String? soundPubkey;
@@ -223,7 +219,6 @@ class CollabRoomState extends Equatable {
     CollabRoom? room,
     SplitScreenLayoutPreset? layout,
     bool clearLayout = false,
-    model.AspectRatio? aspectRatio,
     String? soundPubkey,
     CollabRoomAction? action,
     CollabRoomActionStatus? actionStatus,
@@ -240,7 +235,6 @@ class CollabRoomState extends Equatable {
     status: status ?? this.status,
     room: room ?? this.room,
     layout: clearLayout ? null : layout ?? this.layout,
-    aspectRatio: aspectRatio ?? this.aspectRatio,
     soundPubkey: soundPubkey ?? this.soundPubkey,
     action: action ?? this.action,
     actionStatus: actionStatus ?? this.actionStatus,
@@ -258,7 +252,6 @@ class CollabRoomState extends Equatable {
     status,
     room,
     layout,
-    aspectRatio,
     soundPubkey,
     action,
     actionStatus,

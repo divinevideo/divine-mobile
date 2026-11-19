@@ -231,9 +231,7 @@ class _LayoutPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<CollabRoomCubit>().state;
     final room = state.room!;
-    final frame = room.phase == CollabRoomPhase.lobby
-        ? state.aspectRatio
-        : room.frameAspectRatio;
+    final frame = room.frameAspectRatio;
     final layout = state.layout;
     final cells =
         layout?.cells(aspectRatio: frame.value, gap: collabRoomCellGap) ??
@@ -569,9 +567,7 @@ class _LayoutChoices extends StatelessWidget {
             (room.phase == CollabRoomPhase.recording && !state.layoutFits));
     final choices = state.layoutChoices;
     if (!shows || choices.isEmpty) return const SizedBox.shrink();
-    final frame = room.phase == CollabRoomPhase.lobby
-        ? state.aspectRatio
-        : room.frameAspectRatio;
+    final frame = room.frameAspectRatio;
     final busy = state.actionStatus == CollabRoomActionStatus.busy;
     return Padding(
       padding: const .only(top: 16),

@@ -6,7 +6,6 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show DmFileMetadata, DmMessage;
 import 'package:openvine/collab_room/bloc/collab_room_cubit.dart';
 import 'package:openvine/collab_room/collab_room_composer.dart';
@@ -1033,13 +1032,11 @@ void main() {
       );
     });
 
-    test('a lobby pick of the frame shape is kept until filming', () async {
+    test('plays the sound of the host until another is picked', () async {
       final cubit = build();
       addTearDown(cubit.close);
       rooms.add(_room(_lobby));
       await pumpEventQueue();
-      cubit.aspectRatioPicked(model.AspectRatio.square);
-      expect(cubit.state.aspectRatio, model.AspectRatio.square);
       expect(cubit.state.effectiveSoundPubkey, _author);
     });
   });
