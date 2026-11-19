@@ -27,7 +27,8 @@ abstract class NotificationPayloadKeys {
   /// locally-emitted payload under [notificationType].
   static const String wireType = 'type';
 
-  /// FCM transport ID, used locally to coalesce duplicate tap callbacks.
+  /// FCM transport ID, used locally to coalesce duplicate tap callbacks. A
+  /// campaign open with a valid [campaignRevisionId] coalesces on that instead.
   static const String messageId = 'messageId';
 
   /// The event acted upon (present for like/comment/repost; absent for
@@ -50,12 +51,16 @@ abstract class NotificationPayloadKeys {
   /// Hex pubkey of the actor — used to route follows and unresolved taps.
   static const String senderPubkey = 'senderPubkey';
 
-  /// Campaign destination type. The campaign service currently emits
-  /// `app_route`.
+  /// Campaign destination type: `app_route`, `video_address` or
+  /// `creator_profile` (see [NotificationWireValues]).
   static const String tapTargetType = 'tapTargetType';
 
-  /// Campaign destination value, such as an absolute in-app route.
+  /// Campaign destination value: an absolute in-app route, a kind-34236
+  /// coordinate, or a creator's hex pubkey.
   static const String tapTargetValue = 'tapTargetValue';
+
+  /// Immutable approved campaign revision used for consented attribution.
+  static const String campaignRevisionId = 'campaignRevisionId';
 }
 
 /// Wire values shared by the push service and this client.
@@ -73,13 +78,29 @@ abstract class NotificationWireValues {
 
   /// Campaign `tapTargetType` value for an absolute in-app route.
   static const String appRoute = 'app_route';
+
+  /// Campaign `tapTargetType` value for a kind-34236 video coordinate.
+  static const String videoAddress = 'video_address';
+
+  /// Campaign `tapTargetType` value for a creator's hex pubkey.
+  static const String creatorProfile = 'creator_profile';
+
+  /// Campaign target types advertised at push registration. Each needs a branch
+  /// in the router (an `app_route` opens only allowlisted paths), and a test
+  /// fails when a listed type routes nowhere.
+  static const List<String> campaignTargetTypes = [
+    appRoute,
+    videoAddress,
+    creatorProfile,
+  ];
 }
 
 /// Returns an FCM message's [data] with its transport [messageId] added under
 /// [NotificationPayloadKeys.messageId].
 ///
 /// Every `RemoteMessage` entry point goes through this so none of them drops
-/// the key that tap analytics deduplicates on.
+/// the key that tap analytics deduplicates on, unless a campaign revision
+/// takes its place.
 Map<String, dynamic> fcmPayloadWithMessageId(
   Map<String, dynamic> data,
   String? messageId,
@@ -132,6 +153,7 @@ bool isRoutableNotificationPayload({
   String? senderPubkey,
   String? tapTargetType,
   String? tapTargetValue,
+  String? campaignRevisionId,
 })?
 parseFcmPayload(Map<String, dynamic> data) {
   String? nonEmpty(String key) {
@@ -168,6 +190,7 @@ parseFcmPayload(Map<String, dynamic> data) {
     senderPubkey: senderPubkey,
     tapTargetType: tapTargetType,
     tapTargetValue: tapTargetValue,
+    campaignRevisionId: nonEmpty(NotificationPayloadKeys.campaignRevisionId),
   );
 }
 
@@ -194,5 +217,6 @@ Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
     NotificationPayloadKeys.senderPubkey: parsed?.senderPubkey,
     NotificationPayloadKeys.tapTargetType: ?parsed?.tapTargetType,
     NotificationPayloadKeys.tapTargetValue: ?parsed?.tapTargetValue,
+    NotificationPayloadKeys.campaignRevisionId: ?parsed?.campaignRevisionId,
   };
 }

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import release_train_fakes  # noqa: F401 - scripts import path
 from release_train import runner
-from release_train.coordinator import plan_tick
+from release_train.coordinator import PLAY_PUBLICATION_VERSION, plan_tick
 from release_train.providers import Apple, ProviderError
 from release_train.runner import reconcile_operations
 from test_release_train_coordinator import NOW, SHA, build, snapshot
@@ -27,7 +27,10 @@ class ReviewRegressionTest(unittest.TestCase):
             ]
             state = {
                 "public_available": {"10": NOW - 21600},
-                "internal_periods": {"10": {"completed": True}},
+                "play_publication": {
+                    "version": PLAY_PUBLICATION_VERSION,
+                    "internal_periods": {"10": {"completed": True}},
+                },
             }
             self.assertFalse(
                 plan_tick(s, state, {"ios": "app-store", "android": "production"})[

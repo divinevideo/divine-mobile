@@ -202,14 +202,17 @@ that did not open the camera in the active session, so those publishes cannot
 drag the timing distribution toward zero. Query it with `IS NOT NULL` rather
 than treating a missing value as instant.
 
-## Notification Opens
+## Notification Opens and Campaign Consent
 
 | Event | Parameters | Boundary |
 | --- | --- | --- |
-| `push_notification_opened` | `notification_type`, `open_source` | A person taps a push or local notification; receipt alone is not an open |
+| `push_notification_opened` | `notification_type`, `open_source`, `campaign_revision_id` (campaign opens only) | A person taps a push or local notification; receipt alone is not an open |
+| `campaign_consent_changed` | `enabled` (0 or 1) | The campaign opt-in changes while the Notification settings screen is open |
 
 The parameter values, deduplication, and the BigQuery engagement report are in
-[analytics/push_engagement.md](analytics/push_engagement.md).
+[analytics/push_engagement.md](analytics/push_engagement.md). The campaign
+contract, including how revisions and consent changes are measured, is in
+[mobile/docs/MARKETING_CAMPAIGNS.md](../mobile/docs/MARKETING_CAMPAIGNS.md).
 
 ## Post-Publish Experiment
 
@@ -245,10 +248,11 @@ does not make them queryable as dimensions retroactively.
 
 1. Create an event-scoped custom dimension named `mode` for event parameter
    `mode`.
-2. Create event-scoped custom dimensions `notification_type` and `open_source`
-   before the instrumented release if notification opens should break down in
-   GA4 reports. The BigQuery report reads raw event parameters and does not
-   need them.
+2. Create event-scoped custom dimensions `notification_type`, `open_source`
+   and `campaign_revision_id`, and `enabled` for `campaign_consent_changed`,
+   before the instrumented release if notification opens and campaign consent
+   changes should break down in GA4 reports. The BigQuery report reads raw
+   event parameters and does not need them.
 3. Create event-scoped custom dimensions `tab` (for `surface_load`) and
    `source`, `outcome` and `searched` (for `sound_selected`) if the sound
    picker should break down in GA4 reports. BigQuery reads the raw event

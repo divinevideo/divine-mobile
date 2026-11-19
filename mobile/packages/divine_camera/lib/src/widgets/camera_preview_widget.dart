@@ -248,6 +248,57 @@ class _CameraPreviewWidgetState extends State<CameraPreviewWidget> {
   }
 }
 
+/// Displays the second camera's preview while dual-camera capture is on.
+///
+/// Renders [DivineCamera.secondaryCamera]'s texture filling its box
+/// ([BoxFit.cover]), mirrored and rotated upright the same way
+/// [CameraPreviewWidget] treats the main camera. Shows [placeholder] (black
+/// by default) while dual-camera capture is off or its texture is not ready.
+/// Gestures are left to the caller.
+class SecondaryCameraPreviewWidget extends StatelessWidget {
+  /// Creates the second camera's preview.
+  const SecondaryCameraPreviewWidget({this.placeholder, super.key});
+
+  /// Shown while there is no second camera preview to draw.
+  final Widget? placeholder;
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = DivineCamera.instance;
+    final secondary = camera.secondaryCamera;
+    final textureId = secondary?.textureId;
+    if (secondary == null || textureId == null) {
+      return placeholder ?? const ColoredBox(color: Color(0xFF000000));
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) => _CameraPreview(
+        constraints: constraints,
+        textureId: textureId,
+        aspectRatio: secondary.aspectRatio,
+        fit: BoxFit.cover,
+        shouldMirror: _shouldMirror(camera, secondary),
+        rotationDegrees: secondary.previewRotationDegrees,
+      ),
+    );
+  }
+
+  // Same platform split as [_CameraPreviewWidgetState._isPreviewMirrored];
+  // verified on device, not in host tests.
+  // coverage:ignore-start
+  static bool _shouldMirror(
+    DivineCamera camera,
+    SecondaryCameraState secondary,
+  ) {
+    if (kIsWeb || !secondary.lens.facesUser) return false;
+    if (Platform.isIOS || Platform.isMacOS) {
+      return !camera.mirrorFrontCameraOutput;
+    }
+    return !secondary.previewHandlesTransform;
+  }
+  // coverage:ignore-end
+}
+
 class _CameraLoadingIndicator extends StatelessWidget {
   const _CameraLoadingIndicator();
 

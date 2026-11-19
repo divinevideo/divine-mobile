@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,6 +18,17 @@ class _MockNotificationPreferencesService extends Mock
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
+
+class _ConsentSink extends NoOpAnalyticsEventSink {
+  final changes = <Map<String, Object>>[];
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    if (name == 'campaign_consent_changed') changes.add(parameters);
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -58,6 +70,96 @@ void main() {
           preferencesService: service,
           notificationRepository: repository,
         );
+
+    group('campaign consent analytics', () {
+      late _ConsentSink sink;
+
+      NotificationSettingsCubit buildTrackedCubit() {
+        final cubit = NotificationSettingsCubit(
+          preferencesService: service,
+          notificationAnalytics: NotificationAnalyticsTracker(
+            sink: sink,
+            collectionAllowed: () async => true,
+            privacyBoundary: () => 'test',
+          ),
+        );
+        addTearDown(cubit.close);
+        return cubit;
+      }
+
+      setUp(() => sink = _ConsentSink());
+
+      test(
+        'concurrent campaign choices and unrelated toggles emit one actual '
+        'transition',
+        () async {
+          final cubit = buildTrackedCubit();
+          await cubit.load();
+          await Future.wait([
+            cubit.setPreference(NotificationPreference.likesEnabled, false),
+            cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+            cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+          ]);
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+          ]);
+          await Future.wait([cubit.resetToDefaults(), cubit.resetToDefaults()]);
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+            {'enabled': 0},
+          ]);
+        },
+      );
+
+      test(
+        'records only actual campaign preference changes, including reset',
+        () async {
+          final cubit = buildTrackedCubit();
+          await cubit.load();
+          await cubit.setPreference(
+            NotificationPreference.campaignsEnabled,
+            true,
+          );
+          await cubit.setPreference(
+            NotificationPreference.campaignsEnabled,
+            true,
+          );
+          await cubit.resetToDefaults();
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+            {'enabled': 0},
+          ]);
+          expect(cubit.state.preferences.campaignsEnabled, false);
+        },
+      );
+
+      test('an unrelated toggle on its own records nothing', () async {
+        final cubit = buildTrackedCubit();
+        await cubit.load();
+        await cubit.setPreference(NotificationPreference.likesEnabled, false);
+        await pumpEventQueue();
+        expect(cubit.state.preferences.likesEnabled, false);
+        expect(sink.changes, isEmpty);
+      });
+
+      test('a change that arrives before load records nothing', () async {
+        // Opted in, so the first read differs from the unloaded state.
+        when(service.loadPreferences).thenAnswer(
+          (_) async => const NotificationPreferences(campaignsEnabled: true),
+        );
+        final changes = StreamController<void>.broadcast();
+        addTearDown(changes.close);
+        when(() => service.changes).thenAnswer((_) => changes.stream);
+        final cubit = buildTrackedCubit();
+        changes.add(null);
+        await pumpEventQueue();
+        expect(cubit.state.status, NotificationSettingsStatus.initial);
+        expect(sink.changes, isEmpty);
+      });
+    });
 
     blocTest<NotificationSettingsCubit, NotificationSettingsState>(
       'load emits loading then ready with the loaded preferences',

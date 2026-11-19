@@ -5,7 +5,12 @@ import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
 import copy
 import unittest
 
-from release_train.coordinator import affects_app, observe, plan_tick
+from release_train.coordinator import (
+    PLAY_PUBLICATION_VERSION,
+    affects_app,
+    observe,
+    plan_tick,
+)
 
 SHA = "a" * 40
 NOW = 2000000000
@@ -19,7 +24,12 @@ def snapshot():
         "changes": {"ios": True, "android": True},
         "cm": [],
         "ios": {"builds": [], "versions": [], "submissions": [], "group_valid": True},
-        "android": {"internal": [], "production": [], "managed_publishing": False},
+        "android": {
+            "internal": [],
+            "production": [],
+            "managed_publishing": False,
+            "lifecycle_complete": True,
+        },
     }
 
 
@@ -248,7 +258,9 @@ class CoordinatorTest(unittest.TestCase):
         s["android"]["internal"] = [
             {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
         ]
-        state["internal_periods"] = {"10": {"since": NOW - 21600, "completed": True}}
+        state["play_publication"]["internal_periods"] = {
+            "10": {"since": NOW - 21600, "completed": True}
+        }
         self.assertFalse(
             any(
                 a["kind"] == "play-production"
@@ -274,8 +286,16 @@ class CoordinatorTest(unittest.TestCase):
         state = observe(s, state)
         s["now"] += 21600
         state = observe(s, state)
-        self.assertFalse(state["internal_periods"]["10"]["completed"])
-        self.assertTrue(state["internal_periods"]["11"]["completed"])
+        periods = state["play_publication"]["internal_periods"]
+        self.assertFalse(periods["10"]["completed"])
+        self.assertTrue(periods["11"]["completed"])
+        s["android"]["internal"] = [
+            {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
+        state = observe(s, state)
+        period = state["play_publication"]["internal_periods"]["10"]
+        self.assertEqual(period["since"], s["now"])
+        self.assertFalse(period["completed"])
 
     def test_deferred_upload_survives_restart_pauses_builds(self):
         state = {
@@ -294,7 +314,12 @@ class CoordinatorTest(unittest.TestCase):
         s["android"]["internal"] = [
             {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
         ]
-        state = {"internal_periods": {"10": {"since": NOW - 21600, "completed": True}}}
+        state = {
+            "play_publication": {
+                "version": PLAY_PUBLICATION_VERSION,
+                "internal_periods": {"10": {"since": NOW - 21600, "completed": True}},
+            },
+        }
         self.assertFalse(
             plan_tick(s, state, {"ios": "off", "android": "build"})["actions"]
         )
@@ -335,7 +360,10 @@ class QueueRaceTest(unittest.TestCase):
         ]
         state = {
             "deferred_android": {"number": 10},
-            "internal_periods": {"11": {"since": NOW - 10, "completed": False}},
+            "play_publication": {
+                "version": PLAY_PUBLICATION_VERSION,
+                "internal_periods": {"11": {"since": NOW - 10, "completed": False}},
+            },
         }
         self.assertFalse(
             plan_tick(s, state, {"ios": "off", "android": "build"})["actions"]

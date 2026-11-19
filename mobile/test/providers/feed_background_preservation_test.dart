@@ -12,8 +12,16 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/test_provider_overrides.dart';
+
+class _TestCurrentAuth extends CurrentAuthState {
+  @override
+  AuthState build() => AuthState.unauthenticated;
+}
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
@@ -40,6 +48,7 @@ void main() {
     late _MockVideoEventService mockVideoEventService;
     late _MockContentBlocklistRepository mockBlocklistRepository;
     late SharedPreferences sharedPreferences;
+    late TestAnalyticsService analytics;
 
     // Test videos with originalLoops for ClassicVines Nostr fallback
     final testVideos = List.generate(
@@ -62,6 +71,8 @@ void main() {
     );
 
     setUp(() async {
+      analytics = TestAnalyticsService();
+      addTearDown(analytics.dispose);
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
       mockFunnelcakeClient = _MockFunnelcakeApiClient();
@@ -97,6 +108,8 @@ void main() {
       return ProviderContainer(
         overrides: [
           appReadyProvider.overrideWithValue(appReady),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           funnelcakeApiClientProvider.overrideWithValue(mockFunnelcakeClient),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -143,6 +156,8 @@ void main() {
         // Simulate going to background — appReady becomes false
         container.updateOverrides([
           appReadyProvider.overrideWithValue(false),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           funnelcakeApiClientProvider.overrideWithValue(mockFunnelcakeClient),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -190,6 +205,8 @@ void main() {
 
         container.updateOverrides([
           appReadyProvider.overrideWithValue(false),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           funnelcakeApiClientProvider.overrideWithValue(mockFunnelcakeClient),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -228,6 +245,8 @@ void main() {
         // Go to background
         container.updateOverrides([
           appReadyProvider.overrideWithValue(false),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           funnelcakeApiClientProvider.overrideWithValue(mockFunnelcakeClient),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
@@ -254,6 +273,8 @@ void main() {
         // Return to foreground
         container.updateOverrides([
           appReadyProvider.overrideWithValue(true),
+          analyticsServiceProvider.overrideWithValue(analytics),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           funnelcakeApiClientProvider.overrideWithValue(mockFunnelcakeClient),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),

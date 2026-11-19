@@ -16,6 +16,8 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import java.io.File
 
+internal const val BUNNY_PLAYBACK_HOST = "media-bunny.divine.video"
+
 /**
  * Singleton managing ExoPlayer's disk-backed [SimpleCache].
  *
@@ -204,8 +206,9 @@ internal class CacheBypassDataSource(
         } else {
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
-        val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true) ||
-            dataSpec.uri.host.equals("media-b2-cdn.divine.video", ignoreCase = true)
+        val isPlaybackCanary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true) ||
+            dataSpec.uri.host.equals("media-b2-cdn.divine.video", ignoreCase = true) ||
+            dataSpec.uri.host.equals(BUNNY_PLAYBACK_HOST, ignoreCase = true)
         // Only correlation is exempt from the app-header bypass. In particular,
         // an app-supplied ICY or If-Range header must not gain an exemption.
         val cacheableAppHeaders = httpHeaders.keys.all {
@@ -221,7 +224,7 @@ internal class CacheBypassDataSource(
                 name.equals("If-Range", ignoreCase = true)
         }
         val useCache = cacheableAppHeaders && cacheableDataSpecHeaders &&
-            isCacheableScheme(dataSpec.uri.scheme) && !isB2Canary
+            isCacheableScheme(dataSpec.uri.scheme) && !isPlaybackCanary
         val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()
         } else {

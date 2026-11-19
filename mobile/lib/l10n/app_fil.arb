@@ -1917,6 +1917,8 @@
   "videoRecorderTapToStartLabel": "I-tap kahit saan para magsimulang mag-record",
   "videoRecorderDeleteLastClipLabel": "Burahin ang huling clip",
   "videoRecorderSwitchCameraLabel": "Magpalit ng camera",
+  "videoRecorderToggleDualCameraLabel": "Mag-record gamit ang dalawang camera",
+  "videoRecorderDualCameraSwapLabel": "Pagpalitin ang mga camera",
   "videoRecorderZoomLevelLabel": "I-zoom sa {zoom}×",
   "videoRecorderToggleGridLabel": "I-toggle ang grid",
   "videoRecorderToggleGhostFrameLabel": "I-toggle ang ghost frame",

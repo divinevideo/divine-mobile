@@ -82,8 +82,8 @@ void main() {
     }
 
     group('semantics', () {
-      // The lip-sync E2E flow confirms its sound with this button
-      // (e2e/maestro/tests/lipSyncModeRecordClip.yaml). The label assertions
+      // The capture sound E2E flow confirms its sound with this button
+      // (e2e/maestro/utils/pickCaptureSound.yaml). The label assertions
       // elsewhere in this file stay green when the identifier is dropped.
       testWidgets('exposes the E2E identifier on the done button', (
         tester,

@@ -302,14 +302,23 @@ class VideoEditorDetachedClipOpacityPreviewChanged
 }
 
 /// Done was tapped: hand the edit over to the export once the fonts its
-/// social stickers draw in, named by their [stickerTexts], are loaded.
+/// social stickers draw in, named by their [stickerTexts], are loaded and the
+/// [pendingLayers] still being placed are in.
 class VideoEditorFinishRequested extends VideoEditorMainEvent {
-  const VideoEditorFinishRequested({this.stickerTexts = const []});
+  const VideoEditorFinishRequested({
+    this.stickerTexts = const [],
+    this.pendingLayers,
+  });
 
   final List<String> stickerTexts;
 
+  /// Layers the canvas is still placing, such as the second camera's window
+  /// of a dual-camera take: the export captures only the layers placed by
+  /// the hand-over.
+  final Future<void>? pendingLayers;
+
   @override
-  List<Object?> get props => [stickerTexts];
+  List<Object?> get props => [stickerTexts, pendingLayers];
 }
 
 /// Drops a hand-over still waiting for its fonts, as when Close or system

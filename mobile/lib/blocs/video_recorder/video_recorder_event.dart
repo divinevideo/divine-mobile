@@ -323,6 +323,24 @@ final class VideoRecorderGridLinesToggled extends VideoRecorderEvent {
   const VideoRecorderGridLinesToggled();
 }
 
+/// Turns dual-camera capture on or off: every take records the front and the
+/// back camera, and the viewfinder shows the second one in a small window.
+final class VideoRecorderDualCameraToggled extends VideoRecorderEvent {
+  const VideoRecorderDualCameraToggled();
+}
+
+/// Moves the second camera's window in the viewfinder to [center], as
+/// fractions of the frame.
+final class VideoRecorderDualCameraPipMoved extends VideoRecorderEvent {
+  const VideoRecorderDualCameraPipMoved(this.center);
+
+  /// The window's new center, as fractions of the frame's width and height.
+  final Offset center;
+
+  @override
+  List<Object?> get props => [center];
+}
+
 // === Stop-motion events ===
 
 /// Captures a single still in stop-motion mode and appends it to

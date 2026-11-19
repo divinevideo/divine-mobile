@@ -420,6 +420,8 @@ class VideoInteractionsBloc
               targetVideoId: _eventId,
             ),
           );
+        } else {
+          _consumptionAnalytics.reactionRetracted(targetVideoId: _eventId);
         }
         // Optimistic emit already matches the publish result; no-op.
         return;

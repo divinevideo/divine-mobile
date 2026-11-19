@@ -1,6 +1,8 @@
 // ABOUTME: Mobile platform implementation of camera service using the camera package
 // ABOUTME: Handles camera initialization, switching, recording, and lifecycle management on mobile devices
 
+import 'dart:io';
+
 import 'package:divine_camera/divine_camera.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
@@ -13,7 +15,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Mobile implementation of [CameraService] using the `divine_camera` package.
 ///
 /// Manages camera initialization, recording, and switching between front/back cameras.
-class CameraMobileService extends CameraService {
+class CameraMobileService extends CameraService implements DualCameraCapture {
   /// Creates a mobile camera service instance.
   CameraMobileService({
     required super.onUpdateState,
@@ -24,6 +26,10 @@ class CameraMobileService extends CameraService {
   bool _isInitialized = false;
   CameraInitializationError? _initializationError;
   final DivineCamera _camera = DivineCamera.instance;
+
+  /// The second camera's file of the last stopped take, until
+  /// [takeSecondaryRecording] hands it over.
+  VideoRecordingResult? _secondaryRecording;
 
   @override
   Future<void> initialize({
@@ -55,6 +61,7 @@ class CameraMobileService extends CameraService {
         mirrorFrontCameraOutput: mirrorFrontCameraOutput,
       );
       _camera.onRecordingAutoStopped = (result) {
+        _holdSecondaryRecording(result?.secondary);
         onAutoStopped(
           result == null ? null : EditorVideo.file(result.filePath),
         );
@@ -350,8 +357,9 @@ class CameraMobileService extends CameraService {
         category: .video,
       );
       if (result?.filePath == null) return null;
+      _holdSecondaryRecording(result!.secondary);
 
-      return EditorVideo.autoSource(file: result!.filePath);
+      return EditorVideo.autoSource(file: result.filePath);
     } catch (e) {
       Log.error(
         '📷 Failed to stop recording (unexpected error): $e',
@@ -359,6 +367,68 @@ class CameraMobileService extends CameraService {
         category: .video,
       );
       return null;
+    }
+  }
+
+  @override
+  bool get isDualCameraSupported => _camera.isDualCameraSupported;
+
+  @override
+  bool get isDualCameraEnabled => _camera.isDualCameraEnabled;
+
+  @override
+  SecondaryCameraState? get secondaryCamera => _camera.secondaryCamera;
+
+  @override
+  Future<bool> setDualCameraEnabled({required bool enabled}) async {
+    if (!_isInitialized) return false;
+    try {
+      final applied = await _camera.setDualCameraEnabled(enabled: enabled);
+      Log.info(
+        '📷 Dual camera ${enabled ? 'on' : 'off'}: applied=$applied',
+        name: 'CameraMobileService',
+        category: .video,
+      );
+      onUpdateState(forceCameraRebuild: true);
+      return applied;
+    } catch (e) {
+      Log.error(
+        '📷 Failed to change dual camera: $e',
+        name: 'CameraMobileService',
+        category: .video,
+      );
+      onUpdateState(forceCameraRebuild: true);
+      return false;
+    }
+  }
+
+  @override
+  VideoRecordingResult? takeSecondaryRecording() {
+    final secondary = _secondaryRecording;
+    _secondaryRecording = null;
+    return secondary;
+  }
+
+  /// Keeps the second camera's file of a stopped take for the recorder. A
+  /// file the recorder never took is deleted: nothing else references it.
+  void _holdSecondaryRecording(VideoRecordingResult? secondary) {
+    final stale = _secondaryRecording;
+    if (stale != null && stale.filePath != secondary?.filePath) {
+      _deleteQuietly(stale.filePath);
+    }
+    _secondaryRecording = secondary;
+  }
+
+  static void _deleteQuietly(String path) {
+    try {
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+    } on FileSystemException catch (e) {
+      Log.warning(
+        '📷 Could not delete an unused second camera file: $e',
+        name: 'CameraMobileService',
+        category: .video,
+      );
     }
   }
 

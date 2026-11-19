@@ -45,10 +45,12 @@ void main() {
     test('Apple logs HTTP 202 media_processing as warning', () {
       final source = _appleSourceFile().readAsStringSync();
 
-      final statusMapping = source.indexOf('httpResponse.statusCode == 202');
-      final mediaProcessingMapping = source.indexOf(
-        'return "media_processing"',
-        statusMapping,
+      final classifier = _appleSourceFile(
+        'HTTPPlaybackError.swift',
+      ).readAsStringSync();
+      expect(
+        classifier,
+        contains(RegExp(r'case 202:\s*return "media_processing"')),
       );
       final compositionBranch = source.indexOf(
         'self.errorCode == "media_processing"',
@@ -74,8 +76,6 @@ void main() {
         itemBranch,
       );
 
-      expect(statusMapping, greaterThanOrEqualTo(0));
-      expect(mediaProcessingMapping, greaterThan(statusMapping));
       expect(compositionBranch, greaterThanOrEqualTo(0));
       expect(compositionWarning, greaterThan(compositionBranch));
       expect(compositionWarning, lessThan(compositionError));
@@ -200,20 +200,13 @@ File _androidSourceFile() {
   );
 }
 
-File _appleSourceFile() {
-  final packageRelative = File(
-    'darwin/divine_video_player/Sources/divine_video_player/'
-    'DivineVideoPlayerInstance.swift',
-  );
-  if (packageRelative.existsSync()) {
-    return packageRelative;
-  }
-
-  return File(
-    'packages/divine_video_player/'
-    'darwin/divine_video_player/Sources/divine_video_player/'
-    'DivineVideoPlayerInstance.swift',
-  );
+File _appleSourceFile([String name = 'DivineVideoPlayerInstance.swift']) {
+  final relative =
+      'darwin/divine_video_player/Sources/divine_video_player/$name';
+  final packageRelative = File(relative);
+  return packageRelative.existsSync()
+      ? packageRelative
+      : File('packages/divine_video_player/$relative');
 }
 
 File _appleAudioOverlaySourceFile() {

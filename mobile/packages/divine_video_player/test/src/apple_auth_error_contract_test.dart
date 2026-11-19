@@ -4,65 +4,54 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Apple native auth error contract', () {
-    test('maps NSURLError auth-required failures to auth_required', () {
-      final source = _appleSourceFile().readAsStringSync();
+    test('maps NSURLError auth-required failures before transport errors', () {
+      final source = _appleSourceFile(
+        'HTTPPlaybackError.swift',
+      ).readAsStringSync();
 
-      final authCase = source.indexOf('NSURLErrorUserAuthenticationRequired');
-      final authMapping = source.indexOf('return "auth_required"', authCase);
-      final defaultCase = source.indexOf('default:', authCase);
-
+      final authMapping = RegExp(
+        r'code == NSURLErrorUserAuthenticationRequired\s*'
+        r'\}\)\s*\{\s*statuses\.append\(401\)\s*\}',
+      ).firstMatch(source);
+      expect(authMapping, isNotNull);
       expect(
-        authCase,
-        greaterThanOrEqualTo(0),
-        reason:
-            'Bare AVFoundation NSURLErrorDomain -1013 failures must not fall '
-            'through to unknown.',
-      );
-      expect(authMapping, greaterThan(authCase));
-      expect(
-        authMapping,
-        lessThan(defaultCase),
-        reason:
-            'The auth-required case must be handled inside the '
-            'NSURLErrorDomain '
-            'switch before default maps unrecognised errors to unknown.',
+        authMapping!.end,
+        lessThan(source.indexOf('case NSURLErrorTimedOut:')),
+        reason: 'An auth-required error must outrank a wrapped timeout.',
       );
     });
 
     test('maps HTTP 401 responses to auth_required', () {
-      final source = _appleSourceFile().readAsStringSync();
+      final source = _appleSourceFile(
+        'HTTPPlaybackError.swift',
+      ).readAsStringSync();
 
-      final responseBranch = source.indexOf(
-        'NSURLErrorFailingURLResponseErrorKey',
-      );
-      final statusCheck = source.indexOf('httpResponse.statusCode == 401');
-      final statusMapping = source.indexOf(
-        'return "auth_required"',
-        statusCheck,
-      );
-
-      expect(responseBranch, greaterThanOrEqualTo(0));
-      expect(statusCheck, greaterThan(responseBranch));
-      expect(statusMapping, greaterThan(statusCheck));
+      expect(source, contains(RegExp(r'case 401:\s*return "auth_required"')));
     });
 
     test('returns typed auth details from composition-load failures', () {
       final source = _appleSourceFile().readAsStringSync();
 
-      final catchBlock = source.indexOf('} catch {');
-      final derivedCode = source.indexOf(
-        'self.errorCode = self.errorCode(for: error as NSError)',
-        catchBlock,
+      final code = RegExp(
+        r'let (\w+)\s*=\s*self\.errorCode\(for:\s*error as NSError\)',
+      ).firstMatch(source);
+      expect(code, isNotNull, reason: 'Classify the original native error.');
+      final compositionError = source.indexOf(
+        'code: "COMPOSITION_ERROR"',
+        code!.end,
       );
-      final flutterError = source.indexOf('FlutterError(', derivedCode);
-      final details = source.indexOf(
-        r'details: self.errorCode.map { ["errorCode": $0] }',
-        flutterError,
+      expect(compositionError, greaterThan(code.end));
+      expect(
+        source.substring(compositionError),
+        contains(
+          RegExp(
+            r'code: "COMPOSITION_ERROR",\s*'
+            r'message: \w+,\s*'
+            'details:\\s*\\["errorCode":\\s*${code.group(1)}\\]',
+          ),
+        ),
+        reason: 'FlutterError details must carry the derived native code.',
       );
-
-      expect(catchBlock, greaterThanOrEqualTo(0));
-      expect(derivedCode, greaterThan(catchBlock));
-      expect(details, greaterThan(flutterError));
     });
   });
 }
@@ -70,18 +59,11 @@ void main() {
 /// The iOS and macOS players share a single Darwin source tree
 /// (`darwin/divine_video_player/Sources/`), so the auth contract is asserted
 /// once.
-File _appleSourceFile() {
-  final packageRelative = File(
-    'darwin/divine_video_player/Sources/divine_video_player/'
-    'DivineVideoPlayerInstance.swift',
-  );
-  if (packageRelative.existsSync()) {
-    return packageRelative;
-  }
-
-  return File(
-    'packages/divine_video_player/'
-    'darwin/divine_video_player/Sources/divine_video_player/'
-    'DivineVideoPlayerInstance.swift',
-  );
+File _appleSourceFile([String name = 'DivineVideoPlayerInstance.swift']) {
+  final relative =
+      'darwin/divine_video_player/Sources/divine_video_player/$name';
+  final packageRelative = File(relative);
+  return packageRelative.existsSync()
+      ? packageRelative
+      : File('packages/divine_video_player/$relative');
 }

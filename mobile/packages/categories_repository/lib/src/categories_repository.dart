@@ -1,5 +1,5 @@
 // ABOUTME: Repository for video categories from the Funnelcake REST API.
-// ABOUTME: Owns in-memory and CacheSync-backed caches for the categories list.
+// ABOUTME: Owns category metadata and first-page video snapshot caches.
 
 import 'dart:convert';
 
@@ -48,6 +48,9 @@ class CategoriesRepository {
   DateTime? _cachedAt;
 
   static const _categoriesCacheKey = 'global:categories:v1';
+
+  /// The oldest category video snapshot that may still be shown.
+  static const _videoSnapshotMaxAge = Duration(hours: 24);
 
   bool get _isCacheValid =>
       _cache != null &&
@@ -111,6 +114,87 @@ class CategoriesRepository {
           : CacheFetchPolicy.cacheAndNetwork,
     );
   }
+
+  /// Watches the first page of a public category feed, then refreshes it.
+  ///
+  /// Snapshots are scoped to [viewerPubkey], canonical category, API sort and
+  /// platform. [viewerPubkey] is the signed-in viewer's hex pubkey, the prefix
+  /// sign-out clears; null uses a shared anonymous scope that nothing clears.
+  /// They can be served across gallery/app restarts for 24 hours and share
+  /// CacheSync's global size limit and oldest-entry eviction. Every opening
+  /// still fetches live data. Personalized recommendations deliberately use
+  /// [getRecommendedVideos] instead of this cache.
+  ///
+  /// The current block filter and NIP-40 expiry run again on every cached and
+  /// live emission. [CategoryVideosPage.hasMore] reflects the unfiltered API
+  /// page size.
+  ///
+  /// A failed live fetch arrives as a stream error after any snapshot, so a
+  /// caller can keep the snapshot on screen. The error is whatever the live
+  /// request threw, usually a [FunnelcakeException].
+  Stream<CacheResult<CategoryVideosPage>> watchVideosForCategoryCached({
+    required String category,
+    required String? viewerPubkey,
+    String sort = 'trending',
+    String? platform,
+  }) {
+    final canonicalCategory = category.trim().toLowerCase();
+    if (DiscoveryCategoryPolicy.isDenied(canonicalCategory)) {
+      return Stream.value(
+        const CacheResult.live(CategoryVideosPage(videos: [], hasMore: false)),
+      );
+    }
+
+    final key =
+        '${viewerPubkey ?? 'anonymous'}:category-videos:v1:'
+        '${jsonEncode([canonicalCategory, sort, platform])}';
+    return CacheSync.watchOne<CategoryVideosPage>(
+      key: key,
+      fetch: () => getVideosForCategory(
+        category: canonicalCategory,
+        sort: sort,
+        platform: platform,
+      ),
+      fromJson: _videosPageFromJson,
+      toJson: _videosPageToJson,
+    ).map((result) {
+      // A snapshot can outlive a video's NIP-40 expiration.
+      final unexpired = result.data.videos
+          .where((video) => !video.isExpired)
+          .toList();
+      final page = CategoryVideosPage(
+        videos: _filterVideos(unexpired),
+        hasMore: result.data.hasMore,
+      );
+      return result.isLive ? CacheResult.live(page) : CacheResult.cached(page);
+    });
+  }
+
+  static CategoryVideosPage _videosPageFromJson(String payload) {
+    final decoded = jsonDecode(payload) as Map<String, dynamic>;
+    final cachedAt = DateTime.parse(decoded['cachedAt'] as String);
+    final age = DateTime.now().difference(cachedAt);
+    // A negative age means the device clock moved back since the write, so
+    // the snapshot's real age is unknown.
+    if (age.isNegative || age > _videoSnapshotMaxAge) {
+      // CacheSync removes rejected snapshots and continues with the live fetch.
+      throw const FormatException('Category video snapshot expired');
+    }
+    return CategoryVideosPage(
+      videos: (decoded['videos'] as List<dynamic>)
+          .map((video) => VideoEvent.fromJson(video as Map<String, dynamic>))
+          .toList(growable: false),
+      hasMore: decoded['hasMore'] as bool,
+    );
+  }
+
+  static String _videosPageToJson(CategoryVideosPage page) => jsonEncode({
+    'cachedAt': DateTime.now().toUtc().toIso8601String(),
+    'videos': page.videos
+        .map((video) => video.toJson())
+        .toList(growable: false),
+    'hasMore': page.hasMore,
+  });
 
   /// Returns a filtered page of videos for [category].
   ///

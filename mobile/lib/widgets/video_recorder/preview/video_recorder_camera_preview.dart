@@ -16,6 +16,7 @@ import 'package:openvine/utils/platform_helpers.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
+import 'package:openvine/widgets/video_recorder/preview/video_recorder_dual_camera_window.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_focus_point.dart';
@@ -89,6 +90,7 @@ class _StackItems extends StatelessWidget {
         isCameraInitialized: b.state.isCameraInitialized,
         cameraRebuildCount: b.state.cameraRebuildCount,
         initializationError: b.state.initializationError,
+        isDualCameraEnabled: b.state.isDualCameraEnabled,
       ),
     );
     return Stack(
@@ -113,6 +115,8 @@ class _StackItems extends StatelessWidget {
           _CropGuide(aspectRatio: guide.aspectRatio),
         const _OverlayGrid(),
         if (enableTapToFocus) const VideoRecorderFocusPoint(),
+        if (state.isCameraInitialized && state.isDualCameraEnabled)
+          const VideoRecorderDualCameraWindow(),
       ],
     );
   }

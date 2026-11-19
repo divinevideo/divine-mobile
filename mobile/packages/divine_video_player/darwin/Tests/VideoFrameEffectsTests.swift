@@ -12,6 +12,17 @@ private final class HistoryEffect: VideoFrameEffect {
   { image }
 }
 
+/// Darkens the frame and asks for no earlier frames, so every frame it is
+/// active on is drawn through the processor's context.
+private final class DimEffect: VideoFrameEffect {
+  let historyOffsetsUs: [Int64] = []
+  let historyScale = 1.0
+
+  func render(_ image: CIImage, history: [CIImage?], timeUs: Int64, effectTimeUs: Int64)
+    -> CIImage
+  { image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: -1]) }
+}
+
 @main
 enum VideoFrameEffectsTests {
   static func main() {
@@ -21,6 +32,8 @@ enum VideoFrameEffectsTests {
     precondition(CMTime(value: 3, timescale: 2).microseconds == 1_500_000)
 
     decodingFromAnAssetThatFailsCompletesTheFill()
+    aPlayerWithoutEffectsNeverCreatesARenderContext()
+    theRenderContextIsCreatedOnceWhenAnEffectIsFirstDrawn()
     heldFramesAreDrawnAtTheClocksTime()
     heldFramesAreRedrawnOnlyOnceHeldAndDue()
     redrawsOverAHeldFrameKeepASteadyThirtyFramesASecond()
@@ -166,5 +179,50 @@ enum VideoFrameEffectsTests {
     precondition(filled, "the failed decode never completed its fill")
     processor.dispose()
     withExtendedLifetime(item) {}
+  }
+
+  /// Creating the context sets up Metal on the main thread, so a player that
+  /// never draws an effect, like every feed player, must not make one.
+  private static func aPlayerWithoutEffectsNeverCreatesARenderContext() {
+    var made = 0
+    let processor = VideoFrameEffectProcessor(makeContext: {
+      made += 1
+      return VideoFrameEffectProcessor.makeRenderContext()
+    })
+    let frame = makeFrame()
+    _ = processor.process(frame, timeUs: 0)
+    processor.setEffects([])
+    for timeUs in stride(from: Int64(33_333), to: 200_000, by: 33_333) {
+      precondition(processor.process(frame, timeUs: timeUs) === frame)
+    }
+    processor.reset()
+    processor.dispose()
+    precondition(made == 0, "a player without effects created \(made) render contexts")
+  }
+
+  /// The first frame an effect is drawn on makes the context, and the frames
+  /// after it reuse that one.
+  private static func theRenderContextIsCreatedOnceWhenAnEffectIsFirstDrawn() {
+    VideoFrameEffects.register("test.dim") { _ in DimEffect() }
+    var made = 0
+    let processor = VideoFrameEffectProcessor(makeContext: {
+      made += 1
+      return VideoFrameEffectProcessor.makeRenderContext()
+    })
+    processor.setEffects([["id": "test.dim", "params": [String: Any]()]])
+    precondition(made == 0, "setting an effect created a render context before any frame")
+
+    let frame = makeFrame()
+    for timeUs in stride(from: Int64(0), to: 200_000, by: 33_333) {
+      precondition(processor.process(frame, timeUs: timeUs) !== frame, "the effect was not drawn")
+    }
+    precondition(made == 1, "drawing six frames created \(made) render contexts")
+    processor.dispose()
+  }
+
+  private static func makeFrame() -> CVPixelBuffer {
+    var buffer: CVPixelBuffer?
+    CVPixelBufferCreate(nil, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer)
+    return buffer!
   }
 }

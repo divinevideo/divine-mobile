@@ -7,7 +7,9 @@ import 'package:divine_camera/divine_camera.dart'
         DivineCameraLens,
         DivineVideoQuality,
         DivineVideoStabilizationMode,
-        PhotoCaptureResult;
+        PhotoCaptureResult,
+        SecondaryCameraState,
+        VideoRecordingResult;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
@@ -232,4 +234,28 @@ abstract class CameraService {
   /// This is called when the user presses a volume button or Bluetooth
   /// remote while remote record control is enabled.
   void setOnRemoteRecordTrigger(void Function()? callback);
+}
+
+/// A camera service that can record with its front and back camera at once.
+///
+/// Optional: a service without it has no dual-camera capture, so the recorder
+/// asks with `is DualCameraCapture` instead of every implementation and test
+/// fake carrying the API.
+abstract interface class DualCameraCapture {
+  /// Whether the device can record with its front and back camera at once.
+  bool get isDualCameraSupported;
+
+  /// Whether dual-camera capture is on.
+  bool get isDualCameraEnabled;
+
+  /// The second camera while dual-camera capture is on, null otherwise.
+  SecondaryCameraState? get secondaryCamera;
+
+  /// Turns dual-camera capture on or off. Returns true when the requested
+  /// state is in effect.
+  Future<bool> setDualCameraEnabled({required bool enabled});
+
+  /// Hands over the second camera's file of the take the last stop or
+  /// auto-stop returned, once. Null for a single-camera take.
+  VideoRecordingResult? takeSecondaryRecording();
 }

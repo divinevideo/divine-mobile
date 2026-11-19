@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -114,6 +115,121 @@ void main() {
           _key,
           reason: 'the active entry is refreshed too',
         );
+      });
+    });
+
+    group('adoptSecondaryCameraLayers', () {
+      const placedKey =
+          VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey;
+
+      WidgetLayer pip(String id) =>
+          WidgetLayer(id: id, widget: const SizedBox.shrink());
+
+      StateManager managerWith(List<EditorStateHistory> entries) =>
+          StateManager(onStateHistoryChange: null, activeBackgroundImage: null)
+            ..stateHistory = entries
+            ..historyPointer = entries.length - 1;
+
+      test('puts the layers into every entry without adding one', () {
+        final drawing = WidgetLayer(
+          id: 'drawing',
+          widget: const SizedBox.shrink(),
+        );
+        final manager = managerWith([
+          EditorStateHistory(),
+          EditorStateHistory(
+            layers: [drawing],
+            meta: {
+              _clipsKey: [_clip('a').toJson()],
+            },
+          ),
+        ]);
+
+        manager.adoptSecondaryCameraLayers([pip('pip')], ['a_second']);
+
+        expect(manager.stateHistory, hasLength(2));
+        expect(manager.historyPointer, 1);
+        // Undo can no longer take the second camera away.
+        for (final entry in manager.stateHistory) {
+          expect(entry.layers.map((layer) => layer.id), contains('pip'));
+        }
+        expect(manager.activeLayers.map((layer) => layer.id), [
+          'drawing',
+          'pip',
+        ]);
+        // The entry's own metadata stays.
+        expect(_clipsIn(manager.stateHistory.last).single.id, 'a');
+      });
+
+      test('gives every entry a copy of its own', () {
+        final manager = managerWith([
+          EditorStateHistory(),
+          EditorStateHistory(),
+        ]);
+
+        manager.adoptSecondaryCameraLayers([pip('pip')], ['a_second']);
+
+        expect(
+          identical(
+            manager.stateHistory.first.layers.single,
+            manager.stateHistory.last.layers.single,
+          ),
+          isFalse,
+          reason: 'moving the active layer must not move it in older entries',
+        );
+      });
+
+      test('records the takes as placed in every entry', () {
+        final manager = managerWith([
+          EditorStateHistory(),
+          EditorStateHistory(
+            meta: const {
+              placedKey: ['a_second'],
+            },
+          ),
+        ]);
+
+        manager.adoptSecondaryCameraLayers([pip('pip')], ['b_second']);
+
+        expect(manager.placedSecondaryCameraTakeIds, {'a_second', 'b_second'});
+        expect(manager.stateHistory.first.meta[placedKey], ['b_second']);
+        expect(
+          manager.stateHistory.last.meta[placedKey],
+          unorderedEquals(['a_second', 'b_second']),
+        );
+      });
+    });
+
+    group('placedSecondaryCameraTakeIds', () {
+      test('is empty for a history without placed takes', () {
+        final manager = StateManager(
+          onStateHistoryChange: null,
+          activeBackgroundImage: null,
+        )..stateHistory = [EditorStateHistory()];
+
+        expect(manager.placedSecondaryCameraTakeIds, isEmpty);
+      });
+
+      test('reads the record from any entry and skips values not ids', () {
+        final manager =
+            StateManager(
+                onStateHistoryChange: null,
+                activeBackgroundImage: null,
+              )
+              ..stateHistory = [
+                EditorStateHistory(),
+                EditorStateHistory(
+                  meta: const {
+                    VideoEditorConstants
+                        .placedSecondaryCameraTakesStateHistoryKey: [
+                      'a_second',
+                      42,
+                    ],
+                  },
+                ),
+              ];
+
+        expect(manager.placedSecondaryCameraTakeIds, {'a_second'});
       });
     });
   });

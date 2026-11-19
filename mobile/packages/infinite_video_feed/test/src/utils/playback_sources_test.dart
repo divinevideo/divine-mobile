@@ -25,6 +25,81 @@ const _hlsUrl = 'https://media.divine.video/$_hash/hls/master.m3u8';
 
 void main() {
   group('resolvePlaybackSources', () {
+    group('Bunny canary', () {
+      const rawPath = '/$_hash';
+      const renditionPath = '$rawPath/720p.mp4';
+      const renditionUrl = 'https://media.divine.video$renditionPath';
+      const bunny = 'https://media-bunny.divine.video';
+      const allPaths = {rawPath, renditionPath};
+
+      test('inserts the same allowed asset without reordering the ladder', () {
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _rawUrl),
+            urlResolver: (_) => renditionUrl,
+            bunnyPlaybackPaths: allPaths,
+          ),
+          [
+            '$bunny$renditionPath',
+            renditionUrl,
+            _hlsUrl,
+            '$bunny$rawPath',
+            _rawUrl,
+          ],
+        );
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _rawUrl),
+            urlResolver: (_) => renditionUrl,
+            bunnyPlaybackPaths: const {rawPath},
+          ),
+          [renditionUrl, _hlsUrl, '$bunny$rawPath', _rawUrl],
+        );
+      });
+
+      test('excludes signed and third-party source URLs', () {
+        for (final original in [
+          '$_rawUrl?token=test',
+          '$_rawUrl#fragment',
+          'https://media.divine.video.example.test$rawPath',
+        ]) {
+          expect(
+            resolvePlaybackSources(
+              _makeVideo(videoUrl: original),
+              urlResolver: (_) => renditionUrl,
+              bunnyPlaybackPaths: allPaths,
+            ),
+            isNot(contains(startsWith(bunny))),
+          );
+        }
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _rawUrl),
+            urlResolver: (_) => '$renditionUrl?token=test',
+            bunnyPlaybackPaths: allPaths,
+          ),
+          isNot(contains(startsWith(bunny))),
+        );
+      });
+
+      test('retains B2 priority and rejects Bunny URLs embedded in events', () {
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _rawUrl),
+            preferB2Original: true,
+            bunnyPlaybackPaths: allPaths,
+          ),
+          isNot(contains(startsWith(bunny))),
+        );
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: '$bunny$rawPath'),
+            bunnyPlaybackPaths: allPaths,
+          ),
+          isNot(contains(startsWith(bunny))),
+        );
+      });
+    });
     group('when videoUrl is null and no resolver', () {
       test('returns empty list', () {
         final video = _makeVideo();
@@ -428,6 +503,30 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('canFailOverBunny', () {
+    for (final (code, message) in [
+      (NativePlayerErrorCode.networkError, 'HTTP 401 from media host'),
+      (NativePlayerErrorCode.timeout, 'HTTP 403 from media host'),
+      (NativePlayerErrorCode.serviceUnavailable, 'HTTP 404 from media host'),
+      (NativePlayerErrorCode.notFound, 'Synthetic failure'),
+    ]) {
+      test('a policy denial beats transport code $code', () {
+        expect(
+          canFailOverBunny(errorCode: code, errorMessage: message),
+          isFalse,
+        );
+      });
+    }
+
+    test('falls back on a typed transport failure or HTTP 503', () {
+      expect(
+        canFailOverBunny(errorCode: NativePlayerErrorCode.timeout),
+        isTrue,
+      );
+      expect(canFailOverBunny(errorMessage: 'HTTP 503'), isTrue);
     });
   });
 }

@@ -76,6 +76,22 @@ void main() {
                 'textureId': 1,
                 'availableLenses': ['front', 'back', 'ultraWide', 'telephoto'],
               };
+            case 'setDualCameraEnabled':
+              final enabled = args?['enabled'] == true;
+              return {
+                'isInitialized': true,
+                'lens': 'back',
+                'textureId': 1,
+                'isDualCameraSupported': true,
+                if (enabled)
+                  'secondaryCamera': {
+                    'lens': 'front',
+                    'textureId': 2,
+                    'aspectRatio': 0.75,
+                    'previewRotationDegrees': 270,
+                    'previewHandlesTransform': true,
+                  },
+              };
             case 'startRecording':
               return null;
             case 'stopRecording':
@@ -238,6 +254,31 @@ void main() {
       expect(result!.zoomLevel, 2.5);
       expect(result.minZoomLevel, 0.5);
       expect(result.maxZoomLevel, 61.875);
+    });
+
+    test('setDualCameraEnabled parses the second camera', () async {
+      final state = await platform.setDualCameraEnabled(enabled: true);
+
+      expect(state.isDualCameraSupported, isTrue);
+      expect(
+        state.secondaryCamera,
+        equals(
+          const SecondaryCameraState(
+            lens: DivineCameraLens.front,
+            textureId: 2,
+            aspectRatio: 0.75,
+            previewRotationDegrees: 270,
+            previewHandlesTransform: true,
+          ),
+        ),
+      );
+    });
+
+    test('setDualCameraEnabled off reports no second camera', () async {
+      final state = await platform.setDualCameraEnabled(enabled: false);
+
+      expect(state.isDualCameraEnabled, isFalse);
+      expect(state.secondaryCamera, isNull);
     });
 
     test('switchCamera returns updated CameraState', () async {
@@ -558,6 +599,22 @@ void main() {
       await expectLater(
         platform.switchCamera(DivineCameraLens.front),
         throwsA(isA<PlatformException>()),
+      );
+    });
+
+    test('setDualCameraEnabled throws when result is null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async => null);
+
+      await expectLater(
+        platform.setDualCameraEnabled(enabled: true),
+        throwsA(
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'DUAL_CAMERA_FAILED',
+          ),
+        ),
       );
     });
 

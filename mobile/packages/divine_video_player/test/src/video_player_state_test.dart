@@ -646,6 +646,105 @@ void main() {
       });
     });
 
+    group('shownPosition', () {
+      test('is the position when the platform does not report one', () {
+        const state = DivineVideoPlayerState(position: Duration(seconds: 1));
+
+        expect(state.shownPosition, equals(const Duration(seconds: 1)));
+      });
+
+      test('is the frame on screen when a paused player reports it', () {
+        final state = DivineVideoPlayerState.fromMap({
+          'status': 'paused',
+          'positionMs': 1010,
+          'shownPositionMs': 1033,
+        });
+
+        expect(state.position, equals(const Duration(milliseconds: 1010)));
+        expect(state.shownPosition, equals(const Duration(milliseconds: 1033)));
+        expect(state.toString(), contains('shown: 0:00:01.033000'));
+      });
+
+      test('carries when a playing frame went on screen', () {
+        final state = DivineVideoPlayerState.fromMap({
+          'status': 'playing',
+          'positionMs': 1000,
+          'shownPositionMs': 1033,
+          'shownAtEpochMs': 1_800_000_000_000,
+        });
+
+        expect(
+          state.shownAt,
+          DateTime.fromMillisecondsSinceEpoch(1_800_000_000_000),
+        );
+        expect(state, isNot(equals(state.copyWith(shownAt: DateTime(2026)))));
+        expect(state.toString(), contains('shownAt: '));
+      });
+
+      test('tells states apart by the frame they show', () {
+        const clock = DivineVideoPlayerState(
+          position: Duration(milliseconds: 1010),
+        );
+        final shown = clock.copyWith(
+          shownPosition: const Duration(milliseconds: 1033),
+        );
+
+        expect(shown.shownPosition, equals(const Duration(milliseconds: 1033)));
+        expect(shown, isNot(equals(clock)));
+      });
+    });
+
+    group('isPictureAdvancing', () {
+      test('follows playing on a platform that does not report it', () {
+        expect(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+          ).isPictureAdvancing,
+          isTrue,
+        );
+        expect(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.paused,
+          ).isPictureAdvancing,
+          isFalse,
+        );
+      });
+
+      test('holds still while a playing player waits for its picture', () {
+        final state = DivineVideoPlayerState.fromMap({
+          'status': 'playing',
+          'isPictureAdvancing': false,
+        });
+
+        expect(state.isPlaying, isTrue);
+        expect(state.isPictureAdvancing, isFalse);
+      });
+
+      test('is false once the player stops, whatever it last reported', () {
+        final moving = DivineVideoPlayerState.fromMap({
+          'status': 'playing',
+          'isPictureAdvancing': true,
+        });
+        expect(moving.isPictureAdvancing, isTrue);
+
+        final paused = moving.copyWith(status: PlaybackStatus.paused);
+
+        expect(paused.isPictureAdvancing, isFalse);
+      });
+
+      test('tells a moving picture from a still one', () {
+        const still = DivineVideoPlayerState(
+          status: PlaybackStatus.playing,
+          isPictureAdvancing: false,
+        );
+        final moving = still.copyWith(isPictureAdvancing: true);
+
+        expect(moving.isPictureAdvancing, isTrue);
+        expect(moving, isNot(equals(still)));
+        expect(moving.toString(), contains('pictureAdvancing: true'));
+      });
+    });
+
     group('toString', () {
       test('includes all fields', () {
         const state = DivineVideoPlayerState(

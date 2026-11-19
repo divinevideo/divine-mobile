@@ -189,3 +189,24 @@ approved-public replication readiness remain separate operator steps.
 
 For the debug-only allowlisted host override and an isolated native QA entry,
 see [private B2 playback QA](../../../../docs/testing/b2-playback-qa.md).
+
+### Bunny playback canary
+
+`bunnyPlaybackCanary` is an internal, default-off device opt-in for the main
+native video feed. Build the test app with
+`--dart-define=BUNNY_PLAYBACK_PATHS=<comma-separated exact paths>` using only
+currently verified paths from the CDN operator. Use `/{sha256}` for a raw
+original or `/{sha256}/720p.mp4` for a rendition. Supply the leading slash and
+the complete lowercase SHA-256. Keep real fixture lists out of Git, logs shared
+outside the pilot, and release builds. A build without the list has no Bunny
+candidates.
+
+Enable **Bunny Playback Canary** under **Developer Options → Feature Flags**.
+Use one CDN canary at a time. B2 takes precedence when both switches are on.
+Trigger playback of an enrolled clip and check the Bunny attempt in the local
+player logs. Confirm the app still uses the same rendition, then test a
+controlled Bunny timeout or HTTP 503 to see the equivalent canonical source
+attempted. A Bunny 401, 403, or 404 must stop playback. An authenticated
+age-verification retry must open the canonical host and never send its viewer
+authorization to Bunny. Turning the flag off rebuilds playback from canonical
+sources without waiting for DNS.

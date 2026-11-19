@@ -100,7 +100,8 @@ final analyticsCollectionControlProvider = Provider<AnalyticsCollectionControl>(
   },
 );
 
-/// Measures taps through the existing Firebase collection/consent boundary.
+/// Measures notification taps and campaign consent changes through the
+/// existing Firebase collection/consent boundary.
 final notificationAnalyticsTrackerProvider =
     Provider<NotificationAnalyticsTracker>(
       (ref) => NotificationAnalyticsTracker(

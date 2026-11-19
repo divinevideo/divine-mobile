@@ -74,10 +74,10 @@ def publish_bundle(env=os.environ, *, ledger=None, play=None):
         result = "uploaded"
     except DeferredReview:
         result = "deferred"
-    except ProviderError:
+    except ProviderError as error:
         ledger.create_json(
             f"uploads/android/{number}.json",
-            record | {"status": "failed"},
+            record | {"status": "failed", "error": str(error), "diagnostic": error.diagnostic},
             f"Record Android upload failure {number}",
         )
         raise

@@ -157,6 +157,7 @@ void main() {
               : timedOut
               ? QueryEnd.deadline
               : QueryEnd.complete,
+          answeredNetworkRelayCount: noRelays || timedOut ? 0 : 1,
           possiblyCapped: possiblyCapped,
         );
       });

@@ -468,6 +468,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
           unawaited(
             routeNotificationTap(
               messageId: tapEvent.messageId,
+              campaignRevisionId: tapEvent.campaignRevisionId,
               openSource: NotificationOpenSource.localTap,
               referencedAddress: tapEvent.referencedAddress,
               referencedEventId: tapEvent.referencedEventId,

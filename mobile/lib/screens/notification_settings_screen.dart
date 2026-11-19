@@ -13,6 +13,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -44,6 +45,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
         final cubit = NotificationSettingsCubit(
           preferencesService: preferencesService,
           notificationRepository: repository,
+          // Stable for the container's lifetime: it watches only the
+          // dependency-free analytics sink provider.
+          notificationAnalytics: ref.read(notificationAnalyticsTrackerProvider),
         );
         runDetached(
           cubit.load(),

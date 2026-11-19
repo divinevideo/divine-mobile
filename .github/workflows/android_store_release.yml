@@ -29,8 +29,10 @@ permissions:
   actions: read
 
 concurrency:
-  group: android-store-release
+  # Serialize manual starts with coordinator diagnostics and queue mutations.
+  group: store-release-train
   cancel-in-progress: false
+  queue: max
 
 jobs:
   release:

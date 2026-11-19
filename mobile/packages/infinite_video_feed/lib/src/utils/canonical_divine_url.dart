@@ -101,3 +101,29 @@ bool isB2OriginalPlaybackSource(String source) {
       !uri.hasFragment &&
       RegExp(r'^/[a-f0-9]{64}$').hasMatch(uri.path);
 }
+
+/// Public playback hostname for the Bunny canary.
+const bunnyPlaybackHost = 'media-bunny.divine.video';
+
+/// Whether the source targets Bunny, including externally supplied URLs that
+/// must never enter the normal playback ladder.
+bool isBunnyPlaybackSource(String source) =>
+    Uri.tryParse(source)?.host == bunnyPlaybackHost;
+
+final _bunnyProgressivePath = RegExp(r'^/[a-f0-9]{64}(/720p\.mp4)?$');
+
+/// Returns a path only for exact, unsigned HTTPS media URLs on the canonical
+/// host. Reconstructing the URL excludes queries, credentials and port aliases.
+String? unsignedCanonicalMediaPath(String? source) {
+  if (source == null) return null;
+  final path = Uri.tryParse(source)?.path;
+  return path != null && source == 'https://media.divine.video$path'
+      ? path
+      : null;
+}
+
+/// Returns the exact canonical path for an original or a 720p progressive MP4.
+String? bunnyProgressivePath(String? source) {
+  final path = unsignedCanonicalMediaPath(source);
+  return path != null && _bunnyProgressivePath.hasMatch(path) ? path : null;
+}

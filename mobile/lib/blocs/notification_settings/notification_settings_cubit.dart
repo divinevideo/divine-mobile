@@ -1,10 +1,11 @@
 // ABOUTME: Screen-scoped Cubit for the notification settings screen.
 // ABOUTME: Owns the notification preferences, persisting changes via
-// ABOUTME: NotificationPreferencesService, and runs the mark-all-as-read
-// ABOUTME: action against NotificationRepository.
+// ABOUTME: NotificationPreferencesService, records campaign opt-in changes it
+// ABOUTME: observes, and runs mark-all-as-read against NotificationRepository.
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/close_guard.dart';
@@ -18,14 +19,17 @@ import 'package:openvine/services/notification_preferences_service.dart';
 /// mutations through [NotificationPreferencesService]. A null
 /// [NotificationRepository] — the signed-out case — leaves the
 /// mark-all-as-read action permanently
-/// [MarkAllAsReadStatus.unavailable].
+/// [MarkAllAsReadStatus.unavailable]. While open, it reports each change of
+/// the campaign opt-in it observes to [NotificationAnalyticsTracker].
 class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
     with CloseGuardedEmit<NotificationSettingsState> {
   NotificationSettingsCubit({
     required NotificationPreferencesService preferencesService,
     NotificationRepository? notificationRepository,
+    NotificationAnalyticsTracker? notificationAnalytics,
   }) : _preferencesService = preferencesService,
        _notificationRepository = notificationRepository,
+       _notificationAnalytics = notificationAnalytics,
        super(
          NotificationSettingsState(
            markAllAsReadStatus: notificationRepository == null
@@ -43,7 +47,19 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   void _preferencesChanged() => unawaited(_reloadPreferences());
   Future<void> _reloadPreferences() async {
     final preferences = await _preferencesService.loadPreferences();
+    if (isClosed) return;
+    // Before load() completes there is no shown choice to have changed from.
+    final wasLoaded = state.status == NotificationSettingsStatus.ready;
+    final previous = state.preferences.campaignsEnabled;
     emitIfOpen(state.copyWith(preferences: preferences));
+    final tracker = _notificationAnalytics;
+    if (wasLoaded &&
+        previous != preferences.campaignsEnabled &&
+        tracker != null) {
+      unawaited(
+        tracker.campaignConsentChanged(enabled: preferences.campaignsEnabled),
+      );
+    }
   }
 
   @override
@@ -54,6 +70,7 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
 
   final NotificationPreferencesService _preferencesService;
   final NotificationRepository? _notificationRepository;
+  final NotificationAnalyticsTracker? _notificationAnalytics;
 
   /// Loads the persisted preferences. `loadPreferences` is itself defensive
   /// (returns defaults on storage/decoding errors), so this does not throw.

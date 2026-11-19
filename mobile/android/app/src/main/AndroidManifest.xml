@@ -26,6 +26,9 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
+    <!-- The camera activity requests portrait. Devices with other display orientations can still install Divine. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <!-- Force override camera.any and wifi to NOT be required (dependencies set them to required=true) -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" tools:replace="android:required" />

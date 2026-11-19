@@ -1176,6 +1176,41 @@ void main() {
       expect(feed().preferB2Original, isFalse);
     });
 
+    testWidgets('Bunny exposes configured paths only while opted in', (
+      tester,
+    ) async {
+      const configured = String.fromEnvironment('BUNNY_PLAYBACK_PATHS');
+      final expected = configured.isEmpty
+          ? <String>{}
+          : configured.split(',').toSet();
+      SharedPreferences.setMockInitialValues({});
+      final flags = FeatureFlagService(
+        await SharedPreferences.getInstance(),
+        const BuildConfiguration(),
+        canOverrideInternalFlags: () => true,
+      );
+      await flags.initialize();
+      addTearDown(flags.dispose);
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        additionalOverrides: [
+          featureFlagServiceProvider.overrideWithValue(flags),
+        ],
+      );
+      Set<String> playbackPaths() => tester
+          .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+          .bunnyPlaybackPaths;
+
+      expect(playbackPaths(), isEmpty);
+      await flags.setFlag(FeatureFlag.bunnyPlaybackCanary, true);
+      await tester.pump();
+      expect(playbackPaths(), expected);
+      await flags.setFlag(FeatureFlag.bunnyPlaybackCanary, false);
+      await tester.pump();
+      expect(playbackPaths(), isEmpty);
+    });
+
     testWidgets(
       'drops the community blur and reopens the gate when flag flips off '
       'at runtime',

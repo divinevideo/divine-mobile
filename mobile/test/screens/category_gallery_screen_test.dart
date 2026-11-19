@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the category gallery screen.
 // ABOUTME: Verifies picker-driven category navigation and gallery state handling.
 
+import 'dart:async';
+
 import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -34,12 +36,14 @@ void main() {
     VoidCallback? onBack,
     VoidCallback? onRetry,
     Widget? galleryOverride,
+    Locale? locale,
   }) {
     // No Scaffold: the route mounts this view on the root navigator, so
     // nothing above it supplies a Material. Pump it the same way here.
     return MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: CategoryGalleryView(
         category: category,
         state: state,
@@ -96,6 +100,23 @@ void main() {
         expect(mascot, findsNothing);
         expect(find.byType(CategoryGlyph), findsOneWidget);
       });
+
+      // The slot is 90 px tall and clips what it holds, so a mascot laid out
+      // any taller would lose real artwork, not just its tilted corners.
+      testWidgets('fits the sticker to the slot height', (tester) async {
+        await pumpHeader(tester, category);
+
+        expect(tester.getSize(mascot), equals(const Size.square(90)));
+      });
+
+      testWidgets('fits the glyph to the slot height', (tester) async {
+        await pumpHeader(
+          tester,
+          const VideoCategory(name: 'technology', videoCount: 12),
+        );
+
+        expect(tester.getSize(find.byType(CategoryGlyph)).height, equals(90));
+      });
     });
 
     testWidgets(
@@ -148,22 +169,248 @@ void main() {
         expect(filterDecoration.color, const Color(0xFF3E0C1F));
         expect(filterDecoration.border, isNotNull);
 
-        expect(
-          tester.getSize(find.byKey(const Key('category-header-mascot-slot'))),
-          const Size(149, 90),
-        );
-
         final filterLeft = tester
             .getTopLeft(find.byKey(const Key('category-header-filter-button')))
             .dx;
         expect(filterLeft, greaterThan(900));
-
-        final backTop = tester
-            .getTopLeft(find.byKey(const Key('category-header-back-button')))
-            .dy;
-        expect(backTop, greaterThan(24));
       },
     );
+
+    group('layout', () {
+      // The Figma frame is 402 wide. With no device inset the header keeps
+      // its 24 px minimum top, so the 72 px bar ends at 96.
+      const screenWidth = 402.0;
+      const barBottom = 24.0 + 72.0;
+
+      final backButton = find.byKey(const Key('category-header-back-button'));
+      final filterButton = find.byKey(
+        const Key('category-header-filter-button'),
+      );
+      final mascotSlot = find.byKey(const Key('category-header-mascot-slot'));
+      final bodyClip = find.byKey(const Key('category-gallery-body-clip'));
+
+      Future<void> pumpAtPhoneSize(
+        WidgetTester tester, {
+        VideoCategory shown = category,
+        Locale? locale,
+      }) async {
+        tester.view.physicalSize = const Size(screenWidth, 874);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          buildSubject(
+            category: shown,
+            state: CategoriesState(
+              selectedCategory: shown,
+              videosStatus: CategoriesVideosStatus.loaded,
+            ),
+            galleryOverride: const SizedBox.expand(),
+            locale: locale,
+          ),
+        );
+      }
+
+      testWidgets('places the actions inside 48 px slots with 12 px padding', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        // 12 px bar padding plus the 4 px slot margin around each button.
+        expect(tester.getTopLeft(backButton), equals(const Offset(16, 40)));
+        expect(
+          tester.getTopRight(filterButton),
+          equals(const Offset(screenWidth - 16, 40)),
+        );
+        expect(tester.getSize(backButton), equals(const Size(40, 40)));
+      });
+
+      testWidgets('grows the bar with large text and keeps actions square', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        final back = tester.getSize(backButton);
+        expect(back.width, greaterThan(40));
+        expect(back.height, equals(back.width));
+        expect(
+          tester.getRect(mascotSlot).right,
+          closeTo(tester.getRect(filterButton).left, 0.001),
+        );
+        expect(
+          tester.getRect(mascotSlot).bottom,
+          equals(tester.getRect(bodyClip).top),
+        );
+      });
+
+      testWidgets('fits the whole title in the bar at the largest text', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        // The title keeps growing after the icons stop at 1.3x, so only a
+        // bar that grows with it keeps the line from being squeezed.
+        final title = tester.renderObject<RenderBox>(
+          find.text(lookupAppLocalizations(const Locale('en')).categoryAnimals),
+        );
+        expect(
+          title.size.height,
+          greaterThanOrEqualTo(title.getMaxIntrinsicHeight(title.size.width)),
+        );
+        expect(
+          tester.getRect(mascotSlot).bottom,
+          equals(tester.getRect(bodyClip).top),
+        );
+      });
+
+      testWidgets('centres the actions in the bar at small text', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 0.85;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        // The bar keeps its 72 px design height around shorter content.
+        expect(tester.getRect(bodyClip).top, equals(barBottom));
+        expect(
+          tester.getCenter(backButton).dy,
+          closeTo(barBottom - 72 / 2, 0.001),
+        );
+      });
+
+      testWidgets('starts the gallery right below the bar, edge to edge', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        expect(
+          tester.getRect(bodyClip),
+          equals(const Rect.fromLTRB(0, barBottom, screenWidth, 874)),
+        );
+      });
+
+      testWidgets('rests the mascot on the bar and next to the sort button', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        expect(
+          tester.getRect(mascotSlot),
+          equals(
+            const Rect.fromLTRB(
+              screenWidth - 56 - 149,
+              barBottom - 90,
+              screenWidth - 56,
+              barBottom,
+            ),
+          ),
+        );
+        expect(
+          tester.getRect(mascotSlot).right,
+          equals(tester.getRect(filterButton).left),
+        );
+      });
+
+      testWidgets('stops the title box where the mascot begins', (
+        tester,
+      ) async {
+        const entertainment = VideoCategory(
+          name: 'entertainment',
+          videoCount: 1500,
+        );
+        await pumpAtPhoneSize(tester, shown: entertainment);
+
+        final title = find.text(
+          lookupAppLocalizations(const Locale('en')).categoryEntertainment,
+        );
+        expect(
+          tester.getRect(title).right,
+          lessThanOrEqualTo(tester.getRect(mascotSlot).left),
+        );
+      });
+
+      testWidgets('mirrors the header in a right-to-left locale', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester, locale: const Locale('ar'));
+
+        // The sort button is now at the start edge, so the mascot meets it
+        // there and the title stops at the mascot's far side.
+        expect(
+          tester.getRect(mascotSlot),
+          equals(const Rect.fromLTRB(56, barBottom - 90, 56 + 149, barBottom)),
+        );
+        expect(
+          tester.getRect(filterButton).right,
+          equals(tester.getRect(mascotSlot).left),
+        );
+        final title = find.text(
+          lookupAppLocalizations(const Locale('ar')).categoryAnimals,
+        );
+        expect(
+          tester.getRect(title).left,
+          greaterThanOrEqualTo(tester.getRect(mascotSlot).right),
+        );
+      });
+
+      testWidgets('rounds the gallery top corners into the header colour', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        final clip = tester.widget<ClipRRect>(bodyClip);
+        expect(
+          clip.borderRadius,
+          equals(const BorderRadius.vertical(top: Radius.circular(48))),
+        );
+
+        // What shows through the cut corners is the nearest painted ancestor
+        // of the clip, which must match the header's own background.
+        Color? paintOf(Finder finder) => switch (tester.widget(finder)) {
+          Material(:final color) => color,
+          ColoredBox(:final color) => color,
+          _ => null,
+        };
+        final behindCorners = find
+            .ancestor(
+              of: bodyClip,
+              matching: find.byWidgetPredicate(
+                (widget) => widget is Material || widget is ColoredBox,
+              ),
+            )
+            .first;
+        final header = find
+            .ancestor(of: backButton, matching: find.byType(ColoredBox))
+            .first;
+        expect(paintOf(behindCorners), equals(paintOf(header)));
+      });
+    });
+
+    testWidgets('names the back button for screen readers', (tester) async {
+      var backTapped = false;
+      await tester.pumpWidget(
+        buildSubject(
+          category: category,
+          state: const CategoriesState(
+            selectedCategory: category,
+            videosStatus: CategoriesVideosStatus.loaded,
+          ),
+          onBack: () => backTapped = true,
+        ),
+      );
+
+      await tester.tap(
+        find.bySemanticsLabel(
+          lookupAppLocalizations(const Locale('en')).commonBack,
+        ),
+      );
+
+      expect(backTapped, isTrue);
+    });
 
     testWidgets(
       'opens picker sheet and calls back when a different mode is tapped',
@@ -350,6 +597,22 @@ void main() {
 
     setUp(() {
       categoriesRepository = _MockCategoriesRepository();
+      when(
+        () => categoriesRepository.watchVideosForCategoryCached(
+          category: any(named: 'category'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+          viewerPubkey: any(named: 'viewerPubkey'),
+        ),
+      ).thenAnswer((invocation) async* {
+        yield CacheResult.live(
+          await categoriesRepository.getVideosForCategory(
+            category: invocation.namedArguments[#category] as String,
+            sort: invocation.namedArguments[#sort] as String,
+            platform: invocation.namedArguments[#platform] as String?,
+          ),
+        );
+      });
       blocklistRepository = _MockContentBlocklistRepository();
       authService = createMockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_viewerPubkey);
@@ -370,7 +633,10 @@ void main() {
 
       when(
         () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
-      ).thenReturn([allowedVideo]);
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<VideoEvent>,
+      );
 
       container = ProviderContainer(
         overrides: [
@@ -408,15 +674,168 @@ void main() {
       expect(find.text('Blocked Video'), findsOneWidget);
       expect(find.text('Allowed Video'), findsOneWidget);
 
+      when(() => blocklistRepository.filterContent<VideoEvent>(any(), any()))
+          .thenReturn([allowedVideo]);
       container.read(blocklistVersionProvider.notifier).increment();
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(find.text('Blocked Video'), findsNothing);
       expect(find.text('Allowed Video'), findsOneWidget);
-      verify(
-        () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
-      ).called(1);
+    });
+
+    testWidgets('shows cached gallery during refresh and keeps it on failure', (
+      tester,
+    ) async {
+      final results = StreamController<CacheResult<CategoryVideosPage>>();
+      addTearDown(results.close);
+      when(
+        () => categoriesRepository.watchVideosForCategoryCached(
+          category: 'animals',
+          viewerPubkey: _viewerPubkey,
+        ),
+      ).thenAnswer((_) => results.stream);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: CategoryGalleryScreen(category: category)),
+          ),
+        ),
+      );
+      await tester.pump();
+      results.add(
+        CacheResult.cached(
+          CategoryVideosPage(videos: [allowedVideo], hasMore: false),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Allowed Video'), findsOneWidget);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      results.addError(const FormatException('Refresh unavailable'));
+      await tester.pumpAndSettle();
+      expect(find.text('Allowed Video'), findsOneWidget);
+      expect(
+        find.text(
+          lookupAppLocalizations(const Locale('en'))
+              .categoryGalleryCouldNotLoadVideos,
+        ),
+        findsNothing,
+      );
+    });
+
+    for (final refreshFails in [false, true]) {
+      testWidgets(
+        'cached tiles wait for refresh ${refreshFails ? 'failure' : 'success'} '
+        'before opening fullscreen',
+        (tester) async {
+          final results = StreamController<CacheResult<CategoryVideosPage>>();
+          addTearDown(results.close);
+          when(
+            () => categoriesRepository.watchVideosForCategoryCached(
+              category: 'animals',
+              viewerPubkey: _viewerPubkey,
+            ),
+          ).thenAnswer((_) => results.stream);
+          PooledFullscreenVideoFeedArgs? pushedArgs;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: CategoryGalleryScreen(category: category),
+                ),
+              ),
+              GoRoute(
+                path: PooledFullscreenVideoFeedScreen.path,
+                builder: (context, state) {
+                  pushedArgs = state.extra! as PooledFullscreenVideoFeedArgs;
+                  return const Scaffold(body: SizedBox());
+                },
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pump();
+          results.add(
+            CacheResult.cached(
+              CategoryVideosPage(videos: [allowedVideo], hasMore: false),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Allowed Video'));
+          await tester.pumpAndSettle();
+          expect(pushedArgs, isNull);
+
+          if (refreshFails) {
+            results.addError(const FormatException('Refresh unavailable'));
+          } else {
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [blockedVideo], hasMore: false),
+              ),
+            );
+          }
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(refreshFails ? 'Allowed Video' : 'Blocked Video'),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            pushedArgs?.initialVideoId,
+            refreshFails ? 'allowed-id' : 'blocked-id',
+          );
+        },
+      );
+    }
+
+    testWidgets('lays the videos out edge to edge with 4 px gaps', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CategoryGalleryScreen(category: category),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Rect tile(int index) => tester.getRect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.identifier == 'video_thumbnail_$index',
+        ),
+      );
+
+      // Two (402 - 4) / 2 px columns from the bar's bottom: the 24 px
+      // minimum top plus the 72 px bar.
+      expect(tile(0).topLeft, equals(const Offset(0, 96)));
+      expect(tile(0).width, equals(199));
+      expect(tile(1).left - tile(0).right, equals(4));
+      expect(tile(1).right, equals(402));
     });
 
     Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(

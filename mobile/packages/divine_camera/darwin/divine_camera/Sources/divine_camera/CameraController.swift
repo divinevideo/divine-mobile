@@ -43,6 +43,20 @@ class CameraController: NSObject {
     /// AVCapturePhotoOutput does not retain its delegate.
     private var activePhotoDelegates: [PhotoCaptureDelegate] = []
 
+    /// Dual-camera capture: whether the session runs the front and the back
+    /// camera at once (an `AVCaptureMultiCamSession`, iOS only).
+    /// `videoDevice` / `videoInput` / `videoOutput` keep meaning the main
+    /// camera, the one that fills the preview and records with sound; the
+    /// `secondary*` set is the other camera. A swap exchanges the two sets.
+    private var isDualCameraEnabled = false
+    private var secondaryDevice: AVCaptureDevice?
+    private var secondaryInput: AVCaptureDeviceInput?
+    private var secondaryOutput: AVCaptureVideoDataOutput?
+    private var secondaryStream: SecondaryCameraStream?
+    /// The main camera's lens when the current take started. A take keeps the
+    /// lens it started with even if the roles change before it is written.
+    private var recordingLensType: String?
+
     // AVAssetWriter for video recording (replaces AVCaptureMovieFileOutput)
     private var assetWriter: AVAssetWriter?
     private var videoWriterInput: AVAssetWriterInput?
@@ -1030,6 +1044,9 @@ class CameraController: NSObject {
     
     /// Returns a list of available lens types on this device.
     private func getAvailableLenses() -> [String] {
+        // Dual capture runs the two wide cameras; other lenses would need
+        // the session rebuilt without the second camera.
+        if isDualCameraEnabled { return ["front", "back"] }
         var lenses: [String] = []
         if hasFrontCamera { lenses.append("front") }
         if hasFrontUltraWideCamera { lenses.append("frontUltraWide") }
@@ -1236,123 +1253,10 @@ class CameraController: NSObject {
             return
         }
         
-        self.videoDevice = videoDevice
-        
-        do {
-            let videoInput = try AVCaptureDeviceInput(device: videoDevice)
-            
-            // Add input before setting preset
-            if session.canAddInput(videoInput) {
-                session.addInput(videoInput)
-                self.videoInput = videoInput
-            } else {
-                completion(nil, "Cannot add video input")
-                return
-            }
-            
-            // Now set preset AFTER adding input - try requested quality with fallback
-            let presetsToTry: [AVCaptureSession.Preset] = [
-                videoQualityPreset,
-                .hd4K3840x2160,
-                .hd1920x1080,
-                .hd1280x720,
-                .high,
-                .medium,
-                .low
-            ]
-            
-            var presetSet = false
-            for preset in presetsToTry {
-                if session.canSetSessionPreset(preset) {
-                    session.sessionPreset = preset
-                    if preset != videoQualityPreset {
-                        DivineCameraLog.shared.warning(
-                            "Requested capture preset not supported, falling back to: \(preset.rawValue)",
-                            name: "DivineCamera.Lifecycle"
-                        )
-                    }
-                    presetSet = true
-                    break
-                }
-            }
-            
-            if !presetSet {
-                DivineCameraLog.shared.warning(
-                    "Could not set any preferred capture preset",
-                    name: "DivineCamera.Lifecycle"
-                )
-            }
-        } catch {
-            completion(nil, "Failed to create video input: \(error.localizedDescription)")
+        if let error = configureSingleCameraSession(session, device: videoDevice) {
+            completion(nil, error)
             return
         }
-        
-        // NOTE: Audio input/output are intentionally NOT added here.
-        // AudioToolbox + AVAudioSession.setCategory trigger dyld image-load
-        // notifications + an XPC roundtrip to mediaserverd, which freezes the
-        // main thread on the first camera open. We add them lazily in
-        // startRecording() instead, mirroring flutter's camera_avfoundation
-        // plugin (setUpCaptureSessionForAudioIfNeeded). The session preset
-        // remains video-only, audio gets attached when the user actually records.
-        
-        // Setup video output for preview
-        let videoOutput = AVCaptureVideoDataOutput()
-        videoOutput.videoSettings = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-        ]
-        // Don't discard late frames - we need them for the texture
-        videoOutput.alwaysDiscardsLateVideoFrames = false
-        
-        // Use a dedicated queue for video output to avoid blocking the session queue
-        videoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
-        
-        if session.canAddOutput(videoOutput) {
-            session.addOutput(videoOutput)
-            self.videoOutput = videoOutput
-            DivineCameraLog.shared.debug("DivineCamera: Video output added successfully")
-            
-            // Set video orientation to portrait
-            if let connection = videoOutput.connection(with: .video) {
-                DivineCameraLog.shared.debug("DivineCamera: Video connection established")
-                Self.applyCaptureOrientation(to: connection)
-                // Mirror pixels only for front camera when mirrorFrontCameraOutput is enabled
-                // When mirrored here, Flutter doesn't need to apply preview transform
-                // When NOT mirrored here, Flutter applies visual transform for selfie preview
-                if connection.isVideoMirroringSupported {
-                    let isFront = currentLens == .front
-                    connection.isVideoMirrored = isFront && mirrorFrontCameraOutput
-                }
-            }
-        } else {
-            DivineCameraLog.shared.error("DivineCamera: Cannot add video output to session", name: "DivineCamera.Setup")
-        }
-
-        // Still-photo output for single-frame (stop-motion) capture. Safe to add
-        // here: AVCapturePhotoOutput does not conflict with the video data output.
-        let photoOutput = AVCapturePhotoOutput()
-        if session.canAddOutput(photoOutput) {
-            session.addOutput(photoOutput)
-            self.photoOutput = photoOutput
-            if let connection = photoOutput.connection(with: .video) {
-                Self.applyCaptureOrientation(to: connection)
-                if connection.isVideoMirroringSupported {
-                    let isFront = currentLens == .front
-                    connection.isVideoMirrored = isFront && mirrorFrontCameraOutput
-                }
-            }
-            DivineCameraLog.shared.debug("DivineCamera: Photo output added successfully")
-        } else {
-            DivineCameraLog.shared.error("DivineCamera: Cannot add photo output to session", name: "DivineCamera.Setup")
-        }
-
-        // Optional preview-optimized output (iOS 17+). A second, preview-sized
-        // data output carries `.previewOptimized`, so the live preview stays
-        // smooth and does not jump when recording starts. `videoOutput` keeps
-        // the user-selected overscan mode for the recorded file. Added AFTER the
-        // photo output so that, on any device with an output-count limit, the
-        // existing photo capture wins and this optional output falls back to the
-        // single-output preview path.
-        setupPreviewOptimizedOutputIfPossible(session: session)
 
         // NOTE: AVCaptureAudioDataOutput is also added lazily in startRecording().
         
@@ -1372,20 +1276,7 @@ class CameraController: NSObject {
         // mode does not suit records with off, but the request is kept, so
         // switching to a lens that takes it turns it on.
         applyVideoStabilization()
-
-        // Set initial zoom to 1.0x (wide angle) for virtual multi-camera devices.
-        // Without this, the camera starts at native 1.0 which is the ultra-wide (0.5x).
-        if nativeToUserZoomScale < 1.0 {
-            let nativeWideZoom = 1.0 / nativeToUserZoomScale  // 2.0 for triple/dualWide
-            do {
-                try videoDevice.lockForConfiguration()
-                videoDevice.videoZoomFactor = nativeWideZoom
-                videoDevice.unlockForConfiguration()
-                currentZoom = 1.0
-            } catch {
-                DivineCameraLog.shared.warning("DivineCamera: Failed to set initial zoom to 1.0x: \(error.localizedDescription)", name: "DivineCamera.Setup")
-            }
-        }
+        applyInitialWideZoom(device: videoDevice)
         #endif
 
         // Start session first so frames start flowing
@@ -1464,6 +1355,149 @@ class CameraController: NSObject {
         }
     }
     
+    /// Adds the main camera's input, preset, video data output, photo output
+    /// and optional preview-optimized output to a single-camera `session`
+    /// inside its configuration block. Returns an error message when the
+    /// camera cannot be added; the caller still owns the commit.
+    private func configureSingleCameraSession(
+        _ session: AVCaptureSession,
+        device videoDevice: AVCaptureDevice
+    ) -> String? {
+        self.videoDevice = videoDevice
+
+        do {
+            let videoInput = try AVCaptureDeviceInput(device: videoDevice)
+            
+            // Add input before setting preset
+            if session.canAddInput(videoInput) {
+                session.addInput(videoInput)
+                self.videoInput = videoInput
+            } else {
+                return "Cannot add video input"
+            }
+            
+            // Now set preset AFTER adding input - try requested quality with fallback
+            let presetsToTry: [AVCaptureSession.Preset] = [
+                videoQualityPreset,
+                .hd4K3840x2160,
+                .hd1920x1080,
+                .hd1280x720,
+                .high,
+                .medium,
+                .low
+            ]
+            
+            var presetSet = false
+            for preset in presetsToTry {
+                if session.canSetSessionPreset(preset) {
+                    session.sessionPreset = preset
+                    if preset != videoQualityPreset {
+                        DivineCameraLog.shared.warning(
+                            "Requested capture preset not supported, falling back to: \(preset.rawValue)",
+                            name: "DivineCamera.Lifecycle"
+                        )
+                    }
+                    presetSet = true
+                    break
+                }
+            }
+            
+            if !presetSet {
+                DivineCameraLog.shared.warning(
+                    "Could not set any preferred capture preset",
+                    name: "DivineCamera.Lifecycle"
+                )
+            }
+        } catch {
+            return "Failed to create video input: \(error.localizedDescription)"
+        }
+        
+        // NOTE: Audio input/output are intentionally NOT added here.
+        // AudioToolbox + AVAudioSession.setCategory trigger dyld image-load
+        // notifications + an XPC roundtrip to mediaserverd, which freezes the
+        // main thread on the first camera open. We add them lazily in
+        // startRecording() instead, mirroring flutter's camera_avfoundation
+        // plugin (setUpCaptureSessionForAudioIfNeeded). The session preset
+        // remains video-only, audio gets attached when the user actually records.
+        
+        // Setup video output for preview
+        let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.videoSettings = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+        ]
+        // Don't discard late frames - we need them for the texture
+        videoOutput.alwaysDiscardsLateVideoFrames = false
+        
+        // Use a dedicated queue for video output to avoid blocking the session queue
+        videoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
+        
+        if session.canAddOutput(videoOutput) {
+            session.addOutput(videoOutput)
+            self.videoOutput = videoOutput
+            DivineCameraLog.shared.debug("DivineCamera: Video output added successfully")
+            
+            // Set video orientation to portrait
+            if let connection = videoOutput.connection(with: .video) {
+                DivineCameraLog.shared.debug("DivineCamera: Video connection established")
+                Self.applyCaptureOrientation(to: connection)
+                // Mirror pixels only for front camera when mirrorFrontCameraOutput is enabled
+                // When mirrored here, Flutter doesn't need to apply preview transform
+                // When NOT mirrored here, Flutter applies visual transform for selfie preview
+                if connection.isVideoMirroringSupported {
+                    let isFront = currentLens == .front
+                    connection.isVideoMirrored = isFront && mirrorFrontCameraOutput
+                }
+            }
+        } else {
+            DivineCameraLog.shared.error("DivineCamera: Cannot add video output to session", name: "DivineCamera.Setup")
+        }
+
+        // Still-photo output for single-frame (stop-motion) capture. Safe to add
+        // here: AVCapturePhotoOutput does not conflict with the video data output.
+        let photoOutput = AVCapturePhotoOutput()
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            self.photoOutput = photoOutput
+            if let connection = photoOutput.connection(with: .video) {
+                Self.applyCaptureOrientation(to: connection)
+                if connection.isVideoMirroringSupported {
+                    let isFront = currentLens == .front
+                    connection.isVideoMirrored = isFront && mirrorFrontCameraOutput
+                }
+            }
+            DivineCameraLog.shared.debug("DivineCamera: Photo output added successfully")
+        } else {
+            DivineCameraLog.shared.error("DivineCamera: Cannot add photo output to session", name: "DivineCamera.Setup")
+        }
+
+        // Optional preview-optimized output (iOS 17+). A second, preview-sized
+        // data output carries `.previewOptimized`, so the live preview stays
+        // smooth and does not jump when recording starts. `videoOutput` keeps
+        // the user-selected overscan mode for the recorded file. Added AFTER the
+        // photo output so that, on any device with an output-count limit, the
+        // existing photo capture wins and this optional output falls back to the
+        // single-output preview path.
+        setupPreviewOptimizedOutputIfPossible(session: session)
+        return nil
+    }
+
+    #if os(iOS)
+    /// Starts a virtual multi-camera device at 1.0x (the wide lens). Native
+    /// zoom 1.0 is the ultra-wide (0.5x) on those devices.
+    private func applyInitialWideZoom(device: AVCaptureDevice) {
+        guard nativeToUserZoomScale < 1.0 else { return }
+        let nativeWideZoom = 1.0 / nativeToUserZoomScale  // 2.0 for triple/dualWide
+        do {
+            try device.lockForConfiguration()
+            device.videoZoomFactor = nativeWideZoom
+            device.unlockForConfiguration()
+            currentZoom = 1.0
+        } catch {
+            DivineCameraLog.shared.warning("DivineCamera: Failed to set initial zoom to 1.0x: \(error.localizedDescription)", name: "DivineCamera.Setup")
+        }
+    }
+    #endif
+
     /// Lazily sets up a SEPARATE AVCaptureSession for audio capture and starts
     /// it. This is the two-session pattern used by flutter's camera_avfoundation
     /// plugin. Why two sessions:
@@ -1793,6 +1827,16 @@ class CameraController: NSObject {
         disableScreenFlash()
         disableAutoFlashTorch()
         isAutoFlashMode = false
+
+        #if os(iOS)
+        // Both cameras already run: a flip swaps their roles instead.
+        if isDualCameraEnabled {
+            sessionQueue.async { [weak self] in
+                self?.swapDualCameras(completion: completion)
+            }
+            return
+        }
+        #endif
         
         sessionQueue.async { [weak self] in
             guard let self = self, let session = self.captureSession else {
@@ -1933,6 +1977,454 @@ class CameraController: NSObject {
         }
     }
     
+    // MARK: - Dual camera
+
+    /// Whether the device can run its front and back wide camera at once.
+    ///
+    /// Needs an `AVCaptureMultiCamSession` (iPhone XS / XR and later) and a
+    /// supported multi-camera device set holding both wide cameras. Never on
+    /// macOS.
+    private lazy var isDualCameraSupported: Bool = {
+        #if os(iOS)
+        guard AVCaptureMultiCamSession.isMultiCamSupported else { return false }
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera],
+            mediaType: .video,
+            position: .unspecified
+        )
+        return discovery.supportedMultiCamDeviceSets.contains { set in
+            set.contains { $0.position == .back } && set.contains { $0.position == .front }
+        }
+        #else
+        return false
+        #endif
+    }()
+
+    /// The second camera's state for Dart, nil while dual capture is off.
+    private func secondaryCameraState() -> [String: Any]? {
+        guard isDualCameraEnabled, let stream = secondaryStream else { return nil }
+        return [
+            "lens": stream.lensType,
+            "textureId": stream.textureId,
+            "aspectRatio": stream.aspectRatio,
+            "previewRotationDegrees": 0,
+            "previewHandlesTransform": false,
+        ]
+    }
+
+    /// Turns dual-camera capture on or off by rebuilding the capture session.
+    ///
+    /// Completes with the new state on the main camera's first frame from
+    /// the rebuilt session, like a lens switch. A rebuild that cannot run
+    /// both cameras falls back to the single camera and reports dual capture
+    /// off, so Dart sees what is actually running.
+    func setDualCameraEnabled(
+        _ enabled: Bool,
+        completion: @escaping ([String: Any]?, String?) -> Void
+    ) {
+        #if os(iOS)
+        guard enabled != isDualCameraEnabled else {
+            completion(getCameraState(), nil)
+            return
+        }
+        guard !enabled || isDualCameraSupported else {
+            completion(nil, "Dual camera is not supported on this device")
+            return
+        }
+        guard !isRecording, !isFinalizingRecording else {
+            completion(nil, "Cannot change dual camera while recording")
+            return
+        }
+        disableScreenFlash()
+        disableAutoFlashTorch()
+        isAutoFlashMode = false
+
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            guard self.captureSession != nil else {
+                DispatchQueue.main.async { completion(nil, "Session not available") }
+                return
+            }
+            if let error = self.rebuildCaptureSession(dual: enabled) {
+                DivineCameraLog.shared.warning(
+                    "Dual camera \(enabled ? "on" : "off") failed: \(error)",
+                    name: "DivineCamera.DualCamera"
+                )
+                if self.captureSession == nil {
+                    DispatchQueue.main.async { completion(nil, error) }
+                    return
+                }
+            }
+            self.switchCameraCompletion = { [weak self] _, _ in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    completion(self.getCameraState(), nil)
+                }
+            }
+        }
+        #else
+        completion(nil, "Dual camera is not supported on this platform")
+        #endif
+    }
+
+    #if os(iOS)
+    /// Replaces the running capture session with a single- or dual-camera
+    /// one. Returns an error when the dual session could not be built; the
+    /// single camera is running again then. `sessionQueue` only.
+    private func rebuildCaptureSession(dual: Bool) -> String? {
+        if let old = captureSession {
+            old.stopRunning()
+            old.beginConfiguration()
+            old.inputs.forEach { old.removeInput($0) }
+            old.outputs.forEach { old.removeOutput($0) }
+            old.commitConfiguration()
+        }
+        videoOutputQueue.sync {
+            self.videoOutput = nil
+            self.secondaryOutput = nil
+            self.previewOutput = nil
+            self.previewOptimizedActive = false
+            self.previewDrivesTexture = false
+        }
+        videoInput = nil
+        secondaryInput = nil
+        secondaryDevice = nil
+        photoOutput = nil
+        tearDownSecondaryStream()
+
+        var dualError: String?
+        if dual {
+            let session = AVCaptureMultiCamSession()
+            session.automaticallyConfiguresApplicationAudioSession = false
+            session.beginConfiguration()
+            dualError = configureDualCameraSession(session)
+            session.commitConfiguration()
+            if dualError == nil, !finishDualCameraSetup(session) {
+                dualError = "The cameras cannot run together at any supported format"
+            }
+            if dualError == nil {
+                isDualCameraEnabled = true
+                startRebuiltSession(session)
+                return nil
+            }
+            session.beginConfiguration()
+            session.inputs.forEach { session.removeInput($0) }
+            session.outputs.forEach { session.removeOutput($0) }
+            session.commitConfiguration()
+            videoOutputQueue.sync {
+                self.videoOutput = nil
+                self.secondaryOutput = nil
+            }
+            videoInput = nil
+            secondaryInput = nil
+            secondaryDevice = nil
+            tearDownSecondaryStream()
+        }
+
+        isDualCameraEnabled = false
+        guard let device = getDeviceForLensType(currentLensType) else {
+            captureSession = nil
+            return "No camera available for lens type: \(currentLensType)"
+        }
+        let session = AVCaptureSession()
+        session.automaticallyConfiguresApplicationAudioSession = false
+        session.beginConfiguration()
+        let singleError = configureSingleCameraSession(session, device: device)
+        session.commitConfiguration()
+        if let singleError {
+            captureSession = nil
+            return singleError
+        }
+        updateCameraProperties(device: device)
+        applyVideoStabilization()
+        applyInitialWideZoom(device: device)
+        startRebuiltSession(session)
+        return dualError
+    }
+
+    private func startRebuiltSession(_ session: AVCaptureSession) {
+        captureSessionInterrupted = false
+        if !isPaused {
+            session.startRunning()
+        }
+        captureSession = session
+    }
+
+    /// The wide camera dual capture uses at `position`. Virtual multi-lens
+    /// devices are left out: every multi-camera device set holds the two
+    /// wide cameras, not every one holds a virtual device.
+    private static func dualCameraDevice(
+        position: AVCaptureDevice.Position
+    ) -> AVCaptureDevice? {
+        AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position)
+    }
+
+    /// Adds both cameras, their video data outputs and explicit connections
+    /// to `session` inside its configuration block. The formats the hardware
+    /// can run together are picked after the commit, by
+    /// `finishDualCameraSetup`. `sessionQueue` only.
+    private func configureDualCameraSession(_ session: AVCaptureMultiCamSession) -> String? {
+        let mainPosition: AVCaptureDevice.Position = currentLens == .front ? .front : .back
+        let otherPosition: AVCaptureDevice.Position = mainPosition == .front ? .back : .front
+        guard let mainDevice = Self.dualCameraDevice(position: mainPosition),
+              let otherDevice = Self.dualCameraDevice(position: otherPosition) else {
+            return "Front and back camera are not both available"
+        }
+        do {
+            let mainInput = try AVCaptureDeviceInput(device: mainDevice)
+            let otherInput = try AVCaptureDeviceInput(device: otherDevice)
+            guard session.canAddInput(mainInput), session.canAddInput(otherInput) else {
+                return "Cannot add both camera inputs"
+            }
+            session.addInputWithNoConnections(mainInput)
+            session.addInputWithNoConnections(otherInput)
+
+            let mainOutput = makeDualCameraOutput()
+            let otherOutput = makeDualCameraOutput()
+            guard session.canAddOutput(mainOutput), session.canAddOutput(otherOutput) else {
+                return "Cannot add both camera outputs"
+            }
+            session.addOutputWithNoConnections(mainOutput)
+            session.addOutputWithNoConnections(otherOutput)
+
+            guard connect(mainInput, to: mainOutput, in: session),
+                  connect(otherInput, to: otherOutput, in: session) else {
+                return "Cannot connect both cameras"
+            }
+
+            videoDevice = mainDevice
+            videoInput = mainInput
+            secondaryDevice = otherDevice
+            secondaryInput = otherInput
+            currentLensType = mainPosition == .front ? "front" : "back"
+            let stream = SecondaryCameraStream(
+                textureRegistry: textureRegistry,
+                lensType: otherPosition == .front ? "front" : "back"
+            )
+            stream.register()
+            secondaryStream = stream
+            videoOutputQueue.sync {
+                self.videoOutput = mainOutput
+                self.secondaryOutput = otherOutput
+            }
+        } catch {
+            return "Failed to create camera inputs: \(error.localizedDescription)"
+        }
+        return nil
+    }
+
+    /// Picks formats for both cameras of a configured dual session and
+    /// reads the main camera's properties from them. Runs after the
+    /// session's configuration is committed: the hardware cost follows the
+    /// devices' active formats. Returns false when no format pair fits.
+    private func finishDualCameraSetup(_ session: AVCaptureMultiCamSession) -> Bool {
+        guard let mainDevice = videoDevice, let otherDevice = secondaryDevice else {
+            return false
+        }
+        guard applyDualCameraFormats(session: session, main: mainDevice, other: otherDevice) else {
+            return false
+        }
+        secondaryStream?.aspectRatio = Self.portraitAspectRatio(of: otherDevice)
+        updateCameraProperties(device: mainDevice)
+        applyDualCameraStabilization()
+        DivineCameraLog.shared.info(
+            "Dual camera on: main=\(currentLensType), "
+                + "hardwareCost=\(String(format: "%.2f", session.hardwareCost)), "
+                + "main=\(Self.formatDescription(mainDevice)), "
+                + "second=\(Self.formatDescription(otherDevice))",
+            name: "DivineCamera.DualCamera"
+        )
+        return true
+    }
+
+    private func makeDualCameraOutput() -> AVCaptureVideoDataOutput {
+        let output = AVCaptureVideoDataOutput()
+        output.videoSettings = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+        ]
+        output.alwaysDiscardsLateVideoFrames = false
+        output.setSampleBufferDelegate(self, queue: videoOutputQueue)
+        return output
+    }
+
+    /// Connects a camera input's video port to `output`, upright and
+    /// mirrored for the front camera like the single-camera path.
+    private func connect(
+        _ input: AVCaptureDeviceInput,
+        to output: AVCaptureVideoDataOutput,
+        in session: AVCaptureMultiCamSession
+    ) -> Bool {
+        let device = input.device
+        guard let port = input.ports(
+            for: .video,
+            sourceDeviceType: device.deviceType,
+            sourceDevicePosition: device.position
+        ).first else { return false }
+        let connection = AVCaptureConnection(inputPorts: [port], output: output)
+        guard session.canAddConnection(connection) else { return false }
+        session.addConnection(connection)
+        Self.applyCaptureOrientation(to: connection)
+        if connection.isVideoMirroringSupported {
+            connection.isVideoMirrored = device.position == .front && mirrorFrontCameraOutput
+        }
+        return true
+    }
+
+    /// Landscape widths dual capture tries, largest first. The main camera
+    /// starts at the requested quality, the second one at 720p; whichever
+    /// the hardware cannot afford steps down, the second camera first.
+    private static let dualCameraWidths: [Int32] = [1920, 1280, 960, 640]
+    private static let dualCameraSecondaryMaxWidth: Int32 = 1280
+
+    private var dualCameraMainMaxWidth: Int32 {
+        switch videoQualityPreset {
+        case .hd1280x720: return 1280
+        case .medium, .low: return 960
+        default: return 1920
+        }
+    }
+
+    /// Sets formats both cameras can run at together (session hardware cost
+    /// at most 1). Returns false when no pair fits.
+    private func applyDualCameraFormats(
+        session: AVCaptureMultiCamSession,
+        main: AVCaptureDevice,
+        other: AVCaptureDevice
+    ) -> Bool {
+        let mainWidths = Self.dualCameraWidths.filter { $0 <= dualCameraMainMaxWidth }
+        let otherWidths = Self.dualCameraWidths.filter {
+            $0 <= Self.dualCameraSecondaryMaxWidth
+        }
+        var mainIndex = 0
+        var otherIndex = 0
+        guard Self.applyMultiCamFormat(to: main, maxWidth: mainWidths[mainIndex]),
+              Self.applyMultiCamFormat(to: other, maxWidth: otherWidths[otherIndex]) else {
+            return false
+        }
+        while session.hardwareCost > 1.0 {
+            if otherIndex + 1 < otherWidths.count {
+                otherIndex += 1
+                _ = Self.applyMultiCamFormat(to: other, maxWidth: otherWidths[otherIndex])
+            } else if mainIndex + 1 < mainWidths.count {
+                mainIndex += 1
+                _ = Self.applyMultiCamFormat(to: main, maxWidth: mainWidths[mainIndex])
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// Sets the largest 16:9, 30 fps, multi-camera format no wider than
+    /// `maxWidth` on `device`. Returns false when the device has none.
+    @discardableResult
+    private static func applyMultiCamFormat(
+        to device: AVCaptureDevice,
+        maxWidth: Int32
+    ) -> Bool {
+        let candidates = device.formats.filter { format in
+            guard format.isMultiCamSupported else { return false }
+            let subtype = CMFormatDescriptionGetMediaSubType(format.formatDescription)
+            guard subtype == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+                || subtype == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange else {
+                return false
+            }
+            let size = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            guard size.width <= maxWidth, size.width * 9 == size.height * 16 else {
+                return false
+            }
+            return format.videoSupportedFrameRateRanges.contains {
+                $0.minFrameRate <= 30 && $0.maxFrameRate >= 30
+            }
+        }
+        guard let format = candidates.max(by: {
+            CMVideoFormatDescriptionGetDimensions($0.formatDescription).width
+                < CMVideoFormatDescriptionGetDimensions($1.formatDescription).width
+        }) else { return false }
+        do {
+            try device.lockForConfiguration()
+            device.activeFormat = format
+            device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+            device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
+            device.unlockForConfiguration()
+            return true
+        } catch {
+            DivineCameraLog.shared.warning(
+                "Could not set a dual-camera format: \(error.localizedDescription)",
+                name: "DivineCamera.DualCamera"
+            )
+            return false
+        }
+    }
+
+    private static func portraitAspectRatio(of device: AVCaptureDevice) -> Double {
+        let size = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+        guard size.width > 0 else { return 9.0 / 16.0 }
+        return Double(size.height) / Double(size.width)
+    }
+
+    private static func formatDescription(_ device: AVCaptureDevice) -> String {
+        let size = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+        return "\(size.width)x\(size.height)"
+    }
+
+    /// Swaps which camera fills the preview and records with sound.
+    /// Completes on the new main camera's first frame. `sessionQueue` only.
+    private func swapDualCameras(completion: @escaping ([String: Any]?, String?) -> Void) {
+        guard let session = captureSession as? AVCaptureMultiCamSession,
+              let mainDevice = videoDevice,
+              let otherDevice = secondaryDevice,
+              let stream = secondaryStream else {
+            DispatchQueue.main.async { completion(nil, "Dual camera is not running") }
+            return
+        }
+        guard !isRecording, !isFinalizingRecording else {
+            DispatchQueue.main.async { completion(nil, "Cannot swap cameras while recording") }
+            return
+        }
+        session.beginConfiguration()
+        swap(&videoInput, &secondaryInput)
+        videoDevice = otherDevice
+        secondaryDevice = mainDevice
+        videoOutputQueue.sync {
+            swap(&self.videoOutput, &self.secondaryOutput)
+        }
+        currentLens = otherDevice.position
+        currentLensType = otherDevice.position == .front ? "front" : "back"
+        stream.lensType = mainDevice.position == .front ? "front" : "back"
+        session.commitConfiguration()
+        // The new main camera gets the larger format.
+        if !applyDualCameraFormats(session: session, main: otherDevice, other: mainDevice) {
+            DivineCameraLog.shared.warning(
+                "No dual-camera format pair after the swap; keeping the previous formats",
+                name: "DivineCamera.DualCamera"
+            )
+        }
+        stream.aspectRatio = Self.portraitAspectRatio(of: mainDevice)
+        updateCameraProperties(device: otherDevice)
+        applyDualCameraStabilization()
+        DivineCameraLog.shared.info(
+            "Dual camera swapped: main=\(currentLensType), "
+                + "hardwareCost=\(String(format: "%.2f", session.hardwareCost))",
+            name: "DivineCamera.DualCamera"
+        )
+        switchCameraCompletion = { [weak self] _, _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                completion(self.getCameraState(), nil)
+            }
+        }
+    }
+    #endif
+
+    /// Releases the second camera's texture and drops an open take of it.
+    private func tearDownSecondaryStream() {
+        guard let stream = secondaryStream else { return }
+        secondaryStream = nil
+        videoOutputQueue.sync { stream.cancelRecording() }
+        DispatchQueue.main.async { stream.unregister() }
+    }
+
     /// Sets the flash mode.
     /// For front camera with torch mode, maximizes screen brightness instead.
     /// For "auto" mode, brightness will be checked once when recording starts.
@@ -2448,6 +2940,11 @@ class CameraController: NSObject {
             )
             return false
         }
+        // Dual capture runs without stabilization and takes no other mode,
+        // as on Android.
+        if isDualCameraEnabled {
+            return parsed == requestedStabilizationMode
+        }
         let previous = requestedStabilizationMode
         requestedStabilizationMode = parsed
         let applied = applyVideoStabilization()
@@ -2531,6 +3028,22 @@ class CameraController: NSObject {
     /// preview-optimized output in sync. Returns true when the requested
     /// (recording) mode could be applied.
     @discardableResult
+    /// Turns stabilization off on the main dual camera, as Android does.
+    ///
+    /// Concurrent streams do not guarantee it, and a look-ahead mode delays
+    /// the main camera's first frame, which holds the second camera's window
+    /// on one frame at the start of every take. The requested mode is kept for
+    /// when one camera runs again.
+    private func applyDualCameraStabilization() {
+        if let connection = videoOutput?.connection(with: .video),
+            connection.isVideoStabilizationSupported
+        {
+            connection.preferredVideoStabilizationMode = .off
+        }
+        requestedStabilizationApplied = requestedStabilizationMode == .off
+        applyPreviewStabilization(recordingStabilized: false)
+    }
+
     private func applyVideoStabilization() -> Bool {
         let applied = applyRecordingStabilization()
         requestedStabilizationApplied = applied
@@ -2631,7 +3144,9 @@ class CameraController: NSObject {
     /// Returns the stabilization modes the active device/format supports.
     private func getAvailableStabilizationModes() -> [String] {
         var modes: [String] = ["off"]
-        guard
+        // Dual capture runs without stabilization; see
+        // applyDualCameraStabilization.
+        guard !isDualCameraEnabled,
             let connection = videoOutput?.connection(with: .video),
             connection.isVideoStabilizationSupported,
             let device = videoDevice
@@ -2684,6 +3199,9 @@ class CameraController: NSObject {
     /// transient `.off` before the connection has configured. A request the
     /// current lens could not take reports off, which is what it records with.
     private func reportedStabilizationString() -> String {
+        if isDualCameraEnabled {
+            return "off"
+        }
         if requestedStabilizationMode != .off && !requestedStabilizationApplied {
             return "off"
         }
@@ -2938,6 +3456,28 @@ class CameraController: NSObject {
             self.videoWriterInput = videoInput
             self.audioWriterInput = addedAudioInput
             self.pixelBufferAdaptor = adaptor
+            self.recordingLensType = self.currentLensType
+
+            // Dual capture: the second camera records a silent file of the
+            // same take next to this one.
+            if self.isDualCameraEnabled,
+               let stream = self.secondaryStream,
+               let otherDevice = self.secondaryDevice {
+                let size = CMVideoFormatDescriptionGetDimensions(
+                    otherDevice.activeFormat.formatDescription
+                )
+                let pixels = Double(size.width) * Double(size.height)
+                let bitRate = max(
+                    2_000_000,
+                    Int(Double(self.videoEncodingBitRate) * pixels / (1920.0 * 1080.0))
+                )
+                stream.prepareRecording(
+                    url: outputDir.appendingPathComponent("VID_\(timestamp)_second.mp4"),
+                    width: Int(size.height),
+                    height: Int(size.width),
+                    bitRate: bitRate
+                )
+            }
 
             // Start writing
             writer.startWriting()
@@ -3144,6 +3684,20 @@ class CameraController: NSObject {
             writer.endSession(atSourceTime: endPTS)
         }
 
+        // The second camera's file of a dual-camera take ends on the same
+        // frame. Its result joins the main one once both are written.
+        let secondaryWritten = DispatchGroup()
+        var secondaryResult: [String: Any]?
+        if let stream = secondaryStream, stream.isRecording {
+            secondaryWritten.enter()
+            stream.finishRecording(endPTS: hasSession ? lastVideoFrameEndPTS : nil) { result in
+                secondaryResult = result
+                secondaryWritten.leave()
+            }
+        }
+        let recordedLens = recordingLensType ?? currentLensType
+        recordingLensType = nil
+
         self.videoWriterInput?.markAsFinished()
         self.audioWriterInput?.markAsFinished()
 
@@ -3209,10 +3763,17 @@ class CameraController: NSObject {
                         "filePath": outputURL.path,
                         "durationMs": duration,
                         "width": width,
-                        "height": height
+                        "height": height,
+                        "lens": recordedLens,
                     ]
 
-                    completion(result, nil)
+                    secondaryWritten.notify(queue: .main) {
+                        var merged = result
+                        if let secondaryResult {
+                            merged["secondary"] = secondaryResult
+                        }
+                        completion(merged, nil)
+                    }
                 case .cancelled:
                     // No frame was ever appended, so no writer session
                     // was ever opened — cancelWriting() below is the
@@ -3223,6 +3784,7 @@ class CameraController: NSObject {
                             + "first frame arrived)",
                         name: "DivineCamera.Recording"
                     )
+                    Self.discardSecondaryFile(after: secondaryWritten) { secondaryResult }
                     completion(nil, "No content captured")
                 default:
                     DivineCameraLog.shared.error(
@@ -3230,6 +3792,7 @@ class CameraController: NSObject {
                             + "\(writer.error?.localizedDescription ?? "Unknown error")",
                         name: "DivineCamera.Recording"
                     )
+                    Self.discardSecondaryFile(after: secondaryWritten) { secondaryResult }
                     completion(nil, "Recording failed: \(writer.error?.localizedDescription ?? "Unknown error")")
                 }
 
@@ -3267,6 +3830,18 @@ class CameraController: NSObject {
             // of risking it, then run the same completion/cleanup path.
             writer.cancelWriting()
             finishHandler()
+        }
+    }
+
+    /// Deletes the second camera's file of a take whose main file failed:
+    /// a second camera file alone is no clip.
+    private static func discardSecondaryFile(
+        after written: DispatchGroup,
+        result: @escaping () -> [String: Any]?
+    ) {
+        written.notify(queue: .global(qos: .utility)) {
+            guard let path = result()?["filePath"] as? String else { return }
+            try? FileManager.default.removeItem(atPath: path)
         }
     }
 
@@ -3503,6 +4078,8 @@ class CameraController: NSObject {
             // modes the menu can actually present (a connection can report
             // support while the active format exposes no concrete mode).
             "isVideoStabilizationSupported": availableStabilizationModes.count > 1,
+            "isDualCameraSupported": isDualCameraSupported,
+            "secondaryCamera": secondaryCameraState() as Any,
         ]
     }
 
@@ -3626,6 +4203,12 @@ class CameraController: NSObject {
             self.previewOutput = nil
             self.previewOptimizedActive = false
             self.previewDrivesTexture = false
+            self.isDualCameraEnabled = false
+            self.secondaryDevice = nil
+            self.secondaryInput = nil
+            self.secondaryOutput = nil
+            self.recordingLensType = nil
+            self.tearDownSecondaryStream()
 
             // Cleanup asset writer if recording
             self.assetWriter = nil
@@ -3783,6 +4366,21 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
                             : CMTime(value: 1, timescale: 30)
                     lastVideoFrameEndPTS = timestamp + endDuration
                 }
+            }
+        }
+        // The second camera of a dual-camera session: its own texture, and
+        // its silent file, opened on the main file's anchor.
+        else if let secondaryOutput, output == secondaryOutput {
+            guard let stream = secondaryStream,
+                  let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+            stream.updatePreview(pixelBuffer)
+            if let window = recordingWindow, stream.isRecording {
+                stream.append(
+                    pixelBuffer,
+                    at: CMSampleBufferGetPresentationTimeStamp(sampleBuffer),
+                    anchor: isWriterSessionStarted ? writerAnchorPTS : nil,
+                    stop: window.stop
+                )
             }
         }
         // Preview-optimized output drives the texture only while engaged.

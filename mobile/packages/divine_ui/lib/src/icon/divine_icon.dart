@@ -179,6 +179,10 @@ enum DivineIconName {
   pencilSimple('pencil_simple'),
   pencilSimpleLine('pencil_simple_line'),
   pencilSimpleLineDuo('pencil_simple_line_duo'),
+
+  /// A small frame overlapping a larger one: dual-camera capture, the
+  /// second camera shown and recorded picture-in-picture.
+  pictureInPicture('picture_in_picture'),
   play('play'),
   playFill('play_fill'),
   playCircle('play_circle'),

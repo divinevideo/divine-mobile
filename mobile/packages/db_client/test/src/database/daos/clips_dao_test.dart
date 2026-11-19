@@ -270,6 +270,31 @@ void main() {
 
         expect(referenced, {'pending_backdrop.mp4', 'baked_backdrop.mp4'});
       });
+
+      test("protects a dual-camera take's library picture", () async {
+        // The composite is what the library card and the draft cover show.
+        // `thumbnail_path` holds the main frame alone, so the JSON blob is
+        // the only reference. Reaped, the card shows a blank tile for good.
+        await dao.upsertClip(
+          id: 'clip_dual',
+          draftId: testDraftId,
+          orderIndex: 0,
+          durationMs: 3000,
+          recordedAt: DateTime(2023, 11, 14, 10),
+          filePath: 'clip_dual.mp4',
+          thumbnailPath: 'clip_dual.jpg',
+          data:
+              '{"secondaryCamera":{"clip":{"filePath":"clip_dual_second.mp4"},'
+              '"compositeThumbnailPath":"clip_dual_composite.jpg"}}',
+        );
+
+        final referenced = await dao.referencedFilenames({
+          'clip_dual_composite.jpg',
+          'unrelated.jpg',
+        });
+
+        expect(referenced, {'clip_dual_composite.jpg'});
+      });
     });
 
     group('getClipsByDraftId', () {

@@ -67,6 +67,14 @@ void main() {
       expect(const BuildConfiguration().getDefault(flag), isFalse);
     });
 
+    test('keeps the Bunny playback canary internal and off by default', () {
+      final flag = FeatureFlag.values.firstWhere(
+        (flag) => flag.name == 'bunnyPlaybackCanary',
+      );
+      expect(flag.isInternal, isTrue);
+      expect(const BuildConfiguration().getDefault(flag), isFalse);
+    });
+
     test('should classify staged rollout flags as internal', () {
       expect(
         FeatureFlag.communityContentWarnings.audience,

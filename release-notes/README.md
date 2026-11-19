@@ -14,6 +14,8 @@ beta or an unverified GitHub tag is not a baseline.
 
 One LunaRoute request rewrites the complete app changelog into plain-language
 TestFlight instructions and store benefits in Divine's [brand voice](BRAND_VOICE.md).
+TestFlight notes welcome people upgrading from the App Store and group the
+useful changes across the full release range, with a few concrete things to try.
 Code checks the build identity, exact language set, nonblank text, store limits
 and accidental copies of English before anything is published. Google Play gets
 all 23 shipped locales with at most 500 Unicode characters each; Apple gets its

@@ -6,7 +6,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
-import 'package:divine_camera/divine_camera.dart' show CameraLensMetadata;
+import 'package:divine_camera/divine_camera.dart'
+    show CameraLensMetadata, VideoRecordingResult;
+import 'package:flutter/widgets.dart' show Offset;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -14,6 +16,7 @@ import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
@@ -88,9 +91,16 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   List<DivineVideoClip> get clips => List.unmodifiable(_clips);
 
   /// Tracks metadata and library work without blocking the next recording.
+  ///
+  /// Work tracked for a clip that still has work pending joins it, so a
+  /// waiter waits for both.
   void trackClipEnrichment(String clipId, Future<void> enrichment) {
+    final earlier = _clipEnrichment[clipId];
+    final joined = earlier == null
+        ? enrichment
+        : Future.wait([earlier, enrichment]).then((_) {});
     late final Future<void> pending;
-    pending = enrichment.whenComplete(() {
+    pending = joined.whenComplete(() {
       if (identical(_clipEnrichment[clipId], pending)) {
         unawaited(_clipEnrichment.remove(clipId));
       }
@@ -115,6 +125,17 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         if (!clipIds.contains(clip.id)) clip,
     ]);
     return finished;
+  }
+
+  /// Waits until every dual-camera take on the clips has its thumbnail and
+  /// proof. Both land on the take after it was recorded, and an editor layer
+  /// made from the take before then would keep neither.
+  Future<void> waitForSecondaryCameraTakes() async {
+    await Future.wait([
+      for (final clip in _clips)
+        if (clip.secondaryCamera case final take?)
+          ?_clipEnrichment[take.clip.id],
+    ]);
   }
 
   /// Calculates the remaining recording time available.
@@ -268,6 +289,8 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     String? thumbnailPath,
     CameraLensMetadata? lensMetadata,
     ClipChromaKey? captureChromaKey,
+    VideoRecordingResult? secondaryRecording,
+    Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
   }) {
     // A new recording supersedes any pending undo from a previous tap.
     if (state.pendingDeletion != null) {
@@ -299,6 +322,19 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       lensMetadata: lensMetadata,
       captureChromaKey: captureChromaKey,
     );
+    if (secondaryRecording != null) {
+      clip = clip.copyWith(
+        secondaryCamera: SecondaryCameraTake(
+          clip: _secondaryCameraClip(
+            ownerId: clip.id,
+            recording: secondaryRecording,
+            mainDuration: clip.duration,
+            targetAspectRatio: targetAspectRatio,
+          ),
+          pipCenter: secondaryPipCenter,
+        ),
+      );
+    }
 
     // Asynchronously trim the clip if it exceeds remaining duration
     if (isClipTooLong) {
@@ -319,6 +355,8 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
               clip = clip.copyWith(
                 thumbnailPath: existingClip.thumbnailPath,
                 thumbnailTimestamp: existingClip.thumbnailTimestamp,
+                // Its proof may have landed while the trim ran.
+                secondaryCamera: existingClip.secondaryCamera,
               );
             }
 
@@ -348,8 +386,93 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
     _editorBackgroundWork.track(_generateClipProof(clip));
+    if (clip.secondaryCamera case final second?) {
+      final proof = _generateSecondaryCameraProof(clip.id, second.clip);
+      _editorBackgroundWork.track(proof);
+      trackClipEnrichment(second.clip.id, proof);
+    }
 
     return clip;
+  }
+
+  /// The second camera's recording of a dual-camera take, as a clip of its
+  /// own. The whole file is kept, untrimmed except for the lead-in before
+  /// the main take began, so it keeps its capture proof; the editor bounds it
+  /// to its clip's window.
+  DivineVideoClip _secondaryCameraClip({
+    required String ownerId,
+    required VideoRecordingResult recording,
+    required Duration mainDuration,
+    required model.AspectRatio targetAspectRatio,
+  }) {
+    final recorded = recording.duration ?? mainDuration;
+    final leadIn = recording.startOffset;
+    return DivineVideoClip(
+      id: '${ownerId}_second',
+      video: EditorVideo.file(recording.filePath),
+      duration: recorded,
+      // Android starts the second camera first; this skips to the main
+      // take's first frame.
+      trimStart: leadIn < recorded ? leadIn : Duration.zero,
+      recordedAt: .now(),
+      targetAspectRatio: targetAspectRatio,
+      originalAspectRatio: _portraitAspectRatio(
+        recording.width,
+        recording.height,
+      ),
+      lensMetadata: recording.lens == null
+          ? null
+          : CameraLensMetadata(lensType: recording.lens!.toNativeString()),
+      // Silent: the main clip carries the take's sound.
+      volume: 0,
+    );
+  }
+
+  /// The width-to-height ratio of a recording as the portrait-locked
+  /// recorder filmed it. Android reports the encoded size, which is landscape
+  /// with the turn kept as rotation metadata, so the shorter side is always
+  /// the width here.
+  static double _portraitAspectRatio(int? width, int? height) {
+    if (width == null || height == null || width <= 0 || height <= 0) {
+      return 9 / 16;
+    }
+    return width < height ? width / height : height / width;
+  }
+
+  /// Replaces the second camera's clip of the clip [clipId], e.g. once its
+  /// thumbnail exists. A no-op when the clip or its take is gone, or holds
+  /// another take by now.
+  void updateSecondaryCameraClip(String clipId, DivineVideoClip secondary) {
+    final index = _clips.indexWhere((c) => c.id == clipId);
+    if (index == -1) return;
+    final take = _clips[index].secondaryCamera;
+    if (take == null || take.clip.id != secondary.id) return;
+    _clips[index] = _clips[index].copyWith(
+      secondaryCamera: take.copyWith(clip: secondary),
+    );
+    state = state.copyWith(clips: List.unmodifiable(_clips));
+    _triggerAutosave();
+  }
+
+  /// Gives the dual-camera take [takeId] of the clip [clipId] its composite
+  /// thumbnail, the picture galleries show for the take.
+  ///
+  /// Returns false, changing nothing, when the clip or that take is gone.
+  bool setSecondaryCameraThumbnail(
+    String clipId, {
+    required String takeId,
+    required String path,
+  }) {
+    final index = _clips.indexWhere((c) => c.id == clipId);
+    if (index == -1) return false;
+    final take = _clips[index].secondaryCamera;
+    if (take == null || take.clip.id != takeId) return false;
+    _clips[index] = _clips[index].copyWith(
+      secondaryCamera: take.copyWith(compositeThumbnailPath: path),
+    );
+    state = state.copyWith(clips: List.unmodifiable(_clips));
+    _triggerAutosave();
+    return true;
   }
 
   /// Adds a frames-based stop-motion clip to the manager.
@@ -411,7 +534,60 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// Waits for any pending processing (e.g. trimming) to finish first,
   /// then generates the proof and updates the clip via [refreshClip].
   /// Failures are logged but do not block clip usage.
-  Future<void> _generateClipProof(DivineVideoClip clip) async {
+  Future<void> _generateClipProof(DivineVideoClip clip) => _proveRecording(
+    clip,
+    apply: (proofManifestJson, recordingSha256) {
+      // Merge with latest clip state (thumbnail may have been updated).
+      // If the clip was deleted while proof generation was in progress,
+      // it is not brought back.
+      final current = getClipById(clip.id);
+      if (current == null) return;
+      refreshClip(
+        current.copyWith(
+          proofManifestJson: proofManifestJson,
+          recordingSha256: recordingSha256,
+        ),
+      );
+      _triggerAutosave();
+    },
+  );
+
+  /// Generates the proof of the second camera's recording of the clip
+  /// [ownerId] and writes it onto that take.
+  ///
+  /// The take is no library clip of its own and no recording of its own in
+  /// the gallery: it travels on its clip, whose library entry and gallery
+  /// backup carry the take.
+  Future<void> _generateSecondaryCameraProof(
+    String ownerId,
+    DivineVideoClip secondary,
+  ) => _proveRecording(
+    secondary,
+    isLibraryRecording: false,
+    apply: (proofManifestJson, recordingSha256) {
+      final current = getClipById(ownerId)?.secondaryCamera?.clip;
+      if (current == null || current.id != secondary.id) return;
+      updateSecondaryCameraClip(
+        ownerId,
+        current.copyWith(
+          proofManifestJson: proofManifestJson,
+          recordingSha256: recordingSha256,
+        ),
+      );
+    },
+  );
+
+  /// Generates the ProofMode / C2PA attestation of [clip]'s recording and
+  /// hands it to [apply] as the clip's `proofManifestJson` and
+  /// `recordingSha256`. A recording with a library entry of its own
+  /// ([isLibraryRecording]) then has its hash remembered there and is backed
+  /// up to the gallery.
+  Future<void> _proveRecording(
+    DivineVideoClip clip, {
+    required void Function(String proofManifestJson, String? recordingSha256)
+    apply,
+    bool isLibraryRecording = true,
+  }) async {
     try {
       // Wait for trimming to finish before proofing the final file
       await clip.processingCompleter?.future;
@@ -440,24 +616,12 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             ? proofData.videoHash
             : null;
 
-        // Merge with latest clip state (thumbnail may have been updated).
-        // If the clip was deleted while proof generation was in progress,
-        // it is not brought back.
-        final current = getClipById(clip.id);
-        if (current != null) {
-          refreshClip(
-            current.copyWith(
-              proofManifestJson: jsonEncode(proofData),
-              recordingSha256: recordingSha256,
-            ),
-          );
-          _triggerAutosave();
-        }
+        apply(jsonEncode(proofData), recordingSha256);
 
         // The recorder saved the take to the clip library before its proof
         // came back, and the take can be picked from there long after it
         // left this working set.
-        if (recordingSha256 != null) {
+        if (isLibraryRecording && recordingSha256 != null) {
           await ref
               .read(clipLibraryServiceProvider)
               .rememberRecordingHash(
@@ -480,6 +644,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         );
       }
 
+      if (!isLibraryRecording) return;
       // The take's signing settled, so its gallery backup can start (#10067).
       // Detached: the gallery is no part of the editor's work.
       runDetached(

@@ -9,7 +9,10 @@ appId: co.openvine.app.staging
 # sequences them. The ghost-frame toggle is shared with stop-motion and
 # classic, so it has its own util too. Timer and stabilization are rendered
 # only by the modes that declare `supportsCountdownTimer` /
-# `supportsVideoStabilization`, so they stay here. A mode with a different set
+# `supportsVideoStabilization`, so they stay here. The color mask and dual
+# camera are not driven: whether they show depends on the device, which has to
+# key the viewfinder live or run both cameras at once. A mode with a different
+# set
 # composes the per-control utils in its own order rather than calling this one
 # with parts skipped — `tests/stopMotionModeControls.yaml` is the worked
 # example.
@@ -34,8 +37,7 @@ appId: co.openvine.app.staging
 # than on the code. A guarded block prints "SKIPPED" in the run output, so a
 # skipped control is visible rather than silently counted as covered.
 #
-# Leaves no mode assertion behind — the caller adds its own, because this rail
-# is shared and the surrounding chrome is not.
+# Leaves no mode assertion behind — the caller adds its own.
 #Steps:
 # 1. Aspect ratio: Vertical -> Square -> Vertical
 # 2. Timer: Off -> 3 seconds -> 10 seconds -> Off

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
@@ -1026,7 +1027,25 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
+    classicRecommendationsEnabled: ref.watch(adaptiveClassicsEnabledProvider),
+    // These run per read, after this provider may have rebuilt. A replaced
+    // repository's Ref can no longer read providers, so it reports no viewer
+    // and a context that never matches: its reads end as superseded.
+    classicViewerPubkey: () {
+      if (!ref.mounted) return null;
+      final analytics = ref.read(analyticsServiceProvider);
+      return analytics.initializedAnalyticsConsent
+          ? authService.currentPublicKeyHex
+          : null;
+    },
+    classicContextKey: () {
+      if (!ref.mounted) return Object();
+      final analytics = ref.read(analyticsServiceProvider);
+      return (analytics, analytics.privacyGeneration);
+    },
     inMemoryFeedCache: InMemoryFeedCache(),
+    viewerPubkey: () =>
+        authService.currentPublicKeyHex ?? nostrClient.publicKey,
     seenVideoLookup: clientSeenFilteringEnabled
         ? SeenVideoLookup(
             wasSeenRecently: seenVideosService.wasSeenRecently,
@@ -1092,10 +1111,11 @@ videosRepositoryIdentityStreamProvider = identityStreamOf<VideosRepository>(
 /// an identity (#6838). `video_providers_signer_resolution_test` pins both.
 ///
 /// An empty result from `syncUserReactions()` is still not proof of emptiness:
-/// a relay read that times out returns whatever arrived, and
+/// a read only some relays answered returns whatever arrived, and
 /// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
 /// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
-/// `initialize` groups.
+/// `initialize` groups. A read no relay answered throws instead, pinned by
+/// `likes_repository_short_read_test.dart` (#11182).
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)

@@ -44,6 +44,7 @@ import io.mockk.verifyOrder
 import java.io.IOException
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -386,6 +387,28 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    @Test
+    fun `legacy SurfaceTexture releases video frames ahead of the clock`() {
+        mockkConstructor(Surface::class)
+        try {
+            instance.enableTextureOutput(mockRegistry, useLegacySurface = true)
+
+            assertEquals(
+                DivineVideoPlayerInstance.LEGACY_SURFACE_VIDEO_LEAD_US,
+                instance.videoReleaseLeadUs,
+            )
+        } finally {
+            unmockkConstructor(Surface::class)
+        }
+    }
+
+    @Test
+    fun `SurfaceProducer releases video frames on the clock`() {
+        instance.enableTextureOutput(mockRegistry)
+
+        assertEquals(0L, instance.videoReleaseLeadUs)
+    }
+
     // -- onMediaItemTransition detach/reattach --
 
     private fun capturePlayerListener(): Player.Listener {
@@ -478,8 +501,15 @@ class DivineVideoPlayerInstanceTest {
         return frameListener.captured to (states as List<Map<*, *>>)
     }
 
-    private fun VideoFrameMetadataListener.render(format: MediaFormat?) =
-        onVideoFrameAboutToBeRendered(0L, 0L, mockk(relaxed = true), format)
+    private fun VideoFrameMetadataListener.render(
+        format: MediaFormat?,
+        rotationDegrees: Int = 0,
+    ) = onVideoFrameAboutToBeRendered(
+        0L,
+        0L,
+        Format.Builder().setRotationDegrees(rotationDegrees).build(),
+        format,
+    )
 
     @Test
     fun `SurfaceProducer sends the picture's part of a padded decoder buffer`() {
@@ -549,19 +579,185 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    // -- picture advancing --
+
+    /** A playing player whose listeners the test drives. */
+    private fun startPictureTest(): Triple<Player.Listener, VideoFrameMetadataListener, List<Map<*, *>>> {
+        val playerListener = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        val (frames, states) = listenForFrames()
+        every { mockPlayer.isPlaying } returns true
+        return Triple(playerListener.captured, frames, states)
+    }
+
+    private fun VideoFrameMetadataListener.renderAt(presentationTimeUs: Long) =
+        onVideoFrameAboutToBeRendered(presentationTimeUs, 0L, Format.Builder().build(), null)
+
+    @Test
+    fun `reports the picture moving only once a later frame is rendered after play`() {
+        val (listener, frames, states) = startPictureTest()
+        frames.renderAt(1_000_000L)
+
+        listener.onIsPlayingChanged(true)
+        assertEquals(false, states.last()["isPictureAdvancing"])
+
+        frames.renderAt(1_033_333L)
+        assertEquals(true, states.last()["isPictureAdvancing"])
+    }
+
+    @Test
+    fun `the frame the picture rests on does not count as moving`() {
+        val (listener, frames, states) = startPictureTest()
+        frames.renderAt(1_000_000L)
+        listener.onIsPlayingChanged(true)
+
+        frames.renderAt(1_000_000L)
+
+        assertEquals(false, states.last()["isPictureAdvancing"])
+    }
+
+    @Test
+    fun `reports the picture moving when no frame arrives in time`() {
+        val timeout = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(timeout), 500L) } returns true
+        val (listener, _, states) = startPictureTest()
+        listener.onIsPlayingChanged(true)
+
+        timeout.captured.run()
+
+        assertEquals(true, states.last()["isPictureAdvancing"])
+    }
+
+    @Test
+    fun `waits for the picture again after a pause`() {
+        val (listener, frames, states) = startPictureTest()
+        listener.onIsPlayingChanged(true)
+        frames.renderAt(1_000_000L)
+        listener.onIsPlayingChanged(false)
+        listener.onIsPlayingChanged(true)
+
+        assertEquals(false, states.last()["isPictureAdvancing"])
+    }
+
+    /** A player paused at [clockMs] into a clip trimmed to start 200 ms in. */
+    private fun pausePictureTestAt(clockMs: Long) {
+        presentDuration(3_000L, startUs = 200_000L)
+        every { mockPlayer.isPlaying } returns false
+        every { mockPlayer.playerError } returns null
+        every { mockPlayer.playbackState } returns Player.STATE_READY
+        every { mockPlayer.playWhenReady } returns false
+        every { mockPlayer.currentPeriodIndex } returns 0
+        every { mockPlayer.currentMediaItemIndex } returns 0
+        every { mockPlayer.currentPosition } returns clockMs
+    }
+
+    @Test
+    fun `reports the paused frame on screen, not the paused clock`() {
+        val (listener, frames, states) = startPictureTest()
+        pausePictureTestAt(1_010L)
+
+        // Handed to the surface just ahead of the clock, as playback does.
+        frames.renderAt(1_233_333L)
+        listener.onIsPlayingChanged(false)
+
+        assertEquals("paused", states.last()["status"])
+        assertEquals(1_010L, states.last()["positionMs"])
+        assertEquals(1_033L, states.last()["shownPositionMs"])
+    }
+
+    @Test
+    fun `reports the playing frame on screen and when it went up`() {
+        val (listener, frames, states) = startPictureTest()
+        pausePictureTestAt(1_010L)
+        every { mockPlayer.isPlaying } returns true
+        every { mockPlayer.playWhenReady } returns true
+        frames.renderAt(1_200_000L)
+        listener.onIsPlayingChanged(true)
+
+        // Went on screen 20 ms ago, handed over just ahead of the clock.
+        val before = System.currentTimeMillis()
+        frames.onVideoFrameAboutToBeRendered(
+            1_233_333L,
+            System.nanoTime() - 20_000_000L,
+            Format.Builder().build(),
+            null,
+        )
+
+        val state = states.last()
+        val after = System.currentTimeMillis()
+        assertEquals("playing", state["status"])
+        assertEquals(true, state["isPictureAdvancing"])
+        assertEquals(1_033L, state["shownPositionMs"])
+        // 20 ms before whenever the frame was converted, which happened
+        // between `before` and `after`; a slow runner only widens that span.
+        // The 5 ms allow for the monotonic and the wall clock drifting apart.
+        val shownAt = state["shownAtEpochMs"] as Long
+        assertTrue(
+            "went up at $shownAt, expected ${before - 25}..${after - 15}",
+            shownAt in (before - 25L)..(after - 15L),
+        )
+    }
+
+    @Test
+    fun `leaves out a frame that cannot be the one on screen`() {
+        val (listener, frames, states) = startPictureTest()
+        pausePictureTestAt(1_010L)
+
+        frames.renderAt(2_700_000L)
+        listener.onIsPlayingChanged(false)
+
+        assertEquals(false, states.last().containsKey("shownPositionMs"))
+    }
+
+    // -- rotation --
+
+    @Test
+    fun `rotation follows the frame on screen, not the clip read ahead`() {
+        every { mockProducer.surface } returns mockSurface
+        // Near a clip's end the decoder already reads the next clip, shot in
+        // the other orientation.
+        every { mockPlayer.videoFormat } returns Format.Builder().setRotationDegrees(90).build()
+        instance.enableTextureOutput(mockRegistry)
+        val playerListener = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        val (frames, states) = listenForFrames()
+        frames.render(null)
+        playerListener.captured.onVideoSizeChanged(VideoSize(1080, 1920))
+
+        assertEquals(0, states.last()["rotationDegrees"])
+
+        frames.render(null, rotationDegrees = 90)
+
+        assertEquals(90, states.last()["rotationDegrees"])
+    }
+
+    @Test
+    fun `a backend that rotates the frames itself sends no rotation`() {
+        every { mockProducer.surface } returns mockSurface
+        every { mockProducer.handlesCropAndRotation() } returns true
+        instance.enableTextureOutput(mockRegistry)
+        val playerListener = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        val (frames, states) = listenForFrames()
+        playerListener.captured.onVideoSizeChanged(VideoSize(1920, 1080))
+
+        frames.render(null, rotationDegrees = 90)
+
+        assertEquals(0, states.last()["rotationDegrees"])
+    }
+
     // -- frame-effect stage install --
 
     @Test
     fun `installing frame effects keeps the decoder's layout until the stage draws`() {
         every { mockProducer.surface } returns mockSurface
-        every { mockPlayer.videoFormat } returns Format.Builder().setRotationDegrees(90).build()
         instance.enableTextureOutput(mockRegistry)
         val playerListener = slot<Player.Listener>()
         every { mockPlayer.addListener(capture(playerListener)) } just runs
         val (frames, states) = listenForFrames()
         val listener = playerListener.captured
         listener.onVideoSizeChanged(VideoSize(1080, 1920))
-        frames.render(paddedFormat())
+        frames.render(paddedFormat(), rotationDegrees = 90)
 
         instance.onMethodCall(
             MethodCall("setFrameEffects", mapOf("effects" to listOf(mapOf("id" to "comic")))),
@@ -996,6 +1192,37 @@ class DivineVideoPlayerInstanceTest {
         // Running the queued task re-prepares the same player.
         scheduled.captured.run()
         verify(exactly = 1) { mockPlayer.prepare() }
+    }
+
+    @Test
+    fun `Bunny errors leave clip identity and exception text out of support logs`() {
+        val listener = capturePlayerListener()
+        val source = "https://media-bunny.divine.video/${"f".repeat(64)}/720p.mp4"
+        val uri = mockk<Uri>()
+        every { uri.host } returns "media-bunny.divine.video"
+        every { uri.toString() } returns source
+        every { mockPlayer.currentMediaItem } returns MediaItem.fromUri(uri)
+        mockkObject(DivineVideoPlayerLog)
+        try {
+            val message = slot<String>()
+            every {
+                DivineVideoPlayerLog.error(capture(message), name = "DivineVideoPlayer.Playback")
+            } just runs
+            listener.onPlayerError(
+                PlaybackException(
+                    "Network error at $source",
+                    null,
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                ),
+            )
+
+            assertTrue(message.captured.contains("provider=Bunny"))
+            assertTrue(message.captured.contains("code=timeout"))
+            assertEquals(false, message.captured.contains(source))
+            assertEquals(false, message.captured.contains("Network error at"))
+        } finally {
+            unmockkObject(DivineVideoPlayerLog)
+        }
     }
 
     @Test

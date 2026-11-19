@@ -1305,7 +1305,127 @@ void main() {
               ]),
         ],
       );
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'syncs every repost, not just the one that arrived, when the tab '
+        'shows a failed load (#11182)',
+        setUp: () {
+          final newest = createAddressableId(currentUserPubkey, 'd2');
+          final older = createAddressableId(currentUserPubkey, 'd1');
+          // The live subscription asks for one event, so it brings only the
+          // newest repost back once the relay answers again.
+          when(
+            () => mockRepostsRepository.getOrderedRepostedAddressableIds(),
+          ).thenAnswer((_) async => [newest]);
+          when(() => mockRepostsRepository.syncUserReposts()).thenAnswer((
+            _,
+          ) async {
+            repostedIdsController.add({newest, older});
+            return RepostsSyncResult(
+              orderedAddressableIds: [newest, older],
+              addressableIdToRepostId: const {},
+            );
+          });
+          when(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer(
+            (invocation) async => [
+              for (final id
+                  in invocation.positionalArguments.first as List<String>)
+                createTestVideo(
+                  id: 'e-${id.split(':').last}',
+                  pubkey: currentUserPubkey,
+                  vineId: id.split(':').last,
+                ),
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => const ProfileRepostedVideosState(
+          status: ProfileRepostedVideosStatus.failure,
+        ),
+        act: (bloc) async {
+          bloc.add(const ProfileRepostedVideosSubscriptionRequested());
+          await pumpEventQueue();
+          repostedIdsController.add({
+            createAddressableId(currentUserPubkey, 'd2'),
+          });
+        },
+        wait: const Duration(milliseconds: 100),
+        // Never settles on the one repost the subscription brought back, not
+        // even on the way to the full list.
+        expect: () => everyElement(
+          isNot(
+            isA<ProfileRepostedVideosState>()
+                .having(
+                  (s) => s.status,
+                  'status',
+                  ProfileRepostedVideosStatus.success,
+                )
+                .having((s) => s.videos.length, 'videos', 1),
+          ),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.status, ProfileRepostedVideosStatus.success);
+          expect(bloc.state.videos.map((v) => v.vineId), equals(['d2', 'd1']));
+        },
+      );
     });
+
+    blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+      'does not queue another recovery sync from its own ID emissions',
+      setUp: () {
+        var syncCount = 0;
+        when(() => mockRepostsRepository.syncUserReposts())
+            .thenAnswer((_) async {
+              // A real sync emits the local IDs before starting its relay read.
+              // One such emission is enough to detect a self-triggered retry.
+              if (++syncCount == 1) {
+                repostedIdsController.add({
+                  createAddressableId(currentUserPubkey, 'd2'),
+                });
+              }
+              return RepostsSyncResult(
+                orderedAddressableIds: [
+                  createAddressableId(currentUserPubkey, 'd2'),
+                ],
+                addressableIdToRepostId: const {},
+              );
+            });
+        when(
+          () => mockVideosRepository.getVideosByAddressableIds(
+            any(),
+            cacheResults: any(named: 'cacheResults'),
+          ),
+        ).thenThrow(Exception('Video lookup failed'));
+      },
+      build: createBloc,
+      seed: () => const ProfileRepostedVideosState(
+        status: ProfileRepostedVideosStatus.failure,
+      ),
+      act: (bloc) async {
+        final failed = bloc.stream.firstWhere(
+          (state) =>
+              state.status == ProfileRepostedVideosStatus.failure &&
+              !state.isRefreshing,
+        );
+        bloc.add(const ProfileRepostedVideosSubscriptionRequested());
+        await pumpEventQueue();
+        repostedIdsController.add({
+          createAddressableId(currentUserPubkey, 'd2'),
+        });
+        await failed;
+        await pumpEventQueue();
+      },
+      errors: () => [isA<Exception>()],
+      verify: (bloc) {
+        expect(bloc.state.status, ProfileRepostedVideosStatus.failure);
+        verify(() => mockRepostsRepository.syncUserReposts()).called(1);
+      },
+    );
 
     group('ProfileRepostedVideosLoadMoreRequested', () {
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(

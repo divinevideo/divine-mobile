@@ -36,6 +36,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// of effects can redraw a paused frame.
     private var latestSourceBuffer: CVPixelBuffer?
     private var latestSourceTime = CMTime.invalid
+
+    /// The item time of the frame on screen, or invalid before one arrives.
+    /// Read on the main thread, where the display link delivers frames.
+    var shownFrameTime: CMTime { latestSourceTime }
     /// The time effects were last drawn over `latestSourceBuffer` at, which
     /// runs ahead of `latestSourceTime` while that frame is held.
     private var latestEffectsTimeUs: Int64?
@@ -150,6 +154,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// retry the seek with tolerance. Suppressed for retry windows, and when
     /// the queue holds no item to retry it on. Always a numeric time.
     var onSeekStuck: ((CMTime) -> Void)?
+
+    /// Called on the main thread with the item time of each frame that
+    /// reaches the texture.
+    var onFrameDelivered: ((CMTime) -> Void)?
 
     init(
         registry: FlutterTextureRegistry,
@@ -577,6 +585,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         guard isFrameDeliveryEnabled else { return }
         PlaybackDiagnostics.shared.recordFrameDelivered()
         registry.textureFrameAvailable(textureId)
+        onFrameDelivered?(time)
         if !hasDeliveredFirstFrame {
             hasDeliveredFirstFrame = true
             onFirstFrame?()

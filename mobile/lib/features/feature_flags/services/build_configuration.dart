@@ -83,6 +83,7 @@ class BuildConfiguration {
         // else starts as a room.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
       case FeatureFlag.b2PlaybackCanary:
+      case FeatureFlag.bunnyPlaybackCanary:
         // A device-local developer opt-in, never enabled for an entire build.
         return false;
       case FeatureFlag.concordChat:
@@ -143,6 +144,8 @@ class BuildConfiguration {
         return 'FF_GROUP_MESSAGES';
       case FeatureFlag.b2PlaybackCanary:
         return 'FF_B2_PLAYBACK_CANARY';
+      case FeatureFlag.bunnyPlaybackCanary:
+        return 'FF_BUNNY_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
       case FeatureFlag.minorConsentInAppRecording:

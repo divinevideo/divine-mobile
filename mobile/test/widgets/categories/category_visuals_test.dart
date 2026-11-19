@@ -79,6 +79,11 @@ void main() {
           'news': DivineStickerName.newsCamera,
           'nature': DivineStickerName.rainforest,
           'fitness': DivineStickerName.pinkDumbbells,
+          'animation': DivineStickerName.videoClapBoard,
+          'beauty': DivineStickerName.glitterLips,
+          'pets': DivineStickerName.cat,
+          'automotive': DivineStickerName.flatTire,
+          'pranks': DivineStickerName.boom,
         };
 
         for (final MapEntry(key: slug, value: sticker) in illustrated.entries) {

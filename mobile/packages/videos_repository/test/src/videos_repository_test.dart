@@ -17572,6 +17572,8 @@ VideoStats _createVideoStats({
     loops: loops,
     views: views,
     rawTags: rawTags,
+    // These older archive fixtures represent responses without provenance.
+    isArchiveVerificationUnknown: rawTags['platform'] == 'vine',
     moderationLabels: moderationLabels,
     collaboratorPubkeys: collaboratorPubkeys,
   );

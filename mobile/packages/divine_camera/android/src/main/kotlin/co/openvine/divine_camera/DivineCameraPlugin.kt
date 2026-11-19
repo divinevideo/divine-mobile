@@ -119,7 +119,7 @@ class DivineCameraPlugin :
         "initializeCamera", "disposeCamera", "switchCamera",
         "startRecording", "stopRecording", "pausePreview", "resumePreview",
         "setFlashMode", "setRemoteRecordControlEnabled",
-        "setVideoStabilizationMode"
+        "setVideoStabilizationMode", "setDualCameraEnabled"
     )
 
     private fun logLifecycleCall(call: MethodCall) {
@@ -192,6 +192,11 @@ class DivineCameraPlugin :
             "switchCamera" -> {
                 val lens = call.argument<String>("lens") ?: "back"
                 switchCamera(lens, oneShotResult)
+            }
+
+            "setDualCameraEnabled" -> {
+                val enabled = call.argument<Boolean>("enabled") ?: false
+                setDualCameraEnabled(enabled, oneShotResult)
             }
 
             "startRecording" -> {
@@ -391,6 +396,28 @@ class DivineCameraPlugin :
             result.success(success)
         } catch (e: Exception) {
             result.error("STABILIZATION_ERROR", e.message, null)
+        }
+    }
+
+    private fun setDualCameraEnabled(enabled: Boolean, result: Result) {
+        val controller = cameraController
+        if (controller == null) {
+            result.error("NOT_INITIALIZED", "Camera not initialized", null)
+            return
+        }
+        try {
+            // Rebinding the cameras can make Bluetooth devices send spurious
+            // play/pause events, like a lens switch.
+            volumeKeyHandler?.suppressTemporarily(3000)
+            controller.setDualCameraEnabled(enabled) { state, error ->
+                if (error != null) {
+                    result.error("DUAL_CAMERA_ERROR", error, null)
+                } else {
+                    result.success(state)
+                }
+            }
+        } catch (e: Exception) {
+            result.error("DUAL_CAMERA_EXCEPTION", e.message, null)
         }
     }
 

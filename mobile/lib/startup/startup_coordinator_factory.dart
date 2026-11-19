@@ -307,6 +307,7 @@ StartupCoordinator createStartupCoordinator(
             unawaited(
               routeNotificationTap(
                 messageId: parsed.messageId,
+                campaignRevisionId: parsed.campaignRevisionId,
                 openSource: NotificationOpenSource.osColdStart,
                 referencedAddress: parsed.referencedAddress,
                 referencedEventId: parsed.referencedEventId,
@@ -338,6 +339,7 @@ StartupCoordinator createStartupCoordinator(
           unawaited(
             routeNotificationTap(
               messageId: launchTap.messageId,
+              campaignRevisionId: launchTap.campaignRevisionId,
               openSource: NotificationOpenSource.localColdStart,
               referencedAddress: launchTap.referencedAddress,
               referencedEventId: launchTap.referencedEventId,

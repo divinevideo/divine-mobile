@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:divine_video_player/divine_video_player.dart'
     hide PlaybackStatus;
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, ValueListenable, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,6 +64,12 @@ import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
 
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
+
+final _bunnyPlaybackPaths = Set<String>.unmodifiable(
+  const String.fromEnvironment(
+    'BUNNY_PLAYBACK_PATHS',
+  ).split(',').where((path) => path.isNotEmpty),
+);
 
 class FeedVideos extends ConsumerStatefulWidget {
   const FeedVideos({
@@ -379,6 +386,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     final preferB2Original = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary),
     );
+    final preferBunny = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.bunnyPlaybackCanary),
+    );
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final isFeedActive =
@@ -459,6 +469,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         cache: ref.read(mediaCacheProvider),
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
         preferB2Original: preferB2Original,
+        bunnyPlaybackPaths:
+            preferBunny &&
+                !kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.iOS)
+            ? _bunnyPlaybackPaths
+            : const {},
         initialIndex: widget.currentIndex,
         scrollPhysics: widget.scrollPhysics,
         onNearEnd: widget.onNearEnd,

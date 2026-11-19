@@ -69,7 +69,7 @@ void main() {
     });
 
     /// A live camera that reports re-syncs the way `CameraMobileService`
-    /// does, on a recorder last left in chroma key mode.
+    /// does.
     void stubLiveCamera() {
       when(() => camera.canRecord).thenReturn(true);
       when(() => camera.isInitialized).thenReturn(true);

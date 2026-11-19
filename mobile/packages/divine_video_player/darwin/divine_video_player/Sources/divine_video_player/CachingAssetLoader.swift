@@ -42,6 +42,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     private var downloadedURL: URL?
 
     private let remoteURL: URL
+    private let keepsDownload: Bool
     private static let telemetryLock = NSLock()
     private static let telemetryLoaders = NSHashTable<CachingAssetLoader>.weakObjects()
 
@@ -89,6 +90,8 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     /// player makes is then fetched on its own.
     private var proxying = false
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
+    private let proxyHTTPFailureLock = NSLock()
+    private var proxyHTTPFailure: (status: Int, error: NSError)?
 
     /// A loader for [remoteURL], or nil for a URL it cannot serve.
     init?(remoteURL: URL, headers: [String: String], onPlaybackNetwork: @escaping ([String: Any]) -> Void = { _ in }) {
@@ -99,6 +102,14 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         components.scheme = Self.schemePrefix + scheme
         guard let loaderURL = components.url else { return nil }
         self.remoteURL = remoteURL
+        let requestsNoStore = headers.contains {
+            $0.key.lowercased() == "cache-control" && $0.value.lowercased() == "no-store"
+        }
+        let keepsDownload = components.host?.lowercased() != "media-bunny.divine.video" && !requestsNoStore
+        self.keepsDownload = keepsDownload
+        // Canary playback goes through fresh range requests and preserves the
+        // HTTP status for Dart's fallback policy without creating a loop file.
+        self.proxying = !keepsDownload
         self.headers = headers
         self.onPlaybackNetwork = onPlaybackNetwork
         self.asset = AVURLAsset(url: loaderURL)
@@ -109,11 +120,24 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         asset.resourceLoader.setDelegate(self, queue: queue)
     }
 
+    /// AVFoundation may strip the response metadata when a resource request
+    /// fails with badServerResponse. Restore it from this asset's proxy.
+    func preservedProxyHTTPFailure(for error: NSError) -> NSError? {
+        guard !keepsDownload, !Task.isCancelled,
+              let failure = proxyHTTPFailureLock.withLock({ proxyHTTPFailure }),
+              playbackErrorCanUseProxyHTTPStatus(failure.status, in: error)
+        else {
+            return nil
+        }
+        return failure.error
+    }
+
     /// Stops every fetch, fails whatever the player still waits for, and
     /// deletes the file.
     func cancel() {
         queue.async { [self] in
             cancelled = true
+            proxyHTTPFailureLock.withLock { proxyHTTPFailure = nil }
             session?.invalidateAndCancel()
             session = nil
             let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
@@ -165,16 +189,28 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     ) {
         observations[dataTask.taskIdentifier]?.headers()
         if let request = proxied[dataTask.taskIdentifier] {
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            if let http = response as? HTTPURLResponse,
+                (!keepsDownload && http.statusCode == 202) || !(200..<300).contains(http.statusCode)
+            {
                 proxied[dataTask.taskIdentifier] = nil
-                request.finishLoading(with: NSError(
+                let responseError = NSError(
                     domain: NSURLErrorDomain,
                     code: NSURLErrorBadServerResponse,
                     userInfo: [
                         NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
                         "NSURLErrorFailingURLResponseErrorKey": http
                     ]
-                ))
+                )
+                if !keepsDownload {
+                    proxyHTTPFailureLock.withLock {
+                        if let previous = proxyHTTPFailure,
+                           playbackHTTPStatusPriority(previous.status) >= playbackHTTPStatusPriority(http.statusCode) {
+                            return
+                        }
+                        proxyHTTPFailure = (http.statusCode, responseError)
+                    }
+                }
+                request.finishLoading(with: responseError)
                 completionHandler(.cancel)
                 return
             }
@@ -280,8 +316,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         let operationQueue = OperationQueue()
         operationQueue.underlyingQueue = queue
         operationQueue.maxConcurrentOperationCount = 1
+        let configuration = keepsDownload ? URLSessionConfiguration.default : .ephemeral
+        if !keepsDownload { configuration.urlCache = nil }
         let session = URLSession(
-            configuration: .default,
+            configuration: configuration,
             delegate: self,
             delegateQueue: operationQueue
         )
@@ -364,17 +402,20 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
             info.contentLength = contentLength
             info.isByteRangeAccessSupported = true
         }
-        guard let dataRequest = request.dataRequest else {
+        var urlRequest = URLRequest(url: remoteURL)
+        for (field, value) in headers { urlRequest.setValue(value, forHTTPHeaderField: field) }
+        if let dataRequest = request.dataRequest {
+            let start = dataRequest.currentOffset
+            let range = dataRequest.requestsAllDataToEndOfResource
+                ? "bytes=\(start)-"
+                : "bytes=\(start)-\(dataRequest.requestedOffset + Int64(dataRequest.requestedLength) - 1)"
+            urlRequest.setValue(range, forHTTPHeaderField: "Range")
+        } else if !keepsDownload, contentLength == nil {
+            urlRequest.httpMethod = "HEAD"
+        } else {
             request.finishLoading()
             return
         }
-        var urlRequest = URLRequest(url: remoteURL)
-        for (field, value) in headers { urlRequest.setValue(value, forHTTPHeaderField: field) }
-        let start = dataRequest.currentOffset
-        let range = dataRequest.requestsAllDataToEndOfResource
-            ? "bytes=\(start)-"
-            : "bytes=\(start)-\(dataRequest.requestedOffset + Int64(dataRequest.requestedLength) - 1)"
-        urlRequest.setValue(range, forHTTPHeaderField: "Range")
         let task = makeSession().dataTask(with: urlRequest)
         proxied[task.taskIdentifier] = request
         observe(task)

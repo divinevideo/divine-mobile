@@ -72,6 +72,21 @@ class MockDivineCameraPlatform
       textureId: 1,
       isFocusPointSupported: true,
       isExposurePointSupported: true,
+      isDualCameraSupported: true,
+    );
+  }
+
+  @override
+  Future<CameraState> setDualCameraEnabled({required bool enabled}) async {
+    return _state = _state.copyWith(
+      secondaryCamera: enabled
+          ? const SecondaryCameraState(
+              lens: DivineCameraLens.front,
+              textureId: 2,
+              previewRotationDegrees: 90,
+            )
+          : null,
+      clearSecondaryCamera: !enabled,
     );
   }
 
@@ -695,5 +710,64 @@ void main() {
         expect(tapCalled, isTrue);
       },
     );
+  });
+
+  group(SecondaryCameraPreviewWidget, () {
+    Widget buildSecondary({Widget? placeholder}) => MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 120,
+          height: 200,
+          child: SecondaryCameraPreviewWidget(placeholder: placeholder),
+        ),
+      ),
+    );
+
+    testWidgets('shows a black box while dual-camera capture is off', (
+      tester,
+    ) async {
+      await camera.initialize();
+      await tester.pumpWidget(buildSecondary());
+
+      expect(find.byType(Texture), findsNothing);
+      final box = tester.widget<ColoredBox>(
+        find.descendant(
+          of: find.byType(SecondaryCameraPreviewWidget),
+          matching: find.byType(ColoredBox),
+        ),
+      );
+      expect(box.color, const Color(0xFF000000));
+    });
+
+    testWidgets('shows the placeholder while dual-camera capture is off', (
+      tester,
+    ) async {
+      await camera.initialize();
+      await tester.pumpWidget(
+        buildSecondary(placeholder: const Text('no second camera')),
+      );
+
+      expect(find.text('no second camera'), findsOneWidget);
+    });
+
+    testWidgets('draws the second camera texture, rotated upright', (
+      tester,
+    ) async {
+      await camera.initialize();
+      await camera.setDualCameraEnabled(enabled: true);
+      await tester.pumpWidget(buildSecondary());
+
+      final texture = tester.widget<Texture>(find.byType(Texture));
+      expect(texture.textureId, equals(2));
+      final rotated = tester.widget<RotatedBox>(find.byType(RotatedBox));
+      expect(rotated.quarterTurns, equals(1));
+      expect(
+        find.descendant(
+          of: find.byType(SecondaryCameraPreviewWidget),
+          matching: find.byType(FittedBox),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }
