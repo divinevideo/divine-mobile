@@ -17,6 +17,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     static let budgetMs = "budgetMs"
     static let modeName = "modeName"
     static let shutterActive = "shutterActive"
+    static let stillShutterCount = "stillShutterCount"
     static let command = "command"
     static let startRecording = "watchStart"
     static let stopRecording = "watchStop"
@@ -35,6 +36,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   private let session = WCSession.default
   private var pendingID: UUID?
   private var pendingStop = false
+  private var pendingStillShutterCount = 0
 
   func activate() {
     session.delegate = self
@@ -53,6 +55,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     let id = UUID()
     pendingID = id
     pendingStop = recorder.isShutterActive
+    pendingStillShutterCount = recorder.stillShutterCount
     isShutterPending = true
     let command = pendingStop ? Wire.stopRecording : Wire.startRecording
     session.sendMessage(
@@ -65,8 +68,8 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
         }
       }
     )
-    // Single-frame capture does not change the shutter action. A timeout
-    // releases the button even if the phone publishes no new state.
+    // A tap the phone ignores changes nothing it publishes. A timeout
+    // releases the button then.
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
       guard self?.pendingID == id else { return }
       self?.clearPending()
@@ -101,6 +104,9 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
       snapshot.modeName = modeName
     }
     snapshot.isShutterActive = payload[Wire.shutterActive] as? Bool ?? snapshot.isRecording
+    if let stillShutterCount = payload[Wire.stillShutterCount] as? Int {
+      snapshot.stillShutterCount = stillShutterCount
+    }
     return snapshot
   }
 
@@ -109,7 +115,10 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       self.recorder = snapshot
-      if snapshot?.isShutterActive != self.pendingStop {
+      // The tap was handled once the shutter flips, or once a still was
+      // taken, which leaves the shutter as it was.
+      if snapshot?.isShutterActive != self.pendingStop
+        || snapshot?.stillShutterCount != self.pendingStillShutterCount {
         self.clearPending()
       }
     }

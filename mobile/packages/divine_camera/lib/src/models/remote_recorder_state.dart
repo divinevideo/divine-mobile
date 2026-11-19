@@ -13,6 +13,7 @@ class RemoteRecorderState {
     required this.modeName,
     required this.isShutterActive,
     this.activeTakeStartedAt,
+    this.stillShutterCount = 0,
   });
 
   /// Combined length of the clips already recorded.
@@ -34,6 +35,13 @@ class RemoteRecorderState {
   /// run without adding recorded time.
   final bool isShutterActive;
 
+  /// How often the shutter has fired for a still, such as a stop-motion
+  /// frame.
+  ///
+  /// A still leaves [isShutterActive] unchanged, so this count is what tells
+  /// a remote that its press was handled.
+  final int stillShutterCount;
+
   /// Converts the state to the map sent over the method channel.
   Map<String, Object?> toMap() => {
     'recordedMs': recorded.inMilliseconds,
@@ -41,5 +49,6 @@ class RemoteRecorderState {
     'budgetMs': budget.inMilliseconds,
     'modeName': modeName,
     'shutterActive': isShutterActive,
+    'stillShutterCount': stillShutterCount,
   };
 }
