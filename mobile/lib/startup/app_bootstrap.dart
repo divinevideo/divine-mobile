@@ -38,6 +38,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/media_cache_budget_provider.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/repositories/shorebird_patch_repository.dart';
 import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/build_provenance_service.dart';
@@ -53,6 +54,8 @@ import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/install_source_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/media_cache_budget.dart';
+import 'package:openvine/services/post_live_activity_channel.dart';
+import 'package:openvine/services/post_live_activity_registrar.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/secure_storage_options.dart';
@@ -75,6 +78,7 @@ import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/utils/recoverable_flutter_error.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -746,6 +750,11 @@ Future<void> startOpenVineApp({
     sharedPreferences: sharedPreferences,
   ).recordSession();
 
+  final postLiveActivity = _buildPostLiveActivity(
+    sharedPreferences: sharedPreferences,
+    crashReporting: crashReporting,
+  );
+
   final deviceScope = DeviceScope(
     database: deviceDatabase,
     sharedPreferences: sharedPreferences,
@@ -768,6 +777,7 @@ Future<void> startOpenVineApp({
     shorebirdAvailable:
         (startupShorebirdUpdater ??= ShorebirdUpdater()).isAvailable,
     playerCacheBudgetBytes: playerCacheBudgetBytes,
+    postLiveActivity: postLiveActivity,
     accountOverrides: [
       // Screenshot mode: lead the 01_classics OG-Viner row with returning
       // Vine OGs who all have avatars, so the marketing shot has no
@@ -999,4 +1009,33 @@ Future<void> handleUncaughtZoneError(
   );
   final record = recordError ?? crashReporting.recordError;
   await record(error, stack, reason: 'runZonedGuarded');
+}
+
+/// Builds the post Live Activity bridge on iOS; null elsewhere.
+PostLiveActivityDevice? _buildPostLiveActivity({
+  required SharedPreferences sharedPreferences,
+  required CrashReportingService crashReporting,
+}) {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+  final channel = PostLiveActivityChannel();
+  final registrar = PostLiveActivityRegistrar();
+  final repository = PostLiveActivityRepository(
+    platform: channel,
+    registrar: registrar,
+    sharedPreferences: sharedPreferences,
+    errorReporter: (error, stack, {required site}) {
+      unawaited(
+        crashReporting.recordError(
+          error,
+          stack,
+          reason: 'PostLiveActivityRepository.$site',
+        ),
+      );
+    },
+  );
+  return PostLiveActivityDevice(
+    channel: channel,
+    registrar: registrar,
+    repository: repository,
+  );
 }

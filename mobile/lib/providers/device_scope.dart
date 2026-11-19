@@ -20,6 +20,7 @@ import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
@@ -75,6 +76,7 @@ class DeviceScope {
     this.installSource = InstallSource.sideload,
     this.shorebirdAvailable = false,
     this.playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes,
+    this.postLiveActivity,
     this.accountOverrides = const [],
     AccountStateWriteBarrier? accountStateWrites,
   }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier();
@@ -155,6 +157,10 @@ class DeviceScope {
   /// see [playerCacheBudgetBytesProvider].
   final int playerCacheBudgetBytes;
 
+  /// The post Live Activity bridge, repository and registrar; null off iOS.
+  /// Device-scoped because an activity outlives an account switch.
+  final PostLiveActivityDevice? postLiveActivity;
+
   /// Extra overrides applied to every account container.
   ///
   /// Production leaves this empty. Tests use it for container-wide fakes that
@@ -181,6 +187,12 @@ class DeviceScope {
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
     crashReportingServiceProvider.overrideWithValue(crashReporting),
     logMessageBatcherProvider.overrideWithValue(logMessageBatcher),
+    postLiveActivityRepositoryProvider.overrideWithValue(
+      postLiveActivity?.repository,
+    ),
+    postLiveActivityRegistrarProvider.overrideWithValue(
+      postLiveActivity?.registrar,
+    ),
     deviceScopeProvider.overrideWithValue(this),
     ...accountOverrides,
   ];

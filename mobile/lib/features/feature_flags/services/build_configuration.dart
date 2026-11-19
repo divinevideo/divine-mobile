@@ -62,6 +62,13 @@ class BuildConfiguration {
         // d=notify subscribers. On without it, the bell publishes a
         // subscription no service reads.
         return const bool.fromEnvironment('FF_NEW_POST_NOTIFICATIONS');
+      case FeatureFlag.postLiveActivity:
+        // The server is the kill switch and the Notification settings toggle
+        // is the person's control, so this defaults on.
+        return const bool.fromEnvironment(
+          'FF_POST_LIVE_ACTIVITY',
+          defaultValue: true,
+        );
       case FeatureFlag.clientSeenFiltering:
         return const bool.fromEnvironment(
           'FF_CLIENT_SEEN_FILTERING',
@@ -136,6 +143,8 @@ class BuildConfiguration {
         return 'FF_COMMUNITY_CONTENT_WARNINGS';
       case FeatureFlag.newPostNotifications:
         return 'FF_NEW_POST_NOTIFICATIONS';
+      case FeatureFlag.postLiveActivity:
+        return 'FF_POST_LIVE_ACTIVITY';
       case FeatureFlag.clientSeenFiltering:
         return 'FF_CLIENT_SEEN_FILTERING';
       case FeatureFlag.postPublishConfirmationExperiment:

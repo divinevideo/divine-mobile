@@ -21,14 +21,18 @@ import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/services/post_live_activity_channel.dart';
+import 'package:openvine/services/post_live_activity_registrar.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _AnnouncementsRepository extends Mock
@@ -244,6 +248,53 @@ void main() {
 
       expect(a.read(logMessageBatcherProvider), same(logMessageBatcher));
       expect(b.read(logMessageBatcherProvider), same(logMessageBatcher));
+    });
+
+    test('post Live Activity providers are null without a device bundle', () {
+      final container = buildAccountContainer(deviceScope);
+      addTearDown(container.dispose);
+
+      expect(container.read(postLiveActivityRepositoryProvider), isNull);
+      expect(container.read(postLiveActivityRegistrarProvider), isNull);
+    });
+
+    test('every container reads the same post Live Activity repository', () {
+      final channel = PostLiveActivityChannel(isSupported: () => false);
+      final registrar = PostLiveActivityRegistrar();
+      final repository = PostLiveActivityRepository(
+        platform: channel,
+        registrar: registrar,
+        sharedPreferences: prefs,
+      );
+      final scope = DeviceScope(
+        database: database,
+        sharedPreferences: prefs,
+        announcementSessions: AnnouncementSessions(),
+        feedModePersistence: FeedModePersistenceRegistry(
+          sharedPreferences: prefs,
+        ),
+        switchController: AccountSwitchController(),
+        appVersion: '1.2.3',
+        crashReporting: CrashReportingService(),
+        startupPerformance: StartupPerformanceService(
+          crashReporting: CrashReportingService(),
+        ),
+        documentsPath: '/documents',
+        logMessageBatcher: logMessageBatcher,
+        postLiveActivity: PostLiveActivityDevice(
+          channel: channel,
+          registrar: registrar,
+          repository: repository,
+        ),
+      );
+      final a = buildAccountContainer(scope);
+      addTearDown(a.dispose);
+      final b = buildAccountContainer(scope);
+      addTearDown(b.dispose);
+
+      expect(a.read(postLiveActivityRepositoryProvider), same(repository));
+      expect(b.read(postLiveActivityRepositoryProvider), same(repository));
+      expect(a.read(postLiveActivityRegistrarProvider), same(registrar));
     });
 
     test('every container reads the same app version override', () {
