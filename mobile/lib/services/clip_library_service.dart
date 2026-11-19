@@ -125,7 +125,18 @@ class ClipLibraryService {
   /// proof naming a C2PA manifest when [clip]'s names none (see
   /// [recordLateProof]) and the entry's gallery backup state (see
   /// [setGalleryBackup]).
-  Future<void> saveClip(DivineVideoClip clip) async {
+  Future<void> saveClip(DivineVideoClip clip) =>
+      _saveClip(clip, keepExisting: false);
+
+  /// Gives this recording a Library row if all earlier saves failed. An
+  /// existing recording can already carry newer metadata or keyed footage.
+  Future<void> retainClip(DivineVideoClip clip) =>
+      _saveClip(clip, keepExisting: true);
+
+  Future<void> _saveClip(
+    DivineVideoClip clip, {
+    required bool keepExisting,
+  }) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
       name: 'ClipLibraryService',
@@ -137,6 +148,12 @@ class ClipLibraryService {
     // it is being saved, and the save must not land on top of it.
     await _clipsDao.transaction(() async {
       final existingLibraryRow = await _clipsDao.getClipById(clip.id);
+      if (keepExisting && existingLibraryRow != null) {
+        if (existingLibraryRow.ownerPubkey != ownerPubkey) {
+          throw StateError('Existing recording belongs to another account');
+        }
+        return;
+      }
       final existingAutosaveRow = existingLibraryRow == null
           ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
           : null;

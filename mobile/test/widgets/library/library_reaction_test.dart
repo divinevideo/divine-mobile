@@ -23,18 +23,50 @@ import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/widgets/library/library_reaction.dart';
 import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
 class _Auth extends Mock implements AuthService {}
+
+class _RecordingLibrary extends Fake implements ClipLibraryService {
+  bool rejectWrites = false;
+  Completer<void>? writeGate;
+  final saved = <String, DivineVideoClip>{};
+
+  @override
+  Future<void> retainClip(DivineVideoClip clip) => saveClip(clip);
+
+  @override
+  Future<void> saveClip(DivineVideoClip clip) async {
+    await writeGate?.future;
+    if (rejectWrites) throw Exception('Library write refused');
+    saved[clip.id] = clip;
+  }
+}
+
+class _RecoveryDrafts extends Fake implements DraftStorageService {
+  final saved = <DivineVideoDraft>[];
+
+  @override
+  Future<void> saveDraft(
+    DivineVideoDraft draft, {
+    void Function(List<String?> orphanPaths)? deferOrphanCleanup,
+    DraftOwnedFilesMemo? ownedFilesMemo,
+  }) async {
+    saved.add(draft);
+  }
+}
 
 class _Analytics extends Fake implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
@@ -74,6 +106,13 @@ class _Manager extends ClipManagerNotifier {
   final savedClips = <String, DivineVideoClip>{};
   Completer<void>? extractionGate;
   Set<String>? extractedIds;
+  int _generation = 0;
+
+  @override
+  int get sessionGeneration => _generation;
+
+  @override
+  bool isSessionCurrent(int generation) => generation == _generation;
 
   @override
   List<DivineVideoClip> abandonExtraction(
@@ -82,6 +121,8 @@ class _Manager extends ClipManagerNotifier {
   }) {
     if (generation != sessionGeneration) return [];
     final removed = clips.where((clip) => clipIds.contains(clip.id)).toList();
+    if (removed.isEmpty) return [];
+    _generation++;
     state = state.copyWith(
       clips: clips.where((clip) => !clipIds.contains(clip.id)).toList(),
     );
@@ -89,10 +130,17 @@ class _Manager extends ClipManagerNotifier {
   }
 
   @override
-  Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+  Future<List<DivineVideoClip>> extractClips(
+    Set<String> clipIds, {
+    Future<void> Function(List<DivineVideoClip>)? retain,
+  }) async {
     extractedIds = clipIds;
     final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
+    final captured = sessionGeneration;
     await extractionGate?.future;
+    if (!isSessionCurrent(captured)) return [];
+    await retain?.call(takes);
+    if (!isSessionCurrent(captured)) return [];
     state = state.copyWith(
       clips: clips.where((clip) => !clipIds.contains(clip.id)).toList(),
     );
@@ -177,6 +225,8 @@ void main() {
     late _Manager manager;
     late _Editor editor;
     late _Auth auth;
+    late _RecordingLibrary library;
+    late _RecoveryDrafts recovery;
     late String owner;
     late List<String> abandoned;
     late List<String>? deferredWhenEditorOpened;
@@ -190,6 +240,8 @@ void main() {
       manager = _Manager();
       editor = _Editor(events);
       auth = _Auth();
+      library = _RecordingLibrary();
+      recovery = _RecoveryDrafts();
       analytics = _Analytics();
       tracker = CreationAnalyticsTracker(analytics: analytics);
       owner =
@@ -237,6 +289,8 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(auth),
+            clipLibraryServiceProvider.overrideWithValue(library),
+            draftStorageServiceProvider.overrideWithValue(recovery),
             creationAnalyticsTrackerProvider.overrideWithValue(tracker),
             clipManagerProvider.overrideWith(() => manager),
             videoEditorProvider.overrideWith(() => editor),
@@ -537,6 +591,76 @@ void main() {
         },
       );
     }
+
+    testWidgets('a take with no durable Library row stays out of Layout', (
+      tester,
+    ) async {
+      library.rejectWrites = true;
+      var layoutOpened = false;
+      await start(
+        tester,
+        record: null,
+        observer: _CameraReplyObserver((_, navigator) {
+          manager.insertClip(0, _clip('unsaved-take'));
+          navigator.pop(true);
+        }),
+        layout: (_, _, _, _) async {
+          layoutOpened = true;
+          return null;
+        },
+      );
+
+      final context = tester.element(find.text('react'));
+      expect(layoutOpened, isFalse);
+      expect(manager.clips, isEmpty);
+      expect(recovery.saved.single.clips.single.id, 'unsaved-take');
+      expect(
+        find.text(context.l10n.videoEditorClipSaveFailed),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Back preserves a take when its Library write fails', (
+      tester,
+    ) async {
+      library.rejectWrites = true;
+      final write = Completer<void>();
+      library.writeGate = write;
+      final enrichment = Completer<void>();
+      manager.extractionGate = enrichment;
+      await start(
+        tester,
+        record: null,
+        pushed: true,
+        reducedMotion: true,
+        observer: _CameraReplyObserver((_, navigator) {
+          manager.insertClip(0, _clip('unsaved-take'));
+          navigator.pop(true);
+        }),
+        layout: (_, _, _, _) async => fail('must not open Layout'),
+      );
+
+      final context = tester.element(find.text('react'));
+      await tester.tap(find.text(context.l10n.commonBack));
+      await tester.pumpAndSettle();
+
+      expect(find.text('open library'), findsOneWidget);
+      expect(enrichment.isCompleted, isFalse);
+      expect(manager.clips, isEmpty);
+      expect(recovery.saved, isEmpty);
+
+      write.complete();
+      await tester.pumpAndSettle();
+      expect(recovery.saved.map((draft) => draft.clips.single.id), [
+        'unsaved-take',
+      ]);
+
+      final reused = _clip('unsaved-take').copyWith(volume: 0.5);
+      manager.insertClip(0, reused);
+      enrichment.complete();
+      await tester.pumpAndSettle();
+      expect(manager.clips.single, same(reused));
+    });
 
     testWidgets('Back leaves an unfinished preparation without a late Layout', (
       tester,

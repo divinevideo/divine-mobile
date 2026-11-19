@@ -4864,6 +4864,54 @@ void main() {
       );
     }
 
+    test(
+      'a failed reaction retention protects the autosave until retry succeeds',
+      () async {
+        stubAutosaveRow(autosave());
+        stubSaveDraft();
+        when(() => mockDraftStorage.deleteDraft(any()))
+            .thenAnswer((_) async {});
+        final notifier = container.read(videoEditorProvider.notifier);
+        container.read(clipManagerProvider.notifier).replaceClips([
+          sessionClip,
+        ], autosave: false);
+        notifier.updateMetadata(title: 'New project');
+        final firstWrite = Completer<void>();
+        var writes = 0;
+        final firstAttempt = notifier.retainAbandonedReaction(
+          () async {
+            if (++writes == 1) await firstWrite.future;
+          },
+        );
+        final failed = expectLater(firstAttempt, throwsException);
+
+        final pendingRemoval = notifier.removeAutosavedDraft();
+        final pendingOverwrite = notifier.flushPendingAutosave();
+        await pumpEventQueue();
+        verifyNever(() => mockDraftStorage.deleteDraft(any()));
+        expect(writes, 1);
+
+        firstWrite.completeError(Exception('Both destination writes refused'));
+        await failed;
+        await pendingRemoval;
+        expect(await pendingOverwrite, isFalse);
+        verifyNever(() => mockDraftStorage.deleteDraft(any()));
+        verifyNever(
+          () => mockDraftStorage.saveDraft(
+            any(),
+            deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+            ownedFilesMemo: any(named: 'ownedFilesMemo'),
+          ),
+        );
+
+        await notifier.removeAutosavedDraft();
+        expect(writes, 2);
+        verify(
+          () => mockDraftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
+        ).called(1);
+      },
+    );
+
     test('discardKeptDraft deletes only the kept draft', () async {
       when(() => mockDraftStorage.deleteDraft(any())).thenAnswer((_) async {});
 

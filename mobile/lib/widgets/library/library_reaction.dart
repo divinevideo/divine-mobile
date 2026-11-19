@@ -12,10 +12,12 @@ import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/creation_session_guard.dart';
@@ -220,6 +222,9 @@ Future<void> recordLibraryReaction(
   }) async {
     final generation = manager.sessionGeneration;
     final initialIds = manager.clips.map((clip) => clip.id).toSet();
+    // Keep the original account's stores even when this route has left.
+    final library = ref.read(clipLibraryServiceProvider);
+    final draftStorage = ref.read(draftStorageServiceProvider);
     final route = editorRecorderRoute(
       VideoRecorderRoute(
         fromEditor: true,
@@ -237,9 +242,54 @@ Future<void> recordLibraryReaction(
         .toSet();
     if (takeIds.isEmpty) return null;
     Future<List<DivineVideoClip>>? extraction;
+    var retentionFailed = false;
     Future<List<DivineVideoClip>> extract() =>
-        extraction ??= manager.extractClips(takeIds);
+        extraction ??= manager.extractClips(
+          takeIds,
+          retain: (takes) async {
+            try {
+              for (final take in takes) {
+                await library.retainClip(take);
+              }
+            } catch (_) {
+              retentionFailed = true;
+              rethrow;
+            }
+          },
+        );
     void abandon() {
+      if (!manager.isSessionCurrent(generation)) return;
+      final snapshots = manager.clips
+          .where((clip) => takeIds.contains(clip.id))
+          .toList(growable: false);
+      if (snapshots.isEmpty) return;
+      final recovery = DivineVideoDraft.create(
+        clips: snapshots,
+        title: '',
+        description: '',
+        hashtags: const {},
+        selectedApproach: 'video',
+      );
+      final retained = editor.retainAbandonedReaction(() async {
+        final unsaved = <DivineVideoClip>[];
+        for (final clip in snapshots) {
+          try {
+            await library.retainClip(clip);
+          } catch (error, stackTrace) {
+            Log.warning(
+              'Could not retain reaction recording in the Library',
+              name: 'LibraryReaction',
+              category: LogCategory.video,
+              error: error,
+              stackTrace: stackTrace,
+            );
+            unsaved.add(clip);
+          }
+        }
+        if (unsaved.isNotEmpty) {
+          await draftStorage.saveDraft(recovery.copyWith(clips: unsaved));
+        }
+      });
       final removed = manager.abandonExtraction(
         takeIds,
         generation: generation,
@@ -253,17 +303,17 @@ Future<void> recordLibraryReaction(
             clip.secondaryCamera?.compositeThumbnailPath,
           ],
       ].whereType<String>().toList();
-      if (paths.isEmpty) return;
       final settled = extraction;
       runDetached(
-        settled == null
-            ? reaction.cleanupFiles(paths)
-            : settled.then<void>(
-                (_) => reaction.cleanupFiles(paths),
-                onError: (Object _, StackTrace _) =>
-                    reaction.cleanupFiles(paths),
-              ),
-        'clean abandoned reaction metadata',
+        retained.then<void>((_) {
+          if (paths.isEmpty) return Future<void>.value();
+          if (settled == null) return reaction.cleanupFiles(paths);
+          return settled.then<void>(
+            (_) => reaction.cleanupFiles(paths),
+            onError: (Object _, StackTrace _) => reaction.cleanupFiles(paths),
+          );
+        }),
+        'retain abandoned reaction recordings and clean their metadata',
         logName: 'LibraryReaction',
         category: LogCategory.ui,
       );
@@ -288,6 +338,7 @@ Future<void> recordLibraryReaction(
           )
         : await extractWithoutOwner();
     if (takes == null) {
+      if (retentionFailed) abandon();
       if (cameraContext.mounted &&
           isActive() &&
           ModalRoute.of(cameraContext)?.isCurrent != false) {

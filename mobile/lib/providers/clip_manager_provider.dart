@@ -155,7 +155,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Waits for recorded takes to finish processing, then moves them out of
   /// the timeline without deleting their saved library copies.
-  Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+  Future<List<DivineVideoClip>> extractClips(
+    Set<String> clipIds, {
+    Future<void> Function(List<DivineVideoClip>)? retain,
+  }) async {
     final generation = _sessionGeneration;
     final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
     for (final take in takes) {
@@ -169,6 +172,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     final finished = [
       for (final take in takes) getClipById(take.id) ?? take,
     ];
+    if (retain != null) {
+      await retain(finished);
+      if (!isSessionCurrent(generation)) return [];
+    }
     replaceClips([
       for (final clip in clips)
         if (!clipIds.contains(clip.id)) clip,
