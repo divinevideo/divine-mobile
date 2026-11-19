@@ -84,6 +84,7 @@ class VideoRecorderRoute extends ConsumerWidget {
     this.challengeRecordingId,
     this.fromEditor = false,
     this.cropGuideAspectRatio,
+    this.analyticsSession,
   });
 
   final String entryPoint;
@@ -94,6 +95,7 @@ class VideoRecorderRoute extends ConsumerWidget {
   /// Uses the return-to-caller controls for a library reaction capture.
   final bool fromEditor;
   final double? cropGuideAspectRatio;
+  final CreationAnalyticsSession? analyticsSession;
 
   /// See [VideoRecorderView.autoRecord].
   final bool autoRecord;
@@ -104,11 +106,13 @@ class VideoRecorderRoute extends ConsumerWidget {
       entryPoint: entryPoint,
       autoRecord: autoRecord,
       fromEditor: fromEditor,
+      analyticsSession: analyticsSession,
     );
     if (cropGuideAspectRatio case final ratio?) {
       view = ClipCropGuide(aspectRatio: ratio, child: view);
     }
     Widget recorder = _VideoRecorderBlocScope(
+      analyticsSession: analyticsSession,
       child: CameraPermissionGate(child: view),
     );
     final recordingId = challengeRecordingId;
@@ -234,9 +238,10 @@ class VideoRecorderScreen extends ConsumerWidget {
 }
 
 class _VideoRecorderBlocScope extends ConsumerWidget {
-  const _VideoRecorderBlocScope({required this.child});
+  const _VideoRecorderBlocScope({required this.child, this.analyticsSession});
 
   final Widget child;
+  final CreationAnalyticsSession? analyticsSession;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,6 +262,7 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         videoEditor,
         sharedPreferences,
         creationAnalyticsTracker,
+        analyticsSession,
       )),
       create: (_) => VideoRecorderBloc(
         readClipManager: () => container.read(clipManagerProvider.notifier),
@@ -266,8 +272,12 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         performanceMonitor: container.read(
           performanceMonitoringServiceProvider,
         ),
-        onRecordingStarted: (mode) =>
-            unawaited(creationAnalyticsTracker.recordingStarted(mode)),
+        onRecordingStarted: (mode) => unawaited(
+          creationAnalyticsTracker.recordingStarted(
+            mode,
+            session: analyticsSession,
+          ),
+        ),
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
       ),
       child: child,
@@ -284,12 +294,14 @@ class VideoRecorderView extends ConsumerStatefulWidget {
     this.fromEditor = false,
     this.entryPoint = CreationEntryPoint.direct,
     this.autoRecord = false,
+    this.analyticsSession,
   });
 
   /// Whether the screen is opened from the video editor.
   final bool fromEditor;
 
   final String entryPoint;
+  final CreationAnalyticsSession? analyticsSession;
 
   /// Opens in capture mode and starts recording as soon as the camera is
   /// ready — the bottom-nav hold-to-record shortcut.
@@ -327,12 +339,16 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     final tracker = ref.read(creationAnalyticsTrackerProvider);
     _creationAnalyticsTracker = tracker;
     final openingMode =
-        tracker.activeMode ??
+        tracker.activeRecorderMode(widget.analyticsSession) ??
         (widget.fromEditor
             ? initialBlocMode
             : _requestedRecorderMode ?? _lastUsedRecorderMode);
     unawaited(
-      tracker.cameraOpened(mode: openingMode, entryPoint: widget.entryPoint),
+      tracker.cameraOpened(
+        mode: openingMode,
+        entryPoint: widget.entryPoint,
+        session: widget.analyticsSession,
+      ),
     );
 
     WidgetsBinding.instance.addObserver(this);
@@ -555,7 +571,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   @override
   void dispose() {
     if (!widget.fromEditor) {
-      unawaited(_creationAnalyticsTracker.creationAbandoned());
+      unawaited(
+        _creationAnalyticsTracker.creationAbandoned(
+          session: widget.analyticsSession,
+        ),
+      );
     }
     _releaseBackgroundPlaybackAfterDispose();
     _soundSubscription?.close();
@@ -593,9 +613,10 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         listener: (context, state) {
           final previous = _lastRecorderMode;
           _lastRecorderMode = state.recorderMode;
-          ref
-              .read(creationAnalyticsTrackerProvider)
-              .modeChanged(state.recorderMode);
+          _creationAnalyticsTracker.modeChanged(
+            state.recorderMode,
+            session: widget.analyticsSession,
+          );
           if (state.recorderMode == VideoRecorderMode.upload) {
             context.read<VideoRecorderBloc>().add(
               const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),

@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -62,6 +64,7 @@ Future<void> recordLibraryReaction(
   final editor = ref.read(videoEditorProvider.notifier);
   final publish = ref.read(videoPublishProvider.notifier);
   final manager = ref.read(clipManagerProvider.notifier);
+  final analytics = ref.read(creationAnalyticsTrackerProvider);
   final owner = ref.read(authServiceProvider).currentPublicKeyHex;
   // Capture the connection before navigation; cleanup can outlive its widget.
   final database = cleanupAbandoned == null ? ref.read(databaseProvider) : null;
@@ -91,6 +94,11 @@ Future<void> recordLibraryReaction(
     extractThumbnail: extractThumbnail,
     cleanupFiles: cleanupAbandoned,
   );
+  final analyticsSession = CreationAnalyticsSession();
+
+  void abandonAnalytics() {
+    unawaited(analytics.creationAbandoned(session: analyticsSession));
+  }
 
   Future<T> withProgress<T>(
     BuildContext progressContext,
@@ -100,6 +108,7 @@ Future<void> recordLibraryReaction(
     final ownerRoute = ModalRoute.of(progressContext);
     Future<void> leaveProgress() async {
       if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
+      abandonAnalytics();
       if (onLeave != null) {
         runDetached(
           Future<void>.sync(onLeave),
@@ -156,6 +165,7 @@ Future<void> recordLibraryReaction(
       runDetached(
         Future<void>.sync(() {
           try {
+            abandonAnalytics();
             onLeave?.call();
           } finally {
             dismiss();
@@ -183,8 +193,9 @@ Future<void> recordLibraryReaction(
     final route = editorRecorderRoute(
       VideoRecorderRoute(
         fromEditor: true,
-        entryPoint: CreationEntryPoint.editor,
+        entryPoint: CreationEntryPoint.library,
         cropGuideAspectRatio: cellAspectRatio,
+        analyticsSession: analyticsSession,
       ),
     );
     final result = await Navigator.of(cameraContext).push<bool>(route);
@@ -259,7 +270,25 @@ Future<void> recordLibraryReaction(
       }
       return null;
     }
-    return isActive() && result == true && takes.isNotEmpty ? takes : null;
+    if (!isActive() || result != true || takes.isEmpty) return null;
+    if (analytics.activeRecorderMode(analyticsSession) case final mode?) {
+      unawaited(
+        analytics.recordingCompleted(
+          session: analyticsSession,
+          mode: mode,
+          clipCount: takes.length,
+          duration: takes.fold(
+            Duration.zero,
+            (duration, take) => duration + take.budgetDuration,
+          ),
+          hasSound: ref.read(videoEditorProvider).selectedSound != null,
+          hasColorMask: takes.any(
+            (take) => take.captureChromaKey != null || take.chromaKey != null,
+          ),
+        ),
+      );
+    }
+    return takes;
   }
 
   Future<List<DivineVideoClip>?> pick(
@@ -385,6 +414,7 @@ Future<void> recordLibraryReaction(
     manager.insertClip(0, result);
     // Queue before the editor can publish/discard and flush this session.
     reaction.adoptGeneratedFiles();
+    analytics.handOffToEditor(analyticsSession);
     if (openEditor != null) {
       await openEditor(context);
     } else {
@@ -392,6 +422,7 @@ Future<void> recordLibraryReaction(
           .push<void>(context);
     }
   } finally {
+    abandonAnalytics();
     await reaction.cleanupGeneratedFiles();
     await reaction.close();
   }

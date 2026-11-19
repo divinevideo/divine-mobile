@@ -1,6 +1,8 @@
 // ABOUTME: Records one creation funnel from camera entry through publish.
 // ABOUTME: Keeps mode and elapsed-time attribution consistent across routes.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -9,6 +11,12 @@ typedef CreationAnalyticsClock = DateTime Function();
 
 /// Stages used by the creation funnel and its abandonment event.
 enum CreationFunnelStage { camera, recording, editor, publishing }
+
+/// Owns the recorder events of a flow that can open the camera repeatedly.
+class CreationAnalyticsSession {
+  bool _closed = false;
+  bool _handingOffToEditor = false;
+}
 
 /// App-scoped tracker for the active creation session.
 ///
@@ -28,6 +36,7 @@ class CreationAnalyticsTracker {
   VideoRecorderMode? _mode;
   DateTime? _cameraOpenedAt;
   CreationFunnelStage? _lastStage;
+  CreationAnalyticsSession? _cameraSession;
   bool _cameraOpenedLogged = false;
   bool _recordingStarted = false;
   bool _recordingCompleted = false;
@@ -38,11 +47,24 @@ class CreationAnalyticsTracker {
   VideoRecorderMode? get activeMode => _terminal ? null : _mode;
   DateTime? get cameraOpenedAt => _cameraOpenedAt;
 
+  /// Mode of the camera flow this recorder is joining, if it is still active.
+  VideoRecorderMode? activeRecorderMode(CreationAnalyticsSession? session) =>
+      _accepts(session) ? activeMode : null;
+
   Future<void> cameraOpened({
     required VideoRecorderMode mode,
     required String entryPoint,
+    CreationAnalyticsSession? session,
   }) async {
-    if (_mode != null && !_terminal) {
+    if (session?._closed ?? false) return;
+    final previous = _cameraSession;
+    if (!identical(previous, session)) {
+      if (previous != null) {
+        unawaited(creationAbandoned(session: previous));
+      }
+      _cameraSession = session;
+      _reset(mode: mode, openedAt: _now(), cameraOpenedLogged: true);
+    } else if (_mode != null && !_terminal) {
       _mode = mode;
       if (_cameraOpenedLogged) return;
       _cameraOpenedAt = _now();
@@ -57,11 +79,18 @@ class CreationAnalyticsTracker {
     );
   }
 
-  void modeChanged(VideoRecorderMode mode) {
-    if (!_terminal) _mode = mode;
+  void modeChanged(
+    VideoRecorderMode mode, {
+    CreationAnalyticsSession? session,
+  }) {
+    if (_accepts(session) && !_terminal) _mode = mode;
   }
 
-  Future<void> recordingStarted(VideoRecorderMode mode) async {
+  Future<void> recordingStarted(
+    VideoRecorderMode mode, {
+    CreationAnalyticsSession? session,
+  }) async {
+    if (!_accepts(session)) return;
     _ensureSession(mode);
     if (_recordingStarted || _terminal) return;
     _recordingStarted = true;
@@ -80,7 +109,9 @@ class CreationAnalyticsTracker {
     required Duration duration,
     bool hasSound = false,
     bool hasColorMask = false,
+    CreationAnalyticsSession? session,
   }) async {
+    if (!_accepts(session)) return;
     _ensureSession(mode);
     if (_recordingCompleted || _terminal) return;
     _recordingCompleted = true;
@@ -98,7 +129,21 @@ class CreationAnalyticsTracker {
     );
   }
 
+  /// The next editor opening can continue this recorder's funnel.
+  void handOffToEditor(CreationAnalyticsSession session) {
+    if (_accepts(session)) session._handingOffToEditor = true;
+  }
+
   Future<void> editorOpened(VideoRecorderMode mode) async {
+    if (_cameraSession case final session?) {
+      if (session._handingOffToEditor && !session._closed) {
+        // Keep the funnel for the editor, and revoke any late camera callbacks.
+        session._closed = true;
+      } else {
+        unawaited(creationAbandoned(session: session));
+      }
+      _cameraSession = null;
+    }
     _ensureSession(mode);
     if (_editorOpened || _terminal) return;
     _editorOpened = true;
@@ -145,16 +190,25 @@ class CreationAnalyticsTracker {
     );
   }
 
-  Future<void> creationAbandoned() async {
-    if (_mode == null || _lastStage == null || _terminal || _publishStarted) {
+  Future<void> creationAbandoned({CreationAnalyticsSession? session}) async {
+    if (session != null) session._closed = true;
+    if (!identical(_cameraSession, session) ||
+        _mode == null ||
+        _lastStage == null ||
+        _terminal ||
+        _publishStarted) {
       return;
     }
+    // The next camera can open before the analytics transport finishes.
+    _terminal = true;
     await _logEvent(
       name: 'creation_abandoned',
       parameters: {'mode': _mode!.name, 'last_stage': _lastStage!.name},
     );
-    _terminal = true;
   }
+
+  bool _accepts(CreationAnalyticsSession? session) =>
+      identical(_cameraSession, session) && !(session?._closed ?? false);
 
   /// Null when the active session never opened the camera (an editor-only
   /// restored draft). Reporting `0` there would be indistinguishable from an

@@ -1,5 +1,7 @@
 // ABOUTME: Tests creation funnel ordering, dimensions, timing, and abandonment.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -7,12 +9,16 @@ import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 
 class _RecordingSink implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
+  Completer<void>? abandonment;
 
   @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
-  }) async => events.add((name: name, parameters: parameters));
+  }) async {
+    events.add((name: name, parameters: parameters));
+    if (name == 'creation_abandoned') await abandonment?.future;
+  }
 
   @override
   Future<void> logScreenView({
@@ -102,6 +108,85 @@ void main() {
         'last_stage': 'recording',
       });
     });
+
+    test(
+      'a pending abandonment event does not block the next camera',
+      () async {
+        final sink = _RecordingSink()..abandonment = Completer<void>();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+
+        await tracker.cameraOpened(mode: .capture, entryPoint: 'library');
+        await tracker.recordingStarted(.capture);
+        final abandonment = tracker.creationAbandoned();
+        await tracker.cameraOpened(mode: .capture, entryPoint: 'bottom_nav');
+        await tracker.recordingStarted(.capture);
+        sink.abandonment!.complete();
+        await abandonment;
+
+        expect(sink.events.map((event) => event.name), [
+          'camera_opened',
+          'recording_started',
+          'creation_abandoned',
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(sink.events[3].parameters['entry_point'], 'bottom_nav');
+        expect(tracker.activeMode, VideoRecorderMode.capture);
+      },
+    );
+
+    test(
+      'late library recorder events cannot end or change a new funnel',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        final reaction = CreationAnalyticsSession();
+
+        await tracker.cameraOpened(
+          mode: .capture,
+          entryPoint: 'library',
+          session: reaction,
+        );
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+        await tracker.creationAbandoned(session: reaction);
+        await tracker.cameraOpened(
+          mode: .stopMotion,
+          entryPoint: 'library',
+          session: reaction,
+        );
+        tracker.modeChanged(.stopMotion, session: reaction);
+        await tracker.recordingStarted(.stopMotion, session: reaction);
+        await tracker.recordingStarted(.classic);
+
+        expect(sink.events.map((event) => event.name), [
+          'camera_opened',
+          'creation_abandoned',
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(tracker.activeMode, VideoRecorderMode.classic);
+        expect(sink.events.last.parameters, {'mode': 'classic'});
+      },
+    );
+
+    test(
+      'leaving a reaction that never opened cannot end another funnel',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        final reaction = CreationAnalyticsSession();
+
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+        await tracker.creationAbandoned(session: reaction);
+        await tracker.recordingStarted(.classic);
+
+        expect(sink.events.map((event) => event.name), [
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(tracker.activeMode, VideoRecorderMode.classic);
+      },
+    );
 
     test('records publish failure without misclassifying disposal', () async {
       final sink = _RecordingSink();

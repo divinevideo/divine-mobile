@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -18,6 +20,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -31,6 +34,16 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
 class _Auth extends Mock implements AuthService {}
+
+class _Analytics extends Fake implements AnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async => events.add((name: name, parameters: parameters));
+}
 
 class _CameraReplyObserver extends NavigatorObserver {
   _CameraReplyObserver(this.reply);
@@ -164,6 +177,8 @@ void main() {
     late String owner;
     late List<String> abandoned;
     late List<String>? deferredWhenEditorOpened;
+    late _Analytics analytics;
+    late CreationAnalyticsTracker tracker;
 
     setUp(() {
       events = [];
@@ -172,6 +187,8 @@ void main() {
       manager = _Manager();
       editor = _Editor(events);
       auth = _Auth();
+      analytics = _Analytics();
+      tracker = CreationAnalyticsTracker(analytics: analytics);
       owner =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
@@ -183,6 +200,7 @@ void main() {
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
       NavigatorObserver? observer,
+      Future<void> Function()? onOpenEditor,
       bool reducedMotion = false,
       bool pushed = false,
     }) async {
@@ -202,6 +220,7 @@ void main() {
               openEditor: (_) async {
                 deferredWhenEditorOpened = [...editor.deferredPaths];
                 events.add('open editor');
+                await onOpenEditor?.call();
               },
             ),
             child: const Text('react'),
@@ -212,6 +231,7 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(auth),
+            creationAnalyticsTrackerProvider.overrideWithValue(tracker),
             clipManagerProvider.overrideWith(() => manager),
             videoEditorProvider.overrideWith(() => editor),
             videoPublishProvider.overrideWith(() => _Publish(events, manager)),
@@ -249,6 +269,93 @@ void main() {
       await tester.tap(find.text('react'));
       await tester.pumpAndSettle();
     }
+
+    void reportCameraUse(Route<dynamic> route, NavigatorState navigator) {
+      final recorder = (route as PageRouteBuilder<bool>).pageBuilder(
+        navigator.context,
+        kAlwaysCompleteAnimation,
+        kAlwaysDismissedAnimation,
+      ) as VideoRecorderRoute;
+      unawaited(
+        tracker.cameraOpened(
+          mode: .capture,
+          entryPoint: recorder.entryPoint,
+          session: recorder.analyticsSession,
+        ),
+      );
+      unawaited(
+        tracker.recordingStarted(.capture, session: recorder.analyticsSession),
+      );
+    }
+
+    testWidgets(
+      'canceled library capture leaves the next camera funnel fresh',
+      (
+        tester,
+      ) async {
+        await start(
+          tester,
+          record: null,
+          layout: (_, _, _, _) async => fail('canceled camera opens no Layout'),
+          observer: _CameraReplyObserver((route, navigator) {
+            reportCameraUse(route, navigator);
+            navigator.pop(false);
+          }),
+        );
+
+        await tracker.cameraOpened(mode: .capture, entryPoint: 'bottom_nav');
+        await tracker.recordingStarted(.capture);
+        expect(analytics.events.map((event) => event.name), [
+          'camera_opened',
+          'recording_started',
+          'creation_abandoned',
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(analytics.events.first.parameters['entry_point'], 'library');
+        expect(
+          analytics.events
+              .lastWhere((event) => event.name == 'camera_opened')
+              .parameters['entry_point'],
+          'bottom_nav',
+        );
+      },
+    );
+
+    testWidgets('library re-recording continues the funnel into the editor', (
+      tester,
+    ) async {
+      var captures = 0;
+      await start(
+        tester,
+        record: null,
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
+          manager.insertClip(0, _clip('capture-${++captures}'));
+          navigator.pop(true);
+        }),
+        layout: (context, _, _, recordAgain) async {
+          final takes = await recordAgain(
+            context,
+            cellAspectRatio: 0.5,
+            maxClips: 1,
+          );
+          expect(takes?.single.id, 'capture-2');
+          return _clip('layout');
+        },
+        onOpenEditor: () => tracker.editorOpened(.capture),
+      );
+
+      expect(captures, 2);
+      expect(analytics.events.map((event) => event.name), [
+        'camera_opened',
+        'recording_started',
+        'recording_completed',
+        'editor_opened',
+      ]);
+      expect(analytics.events.first.parameters['entry_point'], 'library');
+      expect(analytics.events[2].parameters, containsPair('clip_count', 1));
+    });
 
     for (final path in [
       RoutePaths.videoRecorder,
@@ -367,7 +474,8 @@ void main() {
         record: null,
         pushed: true,
         reducedMotion: true,
-        observer: _CameraReplyObserver((_, navigator) {
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
           manager.insertClip(
             0,
             _clip('captured').copyWith(
@@ -395,12 +503,15 @@ void main() {
       expect(find.text(label), findsNothing);
       final releasedImmediately = manager.clips.isEmpty;
       expect(abandoned, isEmpty);
+      expect(analytics.events.last.name, 'creation_abandoned');
+      await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
       manager.insertClip(0, _clip('new-session'));
       gate.complete();
       await tester.pumpAndSettle();
       expect(events, ['keep draft', 'clear session']);
       expect(releasedImmediately, isTrue);
       expect(manager.clips.map((clip) => clip.id), ['new-session']);
+      expect(tracker.activeMode?.name, 'classic');
       expect(
         abandoned,
         containsAll([
@@ -536,9 +647,12 @@ void main() {
       manager.saveSucceeds = false;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record: null,
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
+          manager.insertClip(0, _clip('reaction'));
+          navigator.pop(true);
+        }),
         layout: (_, _, _, _) async => _clip('layout'),
       );
       final context = tester.element(find.text('react'));
@@ -547,6 +661,9 @@ void main() {
       expect(manager.clips, isEmpty);
       expect(manager.savedClips, isEmpty);
       expect(abandoned, ['/documents/layout.mp4']);
+      expect(analytics.events.last.name, 'creation_abandoned');
+      expect(analytics.events.last.parameters['last_stage'], 'recording');
+      expect(tracker.activeMode, isNull);
     });
 
     testWidgets('account change during layout save does not open an editor', (
