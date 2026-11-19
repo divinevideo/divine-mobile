@@ -175,13 +175,6 @@ void main() {
         expect(cells.map((cell) => cell.shape.isRectangle), everyElement(true));
       });
 
-      /// Matches an offset within rounding of [expected].
-      Matcher near(Offset expected) => isA<Offset>().having(
-        (offset) => (offset - expected).distance,
-        'distance from $expected',
-        lessThan(1e-9),
-      );
-
       /// The two corners of [corners] furthest along [direction]: a slanted
       /// cell's edge on that side.
       List<Offset> edge(List<Offset> corners, Offset direction) {
@@ -202,9 +195,15 @@ void main() {
         final [leftEnd, rightEnd] = divider;
 
         expect(leftEnd.dy, greaterThan(rightEnd.dy));
-        // With no gap the two cells share that edge.
-        expect(cornersInFrame(bottom), anyElement(near(leftEnd)));
-        expect(cornersInFrame(bottom), anyElement(near(rightEnd)));
+        // With no gap the top cell reaches a hair under the bottom one, which
+        // is drawn over it, so no border shows along the slanted line.
+        final [upperLeft, upperRight] = edge(
+          cornersInFrame(bottom),
+          const Offset(0, -1),
+        )..sort((a, b) => a.dx.compareTo(b.dx));
+        const overlap = SplitScreenLayoutGeometry.slantSeamOverlap;
+        expect(leftEnd.dy - upperLeft.dy, closeTo(overlap, overlap / 10));
+        expect(rightEnd.dy - upperRight.dy, closeTo(overlap, overlap / 10));
         expect(top.rect.top, 0);
         expect(bottom.rect.bottom, closeTo(1, 1e-9));
       });
@@ -239,8 +238,13 @@ void main() {
         final [topEnd, bottomEnd] = divider;
 
         expect(topEnd.dx, greaterThan(bottomEnd.dx));
-        expect(cornersInFrame(right), anyElement(near(topEnd)));
-        expect(cornersInFrame(right), anyElement(near(bottomEnd)));
+        // The left cell reaches a hair under the right one, drawn over it.
+        final [innerTop, innerBottom] = edge(
+          cornersInFrame(right),
+          const Offset(-1, 0),
+        )..sort((a, b) => a.dy.compareTo(b.dy));
+        expect(topEnd.dx, greaterThan(innerTop.dx));
+        expect(bottomEnd.dx, greaterThan(innerBottom.dx));
       });
 
       test('gives three slanted rows a middle cut on both sides', () {

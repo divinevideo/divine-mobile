@@ -417,7 +417,11 @@ enum SplitScreenLayoutPreset {
             unit,
             part == parts - 1
                 ? double.infinity
-                : dot(unit, through(part + 1)) - spacing / 2,
+                : dot(unit, through(part + 1)) -
+                      spacing / 2 +
+                      (spacing == 0
+                          ? SplitScreenLayoutGeometry.slantSeamOverlap
+                          : 0),
           ),
         ),
     ];
@@ -640,6 +644,13 @@ abstract final class SplitScreenLayoutGeometry {
   /// side. Wider than this and the cells start to read as thumbnails on a
   /// coloured card rather than a split screen.
   static const double maxGap = 0.08;
+
+  /// How far a slanted cell reaches under the next one with no gap, square
+  /// to the line, as a fraction of the frame's height: a hair under two
+  /// pixels of a full-height video. Two anti-aliased edges that only meet on
+  /// a slant let the border colour through as a faint line; the next cell is
+  /// drawn over the overlap and hides it.
+  static const double slantSeamOverlap = 0.001;
 
   /// Width of the picture-in-picture window as a fraction of the frame's.
   static const double pictureInPictureWidth = 0.38;
