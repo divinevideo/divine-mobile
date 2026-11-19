@@ -1,4 +1,4 @@
-// ABOUTME: Shared MaterialPage that presents as a full-screen modal on iOS
+// ABOUTME: Shared MaterialPage that presents as a full-screen modal on native iOS
 // ABOUTME: only, leaving the Android page transition untouched
 
 import 'package:flutter/foundation.dart';
@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 
-/// Wraps [child] in a page that presents as a full-screen modal on iOS and as a
-/// regular page everywhere else.
+/// Wraps [child] in a full-screen modal on native iOS and a regular page
+/// everywhere else.
 ///
 /// On iOS the full-screen-dialog flag selects Cupertino's slide-up transition.
 /// That also disables the edge back-swipe and holds the screen behind still.
@@ -32,7 +32,8 @@ MaterialPage<void> iosModalPage({
       ...state.uri.queryParameters,
     },
     restorationId: state.pageKey.value,
-    fullscreenDialog: (platform ?? defaultTargetPlatform) == TargetPlatform.iOS,
+    fullscreenDialog:
+        !kIsWeb && (platform ?? defaultTargetPlatform) == TargetPlatform.iOS,
     child: child,
   );
 }

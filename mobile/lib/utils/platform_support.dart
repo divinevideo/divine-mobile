@@ -3,6 +3,12 @@
 
 import 'package:flutter/foundation.dart';
 
+/// Whether the app is running natively on Android or iOS.
+bool get isNativeMobilePlatform =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
+
 /// Whether Firebase Core config can initialize on the current platform.
 ///
 /// This is a coarse platform gate used before touching

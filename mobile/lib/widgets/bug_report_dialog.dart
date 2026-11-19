@@ -17,6 +17,7 @@ import 'package:openvine/services/bug_report_log_summary.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/widgets/image_attachment_picker.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 import 'package:openvine/widgets/support_form_actions.dart';
@@ -47,7 +48,7 @@ class BugReportScreen extends StatefulWidget {
   final SubmitBugReportAction? submitBugReport;
   final BuildLogsSummary buildLogsSummary;
 
-  /// Whether to teach the Profile-tab hold shortcut at the bottom of the form.
+  /// Whether to teach the Profile-tab hold shortcut in the native mobile app.
   ///
   /// False when that hold opened the form, since the tip would only repeat
   /// what the user just did.
@@ -213,7 +214,7 @@ class _BugReportView extends StatelessWidget {
                           color: context.vineColors.mutedText,
                         ),
                       ),
-                      if (showProfileHoldTip)
+                      if (showProfileHoldTip && isNativeMobilePlatform)
                         Text(
                           l10n.bugReportProfileHoldTip,
                           style: VineTheme.bodySmallFont(

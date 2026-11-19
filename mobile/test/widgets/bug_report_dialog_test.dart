@@ -579,6 +579,12 @@ void main() {
       expect(find.text(l10n.bugReportProfileHoldTip), findsOneWidget);
     });
 
+    testWidgets('omits the shortcut tip on desktop', (tester) async {
+      await openFlow(tester);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.bugReportProfileHoldTip), findsNothing);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
     testWidgets('skips the tip when the hold opened the form', (tester) async {
       await openFlow(tester, showProfileHoldTip: false);
       final l10n = lookupAppLocalizations(const Locale('en'));

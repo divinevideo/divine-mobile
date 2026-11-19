@@ -33,6 +33,7 @@ import 'package:openvine/utils/camera_permission_check.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/widgets/notification_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -723,17 +724,21 @@ class _ProfileTabButton extends ConsumerWidget {
       ),
     );
 
+    final reportBug = isNativeMobilePlatform ? onLongPress : null;
     return _TabSlot(
       identifier: 'profile_tab',
       label: semanticLabel,
       onTap: onTap,
-      onLongPress: onLongPress,
-      onLongPressHint: context.l10n.navProfileLongPressHint,
+      onLongPress: reportBug,
+      onLongPressHint: reportBug == null
+          ? null
+          : context.l10n.navProfileLongPressHint,
       // iOS only: TalkBack would list it twice, and iOS ignores hint overrides.
-      customSemanticsActions: defaultTargetPlatform == TargetPlatform.iOS
+      customSemanticsActions:
+          reportBug != null && defaultTargetPlatform == TargetPlatform.iOS
           ? {
               CustomSemanticsAction(label: context.l10n.supportReportBug):
-                  onLongPress,
+                  reportBug,
             }
           : null,
       tapTargetWidth: tapTargetWidth,

@@ -738,6 +738,25 @@ void main() {
         expect(summary ?? '', isNot(contains('held profile tab')));
       });
 
+      testWidgets('does not offer the report shortcut on desktop', (
+        tester,
+      ) async {
+        await pumpSubjectWithRouter(tester, router);
+        final profileTab = find.bySemanticsIdentifier('profile_tab');
+
+        await tester.longPress(profileTab);
+        await tester.pump();
+
+        verifyNever(
+          () => router.push<Object?>(
+            RoutePaths.supportReportBugFromProfileHold,
+            extra: any(named: 'extra'),
+          ),
+        );
+        final semantics = tester.getSemantics(profileTab).getSemanticsData();
+        expect(semantics.hasAction(SemanticsAction.longPress), isFalse);
+      }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
       testWidgets('a tap still opens the profile, not the report', (
         tester,
       ) async {
