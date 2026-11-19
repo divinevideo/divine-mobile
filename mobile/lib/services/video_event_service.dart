@@ -5787,7 +5787,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _addVideoToSubscription(videoEvent, SubscriptionType.discovery);
   }
 
-  /// Update a video event (for addressable events with same pubkey/d-tag).
+  /// Update a video event (for addressable events with the same kind/pubkey/d-tag).
   ///
   /// This method replaces an existing video across all data structures:
   /// - `_eventLists` (all subscription types: homeFeed, discovery, etc.)
@@ -5811,13 +5811,14 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       final eventList = entry.value;
 
       // Find by stable identifier and pubkey instead of event.id.
-      // For addressable events, (pubkey, d-tag) is the stable identifier.
+      // For addressable events, (kind, pubkey, d-tag) is the stable identifier.
       // Note: Some relays/clients may omit the 'd' tag, in which case we fall
       // back to event.id; using stableId avoids mismatches that cause duplicates.
       final existingIndex = eventList.indexWhere(
         (existing) =>
             existing.stableId == updatedVideo.stableId &&
-            existing.pubkey == updatedVideo.pubkey,
+            existing.pubkey == updatedVideo.pubkey &&
+            existing.referenceKind == updatedVideo.referenceKind,
       );
 
       if (existingIndex != -1) {
@@ -5830,9 +5831,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         foundAny = true;
 
         // Update replaceable tracking map
-        // Use NIP71VideoKinds.addressableShortVideo since that's what Divine uses
         final replaceKey =
-            '$subscriptionType:${NIP71VideoKinds.addressableShortVideo}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
+            '$subscriptionType:${mergedVideo.referenceKind}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
         // The raw created_at, as _handleReplaceableVideoEvent records it.
         // createdAt holds the published_at every edit re-emits, so an
         // earlier revision would compare as newer.

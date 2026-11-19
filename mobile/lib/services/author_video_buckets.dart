@@ -133,7 +133,7 @@ class AuthorVideoBuckets {
   }
 
   /// Merges [updated] into the cached video with the same `stableId` and
-  /// `pubkey`, using [merge] to combine the two versions.
+  /// author and kind, using [merge] to combine the two versions.
   ///
   /// Returns whether a match was found.
   bool replaceByStableId(
@@ -147,7 +147,8 @@ class AuthorVideoBuckets {
     final index = bucket.indexWhere(
       (existing) =>
           existing.stableId == updated.stableId &&
-          existing.pubkey == updated.pubkey,
+          existing.pubkey == updated.pubkey &&
+          existing.referenceKind == updated.referenceKind,
     );
     if (index == -1) return false;
 
