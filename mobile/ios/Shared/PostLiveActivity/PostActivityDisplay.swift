@@ -72,6 +72,26 @@ struct PostActivityDisplay: Equatable {
     }
 }
 
+/// One piece of what VoiceOver reads for the activity, in reading order.
+enum PostActivitySpokenPart: Equatable {
+    case yourPost
+    case headline(PostActivityHeadline)
+    case count(PostActivityCount)
+    case firstRunNote
+    case updated
+}
+
+extension PostActivityDisplay {
+    /// Everything a sighted person can see, in the order it should be read,
+    /// including that the numbers have gone stale.
+    var spokenParts: [PostActivitySpokenPart] {
+        [.yourPost, .headline(headline)]
+            + counts.map(PostActivitySpokenPart.count)
+            + (showsFirstRunNote ? [.firstRunNote] : [])
+            + (showsUpdatedAt ? [.updated] : [])
+    }
+}
+
 enum PostActivityFormat {
     /// A locale-aware compact number, so 1,234,567 reads "1.2M" in English.
     static func compact(_ value: Int, locale: Locale) -> String {
@@ -100,8 +120,26 @@ enum PostActivityThumbnail {
 /// deep-link handling knows this route, a tap opens the app at its default
 /// screen.
 enum PostActivityLink {
-    static func url(postEventId: String) -> URL {
-        // Custom-scheme URLs with a full hex id are always valid.
-        URL(string: "divine:///post-analytics/\(postEventId)")!
+    /// Characters a query value may carry unescaped. `&`, `=`, `+` and `?`
+    /// are legal in a query but would split or corrupt the value, so they
+    /// are escaped too.
+    private static let queryValueAllowed: CharacterSet = {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+?/")
+        return allowed
+    }()
+
+    /// Carries the post's address as well as its first event id: after an
+    /// edit that id no longer resolves, and the address still does.
+    static func url(postEventId: String, postCoordinate: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "divine"
+        components.host = ""
+        components.path = "/post-analytics/\(postEventId)"
+        guard let coordinate = postCoordinate.addingPercentEncoding(
+            withAllowedCharacters: queryValueAllowed
+        ) else { return nil }
+        components.percentEncodedQuery = "coordinate=\(coordinate)"
+        return components.url
     }
 }

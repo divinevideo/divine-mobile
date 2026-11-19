@@ -199,11 +199,52 @@ final class PostActivityDisplayTests: XCTestCase {
         XCTAssertNotNil(PostActivityThumbnail.load(fileName: "good.png", containerURL: container))
     }
 
-    func testLinkUsesFullEventId() {
-        XCTAssertEqual(
-            PostActivityLink.url(postEventId: fullEventId).absoluteString,
-            "divine:///post-analytics/\(fullEventId)"
+    func testLinkCarriesFullEventIdAndCoordinate() throws {
+        let coordinate = "34236:\(String(repeating: "cd", count: 32)):my-post"
+        let url = try XCTUnwrap(
+            PostActivityLink.url(postEventId: fullEventId, postCoordinate: coordinate)
         )
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(components.scheme, "divine")
+        XCTAssertEqual(components.path, "/post-analytics/\(fullEventId)")
+        XCTAssertEqual(
+            components.queryItems?.first { $0.name == "coordinate" }?.value,
+            coordinate
+        )
+    }
+
+    /// After an edit the first event id no longer resolves, so the address
+    /// has to survive the trip, whatever characters its d-tag holds.
+    func testLinkEncodesACoordinateWithAnyDTag() throws {
+        let coordinate = "34236:\(String(repeating: "cd", count: 32)):a b&c=d/é?#"
+        let url = try XCTUnwrap(
+            PostActivityLink.url(postEventId: fullEventId, postCoordinate: coordinate)
+        )
+        let decoded = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "coordinate" }?.value
+        XCTAssertEqual(decoded, coordinate)
+    }
+
+    // MARK: - What VoiceOver reads
+
+    func testSpokenPartsReadHeadlineThenEachKnownCountInOrder() {
+        let parts = display(state(.live, views: 48, likes: 9)).spokenParts
+        XCTAssertEqual(parts, [
+            .yourPost,
+            .headline(.live),
+            .count(PostActivityCount(metric: .views, value: 48)),
+            .count(PostActivityCount(metric: .likes, value: 9)),
+        ])
+    }
+
+    func testSpokenPartsSayWhenTheActivityIsStale() {
+        let parts = display(state(.live, views: 48), stale: true).spokenParts
+        XCTAssertEqual(parts.last, .updated)
+    }
+
+    func testSpokenPartsIncludeTheFirstRunNote() {
+        let parts = display(state(.live, note: true)).spokenParts
+        XCTAssertEqual(parts, [.yourPost, .headline(.live), .firstRunNote])
     }
 
     func testContentStateRoundTripsAndStaysSmall() throws {

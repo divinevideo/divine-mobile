@@ -74,24 +74,42 @@ struct PostActivityLockScreenView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             PostActivityAccessibility.label(
-                display: display,
+                parts: display.spokenParts,
                 postedAt: attributes.postedAt,
+                updatedAt: state.updatedAt,
                 bundle: bundle
             )
         )
     }
 }
 
+/// The compact island's leading side. It carries the headline for VoiceOver,
+/// since the thumbnail alone says nothing.
 struct PostActivityCompactLeadingView: View {
     let thumbnail: UIImage?
+    let display: PostActivityDisplay
+    let postedAt: Date
+    let bundle: Bundle
 
     var body: some View {
         PostActivityThumbnailView(image: thumbnail, size: 22, cornerRadius: 5)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                PostActivityAccessibility.label(
+                    parts: [.yourPost, .headline(display.headline)],
+                    postedAt: postedAt,
+                    updatedAt: postedAt,
+                    bundle: bundle
+                )
+            )
     }
 }
 
+/// The compact island's single count. Dimmed, and said to be old, when the
+/// server has stopped checking in, so a frozen number never reads as current.
 struct PostActivityCompactTrailingView: View {
     let display: PostActivityDisplay
+    let updatedAt: Date
     let bundle: Bundle
 
     var body: some View {
@@ -99,29 +117,72 @@ struct PostActivityCompactTrailingView: View {
             PostActivityCountLabel(count: count)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PostActivityColors.green)
+                .opacity(display.showsUpdatedAt ? 0.5 : 1)
                 .frame(maxWidth: 52)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(PostActivityAccessibility.countText(count, bundle: bundle))
+                .accessibilityLabel(
+                    PostActivityAccessibility.label(
+                        parts: [.count(count)] + (display.showsUpdatedAt ? [.updated] : []),
+                        postedAt: updatedAt,
+                        updatedAt: updatedAt,
+                        bundle: bundle
+                    )
+                )
         }
     }
 }
 
 struct PostActivityMinimalView: View {
     let thumbnail: UIImage?
-
-    var body: some View {
-        PostActivityThumbnailView(image: thumbnail, size: 20, cornerRadius: 10)
-    }
-}
-
-struct PostActivityExpandedBottomView: View {
     let display: PostActivityDisplay
+    let postedAt: Date
     let bundle: Bundle
 
     var body: some View {
-        PostActivityDetailLine(display: display, bundle: bundle)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        PostActivityThumbnailView(image: thumbnail, size: 20, cornerRadius: 10)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                PostActivityAccessibility.label(
+                    parts: [.yourPost, .headline(display.headline)],
+                    postedAt: postedAt,
+                    updatedAt: postedAt,
+                    bundle: bundle
+                )
+            )
+    }
+}
+
+/// The expanded island's bottom region: counts or note, then "Updated … ago"
+/// when stale. It carries the whole activity's VoiceOver label, so the
+/// counts are never read as bare numbers.
+struct PostActivityExpandedBottomView: View {
+    let display: PostActivityDisplay
+    let postedAt: Date
+    let updatedAt: Date
+    let bundle: Bundle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            PostActivityDetailLine(display: display, bundle: bundle)
+            if display.showsUpdatedAt {
+                Text("divine_post_activity_updated \(Text(updatedAt, style: .relative))", bundle: bundle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            PostActivityAccessibility.label(
+                parts: display.spokenParts,
+                postedAt: postedAt,
+                updatedAt: updatedAt,
+                bundle: bundle
+            )
+        )
     }
 }
 
@@ -133,9 +194,12 @@ struct PostActivityHeadlineText: View {
     let bundle: Bundle
 
     var body: some View {
+        // Two lines: the longest messages ("can't find stats", "no views yet
+        // · live for …") are the ones that must not be cut off.
         PostActivityAccessibility.headlineText(headline, postedAt: postedAt, bundle: bundle)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -269,19 +333,28 @@ enum PostActivityAccessibility {
         }
     }
 
-    /// One label for the whole activity: whose post, the headline, then each
-    /// known count read with its plural form.
-    static func label(display: PostActivityDisplay, postedAt: Date, bundle: Bundle) -> Text {
-        var label = Text(LocalizedStringKey(PostActivityStrings.yourPost), bundle: bundle)
-            + Text(", ")
-            + headlineText(display.headline, postedAt: postedAt, bundle: bundle)
-        for count in display.counts {
-            label = label + Text(", ") + countText(count, bundle: bundle)
+    /// Reads the given parts as one label, counts with their plural forms.
+    static func label(
+        parts: [PostActivitySpokenPart],
+        postedAt: Date,
+        updatedAt: Date,
+        bundle: Bundle
+    ) -> Text {
+        let pieces = parts.map { part -> Text in
+            switch part {
+            case .yourPost:
+                return Text(LocalizedStringKey(PostActivityStrings.yourPost), bundle: bundle)
+            case .headline(let headline):
+                return headlineText(headline, postedAt: postedAt, bundle: bundle)
+            case .count(let count):
+                return countText(count, bundle: bundle)
+            case .firstRunNote:
+                return Text(LocalizedStringKey(PostActivityStrings.firstRunNote), bundle: bundle)
+            case .updated:
+                return Text("divine_post_activity_updated \(Text(updatedAt, style: .relative))", bundle: bundle)
+            }
         }
-        if display.showsFirstRunNote {
-            label = label + Text(". ")
-                + Text(LocalizedStringKey(PostActivityStrings.firstRunNote), bundle: bundle)
-        }
-        return label
+        guard let first = pieces.first else { return Text("") }
+        return pieces.dropFirst().reduce(first) { $0 + Text(", ") + $1 }
     }
 }

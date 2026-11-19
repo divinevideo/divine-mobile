@@ -87,6 +87,7 @@ final class PostActivityViewsTests: XCTestCase {
         let big = state(.live, views: 9_876_543, likes: Int.max)
         let view = PostActivityCompactTrailingView(
             display: PostActivityDisplay.make(state: big, isStale: false),
+            updatedAt: big.updatedAt,
             bundle: widgetBundle
         )
         .environment(\.locale, Locale(identifier: "de_DE"))
@@ -94,19 +95,37 @@ final class PostActivityViewsTests: XCTestCase {
         XCTAssertLessThanOrEqual(image.size.width, 64)
     }
 
-    func testLockScreenRendersRightToLeft() {
-        let view = lockScreen(state(.live, views: 48, likes: 9, comments: 2))
-            .frame(width: 360)
-            .environment(\.layoutDirection, .rightToLeft)
-            .environment(\.locale, Locale(identifier: "ar"))
-        XCTAssertNotNil(render(view))
+    /// Height of a headline laid out in the Lock Screen's headline width.
+    private func headlineHeight(
+        _ headline: PostActivityHeadline,
+        locale: String,
+        typeSize: DynamicTypeSize = .large
+    ) throws -> CGFloat {
+        let view = PostActivityHeadlineText(
+            headline: headline,
+            postedAt: Date(),
+            bundle: widgetBundle
+        )
+        .font(.headline)
+        .frame(width: 265, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .environment(\.locale, Locale(identifier: locale))
+        .environment(\.dynamicTypeSize, typeSize)
+        return try XCTUnwrap(render(view)).size.height
     }
 
-    func testLockScreenRendersAtAccessibilityTextSize() {
-        let view = lockScreen(state(.live, views: 48, likes: 9, comments: 2))
-            .frame(width: 360)
-            .environment(\.dynamicTypeSize, .accessibility3)
-        XCTAssertNotNil(render(view))
+    /// The messages that matter most are the longest ones; they must wrap to
+    /// a second line rather than be cut off mid-word.
+    func testLongHeadlineWrapsInsteadOfTruncating() throws {
+        let oneLine = try headlineHeight(.firstHour, locale: "fr")
+        let long = try headlineHeight(.cantFind, locale: "fr")
+        XCTAssertGreaterThan(long, oneLine * 1.5)
+    }
+
+    func testHeadlineWrapsAtAccessibilityTextSize() throws {
+        let oneLine = try headlineHeight(.firstHour, locale: "en", typeSize: .accessibility3)
+        let long = try headlineHeight(.cantFind, locale: "en", typeSize: .accessibility3)
+        XCTAssertGreaterThan(long, oneLine * 1.5)
     }
 
     func testEveryKeyResolvesInEnglish() throws {

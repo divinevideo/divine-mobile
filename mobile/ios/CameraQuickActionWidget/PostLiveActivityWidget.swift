@@ -18,35 +18,60 @@ struct PostLiveActivityWidget: Widget {
             )
             .activityBackgroundTint(PostActivityColors.deepGreen)
             .activitySystemActionForegroundColor(.white)
-            .widgetURL(PostActivityLink.url(postEventId: context.attributes.postEventId))
+            .widgetURL(link(for: context.attributes))
         } dynamicIsland: { context in
             let display = PostActivityDisplay.make(state: context.state, isStale: context.isStale)
             let image = thumbnail(for: context.attributes)
+            let postedAt = context.attributes.postedAt
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     PostActivityThumbnailView(image: image, size: 44, cornerRadius: 9)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    PostActivityHeadlineText(
-                        headline: display.headline,
-                        postedAt: context.attributes.postedAt,
-                        bundle: .main
-                    )
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                    PostActivityHeadlineText(headline: display.headline, postedAt: postedAt, bundle: .main)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        // The bottom region reads the whole activity, headline included.
+                        .accessibilityHidden(true)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    PostActivityExpandedBottomView(display: display, bundle: .main)
+                    PostActivityExpandedBottomView(
+                        display: display,
+                        postedAt: postedAt,
+                        updatedAt: context.state.updatedAt,
+                        bundle: .main
+                    )
                 }
             } compactLeading: {
-                PostActivityCompactLeadingView(thumbnail: image)
+                PostActivityCompactLeadingView(
+                    thumbnail: image,
+                    display: display,
+                    postedAt: postedAt,
+                    bundle: .main
+                )
             } compactTrailing: {
-                PostActivityCompactTrailingView(display: display, bundle: .main)
+                PostActivityCompactTrailingView(
+                    display: display,
+                    updatedAt: context.state.updatedAt,
+                    bundle: .main
+                )
             } minimal: {
-                PostActivityMinimalView(thumbnail: image)
+                PostActivityMinimalView(
+                    thumbnail: image,
+                    display: display,
+                    postedAt: postedAt,
+                    bundle: .main
+                )
             }
-            .widgetURL(PostActivityLink.url(postEventId: context.attributes.postEventId))
+            .widgetURL(link(for: context.attributes))
         }
+    }
+
+    private func link(for attributes: PostActivityAttributes) -> URL? {
+        PostActivityLink.url(
+            postEventId: attributes.postEventId,
+            postCoordinate: attributes.postCoordinate
+        )
     }
 
     private func thumbnail(for attributes: PostActivityAttributes) -> UIImage? {
