@@ -61,7 +61,7 @@ Defaults below describe this source configuration **without build overrides**, n
 
 Find and report release-affecting gates outside the enum, including backend flags, build configuration and service availability. At minimum examine:
 
-- `CONSUMPTION_ANALYTICS_ENABLED`: followed/engagement/linkability measurements remain held. QA enabling a UI flag does not authorize changing consent or these analytics gates. Distinguish optional telemetry from dependencies that actually block the user flow; propose any separation explicitly for owner review.
+- `CONSUMPTION_ANALYTICS_ENABLED` (off by default) gates the people-suggestion `followed` outcome, engagement and feed-depth measurements, which remain held. `PRODUCT_ANALYTICS_ENABLED` decides whether queued product events are sent at all, including the Find people `exposed` and `dismissed` outcomes; it is on by default only when `DEFAULT_ENV=STAGING`. QA enabling a UI flag does not authorize changing consent or these analytics gates. Distinguish optional telemetry from dependencies that actually block the user flow; propose any separation explicitly for owner review.
 - `PARENT_CONSENT_DELIVERY_VERIFIED`, `CONCORD_INVITE_URL` and the CDN enrollment list above: configuration has independent meaning; do not fabricate values to bypass a requirement.
 - Backend endpoint and migration availability, platform-specific support, signing/account state and any feature dependencies discovered in call sites.
 
