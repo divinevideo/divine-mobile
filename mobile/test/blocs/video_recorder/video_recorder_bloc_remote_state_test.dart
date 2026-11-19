@@ -157,6 +157,24 @@ void main() {
       },
     );
 
+    test('publishes again when a stop-motion frame is taken', () {
+      stubClips(total: Duration.zero);
+      const stopMotion = VideoRecorderBlocState(
+        isCameraInitialized: true,
+        recorderMode: VideoRecorderMode.stopMotion,
+      );
+      final bloc = buildBloc()..emit(stopMotion);
+      addTearDown(bloc.close);
+      expect(published.single!.stillShutterCount, equals(0));
+
+      bloc.emit(stopMotion.copyWith(stopMotionShutterTick: 1));
+
+      expect(published, hasLength(2));
+      final state = published.last!;
+      expect(state.stillShutterCount, equals(1));
+      expect(state.isShutterActive, isFalse);
+    });
+
     test('reports an active shutter during the countdown before a take', () {
       stubClips(total: const Duration(seconds: 2));
       final bloc = buildBloc()..emit(openRecorder);

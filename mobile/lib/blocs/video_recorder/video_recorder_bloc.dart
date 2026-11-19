@@ -542,12 +542,16 @@ class VideoRecorderBloc
         budget: VideoEditorConstants.maxDuration,
         modeName: recorder.recorderMode.label,
         isShutterActive: isShutterActive,
+        // A stop-motion frame changes nothing else a remote shows, so the
+        // Watch would otherwise not learn that its press was handled.
+        stillShutterCount: recorder.stopMotionShutterTick,
       );
       signature = (
         isTakeRunning,
         isShutterActive,
         recorded,
         recorder.recorderMode,
+        recorder.stopMotionShutterTick,
       );
     }
     if (signature == _publishedRemoteRecorder) return;
