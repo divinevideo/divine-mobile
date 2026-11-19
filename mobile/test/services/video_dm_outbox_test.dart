@@ -81,6 +81,18 @@ class _PendingSend {
   /// then answers the publication with the same result.
   final Completer<NIP17SendResult> completer = Completer<NIP17SendResult>();
 
+  final Completer<void> _uploadFinished = Completer<void>();
+
+  /// Finishes the upload alone, leaving the publication that follows it
+  /// waiting on [completer].
+  void finishUpload() => _uploadFinished.complete();
+
+  /// Settles when the upload finishes, through [finishUpload] or [completer].
+  Future<DmVideoUpload> get uploaded =>
+      Future.any([_uploadFinished.future, completer.future]).then(
+        (_) => upload,
+      );
+
   /// The extra tags the publication was given, once it ran.
   List<List<String>>? publishedTags;
 }
@@ -231,13 +243,19 @@ void main() {
                 as void Function(double)?,
       );
       sends.add(send);
-      return send.completer.future.then((_) => send.upload);
+      return send.uploaded;
     });
+    // Starts publication as the service does: past the point of
+    // cancellation, then reporting it.
     whenPublishVideo().thenAnswer((invocation) {
       final uploaded = invocation.namedArguments[#uploaded] as DmVideoUpload;
       final send = sends.lastWhere((send) => identical(send.upload, uploaded));
       send.publishedTags =
           invocation.namedArguments[#extraTags] as List<List<String>>;
+      (invocation.namedArguments[#cancellation] as DmVideoSendCancellation?)
+          ?.beginPublication();
+      (invocation.namedArguments[#onPhase] as void Function(DmVideoSendPhase)?)
+          ?.call(DmVideoSendPhase.sending);
       return send.completer.future;
     });
   }
@@ -518,7 +536,8 @@ void main() {
         final outcomes = recordOutcomes();
         sendVideo();
         await tester.pump();
-        sends.single.onPhase!(DmVideoSendPhase.sending);
+        sends.single.finishUpload();
+        await tester.pump();
         await tester.pump(const Duration(hours: 1));
         expect(entries.last.single.phase, OutgoingVideoDmPhase.publishing);
         expect(outcomes, isEmpty);
@@ -613,7 +632,8 @@ void main() {
         sendVideo();
         sendVideo(path: '/v/queued.mp4');
         await tester.pump();
-        sends.single.onPhase!(DmVideoSendPhase.sending);
+        sends.single.finishUpload();
+        await tester.pump();
         var settled = false;
         final quiesced = outbox.quiesce().then((_) => settled = true);
         await tester.pump(const Duration(minutes: 30));
@@ -709,7 +729,8 @@ void main() {
           send.onPhase!(DmVideoSendPhase.encrypting);
           send.onPhase!(DmVideoSendPhase.uploading);
           send.onUploadProgress!(0.4);
-          send.onPhase!(DmVideoSendPhase.sending);
+          send.finishUpload();
+          await pumpEventQueue();
           send.completer.complete(_success('r1'));
           await pumpEventQueue();
 
@@ -2662,7 +2683,9 @@ void main() {
                 "the new account's send service",
           );
           final [running, queued] = events.last;
-          expect(running.phase, equals(OutgoingVideoDmPhase.sent));
+          // Its upload finished after the switch, and publication checks the
+          // account again before it starts.
+          expect(running.phase, equals(OutgoingVideoDmPhase.failed));
           expect(queued.phase, equals(OutgoingVideoDmPhase.failed));
         },
       );
