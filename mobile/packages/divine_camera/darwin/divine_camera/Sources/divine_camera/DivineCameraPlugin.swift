@@ -45,8 +45,8 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         // Up from launch so a Watch still showing a recorder from a previous
         // run of the app learns that it is gone.
         let watchRemoteLink = WatchRemoteLink(
-            onToggleRecording: { [weak instance] in
-                instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: "watch")
+            onShutterAction: { [weak instance] action in
+                instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: action.rawValue)
             },
             onWatchRemoteChanged: { state in
                 DivineCameraPlugin.onWatchRemoteChanged?(state)

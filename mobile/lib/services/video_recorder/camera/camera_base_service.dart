@@ -8,6 +8,7 @@ import 'package:divine_camera/divine_camera.dart'
         DivineVideoQuality,
         DivineVideoStabilizationMode,
         PhotoCaptureResult,
+        RemoteRecordTrigger,
         SecondaryCameraState,
         VideoRecordingResult;
 import 'package:flutter/foundation.dart';
@@ -233,7 +234,7 @@ abstract class CameraService {
   ///
   /// This is called when the user presses a volume button or Bluetooth
   /// remote while remote record control is enabled.
-  void setOnRemoteRecordTrigger(void Function()? callback);
+  void setOnRemoteRecordTrigger(void Function(RemoteRecordTrigger)? callback);
 }
 
 /// A camera service that can record with its front and back camera at once.
