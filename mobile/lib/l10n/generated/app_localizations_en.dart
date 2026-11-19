@@ -3419,6 +3419,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsOpenPost => 'Open Post';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Stats are on their way';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'No views yet · live for $minutes min',
+      one: 'No views yet · live for $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'We can\'t find stats for this post';
+
+  @override
+  String get analyticsViewPost => 'View post';
+
+  @override
+  String get analyticsStopLiveActivity => 'Stop Lock Screen activity';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Recent Daily Interactions';
 
   @override

@@ -3148,6 +3148,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsOpenPost => '게시물 열기';
 
   @override
+  String get analyticsStatsOnTheirWay => '통계가 곧 도착해요';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '아직 조회수가 없어요 · 공개 후 $minutes분',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => '이 게시물의 통계를 찾을 수 없어요';
+
+  @override
+  String get analyticsViewPost => '게시물 보기';
+
+  @override
+  String get analyticsStopLiveActivity => '잠금 화면 활동 중지';
+
+  @override
   String get analyticsRecentDailyInteractions => '최근 일별 상호작용';
 
   @override

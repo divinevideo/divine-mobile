@@ -3292,6 +3292,29 @@ class AppLocalizationsTr extends AppLocalizations {
   String get analyticsOpenPost => 'Gönderiyi Aç';
 
   @override
+  String get analyticsStatsOnTheirWay => 'İstatistikler yolda';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Henüz izlenme yok · $minutes dk süredir yayında',
+      one: 'Henüz izlenme yok · $minutes dk süredir yayında',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'Bu gönderi için istatistik bulamıyoruz';
+
+  @override
+  String get analyticsViewPost => 'Gönderiyi gör';
+
+  @override
+  String get analyticsStopLiveActivity => 'Kilit Ekranı hareketini durdur';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Son Günlük Etkileşimler';
 
   @override

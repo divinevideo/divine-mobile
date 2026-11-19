@@ -3137,6 +3137,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get analyticsOpenPost => '投稿を開く';
 
   @override
+  String get analyticsStatsOnTheirWay => '統計はまもなく表示されます';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'まだ再生はありません · 公開から$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'この投稿の統計が見つかりません';
+
+  @override
+  String get analyticsViewPost => '投稿を見る';
+
+  @override
+  String get analyticsStopLiveActivity => 'ロック画面のアクティビティを停止';
+
+  @override
   String get analyticsRecentDailyInteractions => '最近の日別インタラクション';
 
   @override

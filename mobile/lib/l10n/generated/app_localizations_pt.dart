@@ -3387,6 +3387,31 @@ class AppLocalizationsPt extends AppLocalizations {
   String get analyticsOpenPost => 'Abrir post';
 
   @override
+  String get analyticsStatsOnTheirWay => 'As estatísticas estão a caminho';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Ainda sem visualizações · no ar há $minutes min',
+      many: 'Ainda sem visualizações · no ar há $minutes min',
+      one: 'Ainda sem visualizações · no ar há $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Não encontramos estatísticas desta publicação';
+
+  @override
+  String get analyticsViewPost => 'Ver publicação';
+
+  @override
+  String get analyticsStopLiveActivity => 'Parar a atividade na Tela Bloqueada';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Interações diárias recentes';
 
   @override

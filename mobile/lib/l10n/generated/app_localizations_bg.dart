@@ -3405,6 +3405,31 @@ class AppLocalizationsBg extends AppLocalizations {
   String get analyticsOpenPost => 'Отвори публикацията';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Статистиката е на път';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Още няма гледания · онлайн от $minutes мин.',
+      one: 'Още няма гледания · онлайн от $minutes мин.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Не намираме статистика за тази публикация';
+
+  @override
+  String get analyticsViewPost => 'Виж публикацията';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Спри активността на заключения екран';
+
+  @override
   String get analyticsRecentDailyInteractions =>
       'Скорошни ежедневни взаимодействия';
 

@@ -3350,6 +3350,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get analyticsOpenPost => 'Öppna inlägg';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Statistiken är på väg';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Inga visningar än · live i $minutes min',
+      one: 'Inga visningar än · live i $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Vi hittar ingen statistik för det här inlägget';
+
+  @override
+  String get analyticsViewPost => 'Visa inlägget';
+
+  @override
+  String get analyticsStopLiveActivity => 'Stoppa aktiviteten på låsskärmen';
+
+  @override
   String get analyticsRecentDailyInteractions =>
       'Senaste dagliga interaktioner';
 

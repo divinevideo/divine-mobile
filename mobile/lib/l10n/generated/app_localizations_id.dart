@@ -3278,6 +3278,29 @@ class AppLocalizationsId extends AppLocalizations {
   String get analyticsOpenPost => 'Buka Postingan';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Statistik segera muncul';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Belum ada tayangan · tayang selama $minutes mnt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Kami tidak menemukan statistik untuk postingan ini';
+
+  @override
+  String get analyticsViewPost => 'Lihat postingan';
+
+  @override
+  String get analyticsStopLiveActivity => 'Hentikan aktivitas di Layar Kunci';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Interaksi Harian Terbaru';
 
   @override

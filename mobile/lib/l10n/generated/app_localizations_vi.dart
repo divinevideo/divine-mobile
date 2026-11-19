@@ -3319,6 +3319,29 @@ class AppLocalizationsVi extends AppLocalizations {
   String get analyticsOpenPost => 'Mở bài đăng';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Số liệu sắp có';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Chưa có lượt xem · đã đăng $minutes phút',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Không tìm thấy số liệu cho bài đăng này';
+
+  @override
+  String get analyticsViewPost => 'Xem bài đăng';
+
+  @override
+  String get analyticsStopLiveActivity => 'Dừng hoạt động trên Màn hình khóa';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Tương tác hằng ngày gần đây';
 
   @override

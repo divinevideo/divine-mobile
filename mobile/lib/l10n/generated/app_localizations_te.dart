@@ -3489,6 +3489,29 @@ class AppLocalizationsTe extends AppLocalizations {
   String get analyticsOpenPost => 'ఓపెన్ పోస్ట్';
 
   @override
+  String get analyticsStatsOnTheirWay => 'గణాంకాలు త్వరలో వస్తాయి';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'ఇంకా వీక్షణలు లేవు · $minutes నిమిషాలుగా లైవ్‌లో ఉంది',
+      one: 'ఇంకా వీక్షణలు లేవు · $minutes నిమిషంగా లైవ్‌లో ఉంది',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'ఈ పోస్ట్‌కు గణాంకాలు కనుగొనలేకపోయాము';
+
+  @override
+  String get analyticsViewPost => 'పోస్ట్ చూడండి';
+
+  @override
+  String get analyticsStopLiveActivity => 'లాక్ స్క్రీన్ యాక్టివిటీని ఆపండి';
+
+  @override
   String get analyticsRecentDailyInteractions =>
       'ఇటీవలి రోజువారీ పరస్పర చర్యలు';
 

@@ -3281,6 +3281,29 @@ class AppLocalizationsAm extends AppLocalizations {
   String get analyticsOpenPost => 'ፖስት ክፈት';
 
   @override
+  String get analyticsStatsOnTheirWay => 'ስታቲስቲክስ በቅርቡ ይደርሳል';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'እስካሁን ምንም እይታ የለም · ከታተመ $minutes ደቂቃ',
+      one: 'እስካሁን ምንም እይታ የለም · ከታተመ $minutes ደቂቃ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'ለዚህ ልጥፍ ስታቲስቲክስ ማግኘት አልቻልንም';
+
+  @override
+  String get analyticsViewPost => 'ልጥፉን ይመልከቱ';
+
+  @override
+  String get analyticsStopLiveActivity => 'የመቆለፊያ ማያ ገጽ እንቅስቃሴን ያቁሙ';
+
+  @override
   String get analyticsRecentDailyInteractions => 'የቅርብ ጊዜ ዕለታዊ ግንኙነቶች';
 
   @override

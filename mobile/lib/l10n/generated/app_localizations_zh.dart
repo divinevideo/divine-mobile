@@ -3140,6 +3140,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsOpenPost => '打开帖子';
 
   @override
+  String get analyticsStatsOnTheirWay => '数据马上就来';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '还没有观看 · 已发布 $minutes 分钟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => '找不到这条帖子的数据';
+
+  @override
+  String get analyticsViewPost => '查看帖子';
+
+  @override
+  String get analyticsStopLiveActivity => '停止锁定屏幕上的动态';
+
+  @override
   String get analyticsRecentDailyInteractions => '近期每日互动';
 
   @override

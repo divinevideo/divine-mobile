@@ -3341,6 +3341,29 @@ class AppLocalizationsMs extends AppLocalizations {
   String get analyticsOpenPost => 'Buka Siaran';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Statistik akan tiba sebentar lagi';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Belum ada tontonan · disiarkan $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Kami tidak dapat mencari statistik untuk siaran ini';
+
+  @override
+  String get analyticsViewPost => 'Lihat siaran';
+
+  @override
+  String get analyticsStopLiveActivity => 'Hentikan aktiviti Skrin Kunci';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Interaksi Harian Terkini';
 
   @override

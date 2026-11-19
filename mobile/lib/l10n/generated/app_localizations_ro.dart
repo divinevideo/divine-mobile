@@ -3468,6 +3468,32 @@ class AppLocalizationsRo extends AppLocalizations {
   String get analyticsOpenPost => 'Deschide postarea';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Statisticile sunt pe drum';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Încă nicio vizionare · live de $minutes min',
+      few: 'Încă nicio vizionare · live de $minutes min',
+      one: 'Încă nicio vizionare · live de $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Nu găsim statistici pentru această postare';
+
+  @override
+  String get analyticsViewPost => 'Vezi postarea';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Oprește activitatea de pe ecranul de blocare';
+
+  @override
   String get analyticsRecentDailyInteractions => 'Interacțiuni zilnice recente';
 
   @override

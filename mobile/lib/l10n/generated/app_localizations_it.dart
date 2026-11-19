@@ -3402,6 +3402,32 @@ class AppLocalizationsIt extends AppLocalizations {
   String get analyticsOpenPost => 'Apri post';
 
   @override
+  String get analyticsStatsOnTheirWay => 'Le statistiche stanno arrivando';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Ancora nessuna visualizzazione · online da $minutes min',
+      many: 'Ancora nessuna visualizzazione · online da $minutes min',
+      one: 'Ancora nessuna visualizzazione · online da $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Non troviamo le statistiche di questo post';
+
+  @override
+  String get analyticsViewPost => 'Vedi post';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Interrompi l\'attività nella schermata di blocco';
+
+  @override
   String get analyticsRecentDailyInteractions =>
       'Interazioni giornaliere recenti';
 
