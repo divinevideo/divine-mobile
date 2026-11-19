@@ -208,65 +208,59 @@ class ClipLibraryService {
   /// A single corrupt row (e.g. a clip persisted without a file path) is
   /// skipped and logged rather than discarding the entire library — one bad
   /// row must never hide every other clip.
+  ///
+  /// Throws when the library itself cannot be read, such as a database
+  /// error, so a failed read is never mistaken for an empty library.
   Future<List<DivineVideoClip>> getAllClips() async {
-    try {
-      // Include the autosave draft so a just-recorded clip (which the editor
-      // immediately holds in its autosave draft) stays visible in the library.
-      // Clips saved into a named project keep their own draftId and stay hidden.
-      final rows = await _clipsDao.getLibraryClips(
+    // Include the autosave draft so a just-recorded clip (which the editor
+    // immediately holds in its autosave draft) stays visible in the library.
+    // Clips saved into a named project keep their own draftId and stay hidden.
+    final rows = await _clipsDao.getLibraryClips(
+      ownerPubkey: ownerPubkey,
+      includeAutosaveDraftId: VideoEditorConstants.autoSaveId,
+    );
+    // Trashing a clip trashes its autosave-draft copy too (see [softDelete]),
+    // but the editor's next autosave writes that copy again, untrashed. The
+    // library row decides, or the trashed clip would be listed again.
+    final trashedClipIds = {
+      for (final row in await _clipsDao.getTrashedLibraryClips(
         ownerPubkey: ownerPubkey,
-        includeAutosaveDraftId: VideoEditorConstants.autoSaveId,
-      );
-      // Trashing a clip trashes its autosave-draft copy too (see [softDelete]),
-      // but the editor's next autosave writes that copy again, untrashed. The
-      // library row decides, or the trashed clip would be listed again.
-      final trashedClipIds = {
-        for (final row in await _clipsDao.getTrashedLibraryClips(
-          ownerPubkey: ownerPubkey,
-        ))
-          row.id,
-      };
+      ))
+        row.id,
+    };
 
-      final documentsPath = await getDocumentsPath();
+    final documentsPath = await getDocumentsPath();
 
-      // The clips table keys draft clips by `<draftId>:<clipId>` (composite row
-      // id) but library clips by the plain clip id, so several rows can parse
-      // to the same `clip.id`: the library row, an autosave-draft row, and an
-      // autosave copy the recorder's delete detached from its draft (see
-      // [softDelete]) that a restore from the trash brought back. Keep one per
-      // clip id, preferring the library row: it is the row [saveClip] writes,
-      // so a clip shows exactly once and with the assets recovered for it.
-      final byClipId = <String, ({int rank, DivineVideoClip clip})>{};
-      for (final row in rows) {
-        final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
-        if (clip == null) continue;
-        // A placeholder is the colour or still holding the slot a detached
-        // clip left behind. It is part of the composition, so the autosave
-        // draft has to carry it — but it is a backdrop the editor generated,
-        // not footage the user shot, and it has no meaning outside the
-        // composition it stands in. Listing it would put a flat colour in the
-        // library next to real recordings. A freeze frame is the same kind of
-        // generated still, held between two halves of a clip.
-        if (clip.isPlaceholder || clip.isFreezeFrame) continue;
-        final isLibraryRow = row.id == clip.id;
-        if (!isLibraryRow && trashedClipIds.contains(clip.id)) continue;
-        final rank = isLibraryRow ? 0 : (row.draftId == null ? 1 : 2);
-        final existing = byClipId[clip.id];
-        if (existing == null || rank < existing.rank) {
-          byClipId[clip.id] = (rank: rank, clip: clip);
-        }
+    // The clips table keys draft clips by `<draftId>:<clipId>` (composite row
+    // id) but library clips by the plain clip id, so several rows can parse
+    // to the same `clip.id`: the library row, an autosave-draft row, and an
+    // autosave copy the recorder's delete detached from its draft (see
+    // [softDelete]) that a restore from the trash brought back. Keep one per
+    // clip id, preferring the library row: it is the row [saveClip] writes,
+    // so a clip shows exactly once and with the assets recovered for it.
+    final byClipId = <String, ({int rank, DivineVideoClip clip})>{};
+    for (final row in rows) {
+      final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
+      if (clip == null) continue;
+      // A placeholder is the colour or still holding the slot a detached
+      // clip left behind. It is part of the composition, so the autosave
+      // draft has to carry it — but it is a backdrop the editor generated,
+      // not footage the user shot, and it has no meaning outside the
+      // composition it stands in. Listing it would put a flat colour in the
+      // library next to real recordings. A freeze frame is the same kind of
+      // generated still, held between two halves of a clip.
+      if (clip.isPlaceholder || clip.isFreezeFrame) continue;
+      final isLibraryRow = row.id == clip.id;
+      if (!isLibraryRow && trashedClipIds.contains(clip.id)) continue;
+      final rank = isLibraryRow ? 0 : (row.draftId == null ? 1 : 2);
+      final existing = byClipId[clip.id];
+      if (existing == null || rank < existing.rank) {
+        byClipId[clip.id] = (rank: rank, clip: clip);
       }
-
-      return byClipId.values.map((e) => e.clip).toList()
-        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    } catch (e) {
-      Log.error(
-        '❌ Failed to load clips: $e',
-        name: 'ClipLibraryService',
-        category: LogCategory.video,
-      );
-      return [];
     }
+
+    return byClipId.values.map((e) => e.clip).toList()
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
   }
 
   /// The newest clip outside the trash imported from [video] whose video file
@@ -713,28 +707,21 @@ class ClipLibraryService {
   }
 
   /// Every category owned by the current account, in chip-row order.
+  ///
+  /// Throws when the categories cannot be read, such as a database error.
   Future<List<ClipCategory>> getCategories() async {
-    try {
-      final rows = await _clipCategoriesDao.getCategories(
-        ownerPubkey: ownerPubkey,
-      );
-      return [
-        for (final row in rows)
-          ClipCategory(
-            id: row.id,
-            name: row.name,
-            createdAt: row.createdAt,
-            orderIndex: row.orderIndex,
-          ),
-      ];
-    } catch (e) {
-      Log.error(
-        '❌ Failed to load clip categories: $e',
-        name: 'ClipLibraryService',
-        category: LogCategory.video,
-      );
-      return [];
-    }
+    final rows = await _clipCategoriesDao.getCategories(
+      ownerPubkey: ownerPubkey,
+    );
+    return [
+      for (final row in rows)
+        ClipCategory(
+          id: row.id,
+          name: row.name,
+          createdAt: row.createdAt,
+          orderIndex: row.orderIndex,
+        ),
+    ];
   }
 
   /// Create a category named [rawName], appended after the existing ones.
