@@ -3422,7 +3422,7 @@ class CameraController(
         }
 
         // Invoked by the Finalize event.
-        val claimed = stopArbiter.beginStop { result, error ->
+        val claimed = stopArbiter.beginStop(automatic = true) { result, error ->
             if (result != null) {
                 DivineCameraLog.d(TAG, "Auto-stop completed, notifying listener: $result")
             } else {
@@ -3452,11 +3452,12 @@ class CameraController(
      * Stops video recording and returns the result.
      * Waits for the Finalize event to ensure the file is fully written.
      *
-     * Answers "Not recording" when another stop already began — in practice
-     * the max-duration auto-stop, which owns the take from then on and
-     * reports it through [onAutoStopListener].
+     * If max duration already fired, this request receives its final result
+     * instead of the separate auto-stop callback.
      */
     fun stopRecording(callback: (Map<String, Any?>?, String?) -> Unit) {
+        if (stopArbiter.handoffAutomaticStop(callback)) return
+
         val currentRecording = recording
 
         if (currentRecording == null || !isRecording) {

@@ -243,11 +243,33 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
   /// [saveDraftWithClips]) keeps orphaned clip rows from surviving and keeping
   /// the draft's media referenced — which blocks file cleanup and leaks the
   /// clip/frame files. Returns the number of draft rows deleted.
-  Future<int> deleteDraft(String id) {
-    return transaction(() async {
-      await (delete(clips)..where((t) => t.draftId.equals(id))).go();
-      return (delete(drafts)..where((t) => t.id.equals(id))).go();
-    });
+  Future<int> deleteDraft(String id) =>
+      transaction(() => _deleteDraftWithClips(id));
+
+  /// Deletes an owned or legacy draft and returns the exact rows removed.
+  /// A null [ownerPubkey] permits legacy rows only.
+  Future<({DraftRow row, List<ClipRow> clips})?> deleteOwnedDraftWithClips(
+    String id, {
+    required String? ownerPubkey,
+  }) => transaction(() async {
+    final row =
+        await (select(drafts)..where(
+              (t) =>
+                  t.id.equals(id) &
+                  (ownerPubkey == null
+                      ? t.ownerPubkey.isNull()
+                      : _ownedOrLegacy(t.ownerPubkey, ownerPubkey)),
+            ))
+            .getSingleOrNull();
+    if (row == null) return null;
+    final clipRows = await attachedDatabase.clipsDao.getClipsByDraftId(id);
+    await _deleteDraftWithClips(id);
+    return (row: row, clips: clipRows);
+  });
+
+  Future<int> _deleteDraftWithClips(String id) async {
+    await (delete(clips)..where((t) => t.draftId.equals(id))).go();
+    return (delete(drafts)..where((t) => t.id.equals(id))).go();
   }
 
   /// Delete drafts older than a given date

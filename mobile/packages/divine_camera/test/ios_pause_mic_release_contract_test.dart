@@ -17,7 +17,7 @@ void main() {
 
     setUpAll(() {
       final source = readDarwinNativeSource('CameraController.swift');
-      stop = declarationAt(source, 'func stopRecording(');
+      stop = declarationAt(source, 'private func finishRecordingRequest(');
       pause = declarationAt(source, 'func pausePreview(');
       pauseOnSessionQueue = declarationAt(pause, 'sessionQueue.async');
     });

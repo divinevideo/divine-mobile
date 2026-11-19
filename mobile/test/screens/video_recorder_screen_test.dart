@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -15,14 +16,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -41,6 +45,20 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+class _CreationEventSink extends Fake implements AnalyticsEventSink {
+  final events = <String>[];
+  final cameraModes = <Object>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    Map<String, Object> parameters = const {},
+  }) async {
+    events.add(name);
+    if (name == 'camera_opened') cameraModes.add(parameters['mode']!);
+  }
+}
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
@@ -174,6 +192,7 @@ Widget buildNavigatorTestWidget({
   required bool fromEditor,
   required List<Override> overrides,
   ProviderContainer? container,
+  CreationAnalyticsSession? reactionSession,
 }) {
   final child = MaterialApp(
     localizationsDelegates: appLocalizationsDelegates,
@@ -183,8 +202,8 @@ Widget buildNavigatorTestWidget({
         body: Center(
           child: ElevatedButton(
             onPressed: () {
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
+              Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(
                   builder: (_) => MultiBlocProvider(
                     providers: [
                       BlocProvider<VideoRecorderBloc>.value(
@@ -194,7 +213,13 @@ Widget buildNavigatorTestWidget({
                         create: (_) => MockCameraPermissionBloc(),
                       ),
                     ],
-                    child: VideoRecorderView(fromEditor: fromEditor),
+                    child: VideoRecorderView(
+                      fromEditor: fromEditor,
+                      entryPoint: reactionSession == null
+                          ? CreationEntryPoint.direct
+                          : CreationEntryPoint.library,
+                      analyticsSession: reactionSession,
+                    ),
                   ),
                 ),
               );
@@ -308,6 +333,63 @@ void main() {
 
     tearDown(() {
       container.dispose();
+    });
+
+    group('reaction editor camera ownership', () {
+      for (final fromEditor in [true, false]) {
+        testWidgets(
+          'fromEditor=$fromEditor selects continuation versus a new funnel',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            await testPrefs.setString(
+              VideoRecorderMode.persistenceKey,
+              VideoRecorderMode.classic.name,
+            );
+            final sink = _CreationEventSink();
+            final tracker = CreationAnalyticsTracker(analytics: sink);
+            final reaction = CreationAnalyticsSession();
+            await tracker.cameraOpened(
+              mode: .capture,
+              entryPoint: 'library',
+              session: reaction,
+            );
+            await tracker.recordingStarted(.capture, session: reaction);
+            await tracker.claimEditorSession(reaction);
+            final routeContainer = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(testPrefs),
+                ..._stubServiceOverrides(),
+                creationAnalyticsTrackerProvider.overrideWithValue(tracker),
+              ],
+            );
+            addTearDown(routeContainer.dispose);
+            await tester.pumpWidget(
+              buildNavigatorTestWidget(
+                fromEditor: fromEditor,
+                overrides: const [],
+                container: routeContainer,
+              ),
+            );
+            await tester.tap(find.text('Open recorder'));
+            await tester.pumpAndSettle();
+            expect(find.byType(VideoRecorderView), findsOneWidget);
+            expect(sink.events, [
+              'camera_opened',
+              'recording_started',
+              'editor_opened',
+              if (!fromEditor) ...['creation_abandoned', 'camera_opened'],
+            ]);
+            expect(sink.cameraModes, ['capture', if (!fromEditor) 'classic']);
+            if (!fromEditor) {
+              await tracker.abandonEditorSession(reaction);
+              expect(tracker.activeMode, isNotNull);
+            }
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
     });
 
     group('UI Components', () {
@@ -723,6 +805,72 @@ void main() {
     });
 
     group('Screen Integration', () {
+      for (final alreadyStopping in [false, true]) {
+        testWidgets(
+          'reaction Back returns after native Stop (alreadyStopping=$alreadyStopping)',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final states = StreamController<VideoRecorderBlocState>();
+            addTearDown(states.close);
+            const ready = VideoRecorderBlocState(
+              isCameraInitialized: true,
+              canRecord: true,
+            );
+            when(() => recorderBloc.isClosed).thenReturn(false);
+            whenListen(recorderBloc, states.stream, initialState: ready);
+            await tester.pumpWidget(
+              buildNavigatorTestWidget(
+                fromEditor: true,
+                overrides: const [],
+                container: container,
+                reactionSession: CreationAnalyticsSession(),
+              ),
+            );
+            await tester.tap(find.text('Open recorder'));
+            await tester.pumpAndSettle();
+            states.add(
+              ready.copyWith(
+                recordingState: VideoRecorderState.recording,
+                isStoppingRecording: alreadyStopping,
+              ),
+            );
+            await tester.pump();
+
+            expect(recorderBloc.state.isRecording, isTrue);
+            await tester.pump();
+            final recorderContext = tester.element(
+              find.byType(VideoRecorderView),
+            );
+            final route = ModalRoute.of(recorderContext)!;
+            expect(route.isCurrent, isTrue);
+            expect(route.popDisposition, RoutePopDisposition.doNotPop);
+            expect(await Navigator.of(recorderContext).maybePop(), isTrue);
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            expect(find.byType(VideoRecorderView), findsOneWidget);
+            if (alreadyStopping) {
+              verifyNever(
+                () => recorderBloc.add(
+                  const VideoRecorderRecordingStopRequested(),
+                ),
+              );
+            } else {
+              verify(
+                () => recorderBloc.add(
+                  const VideoRecorderRecordingStopRequested(),
+                ),
+              ).called(1);
+            }
+            states.add(ready);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(VideoRecorderView), findsNothing);
+            expect(find.text('Open recorder'), findsOneWidget);
+          },
+        );
+      }
+
       testWidgets('can be popped from navigation stack', (tester) async {
         await tester.pumpWidget(buildTestWidget());
 
@@ -1247,6 +1395,48 @@ void main() {
     });
 
     group('Autosave Restore Flow', () {
+      testWidgets('a Library reaction skips recovery from an older project', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({'why_six_seconds_shown': true});
+        final prefs = await SharedPreferences.getInstance();
+        final drafts = _MockDraftStorageService();
+        when(drafts.getAutosaveDraft)
+            .thenAnswer((_) async => _autosavedDraft());
+
+        final library = _MockClipLibraryService();
+        when(library.getAllClips).thenAnswer((_) async => []);
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            draftStorageServiceProvider.overrideWithValue(drafts),
+            clipLibraryServiceProvider.overrideWithValue(library),
+            ..._stubSoundPickerOverrides(),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          buildNavigatorTestWidget(
+            fromEditor: true,
+            reactionSession: CreationAnalyticsSession(),
+            overrides: [],
+            container: container,
+          ),
+        );
+        await tester.tap(find.text('Open recorder'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoRecorderView), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en'))
+                .videoRecorderAutosaveFoundTitle,
+          ),
+          findsNothing,
+        );
+        verifyNever(drafts.getAutosaveDraft);
+      });
+
       testWidgets('shows bottom sheet when autosaved draft has been edited', (
         tester,
       ) async {

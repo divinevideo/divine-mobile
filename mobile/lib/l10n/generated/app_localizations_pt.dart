@@ -6859,6 +6859,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get libraryTabClips => 'Clipes';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'De outras pessoas';
 
   @override

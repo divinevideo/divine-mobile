@@ -21,10 +21,11 @@ import 'package:openvine/widgets/video_clip/video_clip_semantic_label.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Creates the transparent route used to fly a library thumbnail into preview.
-Route<void> videoClipPreviewRoute({
+PageRouteBuilder<void> videoClipPreviewRoute({
   required DivineVideoClip clip,
   Future<void> Function()? onSaveToGallery,
   VoidCallback? onDelete,
+  VoidCallback? onRecordReaction,
 }) {
   return PageRouteBuilder<void>(
     opaque: false,
@@ -36,6 +37,7 @@ Route<void> videoClipPreviewRoute({
         clip: clip,
         onSaveToGallery: onSaveToGallery,
         onDelete: onDelete,
+        onRecordReaction: onRecordReaction,
       ),
     ),
     transitionsBuilder: (_, animation, _, child) {
@@ -51,6 +53,7 @@ class VideoClipPreview extends StatefulWidget {
     required this.clip,
     this.onSaveToGallery,
     this.onDelete,
+    this.onRecordReaction,
     super.key,
   });
 
@@ -63,6 +66,9 @@ class VideoClipPreview extends StatefulWidget {
 
   /// Called when the delete button is tapped. If null, delete button is hidden.
   final VoidCallback? onDelete;
+
+  /// Called when Record reaction is tapped. If null, the button is hidden.
+  final VoidCallback? onRecordReaction;
 
   @override
   State<VideoClipPreview> createState() => _VideoClipPreviewSheetState();
@@ -274,6 +280,14 @@ class _VideoClipPreviewSheetState extends State<VideoClipPreview> {
                         style: VineTheme.titleMediumFont(
                           color: context.vineColors.onSurface,
                         ),
+                      ),
+
+                    if (widget.onRecordReaction != null)
+                      DivineButton(
+                        label: context.l10n.libraryRecordReaction,
+                        leadingIcon: .camera,
+                        expanded: true,
+                        onPressed: _isSaving ? null : widget.onRecordReaction,
                       ),
 
                     // Action buttons row

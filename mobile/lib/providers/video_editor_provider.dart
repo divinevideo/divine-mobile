@@ -195,6 +195,14 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   Future<bool>? _runningAutosave;
   Future<bool>? _waitingAutosave;
 
+  /// A failed write can leave an older recovery row behind. Keep the failure
+  /// until a newer write succeeds or this editor session ends.
+  AsyncError? _autosaveFailure;
+
+  // An abandoned reaction may still own the autosave's files until its
+  // recording has an independent Library row or recovery draft.
+  final _reactionRetentions = <Future<void> Function(), Future<void>?>{};
+
   /// Bumped by [reset], so a waiting autosave of the ended session never
   /// writes the empty state that follows it.
   int _autosaveSession = 0;
@@ -423,6 +431,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     _renderGeneration++;
     _autosaveTimer?.cancel();
     _autosaveSession++;
+    _autosaveFailure = null;
     // New-session requests must not reuse the cancelled session's follow-up.
     // Keep the running save so new work still waits for it instead of overlaps.
     _waitingAutosave = null;
@@ -1060,19 +1069,51 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return operation;
   }
 
-  Future<bool> _performAutosave() async {
-    final clipCount = _clips.length;
-    final hasTitle = state.title.isNotEmpty;
+  /// Registers the owner of abandoned reaction files before their working
+  /// timeline is emptied. Later autosave changes must join or retry this write
+  /// before updating the recovery row and its file references.
+  Future<void> retainAbandonedReaction(Future<void> Function() retain) {
+    _reactionRetentions[retain] = null;
+    return _tryReactionRetention(retain);
+  }
 
-    Log.info(
-      '💾 Autosaving draft (clips: $clipCount, has title: $hasTitle)',
-      name: 'VideoEditorNotifier',
-      category: .video,
-    );
+  Future<void> _tryReactionRetention(Future<void> Function() retain) =>
+      _reactionRetentions[retain] ??= Future<void>.sync(retain).then<void>(
+        (_) {
+          unawaited(_reactionRetentions.remove(retain));
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _reactionRetentions[retain] = null;
+          Error.throwWithStackTrace(error, stackTrace);
+        },
+      );
+
+  Future<void> _settleReactionRetentions() async {
+    while (_reactionRetentions.isNotEmpty) {
+      await Future.wait(
+        _reactionRetentions.keys.toList().map(_tryReactionRetention),
+      );
+    }
+  }
+
+  Future<bool> _performAutosave() async {
+    final session = _autosaveSession;
 
     try {
+      if (_reactionRetentions.isNotEmpty) {
+        await _settleReactionRetentions();
+        if (session != _autosaveSession || !ref.mounted) return false;
+      }
+      final clipCount = _clips.length;
+      final hasTitle = state.title.isNotEmpty;
+      Log.info(
+        '💾 Autosaving draft (clips: $clipCount, has title: $hasTitle)',
+        name: 'VideoEditorNotifier',
+        category: LogCategory.video,
+      );
       if (clipCount == 0) {
         await removeAutosavedDraft();
+        if (session == _autosaveSession) _autosaveFailure = null;
         return false;
       }
 
@@ -1088,6 +1129,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
             _deferredFileCleanup.addAll(paths.whereType<String>()),
         ownedFilesMemo: _ownedFilesMemo,
       );
+      if (session == _autosaveSession) _autosaveFailure = null;
 
       Log.info(
         '✅ Autosave completed - $clipCount clip(s), '
@@ -1098,6 +1140,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
       return true;
     } catch (e, stackTrace) {
+      if (session == _autosaveSession) {
+        _autosaveFailure = AsyncError(e, stackTrace);
+      }
       Log.error(
         '❌ Autosave failed: $e',
         name: 'VideoEditorNotifier',
@@ -1499,37 +1544,76 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// the same session moving to the Drafts tab rather than a duplicate
   /// project.
   ///
-  /// Returns the id of the draft it wrote, or `null` when there was nothing
-  /// to keep. A caller that then gives up before replacing the autosave
+  /// [retainUneditedClips] can preserve Library footage before the caller
+  /// clears an autosave that needs no named draft. [isCurrent] lets the
+  /// caller invalidate the operation when the active account changes.
+  ///
+  /// Returns the id of the draft it wrote, or `null` when it wrote no named
+  /// draft. A caller that then gives up before replacing the autosave
   /// passes that id to [discardKeptDraft], or the session is listed twice.
   ///
   /// Throws when the draft store fails; nothing is deleted, so the autosave
   /// is still there.
-  Future<String?> keepAutosaveAsDraft() async {
-    // Their failures are logged where they happen; the copy below reads
-    // whatever row is on disk either way.
-    await flushPendingAutosave().then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
-    final inFlight = _waitingAutosave ?? _runningAutosave;
-    if (inFlight != null) {
-      await inFlight.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+  Future<String?> keepAutosaveAsDraft({
+    Future<void> Function(List<DivineVideoClip>)? retainUneditedClips,
+    bool Function()? isCurrent,
+  }) async {
+    final draftService = _draftService;
+    final session = _autosaveSession;
+    void checkOwner() {
+      if (!ref.mounted ||
+          session != _autosaveSession ||
+          isCurrent?.call() == false) {
+        throw StateError('The autosave session changed while keeping it');
+      }
     }
 
-    if (!await _draftService.draftExists(VideoEditorConstants.autoSaveId)) {
-      return null;
+    if (_reactionRetentions.isNotEmpty) await _settleReactionRetentions();
+    checkOwner();
+    Future<bool>? pendingSave() => _autosaveTimer?.isActive ?? false
+        ? flushPendingAutosave()
+        : _waitingAutosave ?? _runningAutosave;
+
+    var pending = pendingSave();
+    if (pending == null && _autosaveFailure != null) {
+      // A later attempt to keep the draft retries the edits still in memory.
+      pending = autosaveChanges();
     }
-    final autosave = await _draftService.getDraftById(
+    while (pending != null) {
+      await pending;
+      checkOwner();
+      pending = pendingSave();
+    }
+    if (_autosaveFailure case final failure?) {
+      Error.throwWithStackTrace(failure.error, failure.stackTrace);
+    }
+
+    final hasAutosave = await draftService.draftExists(
       VideoEditorConstants.autoSaveId,
     );
-    if (autosave == null || !autosave.hasBeenEdited) return null;
+    checkOwner();
+    if (!hasAutosave) {
+      return null;
+    }
+    final autosave = await draftService.getDraftById(
+      VideoEditorConstants.autoSaveId,
+    );
+    checkOwner();
+    if (autosave == null) return null;
+    if (!autosave.hasBeenEdited) {
+      if (retainUneditedClips != null && autosave.clips.isNotEmpty) {
+        await retainUneditedClips(autosave.clips);
+        checkOwner();
+      }
+      return null;
+    }
     final kept = autosave.duplicate().copyWith(
       challengeContext: autosave.challengeContext,
       scheduledAt: autosave.scheduledAt,
       skipUpdateLastModified: true,
     );
-    await _draftService.saveDraft(kept);
+    await draftService.saveDraft(kept);
+    checkOwner();
     Log.info(
       'Kept the autosaved session as draft ${kept.id} before it was replaced',
       name: 'VideoEditorNotifier',
@@ -1569,11 +1653,13 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// after successfully publishing a video.
   Future<void> removeAutosavedDraft() async {
     try {
-      if (!await _draftService.draftExists(VideoEditorConstants.autoSaveId)) {
-        return;
-      }
-      await _draftService.deleteDraft(VideoEditorConstants.autoSaveId);
-      _ownedFilesMemo.forget();
+      if (!ref.mounted) return;
+      final draftService = _draftService;
+      final session = _autosaveSession;
+      if (_reactionRetentions.isNotEmpty) await _settleReactionRetentions();
+      if (!ref.mounted || session != _autosaveSession) return;
+      if (!await draftService.deleteAutosavedDraft()) return;
+      if (session == _autosaveSession) _ownedFilesMemo.forget();
       Log.debug(
         '🗑️ Deleted autosaved draft',
         name: 'VideoEditorNotifier',

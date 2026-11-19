@@ -217,12 +217,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final draftStorage = _MockDraftStorageService();
-      when(
-        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => true);
-      when(
-        () => draftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async {});
+      when(draftStorage.deleteAutosavedDraft).thenAnswer((_) async => true);
       final scopedContainer = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -233,18 +228,14 @@ void main() {
 
       await scopedContainer.read(videoPublishProvider.notifier).clearAll();
 
-      verify(
-        () => draftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
-      ).called(1);
+      verify(draftStorage.deleteAutosavedDraft).called(1);
     });
 
     test('clearAll drops the Add yours a published video answered', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final draftStorage = _MockDraftStorageService();
-      when(
-        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => false);
+      when(draftStorage.deleteAutosavedDraft).thenAnswer((_) async => false);
       final scopedContainer = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),

@@ -9,6 +9,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/widgets/library/library_reaction_progress_host.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
@@ -37,6 +38,7 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
     required this.aspectRatio,
     required this.pickFromLibrary,
     required this.recordWithCamera,
+    this.initialClips = const [],
     this.bakeCapturedChromaKey,
     this.deferFileCleanup,
     super.key,
@@ -44,6 +46,9 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
 
   /// The shape of the video the layout splits.
   final model.AspectRatio aspectRatio;
+
+  /// Clips placed left to right when a library reaction opens this screen.
+  final List<DivineVideoClip> initialClips;
 
   final SplitScreenCellPicker pickFromLibrary;
   final SplitScreenCellPicker recordWithCamera;
@@ -56,23 +61,26 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
     required model.AspectRatio aspectRatio,
     required SplitScreenCellPicker pickFromLibrary,
     required SplitScreenCellPicker recordWithCamera,
+    List<DivineVideoClip> initialClips = const [],
     SplitScreenBakeChromaKeyFn? bakeCapturedChromaKey,
     SplitScreenDeferFileCleanupFn? deferFileCleanup,
   }) {
-    return Navigator.of(context).push<DivineVideoClip>(
-      PageRouteBuilder<DivineVideoClip>(
-        settings: const RouteSettings(name: 'split_screen_layout'),
-        pageBuilder: (_, _, _) => VideoEditorSplitScreenLayoutScreen(
-          aspectRatio: aspectRatio,
-          pickFromLibrary: pickFromLibrary,
-          recordWithCamera: recordWithCamera,
-          bakeCapturedChromaKey: bakeCapturedChromaKey,
-          deferFileCleanup: deferFileCleanup,
-        ),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
+    final route = PageRouteBuilder<DivineVideoClip>(
+      settings: const RouteSettings(name: 'split_screen_layout'),
+      pageBuilder: (_, _, _) => VideoEditorSplitScreenLayoutScreen(
+        aspectRatio: aspectRatio,
+        initialClips: initialClips,
+        pickFromLibrary: pickFromLibrary,
+        recordWithCamera: recordWithCamera,
+        bakeCapturedChromaKey: bakeCapturedChromaKey,
+        deferFileCleanup: deferFileCleanup,
       ),
+      transitionsBuilder: (_, animation, _, child) =>
+          FadeTransition(opacity: animation, child: child),
     );
+    Navigator.of(context).push(route);
+    // The caller also releases its files when the entire Navigator unmounts.
+    return route.completed;
   }
 
   @override
@@ -83,10 +91,12 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
         borderColor: VineTheme.backgroundColor,
         bakeCapturedChromaKey: bakeCapturedChromaKey,
         deferFileCleanup: deferFileCleanup,
-      ),
-      child: VideoEditorSplitScreenLayoutView(
-        pickFromLibrary: pickFromLibrary,
-        recordWithCamera: recordWithCamera,
+      )..clipsPicked(initialClips),
+      child: LibraryReactionProgressHost(
+        child: VideoEditorSplitScreenLayoutView(
+          pickFromLibrary: pickFromLibrary,
+          recordWithCamera: recordWithCamera,
+        ),
       ),
     );
   }

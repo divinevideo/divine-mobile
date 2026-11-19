@@ -6468,6 +6468,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryTabClips => '클립';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => '다른 사람에게서';
 
   @override

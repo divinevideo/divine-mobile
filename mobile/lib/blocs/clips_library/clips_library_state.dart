@@ -70,7 +70,10 @@ abstract class ClipGridColumns {
 enum LibraryClipTypeFilter {
   all,
   stopMotion,
-  video;
+  video,
+
+  /// Split Screen currently plays each cell as a single video layer.
+  reactionCompatible;
 
   static const _queryValues = <LibraryClipTypeFilter, String>{
     LibraryClipTypeFilter.stopMotion: 'stop_motion',
@@ -95,6 +98,7 @@ enum LibraryClipTypeFilter {
     LibraryClipTypeFilter.all => true,
     LibraryClipTypeFilter.stopMotion => clip.isStopMotion,
     LibraryClipTypeFilter.video => !clip.isStopMotion,
+    LibraryClipTypeFilter.reactionCompatible => clip.secondaryCamera == null,
   };
 }
 

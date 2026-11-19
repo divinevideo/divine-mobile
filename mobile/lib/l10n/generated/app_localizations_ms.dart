@@ -6804,6 +6804,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryTabClips => 'Klip';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Daripada orang lain';
 
   @override

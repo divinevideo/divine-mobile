@@ -12,6 +12,7 @@ import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1185,6 +1186,34 @@ void main() {
     });
 
     group('clipTypeFilter', () {
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'offers only clips a reaction cell can render',
+        setUp: () {
+          final dual = createClip(id: 'dual').copyWith(
+            secondaryCamera: SecondaryCameraTake(clip: createClip(id: 'pip')),
+          );
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              createClip(id: 'single'),
+              dual,
+              createStopMotionClip(id: 'reaction-frames'),
+            ],
+          );
+        },
+        build: () => createBloc(
+          clipTypeFilter: LibraryClipTypeFilter.reactionCompatible,
+        ),
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        expect: () => [
+          const ClipsLibraryState(status: ClipsLibraryStatus.loading),
+          isA<ClipsLibraryState>().having(
+            (state) => state.clips.map((clip) => clip.id),
+            'clip ids',
+            ['single', 'reaction-frames'],
+          ),
+        ],
+      );
+
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'stopMotion filter loads only stop-motion clips',
         setUp: () {

@@ -6844,6 +6844,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryTabClips => 'Mga Clip';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'Mula sa iba';
 
   @override

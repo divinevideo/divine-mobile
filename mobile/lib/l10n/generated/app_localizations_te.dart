@@ -7008,6 +7008,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryTabClips => 'క్లిప్‌లు';
 
   @override
+  String get libraryRecordReaction => 'Record reaction';
+
+  @override
   String get libraryTabFromOthers => 'ఇతరుల నుండి';
 
   @override

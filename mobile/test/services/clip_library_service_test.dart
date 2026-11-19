@@ -75,6 +75,54 @@ void main() {
       await database.close();
     });
 
+    group('retainClip', () {
+      final raw = DivineVideoClip(
+        id: 'recorded-take',
+        video: EditorVideo.file('/tmp/raw.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      test(
+        'inserts a missing take and preserves later media and metadata',
+        () async {
+          await service.retainClip(raw);
+          expect(
+            (await service.getClipById(raw.id))?.video?.file?.path,
+            endsWith('raw.mp4'),
+          );
+          final edited = raw.copyWith(
+            video: EditorVideo.file('/tmp/keyed.mp4'),
+            thumbnailPath: '/tmp/keyed.jpg',
+          );
+          await service.saveClip(edited);
+
+          await service.retainClip(raw);
+
+          final retained = (await service.getClipById(raw.id))!;
+          expect(retained.video?.file?.path, endsWith('keyed.mp4'));
+          expect(retained.thumbnailPath, endsWith('keyed.jpg'));
+        },
+      );
+
+      test('leaves an existing row owned by another account intact', () async {
+        final another = ClipLibraryService(
+          clipsDao: database.clipsDao,
+          draftsDao: database.draftsDao,
+          clipCategoriesDao: database.clipCategoriesDao,
+          ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
+        await another.saveClip(raw);
+
+        await expectLater(service.retainClip(raw), throwsStateError);
+
+        final row = (await database.clipsDao.getClipById(raw.id))!;
+        expect(row.ownerPubkey, another.ownerPubkey);
+      });
+    });
+
     group('saveClip', () {
       test('saves a clip and retrieves it', () async {
         final clip = DivineVideoClip(

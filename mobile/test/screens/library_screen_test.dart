@@ -34,6 +34,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/clip_gallery_save/clip_gallery_save_warning_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/library_screen.dart';
@@ -227,6 +228,7 @@ void main() {
       ValueListenable<bool>? libraryVisible,
       List<Override> extraOverrides = const [],
       bool routed = false,
+      String? underlyingCreationRoute,
       double? cropGuideAspectRatio,
     }) {
       final library = LibraryScreen(
@@ -237,9 +239,22 @@ void main() {
         cropGuideAspectRatio: cropGuideAspectRatio,
       );
       final GoRouter? router;
-      if (routed) {
+      if (routed || underlyingCreationRoute != null) {
         router = GoRouter(
-          routes: [GoRoute(path: '/', builder: (_, _) => library)],
+          initialLocation: underlyingCreationRoute ?? RoutePaths.root,
+          routes: [
+            GoRoute(path: RoutePaths.root, builder: (_, _) => library),
+            GoRoute(path: RoutePaths.libraryDrafts, builder: (_, _) => library),
+            for (final path in [
+              RoutePaths.videoRecorder,
+              RoutePaths.videoEditor,
+              RoutePaths.videoMetadata,
+            ])
+              GoRoute(
+                path: path,
+                builder: (_, _) => const Scaffold(body: SizedBox.shrink()),
+              ),
+          ],
         );
         addTearDown(router.dispose);
       } else {
@@ -395,6 +410,97 @@ void main() {
         );
       },
     );
+
+    group('Record reaction', () {
+      for (final creationRoute in [
+        RoutePaths.videoRecorder,
+        RoutePaths.videoEditor,
+        RoutePaths.videoMetadata,
+      ]) {
+        testWidgets('is not offered when library covers $creationRoute', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              underlyingCreationRoute: creationRoute,
+              initialTabIndex: LibraryScreen.clipsTabIndex,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final router = GoRouter.of(tester.element(find.byType(Scaffold)));
+          final library = router.push<void>(RoutePaths.libraryDrafts);
+          await tester.pumpAndSettle();
+          final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+          expect(tabs, isNotEmpty);
+          expect(
+            tabs.map((tab) => tab.offersRecordReaction),
+            everyElement(isFalse),
+          );
+          router.pop();
+          await library;
+          await tester.pumpAndSettle();
+        });
+      }
+
+      testWidgets('is not offered above an imperatively pushed editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            routed: true,
+            initialTabIndex: LibraryScreen.clipsTabIndex,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final router = GoRouter.of(tester.element(find.byType(LibraryScreen)));
+        final editor = router.push<void>(RoutePaths.videoEditor);
+        await tester.pumpAndSettle();
+        final library = router.push<void>(RoutePaths.libraryDrafts);
+        await tester.pumpAndSettle();
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isFalse),
+        );
+        router.pop();
+        await library;
+        router.pop();
+        await editor;
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('is not offered in the recorder library', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            tabsMode: LibraryTabsMode.withoutSounds,
+            initialTabIndex: LibraryScreen.clipsTabIndex,
+          ),
+        );
+        await tester.pump();
+
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isFalse),
+        );
+      });
+
+      testWidgets('is offered in the standalone library', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(initialTabIndex: LibraryScreen.clipsTabIndex),
+        );
+        await tester.pump();
+
+        final tabs = tester.widgetList<ClipsTab>(find.byType(ClipsTab));
+        expect(tabs, isNotEmpty);
+        expect(
+          tabs.map((tab) => tab.offersRecordReaction),
+          everyElement(isTrue),
+        );
+      });
+    });
 
     group('scheduled section (#3538)', () {
       testWidgets('is off in the recorder library', (tester) async {
@@ -2493,6 +2599,64 @@ void main() {
             .state
             .selectedClipIds;
       }
+
+      testWidgets(
+        'editor picker selects a square Classic beside a vertical recording',
+        (tester) async {
+          final recording = shaped('recording', models.AspectRatio.vertical);
+          final classic =
+              shaped('classic_vine_source', models.AspectRatio.square).copyWith(
+                importedSource: true,
+                sourceCredits: const [
+                  models.ClipSourceCredit(
+                    authorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    eventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                  ),
+                ],
+              );
+          when(() => mockClipLibraryService.getAllClips())
+              .thenAnswer((_) async => [recording, classic]);
+          when(() => mockClipLibraryService.recoverMissingAssets(any()))
+              .thenAnswer((_) async => [recording, classic]);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+                clipLibraryServiceProvider.overrideWithValue(
+                  mockClipLibraryService,
+                ),
+                draftStorageServiceProvider.overrideWithValue(
+                  mockDraftStorageService,
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: LibraryScreen.editorPicker(editorClips: [recording]),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(en.libraryTabFromOthers));
+          await tester.pumpAndSettle();
+          final card = find.byWidgetPredicate(
+            (widget) =>
+                widget is VideoClipThumbnailCard &&
+                widget.clip.id == classic.id,
+          );
+          expect(tester.widget<VideoClipThumbnailCard>(card).disabled, isFalse);
+          await tester.tap(card);
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .element(find.byType(ClipsTab))
+                .read<ClipsLibraryBloc>()
+                .state
+                .selectedClipIds,
+            {recording.id, classic.id},
+          );
+        },
+      );
 
       testWidgets('lets a picker with a crop guide pick two shapes', (
         tester,

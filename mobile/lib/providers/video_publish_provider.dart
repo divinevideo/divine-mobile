@@ -16,6 +16,7 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -436,11 +437,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     final recorderMode =
         creationTracker.activeMode ?? VideoRecorderMode.capture;
 
+    CreationAnalyticsPublishAttempt? publishAttempt;
     try {
-      await creationTracker.publishStarted(recorderMode);
+      publishAttempt = await creationTracker.publishStarted(recorderMode);
       if (!context.mounted) {
         await creationTracker.publishFailed(
-          mode: recorderMode,
+          publishAttempt,
           reason: 'context_unmounted',
         );
         return;
@@ -488,7 +490,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         if (materialized == null) {
           setError(stopMotionFailedMessage!);
           await creationTracker.publishFailed(
-            mode: recorderMode,
+            publishAttempt,
             reason: 'stop_motion_render_failed',
           );
           return;
@@ -536,7 +538,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           setError(message);
           _showPublishError(message);
           await creationTracker.publishFailed(
-            mode: recorderMode,
+            publishAttempt,
             reason: 'overlays_unavailable',
           );
           return;
@@ -589,7 +591,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           setError(message);
           _showPublishError(message);
           await creationTracker.publishFailed(
-            mode: recorderMode,
+            publishAttempt,
             reason: analyticsReason,
           );
           return;
@@ -640,7 +642,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
       if (!context.mounted) {
         await creationTracker.publishFailed(
-          mode: recorderMode,
+          publishAttempt,
           reason: 'context_unmounted',
         );
         return;
@@ -727,7 +729,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       // Handle result
       switch (result) {
         case PublishSuccess():
-          await creationTracker.publishSucceeded(recorderMode);
+          await creationTracker.publishSucceeded(publishAttempt);
           Log.info(
             '🎉 Video published successfully',
             name: 'VideoPublishNotifier',
@@ -745,7 +747,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           :final publishAt,
           :final audioReuseDegraded,
         ):
-          await creationTracker.publishSucceeded(recorderMode);
+          await creationTracker.publishSucceeded(publishAttempt);
           Log.info(
             '📅 Video scheduled: $eventId for ${publishAt.toIso8601String()}',
             name: 'VideoPublishNotifier',
@@ -762,7 +764,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
               l10n.publishErrorMessage(kind, serverName: serverName);
           setError(message);
           await creationTracker.publishFailed(
-            mode: recorderMode,
+            publishAttempt,
             reason: kind.name,
           );
           Log.error(
@@ -787,10 +789,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       final message = l10n.publishErrorMessage(PublishErrorKind.generic);
       setError(message);
       _showPublishError(message);
-      await creationTracker.publishFailed(
-        mode: recorderMode,
-        reason: 'unexpected_error',
-      );
+      if (publishAttempt != null) {
+        await creationTracker.publishFailed(
+          publishAttempt,
+          reason: 'unexpected_error',
+        );
+      }
     } finally {
       _inFlightSourceDraftIds.remove(sourceDraftId);
       Log.info(

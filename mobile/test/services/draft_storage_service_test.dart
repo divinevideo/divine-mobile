@@ -1,6 +1,7 @@
 // ABOUTME: TDD tests for DraftStorageService - persistent storage for vine drafts
 // ABOUTME: Tests save, load, delete, clear, and migration operations using Drift
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -45,9 +46,23 @@ class _RecordingCrashReporter implements CrashReporter {
   Future<void> setCustomKey(String key, Object value) async {}
 }
 
+class _GatedDocumentsPathProvider extends MockPathProviderPlatform {
+  final lookupStarted = Completer<void>();
+  final releaseLookup = Completer<void>();
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async {
+    if (!lookupStarted.isCompleted) {
+      lookupStarted.complete();
+      await releaseLookup.future;
+    }
+    return super.getApplicationDocumentsPath();
+  }
+}
+
 void main() {
   group('DraftStorageService', () {
-    const documentsPath = '/tmp/documents';
+    late String documentsPath;
     late AppDatabase database;
     late DraftStorageService service;
     late PathProviderPlatform originalPathProviderInstance;
@@ -89,6 +104,9 @@ void main() {
 
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+      documentsPath = Directory.systemTemp
+          .createTempSync('draft-storage-')
+          .path;
 
       originalPathProviderInstance = PathProviderPlatform.instance;
       final mockPlatform = MockPathProviderPlatform()
@@ -828,6 +846,116 @@ void main() {
 
         expect(await serviceFor(pubkeyA).getDraftById('draft_a'), isNull);
       });
+
+      test(
+        'a replacement autosave survives cleanup of the previous one',
+        () async {
+          const id = VideoEditorConstants.autoSaveId;
+          final draft = draftWithId(id);
+          final oldClip = draft.clips.single.copyWith(
+            id: 'old-clip',
+            video: EditorVideo.file(p.join(documentsPath, 'old_video.mp4')),
+          );
+          final oldOwner = serviceFor(pubkeyA);
+          final newOwner = serviceFor(pubkeyB);
+          await oldOwner.saveDraft(
+            draft.copyWith(clips: [...draft.clips, oldClip]),
+          );
+          final pathProvider = _GatedDocumentsPathProvider()
+            ..setApplicationDocumentsPath(documentsPath);
+          PathProviderPlatform.instance = pathProvider;
+
+          final deleting = oldOwner.deleteAutosavedDraft();
+          await pathProvider.lookupStarted.future;
+          try {
+            await newOwner.saveDraft(draft.copyWith(title: 'Replacement'));
+          } finally {
+            pathProvider.releaseLookup.complete();
+          }
+          expect(await deleting, isFalse);
+
+          final saved = await newOwner.getDraftById(id);
+          expect(saved?.title, 'Replacement');
+          expect(saved?.clips.map((clip) => clip.id), [draft.clips.single.id]);
+          expect(File(p.join(documentsPath, 'video.mp4')).existsSync(), isTrue);
+          expect(
+            File(p.join(documentsPath, 'old_video.mp4')).existsSync(),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'deletes an owned autosave and reclaims its unshared media',
+        () async {
+          const id = VideoEditorConstants.autoSaveId;
+          final owner = serviceFor(pubkeyA);
+          await owner.saveDraft(draftWithId(id));
+          expect(await owner.getDraftById(id), isNotNull);
+
+          expect(await owner.deleteAutosavedDraft(), isTrue);
+
+          expect(await database.draftsDao.getDraftById(id), isNull);
+          expect(await database.clipsDao.getClipsByDraftId(id), isEmpty);
+          expect(
+            File(p.join(documentsPath, 'video.mp4')).existsSync(),
+            isFalse,
+          );
+        },
+      );
+
+      test('an ownerless service leaves an owned autosave intact', () async {
+        const id = VideoEditorConstants.autoSaveId;
+        final owner = serviceFor(pubkeyA);
+        await owner.saveDraft(draftWithId(id));
+
+        expect(await service.deleteAutosavedDraft(), isFalse);
+
+        final saved = await owner.getDraftById(id);
+        expect(saved?.clips, hasLength(1));
+        expect(File(p.join(documentsPath, 'video.mp4')).existsSync(), isTrue);
+      });
+
+      test(
+        'deletes a legacy unreadable autosave and keeps shared files',
+        () async {
+          const id = VideoEditorConstants.autoSaveId;
+          final draft = draftWithId(id);
+          final exclusive = draft.clips.single.copyWith(
+            id: 'exclusive-clip',
+            video: EditorVideo.file(p.join(documentsPath, 'old_video.mp4')),
+          );
+          final owner = serviceFor(pubkeyA);
+          await service.saveDraft(
+            draft.copyWith(clips: [...draft.clips, exclusive]),
+          );
+          await owner.saveDraft(draftWithId('saved-draft'));
+          await database.draftsDao.upsertDraft(
+            id: id,
+            title: 'Legacy',
+            description: '',
+            publishStatus: PublishStatus.draft.name,
+            createdAt: draft.createdAt,
+            lastModified: draft.lastModified,
+            data: '{',
+            renderedFilePath: null,
+            renderedThumbnailPath: null,
+          );
+          expect(await owner.getDraftById(id), isNull);
+          expect(await database.clipsDao.getClipsByDraftId(id), hasLength(2));
+
+          expect(await owner.deleteAutosavedDraft(), isTrue);
+
+          expect(await database.draftsDao.getDraftById(id), isNull);
+          expect(await database.clipsDao.getClipsByDraftId(id), isEmpty);
+          expect(await owner.getDraftById('saved-draft'), isNotNull);
+          expect(File(p.join(documentsPath, 'video.mp4')).existsSync(), isTrue);
+          expect(
+            File(p.join(documentsPath, 'old_video.mp4')).existsSync(),
+            isFalse,
+          );
+        },
+      );
 
       test('draftExists sees a row owned by another account', () async {
         await serviceFor(pubkeyA).saveDraft(draftWithId('draft_a'));

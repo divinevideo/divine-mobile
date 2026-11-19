@@ -31,7 +31,15 @@ import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interfac
 
 class _MockCameraService extends Mock implements CameraService {}
 
-class _MockClipManager extends Mock implements ClipManagerNotifier {}
+class _MockClipManager extends Mock implements ClipManagerNotifier {
+  int generation = 0;
+
+  @override
+  int get sessionGeneration => generation;
+
+  @override
+  bool isSessionCurrent(int expected) => generation == expected;
+}
 
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
@@ -89,6 +97,7 @@ void main() {
     registerFallbackValue(DivineVideoStabilizationMode.off);
     registerFallbackValue(DivineFlashMode.off);
     registerFallbackValue(model.AspectRatio.vertical);
+    registerFallbackValue(Future<void>.value());
     registerFallbackValue(
       DivineVideoClip(
         id: 'fallback',
@@ -553,20 +562,31 @@ void main() {
         when(
           () => clipManager.saveClipToLibrary(any()),
         ).thenAnswer((_) async => true);
+        when(
+          () => clipManager.bakeRecordedTake(
+            any(),
+            generation: any(named: 'generation'),
+            after: any(named: 'after'),
+          ),
+        ).thenAnswer(
+          (invocation) => invocation.namedArguments[#after] as Future<void>,
+        );
       });
 
-      ClipChromaKey? recordedIntent() =>
-          verify(
-                () => clipManager.addClip(
-                  video: any(named: 'video'),
-                  originalAspectRatio: any(named: 'originalAspectRatio'),
-                  targetAspectRatio: any(named: 'targetAspectRatio'),
-                  lensMetadata: any(named: 'lensMetadata'),
-                  limitClipDuration: any(named: 'limitClipDuration'),
-                  captureChromaKey: captureAny(named: 'captureChromaKey'),
-                ),
-              ).captured.single
-              as ClipChromaKey?;
+      ClipChromaKey? recordedIntent() {
+        verify(recorded.safeFilePath).called(1);
+        return verify(
+              () => clipManager.addClip(
+                video: any(named: 'video'),
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+                captureChromaKey: captureAny(named: 'captureChromaKey'),
+              ),
+            ).captured.single
+            as ClipChromaKey?;
+      }
 
       final backdropKey = const ClipChromaKey(
         key: ChromaKey.blueScreen(),
@@ -595,7 +615,16 @@ void main() {
             ),
           ),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
-        verify: (_) => expect(recordedIntent(), isNull),
+        verify: (_) {
+          expect(recordedIntent(), isNull);
+          verifyNever(
+            () => clipManager.bakeRecordedTake(
+              any(),
+              generation: any(named: 'generation'),
+              after: any(named: 'after'),
+            ),
+          );
+        },
       );
 
       test('hands the backdrop image over to the recorded clip', () async {
@@ -677,15 +706,21 @@ void main() {
         verify(() => clipManager.releaseCapturedChromaKeyBakes()).called(1);
       });
 
-      /// A chroma-key take whose stop ends its post-processing straight away,
-      /// so the recorder moves on to the take's bake, which runs [bake].
-      void stubChromaKeyTakeStop({required Future<void> Function() bake}) {
+      /// A chroma-key stop that waits for the caller's raw save and path read
+      /// before running [bake].
+      DivineVideoClip stubChromaKeyTakeStop({
+        required Future<void> Function() bake,
+        Future<String> Function()? readPath,
+        Future<bool>? save,
+      }) {
         stubStopReads();
         final recorded = _MockEditorVideo();
         // Post-processing fails straight away, which ends it just the same.
         when(
           recorded.safeFilePath,
-        ).thenAnswer((_) async => throw Exception('no file'));
+        ).thenAnswer(
+          (_) => readPath?.call() ?? Future.error(Exception('no file')),
+        );
         when(
           () => cameraService.stopRecording(),
         ).thenAnswer((_) async => recorded);
@@ -710,10 +745,18 @@ void main() {
         ).thenReturn(take);
         when(
           () => clipManager.saveClipToLibrary(any()),
-        ).thenAnswer((_) async => true);
+        ).thenAnswer((_) => save ?? Future.value(true));
         when(
-          () => clipManager.bakeRecordedTake('recorded'),
-        ).thenAnswer((_) => bake());
+          () => clipManager.bakeRecordedTake(
+            any(),
+            generation: any(named: 'generation'),
+            after: any(named: 'after'),
+          ),
+        ).thenAnswer((invocation) async {
+          await (invocation.namedArguments[#after] as Future<void>);
+          await bake();
+        });
+        return take;
       }
 
       test('report a failed bake to crash reporting', () async {
@@ -743,8 +786,15 @@ void main() {
         );
       });
 
-      test('bake a take once its post-processing is done', () async {
-        stubChromaKeyTakeStop(bake: () async {});
+      test('binds the original take and waits for both raw saves', () async {
+        final readPath = Completer<String>();
+        final rawSave = Completer<bool>();
+        final baked = Completer<void>();
+        final take = stubChromaKeyTakeStop(
+          readPath: () => readPath.future,
+          save: rawSave.future,
+          bake: () async => baked.complete(),
+        );
         final bloc = buildBloc()
           ..emit(
             chromaKeyState.copyWith(
@@ -755,8 +805,21 @@ void main() {
 
         bloc.add(const VideoRecorderRecordingStopRequested());
         await pumpEventQueue();
-
-        verify(() => clipManager.bakeRecordedTake('recorded')).called(1);
+        verify(
+          () => clipManager.bakeRecordedTake(
+            take,
+            generation: 0,
+            after: any(named: 'after'),
+          ),
+        ).called(1);
+        expect(baked.isCompleted, isFalse);
+        clipManager.generation++;
+        // A departed generation skips primary enrichment after the file read.
+        readPath.complete('/documents/raw.mp4');
+        await pumpEventQueue();
+        expect(baked.isCompleted, isFalse);
+        rawSave.complete(true);
+        await baked.future;
       });
     });
   });
