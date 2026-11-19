@@ -1280,6 +1280,11 @@ class VideoRecorderBloc
     final pendingReactionStop = _pendingReactionStop =
         _reactionRecordingOwner == null ? null : Completer<void>();
     try {
+      // A native auto-stop may deliver the file before startup settles. Keep
+      // that result in the stop pipeline while the reaction finishes starting.
+      if (_pendingReactionStart case final startup? when event.result != null) {
+        await startup.future;
+      }
       await _handleRecordingStop(event, emit);
     } catch (error, stackTrace) {
       if (event._teardown == null) rethrow;

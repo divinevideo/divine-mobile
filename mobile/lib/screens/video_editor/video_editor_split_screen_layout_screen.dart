@@ -65,21 +65,22 @@ class VideoEditorSplitScreenLayoutScreen extends StatelessWidget {
     SplitScreenBakeChromaKeyFn? bakeCapturedChromaKey,
     SplitScreenDeferFileCleanupFn? deferFileCleanup,
   }) {
-    return Navigator.of(context).push<DivineVideoClip>(
-      PageRouteBuilder<DivineVideoClip>(
-        settings: const RouteSettings(name: 'split_screen_layout'),
-        pageBuilder: (_, _, _) => VideoEditorSplitScreenLayoutScreen(
-          aspectRatio: aspectRatio,
-          initialClips: initialClips,
-          pickFromLibrary: pickFromLibrary,
-          recordWithCamera: recordWithCamera,
-          bakeCapturedChromaKey: bakeCapturedChromaKey,
-          deferFileCleanup: deferFileCleanup,
-        ),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
+    final route = PageRouteBuilder<DivineVideoClip>(
+      settings: const RouteSettings(name: 'split_screen_layout'),
+      pageBuilder: (_, _, _) => VideoEditorSplitScreenLayoutScreen(
+        aspectRatio: aspectRatio,
+        initialClips: initialClips,
+        pickFromLibrary: pickFromLibrary,
+        recordWithCamera: recordWithCamera,
+        bakeCapturedChromaKey: bakeCapturedChromaKey,
+        deferFileCleanup: deferFileCleanup,
       ),
+      transitionsBuilder: (_, animation, _, child) =>
+          FadeTransition(opacity: animation, child: child),
     );
+    Navigator.of(context).push(route);
+    // The caller also releases its files when the entire Navigator unmounts.
+    return route.completed;
   }
 
   @override

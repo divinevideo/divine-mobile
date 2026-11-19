@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/library_reaction/library_reaction_cubit.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -272,6 +273,7 @@ void main() {
       required SplitScreenCellPicker? record,
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
+      ExtractReactionPoster? poster,
       DivineVideoClip? source,
       NavigatorObserver? observer,
       ValueNotifier<bool>? navigatorVisible,
@@ -293,8 +295,10 @@ void main() {
                 recordWithCamera: record,
                 showLayout: layout,
                 mergeTakes: merge,
-                extractThumbnail: (path) async =>
-                    (path: '$path.jpg', timestamp: Duration.zero),
+                extractThumbnail:
+                    poster ??
+                    ((path) async =>
+                        (path: '$path.jpg', timestamp: Duration.zero)),
                 cleanupAbandoned: (paths) async => abandoned.addAll(paths),
                 openEditor: (_, session) async {
                   deferredWhenEditorOpened = [...editor.deferredPaths];
@@ -378,6 +382,92 @@ void main() {
         tracker.recordingStarted(.capture, session: recorder.analyticsSession),
       );
     }
+
+    testWidgets('releases pending layout files when its Navigator unmounts', (
+      tester,
+    ) async {
+      final visible = ValueNotifier(true);
+      addTearDown(visible.dispose);
+      await start(
+        tester,
+        record: null,
+        navigatorVisible: visible,
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
+          manager.insertClip(0, _clip('cut-one'));
+          manager.insertClip(1, _clip('cut-two'));
+          navigator.pop(true);
+        }),
+        layout: null,
+        merge: ({required clips, required renderId}) async => _clip('combined'),
+      );
+      expect(find.byType(VideoEditorSplitScreenLayoutScreen), findsOneWidget);
+      expect(tracker.activeMode, isNotNull);
+      visible.value = false;
+      await tester.pumpAndSettle();
+      expect(find.byType(Navigator), findsNothing);
+      expect(tracker.activeMode, isNull);
+      expect(analytics.events.map((event) => event.name), [
+        'camera_opened',
+        'recording_started',
+        'recording_completed',
+        'creation_abandoned',
+      ]);
+      expect(abandoned, [
+        '/documents/combined.mp4',
+        '/documents/combined.mp4.jpg',
+      ]);
+    });
+
+    testWidgets(
+      'cleans up when the Navigator unmounts during thumbnail extraction',
+      (
+        tester,
+      ) async {
+        final visible = ValueNotifier(true);
+        final posterGate = Completer<({String path, Duration timestamp})?>();
+        addTearDown(visible.dispose);
+        await start(
+          tester,
+          record: null,
+          navigatorVisible: visible,
+          reducedMotion: true,
+          observer: _CameraReplyObserver((route, navigator) {
+            reportCameraUse(route, navigator);
+            manager.insertClip(0, _clip('cut-one'));
+            manager.insertClip(1, _clip('cut-two'));
+            navigator.pop(true);
+          }),
+          layout: null,
+          merge: ({required clips, required renderId}) async =>
+              _clip('combined'),
+          poster: (_) => posterGate.future,
+        );
+        expect(find.byType(VideoEditorSplitScreenLayoutScreen), findsNothing);
+        expect(tracker.activeMode, isNotNull);
+        visible.value = false;
+        await tester.pumpAndSettle();
+        expect(find.byType(Navigator), findsNothing);
+        expect(tracker.activeMode, isNull);
+        expect(analytics.events.map((event) => event.name), [
+          'camera_opened',
+          'recording_started',
+          'recording_completed',
+          'creation_abandoned',
+        ]);
+        expect(abandoned, ['/documents/combined.mp4']);
+
+        posterGate.complete((
+          path: '/documents/combined.mp4.jpg',
+          timestamp: Duration.zero,
+        ));
+        await tester.pumpAndSettle();
+        expect(abandoned, [
+          '/documents/combined.mp4',
+          '/documents/combined.mp4.jpg',
+        ]);
+      },
+    );
 
     testWidgets('ends the camera funnel if its Navigator unmounts', (
       tester,

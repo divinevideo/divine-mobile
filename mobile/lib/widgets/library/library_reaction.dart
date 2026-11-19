@@ -171,23 +171,28 @@ Future<void> recordLibraryReaction(
     unawaited(analytics.creationAbandoned(session: analyticsSession));
   }
 
-  Future<T> withProgress<T>(
+  Future<T?> withProgress<T>(
     BuildContext progressContext,
-    Future<T> Function() work, {
+    Future<T?> Function() work, {
     VoidCallback? onLeave,
   }) async {
     final ownerRoute = ModalRoute.of(progressContext);
+    var released = false;
+    void release() {
+      if (released) return;
+      released = true;
+      abandonAnalytics();
+      onLeave?.call();
+    }
+
     Future<void> leaveProgress() async {
       if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
-      abandonAnalytics();
-      if (onLeave != null) {
-        runDetached(
-          Future<void>.sync(onLeave),
-          'release abandoned reaction takes',
-          logName: 'LibraryReaction',
-          category: LogCategory.ui,
-        );
-      }
+      runDetached(
+        Future<void>.sync(release),
+        'release abandoned reaction takes',
+        logName: 'LibraryReaction',
+        category: LogCategory.ui,
+      );
       if (await Navigator.of(progressContext).maybePop()) return;
       if (!progressContext.mounted || ownerRoute?.isCurrent == false) return;
       GoRouter.maybeOf(progressContext)?.go(VideoFeedPage.pathForIndex(0));
@@ -213,10 +218,31 @@ Future<void> recordLibraryReaction(
       ),
     );
     StreamSubscription<Object?>? routeExit;
-    var dismissed = false;
-    void dismiss() {
-      if (dismissed) return;
-      dismissed = true;
+
+    // A pop or Navigator disposal ends the flow while native processing
+    // finishes in the background. The cubit reclaims any late output.
+    final ownerExited = Completer<T?>();
+    if (ownerRoute != null) {
+      routeExit = Future.any<Object?>([ownerRoute.popped, ownerRoute.completed])
+          .asStream()
+          .listen((_) {
+            runDetached(
+              Future<void>.sync(() {
+                try {
+                  release();
+                } finally {
+                  ownerExited.complete();
+                }
+              }),
+              'release reaction progress after route exit',
+              logName: 'LibraryReaction',
+              category: LogCategory.ui,
+            );
+          });
+    }
+    try {
+      return await Future.any([work(), ownerExited.future]);
+    } finally {
       hideProgress?.call();
       final cancellation = routeExit?.cancel();
       if (cancellation != null) {
@@ -227,29 +253,6 @@ Future<void> recordLibraryReaction(
           category: LogCategory.ui,
         );
       }
-    }
-
-    // Back remains available while native processing finishes. Leaving the
-    // owning route removes this UI without canceling the take's library save.
-    routeExit = ownerRoute?.popped.asStream().cast<Object?>().listen((_) {
-      runDetached(
-        Future<void>.sync(() {
-          try {
-            abandonAnalytics();
-            onLeave?.call();
-          } finally {
-            dismiss();
-          }
-        }),
-        'release reaction progress after route exit',
-        logName: 'LibraryReaction',
-        category: LogCategory.ui,
-      );
-    });
-    try {
-      return await work();
-    } finally {
-      dismiss();
     }
   }
 

@@ -2314,6 +2314,81 @@ void main() {
     group('native auto-stop callback', () {
       setUp(stubRecorderDefaults);
       test(
+        'retains a native auto-stop result delivered during reaction startup',
+        () async {
+          final wakelock = _GatedWakelockPlatform();
+          final previousWakelock = wakelockPlusPlatformInstance;
+          wakelockPlusPlatformInstance = wakelock;
+          addTearDown(() => wakelockPlusPlatformInstance = previousWakelock);
+          late void Function(EditorVideo? video) autoStop;
+          final video = _MockEditorVideo();
+          when(video.safeFilePath)
+              .thenAnswer((_) => Completer<String>().future);
+          when(() => clipManager.recordingElapsed).thenReturn(Duration.zero);
+          when(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(cameraService.stopRecording).thenAnswer((_) async => null);
+          when(
+            () => clipManager.addClip(
+              video: video,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+              secondaryRecording: any(named: 'secondaryRecording'),
+              secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'salvaged',
+              video: video,
+              duration: const Duration(milliseconds: 400),
+              recordedAt: DateTime.utc(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(() => clipManager.saveClipToLibrary(any()))
+              .thenAnswer((_) async => true);
+          final bloc = buildBloc(
+            reactionRecordingOwner: (
+              clipManager: clipManager,
+              isCurrent: () => true,
+              retain: (_) async {},
+            ),
+            cameraServiceFactory:
+                ({
+                  required onUpdateState,
+                  required onAutoStopped,
+                  onScreenFlashChanged,
+                }) {
+                  autoStop = onAutoStopped;
+                  return cameraService;
+                },
+          );
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          await pumpEventQueue();
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+          expect(bloc.state.isStartingRecording, isTrue);
+          autoStop(video);
+          await pumpEventQueue();
+          wakelock.enableGate.complete();
+          await pumpEventQueue();
+          verify(() => clipManager.saveClipToLibrary(any())).called(1);
+          verifyNever(cameraService.stopRecording);
+        },
+      );
+
+      test(
         'processes a recovered clip outside recording-limit modes (#9210)',
         () async {
           late void Function(EditorVideo video) autoStopCallback;
