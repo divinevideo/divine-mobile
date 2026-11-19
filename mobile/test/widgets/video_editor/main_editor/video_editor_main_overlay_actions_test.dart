@@ -326,14 +326,19 @@ void main() {
         );
       });
 
-      testWidgets('is shown below the timeline on a phone', (tester) async {
-        await tester.pumpWidget(buildWidget(largeScreenLayout: true));
+      testWidgets(
+        'is shown below the timeline outside wide landscape windows',
+        (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildWidget(largeScreenLayout: true));
 
-        expect(
-          find.bySemanticsLabel(l10n.videoEditorHideTimelineSemanticLabel),
-          findsOneWidget,
-        );
-      });
+          expect(
+            find.bySemanticsLabel(l10n.videoEditorHideTimelineSemanticLabel),
+            findsOneWidget,
+          );
+        },
+      );
     });
 
     group('music sub-editor hiding', () {

@@ -423,7 +423,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         );
     // Whether the feed fills the window with each video or shows the whole
     // video on a blurred backdrop (see feedFillsViewport).
-    final shouldPortraitExpand = feedFillsViewport(
+    final fillsViewport = feedFillsViewport(
       shouldPortraitExpand: widget.shouldPortraitExpand,
       largeScreenLayout: AdaptiveLayoutScope.isEnabledOf(context),
       window: MediaQuery.sizeOf(context),
@@ -526,7 +526,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         // (#5544, #6421).
         maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
         onVideoLoopCompleted: _handleVideoLoopCompleted,
-        shouldPortraitExpand: shouldPortraitExpand,
+        shouldPortraitExpand: fillsViewport,
         canAutoPlay: _canAutoPlayVideo,
         videoBuilder: (context, child, index, controller) {
           if (index < 0 || index >= widget.videos.length) {
@@ -548,7 +548,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           // contain-fit (letterboxed) case where it is actually visible.
           final coversScreen = videoCoversFeedViewport(
             aspectRatio: aspectRatio,
-            shouldPortraitExpand: shouldPortraitExpand,
+            shouldPortraitExpand: fillsViewport,
           );
           // Either source can carry the backdrop: the blurhash path needs
           // no poster URL (PR #5957 review). The backdrop paints only in the
@@ -558,7 +558,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           // A portrait video only leaves bars beside it where the feed
           // shows whole videos instead of filling the viewport.
           final showBlurBackdrop =
-              (!video.isPortrait || !shouldPortraitExpand) &&
+              (!video.isPortrait || !fillsViewport) &&
               !coversScreen &&
               ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
                   (blurhash != null && blurhash.isNotEmpty));
@@ -587,7 +587,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             index: index,
             feedMode: widget.contextTitle,
             isSquare: isSquare,
-            shouldPortraitExpand: shouldPortraitExpand,
+            shouldPortraitExpand: fillsViewport,
             onSkip: () => _skipPooledVideoAt(index),
           );
         },
@@ -636,7 +636,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             retryPlayback: (httpHeaders) =>
                 _retryPooledVideoAt(index, httpHeaders),
             errorType: errorType,
-            shouldPortraitExpand: shouldPortraitExpand,
+            shouldPortraitExpand: fillsViewport,
             isSquare: isSquare,
           );
         },
@@ -682,7 +682,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                   onSkipToNextVideo: () => _skipPooledVideoAt(index),
                   onAutomaticSkipToNextVideo: () =>
                       unawaited(_animateToPage(index + 1)),
-                  shouldPortraitExpand: shouldPortraitExpand,
+                  shouldPortraitExpand: fillsViewport,
                 ),
               ),
             ),

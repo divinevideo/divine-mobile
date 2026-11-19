@@ -21,6 +21,12 @@ void main() {
       required Size window,
       bool largeScreenLayout = true,
       FakeViewPadding padding = FakeViewPadding.zero,
+      List<Widget> details = const [SizedBox(key: _detailsKey, height: 300)],
+      Widget bottomBar = const SizedBox(
+        key: _bottomBarKey,
+        width: double.infinity,
+        height: 56,
+      ),
     }) async {
       tester.view.physicalSize = window;
       tester.view.devicePixelRatio = 1;
@@ -46,12 +52,8 @@ void main() {
                   preview: const SizedBox(key: _previewKey, height: 200),
                   sidePreview: (maxSize) =>
                       SizedBox.fromSize(key: _sidePreviewKey, size: maxSize),
-                  details: const [SizedBox(key: _detailsKey, height: 300)],
-                  bottomBar: const SizedBox(
-                    key: _bottomBarKey,
-                    width: double.infinity,
-                    height: 56,
-                  ),
+                  details: details,
+                  bottomBar: bottomBar,
                 ),
               ),
             ),
@@ -130,5 +132,57 @@ void main() {
         expect(rectOf(tester, _bottomBarKey).bottom, equals(669 - 34));
       });
     });
+
+    group('interactions', () {
+      testWidgets('keeps the form and the bottom bar when rotating between the '
+          'two layouts', (tester) async {
+        const formKey = Key('form');
+        const barKey = Key('bar');
+        Future<void> pumpAt(Size window) => pumpLayout(
+          tester,
+          window: window,
+          details: const [_Counter(key: formKey)],
+          bottomBar: const _Counter(key: barKey),
+        );
+
+        await pumpAt(const Size(1194, 834));
+        await tester.tap(find.byKey(formKey));
+        await tester.tap(find.byKey(barKey));
+        await tester.tap(find.byKey(barKey));
+        await tester.pump();
+        expect(find.byKey(_sidePreviewKey), findsOneWidget);
+
+        await pumpAt(const Size(834, 1194));
+
+        expect(find.byKey(_previewKey), findsOneWidget);
+        expect(
+          find.descendant(of: find.byKey(formKey), matching: find.text('1')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: find.byKey(barKey), matching: find.text('2')),
+          findsOneWidget,
+        );
+      });
+    });
   });
+}
+
+/// Counts its taps, to tell a kept state from a fresh one.
+class _Counter extends StatefulWidget {
+  const _Counter({super.key});
+
+  @override
+  State<_Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<_Counter> {
+  int _taps = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => setState(() => _taps++),
+    child: SizedBox(height: 56, child: Center(child: Text('$_taps'))),
+  );
 }

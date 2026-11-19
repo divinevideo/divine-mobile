@@ -155,11 +155,11 @@ class _VideosGrid extends StatelessWidget {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final layout = context.adaptiveLayout;
-    final crossAxisCount = layout.enabled
-        ? layout.gridColumns(compact: 2, width: screenWidth)
-        : screenWidth >= 600
-        ? 3
-        : 2;
+    final crossAxisCount = layout.gridColumns(
+      compact: 2,
+      width: screenWidth,
+      largeColumnsWithoutFlag: 3,
+    );
 
     return SliverPadding(
       padding: const EdgeInsets.all(4),

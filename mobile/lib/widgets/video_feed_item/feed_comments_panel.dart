@@ -6,9 +6,12 @@ import 'dart:math' as math;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:models/models.dart' show liveCommentCountSeed;
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/comments_panel_scope.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// The comments panel's width: about a third of the window, within these
 /// bounds, plus the system inset on the edge it sits against.
@@ -22,11 +25,13 @@ const Duration _slideDuration = Duration(milliseconds: 280);
 /// Lays [child], a feed screen, out beside the comments panel.
 ///
 /// Wraps the whole screen — its top bar too — so the screen's chrome stays
-/// over the feed while the panel is open. The panel exists only in wide
+/// over the feed while the panel is open. The panel opens only in wide
 /// landscape windows ([AdaptiveLayout.isWideLandscape]); everywhere else
 /// [CommentsPanelScope] publishes no cubit, so comments open in the sheet as
-/// before. The tree keeps its shape either way, so rotating never rebuilds
-/// the feed.
+/// before. A panel already open when the window stops being wide landscape
+/// (rotating, folding, a portrait camera opened over the feed) stays, hidden,
+/// with what was typed in it, and shows again once the window is wide again.
+/// The tree keeps its shape either way, so rotating never rebuilds the feed.
 class FeedCommentsPanelHost extends StatefulWidget {
   const FeedCommentsPanelHost({
     required this.child,
@@ -60,7 +65,6 @@ class FeedCommentsPanelHost extends StatefulWidget {
 class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
     with SingleTickerProviderStateMixin {
   final _cubit = CommentsPanelCubit();
-  bool _closeScheduled = false;
 
   late final AnimationController _slide = AnimationController(
     vsync: this,
@@ -88,6 +92,7 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     if (request != null) {
       setState(() => _shown = request);
+      _announce(context, request);
       if (reduceMotion) {
         _slide.value = 1;
       } else {
@@ -106,15 +111,18 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
     });
   }
 
-  /// Closes a panel the window got too narrow for (rotation, folding) after
-  /// this frame: the cubit may not emit while the tree builds.
-  void _closeIfOpen() {
-    if (_cubit.state == null || _closeScheduled) return;
-    _closeScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _closeScheduled = false;
-      if (mounted) _cubit.dismiss();
-    });
+  /// Tells a screen reader the panel opened, with its header: it opens
+  /// beside the video, not as a screen of its own, which a screen reader
+  /// would announce by itself.
+  void _announce(BuildContext context, CommentsPanelRequest request) {
+    final count =
+        request.initialCommentCount ?? liveCommentCountSeed(request.video);
+    announceDetached(
+      context,
+      context.l10n.commentsHeaderCount(count ?? 0),
+      description: 'announce the comments panel',
+      logName: 'FeedCommentsPanelHost',
+    );
   }
 
   @override
@@ -123,9 +131,11 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
     final available = layout.isWideLandscape;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final padding = MediaQuery.paddingOf(context);
-    // The panel sits against the trailing edge, where the iPhone Duo keeps
-    // its status bar: the panel pads its content clear of it, and the feed
-    // beside it no longer needs to.
+    // The panel sits against the trailing edge. A side inset still left there
+    // (a camera cutout, or a navigation bar on the side in landscape; the
+    // iPhone Duo's status bar column is already taken off by the shell and
+    // the page frame) is padded inside the panel, and the feed beside it no
+    // longer needs to keep clear of it.
     final trailingInset = isRtl ? padding.left : padding.right;
     final panelWidth =
         math.min(
@@ -133,8 +143,9 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
           math.max(_minPanelWidth, layout.size.width * _panelWidthFraction),
         ) +
         trailingInset;
-    if (!available) _closeIfOpen();
-    final shown = available ? _shown : null;
+    final shown = _shown;
+    // Takes the feed's trailing inset only while it is on screen.
+    final panelOnScreen = shown != null && available;
     return CommentsPanelScope(
       cubit: available ? _cubit : null,
       child: BlocListener<CommentsPanelCubit, CommentsPanelRequest?>(
@@ -146,34 +157,42 @@ class _FeedCommentsPanelHostState extends State<FeedCommentsPanelHost>
               key: const ValueKey('feed'),
               child: MediaQuery.removePadding(
                 context: context,
-                removeLeft: shown != null && isRtl,
-                removeRight: shown != null && !isRtl,
+                removeLeft: panelOnScreen && isRtl,
+                removeRight: panelOnScreen && !isRtl,
                 child: widget.child,
               ),
             ),
             if (shown != null)
-              // Slides in from the trailing edge, the feed narrowing beside
-              // it, and back out on close.
-              SizeTransition(
-                axis: Axis.horizontal,
-                sizeFactor: _slideCurve,
-                alignment: AlignmentDirectional.centerStart,
-                child: SizedBox(
-                  width: panelWidth,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.vineColors.surface,
-                      border: BorderDirectional(
-                        start: BorderSide(
-                          color: context.vineColors.surfaceContainer,
+              // Hidden while the window is not wide landscape, keeping its
+              // state; the keyboard lets go of a field in it meanwhile.
+              Offstage(
+                offstage: !available,
+                child: ExcludeFocus(
+                  excluding: !available,
+                  // Slides in from the trailing edge, the feed narrowing
+                  // beside it, and back out on close.
+                  child: SizeTransition(
+                    axis: Axis.horizontal,
+                    sizeFactor: _slideCurve,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: SizedBox(
+                      width: panelWidth,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: context.vineColors.surface,
+                          border: BorderDirectional(
+                            start: BorderSide(
+                              color: context.vineColors.surfaceContainer,
+                            ),
+                          ),
+                        ),
+                        child: SafeArea(
+                          left: isRtl,
+                          right: !isRtl,
+                          bottom: false,
+                          child: widget.panelBuilder(shown, _cubit.dismiss),
                         ),
                       ),
-                    ),
-                    child: SafeArea(
-                      left: isRtl,
-                      right: !isRtl,
-                      bottom: false,
-                      child: widget.panelBuilder(shown, _cubit.dismiss),
                     ),
                   ),
                 ),

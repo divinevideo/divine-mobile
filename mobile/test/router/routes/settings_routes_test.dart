@@ -66,6 +66,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -918,12 +919,17 @@ void main() {
               kAlwaysDismissedAnimation,
               const SizedBox.shrink(),
             );
+        // Framed against a status bar column, as every page is.
         expect(
           transition,
-          isA<SlideTransition>().having(
-            (t) => t.position.value,
-            'start offset',
-            const Offset(1, 0),
+          isA<StatusBarColumnFrame>().having(
+            (frame) => frame.child,
+            'child',
+            isA<SlideTransition>().having(
+              (t) => t.position.value,
+              'start offset',
+              const Offset(1, 0),
+            ),
           ),
         );
       });

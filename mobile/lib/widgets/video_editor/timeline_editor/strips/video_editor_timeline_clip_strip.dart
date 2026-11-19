@@ -572,7 +572,7 @@ class _VideoEditorTimelineClipStripState
     _updateAutoScroll(details.globalPosition.dx);
   }
 
-  // --------------- Auto-scroll while dragging near screen edges -------------
+  //----------- Auto-scroll while dragging near the timeline's edges -----------
 
   void _updateAutoScroll(double globalX) {
     if (widget.scrollController == null) return;

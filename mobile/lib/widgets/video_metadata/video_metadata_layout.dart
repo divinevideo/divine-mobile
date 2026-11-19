@@ -15,7 +15,7 @@ import 'package:openvine/ui/adaptive_layout.dart';
 /// and the details and the bottom bar sit beside it, so neither stretches
 /// across the whole window. Like every screen there, it ends at a status bar
 /// column.
-class VideoMetadataLayout extends StatelessWidget {
+class VideoMetadataLayout extends StatefulWidget {
   /// Creates the layout of a video metadata screen's body.
   const VideoMetadataLayout({
     required this.preview,
@@ -52,7 +52,31 @@ class VideoMetadataLayout extends StatelessWidget {
   static const double previewPaneInset = 16;
 
   @override
+  State<VideoMetadataLayout> createState() => _VideoMetadataLayoutState();
+}
+
+class _VideoMetadataLayoutState extends State<VideoMetadataLayout> {
+  /// Keep the form (its text, focus and keyboard) and the bottom bar (its
+  /// busy flags) when a rotation moves them between the two layouts.
+  final GlobalKey _detailsKey = GlobalKey(debugLabel: 'video-metadata-details');
+  final GlobalKey _bottomBarKey = GlobalKey(
+    debugLabel: 'video-metadata-bottom-bar',
+  );
+
+  @override
   Widget build(BuildContext context) {
+    final details = KeyedSubtree(
+      key: _detailsKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: widget.details,
+      ),
+    );
+    final bottomBar = SafeArea(
+      top: false,
+      child: KeyedSubtree(key: _bottomBarKey, child: widget.bottomBar),
+    );
     if (!context.adaptiveLayout.isWideLandscape) {
       return Column(
         spacing: 12,
@@ -60,15 +84,15 @@ class VideoMetadataLayout extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: padding,
+              padding: widget.padding,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [preview, ...details],
+                children: [widget.preview, details],
               ),
             ),
           ),
-          SafeArea(top: false, child: bottomBar),
+          bottomBar,
         ],
       );
     }
@@ -79,16 +103,18 @@ class VideoMetadataLayout extends StatelessWidget {
           children: [
             SizedBox(
               width: math.min(
-                constraints.maxWidth * previewPaneFraction,
-                maxPreviewPaneWidth,
+                constraints.maxWidth * VideoMetadataLayout.previewPaneFraction,
+                VideoMetadataLayout.maxPreviewPaneWidth,
               ),
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(previewPaneInset),
+                  padding: const EdgeInsets.all(
+                    VideoMetadataLayout.previewPaneInset,
+                  ),
                   child: LayoutBuilder(
                     builder: (context, pane) =>
-                        Center(child: sidePreview(pane.biggest)),
+                        Center(child: widget.sidePreview(pane.biggest)),
                   ),
                 ),
               ),
@@ -101,15 +127,13 @@ class VideoMetadataLayout extends StatelessWidget {
                     child: SingleChildScrollView(
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.only(top: previewPaneInset),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: details,
+                      padding: const EdgeInsets.only(
+                        top: VideoMetadataLayout.previewPaneInset,
                       ),
+                      child: details,
                     ),
                   ),
-                  SafeArea(top: false, child: bottomBar),
+                  bottomBar,
                 ],
               ),
             ),

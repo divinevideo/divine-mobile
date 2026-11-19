@@ -1,5 +1,6 @@
-// ABOUTME: Renders the shell app bar and bottom nav around the branch content
-// ABOUTME: Takes decided values so it can be pumped without the shell's wiring
+// ABOUTME: Renders the shell app bar and tab navigation (bottom bar, or side
+// ABOUTME: navigation in wide landscape) around the branch content;
+// ABOUTME: takes decided values so it can be pumped without the shell's wiring
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;

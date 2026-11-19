@@ -1,4 +1,4 @@
-// ABOUTME: Three-column masonry sliver shared by the profile video tabs,
+// ABOUTME: Masonry sliver shared by the profile video tabs,
 // ABOUTME: mixing vertical 2:3 and square 1:1 tiles like the Explore feeds.
 
 import 'package:flutter/rendering.dart';
@@ -60,7 +60,8 @@ double profileTileAspectRatioForVideo(VideoEvent video) =>
           : profileVerticalTileAspectRatio,
     );
 
-/// Three-column masonry grid for the profile tabs.
+/// Masonry grid for the profile tabs: three columns on a phone, more on wide
+/// windows with the large-screen layouts.
 ///
 /// Each tile is sized by [aspectRatioOf] and placed in the shortest column,
 /// so vertical and square tiles interlock the way the Explore feeds do.

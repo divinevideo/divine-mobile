@@ -133,10 +133,11 @@ extension FlutterError: @retroactive Error {}
   // screen — an iPad, or the iPhone Duo's inner display — while the Large
   // Screen Layout experimental feature is on. There every orientation is
   // allowed here and Dart narrows it through SystemChrome
-  // (AdaptiveLayoutScope), keeping the camera in portrait. Asked again on
-  // every rotation and whenever the feature turns on or off, so neither needs
-  // a restart. The Duo honors only this mask: it refuses programmatic
-  // orientation changes.
+  // (AdaptiveLayoutScope), asking for portrait while the camera is on top.
+  // Asked again on every rotation and whenever the feature turns on or off,
+  // so neither needs a restart. The Duo honors only this mask: it refuses
+  // programmatic orientation changes, so there the camera keeps the window's
+  // orientation (PortraitOrientationLock).
   override func application(
     _ application: UIApplication,
     supportedInterfaceOrientationsFor window: UIWindow?

@@ -1,5 +1,5 @@
 // ABOUTME: Tests that the feed publishes its comments panel only in wide
-// ABOUTME: landscape windows, and closes it when the window gets too narrow
+// ABOUTME: landscape windows, and hides it while the window is too narrow
 
 import 'dart:async';
 
@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/comments_panel_scope.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
@@ -31,6 +32,7 @@ void main() {
       required Size window,
       bool enabled = true,
       bool reduceMotion = false,
+      Widget panel = const SizedBox.expand(key: panelKey),
     }) async {
       tester.view.physicalSize = window;
       tester.view.devicePixelRatio = 1;
@@ -43,8 +45,9 @@ void main() {
               FeatureFlag.largeScreenLayout,
             ).overrideWithValue(enabled),
           ],
-          child: Directionality(
-            textDirection: TextDirection.ltr,
+          child: Localizations(
+            locale: const Locale('en'),
+            delegates: appLocalizationsDelegates,
             child: MediaQuery(
               data: MediaQueryData(
                 size: window,
@@ -53,7 +56,7 @@ void main() {
               child: AdaptiveLayoutScope(
                 child: FeedCommentsPanelHost(
                   // The comments themselves need the whole app around them.
-                  panelBuilder: (_, _) => const SizedBox.expand(key: panelKey),
+                  panelBuilder: (_, _) => panel,
                   child: Builder(
                     builder: (context) {
                       feedContext = context;
@@ -149,30 +152,82 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('closes the panel when the window turns portrait', (
-        tester,
-      ) async {
-        await pumpHost(tester, window: _landscape);
-        final cubit = CommentsPanelScope.maybeOf(feedContext)!;
-        var closed = false;
-        unawaited(
-          cubit
-              .open(
-                CommentsPanelRequest(
-                  video: TestHelpers.createVideoEvent(id: 'a' * 64),
-                ),
-              )
-              .then((_) => closed = true),
+      testWidgets('hides the panel while the window is not wide landscape, '
+          'and shows it again with its state', (tester) async {
+        Future<void> pumpAt(Size window) => pumpHost(
+          tester,
+          window: window,
+          panel: const _Counter(key: panelKey),
         );
-
-        // Rotated before the panel built: it never has to render here.
-        await pumpHost(tester, window: _portrait);
+        await pumpAt(_landscape);
+        final cubit = CommentsPanelScope.maybeOf(feedContext)!;
+        unawaited(
+          cubit.open(
+            CommentsPanelRequest(
+              video: TestHelpers.createVideoEvent(id: 'a' * 64),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(panelKey));
         await tester.pump();
 
-        expect(cubit.state, isNull);
-        expect(closed, isTrue);
+        // A portrait camera opened over the feed turns a tablet to portrait.
+        await pumpAt(_portrait);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(panelKey), findsNothing);
         expect(CommentsPanelScope.maybeOf(feedContext), isNull);
+        expect(tester.getSize(find.byKey(_feedKey)).width, _portrait.width);
+        expect(cubit.state, isNotNull);
+
+        await pumpAt(_landscape);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(of: find.byKey(panelKey), matching: find.text('1')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    group('semantics', () {
+      testWidgets('tells a screen reader the panel opened', (tester) async {
+        await pumpHost(tester, window: _landscape);
+        unawaited(
+          CommentsPanelScope.maybeOf(feedContext)!.open(
+            CommentsPanelRequest(
+              video: TestHelpers.createVideoEvent(id: 'c' * 64),
+              initialCommentCount: 3,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          tester.takeAnnouncements().map((a) => a.message),
+          [lookupAppLocalizations(const Locale('en')).commentsHeaderCount(3)],
+        );
       });
     });
   });
+}
+
+/// Counts its taps, to tell a kept state from a fresh one.
+class _Counter extends StatefulWidget {
+  const _Counter({super.key});
+
+  @override
+  State<_Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<_Counter> {
+  int _taps = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => setState(() => _taps++),
+    child: Center(child: Text('$_taps')),
+  );
 }

@@ -1,5 +1,5 @@
-// ABOUTME: Shared bottom navigation bar widget for app shell and profile screens
-// ABOUTME: Provides consistent bottom nav across screens with/without shell
+// ABOUTME: Shared tab navigation for the app shell and profile screens: a bottom
+// ABOUTME: bar, or a side rail / status bar column in wide landscape windows
 
 import 'dart:async';
 import 'dart:math' show pi;
@@ -34,7 +34,8 @@ import 'package:openvine/widgets/notification_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Shared bottom navigation bar used by AppShell and standalone profile screens.
+/// Shared tab navigation used by AppShell and standalone profile screens: the
+/// bottom bar, or the side navigation of wide landscape windows.
 class VineBottomNav extends ConsumerWidget {
   const VineBottomNav({
     required this.currentIndex,
@@ -44,10 +45,11 @@ class VineBottomNav extends ConsumerWidget {
     super.key,
   });
 
-  /// [Axis.horizontal] lays the tabs out as the bottom bar;
-  /// [Axis.vertical] as a [vineNavigationRailWidth]-wide rail along the
-  /// leading edge, for wide landscape windows (see
-  /// `AdaptiveLayout.isWideLandscape`).
+  /// [Axis.horizontal] lays the tabs out as the bottom bar; [Axis.vertical]
+  /// stacks them for wide landscape windows (see
+  /// `AdaptiveLayout.isWideLandscape`): a [vineNavigationRailWidth]-wide rail
+  /// along the leading edge, or the status bar column when
+  /// [statusBarColumnWidth] is set.
   final Axis direction;
 
   /// When set, the vertical nav fills the status bar column the system runs
@@ -149,7 +151,8 @@ class VineBottomNav extends ConsumerWidget {
       // targets (see [_kTopExtraTapHeight], [_kBottomExtraTapHeight],
       // [_kHorizontalEdgePad]). [SafeArea] still keeps tap targets clear
       // of the iOS home indicator and Android navigation bar; as a rail, of
-      // the cutout on the leading edge it sits on.
+      // the cutout on the leading edge it sits on; in the status bar column,
+      // of the home indicator only.
       child: SafeArea(
         top: false,
         bottom: !isRail || inColumn,
@@ -167,7 +170,7 @@ class VineBottomNav extends ConsumerWidget {
             const totalIconWidth = iconWidth * 4 + cameraWidth;
             const totalEdgePad = _kHorizontalEdgePad * 2;
             // 4 inter-icon gaps × 2 halves = 8. A rail stacks equal slots
-            // instead, centred on the leading edge.
+            // instead, centred down the edge it sits on.
             final halfGap = isRail
                 ? 0.0
                 : ((constraints.maxWidth - totalIconWidth - totalEdgePad) / 8)

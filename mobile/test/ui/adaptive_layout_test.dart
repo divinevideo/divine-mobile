@@ -129,6 +129,40 @@ void main() {
         expect(layout.gridColumns(compact: 3, width: 1300), equals(3));
       });
 
+      test("keeps a grid's own large-window count with the flag off", () {
+        const layout = AdaptiveLayout(enabled: false, size: Size.zero);
+
+        expect(
+          layout.gridColumns(
+            compact: 2,
+            width: 599,
+            largeColumnsWithoutFlag: 3,
+          ),
+          equals(2),
+        );
+        expect(
+          layout.gridColumns(
+            compact: 2,
+            width: 1300,
+            largeColumnsWithoutFlag: 3,
+          ),
+          equals(3),
+        );
+      });
+
+      test('ignores the flag-off count with the flag on', () {
+        const layout = AdaptiveLayout(enabled: true, size: Size.zero);
+
+        expect(
+          layout.gridColumns(
+            compact: 2,
+            width: 1300,
+            largeColumnsWithoutFlag: 3,
+          ),
+          equals(5),
+        );
+      });
+
       test('adds a column at each breakpoint the grid crosses', () {
         const layout = AdaptiveLayout(enabled: true, size: Size.zero);
 
@@ -280,7 +314,9 @@ void main() {
       testWidgets(
         'leaves keeping small screens in portrait to the app delegate on iOS',
         (tester) async {
-          // Opening the iPhone Duo: the outer display, then the inner one.
+          // Folding the open iPhone Duo and opening it again: the inner
+          // display, the outer one, then the inner one again.
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
           await pumpScope(tester, enabled: true, size: _duoOuter);
           await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
@@ -372,6 +408,35 @@ void main() {
         await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
         expect(reportedFlags, isEmpty);
+      });
+
+      testWidgets('lets a page pushed over the camera rotate, and locks '
+          'portrait again when it pops', (tester) async {
+        final navigatorKey = GlobalKey<NavigatorState>();
+        await pumpScope(
+          tester,
+          enabled: true,
+          size: _duoInnerPortrait,
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const PortraitOrientationLock(child: SizedBox.expand()),
+          ),
+        );
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+
+        navigatorKey.currentState!.push(
+          MaterialPageRoute<void>(builder: (_) => const SizedBox.expand()),
+        );
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, hasLength(4));
+
+        navigatorKey.currentState!.pop();
+        await tester.pumpAndSettle();
+
+        expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
       });
 
       testWidgets('restores portrait when the flag is turned off', (

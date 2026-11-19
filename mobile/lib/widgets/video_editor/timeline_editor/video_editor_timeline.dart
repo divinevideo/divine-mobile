@@ -248,8 +248,6 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         !isTimelineHiddenByUser &&
         !hasSelectedOverlay &&
         !hasLoopSuggestion;
-    // Sync layers from main editor to timeline overlay bloc, and
-    // sync scroll to playback position while not user-scrolling.
     final fillsHeight = widget.fillHeight && !isTimelineHiddenByUser;
     // The tracks have fixed heights the text has to fit in. Below the preview
     // they keep their fixed height, also while the timeline is being hidden,
@@ -322,6 +320,8 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
       ),
     );
 
+    // Sync layers from main editor to timeline overlay bloc, and
+    // sync scroll to playback position while not user-scrolling.
     final Widget body = MultiBlocListener(
       listeners: [
         BlocListener<ClipEditorBloc, ClipEditorState>(

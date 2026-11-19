@@ -142,8 +142,8 @@ class _PlatformBrightnessStatusBarState
   }
 }
 
-/// The app's themes, every page route framed against a status bar column
-/// (see [StatusBarColumnFrame]).
+/// The app's themes, framing every page route that takes their transition
+/// against a status bar column (see [StatusBarColumnFrame]).
 final ThemeData _lightTheme = _framingStatusBarColumn(VineTheme.lightTheme);
 final ThemeData _darkTheme = _framingStatusBarColumn(VineTheme.theme);
 

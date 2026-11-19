@@ -27,8 +27,8 @@ CustomTransitionPage<void> fadeUpwardsPage({
     restorationId: state.pageKey.value,
     child: child,
     // It brings its own transition, so the theme's frame never reaches it:
-    // framed here, as every page is, the page ends before a status bar column
-    // and the column stays put while the page fades in.
+    // framed here, as the theme's page routes are, the page ends before a
+    // status bar column and the column stays put while the page fades in.
     transitionsBuilder: (context, animation, secondaryAnimation, child) =>
         StatusBarColumnFrame(
           child: const FadeUpwardsPageTransitionsBuilder()

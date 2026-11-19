@@ -64,9 +64,6 @@ class AdaptiveLayout {
       size.width >= AdaptiveBreakpoints.wide &&
       size.width > size.height;
 
-  /// The column count for a video grid [width] wide that shows [compact]
-  /// columns on a phone.
-  ///
   /// The column the system keeps along a side of the window for its status
   /// bar, read from the window's [viewPadding]: the iPhone Duo runs its
   /// status bar and camera down a side edge, on the outer display and on the
@@ -82,10 +79,20 @@ class AdaptiveLayout {
     return (width: width, onRight: onRight);
   }
 
+  /// The column count for a video grid [width] wide that shows [compact]
+  /// columns on a phone.
+  ///
   /// Adds one column at each breakpoint the grid crosses, so tiles stay about
-  /// as wide as they are on a phone.
-  int gridColumns({required int compact, required double width}) {
-    if (!enabled || width < AdaptiveBreakpoints.large) return compact;
+  /// as wide as they are on a phone. Without the large-screen layouts a grid
+  /// keeps the rule it had before them: [compact] columns, or
+  /// [largeColumnsWithoutFlag] from [AdaptiveBreakpoints.large] where given.
+  int gridColumns({
+    required int compact,
+    required double width,
+    int? largeColumnsWithoutFlag,
+  }) {
+    if (width < AdaptiveBreakpoints.large) return compact;
+    if (!enabled) return largeColumnsWithoutFlag ?? compact;
     if (width < AdaptiveBreakpoints.wide) return compact + 1;
     if (width < AdaptiveBreakpoints.extraWide) return compact + 2;
     return compact + 3;
@@ -169,7 +176,8 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
     if (allowRotation == _rotationApplied) return;
     // Portrait is what startup already applied: nothing to ask for until
     // rotation was allowed once, so a camera opened with the flag off (or on
-    // a phone) makes no orientation call, exactly as before the flag.
+    // an Android phone) makes no orientation call, exactly as before the
+    // flag.
     if (_rotationApplied == null && !allowRotation) return;
     _rotationApplied = allowRotation;
     runDetached(
@@ -250,11 +258,16 @@ class _AdaptiveLayoutInherited extends InheritedWidget {
       enabled != oldWidget.enabled;
 }
 
-/// Keeps the app in portrait while [child] is mounted, even where the
+/// Keeps the app in portrait while [child]'s route is on top, even where the
 /// large-screen layouts let it rotate.
 ///
-/// For the camera, which records in portrait. The editor is laid out for
-/// both orientations instead.
+/// For the camera, which records in portrait. A page pushed over it, such as
+/// the editor or Post details, may rotate again, and the lock comes back
+/// with the camera. The editor is laid out for both orientations instead.
+///
+/// It asks the system, which an iPad follows. The iPhone Duo refuses
+/// programmatic rotation, so on the open Duo the camera keeps the window's
+/// orientation.
 class PortraitOrientationLock extends StatefulWidget {
   const PortraitOrientationLock({required this.child, super.key});
 
@@ -266,12 +279,20 @@ class PortraitOrientationLock extends StatefulWidget {
 }
 
 class _PortraitOrientationLockState extends State<PortraitOrientationLock> {
+  /// Releases the lock this widget holds, or null while it holds none.
   VoidCallback? _release;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_release != null) return;
+    // Depends on the route's position, so this runs again whenever a page is
+    // pushed over it or popped back off.
+    final onTop = ModalRoute.isCurrentOf(context) ?? true;
+    if (onTop == (_release != null)) return;
+    if (!onTop) {
+      _releaseLock();
+      return;
+    }
     final scope = context
         .getInheritedWidgetOfExactType<_AdaptiveLayoutInherited>();
     if (scope == null) return;
@@ -279,9 +300,14 @@ class _PortraitOrientationLockState extends State<PortraitOrientationLock> {
     _release = scope.releasePortraitLock;
   }
 
+  void _releaseLock() {
+    _release?.call();
+    _release = null;
+  }
+
   @override
   void dispose() {
-    _release?.call();
+    _releaseLock();
     super.dispose();
   }
 
@@ -319,12 +345,16 @@ class StatusBarColumnSafeArea extends StatelessWidget {
 /// Lays [child], a screen opened over the tabs, out beside the window's status
 /// bar column (see [AdaptiveLayout.statusBarColumn]), and paints the column in
 /// the navigation's color, as the tab screens do: there the column holds the
-/// tabs, or meets the bottom bar. So on every screen the content ends where
-/// the column starts, and the column reads the same.
+/// tabs, or meets the bottom bar. So on the screens it frames the content
+/// ends where the column starts, and the column reads the same.
 ///
-/// [StatusBarColumnPageTransitionsBuilder] puts it around every page route's
-/// transition, so the column stays put while the page slides within its
-/// space. Without a column it lays [child] out as it would be.
+/// [StatusBarColumnPageTransitionsBuilder] puts it around the transition of
+/// every page route that takes the theme's transition, so the column stays
+/// put while the page slides within its space. Routes with a transition of
+/// their own (the fade-upwards pages, developer options, the Post details
+/// preview) put it there themselves; the editor's tool screens, pushed as
+/// their own routes over the framed editor, have none. Without a column it
+/// lays [child] out as it would be.
 class StatusBarColumnFrame extends StatelessWidget {
   const StatusBarColumnFrame({required this.child, super.key});
 
@@ -372,8 +402,8 @@ class StatusBarColumnFrame extends StatelessWidget {
 /// Frames the pages [inner] transitions in a [StatusBarColumnFrame].
 ///
 /// Installed for every platform in the app's themes, so it reaches the
-/// screens opened over the tabs, which are page routes. The tabs' own route
-/// is a custom page that lays out its column itself.
+/// screens opened over the tabs that take the theme's transition. The tabs'
+/// own route is a custom page that lays out its column itself.
 class StatusBarColumnPageTransitionsBuilder extends PageTransitionsBuilder {
   const StatusBarColumnPageTransitionsBuilder(this.inner);
 

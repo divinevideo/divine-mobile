@@ -217,7 +217,7 @@ class _VideoMetadataPreviewScreenState
       child: Scaffold(
         backgroundColor: context.vineColors.surfaceContainerHigh,
         // Its own route, not a page: framed against a status bar column
-        // here, as every page is.
+        // here, as the theme's page routes are.
         body: StatusBarColumnFrame(
           child: Column(
             spacing: 16,

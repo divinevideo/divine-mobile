@@ -211,14 +211,11 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     // breakpoint.
     final screenSize = MediaQuery.sizeOf(context);
     final layout = context.adaptiveLayout;
-    final responsiveCrossAxisCount = layout.enabled
-        ? layout.gridColumns(
-            compact: widget.crossAxisCount,
-            width: screenSize.width,
-          )
-        : screenSize.width >= 600
-        ? 3
-        : widget.crossAxisCount;
+    final responsiveCrossAxisCount = layout.gridColumns(
+      compact: widget.crossAxisCount,
+      width: screenSize.width,
+      largeColumnsWithoutFlag: 3,
+    );
     final cacheExtent = screenSize.height * _gridCacheExtentScreens;
 
     // Whether to render the load-more footer below the grid.
