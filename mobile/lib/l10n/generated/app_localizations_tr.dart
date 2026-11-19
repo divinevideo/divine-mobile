@@ -4075,6 +4075,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bağlı platformlarına gönder. Paylaşım birkaç dakika sürebilir.';
 
   @override
+  String get crosspostStarted =>
+      'Diğer platformlarda arka planda paylaşılıyor.';
+
+  @override
   String get crosspostSubmit => 'Çapraz Paylaş';
 
   @override

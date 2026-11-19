@@ -4156,6 +4156,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Ipadala ito sa mga naka-connect mong platform. Maaaring tumagal nang ilang minuto ang pag-post.';
 
   @override
+  String get crosspostStarted => 'Ipinopost sa ibang platform sa background.';
+
+  @override
   String get crosspostSubmit => 'I-crosspost';
 
   @override

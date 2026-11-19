@@ -4186,6 +4186,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Schick es an deine verbundenen Plattformen. Das Posten kann ein paar Minuten dauern.';
 
   @override
+  String get crosspostStarted =>
+      'Dein Video wird im Hintergrund auf den anderen Plattformen veröffentlicht.';
+
+  @override
   String get crosspostSubmit => 'Crossposten';
 
   @override

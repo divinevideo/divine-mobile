@@ -1477,6 +1477,7 @@
   "shareSheetCrosspost": "Crossposter",
   "crosspostSheetTitle": "Crossposter cette vidéo",
   "crosspostSheetSubtitle": "Envoie-la sur tes plateformes connectées. La publication peut prendre quelques minutes.",
+  "crosspostStarted": "Publication sur les autres plateformes en arrière-plan.",
   "crosspostSubmit": "Crossposter",
   "crosspostStatusQueued": "En file d'attente",
   "crosspostStatusUploading": "Envoi en cours",

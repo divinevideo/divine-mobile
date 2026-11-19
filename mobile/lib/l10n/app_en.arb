@@ -2905,6 +2905,10 @@
   "shareSheetCrosspost": "Crosspost",
   "crosspostSheetTitle": "Crosspost this video",
   "crosspostSheetSubtitle": "Send it to your connected platforms. Posting can take a few minutes.",
+  "crosspostStarted": "Crossposting in the background.",
+  "@crosspostStarted": {
+    "description": "Confirmation shown after the crosspost picker closes while submission continues in the background."
+  },
   "crosspostSubmit": "Crosspost",
   "crosspostStatusQueued": "Queued",
   "crosspostStatusUploading": "Uploading",

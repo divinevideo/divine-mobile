@@ -1467,6 +1467,7 @@
   "shareSheetCrosspost": "クロス投稿",
   "crosspostSheetTitle": "この動画をクロス投稿",
   "crosspostSheetSubtitle": "連携中のプラットフォームに送るよ。投稿には数分かかることがあるよ。",
+  "crosspostStarted": "バックグラウンドで他のプラットフォームに投稿しています。",
   "crosspostSubmit": "クロス投稿",
   "crosspostStatusQueued": "待機中",
   "crosspostStatusUploading": "アップロード中",

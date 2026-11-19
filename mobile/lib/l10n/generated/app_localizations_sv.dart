@@ -4129,6 +4129,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Skicka den till dina anslutna plattformar. Publicering kan ta några minuter.';
 
   @override
+  String get crosspostStarted =>
+      'Publicerar på andra plattformar i bakgrunden.';
+
+  @override
   String get crosspostSubmit => 'Korsposta';
 
   @override

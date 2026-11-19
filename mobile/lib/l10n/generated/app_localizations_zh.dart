@@ -3865,6 +3865,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get crosspostSheetSubtitle => '发送到你已连接的平台。发布可能需要几分钟。';
 
   @override
+  String get crosspostStarted => '正在后台发布到其他平台。';
+
+  @override
   String get crosspostSubmit => '跨平台发布';
 
   @override

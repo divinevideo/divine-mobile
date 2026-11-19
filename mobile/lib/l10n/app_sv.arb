@@ -1477,6 +1477,7 @@
   "shareSheetCrosspost": "Korsposta",
   "crosspostSheetTitle": "Korsposta den här videon",
   "crosspostSheetSubtitle": "Skicka den till dina anslutna plattformar. Publicering kan ta några minuter.",
+  "crosspostStarted": "Publicerar på andra plattformar i bakgrunden.",
   "crosspostSubmit": "Korsposta",
   "crosspostStatusQueued": "I kö",
   "crosspostStatusUploading": "Laddar upp",

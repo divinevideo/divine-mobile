@@ -1477,6 +1477,7 @@
   "shareSheetCrosspost": "Crosspostează",
   "crosspostSheetTitle": "Crosspostează acest videoclip",
   "crosspostSheetSubtitle": "Trimite-l pe platformele tale conectate. Postarea poate dura câteva minute.",
+  "crosspostStarted": "Se publică pe celelalte platforme în fundal.",
   "crosspostSubmit": "Crosspostează",
   "crosspostStatusQueued": "În coadă",
   "crosspostStatusUploading": "Se încarcă",

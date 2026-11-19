@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,78 @@ const _secondPubkey =
 final _ownerSelectorProvider = StateProvider<String?>((_) => _firstPubkey);
 
 void main() {
+  group('crosspostSubmissionQueueProvider', () {
+    test('account switch cancels an active background retry', () {
+      fakeAsync((clock) {
+        final client = _MockCrosspostingApiClient();
+        final nextClient = _MockCrosspostingApiClient();
+        var attempts = 0;
+        when(
+          () => client.createCrossposts(
+            eventId: _firstPubkey,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          throw const CrosspostingApiException(
+            'Not indexed',
+            statusCode: 404,
+            code: 'not_found',
+          );
+        });
+        final container = ProviderContainer(
+          overrides: [
+            nip98AuthServiceProvider.overrideWithValue(_MockNip98AuthService()),
+            crosspostingOwnerPubkeyProvider.overrideWith(
+              (ref) => ref.watch(_ownerSelectorProvider),
+            ),
+            crosspostingApiClientFactoryProvider.overrideWithValue(
+              ({
+                required nip98AuthService,
+                required ownerPubkey,
+              }) => ownerPubkey == _firstPubkey ? client : nextClient,
+            ),
+          ],
+        );
+        final subscription = container.listen(
+          crosspostSubmissionQueueProvider,
+          (_, _) {},
+        );
+        var completed = false;
+        unawaited(
+          subscription
+              .read()
+              .submit(
+                eventId: _firstPubkey,
+                connections: const [
+                  CrosspostingConnection(
+                    id: 'connection-1',
+                    platform: CrosspostingPlatform.instagram,
+                    status: CrosspostingConnectionStatus.connected,
+                  ),
+                ],
+              )
+              .then((result) {
+                expect(result, isNull);
+                completed = true;
+              }),
+        );
+        clock.flushMicrotasks();
+        expect(attempts, 1);
+        container.read(_ownerSelectorProvider.notifier).state = _secondPubkey;
+        clock.flushMicrotasks();
+        clock.elapse(const Duration(minutes: 1));
+
+        expect(completed, isTrue);
+        expect(attempts, 1);
+        expect(clock.pendingTimers, isEmpty);
+        subscription.close();
+        container.dispose();
+        clock.flushMicrotasks();
+      });
+    });
+  });
+
   group('crosspostingApiClientProvider', () {
     test('an account change rebuilds the client for the new owner and '
         'closes the old one', () async {

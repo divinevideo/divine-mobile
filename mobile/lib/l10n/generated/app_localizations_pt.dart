@@ -4172,6 +4172,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mande para suas plataformas conectadas. A publicação pode levar alguns minutos.';
 
   @override
+  String get crosspostStarted =>
+      'Publicando em outras plataformas em segundo plano.';
+
+  @override
   String get crosspostSubmit => 'Fazer crosspost';
 
   @override

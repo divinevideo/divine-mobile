@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for manually crossposting an own video
-// ABOUTME: Select connected platforms, submit jobs, watch progress to permalink
+// ABOUTME: Confirms selected platforms and hands submissions to an account owner
 
 import 'dart:async';
 
@@ -14,6 +14,7 @@ import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/crosspost_models.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shows the crosspost flow for the current user's own [video].
@@ -42,9 +43,11 @@ Future<void> showCrosspostSheetForEvent({
   required List<CrosspostingConnection> connections,
 }) {
   final repository = container.read(crosspostingRepositoryProvider);
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
   // Resolved while the opener is mounted: it may be gone by the time the
   // reconnect button is tapped, and Navigator.of on a defunct element throws.
-  final navigator = Navigator.of(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
   return VineBottomSheet.show<void>(
     context: context,
     showHeaderDivider: false,
@@ -54,15 +57,128 @@ Future<void> showCrosspostSheetForEvent({
         eventId: eventId,
         initialConnections: connections,
       ),
-      child: CrosspostSheetView(
-        onReconnect: () {
-          navigator.pop();
-          unawaited(openCrosspostingSetup(container));
+      child: Builder(
+        builder: (sheetContext) {
+          var submitted = false;
+          return CrosspostSheetView(
+            onSubmit: () {
+              if (submitted) return;
+              submitted = true;
+              final state = sheetContext.read<VideoCrosspostCubit>().state;
+              final selected = [
+                for (final connection in state.connectedConnections)
+                  if (state.selectedPlatforms.contains(
+                    connection.platform.wireName,
+                  ))
+                    connection,
+              ];
+              navigator.pop();
+              messenger.showSnackBar(
+                SnackBar(content: Text(l10n.crosspostStarted)),
+              );
+              runDetached(
+                _submitInBackground(
+                  container: container,
+                  eventId: eventId,
+                  connections: selected,
+                  messenger: messenger,
+                  l10n: l10n,
+                ),
+                'submit crosspost in background',
+                logName: 'CrosspostSheet',
+                category: LogCategory.system,
+              );
+            },
+            onReconnect: () {
+              navigator.pop();
+              unawaited(openCrosspostingSetup(container));
+            },
+          );
         },
       ),
     ),
   );
 }
+
+Future<void> _submitInBackground({
+  required ProviderContainer container,
+  required String eventId,
+  required List<CrosspostingConnection> connections,
+  required ScaffoldMessengerState messenger,
+  required AppLocalizations l10n,
+}) async {
+  void showFailure(VideoCrosspostSubmitError? error) {
+    if (!messenger.mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(_submitErrorText(l10n, error))));
+  }
+
+  final notifiedFailures = <String>{};
+  void onUpdate(VideoCrosspostState state) {
+    if (!messenger.mounted) return;
+    if (state.status == VideoCrosspostStatus.submitFailed) {
+      showFailure(state.submitError);
+      return;
+    }
+    final failures = [
+      for (final job in state.jobs)
+        if (job.status == CrosspostJobStatus.failed &&
+            notifiedFailures.add(job.id))
+          '${crosspostPlatformDisplayName(job.platform)}: '
+              '${_jobFailureText(l10n, job.errorCode)}'
+        else if (job.status == CrosspostJobStatus.needsReauth &&
+            notifiedFailures.add(job.id))
+          l10n.crosspostReconnectPrompt(
+            crosspostPlatformDisplayName(job.platform),
+          ),
+    ];
+    if (failures.isNotEmpty) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(failures.join('\n'))));
+    }
+  }
+
+  // Keep account-change dependencies active after the modal is gone.
+  final subscription = container.listen(
+    crosspostSubmissionQueueProvider,
+    (_, _) {},
+  );
+  try {
+    await subscription.read().submit(
+      eventId: eventId,
+      connections: connections,
+      onUpdate: onUpdate,
+    );
+  } catch (_) {
+    showFailure(VideoCrosspostSubmitError.network);
+    rethrow; // runDetached logs unexpected failures.
+  } finally {
+    subscription.close();
+  }
+}
+
+String _submitErrorText(
+  AppLocalizations l10n,
+  VideoCrosspostSubmitError? error,
+) => switch (error) {
+  VideoCrosspostSubmitError.notOwner => l10n.crosspostErrorNotOwner,
+  VideoCrosspostSubmitError.notEligible => l10n.crosspostErrorNotEligible,
+  VideoCrosspostSubmitError.notConnected => l10n.crosspostErrorNotConnected,
+  VideoCrosspostSubmitError.unauthorized => l10n.crosspostErrorUnauthorized,
+  VideoCrosspostSubmitError.network || null => l10n.crosspostErrorNetwork,
+};
+
+String _jobFailureText(AppLocalizations l10n, String? errorCode) =>
+    switch (errorCode) {
+      'not_owner' => l10n.crosspostErrorNotOwner,
+      'not_eligible' => l10n.crosspostErrorNotEligible,
+      'not_connected' => l10n.crosspostErrorNotConnected,
+      'unauthorized' => l10n.crosspostErrorUnauthorized,
+      'network' => l10n.crosspostErrorNetwork,
+      _ => l10n.crosspostFailedGeneric,
+    };
 
 /// Platform ids are brand names; they render as-is in every locale.
 String crosspostPlatformDisplayName(String platform) => switch (platform) {
@@ -76,7 +192,9 @@ String crosspostPlatformDisplayName(String platform) => switch (platform) {
 @visibleForTesting
 class CrosspostSheetView extends StatelessWidget {
   @visibleForTesting
-  const CrosspostSheetView({this.onReconnect, super.key});
+  const CrosspostSheetView({this.onReconnect, this.onSubmit, super.key});
+
+  final VoidCallback? onSubmit;
 
   final VoidCallback? onReconnect;
 
@@ -122,7 +240,8 @@ class CrosspostSheetView extends StatelessWidget {
                     onPressed:
                         state.status == VideoCrosspostStatus.ready &&
                             state.selectedPlatforms.isNotEmpty
-                        ? () => context.read<VideoCrosspostCubit>().submit()
+                        ? onSubmit ??
+                              () => context.read<VideoCrosspostCubit>().submit()
                         : null,
                     expanded: true,
                   ),
@@ -131,7 +250,7 @@ class CrosspostSheetView extends StatelessWidget {
                   const _SheetTitle(),
                   const SizedBox(height: 16),
                   Text(
-                    _submitErrorText(context, state.submitError),
+                    _submitErrorText(context.l10n, state.submitError),
                     textAlign: TextAlign.center,
                     style: VineTheme.bodyLargeFont(
                       color: context.vineColors.onSurfaceVariant,
@@ -141,7 +260,8 @@ class CrosspostSheetView extends StatelessWidget {
                   DivineButton(
                     label: context.l10n.crosspostSubmit,
                     onPressed: state.selectedPlatforms.isNotEmpty
-                        ? () => context.read<VideoCrosspostCubit>().submit()
+                        ? onSubmit ??
+                              () => context.read<VideoCrosspostCubit>().submit()
                         : null,
                     expanded: true,
                   ),
@@ -174,21 +294,6 @@ class CrosspostSheetView extends StatelessWidget {
       ),
     );
   }
-
-  String _submitErrorText(
-    BuildContext context,
-    VideoCrosspostSubmitError? error,
-  ) => switch (error) {
-    VideoCrosspostSubmitError.notOwner => context.l10n.crosspostErrorNotOwner,
-    VideoCrosspostSubmitError.notEligible =>
-      context.l10n.crosspostErrorNotEligible,
-    VideoCrosspostSubmitError.notConnected =>
-      context.l10n.crosspostErrorNotConnected,
-    VideoCrosspostSubmitError.unauthorized =>
-      context.l10n.crosspostErrorUnauthorized,
-    VideoCrosspostSubmitError.network ||
-    null => context.l10n.crosspostErrorNetwork,
-  };
 }
 
 class _SheetTitle extends StatelessWidget {
@@ -351,7 +456,7 @@ class _JobRow extends StatelessWidget {
             _ViewPostLink(url: job.externalPostUrl!),
           if (job.status == CrosspostJobStatus.failed)
             Text(
-              _failureText(context, job.errorCode),
+              _jobFailureText(context.l10n, job.errorCode),
               style: VineTheme.bodySmallFont(color: VineTheme.error),
             ),
           if (job.status == CrosspostJobStatus.needsReauth)
@@ -375,16 +480,6 @@ class _JobRow extends StatelessWidget {
     CrosspostJobStatus.needsReauth => context.l10n.crosspostStatusNeedsReauth,
     CrosspostJobStatus.skipped => context.l10n.crosspostStatusSkipped,
   };
-
-  String _failureText(BuildContext context, String? errorCode) =>
-      switch (errorCode) {
-        'not_owner' => context.l10n.crosspostErrorNotOwner,
-        'not_eligible' => context.l10n.crosspostErrorNotEligible,
-        'not_connected' => context.l10n.crosspostErrorNotConnected,
-        'unauthorized' => context.l10n.crosspostErrorUnauthorized,
-        'network' => context.l10n.crosspostErrorNetwork,
-        _ => context.l10n.crosspostFailedGeneric,
-      };
 }
 
 class _ViewPostLink extends StatelessWidget {

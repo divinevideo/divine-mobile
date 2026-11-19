@@ -4134,6 +4134,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'أرسله إلى منصّاتك المرتبطة. قد يستغرق النشر بضع دقائق.';
 
   @override
+  String get crosspostStarted => 'جارٍ النشر على المنصات الأخرى في الخلفية.';
+
+  @override
   String get crosspostSubmit => 'نشر متقاطع';
 
   @override

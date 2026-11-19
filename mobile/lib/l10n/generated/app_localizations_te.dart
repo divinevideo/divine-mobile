@@ -4276,6 +4276,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'దీన్ని మీ కనెక్ట్ చేయబడిన ప్లాట్‌ఫారమ్‌లకు పంపండి. పోస్ట్ చేయడానికి కొన్ని నిమిషాలు పట్టవచ్చు.';
 
   @override
+  String get crosspostStarted =>
+      'బ్యాక్‌గ్రౌండ్‌లో ఇతర ప్లాట్‌ఫారమ్‌లకు పోస్ట్ చేస్తోంది.';
+
+  @override
   String get crosspostSubmit => 'క్రాస్‌పోస్ట్';
 
   @override

@@ -1986,6 +1986,7 @@
   "shareSheetCrosspost": "跨平台发布",
   "crosspostSheetTitle": "跨平台发布此视频",
   "crosspostSheetSubtitle": "发送到你已连接的平台。发布可能需要几分钟。",
+  "crosspostStarted": "正在后台发布到其他平台。",
   "crosspostSubmit": "跨平台发布",
   "crosspostStatusQueued": "排队中",
   "crosspostStatusUploading": "上传中",

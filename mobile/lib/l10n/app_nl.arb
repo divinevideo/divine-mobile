@@ -1477,6 +1477,7 @@
   "shareSheetCrosspost": "Crossposten",
   "crosspostSheetTitle": "Deze video crossposten",
   "crosspostSheetSubtitle": "Stuur 'm naar je gekoppelde platforms. Het posten kan een paar minuten duren.",
+  "crosspostStarted": "Je video wordt op de achtergrond op andere platforms geplaatst.",
   "crosspostSubmit": "Crossposten",
   "crosspostStatusQueued": "In de wachtrij",
   "crosspostStatusUploading": "Uploaden",

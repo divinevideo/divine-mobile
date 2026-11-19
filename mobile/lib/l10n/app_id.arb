@@ -1474,6 +1474,7 @@
   "shareSheetCrosspost": "Crosspost",
   "crosspostSheetTitle": "Crosspost video ini",
   "crosspostSheetSubtitle": "Kirim ke platform yang terhubung ke akunmu. Posting bisa butuh beberapa menit.",
+  "crosspostStarted": "Memposting ke platform lain di latar belakang.",
   "crosspostSubmit": "Crosspost",
   "crosspostStatusQueued": "Dalam antrean",
   "crosspostStatusUploading": "Mengunggah",

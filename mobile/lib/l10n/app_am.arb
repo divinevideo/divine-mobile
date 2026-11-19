@@ -1833,6 +1833,7 @@
   "shareSheetCrosspost": "ተሻግሮ ማተም",
   "crosspostSheetTitle": "ይህን ቪዲዮ ተሻግሮ ማተም",
   "crosspostSheetSubtitle": "ወደ የተገናኙ መድረኮችዎ ይላኩት። ማተሙ ጥቂት ደቂቃዎች ሊወስድ ይችላል።",
+  "crosspostStarted": "ቪዲዮው በጀርባ ወደ ሌሎች መድረኮች እየተለጠፈ ነው።",
   "crosspostSubmit": "ተሻግሮ ማተም",
   "crosspostStatusQueued": "ተሰልፏል",
   "crosspostStatusUploading": "በመስቀል ላይ",

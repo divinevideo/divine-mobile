@@ -4043,6 +4043,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'ወደ የተገናኙ መድረኮችዎ ይላኩት። ማተሙ ጥቂት ደቂቃዎች ሊወስድ ይችላል።';
 
   @override
+  String get crosspostStarted => 'ቪዲዮው በጀርባ ወደ ሌሎች መድረኮች እየተለጠፈ ነው።';
+
+  @override
   String get crosspostSubmit => 'ተሻግሮ ማተም';
 
   @override

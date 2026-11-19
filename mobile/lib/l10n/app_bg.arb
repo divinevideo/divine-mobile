@@ -1567,6 +1567,7 @@
   "shareSheetCrosspost": "Публикувай кръстосано",
   "crosspostSheetTitle": "Кръстосано публикуване на това видео",
   "crosspostSheetSubtitle": "Изпрати го до свързаните си платформи. Публикуването може да отнеме няколко минути.",
+  "crosspostStarted": "Публикуване в другите платформи във фонов режим.",
   "crosspostSubmit": "Публикувай кръстосано",
   "crosspostStatusQueued": "В опашката",
   "crosspostStatusUploading": "Качва се",

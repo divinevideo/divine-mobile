@@ -1986,6 +1986,7 @@
   "shareSheetCrosspost": "Siaran silang",
   "crosspostSheetTitle": "Siarkan silang video ini",
   "crosspostSheetSubtitle": "Hantarnya ke platform anda yang bersambung. Penyiaran boleh mengambil masa beberapa minit.",
+  "crosspostStarted": "Menyiarkan ke platform lain di latar belakang.",
   "crosspostSubmit": "Siarkan silang",
   "crosspostStatusQueued": "Dalam baris gilir",
   "crosspostStatusUploading": "Memuat naik",

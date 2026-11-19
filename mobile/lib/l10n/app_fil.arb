@@ -1102,6 +1102,7 @@
   "shareSheetCrosspost": "I-crosspost",
   "crosspostSheetTitle": "I-crosspost ang video na ito",
   "crosspostSheetSubtitle": "Ipadala ito sa mga naka-connect mong platform. Maaaring tumagal nang ilang minuto ang pag-post.",
+  "crosspostStarted": "Ipinopost sa ibang platform sa background.",
   "crosspostSubmit": "I-crosspost",
   "crosspostStatusQueued": "Naka-queue",
   "crosspostStatusUploading": "Ina-upload",

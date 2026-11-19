@@ -4188,6 +4188,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изпрати го до свързаните си платформи. Публикуването може да отнеме няколко минути.';
 
   @override
+  String get crosspostStarted =>
+      'Публикуване в другите платформи във фонов режим.';
+
+  @override
   String get crosspostSubmit => 'Публикувай кръстосано';
 
   @override

@@ -4257,6 +4257,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Trimite-l pe platformele tale conectate. Postarea poate dura câteva minute.';
 
   @override
+  String get crosspostStarted => 'Se publică pe celelalte platforme în fundal.';
+
+  @override
   String get crosspostSubmit => 'Crosspostează';
 
   @override

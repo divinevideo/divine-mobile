@@ -1986,6 +1986,7 @@
   "shareSheetCrosspost": "Đăng chéo",
   "crosspostSheetTitle": "Đăng chéo video này",
   "crosspostSheetSubtitle": "Gửi nó tới các nền tảng bạn đã kết nối. Việc đăng có thể mất vài phút.",
+  "crosspostStarted": "Đang đăng lên các nền tảng khác trong nền.",
   "crosspostSubmit": "Đăng chéo",
   "crosspostStatusQueued": "Đang chờ",
   "crosspostStatusUploading": "Đang tải lên",

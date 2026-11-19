@@ -1474,6 +1474,7 @@
   "shareSheetCrosspost": "Çapraz Paylaş",
   "crosspostSheetTitle": "Bu videoyu çapraz paylaş",
   "crosspostSheetSubtitle": "Bağlı platformlarına gönder. Paylaşım birkaç dakika sürebilir.",
+  "crosspostStarted": "Diğer platformlarda arka planda paylaşılıyor.",
   "crosspostSubmit": "Çapraz Paylaş",
   "crosspostStatusQueued": "Sırada",
   "crosspostStatusUploading": "Yükleniyor",

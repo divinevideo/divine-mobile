@@ -4124,6 +4124,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Hantarnya ke platform anda yang bersambung. Penyiaran boleh mengambil masa beberapa minit.';
 
   @override
+  String get crosspostStarted =>
+      'Menyiarkan ke platform lain di latar belakang.';
+
+  @override
   String get crosspostSubmit => 'Siarkan silang';
 
   @override
