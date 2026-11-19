@@ -34,11 +34,12 @@ String videoDmMimeTypeFor(String path) {
   return dmVideoMimeTypesByExtension[extension] ?? 'video/mp4';
 }
 
-/// How long a finished upload is kept for a retry of its entry.
+/// How old a finished upload may be for a retry of its entry to reuse it.
 ///
-/// Bounds how long a video's decryption key stays in memory for an entry
-/// nobody retries, and how old a blob a retry may still point at. A retry
-/// after this uploads the video again.
+/// Bounds how old a blob a retry may still point at: a retry after this
+/// uploads the video again. It does not shorten how long the upload, and its
+/// decryption key, stay in memory; that ends when the entry is retried,
+/// removed or the outbox is disposed.
 const videoDmKeptUploadMaxAge = Duration(hours: 1);
 
 /// Whether the file at `path` is the exact file of a published Vine post.
