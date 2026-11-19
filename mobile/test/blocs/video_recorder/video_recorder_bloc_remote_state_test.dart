@@ -4,7 +4,8 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
-import 'package:divine_camera/divine_camera.dart' show RemoteRecorderState;
+import 'package:divine_camera/divine_camera.dart'
+    show PhotoCaptureResult, RemoteRecorderState;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -182,23 +183,41 @@ void main() {
       },
     );
 
-    test('publishes again when a stop-motion frame is taken', () {
-      stubClips(total: Duration.zero);
-      const stopMotion = VideoRecorderBlocState(
-        isCameraInitialized: true,
-        recorderMode: VideoRecorderMode.stopMotion,
-      );
-      final bloc = buildBloc()..emit(stopMotion);
-      addTearDown(bloc.close);
-      expect(published.single!.stillShutterCount, equals(0));
+    test(
+      'acknowledges a still after the camera finishes the capture',
+      () async {
+        stubClips(total: Duration.zero);
+        final capture = Completer<PhotoCaptureResult?>();
+        when(() => camera.isInitialized).thenReturn(true);
+        when(() => camera.isSwitchingCamera).thenReturn(false);
+        when(() => camera.capturePhoto()).thenAnswer((_) => capture.future);
+        const stopMotion = VideoRecorderBlocState(
+          isCameraInitialized: true,
+          canRecord: true,
+          recorderMode: VideoRecorderMode.stopMotion,
+        );
+        final bloc = buildBloc()..emit(stopMotion);
+        addTearDown(bloc.close);
+        addTearDown(() {
+          if (!capture.isCompleted) capture.complete();
+        });
+        expect(published.single!.stillShutterCount, equals(0));
 
-      bloc.emit(stopMotion.copyWith(stopMotionShutterTick: 1));
+        bloc.add(const VideoRecorderStopMotionFrameCaptured());
+        await pumpEventQueue();
+        verify(() => camera.capturePhoto()).called(1);
+        expect(published, hasLength(1));
 
-      expect(published, hasLength(2));
-      final state = published.last!;
-      expect(state.stillShutterCount, equals(1));
-      expect(state.isShutterActive, isFalse);
-    });
+        // A failed capture must also release the Watch so the user can retry.
+        capture.complete();
+        await pumpEventQueue();
+
+        expect(published, hasLength(2));
+        final state = published.last!;
+        expect(state.stillShutterCount, equals(1));
+        expect(state.isShutterActive, isFalse);
+      },
+    );
 
     test('reports an active shutter during the countdown before a take', () {
       stubClips(total: const Duration(seconds: 2));

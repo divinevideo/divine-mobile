@@ -432,6 +432,7 @@ class VideoRecorderBloc
 
   /// What [_syncRemoteRecorder] last published: null for a closed recorder.
   Object? _publishedRemoteRecorder;
+  int _finishedStillCaptures = 0;
   bool _remotePreviewReady = true;
   int _lifecycleRevision = 0;
   bool _isAppForeground = true;
@@ -520,6 +521,9 @@ class VideoRecorderBloc
               budget - totalDuration >= _minimumRecordingDuration);
       final isShutterEnabled =
           !recorder.isSwitchingCamera && (isShutterActive || canStart);
+      final stillShutterCount = recorder.recorderMode.capturesStills
+          ? _finishedStillCaptures
+          : 0;
       final takeDuration = clipManager.activeRecordingDuration;
       // A take being finalized is not in the clips yet, but its time is
       // already spent.
@@ -535,9 +539,7 @@ class VideoRecorderBloc
         modeName: recorder.recorderMode.label,
         isShutterActive: isShutterActive,
         isShutterEnabled: isShutterEnabled,
-        // A stop-motion frame changes nothing else a remote shows, so the
-        // Watch would otherwise not learn that its press was handled.
-        stillShutterCount: recorder.stopMotionShutterTick,
+        stillShutterCount: stillShutterCount,
       );
       signature = (
         isTakeRunning,
@@ -545,7 +547,7 @@ class VideoRecorderBloc
         isShutterEnabled,
         recorded,
         recorder.recorderMode,
-        recorder.stopMotionShutterTick,
+        stillShutterCount,
       );
     }
     if (signature == _publishedRemoteRecorder) return;
@@ -2887,7 +2889,12 @@ class VideoRecorderBloc
   Future<void> _onStopMotionFrameCaptured(
     VideoRecorderStopMotionFrameCaptured event,
     Emitter<VideoRecorderBlocState> emit,
-  ) => _captureStopMotionFrame(emit);
+  ) async {
+    await _captureStopMotionFrame(emit);
+    // The Watch can take another still once this droppable handler finishes.
+    _finishedStillCaptures++;
+    _syncRemoteRecorder(state);
+  }
 
   /// Captures one still, appends it to [state.stopMotionFrames], and persists
   /// the growing session to the library. Returns whether a still was appended.
