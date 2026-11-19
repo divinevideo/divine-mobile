@@ -237,6 +237,39 @@ void main() {
       );
     });
 
+    testWidgets('screenNameOf completes the session started for the route', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          navigatorObservers: [observer],
+          home: const Scaffold(body: Text('Home')),
+          onGenerateRoute: (settings) => MaterialPageRoute<void>(
+            settings: const RouteSettings(name: 'profile-view'),
+            builder: (context) {
+              analytics.markDataLoaded(PageLoadObserver.screenNameOf(context));
+              return const Scaffold(body: Text('Profile'));
+            },
+          ),
+        ),
+      );
+
+      final context = tester.element(find.text('Home'));
+      Navigator.of(context).pushNamed('/profile-view/npub1');
+      await tester.pumpAndSettle();
+
+      final dataLoaded = sink.events.where(
+        (event) => event.name == 'screen_data_loaded',
+      );
+      expect(dataLoaded, hasLength(1));
+      expect(
+        dataLoaded.single.parameters,
+        containsPair(AnalyticsParam.screenName, 'profile_view'),
+      );
+    });
+
     testWidgets('uses unknown route for unnamed regular route screen views', (
       tester,
     ) async {

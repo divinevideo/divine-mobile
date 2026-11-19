@@ -455,7 +455,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             ref
                 .read(screenAnalyticsServiceProvider)
                 .markDataLoaded(
-                  'other_profile',
+                  PageLoadObserver.screenNameOf(context),
                   dataMetrics: {'video_count': feedState.videos.length},
                 );
 
