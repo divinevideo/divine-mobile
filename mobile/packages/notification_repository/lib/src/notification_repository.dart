@@ -1550,6 +1550,7 @@ class NotificationRepository {
           'Announcement refresh unavailable',
           name: 'NotificationRepository',
         );
+        return false;
       }),
     );
   }

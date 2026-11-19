@@ -124,7 +124,7 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       final announcement = item('current', 'Current announcement');
-      final refresh = Completer<void>();
+      final refresh = Completer<bool>();
       List<AnnouncementNotification>? catalog;
       when(() => repository.announcementsRepository).thenReturn(announcements);
       when(() => announcements.hasCatalog).thenAnswer((_) => catalog != null);
@@ -147,7 +147,7 @@ void main() {
       verify(announcements.refresh).called(1);
       catalog = [announcement];
       snapshots.add([announcement]);
-      refresh.complete();
+      refresh.complete(true);
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsOneWidget);
 
@@ -173,7 +173,9 @@ void main() {
       when(() => announcements.hasCatalog).thenAnswer((_) => hasCatalog);
       when(() => announcements.items).thenReturn(const []);
       when(announcements.refresh).thenAnswer((_) async {
-        if (++refreshCount == 2) await retry.future;
+        if (++refreshCount < 2) return false;
+        await retry.future;
+        return true;
       });
       when(announcements.watchSnapshot).thenAnswer(
         (_) => Stream.value(const []),
@@ -210,7 +212,7 @@ void main() {
       when(() => repository.announcementsRepository).thenReturn(announcements);
       when(() => announcements.hasCatalog).thenReturn(true);
       when(() => announcements.items).thenReturn([first, second]);
-      when(announcements.refresh).thenAnswer((_) async {});
+      when(announcements.refresh).thenAnswer((_) async => true);
       when(announcements.watchSnapshot).thenAnswer(
         (_) => const Stream<List<AnnouncementNotification>>.empty(),
       );
@@ -257,7 +259,7 @@ void main() {
           action: action,
         ),
       ]);
-      when(announcements.refresh).thenAnswer((_) async {});
+      when(announcements.refresh).thenAnswer((_) async => true);
       when(announcements.watchSnapshot).thenAnswer(
         (_) => const Stream<List<AnnouncementNotification>>.empty(),
       );

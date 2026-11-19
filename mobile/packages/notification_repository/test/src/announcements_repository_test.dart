@@ -191,6 +191,64 @@ void main() {
     }
   });
 
+  group('refresh reports whether the endpoint answered', () {
+    test('with a new snapshot', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      expect(await repository.refresh(), isTrue);
+      expect(repository.items, hasLength(1));
+    });
+
+    test('with not modified', () async {
+      var requests = 0;
+      create(
+        MockClient((_) async {
+          if (++requests == 1) {
+            return jsonResponse(catalog(), headers: {'etag': '"one"'});
+          }
+          return http.Response('', 304);
+        }),
+      );
+      expect(await repository.refresh(), isTrue);
+      expect(await repository.refresh(), isTrue);
+      expect(requests, 2);
+    });
+
+    test('not when it fails, even though the cached catalog stays', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      await repository.refresh();
+      await repository.close();
+      create(MockClient((_) async => throw Exception('offline')));
+      await repository.initialize();
+      expect(repository.hasCatalog, isTrue);
+
+      expect(await repository.refresh(), isFalse);
+      expect(repository.items, hasLength(1));
+    });
+
+    test('not when it rejects the response', () async {
+      create(MockClient((_) async => http.Response('nope', 503)));
+      expect(await repository.refresh(), isFalse);
+      expect(repository.hasCatalog, isFalse);
+    });
+
+    test('not when close() cuts the request off', () async {
+      final client = _HangingClient();
+      create(client);
+      final refresh = repository.refresh();
+      await pumpEventQueue();
+      expect(client.sent, isTrue);
+
+      await repository.close();
+      expect(await refresh, isFalse);
+    });
+
+    test('not after close()', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      await repository.close();
+      expect(await repository.refresh(), isFalse);
+    });
+  });
+
   group('initialize, refresh, markSeen, and close', () {
     test('accepts the shared Worker catalog fixture', () async {
       final fixture = File.fromUri(

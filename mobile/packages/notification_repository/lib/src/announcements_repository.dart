@@ -83,7 +83,7 @@ class AnnouncementsRepository {
   String? _etag;
   Set<String> _seen = {};
   Future<void>? _initialization;
-  Future<void>? _refresh;
+  Future<bool>? _refresh;
   Future<void> _writes = Future.value();
   Future<void>? _closeFuture;
   Timer? _eligibilityTimer;
@@ -170,17 +170,23 @@ class AnnouncementsRepository {
 
   /// Fetches a complete snapshot; failures retain the last valid catalog.
   /// Concurrent refreshes share the same request.
-  Future<void> refresh() {
-    if (_closed) return Future.value();
+  ///
+  /// Completes with whether the endpoint answered, with a new snapshot or
+  /// "not modified". A failed refresh completes with false: the retained
+  /// catalog may predate an announcement, so its absence there proves nothing.
+  Future<bool> refresh() {
+    if (_closed) return Future.value(false);
     return _refresh ??= _refreshCatalog().whenComplete(() => _refresh = null);
   }
 
-  Future<void> _refreshCatalog() async {
+  Future<bool> _refreshCatalog() async {
     await initialize();
-    if (_closed) return;
+    if (_closed) return false;
+    var answered = false;
     try {
       final fetched = await _fetch();
-      if (_closed) return;
+      if (_closed) return false;
+      answered = true;
       if (fetched != null) {
         _catalog = _decodeCatalog(fetched.catalog);
         _catalogJson = fetched.catalog;
@@ -209,6 +215,7 @@ class AnnouncementsRepository {
       }
     }
     _emit();
+    return answered && !_closed;
   }
 
   Future<_FetchedCatalog?> _fetch() async {
