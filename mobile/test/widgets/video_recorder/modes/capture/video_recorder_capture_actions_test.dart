@@ -401,19 +401,19 @@ void main() {
           DebugSemanticsDumpOrder.traversalOrder,
         );
 
-        // The revealed controls are drawn above the options button, but a
-        // swipe on from it reaches them.
+        // Read top to bottom, the order they are drawn in, so VoiceOver's
+        // focus box moves down the rail and the options button comes last.
         expect(controls.map((node) => node.identifier), [
           SemanticIds.cameraFlashButton,
           SemanticIds.cameraSwitchCameraButton,
           SemanticIds.cameraAspectRatioButton,
-          SemanticIds.cameraRailOptionsButton,
           SemanticIds.cameraTimerButton,
           SemanticIds.cameraGhostFrameButton,
           SemanticIds.cameraGridButton,
           SemanticIds.cameraDualCameraButton,
           SemanticIds.cameraStabilizationButton,
           SemanticIds.cameraColorMaskButton,
+          SemanticIds.cameraRailOptionsButton,
         ]);
         // The framework does not keep equal keys in drawn order, and iOS read
         // them out of order, so no two controls may share one.

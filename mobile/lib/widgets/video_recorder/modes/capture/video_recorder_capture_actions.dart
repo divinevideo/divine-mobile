@@ -21,20 +21,21 @@ const double _railPillWidth = 4 + 8 + 24 + 8 + 4;
 /// How long the rail takes to unfold or fold, and its names to fade in.
 const Duration _railAnimationDuration = Duration(milliseconds: 220);
 
-// Screen readers read the rail top to bottom, except that the controls an
-// unfolded rail reveals come right after the button that revealed them, where
-// a swipe on from it lands, although they are drawn above it. Every control
-// has its own key: the framework does not keep equal keys in drawn order.
+// Screen readers read the rail top to bottom, the order it is drawn in, so
+// VoiceOver's focus box moves down the rail and the options button comes last.
+// After unfolding, the revealed controls are a swipe back from it. Every
+// control has its own key: the framework does not keep equal keys in drawn
+// order.
 const OrdinalSortKey _flashReadingOrder = OrdinalSortKey(0);
 const OrdinalSortKey _flipReadingOrder = OrdinalSortKey(1);
 const OrdinalSortKey _aspectRatioReadingOrder = OrdinalSortKey(2);
-const OrdinalSortKey _optionsButtonReadingOrder = OrdinalSortKey(3);
-const OrdinalSortKey _timerReadingOrder = OrdinalSortKey(4);
-const OrdinalSortKey _ghostFrameReadingOrder = OrdinalSortKey(5);
-const OrdinalSortKey _gridReadingOrder = OrdinalSortKey(6);
-const OrdinalSortKey _dualCameraReadingOrder = OrdinalSortKey(7);
-const OrdinalSortKey _stabilizationReadingOrder = OrdinalSortKey(8);
-const OrdinalSortKey _colorMaskReadingOrder = OrdinalSortKey(9);
+const OrdinalSortKey _timerReadingOrder = OrdinalSortKey(3);
+const OrdinalSortKey _ghostFrameReadingOrder = OrdinalSortKey(4);
+const OrdinalSortKey _gridReadingOrder = OrdinalSortKey(5);
+const OrdinalSortKey _dualCameraReadingOrder = OrdinalSortKey(6);
+const OrdinalSortKey _stabilizationReadingOrder = OrdinalSortKey(7);
+const OrdinalSortKey _colorMaskReadingOrder = OrdinalSortKey(8);
+const OrdinalSortKey _optionsButtonReadingOrder = OrdinalSortKey(9);
 
 /// Shadow under the controls' names, so they stay readable over a bright
 /// viewfinder.
