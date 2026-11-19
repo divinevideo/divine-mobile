@@ -350,6 +350,9 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
     publishedEventLocalEcho: PublishedEventLocalEcho(
       (event) => ref.read(videoLocalStorageProvider).saveEventsBatch([event]),
     ),
+    // ref.read at call time, for the same reason: the repository rebuilds
+    // with content filters and auth, and this provider must not.
+    videosRepositoryGetter: () => ref.read(videosRepositoryProvider),
   );
 }
 
