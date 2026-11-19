@@ -4798,6 +4798,72 @@ void main() {
         ]);
       });
     });
+    for (final alreadyWriting in [false, true]) {
+      test(
+        'refuses a stale draft after an autosave write fails '
+        '(alreadyWriting=$alreadyWriting) and retries the latest edit',
+        () async {
+          var stored = autosave(title: 'Older edit');
+          final written = <DivineVideoDraft>[];
+          final write = Completer<void>();
+          var failAutosave = true;
+          final failure = Exception('Autosave write refused');
+          when(
+            () => mockDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
+          ).thenAnswer((_) async => true);
+          when(
+            () =>
+                mockDraftStorage.getDraftById(VideoEditorConstants.autoSaveId),
+          ).thenAnswer((_) async => stored);
+          when(
+            () => mockDraftStorage.deleteDraft(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockDraftStorage.saveDraft(
+              any(),
+              deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+              ownedFilesMemo: any(named: 'ownedFilesMemo'),
+            ),
+          ).thenAnswer((invocation) async {
+            final draft =
+                invocation.positionalArguments.single as DivineVideoDraft;
+            if (draft.id != VideoEditorConstants.autoSaveId) {
+              written.add(draft);
+              return;
+            }
+            if (failAutosave) await write.future;
+            stored = draft;
+          });
+
+          container.read(clipManagerProvider.notifier).replaceClips([
+            sessionClip,
+          ], autosave: false);
+          final notifier = container.read(videoEditorProvider.notifier)
+            ..updateMetadata(title: 'Latest edit');
+          final running = alreadyWriting
+              ? notifier.flushPendingAutosave()
+              : null;
+          final keep = notifier.keepAutosaveAsDraft();
+          final failed = expectLater(keep, throwsA(same(failure)));
+          await pumpEventQueue();
+          write.completeError(failure);
+          await failed;
+          if (running != null) expect(await running, isFalse);
+          expect(stored.title, 'Older edit');
+          expect(written, isEmpty);
+          expect(container.read(videoEditorProvider).title, 'Latest edit');
+          verifyNever(() => mockDraftStorage.deleteDraft(any()));
+
+          failAutosave = false;
+          final kept = await notifier.keepAutosaveAsDraft();
+
+          expect(written.single.id, kept);
+          expect(written.single.title, 'Latest edit');
+          expect(stored.title, 'Latest edit');
+        },
+      );
+    }
+
     test('discardKeptDraft deletes only the kept draft', () async {
       when(() => mockDraftStorage.deleteDraft(any())).thenAnswer((_) async {});
 

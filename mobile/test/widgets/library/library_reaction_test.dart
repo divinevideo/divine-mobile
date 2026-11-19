@@ -667,6 +667,33 @@ void main() {
       },
     );
 
+    testWidgets('leaves the active session intact when keeping it fails', (
+      tester,
+    ) async {
+      final write = Completer<String?>();
+      editor.keepGate = write;
+
+      await start(
+        tester,
+        record: (_, {required cellAspectRatio, required maxClips}) async {
+          events.add('open camera');
+          return null;
+        },
+        layout: (_, _, _, _) async => fail('must not open Layout'),
+      );
+      final context = tester.element(find.text('react'));
+      write.completeError(Exception('Autosave write refused'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(events, ['keep draft']);
+      expect(manager.clips.single.id, 'unfinished');
+      expect(
+        find.text(context.l10n.videoMetadataFailedToSaveSnackbar),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('persists an unedited own-source layout outside the session', (
       tester,
     ) async {

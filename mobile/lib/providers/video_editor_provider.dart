@@ -195,6 +195,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   Future<bool>? _runningAutosave;
   Future<bool>? _waitingAutosave;
 
+  /// A failed write can leave an older recovery row behind. Keep the failure
+  /// until a newer write succeeds or this editor session ends.
+  AsyncError? _autosaveFailure;
+
   /// Bumped by [reset], so a waiting autosave of the ended session never
   /// writes the empty state that follows it.
   int _autosaveSession = 0;
@@ -423,6 +427,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     _renderGeneration++;
     _autosaveTimer?.cancel();
     _autosaveSession++;
+    _autosaveFailure = null;
     // New-session requests must not reuse the cancelled session's follow-up.
     // Keep the running save so new work still waits for it instead of overlaps.
     _waitingAutosave = null;
@@ -1061,6 +1066,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   Future<bool> _performAutosave() async {
+    final session = _autosaveSession;
     final clipCount = _clips.length;
     final hasTitle = state.title.isNotEmpty;
 
@@ -1073,6 +1079,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     try {
       if (clipCount == 0) {
         await removeAutosavedDraft();
+        if (session == _autosaveSession) _autosaveFailure = null;
         return false;
       }
 
@@ -1088,6 +1095,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
             _deferredFileCleanup.addAll(paths.whereType<String>()),
         ownedFilesMemo: _ownedFilesMemo,
       );
+      if (session == _autosaveSession) _autosaveFailure = null;
 
       Log.info(
         '✅ Autosave completed - $clipCount clip(s), '
@@ -1098,6 +1106,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
       return true;
     } catch (e, stackTrace) {
+      if (session == _autosaveSession) {
+        _autosaveFailure = AsyncError(e, stackTrace);
+      }
       Log.error(
         '❌ Autosave failed: $e',
         name: 'VideoEditorNotifier',
@@ -1506,15 +1517,21 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Throws when the draft store fails; nothing is deleted, so the autosave
   /// is still there.
   Future<String?> keepAutosaveAsDraft() async {
-    // Their failures are logged where they happen; the copy below reads
-    // whatever row is on disk either way.
-    await flushPendingAutosave().then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
-    final inFlight = _waitingAutosave ?? _runningAutosave;
-    if (inFlight != null) {
-      await inFlight.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    Future<bool>? pendingSave() => _autosaveTimer?.isActive ?? false
+        ? flushPendingAutosave()
+        : _waitingAutosave ?? _runningAutosave;
+
+    var pending = pendingSave();
+    if (pending == null && _autosaveFailure != null) {
+      // A later attempt to keep the draft retries the edits still in memory.
+      pending = autosaveChanges();
+    }
+    while (pending != null) {
+      await pending;
+      pending = pendingSave();
+    }
+    if (_autosaveFailure case final failure?) {
+      Error.throwWithStackTrace(failure.error, failure.stackTrace);
     }
 
     if (!await _draftService.draftExists(VideoEditorConstants.autoSaveId)) {

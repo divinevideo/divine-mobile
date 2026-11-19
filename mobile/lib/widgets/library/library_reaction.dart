@@ -26,7 +26,7 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:unified_logger/unified_logger.dart' show LogCategory;
+import 'package:unified_logger/unified_logger.dart' show Log, LogCategory;
 
 /// Concatenates all cuts accepted from the reaction camera, in capture order.
 typedef LibraryReactionMerge = MergeReactionTakes;
@@ -86,7 +86,27 @@ Future<void> recordLibraryReaction(
 
   // A full recorder session must not consume the reaction's recording budget.
   // Keep edited work as a named draft before clearing its active session.
-  final keptDraftId = await editor.keepAutosaveAsDraft();
+  final String? keptDraftId;
+  try {
+    keptDraftId = await editor.keepAutosaveAsDraft();
+  } catch (error, stackTrace) {
+    Log.warning(
+      'Could not keep the active draft before recording a library reaction',
+      name: 'LibraryReaction',
+      category: LogCategory.video,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    if (context.mounted && canOpenCamera()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.videoMetadataFailedToSaveSnackbar,
+          error: true,
+        ),
+      );
+    }
+    return;
+  }
   if (!canOpenCamera()) {
     if (keptDraftId != null) await editor.discardKeptDraft(keptDraftId);
     return;
