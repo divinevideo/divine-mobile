@@ -107,6 +107,7 @@ mixin $PostAnalyticsDetailRouteData on GoRouteData {
   static PostAnalyticsDetailRouteData _fromState(GoRouterState state) =>
       PostAnalyticsDetailRouteData(
         videoId: state.pathParameters['videoId']!,
+        coordinate: state.uri.queryParameters['coordinate'],
         $extra: state.extra as Object?,
       );
 
@@ -116,6 +117,7 @@ mixin $PostAnalyticsDetailRouteData on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/creator-analytics/${Uri.encodeComponent(_self.videoId)}',
+    queryParams: {if (_self.coordinate != null) 'coordinate': _self.coordinate},
   );
 
   @override

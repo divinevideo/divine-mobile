@@ -6,13 +6,16 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -425,6 +428,105 @@ void main() {
       );
 
       expect(find.text('25'), findsWidgets);
+    });
+
+    group('back', () {
+      Future<GoRouter> pumpRouted(
+        WidgetTester tester, {
+        required String initialLocation,
+      }) async {
+        final authService = _MockAuthService();
+        final repository = _MockCreatorAnalyticsRepository();
+        when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+        when(() => repository.fetchCreatorSounds(any()))
+            .thenAnswer((_) async => const <CreatorSound>[]);
+        when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+          (_) async => CreatorAnalyticsSnapshot(
+            videos: const [],
+            socialCounts: null,
+            diagnostics: CreatorAnalyticsDiagnostics(
+              totalVideos: 0,
+              videosWithAnyViews: 0,
+              videosMissingViews: 0,
+              videosHydratedByBulkStats: 0,
+              videosHydratedByViewsEndpoint: 0,
+              sourcesUsed: const {AnalyticsDataSource.bulkVideoStats},
+              fetchedAt: DateTime.now(),
+            ),
+          ),
+        );
+        final router = GoRouter(
+          initialLocation: initialLocation,
+          routes: [
+            GoRoute(
+              path: defaultSafePopFallback,
+              builder: (_, _) => const Text('feed'),
+            ),
+            GoRoute(
+              path: RoutePaths.creatorAnalytics,
+              builder: (_, _) => const CreatorAnalyticsScreen(),
+              routes: [
+                GoRoute(
+                  path: ':videoId',
+                  builder: (_, _) => const Text('post stats'),
+                ),
+              ],
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(authService),
+              creatorAnalyticsRepositoryProvider.overrideWithValue(repository),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return router;
+      }
+
+      Future<void> tapBack(WidgetTester tester) async {
+        await tester.tap(find.bySemanticsIdentifier('back_button'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('falls back to the home feed when nothing is beneath', (
+        tester,
+      ) async {
+        final router = await pumpRouted(
+          tester,
+          initialLocation: RoutePaths.creatorAnalytics,
+        );
+
+        await tapBack(tester);
+
+        expect(router.state.uri.path, equals(defaultSafePopFallback));
+        expect(find.text('feed'), findsOneWidget);
+      });
+
+      testWidgets('from a post opened by link lands on account stats, then '
+          'the feed', (tester) async {
+        final router = await pumpRouted(
+          tester,
+          initialLocation: RoutePaths.postAnalytics('a' * 64),
+        );
+        expect(find.text('post stats'), findsOneWidget);
+
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(CreatorAnalyticsScreen), findsOneWidget);
+
+        await tapBack(tester);
+        expect(find.text('feed'), findsOneWidget);
+      });
     });
 
     testWidgets('toggles diagnostics from the app bar action', (tester) async {

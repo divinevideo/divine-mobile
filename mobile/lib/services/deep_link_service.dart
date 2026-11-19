@@ -28,6 +28,7 @@ enum DeepLinkType {
   list,
   peopleList,
   savedVideos,
+  postAnalytics,
   signerCallback,
   unknown,
 }
@@ -57,6 +58,8 @@ class DeepLink {
     this.searchTerm,
     this.listPubkey,
     this.listId,
+    this.postEventId,
+    this.postCoordinate,
     this.peopleListView = PeopleListLinkView.detail,
     this.signerCallbackRelay,
     this.index,
@@ -87,6 +90,15 @@ class DeepLink {
 
   /// The d-tag identifier of an authored video-list or people-list link.
   final String? listId;
+
+  /// Hex event id of a `divine:///post-analytics/:id` link: the post's first
+  /// event, as the Live Activity knew it.
+  final String? postEventId;
+
+  /// The post's `kind:pubkey:d-tag` address from that link's `coordinate`
+  /// query, which still resolves after an edit retires [postEventId]. Null
+  /// when absent or not shaped like an address.
+  final String? postCoordinate;
 
   /// Query-qualified internal-shaped links may address the roster or picker.
   final PeopleListLinkView peopleListView;
@@ -129,6 +141,10 @@ class DeepLink {
             'listId: ${_forLogs(listId)})';
       case DeepLinkType.savedVideos:
         return 'DeepLink(type: savedVideos)';
+      case DeepLinkType.postAnalytics:
+        return 'DeepLink(type: postAnalytics, '
+            'postEventId: ${_forLogs(postEventId)}, '
+            'postCoordinate: ${_forLogs(postCoordinate)})';
       case DeepLinkType.signerCallback:
         return 'DeepLink(type: signerCallback)';
       case DeepLinkType.unknown:
@@ -559,7 +575,41 @@ class DeepLinkService {
     'list',
   };
 
+  /// The one custom-scheme route with its own exact shape instead of an
+  /// entry in [_customSchemeAppRoutes] or [customSchemeRoutablePrefixes]: the
+  /// post Live Activity's tap link, `divine:///post-analytics/<event id>`.
+  ///
+  /// It is not allow-listed as a prefix (#11017), so no other id-shaped
+  /// segment can ride it. The route only shows the signed-in account's own
+  /// numbers; another account's post fails to load.
+  static const _postAnalyticsRoute = 'post-analytics';
+
+  static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// `kind:pubkey:d-tag`. The d-tag may be empty or hold colons.
+  static final _coordinatePattern = RegExp(r'^\d+:[0-9a-f]{64}:');
+
+  static DeepLink? _parsePostAnalyticsLink(Uri uri) {
+    final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+    if (segments.length != 2 ||
+        segments.first != _postAnalyticsRoute ||
+        !_eventIdPattern.hasMatch(segments[1])) {
+      return null;
+    }
+    final coordinate = uri.queryParameters['coordinate'];
+    return DeepLink(
+      type: DeepLinkType.postAnalytics,
+      postEventId: segments[1],
+      postCoordinate:
+          coordinate != null && _coordinatePattern.hasMatch(coordinate)
+          ? coordinate
+          : null,
+    );
+  }
+
   static DeepLink _parseCustomSchemeAppRoute(Uri uri) {
+    final postAnalytics = _parsePostAnalyticsLink(uri);
+    if (postAnalytics != null) return postAnalytics;
     final segments = uri.pathSegments;
     if (challengesTestEnabled &&
         segments.length == 2 &&

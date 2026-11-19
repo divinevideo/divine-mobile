@@ -82,10 +82,11 @@ String? deepLinkRouterPath(DeepLink deepLink) {
       );
     case DeepLinkType.peopleList:
       return peopleListDeepLinkToRouterPath(deepLink);
-    // savedVideos only arrives over divine://, and the callers that can see it
-    // — customSchemeToRouterPath and the deep-link coordinator — route it
-    // themselves.
+    // savedVideos and postAnalytics only arrive over divine://, and the
+    // callers that can see them — customSchemeToRouterPath and the deep-link
+    // coordinator — route them themselves.
     case DeepLinkType.savedVideos:
+    case DeepLinkType.postAnalytics:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return null;
@@ -103,6 +104,14 @@ String? customSchemeToRouterPath(Uri uri) {
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
   if (deepLink.type == DeepLinkType.savedVideos) {
     return SavedVideosScreen.path;
+  }
+  if (deepLink.type == DeepLinkType.postAnalytics) {
+    final eventId = deepLink.postEventId;
+    if (eventId == null) return null;
+    return RoutePaths.postAnalytics(
+      eventId,
+      coordinate: deepLink.postCoordinate,
+    );
   }
 
   // Only the authority-less form addresses app routes. Anything else is a
@@ -176,6 +185,7 @@ String? universalLinkToRouterPath(Uri uri) {
   switch (deepLink.type) {
     case DeepLinkType.video:
     case DeepLinkType.savedVideos:
+    case DeepLinkType.postAnalytics:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return _invalidPeopleListRoute(uri, deepLink);

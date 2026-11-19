@@ -203,6 +203,7 @@ class _CreatorAnalyticsScreenState
       appBar: DiVineAppBar(
         title: context.l10n.analyticsTitle,
         showBackButton: true,
+        onBackPressed: () => context.safePop(),
         actions: [
           DiVineAppBarAction(
             icon: SvgIconSource(
@@ -1030,6 +1031,7 @@ class _TopVideoRow extends StatelessWidget {
 class PostAnalyticsDetailScreen extends ConsumerStatefulWidget {
   const PostAnalyticsDetailScreen({
     required this.videoId,
+    this.coordinate,
     this.performance,
     super.key,
   });
@@ -1038,6 +1040,10 @@ class PostAnalyticsDetailScreen extends ConsumerStatefulWidget {
   static const subpath = ':videoId';
 
   final String videoId;
+
+  /// The post's `kind:pubkey:d-tag` address when opened from its Live
+  /// Activity; unused until the screen resolves a retired event id with it.
+  final String? coordinate;
   final VideoPerformance? performance;
 
   @override

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/universal_link_resolver.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -503,6 +504,38 @@ class DeepLinkCoordinator {
             } catch (e) {
               Log.error(
                 '❌ Saved videos navigation failed: $e',
+                name: 'DeepLinkHandler',
+                category: LogCategory.ui,
+              );
+            }
+          case DeepLinkType.postAnalytics:
+            final eventId = deepLink.postEventId;
+            if (eventId == null) {
+              Log.warning(
+                '⚠️ Post analytics deep link missing event id',
+                name: 'DeepLinkHandler',
+                category: LogCategory.ui,
+              );
+              break;
+            }
+            final targetPath = RoutePaths.postAnalytics(
+              eventId,
+              coordinate: deepLink.postCoordinate,
+            );
+            try {
+              // `go`, not `push` like saved videos: both routes are nested on
+              // the root navigator, and only `go` builds the account stats
+              // page beneath the post, so back from the post lands there.
+              _router.go(targetPath);
+              Log.info(
+                '✅ Navigation completed to: '
+                '${redactUriStringForLogs(targetPath)}',
+                name: 'DeepLinkHandler',
+                category: LogCategory.ui,
+              );
+            } catch (e) {
+              Log.error(
+                '❌ Post analytics navigation failed: $e',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );

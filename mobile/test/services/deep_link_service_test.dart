@@ -701,6 +701,131 @@ void main() {
         expect(result.type, equals(DeepLinkType.savedVideos));
       });
 
+      group('post-analytics link', () {
+        const eventId =
+            'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+        const author =
+            '81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95';
+        const coordinate = '34236:$author:ip1dd9tAlmw';
+        // The activity's own encoding: `&=+?/` are escaped on top of the
+        // default query-allowed set, so a d-tag cannot split the query.
+        const encodedCoordinate = '34236:$author:ip1dd9tAlmw';
+
+        test('parses the event id and the coordinate', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId?coordinate=$encodedCoordinate',
+          );
+
+          expect(result.type, equals(DeepLinkType.postAnalytics));
+          expect(result.postEventId, equals(eventId));
+          expect(result.postCoordinate, equals(coordinate));
+        });
+
+        test('decodes a d-tag the activity percent-encoded', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId'
+            '?coordinate=34236:$author:a%26b%3Dc%2Bd%3Fe%2Ff%20g',
+          );
+
+          expect(result.type, equals(DeepLinkType.postAnalytics));
+          expect(result.postCoordinate, equals('34236:$author:a&b=c+d?e/f g'));
+        });
+
+        test('opens without a coordinate when none is given', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId',
+          );
+
+          expect(result.type, equals(DeepLinkType.postAnalytics));
+          expect(result.postCoordinate, isNull);
+        });
+
+        test('drops a coordinate that is not kind:pubkey:d-tag', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId?coordinate=not-a-coordinate',
+          );
+
+          expect(result.type, equals(DeepLinkType.postAnalytics));
+          expect(result.postCoordinate, isNull);
+        });
+
+        test('rejects the authority form', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine://post-analytics/$eventId?coordinate=$coordinate',
+          );
+
+          expect(result.type, equals(DeepLinkType.unknown));
+        });
+
+        test('rejects an id that is short, not hex or not lowercase', () {
+          for (final id in [
+            eventId.substring(1),
+            '${eventId.substring(1)}g',
+            eventId.toUpperCase(),
+            '${eventId}0',
+          ]) {
+            final result = DeepLinkService.parseDeepLink(
+              'divine:///post-analytics/$id?coordinate=$coordinate',
+            );
+
+            expect(result.type, equals(DeepLinkType.unknown), reason: id);
+          }
+        });
+
+        test('rejects a link with no id', () {
+          for (final url in [
+            'divine:///post-analytics',
+            'divine:///post-analytics/',
+            'divine:///post-analytics?coordinate=$coordinate',
+          ]) {
+            expect(
+              DeepLinkService.parseDeepLink(url).type,
+              equals(DeepLinkType.unknown),
+              reason: url,
+            );
+          }
+        });
+
+        test('rejects extra path segments', () {
+          final result = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId/more?coordinate=$coordinate',
+          );
+
+          expect(result.type, equals(DeepLinkType.unknown));
+        });
+
+        test('is not reachable over https', () {
+          final result = DeepLinkService.parseDeepLink(
+            'https://divine.video/post-analytics/$eventId',
+          );
+
+          expect(result.type, equals(DeepLinkType.unknown));
+        });
+
+        // Custom schemes are deny-by-default (#11017): the route is opened by
+        // its own exact-shape branch, never by the prefix allow-list.
+        test('is not an allow-listed custom-scheme prefix', () {
+          expect(
+            DeepLinkService.customSchemeRoutablePrefixes,
+            isNot(contains('post-analytics')),
+          );
+        });
+
+        test('formats without the post it names', () {
+          final link = DeepLinkService.parseDeepLink(
+            'divine:///post-analytics/$eventId?coordinate=$coordinate',
+          );
+
+          expect(
+            link.toString(),
+            equals(
+              'DeepLink(type: postAnalytics, postEventId: $eventId, '
+              'postCoordinate: $coordinate)',
+            ),
+          );
+        });
+      });
+
       test('rejects an authority-form saved-videos link', () {
         final result = DeepLinkService.parseDeepLink('divine://saved-videos');
 

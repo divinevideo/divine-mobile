@@ -296,6 +296,22 @@ void main() {
         );
       });
 
+      test('a post-analytics location carries the post coordinate', () {
+        const route = PostAnalyticsDetailRouteData(
+          videoId: _hexId,
+          coordinate: _coordinate,
+        );
+
+        expect(
+          route.location,
+          equals(RoutePaths.postAnalytics(_hexId, coordinate: _coordinate)),
+        );
+        expect(
+          Uri.parse(route.location).queryParameters['coordinate'],
+          equals(_coordinate),
+        );
+      });
+
       test('an original-sound location ends in the key', () {
         for (final pubkey in [
           _authorHex,
@@ -739,6 +755,18 @@ void main() {
           isA<PostAnalyticsDetailScreen>()
               .having((screen) => screen.videoId, 'videoId', _hexId)
               .having((screen) => screen.performance, 'performance', isNull),
+        );
+      });
+
+      test('post analytics keeps the coordinate it was opened with', () {
+        expect(
+          _build(
+            _videoRouter(),
+            RoutePaths.postAnalytics(_hexId, coordinate: _coordinate),
+          ),
+          isA<PostAnalyticsDetailScreen>()
+              .having((screen) => screen.videoId, 'videoId', _hexId)
+              .having((screen) => screen.coordinate, 'coordinate', _coordinate),
         );
       });
 

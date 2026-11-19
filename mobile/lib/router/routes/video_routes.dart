@@ -109,12 +109,20 @@ class CreatorAnalyticsRouteData extends GoRouteData
 /// One post's analytics, pushed from the creator's analytics list.
 class PostAnalyticsDetailRouteData extends GoRouteData
     with $PostAnalyticsDetailRouteData {
-  const PostAnalyticsDetailRouteData({required this.videoId, this.$extra});
+  const PostAnalyticsDetailRouteData({
+    required this.videoId,
+    @TypedQueryParameter(name: 'coordinate') this.coordinate,
+    this.$extra,
+  });
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey =
       NavigatorKeys.root;
 
   final String videoId;
+
+  /// The post's `kind:pubkey:d-tag` address, from the Live Activity's link;
+  /// it still resolves after an edit retires [videoId].
+  final String? coordinate;
 
   /// The tapped post's [VideoPerformance], read through [extraAs]; absent
   /// after a deep link, when the screen refetches it.
@@ -124,6 +132,7 @@ class PostAnalyticsDetailRouteData extends GoRouteData
   Widget build(BuildContext context, GoRouterState state) =>
       PostAnalyticsDetailScreen(
         videoId: videoId,
+        coordinate: coordinate,
         performance: extraAs<VideoPerformance>($extra),
       );
 }

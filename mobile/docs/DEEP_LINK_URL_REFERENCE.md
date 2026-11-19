@@ -284,6 +284,33 @@ AASA association to claim `/people-lists/*`. Coordinate the app release with
 [divine-web #730](https://github.com/divinevideo/divine-web/pull/730); mobile
 parsing alone does not install that server association.
 
+### 10. Post Live Activity Link (`divine://` only)
+
+The iOS Live Activity for a post that is publishing opens that post's stats.
+There is no https form: custom schemes are deny-by-default (#11017), so this
+route has its own exact-shape branch and is deliberately not in
+`customSchemeRoutablePrefixes`.
+
+**Pattern**: `divine:///post-analytics/{eventId}?coordinate={coordinate}`
+
+**Parameters**:
+- `eventId` (required): the post's first event id, 64 lowercase hex characters.
+  The authority form (`divine://post-analytics/...`), any other id shape and
+  extra path segments are rejected.
+- `coordinate` (optional): the post's `kind:pubkey:d-tag` address, percent
+  encoded. An edit retires `eventId`, and the address still resolves. A value
+  not shaped like an address is dropped.
+
+**Mobile Behavior**:
+- Opens `/creator-analytics/{eventId}?coordinate={coordinate}` with `go`, so
+  account stats sits beneath the post: back lands on account stats, back again
+  on the home feed.
+- Gated like any other location: signed out goes to welcome. The screen only
+  ever shows the signed-in account's own numbers; another account's post fails
+  to load.
+
+---
+
 ## URL Patterns Summary
 
 | URL Pattern | View | Mobile Route | Purpose |
