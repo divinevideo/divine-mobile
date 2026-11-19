@@ -137,6 +137,7 @@ void main() {
   late VideoDmOutbox outbox;
   late List<String> sentPaths;
   late List<List<List<String>>> sentTags;
+  late DateTime clockNow;
   var idCounter = 0;
 
   VideoDmOutbox createOutbox({
@@ -152,7 +153,7 @@ void main() {
       sendService: sendService ?? () => service,
       readFrame: (file) => readFrame(file),
       newId: () => 'entry-${idCounter++}',
-      now: () => DateTime.utc(2026, 11, 13),
+      now: () => clockNow,
       clipVerifier: clipVerifier,
       signOwnRecordings: signOwnRecordings,
       isArchivedVine: isArchivedVine,
@@ -291,6 +292,7 @@ void main() {
       sentTags = [];
       readFrame = (_) async => null;
       idCounter = 0;
+      clockNow = DateTime.utc(2026, 11, 13);
     });
 
     test(
@@ -2260,6 +2262,86 @@ void main() {
             expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
           },
         );
+
+        test(
+          'reuses an upload kept for just under the maximum age',
+          () async {
+            stubSends([unreadableInbox, _success('rumor-retried')]);
+            outbox = createOutbox();
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            clockNow = clockNow.add(
+              videoDmKeptUploadMaxAge - const Duration(milliseconds: 1),
+            );
+
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            verify(() => anyUploadVideoOn(service)).called(1);
+            expect(published[1].$1, same(uploads.single));
+            expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+          },
+        );
+
+        test(
+          'uploads again once the kept upload reaches the maximum age',
+          () async {
+            stubSends([unreadableInbox, _success('rumor-retried')]);
+            outbox = createOutbox();
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            clockNow = clockNow.add(videoDmKeptUploadMaxAge);
+
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            verify(() => anyUploadVideoOn(service)).called(2);
+            expect(uploads, hasLength(2));
+            expect(published[1].$1, same(uploads[1]));
+            expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+            expect(outbox.keptUploadCount, isZero);
+          },
+        );
+
+        test('publishing a kept upload again does not renew its age', () async {
+          stubSends([unreadableInbox, unreadableInbox, _success('rumor-c')]);
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          clockNow = clockNow.add(videoDmKeptUploadMaxAge ~/ 2);
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+          expect(uploads, hasLength(1));
+          clockNow = clockNow.add(videoDmKeptUploadMaxAge ~/ 2);
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+
+          expect(uploads, hasLength(2));
+          expect(published.last.$1, same(uploads.last));
+        });
+
+        test('an expired clip upload is checked and uploaded again', () async {
+          when(() => verifier.verify(any())).thenAnswer((_) async => _verified);
+          stubSends([unreadableInbox, _success('rumor-a')]);
+          outbox = createOutbox(clipVerifier: () => verifier);
+          final events = recordConversation('c1');
+          sendClips([_clip('clip-a')]);
+          await pumpEventQueue();
+          clearInteractions(verifier);
+          clockNow = clockNow.add(videoDmKeptUploadMaxAge);
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+
+          verify(() => verifier.verify(_clipPath('clip-a'))).called(1);
+          expect(uploads, hasLength(2));
+          expect(published.last.$1, same(uploads.last));
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+        });
 
         test('dispose drops every kept upload', () async {
           stubSends([unreadableInbox, unreadableInbox]);
