@@ -16587,6 +16587,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Odanın çekime başlaması bekleniyor';
 
   @override
+  String get collabRoomPhaseInvited => 'Davet edildin. Katılmak için dokun.';
+
+  @override
   String get collabRoomCreateFailed => 'Davetler gönderilemedi. Tekrar dene.';
 
   @override

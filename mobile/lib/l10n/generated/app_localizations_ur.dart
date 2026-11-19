@@ -16663,6 +16663,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'روم میں فلم بندی شروع ہونے کا انتظار';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'آپ کو دعوت ملی ہے۔ شامل ہونے کے لیے ٹیپ کریں۔';
+
+  @override
   String get collabRoomCreateFailed =>
       'دعوت نامے نہیں بھیجے جا سکے۔ دوبارہ کوشش کریں۔';
 

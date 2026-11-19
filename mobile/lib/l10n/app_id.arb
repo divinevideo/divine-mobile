@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Merekam bagian",
   "collabRoomPhaseReady": "Siap mulai syuting",
   "collabRoomPhaseWaitingForHost": "Menunggu ruangan mulai syuting",
+  "collabRoomPhaseInvited": "Kamu diundang. Ketuk untuk bergabung.",
   "collabRoomCreateFailed": "Undangan tidak bisa dikirim. Coba lagi.",
   "collabRoomInviteCardTitle": "Yuk bikin video bareng",
   "collabRoomInviteCardBody": "Gabung ke ruangan, lalu semua merekam bagiannya sendiri.",

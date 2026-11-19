@@ -16815,6 +16815,9 @@ class AppLocalizationsBg extends AppLocalizations {
       'Чакаме стаята да започне снимките';
 
   @override
+  String get collabRoomPhaseInvited => 'Имаш покана. Докосни, за да влезеш.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Поканите не можаха да се изпратят. Опитай пак.';
 

@@ -164,6 +164,11 @@ class _RoomTile extends StatelessWidget {
           when !room.isAuthor &&
               room.me?.status == CollabRoomMemberStatus.joined =>
         l10n.collabRoomPhaseWaitingForHost,
+      // The room waits for this guest, not for others.
+      _
+          when !room.isAuthor &&
+              room.me?.status == CollabRoomMemberStatus.invited =>
+        l10n.collabRoomPhaseInvited,
       _ => l10n.collabRoomPhaseLobby,
     };
     return MergeSemantics(

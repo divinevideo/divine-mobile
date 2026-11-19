@@ -16663,6 +16663,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get collabRoomPhaseWaitingForHost => 'Menunggu bilik mula merakam';
 
   @override
+  String get collabRoomPhaseInvited => 'Anda dijemput. Ketik untuk menyertai.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Jemputan tidak dapat dihantar. Cuba lagi.';
 

@@ -16885,6 +16885,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'In attesa che la stanza inizi a girare';
 
   @override
+  String get collabRoomPhaseInvited => 'Hai un invito. Tocca per entrare.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Impossibile inviare gli inviti. Riprova.';
 

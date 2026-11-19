@@ -5552,6 +5552,7 @@
   "collabRoomPhaseRecording": "Nagfi-film ng mga part",
   "collabRoomPhaseReady": "Handa nang mag-film",
   "collabRoomPhaseWaitingForHost": "Hinihintay na magsimula ang pag-film sa room",
+  "collabRoomPhaseInvited": "Inimbitahan ka. I-tap para sumali.",
   "collabRoomCreateFailed": "Hindi naipadala ang mga imbitasyon. Subukan ulit.",
   "collabRoomInviteCardTitle": "Gawa tayo ng video nang sabay",
   "collabRoomInviteCardBody": "Sumali sa room, at bawat isa ay magfi-film ng sariling part.",

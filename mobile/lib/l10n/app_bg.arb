@@ -6639,6 +6639,7 @@
   "collabRoomPhaseRecording": "Снимат се частите",
   "collabRoomPhaseReady": "Готово за снимки",
   "collabRoomPhaseWaitingForHost": "Чакаме стаята да започне снимките",
+  "collabRoomPhaseInvited": "Имаш покана. Докосни, за да влезеш.",
   "collabRoomCreateFailed": "Поканите не можаха да се изпратят. Опитай пак.",
   "collabRoomInviteCardTitle": "Хайде да направим видео заедно",
   "collabRoomInviteCardBody": "Влез в стаята и всеки заснема своята част.",

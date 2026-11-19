@@ -16552,6 +16552,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get collabRoomPhaseWaitingForHost => 'Menunggu ruangan mulai syuting';
 
   @override
+  String get collabRoomPhaseInvited => 'Kamu diundang. Ketuk untuk bergabung.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Undangan tidak bisa dikirim. Coba lagi.';
 

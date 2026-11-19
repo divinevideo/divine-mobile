@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Teile werden gefilmt",
   "collabRoomPhaseReady": "Bereit zum Dreh",
   "collabRoomPhaseWaitingForHost": "Warte, bis der Raum mit dem Dreh startet",
+  "collabRoomPhaseInvited": "Du bist eingeladen. Tippe, um beizutreten.",
   "collabRoomCreateFailed": "Die Einladungen ließen sich nicht senden. Versuch's nochmal.",
   "collabRoomInviteCardTitle": "Lass uns zusammen ein Video machen",
   "collabRoomInviteCardBody": "Tritt dem Raum bei, und alle filmen ihren eigenen Teil.",

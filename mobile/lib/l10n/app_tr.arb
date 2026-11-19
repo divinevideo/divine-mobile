@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Bölümler çekiliyor",
   "collabRoomPhaseReady": "Çekime hazır",
   "collabRoomPhaseWaitingForHost": "Odanın çekime başlaması bekleniyor",
+  "collabRoomPhaseInvited": "Davet edildin. Katılmak için dokun.",
   "collabRoomCreateFailed": "Davetler gönderilemedi. Tekrar dene.",
   "collabRoomInviteCardTitle": "Hadi birlikte video yapalım",
   "collabRoomInviteCardBody": "Odaya katıl, herkes kendi bölümünü çeksin.",

@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Nagrywanie części",
   "collabRoomPhaseReady": "Wszystko gotowe do nagrywania",
   "collabRoomPhaseWaitingForHost": "Czekamy, aż pokój zacznie nagrywać",
+  "collabRoomPhaseInvited": "Masz zaproszenie. Stuknij, aby dołączyć.",
   "collabRoomCreateFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie.",
   "collabRoomInviteCardTitle": "Zróbmy razem wideo",
   "collabRoomInviteCardBody": "Dołącz do pokoju, a każdy nagra swoją część.",

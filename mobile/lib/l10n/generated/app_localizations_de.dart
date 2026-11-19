@@ -16862,6 +16862,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Warte, bis der Raum mit dem Dreh startet';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'Du bist eingeladen. Tippe, um beizutreten.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Die Einladungen ließen sich nicht senden. Versuch\'s nochmal.';
 

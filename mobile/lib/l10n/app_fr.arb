@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Tournage des parties",
   "collabRoomPhaseReady": "Tout est prêt pour le tournage",
   "collabRoomPhaseWaitingForHost": "En attente du lancement du tournage",
+  "collabRoomPhaseInvited": "Tu as une invitation. Touche pour rejoindre.",
   "collabRoomCreateFailed": "Impossible d'envoyer les invitations. Réessaie.",
   "collabRoomInviteCardTitle": "Faisons une vidéo ensemble",
   "collabRoomInviteCardBody": "Rejoins le salon, et chacun filme sa propre partie.",

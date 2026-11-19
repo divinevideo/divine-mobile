@@ -57,7 +57,21 @@ void main() {
         expect(find.text(l10n.collabRoomLobbyRooms), findsOneWidget);
         expect(find.text(l10n.collabRoomTileHosting), findsOneWidget);
         expect(find.text(l10n.collabRoomTileGuest), findsOneWidget);
-        expect(find.text(l10n.collabRoomPhaseLobby), findsNWidgets(2));
+        // The host waits for the guest; the guest is the one invited.
+        expect(find.text(l10n.collabRoomPhaseLobby), findsOneWidget);
+        expect(find.text(l10n.collabRoomPhaseInvited), findsOneWidget);
+      });
+
+      testWidgets('an invited guest as invited, not as waiting for others', (
+        tester,
+      ) async {
+        when(service.watchRooms).thenAnswer(
+          (_) => Stream.value([twoPersonRoom(owner: sam)]),
+        );
+        await pump(tester);
+
+        expect(find.text(l10n.collabRoomPhaseInvited), findsOneWidget);
+        expect(find.text(l10n.collabRoomPhaseLobby), findsNothing);
       });
 
       testWidgets('a host whose guest joined as ready to start', (

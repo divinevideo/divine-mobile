@@ -6575,6 +6575,7 @@
   "collabRoomPhaseRecording": "ክፍሎች እየተቀረጹ ነው",
   "collabRoomPhaseReady": "ለመቅረጽ ዝግጁ",
   "collabRoomPhaseWaitingForHost": "ክፍሉ መቅረጽ እስኪጀምር በመጠበቅ ላይ",
+  "collabRoomPhaseInvited": "ተጋብዘዋል። ለመቀላቀል ይንኩ።",
   "collabRoomCreateFailed": "ግብዣዎቹን መላክ አልተቻለም። እንደገና ይሞክሩ።",
   "collabRoomInviteCardTitle": "አብረን ቪዲዮ እንሥራ",
   "collabRoomInviteCardBody": "ክፍሉን ይቀላቀሉ፣ እያንዳንዱም የራሱን ክፍል ይቀርጻል።",

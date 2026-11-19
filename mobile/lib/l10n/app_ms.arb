@@ -7823,6 +7823,7 @@
   "collabRoomPhaseRecording": "Merakam bahagian",
   "collabRoomPhaseReady": "Sedia untuk mula merakam",
   "collabRoomPhaseWaitingForHost": "Menunggu bilik mula merakam",
+  "collabRoomPhaseInvited": "Anda dijemput. Ketik untuk menyertai.",
   "collabRoomCreateFailed": "Jemputan tidak dapat dihantar. Cuba lagi.",
   "collabRoomInviteCardTitle": "Jom buat video bersama",
   "collabRoomInviteCardBody": "Sertai bilik, dan semua orang merakam bahagian sendiri.",

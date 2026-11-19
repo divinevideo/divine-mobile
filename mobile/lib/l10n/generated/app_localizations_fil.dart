@@ -16810,6 +16810,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hinihintay na magsimula ang pag-film sa room';
 
   @override
+  String get collabRoomPhaseInvited => 'Inimbitahan ka. I-tap para sumali.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Hindi naipadala ang mga imbitasyon. Subukan ulit.';
 

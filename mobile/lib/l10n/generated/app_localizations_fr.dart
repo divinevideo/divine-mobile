@@ -16932,6 +16932,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'En attente du lancement du tournage';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'Tu as une invitation. Touche pour rejoindre.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Impossible d\'envoyer les invitations. Réessaie.';
 

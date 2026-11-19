@@ -16263,6 +16263,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomPhaseWaitingForHost => 'ክፍሉ መቅረጽ እስኪጀምር በመጠበቅ ላይ';
 
   @override
+  String get collabRoomPhaseInvited => 'ተጋብዘዋል። ለመቀላቀል ይንኩ።';
+
+  @override
   String get collabRoomCreateFailed => 'ግብዣዎቹን መላክ አልተቻለም። እንደገና ይሞክሩ።';
 
   @override

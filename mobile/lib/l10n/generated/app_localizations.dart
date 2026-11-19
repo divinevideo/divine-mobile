@@ -27867,6 +27867,12 @@ abstract class AppLocalizations {
   /// **'Waiting for the host to start filming'**
   String get collabRoomPhaseWaitingForHost;
 
+  /// Subtitle of a collaborative video room for someone who was invited and has not joined yet. Tapping the card opens the invite.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re invited. Tap to join.'**
+  String get collabRoomPhaseInvited;
+
   /// Shown when the invites to a new collaborative video room could not be sent.
   ///
   /// In en, this message translates to:

@@ -16996,6 +16996,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Așteptăm să înceapă filmarea în cameră';
 
   @override
+  String get collabRoomPhaseInvited => 'Ai o invitație. Atinge ca să intri.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Invitațiile nu au putut fi trimise. Încearcă din nou.';
 

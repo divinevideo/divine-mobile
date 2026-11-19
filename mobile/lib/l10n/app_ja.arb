@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "パートを撮影中",
   "collabRoomPhaseReady": "撮影を始められます",
   "collabRoomPhaseWaitingForHost": "ルームの撮影開始を待っています",
+  "collabRoomPhaseInvited": "招待が届いています。タップして参加",
   "collabRoomCreateFailed": "招待を送信できませんでした。もう一度お試しください。",
   "collabRoomInviteCardTitle": "一緒に動画を作りましょう",
   "collabRoomInviteCardBody": "ルームに参加すると、それぞれが自分のパートを撮ります。",

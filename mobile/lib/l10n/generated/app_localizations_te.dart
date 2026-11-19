@@ -17042,6 +17042,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రూమ్‌లో చిత్రీకరణ మొదలవడం కోసం వేచి ఉంది';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'మీకు ఆహ్వానం వచ్చింది. చేరడానికి నొక్కండి.';
+
+  @override
   String get collabRoomCreateFailed =>
       'ఆహ్వానాలను పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 

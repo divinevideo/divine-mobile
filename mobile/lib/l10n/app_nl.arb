@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Delen worden gefilmd",
   "collabRoomPhaseReady": "Klaar om te filmen",
   "collabRoomPhaseWaitingForHost": "Wachten tot de ruimte begint met filmen",
+  "collabRoomPhaseInvited": "Je bent uitgenodigd. Tik om mee te doen.",
   "collabRoomCreateFailed": "De uitnodigingen konden niet worden verstuurd. Probeer het opnieuw.",
   "collabRoomInviteCardTitle": "Laten we samen een video maken",
   "collabRoomInviteCardBody": "Kom in de ruimte, en iedereen filmt een eigen deel.",

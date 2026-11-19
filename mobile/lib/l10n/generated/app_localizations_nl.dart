@@ -16753,6 +16753,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Wachten tot de ruimte begint met filmen';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'Je bent uitgenodigd. Tik om mee te doen.';
+
+  @override
   String get collabRoomCreateFailed =>
       'De uitnodigingen konden niet worden verstuurd. Probeer het opnieuw.';
 

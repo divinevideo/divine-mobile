@@ -7823,6 +7823,7 @@
   "collabRoomPhaseRecording": "Đang quay các phần",
   "collabRoomPhaseReady": "Sẵn sàng quay",
   "collabRoomPhaseWaitingForHost": "Đang chờ phòng bắt đầu quay",
+  "collabRoomPhaseInvited": "Bạn có lời mời. Chạm để tham gia.",
   "collabRoomCreateFailed": "Không gửi được lời mời. Hãy thử lại.",
   "collabRoomInviteCardTitle": "Cùng làm video nhé",
   "collabRoomInviteCardBody": "Vào phòng, rồi mỗi người quay phần của mình.",

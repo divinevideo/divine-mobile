@@ -7823,6 +7823,7 @@
   "collabRoomPhaseRecording": "حصے فلمائے جا رہے ہیں",
   "collabRoomPhaseReady": "فلم بندی کے لیے تیار",
   "collabRoomPhaseWaitingForHost": "روم میں فلم بندی شروع ہونے کا انتظار",
+  "collabRoomPhaseInvited": "آپ کو دعوت ملی ہے۔ شامل ہونے کے لیے ٹیپ کریں۔",
   "collabRoomCreateFailed": "دعوت نامے نہیں بھیجے جا سکے۔ دوبارہ کوشش کریں۔",
   "collabRoomInviteCardTitle": "آئیں مل کر ویڈیو بنائیں",
   "collabRoomInviteCardBody": "روم میں شامل ہوں، اور ہر کوئی اپنا حصہ فلمائے۔",

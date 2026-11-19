@@ -6522,6 +6522,7 @@
   "collabRoomPhaseRecording": "Si girano le parti",
   "collabRoomPhaseReady": "Pronti a girare",
   "collabRoomPhaseWaitingForHost": "In attesa che la stanza inizi a girare",
+  "collabRoomPhaseInvited": "Hai un invito. Tocca per entrare.",
   "collabRoomCreateFailed": "Impossibile inviare gli inviti. Riprova.",
   "collabRoomInviteCardTitle": "Facciamo un video insieme",
   "collabRoomInviteCardBody": "Entra nella stanza, e ognuno filma la propria parte.",

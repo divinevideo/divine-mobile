@@ -13930,6 +13930,10 @@
   "@collabRoomPhaseWaitingForHost": {
     "description": "Subtitle of a collaborative video room for a guest who joined, while the host has not started filming yet."
   },
+  "collabRoomPhaseInvited": "You're invited. Tap to join.",
+  "@collabRoomPhaseInvited": {
+    "description": "Subtitle of a collaborative video room for someone who was invited and has not joined yet. Tapping the card opens the invite."
+  },
   "collabRoomCreateFailed": "Couldn't send the invites. Try again.",
   "@collabRoomCreateFailed": {
     "description": "Shown when the invites to a new collaborative video room could not be sent."

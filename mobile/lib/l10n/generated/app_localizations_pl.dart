@@ -17014,6 +17014,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Czekamy, aż pokój zacznie nagrywać';
 
   @override
+  String get collabRoomPhaseInvited =>
+      'Masz zaproszenie. Stuknij, aby dołączyć.';
+
+  @override
   String get collabRoomCreateFailed =>
       'Nie udało się wysłać zaproszeń. Spróbuj ponownie.';
 

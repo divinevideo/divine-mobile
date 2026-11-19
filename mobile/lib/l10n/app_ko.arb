@@ -6068,6 +6068,7 @@
   "collabRoomPhaseRecording": "파트 촬영 중",
   "collabRoomPhaseReady": "촬영 시작 준비 완료",
   "collabRoomPhaseWaitingForHost": "촬영 시작을 기다리는 중",
+  "collabRoomPhaseInvited": "초대를 받았어요. 탭해서 참여하세요",
   "collabRoomCreateFailed": "초대를 보내지 못했어요. 다시 해 보세요.",
   "collabRoomInviteCardTitle": "같이 영상 만들어요",
   "collabRoomInviteCardBody": "방에 들어오면 모두 자기 파트를 찍어요.",
