@@ -271,7 +271,9 @@ their own part of one split-screen video
   `["p", "<call pubkey>"]` and a NIP-40 `["expiration", ...]` ten minutes out.
   relay.divine.video accepts only an allowlist of kinds, and none of its
   ephemeral kinds fits. The JSON inside says `hello`, `offer`, `answer`,
-  `state`, `bye` or `lobby`
+  `state`, `bye` or `lobby`. The routing is sealed only to the room key, which
+  never changes, so everyone who ever held it, a member taken out included,
+  can see who signals whom and when, though not what
 - `lobby` is the author's lobby as it stands — the layout and who sits where —
   so the others see a change within a few hundred milliseconds instead of
   waiting for the next snapshot, which is held back half a second to batch

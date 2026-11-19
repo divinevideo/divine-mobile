@@ -232,8 +232,10 @@ class CollabRoomCallSignal extends Equatable {
 /// Seals and opens a room's connection messages with its call key.
 ///
 /// The room key conceals the routing information from relays. The signal
-/// itself is NIP-44 encrypted between the sender and recipient accounts.
-/// Knowing the room key alone neither identifies a sender nor opens a signal.
+/// itself is NIP-44 encrypted between the sender and recipient accounts, so
+/// the room key alone does not open it. It does open the routing: anyone
+/// holding it — every member, and anyone the host took out since, as the key
+/// never changes — can see who sends whom a message and when.
 class CollabRoomCallChannel {
   /// Creates a channel for the call key [callKey] (a private key in hex).
   CollabRoomCallChannel(
