@@ -129,6 +129,7 @@ class CollabRoomCallControls extends StatelessWidget {
     final notice = switch (state.status) {
       CollabRoomCallStatus.joining => l10n.collabRoomCallConnecting,
       CollabRoomCallStatus.failed => l10n.collabRoomCallFailed,
+      CollabRoomCallStatus.unreachable => l10n.collabRoomCallUnreachable,
       _ when state.cameraFailed => l10n.collabRoomCallCameraFailed,
       _ => null,
     };
@@ -137,7 +138,8 @@ class CollabRoomCallControls extends StatelessWidget {
     // say once the camera let go of the microphone.
     final canJoin =
         state.status == CollabRoomCallStatus.idle ||
-        state.status == CollabRoomCallStatus.failed;
+        state.status == CollabRoomCallStatus.failed ||
+        state.status == CollabRoomCallStatus.unreachable;
     final micOn = !canJoin && state.call.micOn;
     return Padding(
       padding: const .only(top: 12),
@@ -344,7 +346,9 @@ enum _EditorCall {
   connected;
 
   static _EditorCall of(CollabRoomCallState state) => switch (state.status) {
-    CollabRoomCallStatus.idle || CollabRoomCallStatus.failed => out,
+    CollabRoomCallStatus.idle ||
+    CollabRoomCallStatus.failed ||
+    CollabRoomCallStatus.unreachable => out,
     CollabRoomCallStatus.joining => connecting,
     CollabRoomCallStatus.joined
         when state.call.peers.values.any((peer) => peer.connected) =>

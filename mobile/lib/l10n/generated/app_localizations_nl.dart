@@ -16786,6 +16786,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Het gesprek kon niet starten. Check of Divine je microfoon mag gebruiken.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'De anderen zijn niet bereikbaar. Check je verbinding en probeer het opnieuw.';
+
+  @override
   String get collabRoomCallJoin => 'Doe mee aan het gesprek';
 
   @override

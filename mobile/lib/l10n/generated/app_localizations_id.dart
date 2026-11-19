@@ -16585,6 +16585,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Panggilan tidak bisa dimulai. Pastikan Divine boleh memakai mikrofonmu.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Tidak bisa terhubung ke yang lain. Cek koneksimu dan coba lagi.';
+
+  @override
   String get collabRoomCallJoin => 'Gabung panggilan';
 
   @override

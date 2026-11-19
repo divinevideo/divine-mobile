@@ -16897,6 +16897,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo iniciar la llamada. Revisá que Divine pueda usar tu micrófono.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'No se pudo conectar con los demás. Revisá tu conexión y probá de nuevo.';
+
+  @override
   String get collabRoomCallJoin => 'Unirte a la llamada';
 
   @override

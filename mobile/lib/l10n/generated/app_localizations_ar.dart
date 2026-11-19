@@ -16742,6 +16742,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر بدء المكالمة. يُرجى التحقق من السماح لـ Divine باستخدام الميكروفون.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'تعذّر الوصول إلى الآخرين. يُرجى التحقق من الاتصال والمحاولة مجددًا.';
+
+  @override
   String get collabRoomCallJoin => 'انضم إلى المكالمة';
 
   @override

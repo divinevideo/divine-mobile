@@ -16965,6 +16965,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de lancer l\'appel. Vérifie que Divine peut utiliser ton micro.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Impossible de joindre les autres. Vérifie ta connexion et réessaie.';
+
+  @override
   String get collabRoomCallJoin => 'Rejoindre l\'appel';
 
   @override

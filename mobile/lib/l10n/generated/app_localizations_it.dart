@@ -16918,6 +16918,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile avviare la chiamata. Controlla che Divine possa usare il microfono.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Impossibile raggiungere gli altri. Controlla la connessione e riprova.';
+
+  @override
   String get collabRoomCallJoin => 'Entra nella chiamata';
 
   @override

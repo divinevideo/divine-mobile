@@ -17029,6 +17029,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Apelul nu a putut porni. Verifică dacă Divine îți poate folosi microfonul.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Nu i-am putut contacta pe ceilalți. Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
   String get collabRoomCallJoin => 'Intră în apel';
 
   @override

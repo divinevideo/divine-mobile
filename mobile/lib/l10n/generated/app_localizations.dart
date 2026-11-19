@@ -27927,6 +27927,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t start the call. Check that Divine may use your microphone.'**
   String get collabRoomCallFailed;
 
+  /// Shown in a collaborative video room when the call could not reach the others because the relays did not carry its messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the others. Check your connection and try again.'**
+  String get collabRoomCallUnreachable;
+
   /// Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part.
   ///
   /// In en, this message translates to:

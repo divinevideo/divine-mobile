@@ -16843,6 +16843,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi masimulan ang call. I-check kung puwedeng gamitin ng Divine ang mic mo.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Hindi maabot ang iba. I-check ang connection mo at subukan ulit.';
+
+  @override
   String get collabRoomCallJoin => 'Sumali sa call';
 
   @override

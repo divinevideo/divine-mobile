@@ -15725,6 +15725,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomCallFailed => '无法开始通话。请检查 Divine 是否可以使用你的麦克风。';
 
   @override
+  String get collabRoomCallUnreachable => '无法连接到其他人。请检查网络后重试。';
+
+  @override
   String get collabRoomCallJoin => '加入通话';
 
   @override

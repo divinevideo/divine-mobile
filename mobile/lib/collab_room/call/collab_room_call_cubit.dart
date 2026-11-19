@@ -23,6 +23,10 @@ enum CollabRoomCallStatus {
 
   /// The microphone could not be opened.
   failed,
+
+  /// The others could not be reached: no relay took the call's messages, or
+  /// the relays stopped carrying them.
+  unreachable,
 }
 
 /// State of [CollabRoomCallCubit].
@@ -118,7 +122,7 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
           if (!identical(_call, call) || _closing) return;
           addError(error, stackTrace);
           runDetached(
-            _fail(),
+            _giveUp(),
             'hang up a collab room call that failed',
             logName: 'CollabRoomCallCubit',
             category: LogCategory.video,
@@ -129,6 +133,10 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
       if (identical(_call, call)) {
         emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joined));
       }
+    } on CollabRoomCallException catch (error, stackTrace) {
+      if (!identical(_call, call) || _closing) return;
+      addError(error, stackTrace);
+      await _giveUp();
     } on Object catch (error, stackTrace) {
       if (!identical(_call, call) || _closing) return;
       addError(error, stackTrace);
@@ -204,9 +212,9 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     _call?.updateOthers(others);
   }
 
-  Future<void> _fail() async {
+  Future<void> _giveUp() async {
     await _hangUp();
-    emitIfOpen(state.copyWith(status: CollabRoomCallStatus.failed));
+    emitIfOpen(state.copyWith(status: CollabRoomCallStatus.unreachable));
   }
 
   Future<void> _hangUp() {

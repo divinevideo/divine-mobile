@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Kamerayı kapat",
   "collabRoomCallConnecting": "Görüşmen bağlanıyor…",
   "collabRoomCallFailed": "Görüşme başlatılamadı. Divine'ın mikrofonunu kullanabildiğinden emin ol.",
+  "collabRoomCallUnreachable": "Diğerlerine ulaşılamadı. Bağlantını kontrol edip tekrar dene.",
   "collabRoomCallJoin": "Görüşmeye katıl",
   "collabRoomCallLeave": "Görüşmeden çık",
   "collabRoomCallCameraFailed": "Kameran açılamadı.",

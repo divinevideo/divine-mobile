@@ -17075,6 +17075,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'కాల్ ప్రారంభించలేకపోయాం. Divine మీ మైక్రోఫోన్ వాడగలదో చూడండి.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'ఇతరులను చేరుకోలేకపోయాం. మీ కనెక్షన్ చూసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get collabRoomCallJoin => 'కాల్‌లో చేరండి';
 
   @override

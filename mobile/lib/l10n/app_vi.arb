@@ -7833,6 +7833,7 @@
   "collabRoomCallCameraOff": "Tắt camera",
   "collabRoomCallConnecting": "Đang kết nối cuộc gọi…",
   "collabRoomCallFailed": "Không bắt đầu được cuộc gọi. Hãy kiểm tra Divine có được dùng micro của bạn không.",
+  "collabRoomCallUnreachable": "Không kết nối được với mọi người. Kiểm tra kết nối và thử lại.",
   "collabRoomCallJoin": "Tham gia cuộc gọi",
   "collabRoomCallLeave": "Rời cuộc gọi",
   "collabRoomCallCameraFailed": "Không bật được camera của bạn.",

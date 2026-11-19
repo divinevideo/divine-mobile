@@ -16696,6 +16696,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کال شروع نہیں ہو سکی۔ دیکھیں کہ Divine کو آپ کا مائیکروفون استعمال کرنے کی اجازت ہے۔';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'دوسروں سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
   String get collabRoomCallJoin => 'کال میں شامل ہوں';
 
   @override

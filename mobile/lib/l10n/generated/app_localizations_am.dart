@@ -16294,6 +16294,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ጥሪውን መጀመር አልተቻለም። Divine ማይክሮፎንዎን መጠቀም መፈቀዱን ያረጋግጡ።';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'ሌሎቹን ማግኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
   String get collabRoomCallJoin => 'ጥሪውን ተቀላቀል';
 
   @override

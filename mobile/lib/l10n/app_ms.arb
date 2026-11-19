@@ -7833,6 +7833,7 @@
   "collabRoomCallCameraOff": "Matikan kamera",
   "collabRoomCallConnecting": "Menyambung panggilan anda…",
   "collabRoomCallFailed": "Panggilan tidak dapat dimulakan. Pastikan Divine dibenarkan menggunakan mikrofon anda.",
+  "collabRoomCallUnreachable": "Tidak dapat menghubungi yang lain. Semak sambungan anda dan cuba lagi.",
   "collabRoomCallJoin": "Sertai panggilan",
   "collabRoomCallLeave": "Keluar panggilan",
   "collabRoomCallCameraFailed": "Kamera anda tidak dapat dihidupkan.",

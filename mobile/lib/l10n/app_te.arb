@@ -9456,6 +9456,7 @@
   "collabRoomCallCameraOff": "కెమెరా ఆఫ్ చేయండి",
   "collabRoomCallConnecting": "మీ కాల్ కనెక్ట్ అవుతోంది…",
   "collabRoomCallFailed": "కాల్ ప్రారంభించలేకపోయాం. Divine మీ మైక్రోఫోన్ వాడగలదో చూడండి.",
+  "collabRoomCallUnreachable": "ఇతరులను చేరుకోలేకపోయాం. మీ కనెక్షన్ చూసి మళ్లీ ప్రయత్నించండి.",
   "collabRoomCallJoin": "కాల్‌లో చేరండి",
   "collabRoomCallLeave": "కాల్ నుండి వెళ్లండి",
   "collabRoomCallCameraFailed": "మీ కెమెరా ఆన్ చేయలేకపోయాం.",

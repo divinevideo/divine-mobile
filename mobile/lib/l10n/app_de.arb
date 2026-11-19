@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Kamera aus",
   "collabRoomCallConnecting": "Call wird verbunden…",
   "collabRoomCallFailed": "Der Call ließ sich nicht starten. Prüf, ob Divine dein Mikrofon nutzen darf.",
+  "collabRoomCallUnreachable": "Die anderen sind nicht erreichbar. Prüf deine Verbindung und versuch's nochmal.",
   "collabRoomCallJoin": "Call beitreten",
   "collabRoomCallLeave": "Call verlassen",
   "collabRoomCallCameraFailed": "Deine Kamera ließ sich nicht einschalten.",

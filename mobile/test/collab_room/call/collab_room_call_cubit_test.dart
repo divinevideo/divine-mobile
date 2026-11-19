@@ -11,9 +11,14 @@ const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const _kai = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
 class _FakeCall implements CollabRoomCall {
-  _FakeCall({this.failStart = false, this.failCamera = false});
+  _FakeCall({
+    this.failStart = false,
+    this.unreachable = false,
+    this.failCamera = false,
+  });
 
   final bool failStart;
+  final bool unreachable;
   final bool failCamera;
   final controller = StreamController<CollabRoomCallSnapshot>.broadcast();
   final log = <String>[];
@@ -30,6 +35,9 @@ class _FakeCall implements CollabRoomCall {
   Future<void> start() async {
     log.add('start');
     if (failStart) throw Exception('no microphone');
+    if (unreachable) {
+      throw const CollabRoomCallException('No relay accepted the call signal');
+    }
     _emit();
   }
 
@@ -111,6 +119,15 @@ void main() {
     );
 
     blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'reports others it cannot reach, not the microphone',
+      build: () => build(fake: _FakeCall(unreachable: true)),
+      act: (cubit) => cubit.join(),
+      verify: (cubit) =>
+          expect(cubit.state.status, CollabRoomCallStatus.unreachable),
+      errors: () => [isA<CollabRoomCallException>()],
+    );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
       'hangs up and says so when the call gives up on its own',
       build: build,
       act: (cubit) async {
@@ -121,7 +138,7 @@ void main() {
         await pumpEventQueue();
       },
       verify: (cubit) {
-        expect(cubit.state.status, CollabRoomCallStatus.failed);
+        expect(cubit.state.status, CollabRoomCallStatus.unreachable);
         expect(call.log, ['start', 'stop']);
       },
       errors: () => [isA<CollabRoomCallException>()],

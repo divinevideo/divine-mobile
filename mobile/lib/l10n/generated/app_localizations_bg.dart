@@ -16848,6 +16848,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Разговорът не можа да започне. Провери дали Divine може да ползва микрофона ти.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Не успяхме да се свържем с останалите. Провери връзката си и опитай пак.';
+
+  @override
   String get collabRoomCallJoin => 'Влез в разговора';
 
   @override

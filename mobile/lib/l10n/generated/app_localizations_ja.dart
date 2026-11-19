@@ -15917,6 +15917,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomCallFailed => '通話を開始できませんでした。Divine がマイクを使えるか確認してください。';
 
   @override
+  String get collabRoomCallUnreachable =>
+      '他の参加者につながりませんでした。接続を確認してもう一度お試しください。';
+
+  @override
   String get collabRoomCallJoin => '通話に参加';
 
   @override

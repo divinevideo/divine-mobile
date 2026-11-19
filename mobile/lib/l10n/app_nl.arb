@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Camera uit",
   "collabRoomCallConnecting": "Je gesprek wordt verbonden…",
   "collabRoomCallFailed": "Het gesprek kon niet starten. Check of Divine je microfoon mag gebruiken.",
+  "collabRoomCallUnreachable": "De anderen zijn niet bereikbaar. Check je verbinding en probeer het opnieuw.",
   "collabRoomCallJoin": "Doe mee aan het gesprek",
   "collabRoomCallLeave": "Verlaat het gesprek",
   "collabRoomCallCameraFailed": "Je camera kon niet aan.",

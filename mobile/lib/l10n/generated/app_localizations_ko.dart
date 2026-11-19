@@ -15936,6 +15936,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '통화를 시작하지 못했어요. Divine이 마이크를 쓸 수 있는지 확인해 주세요.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      '다른 사람들과 연결하지 못했어요. 연결을 확인하고 다시 해 보세요.';
+
+  @override
   String get collabRoomCallJoin => '통화 참여';
 
   @override

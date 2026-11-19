@@ -16643,6 +16643,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không bắt đầu được cuộc gọi. Hãy kiểm tra Divine có được dùng micro của bạn không.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Không kết nối được với mọi người. Kiểm tra kết nối và thử lại.';
+
+  @override
   String get collabRoomCallJoin => 'Tham gia cuộc gọi';
 
   @override

@@ -13970,6 +13970,10 @@
   "@collabRoomCallFailed": {
     "description": "Shown when the microphone for a Together room's call could not be opened."
   },
+  "collabRoomCallUnreachable": "Couldn't reach the others. Check your connection and try again.",
+  "@collabRoomCallUnreachable": {
+    "description": "Shown in a collaborative video room when the call could not reach the others because the relays did not carry its messages."
+  },
   "collabRoomCallJoin": "Join the call",
   "@collabRoomCallJoin": {
     "description": "Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part."

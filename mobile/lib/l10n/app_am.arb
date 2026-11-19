@@ -6585,6 +6585,7 @@
   "collabRoomCallCameraOff": "ካሜራ ያጥፉ",
   "collabRoomCallConnecting": "ጥሪዎ በመገናኘት ላይ…",
   "collabRoomCallFailed": "ጥሪውን መጀመር አልተቻለም። Divine ማይክሮፎንዎን መጠቀም መፈቀዱን ያረጋግጡ።",
+  "collabRoomCallUnreachable": "ሌሎቹን ማግኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
   "collabRoomCallJoin": "ጥሪውን ተቀላቀል",
   "collabRoomCallLeave": "ጥሪውን ልቀቅ",
   "collabRoomCallCameraFailed": "ካሜራዎን ማብራት አልተቻለም።",

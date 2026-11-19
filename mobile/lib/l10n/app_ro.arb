@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Oprește camera",
   "collabRoomCallConnecting": "Se conectează apelul…",
   "collabRoomCallFailed": "Apelul nu a putut porni. Verifică dacă Divine îți poate folosi microfonul.",
+  "collabRoomCallUnreachable": "Nu i-am putut contacta pe ceilalți. Verifică-ți conexiunea și încearcă din nou.",
   "collabRoomCallJoin": "Intră în apel",
   "collabRoomCallLeave": "Ieși din apel",
   "collabRoomCallCameraFailed": "Camera nu a putut fi pornită.",

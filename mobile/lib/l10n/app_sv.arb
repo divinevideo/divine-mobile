@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Stäng av kameran",
   "collabRoomCallConnecting": "Ansluter samtalet…",
   "collabRoomCallFailed": "Det gick inte att starta samtalet. Kolla att Divine får använda mikrofonen.",
+  "collabRoomCallUnreachable": "Det gick inte att nå de andra. Kolla din anslutning och försök igen.",
   "collabRoomCallJoin": "Gå med i samtalet",
   "collabRoomCallLeave": "Lämna samtalet",
   "collabRoomCallCameraFailed": "Det gick inte att slå på kameran.",

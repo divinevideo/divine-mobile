@@ -16715,6 +16715,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att starta samtalet. Kolla att Divine får använda mikrofonen.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Det gick inte att nå de andra. Kolla din anslutning och försök igen.';
+
+  @override
   String get collabRoomCallJoin => 'Gå med i samtalet';
 
   @override

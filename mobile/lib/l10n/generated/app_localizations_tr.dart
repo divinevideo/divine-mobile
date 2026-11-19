@@ -16619,6 +16619,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Görüşme başlatılamadı. Divine\'ın mikrofonunu kullanabildiğinden emin ol.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Diğerlerine ulaşılamadı. Bağlantını kontrol edip tekrar dene.';
+
+  @override
   String get collabRoomCallJoin => 'Görüşmeye katıl';
 
   @override

@@ -16696,6 +16696,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Panggilan tidak dapat dimulakan. Pastikan Divine dibenarkan menggunakan mikrofon anda.';
 
   @override
+  String get collabRoomCallUnreachable =>
+      'Tidak dapat menghubungi yang lain. Semak sambungan anda dan cuba lagi.';
+
+  @override
   String get collabRoomCallJoin => 'Sertai panggilan';
 
   @override

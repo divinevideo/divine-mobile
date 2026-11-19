@@ -6532,6 +6532,7 @@
   "collabRoomCallCameraOff": "Spegni la fotocamera",
   "collabRoomCallConnecting": "Collegamento della chiamata…",
   "collabRoomCallFailed": "Impossibile avviare la chiamata. Controlla che Divine possa usare il microfono.",
+  "collabRoomCallUnreachable": "Impossibile raggiungere gli altri. Controlla la connessione e riprova.",
   "collabRoomCallJoin": "Entra nella chiamata",
   "collabRoomCallLeave": "Esci dalla chiamata",
   "collabRoomCallCameraFailed": "Impossibile accendere la fotocamera.",

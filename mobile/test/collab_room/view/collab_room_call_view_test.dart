@@ -157,6 +157,25 @@ void main() {
           isSemantics(label: l10n.collabRoomCallFailed, isLiveRegion: true),
         );
       });
+
+      testWidgets('others that could not be reached', (tester) async {
+        await pump(
+          tester,
+          const CollabRoomCallState(
+            others: {sam},
+            status: CollabRoomCallStatus.unreachable,
+          ),
+        );
+        expect(find.text(l10n.collabRoomCallUnreachable), findsOneWidget);
+        expect(find.text(l10n.collabRoomCallFailed), findsNothing);
+        expect(
+          tester.getSemantics(find.text(l10n.collabRoomCallUnreachable)),
+          isSemantics(
+            label: l10n.collabRoomCallUnreachable,
+            isLiveRegion: true,
+          ),
+        );
+      });
     });
 
     group('interactions', () {
@@ -185,6 +204,23 @@ void main() {
           const CollabRoomCallState(
             others: {sam},
             status: CollabRoomCallStatus.failed,
+          ),
+        );
+
+        await tester.tap(find.bySemanticsLabel(l10n.collabRoomCallJoin));
+
+        verify(cubit.join).called(1);
+      });
+
+      testWidgets('joins again once the others could not be reached', (
+        tester,
+      ) async {
+        when(cubit.join).thenAnswer((_) async {});
+        await pump(
+          tester,
+          const CollabRoomCallState(
+            others: {sam},
+            status: CollabRoomCallStatus.unreachable,
           ),
         );
 
