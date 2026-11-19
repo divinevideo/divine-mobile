@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:math' show pi;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/navigation/tab_identity.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -30,6 +33,7 @@ import 'package:openvine/utils/camera_permission_check.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:openvine/widgets/notification_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -108,6 +112,17 @@ class VineBottomNav extends ConsumerWidget {
       2 => context.go(InboxPage.path),
       _ => context.go(VideoFeedPage.pathForIndex(lastIndex ?? 0)),
     };
+  }
+
+  /// Handles a press-and-hold on the Profile tab: opens Report a Bug.
+  void _handleProfileHold(BuildContext context) {
+    unawaited(HapticFeedback.lightImpact());
+    runDetached(
+      const BugReportRouteData.withoutShortcutTip().push<void>(context),
+      'open the bug report',
+      logName: 'Navigation',
+      category: LogCategory.ui,
+    );
   }
 
   /// Combined unread count for the inbox tab (DMs + notifications).
@@ -226,6 +241,7 @@ class VineBottomNav extends ConsumerWidget {
                     semanticLabel: context.l10n.navProfile,
                     isSelected: currentIndex == 3,
                     onTap: () => _handleTabTap(context, ref, 3),
+                    onLongPress: () => _handleProfileHold(context),
                     tapTargetWidth: iconWidth + halfGap + _kHorizontalEdgePad,
                     iconAlignment: AlignmentDirectional.centerEnd,
                     edgePadding: const EdgeInsetsDirectional.only(
@@ -302,6 +318,8 @@ class _TabSlot extends StatelessWidget {
     required this.tapTargetWidth,
     required this.child,
     this.onLongPress,
+    this.onLongPressHint,
+    this.customSemanticsActions,
     this.value,
     this.edgePadding = EdgeInsets.zero,
     this.iconAlignment = Alignment.center,
@@ -318,6 +336,13 @@ class _TabSlot extends StatelessWidget {
   /// Optional press-and-hold action. A quick tap still routes to [onTap];
   /// only a hold past the long-press timeout fires this instead.
   final VoidCallback? onLongPress;
+
+  /// Optional TalkBack hint for [onLongPress], read after "Double-tap and
+  /// hold to". VoiceOver does not announce it.
+  final String? onLongPressHint;
+
+  /// Optional named actions assistive technology lists for this tab.
+  final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
 
   /// Full width the [GestureDetector] occupies inside the nav row — usually
   /// larger than the visible icon so taps in the surrounding gap and edge
@@ -337,6 +362,8 @@ class _TabSlot extends StatelessWidget {
       button: true,
       label: label,
       value: value,
+      onLongPressHint: onLongPressHint,
+      customSemanticsActions: customSemanticsActions,
       child: GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -657,6 +684,7 @@ class _ProfileTabButton extends ConsumerWidget {
     required this.semanticLabel,
     required this.isSelected,
     required this.onTap,
+    required this.onLongPress,
     required this.tapTargetWidth,
     this.iconAlignment = Alignment.center,
     this.edgePadding = EdgeInsets.zero,
@@ -665,6 +693,9 @@ class _ProfileTabButton extends ConsumerWidget {
   final String semanticLabel;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// Press-and-hold action: opens Report a Bug.
+  final VoidCallback onLongPress;
   final double tapTargetWidth;
   final AlignmentGeometry iconAlignment;
 
@@ -693,10 +724,23 @@ class _ProfileTabButton extends ConsumerWidget {
       ),
     );
 
+    final reportBug = isNativeMobilePlatform ? onLongPress : null;
     return _TabSlot(
       identifier: 'profile_tab',
       label: semanticLabel,
       onTap: onTap,
+      onLongPress: reportBug,
+      onLongPressHint: reportBug == null
+          ? null
+          : context.l10n.navProfileLongPressHint,
+      // iOS only: TalkBack would list it twice, and iOS ignores hint overrides.
+      customSemanticsActions:
+          reportBug != null && defaultTargetPlatform == TargetPlatform.iOS
+          ? {
+              CustomSemanticsAction(label: context.l10n.supportReportBug):
+                  reportBug,
+            }
+          : null,
       tapTargetWidth: tapTargetWidth,
       edgePadding: edgePadding,
       iconAlignment: iconAlignment,
