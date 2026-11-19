@@ -18,7 +18,8 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     static let modeName = "modeName"
     static let shutterActive = "shutterActive"
     static let command = "command"
-    static let toggleRecording = "toggleRecording"
+    static let startRecording = "watchStart"
+    static let stopRecording = "watchStop"
   }
 
   @Published private(set) var recorder: RecorderSnapshot?
@@ -26,11 +27,14 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   /// Whether a tap can reach the iPhone now. While it cannot, `recorder` is
   /// the last state received and may be out of date.
   @Published private(set) var isPhoneReachable = false
+  @Published private(set) var isShutterPending = false
 
   /// Sends a value each time a tap could not be delivered.
   let deliveryFailures = PassthroughSubject<Void, Never>()
 
   private let session = WCSession.default
+  private var pendingID: UUID?
+  private var pendingStop = false
 
   func activate() {
     session.delegate = self
@@ -40,21 +44,44 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   /// Asks the iPhone to start or stop a take. What the recorder then does
   /// comes back as a new `recorder`.
   func toggleRecording() {
+    guard let recorder, !isShutterPending else { return }
     guard session.isReachable else {
       updateReachability()
       deliveryFailures.send()
       return
     }
+    let id = UUID()
+    pendingID = id
+    pendingStop = recorder.isShutterActive
+    isShutterPending = true
+    let command = pendingStop ? Wire.stopRecording : Wire.startRecording
     session.sendMessage(
-      [Wire.command: Wire.toggleRecording],
+      [Wire.command: command],
       replyHandler: nil,
       errorHandler: { [weak self] _ in
         DispatchQueue.main.async {
           self?.updateReachability()
-          self?.deliveryFailures.send()
+          self?.failPending(id)
         }
       }
     )
+    // Single-frame capture does not change the shutter action. A timeout
+    // releases the button even if the phone publishes no new state.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+      guard self?.pendingID == id else { return }
+      self?.clearPending()
+    }
+  }
+
+  private func clearPending() {
+    pendingID = nil
+    isShutterPending = false
+  }
+
+  private func failPending(_ id: UUID) {
+    guard pendingID == id else { return }
+    clearPending()
+    deliveryFailures.send()
   }
 
   /// Reads what the iPhone sent; `nil` for a closed recorder.
@@ -80,7 +107,11 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
   private func receive(_ payload: [String: Any]) {
     let snapshot = Self.snapshot(from: payload)
     DispatchQueue.main.async { [weak self] in
-      self?.recorder = snapshot
+      guard let self else { return }
+      self.recorder = snapshot
+      if snapshot?.isShutterActive != self.pendingStop {
+        self.clearPending()
+      }
     }
   }
 
@@ -88,6 +119,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     let isReachable = session.isReachable
     DispatchQueue.main.async { [weak self] in
       self?.isPhoneReachable = isReachable
+      if !isReachable { self?.clearPending() }
     }
   }
 

@@ -1630,8 +1630,21 @@ void main() {
 
     test('all trigger values are distinct', () {
       const triggers = RemoteRecordTrigger.values;
-      expect(triggers.length, equals(4));
-      expect(triggers.toSet().length, equals(4));
+      expect(triggers.length, equals(6));
+      expect(triggers.toSet().length, equals(6));
+    });
+
+    test('round trips explicit Watch shutter actions', () {
+      expect(RemoteRecordTrigger.watchStart.toNativeString(), 'watchStart');
+      expect(RemoteRecordTrigger.watchStop.toNativeString(), 'watchStop');
+      expect(
+        RemoteRecordTrigger.fromNativeString('watchStart'),
+        RemoteRecordTrigger.watchStart,
+      );
+      expect(
+        RemoteRecordTrigger.fromNativeString('watchStop'),
+        RemoteRecordTrigger.watchStop,
+      );
     });
 
     test('toNativeString returns correct string for volumeUp', () {
