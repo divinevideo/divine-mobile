@@ -123,21 +123,25 @@ extension FlutterError: @retroactive Error {}
     // Disk capacity and free space, which size the media caches.
     setupDeviceStorageChannel(with: engineBridge)
 
+    // Whether the Large Screen Layout feature is on, for the orientation mask.
+    setupLargeScreenLayoutChannel(with: engineBridge)
+
     NSLog("✅ AppDelegate: Implicit Flutter engine initialized with UIScene lifecycle")
   }
 
   // Portrait for the entire app (including camera preview), except on a large
-  // screen — an iPad, or the iPhone Duo's inner display — once the user has
-  // turned on the Large Screen Layout experimental feature. There every
-  // orientation is allowed here and Dart narrows it through SystemChrome
-  // (AdaptiveLayoutScope), keeping the camera in portrait. Read on
-  // every rotation, so turning the flag on or off needs no restart. The Duo
-  // honors only this mask: it refuses programmatic orientation changes.
+  // screen — an iPad, or the iPhone Duo's inner display — while the Large
+  // Screen Layout experimental feature is on. There every orientation is
+  // allowed here and Dart narrows it through SystemChrome
+  // (AdaptiveLayoutScope), keeping the camera in portrait. Asked again on
+  // every rotation and whenever the feature turns on or off, so neither needs
+  // a restart. The Duo honors only this mask: it refuses programmatic
+  // orientation changes.
   override func application(
     _ application: UIApplication,
     supportedInterfaceOrientationsFor window: UIWindow?
   ) -> UIInterfaceOrientationMask {
-    guard UserDefaults.standard.bool(forKey: Self.largeScreenLayoutFlagKey),
+    guard largeScreenLayoutEnabled,
           let screen = window?.windowScene?.screen,
           min(screen.bounds.width, screen.bounds.height)
             >= Self.largeScreenMinShortestSide
@@ -147,12 +151,41 @@ extension FlutterError: @retroactive Error {}
     return .all
   }
 
-  /// Where shared_preferences stores FeatureFlag.largeScreenLayout.
-  private static let largeScreenLayoutFlagKey = "flutter.ff_largeScreenLayout"
+  /// FeatureFlag.largeScreenLayout as the app resolves it: the user's choice,
+  /// or else the build default. Dart reports it (AdaptiveLayoutScope); a
+  /// persisted override alone would miss a build that turns it on by default.
+  private var largeScreenLayoutEnabled = false
 
   /// AdaptiveBreakpoints.large: the shortest side, in points, from which a
   /// screen counts as large.
   private static let largeScreenMinShortestSide: CGFloat = 600
+
+  private func setupLargeScreenLayoutChannel(
+    with engineBridge: FlutterImplicitEngineBridge
+  ) {
+    let channel = FlutterMethodChannel(
+      name: "divine/large_screen_layout",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "setEnabled", let enabled = call.arguments as? Bool
+      else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self?.largeScreenLayoutEnabled = enabled
+      // Ask every window for the mask again, so the change applies now and
+      // not only at the next rotation.
+      for case let windowScene as UIWindowScene
+        in UIApplication.shared.connectedScenes {
+        for window in windowScene.windows {
+          window.rootViewController?
+            .setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
+      }
+      result(nil)
+    }
+  }
 
   private func setupProofModeChannel(with engineBridge: FlutterImplicitEngineBridge) {
     let channel = FlutterMethodChannel(

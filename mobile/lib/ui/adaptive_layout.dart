@@ -133,6 +133,26 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
   bool _rotationWanted = false;
   bool? _rotationApplied;
 
+  /// The flag as last reported to the iOS app delegate, which starts out
+  /// believing it off.
+  bool _reportedToSystem = false;
+
+  /// Tells the iOS app delegate whether the flag is on as the app resolves
+  /// it, override or build default: its orientation mask allows rotation on
+  /// large screens only then, and it cannot read the build default itself.
+  void _reportToSystem(bool enabled) {
+    if (!_systemKeepsSmallScreensPortrait || enabled == _reportedToSystem) {
+      return;
+    }
+    _reportedToSystem = enabled;
+    runDetached(
+      largeScreenLayoutChannel.invokeMethod<void>('setEnabled', enabled),
+      'report the large-screen layouts to the app delegate',
+      logName: 'AdaptiveLayoutScope',
+      category: LogCategory.ui,
+    );
+  }
+
   void _acquirePortraitLock() {
     _portraitLocks++;
     _applyOrientations();
@@ -167,6 +187,9 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
     final enabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.largeScreenLayout),
     );
+    // Before any orientation request, so the delegate's mask already allows
+    // what Dart asks for.
+    _reportToSystem(enabled);
     _rotationWanted =
         enabled &&
         (_systemKeepsSmallScreensPortrait ||
@@ -184,6 +207,13 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
 
 /// The orientation startup locks the app to (see `app_bootstrap.dart`).
 const List<DeviceOrientation> _portraitOnly = [DeviceOrientation.portraitUp];
+
+/// Reports the large-screen layouts to the iOS app delegate
+/// (`AppDelegate.swift`), whose orientation mask depends on them.
+@visibleForTesting
+const MethodChannel largeScreenLayoutChannel = MethodChannel(
+  'divine/large_screen_layout',
+);
 
 /// Whether the platform itself keeps screens smaller than
 /// [AdaptiveBreakpoints.large] in portrait once the flag is on.

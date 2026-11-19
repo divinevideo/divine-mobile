@@ -9,8 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _duoInnerPortrait = Size(669, 951);
 const _duoInnerLandscape = Size(951, 669);
@@ -139,21 +142,36 @@ void main() {
 
   group(AdaptiveLayoutScope, () {
     late List<List<String>> orientationCalls;
+    late List<bool> reportedFlags;
 
     setUp(() {
       orientationCalls = [];
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-            if (call.method == 'SystemChrome.setPreferredOrientations') {
-              orientationCalls.add(List<String>.from(call.arguments as List));
-            }
-            return null;
-          });
+      reportedFlags = [];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (
+        call,
+      ) async {
+        if (call.method == 'SystemChrome.setPreferredOrientations') {
+          orientationCalls.add(List<String>.from(call.arguments as List));
+        }
+        return null;
+      });
+      messenger.setMockMethodCallHandler(largeScreenLayoutChannel, (
+        call,
+      ) async {
+        if (call.method == 'setEnabled') {
+          reportedFlags.add(call.arguments as bool);
+        }
+        return null;
+      });
     });
 
     tearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(largeScreenLayoutChannel, null);
     });
 
     Future<void> pumpScope(
@@ -293,6 +311,68 @@ void main() {
           expect(orientationCalls.last, hasLength(4));
         },
       );
+
+      testWidgets(
+        'reports the flag to the app delegate on iOS',
+        (tester) async {
+          await pumpScope(tester, enabled: true, size: _duoOuter);
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+
+          expect(reportedFlags, [true, false]);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        'reports nothing to the app delegate with the flag off',
+        (tester) async {
+          await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+
+          expect(reportedFlags, isEmpty);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        'reports a build that turns the flag on by default, with no '
+        'override stored',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          tester.view.physicalSize = _duoInnerLandscape;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(prefs),
+                buildConfigurationProvider.overrideWithValue(
+                  const _LargeScreenLayoutByDefault(),
+                ),
+              ],
+              child: const MediaQuery(
+                data: MediaQueryData(size: _duoInnerLandscape),
+                child: AdaptiveLayoutScope(child: SizedBox.shrink()),
+              ),
+            ),
+          );
+
+          expect(prefs.containsKey('ff_largeScreenLayout'), isFalse);
+          expect(reportedFlags, [true]);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets('reports nothing to an app delegate outside iOS', (
+        tester,
+      ) async {
+        await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
+
+        expect(reportedFlags, isEmpty);
+      });
 
       testWidgets('restores portrait when the flag is turned off', (
         tester,
@@ -659,4 +739,14 @@ class _CounterState extends State<_Counter> {
       child: Center(child: Text('$_taps')),
     ),
   );
+}
+
+/// A build that turns the large-screen layouts on by default, as
+/// `FF_LARGE_SCREEN_LAYOUT=true` does.
+class _LargeScreenLayoutByDefault extends BuildConfiguration {
+  const _LargeScreenLayoutByDefault();
+
+  @override
+  bool getDefault(FeatureFlag flag) =>
+      flag == FeatureFlag.largeScreenLayout || super.getDefault(flag);
 }

@@ -573,7 +573,12 @@ void main() {
               kAlwaysDismissedAnimation,
               child,
             );
-        expect(transition.runtimeType, equals(fadeUpwards.runtimeType));
+        // Framed against a status bar column, as every page is.
+        expect(transition, isA<StatusBarColumnFrame>());
+        expect(
+          (transition as StatusBarColumnFrame).child.runtimeType,
+          equals(fadeUpwards.runtimeType),
+        );
       });
 
       test('passes a typed sound selection to the recorder', () {
