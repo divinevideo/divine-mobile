@@ -55,9 +55,10 @@ abstract final class SplitScreenLayoutRenderService {
   /// otherwise leave in the border colour between them.
   static const _holdOverlap = Duration(milliseconds: 34);
 
-  /// Longest side of a matte. A coarser matte costs little visible even on a
-  /// round or slanted edge, while one the size of a 4× zoomed clip would
-  /// cost tens of megabytes to decode.
+  /// Longest side of a matte. One the size of a 4× zoomed clip would cost
+  /// tens of megabytes to decode. The price is a softer round or slanted edge
+  /// once zoomed: a full-frame cell at 4× has its edge about 4 output pixels
+  /// wide, where the preview stays sharp.
   static const double _maxMatteSide = 2048;
 
   /// Longest side the last frame of a held cell is read at.
