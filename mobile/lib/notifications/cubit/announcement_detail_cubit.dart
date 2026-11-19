@@ -1,43 +1,74 @@
-// ABOUTME: Keeps announcement detail in sync with the trusted catalog snapshot.
-// ABOUTME: Removal and expiry in the repository clear already-open detail pages.
+// ABOUTME: Resolves announcement detail from the trusted catalog snapshot.
 
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
+import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
 
-/// Resolves one announcement from the current catalog, including cold hydration.
-class AnnouncementDetailCubit extends Cubit<AnnouncementNotification?> {
+enum AnnouncementDetailStatus { loading, ready, unavailable, failed }
+
+typedef AnnouncementDetailState = ({
+  AnnouncementDetailStatus status,
+  AnnouncementNotification? announcement,
+});
+
+/// Keeps detail in sync with catalog hydration, refresh, and expiry.
+class AnnouncementDetailCubit extends Cubit<AnnouncementDetailState> {
   AnnouncementDetailCubit({
     required String announcementId,
-    required List<AnnouncementNotification> initialItems,
-    required Stream<List<AnnouncementNotification>> snapshots,
-    Future<void> Function()? refresh,
-  }) : super(_find(initialItems, announcementId)) {
-    _subscription = snapshots.listen((items) {
-      if (!isClosed) emit(_find(items, announcementId));
+    required AnnouncementsRepository repository,
+  }) : _announcementId = announcementId,
+       _repository = repository,
+       super(_resolve(repository, announcementId)) {
+    _subscription = repository.watchSnapshot().listen((_) {
+      // The stream initially replays an empty list before any catalog exists.
+      // Read the repository's current decision so that replay cannot clear a
+      // newer snapshot that has already loaded.
+      if (!isClosed && repository.hasCatalog) {
+        emit(_resolve(repository, announcementId));
+      }
     });
-    if (refresh != null) unawaited(_refresh(refresh));
+    runDetached(
+      refresh(),
+      'refresh announcement detail',
+      logName: 'AnnouncementDetailCubit',
+      category: LogCategory.ui,
+    );
   }
 
-  Future<void> _refresh(Future<void> Function() refresh) async {
-    try {
-      await refresh();
-    } on Exception {
-      // The repository retains its last trusted catalog while offline.
-    }
-  }
-
+  final String _announcementId;
+  final AnnouncementsRepository _repository;
   late final StreamSubscription<List<AnnouncementNotification>> _subscription;
 
-  static AnnouncementNotification? _find(
-    List<AnnouncementNotification> items,
+  Future<void> refresh() async {
+    if (isClosed) return;
+    if (state.status == AnnouncementDetailStatus.failed) {
+      emit((status: AnnouncementDetailStatus.loading, announcement: null));
+    }
+    await _repository.refresh();
+    if (isClosed) return;
+    emit(
+      _repository.hasCatalog
+          ? _resolve(_repository, _announcementId)
+          : (status: AnnouncementDetailStatus.failed, announcement: null),
+    );
+  }
+
+  static AnnouncementDetailState _resolve(
+    AnnouncementsRepository repository,
     String announcementId,
   ) {
-    for (final item in items) {
-      if (item.announcementId == announcementId) return item;
+    if (!repository.hasCatalog) {
+      return (status: AnnouncementDetailStatus.loading, announcement: null);
     }
-    return null;
+    for (final item in repository.items) {
+      if (item.announcementId == announcementId) {
+        return (status: AnnouncementDetailStatus.ready, announcement: item);
+      }
+    }
+    return (status: AnnouncementDetailStatus.unavailable, announcement: null);
   }
 
   @override

@@ -89,6 +89,9 @@ class AnnouncementsRepository {
   Timer? _eligibilityTimer;
   bool _closed = false;
 
+  /// Whether a validated catalog has loaded from cache or the endpoint.
+  bool get hasCatalog => !_closed && _catalog != null;
+
   /// Current eligible announcements, newest first, with local seen state.
   ///
   /// Eligibility is recalculated so cached rows cannot outlive their expiry.

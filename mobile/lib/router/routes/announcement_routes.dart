@@ -48,22 +48,28 @@ class _AnnouncementDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref
-        .watch(notificationRepositoryProvider)
-        ?.announcementsRepository;
-    if (repository == null) return const AnnouncementDetailScreen();
+    final notifications = ref.watch(notificationRepositoryProvider);
+    if (notifications == null) {
+      return const AnnouncementDetailScreen(
+        status: AnnouncementDetailStatus.loading,
+      );
+    }
+    final repository = notifications.announcementsRepository;
+    if (repository == null) {
+      return const AnnouncementDetailScreen(
+        status: AnnouncementDetailStatus.failed,
+      );
+    }
     return BlocProvider(
       key: ValueKey((repository, announcementId)),
       create: (_) => AnnouncementDetailCubit(
         announcementId: announcementId,
-        initialItems: repository.items,
-        snapshots: repository.watchSnapshot(),
-        refresh: repository.refresh,
+        repository: repository,
       ),
-      child: BlocBuilder<AnnouncementDetailCubit, AnnouncementNotification?>(
-        builder: (context, announcement) => Consumer(
+      child: BlocBuilder<AnnouncementDetailCubit, AnnouncementDetailState>(
+        builder: (context, state) => Consumer(
           builder: (context, ref, _) {
-            final action = announcement?.action;
+            final action = state.announcement?.action;
             final Uri? destination;
             if (action is UpdateAppAnnouncementAction && !kIsWeb) {
               destination = announcementActionDestination(
@@ -80,7 +86,9 @@ class _AnnouncementDetailPage extends ConsumerWidget {
                   : null;
             }
             return AnnouncementDetailScreen(
-              announcement: announcement,
+              announcement: state.announcement,
+              status: state.status,
+              onRetry: context.read<AnnouncementDetailCubit>().refresh,
               actionLabel: destination == null
                   ? null
                   : action is UpdateAppAnnouncementAction

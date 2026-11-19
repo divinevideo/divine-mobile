@@ -1,74 +1,103 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/notification_item.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
+
+class _MockAnnouncementsRepository extends Mock
+    implements AnnouncementsRepository {}
 
 void main() {
   final item = AnnouncementNotification(
     announcementId: 'd7388b9c-b35c-4269-8fc5-fac5d7a454ad',
     title: 'A small update',
-    body: 'Your website is ready.',
+    body: 'The app has a new release.',
     timestamp: DateTime.utc(2026, 10, 23),
     expiresAt: DateTime.utc(2026, 11, 23),
   );
 
   group('AnnouncementDetailCubit snapshots', () {
-    test('cold hydration resolves only the requested announcement', () async {
-      final snapshots = StreamController<List<AnnouncementNotification>>();
-      final cubit = AnnouncementDetailCubit(
-        announcementId: item.announcementId,
-        initialItems: const [],
-        snapshots: snapshots.stream,
-      );
-      addTearDown(cubit.close);
+    late _MockAnnouncementsRepository repository;
+    late StreamController<List<AnnouncementNotification>> snapshots;
+    late Completer<void> refresh;
+    late List<AnnouncementNotification>? catalog;
+
+    setUp(() {
+      catalog = null;
+      refresh = Completer<void>();
+      repository = _MockAnnouncementsRepository();
+      snapshots = StreamController<List<AnnouncementNotification>>();
+      when(() => repository.hasCatalog).thenAnswer((_) => catalog != null);
+      when(() => repository.items).thenAnswer((_) => catalog ?? const []);
+      when(repository.watchSnapshot).thenAnswer((_) => snapshots.stream);
+      when(repository.refresh).thenAnswer((_) => refresh.future);
       addTearDown(snapshots.close);
-      expect(cubit.state, isNull);
-      final hydrated = cubit.stream.first;
-      snapshots.add([item]);
-      expect(await hydrated, item);
     });
 
-    test('cold detail requests a refresh after subscribing, without visiting the inbox', () async {
-      final snapshots = StreamController<List<AnnouncementNotification>>(
-        sync: true,
-      );
+    AnnouncementDetailCubit watchAnnouncement({String? id}) {
       final cubit = AnnouncementDetailCubit(
-        announcementId: item.announcementId,
-        initialItems: const [],
-        snapshots: snapshots.stream,
-        refresh: () async => snapshots.add([item]),
+        announcementId: id ?? item.announcementId,
+        repository: repository,
       );
       addTearDown(cubit.close);
-      addTearDown(snapshots.close);
-      expect(cubit.state, item);
-    });
+      return cubit;
+    }
 
-    test('withdrawal clears a detail that is already open', () async {
-      final snapshots = StreamController<List<AnnouncementNotification>>();
-      final cubit = AnnouncementDetailCubit(
-        announcementId: item.announcementId,
-        initialItems: [item],
-        snapshots: snapshots.stream,
-      );
-      addTearDown(cubit.close);
-      addTearDown(snapshots.close);
-      expect(cubit.state, item);
-      final withdrawn = cubit.stream.first;
+    test(
+      'cold hydration waits for a catalog and resolves the requested item',
+      () async {
+        final cubit = watchAnnouncement();
+        expect(cubit.state.status, AnnouncementDetailStatus.loading);
+        verify(repository.refresh).called(1);
+        final hydrated = cubit.stream.first;
+        catalog = [item];
+        snapshots.add([item]);
+        refresh.complete();
+
+        expect((await hydrated).announcement, item);
+      },
+    );
+
+    test('a failed cold refresh cannot confirm absence', () async {
+      final cubit = watchAnnouncement();
+      expect(cubit.state.status, AnnouncementDetailStatus.loading);
+      final failed = cubit.stream.first;
       snapshots.add(const []);
-      expect(await withdrawn, isNull);
+      refresh.complete();
+
+      expect((await failed).status, AnnouncementDetailStatus.failed);
     });
+
+    test(
+      'keeps the current item while refreshing and clears it on withdrawal',
+      () async {
+        catalog = [item];
+        final cubit = watchAnnouncement();
+        expect(cubit.state.announcement, item);
+
+        refresh.complete();
+        await pumpEventQueue();
+        expect(cubit.state.status, AnnouncementDetailStatus.ready);
+        expect(cubit.state.announcement, item);
+
+        final withdrawn = cubit.stream.first;
+        catalog = const [];
+        snapshots.add(const []);
+        expect((await withdrawn).status, AnnouncementDetailStatus.unavailable);
+        expect(cubit.state.announcement, isNull);
+      },
+    );
 
     test('a different ID cannot supply the detail', () async {
-      final snapshots = StreamController<List<AnnouncementNotification>>();
-      final cubit = AnnouncementDetailCubit(
-        announcementId: '60b328b6-4390-47c1-9f45-43738f2bd790',
-        initialItems: [item],
-        snapshots: snapshots.stream,
+      catalog = [item];
+      final cubit = watchAnnouncement(
+        id: '60b328b6-4390-47c1-9f45-43738f2bd790',
       );
-      addTearDown(cubit.close);
-      addTearDown(snapshots.close);
-      expect(cubit.state, isNull);
+      expect(cubit.state.status, AnnouncementDetailStatus.unavailable);
+      expect(cubit.state.announcement, isNull);
+      refresh.complete();
     });
   });
 }

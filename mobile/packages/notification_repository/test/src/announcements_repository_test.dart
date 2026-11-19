@@ -315,6 +315,26 @@ void main() {
       expect(store.catalogWrites, 0);
     });
 
+    test('an empty catalog is resolved only after a valid response', () async {
+      var requests = 0;
+      create(
+        MockClient((_) async {
+          if (++requests == 1) return http.Response('', 503);
+          return jsonResponse(catalog(const []));
+        }),
+      );
+      await repository.refresh();
+      expect(repository.hasCatalog, isFalse);
+      expect(repository.items, isEmpty);
+
+      await repository.refresh();
+      expect(repository.hasCatalog, isTrue);
+      expect(repository.items, isEmpty);
+
+      await repository.close();
+      expect(repository.hasCatalog, isFalse);
+    });
+
     test(
       'filters platform, semantic version, future dates and expiry',
       () async {

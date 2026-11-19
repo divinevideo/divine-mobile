@@ -80,13 +80,11 @@ void main() {
       );
       addTearDown(router.dispose);
       await pump(tester, router, null);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Untrusted route content'), findsNothing);
-      expect(
-        find.text(l10n.announcementUnavailable),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('back from a cold entry falls back to notifications', (
@@ -104,7 +102,7 @@ void main() {
       );
       addTearDown(router.dispose);
       await pump(tester, router, null);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(
         find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
@@ -126,9 +124,12 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       final announcement = item('current', 'Current announcement');
+      final refresh = Completer<void>();
+      List<AnnouncementNotification>? catalog;
       when(() => repository.announcementsRepository).thenReturn(announcements);
-      when(() => announcements.items).thenReturn(const []);
-      when(announcements.refresh).thenAnswer((_) async {});
+      when(() => announcements.hasCatalog).thenAnswer((_) => catalog != null);
+      when(() => announcements.items).thenAnswer((_) => catalog ?? const []);
+      when(announcements.refresh).thenAnswer((_) => refresh.future);
       when(announcements.watchSnapshot).thenAnswer((_) => snapshots.stream);
       final router = GoRouter(
         initialLocation: AnnouncementDetailScreen.pathForId('current'),
@@ -137,17 +138,20 @@ void main() {
       addTearDown(router.dispose);
       addTearDown(snapshots.close);
       await pump(tester, router, repository);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       expect(
         find.text(l10n.announcementUnavailable),
-        findsOneWidget,
+        findsNothing,
       );
 
       verify(announcements.refresh).called(1);
+      catalog = [announcement];
       snapshots.add([announcement]);
+      refresh.complete();
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsOneWidget);
 
+      catalog = const [];
       snapshots.add(const []);
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsNothing);
@@ -155,6 +159,45 @@ void main() {
         find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a failed cold lookup allows retry before confirming absence', (
+      tester,
+    ) async {
+      final announcements = _MockAnnouncementsRepository();
+      final repository = _MockNotificationRepository();
+      var hasCatalog = false;
+      final retry = Completer<void>();
+      var refreshCount = 0;
+      when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenAnswer((_) => hasCatalog);
+      when(() => announcements.items).thenReturn(const []);
+      when(announcements.refresh).thenAnswer((_) async {
+        if (++refreshCount == 2) await retry.future;
+      });
+      when(announcements.watchSnapshot).thenAnswer(
+        (_) => Stream.value(const []),
+      );
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId('missing'),
+        routes: announcementRoutes(),
+      );
+      addTearDown(router.dispose);
+      await pump(tester, router, repository);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.text(l10n.commonSomethingWentWrong), findsOneWidget);
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+
+      hasCatalog = true;
+      retry.complete();
+      await tester.pumpAndSettle();
+      expect(refreshCount, 2);
+      expect(find.text(l10n.announcementUnavailable), findsOneWidget);
     });
 
     testWidgets('changing the route ID resolves the new catalog item', (
@@ -165,6 +208,7 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenReturn(true);
       when(() => announcements.items).thenReturn([first, second]);
       when(announcements.refresh).thenAnswer((_) async {});
       when(announcements.watchSnapshot).thenAnswer(
@@ -202,6 +246,7 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenReturn(true);
       when(() => announcements.items).thenReturn([
         AnnouncementNotification(
           announcementId: id,
