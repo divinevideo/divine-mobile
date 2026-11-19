@@ -15,7 +15,7 @@ import 'package:openvine/utils/proofmode_helpers.dart';
 /// Row of non-interactive badge labels rendered between the title and
 /// description in the metadata expanded sheet.
 ///
-/// Labels: "Classic Vine", "Human-Made" (with tier) and "Not Divine".
+/// Labels: "Classic Vine", "Human-Made" and "Not Divine".
 /// Future: "No AI", "Don't try this at home" (content warnings).
 ///
 /// Returns [SizedBox.shrink] when no badges apply.
@@ -61,7 +61,9 @@ class MetadataBadgesRow extends StatelessWidget {
   }
 }
 
-/// Display-only archive label using the metadata sheet's pill styling.
+/// Display-only Classic Vine pill; it grants no archive trust.
+///
+/// See [VideoEvent.isClassicVine].
 class _ClassicVineChip extends StatelessWidget {
   const _ClassicVineChip();
 

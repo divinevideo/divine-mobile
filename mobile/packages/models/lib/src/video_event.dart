@@ -1625,13 +1625,15 @@ class VideoEvent {
   ///
   /// The meaning of `platform` differs by ingestion path, and any publisher
   /// can write the tag, so this is a display signal rather than archive
-  /// provenance. Decisions that rely on provenance (badges, filters, credit,
-  /// audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine] instead.
+  /// provenance. Decisions that rely on provenance (trust badges, filters,
+  /// credit, audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine]
+  /// instead; display labels such as [isClassicVine] may use it.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
   }
 
-  /// Whether to display the Classic Vine chip for a video from 2017 or earlier.
+  /// Whether a Vine-origin video from 2017 or earlier shows the Classic Vine
+  /// chip.
   ///
   /// Use the original publish date, or a legacy event date from before Vine
   /// shut down. This display label does not grant verification or audio reuse.

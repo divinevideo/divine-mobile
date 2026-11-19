@@ -385,9 +385,12 @@ class _ListSearchPolicyScopeState extends State<_ListSearchPolicyScope> {
   );
 }
 
-/// Re-runs the active searches when the blocklist changes, so an author
-/// blocked from a result's profile disappears from still-open search
-/// results without a manual re-search (and reappears after an unblock).
+/// Keeps open search results current: re-runs the active searches when the
+/// blocklist changes, and teaches the OG Viner cache from video results.
+///
+/// A blocklist change makes an author blocked from a result's profile
+/// disappear from still-open search results without a manual re-search (and
+/// reappear after an unblock).
 ///
 /// Re-dispatching the current query is safe: every search bloc debounces
 /// and uses a restartable transformer, and results are re-fetched through
