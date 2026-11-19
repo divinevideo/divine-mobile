@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart'
     show FunnelcakeApiException, FunnelcakeNotConfiguredException;
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/config/badge_issuers.dart';
 
 part 'explore_badges_state.dart';
 
@@ -67,7 +68,11 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       final videoPreviews = {
         for (final card in indexed) card.definition.coordinate: card.videos,
       };
-      _applyDefinitions(definitions, generation, videoPreviews);
+      _applyDefinitions(
+        _mergeDefinitions(definitions, state.federatedDefinitions),
+        generation,
+        videoPreviews,
+      );
       unawaited(_appendFederated(generation, definitions));
     } catch (error, stackTrace) {
       // Log even a superseded read: its failure is still a relay symptom.
@@ -93,24 +98,38 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   ) async {
     try {
       final federated = await _repository.loadFederatedDiscovery();
-      if (!_isCurrent(generation) || federated.isEmpty) return;
-      final coordinates = indexed
-          .map((definition) => definition.coordinate)
-          .toSet();
+      if (!_isCurrent(generation)) return;
+      final merged = _mergeDefinitions(indexed, federated);
       emitIfOpen(
         state.copyWith(
-          definitions: List.unmodifiable([
-            ...indexed,
-            ...federated.where(
-              (definition) => coordinates.add(definition.coordinate),
-            ),
-          ]),
+          definitions: List.unmodifiable(merged),
+          federatedDefinitions: List.unmodifiable(federated),
         ),
       );
     } catch (error, stackTrace) {
       // External relays are supplemental and never replace the indexed page.
       if (_isCurrent(generation)) addError(error, stackTrace);
     }
+  }
+
+  List<Nip58BadgeDefinition> _mergeDefinitions(
+    List<Nip58BadgeDefinition> indexed,
+    List<Nip58BadgeDefinition> federated,
+  ) {
+    final coordinates = <String>{};
+    final counts = <String, int>{};
+    return [
+      for (final definition in [...indexed, ...federated])
+        if (coordinates.add(definition.coordinate) &&
+            (definition.event.pubkey == kDivineBadgeIssuerPubkey ||
+                counts.update(
+                      definition.event.pubkey,
+                      (count) => count + 1,
+                      ifAbsent: () => 1,
+                    ) <=
+                    3))
+          definition,
+    ];
   }
 
   bool _isCurrent(int generation) =>

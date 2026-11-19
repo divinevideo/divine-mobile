@@ -46,6 +46,9 @@ void main() {
                     'pubkey': _issuer,
                     'title': 'Clip',
                     'thumbnail': '',
+                    'created_at': 1700000000,
+                    'kind': 34236,
+                    'tags': <Object>[],
                   },
                 ],
               },
@@ -66,6 +69,27 @@ void main() {
       expect(result.single.holderCount, 12);
       expect(result.single.followerCount, 7);
       expect(result.single.videos.single.id, 'a' * 64);
+    });
+
+    test('hands off to relay fallback after one failed request', () async {
+      var calls = 0;
+      final transport = MockClient((_) async {
+        calls++;
+        return http.Response('', 503);
+      });
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+        retryBaseDelay: Duration.zero,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+
+      await expectLater(
+        client.getBadgeDiscovery(),
+        throwsA(isA<FunnelcakeApiException>()),
+      );
+      expect(calls, 1);
     });
 
     test('a malformed indexed payload is a typed failure', () async {

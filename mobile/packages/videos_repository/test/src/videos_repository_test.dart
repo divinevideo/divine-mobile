@@ -520,6 +520,46 @@ void main() {
       });
     });
 
+    group('canShowUnblurredPreview', () {
+      for (final reason in ['blocked', 'deleted', 'hidden', 'warned']) {
+        test('hides a $reason clip', () {
+          final repository = VideosRepository(
+            nostrClient: mockNostrClient,
+            blockFilter: (_) => reason == 'blocked',
+            deletedFilter: (_) => reason == 'deleted',
+            contentFilter: (_) => reason == 'hidden',
+            warningLabelsResolver: (_) =>
+                reason == 'warned' ? const ['nudity'] : const [],
+          );
+          final video = VideoEvent(
+            id: '1' * 64,
+            pubkey: '2' * 64,
+            createdAt: 1700000000,
+            content: '',
+            timestamp: DateTime.utc(2023),
+          );
+
+          expect(repository.canShowUnblurredPreview(video), isFalse);
+        });
+      }
+
+      test('shows an eligible clip regardless of the feed aspect ratio', () {
+        final repository = VideosRepository(
+          nostrClient: mockNostrClient,
+          feedShapeFilter: (_) => true,
+        );
+        final video = VideoEvent(
+          id: '1' * 64,
+          pubkey: '2' * 64,
+          createdAt: 1700000000,
+          content: '',
+          timestamp: DateTime.utc(2023),
+        );
+
+        expect(repository.canShowUnblurredPreview(video), isTrue);
+      });
+    });
+
     test('isVideoKnownDeleted delegates to the injected deletion filter', () {
       final visibleVideo = VideoEvent(
         id: 'visible-video',

@@ -168,7 +168,7 @@ void main() {
       'uses server order without relay reads and hides blocked videos',
       () async {
         final official = definition(key2, at: 1);
-        final community = definition(key1, at: 100);
+        final community = definition(key1);
         final hiddenAuthor = '9' * 64;
         hidden.add(hiddenAuthor);
         final clip = (
@@ -176,6 +176,12 @@ void main() {
           pubkey: issuer1,
           title: 'Clip',
           thumbnail: '',
+          createdAt: 1700000000,
+          kind: 34236,
+          tags: const [
+            ['d', 'clip'],
+            ['url', 'https://media.divine.video/clip.mp4'],
+          ],
         );
         when(api.getBadgeDiscovery).thenAnswer(
           (_) async => [
@@ -189,12 +195,24 @@ void main() {
                   pubkey: hiddenAuthor,
                   title: 'Hidden',
                   thumbnail: '',
+                  createdAt: 1700000000,
+                  kind: 34236,
+                  tags: const [
+                    ['d', 'clip'],
+                    ['url', 'https://media.divine.video/clip.mp4'],
+                  ],
                 ),
                 (
                   id: 'invalid',
                   pubkey: issuer2,
                   title: 'Invalid',
                   thumbnail: '',
+                  createdAt: 1700000000,
+                  kind: 34236,
+                  tags: const [
+                    ['d', 'clip'],
+                    ['url', 'https://media.divine.video/clip.mp4'],
+                  ],
                 ),
                 clip,
               ],

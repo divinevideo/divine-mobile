@@ -14,6 +14,9 @@ typedef BadgeVideoPreview = ({
   String pubkey,
   String title,
   String thumbnail,
+  int createdAt,
+  int kind,
+  List<List<String>> tags,
 });
 
 /// Parses the bounded discovery page without treating malformed data as empty.
@@ -42,6 +45,11 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
                   pubkey: video['pubkey'] as String,
                   title: video['title'] as String,
                   thumbnail: video['thumbnail'] as String,
+                  createdAt: video['created_at'] as int,
+                  kind: video['kind'] as int,
+                  tags: (video['tags'] as List<dynamic>)
+                      .map((tag) => List<String>.from(tag as List<dynamic>))
+                      .toList(growable: false),
                 );
               })
               .toList(growable: false),

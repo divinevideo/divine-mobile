@@ -294,6 +294,16 @@ class VideosRepository {
   bool isVideoKnownDeleted(VideoEvent video) =>
       _deletedFilter?.call(video) ?? false;
 
+  /// Whether a discovery surface can show [video]'s artwork without a gate.
+  bool canShowUnblurredPreview(VideoEvent video) {
+    if ((_blockFilter?.call(video.pubkey) ?? false) ||
+        isVideoKnownDeleted(video)) {
+      return false;
+    }
+    final visible = _applyContentPreferences(video, includeFeedShape: false);
+    return visible != null && visible.warnLabels.isEmpty;
+  }
+
   /// Refreshes the authoritative takedown decision for [video].
   Future<AudioReusePolicy> refreshAudioReusePolicy(VideoEvent video) {
     final client = _funnelcakeApiClient;
@@ -3749,6 +3759,9 @@ class VideosRepository {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
           expectedPubkey: author,
+          expectedEventId: candidate.stableId == null
+              ? candidate.eventId
+              : null,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -4394,6 +4407,7 @@ class VideosRepository {
   Future<VideoEvent?> _fetchVideoFromRouteApi(
     String routeId, {
     String? expectedPubkey,
+    String? expectedEventId,
     bool permissive = false,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
@@ -4402,7 +4416,10 @@ class VideosRepository {
     }
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
-    if (event == null) return null;
+    if (event == null ||
+        (expectedEventId != null && event.id != expectedEventId)) {
+      return null;
+    }
     // Checked before content filtering, so another author's filtered video
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;

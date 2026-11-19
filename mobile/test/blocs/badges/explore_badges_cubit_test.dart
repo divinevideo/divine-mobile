@@ -66,6 +66,12 @@ void main() {
           pubkey: 'b' * 64,
           title: 'Clip',
           thumbnail: '',
+          createdAt: 1700000000,
+          kind: 34236,
+          tags: const [
+            ['d', 'clip'],
+            ['url', 'https://media.divine.video/clip.mp4'],
+          ],
         );
         when(indexed.loadIndexedDiscovery).thenAnswer(
           (_) async => [
@@ -85,6 +91,40 @@ void main() {
         waiting.complete([_definition]);
         await pumpEventQueue();
         expect(cubit.state.definitions, [_definition]);
+      },
+    );
+
+    test(
+      'caps duplicate issuers and retains relay cards during refresh',
+      () async {
+        final indexed = _IndexedRepository();
+        final definitions = List.generate(
+          4,
+          (index) => Nip58BadgeDefinition(
+            event: _definition.event,
+            coordinate: '30009:$_issuer:badge-$index',
+            dTag: 'badge-$index',
+          ),
+        );
+        final next = Completer<List<Nip58BadgeDefinition>>();
+        var relayReads = 0;
+        when(indexed.loadIndexedDiscovery).thenAnswer(
+          (_) async => [(definition: definitions.first, videos: [])],
+        );
+        when(indexed.loadFederatedDiscovery).thenAnswer(
+          (_) => relayReads++ == 0 ? Future.value(definitions) : next.future,
+        );
+        final cubit = ExploreBadgesCubit(repository: indexed);
+        addTearDown(cubit.close);
+        await cubit.load();
+        await pumpEventQueue();
+        expect(cubit.state.definitions, definitions.take(3));
+
+        await cubit.refresh();
+        expect(cubit.state.definitions, definitions.take(3));
+        next.complete([]);
+        await pumpEventQueue();
+        expect(cubit.state.definitions, [definitions.first]);
       },
     );
 
