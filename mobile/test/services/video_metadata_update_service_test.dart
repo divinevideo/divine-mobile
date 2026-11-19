@@ -939,6 +939,38 @@ void main() {
         },
       );
 
+      test('applies local hashtag changes to the signed set', () async {
+        final opened = _testVideo(
+          extraTags: const [
+            ['t', 'kept'],
+            ['t', 'removed'],
+          ],
+        );
+        relaysHold(
+          newerRevision(
+            extraTags: const [
+              ['t', 'kept'],
+              ['t', 'removed'],
+              ['t', 'remoteaddition'],
+            ],
+          ),
+        );
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened).copyWith(
+            tags: const {'kept', 'localaddition'},
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags.where((tag) => tag.first == 't').map((tag) => tag[1]),
+          unorderedEquals(['kept', 'remoteaddition', 'localaddition']),
+        );
+      });
+
       test('keeps a newer title when saving details after subtitles', () async {
         final opened = _testVideo();
         final subtitleRevision = newerRevision(
