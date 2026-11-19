@@ -10,11 +10,18 @@ import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/repositories/subtitle_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
+import 'package:videos_repository/videos_repository.dart'
+    show
+        LatestVideoRevisionAbsent,
+        LatestVideoRevisionFound,
+        LatestVideoRevisionUnknown,
+        VideosRepository;
 
 class _MockBlossom extends Mock implements BlossomUploadService {}
 
@@ -25,6 +32,8 @@ class _MockAuth extends Mock implements AuthService {}
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 final _video = VideoEvent(
   id: 'vid1',
@@ -59,6 +68,7 @@ void main() {
     late _MockPublisher publisher;
     late _MockAuth auth;
     late _MockHttpClient httpClient;
+    late _MockVideosRepository videos;
     late SubtitleRepository repo;
 
     setUp(() {
@@ -66,15 +76,25 @@ void main() {
       publisher = _MockPublisher();
       auth = _MockAuth();
       httpClient = _MockHttpClient();
+      videos = _MockVideosRepository();
       repo = SubtitleRepository(
         blossomUploadService: blossom,
         videoEventPublisher: publisher,
+        videosRepository: videos,
         authService: auth,
         nostrClient: _MockNostrClient(),
         httpClient: httpClient,
         pollDelay: (_) async {},
       );
       when(() => auth.currentPublicKeyHex).thenReturn('pk1');
+      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+        (_) async => LatestVideoRevisionFound(
+          // Event needs a hex key; the read matches the address, not this.
+          Event('a' * 64, 34236, [
+            ['d', 'my-vine-id'],
+          ], ''),
+        ),
+      );
     });
 
     test('loadCues falls back to legacy singular textTrackRef', () async {
@@ -324,5 +344,52 @@ void main() {
         );
       },
     );
+
+    group('refuses before uploading anything', () {
+      for (final (reason, revision) in [
+        ('no relay answered in full', const LatestVideoRevisionUnknown()),
+        ('no relay holds a revision', const LatestVideoRevisionAbsent()),
+      ]) {
+        test('when $reason', () async {
+          when(
+            () => videos.fetchLatestVideoRevision(any()),
+          ).thenAnswer((_) async => revision);
+
+          await expectLater(
+            repo.publishEditedSubtitles(video: _video, cues: _cues),
+            throwsA(isA<SubtitleEditException>()),
+          );
+
+          verify(
+            () => videos.fetchLatestVideoRevision('34236:pk1:my-vine-id'),
+          ).called(1);
+          verifyNever(
+            () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
+          );
+          verifyNever(
+            () => publisher.publishSubtitleEvent(
+              video: any(named: 'video'),
+              vttContent: any(named: 'vttContent'),
+              blossomUrl: any(named: 'blossomUrl'),
+              lang: any(named: 'lang'),
+            ),
+          );
+        });
+      }
+
+      test("when the video is not the signed-in account's", () async {
+        when(() => auth.currentPublicKeyHex).thenReturn('someone-else');
+
+        await expectLater(
+          repo.publishEditedSubtitles(video: _video, cues: _cues),
+          throwsA(isA<SubtitleEditException>()),
+        );
+
+        verifyNever(() => videos.fetchLatestVideoRevision(any()));
+        verifyNever(
+          () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
+        );
+      });
+    });
   });
 }

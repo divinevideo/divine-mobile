@@ -13,6 +13,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
+import 'package:openvine/utils/newest_video_revision.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 /// Thrown when an edited-subtitle publish cannot complete. Carries no PII.
 class SubtitleEditException implements Exception {
@@ -36,12 +38,14 @@ class SubtitleRepository {
   SubtitleRepository({
     required BlossomUploadService blossomUploadService,
     required VideoEventPublisher videoEventPublisher,
+    required VideosRepository videosRepository,
     required AuthService authService,
     required NostrClient nostrClient,
     required http.Client httpClient,
     required SubtitlePollDelay pollDelay,
   }) : _blossom = blossomUploadService,
        _publisher = videoEventPublisher,
+       _videosRepository = videosRepository,
        _authService = authService,
        _nostrClient = nostrClient,
        _httpClient = httpClient,
@@ -49,6 +53,7 @@ class SubtitleRepository {
 
   final BlossomUploadService _blossom;
   final VideoEventPublisher _publisher;
+  final VideosRepository _videosRepository;
   final AuthService _authService;
   final NostrClient _nostrClient;
   final http.Client _httpClient;
@@ -82,10 +87,17 @@ class SubtitleRepository {
   /// [lang] defaults to the language the subtitles are already tagged with,
   /// so an edit keeps it; untagged subtitles are published as English.
   ///
+  /// The newest revision of [video] is read before anything is uploaded: the
+  /// subtitle event replaces the captions the video serves from its fixed
+  /// address, so a save the video republish would refuse must stop first.
+  ///
   /// Throws:
   ///
   /// * [SubtitleEditException] when the user is not authenticated.
+  /// * [SubtitleEditException] when [video] is not the signed-in account's.
   /// * [SubtitleEditException] when [video] has no addressable identifier.
+  /// * [SubtitleEditException] when the newest revision of [video] cannot be
+  ///   read.
   /// * [SubtitleEditException] when the Blossom upload fails.
   /// * [SubtitleEditException] when the subtitle event publish fails.
   /// * [SubtitleEditException] when the video republish fails.
@@ -94,12 +106,24 @@ class SubtitleRepository {
     required List<SubtitleCue> cues,
     String? lang,
   }) async {
-    if (_authService.currentPublicKeyHex == null) {
+    final signedIn = _authService.currentPublicKeyHex;
+    if (signedIn == null) {
       throw SubtitleEditException('Not authenticated');
+    }
+    if (signedIn != video.pubkey) {
+      throw SubtitleEditException("Video is not the signed-in account's");
     }
     final vineId = video.vineId;
     if (vineId == null || vineId.isEmpty) {
       throw SubtitleEditException('Video has no addressable identifier');
+    }
+    final newest = await newestVideoRevision(
+      _videosRepository,
+      video,
+      logName: 'SubtitleRepository',
+    );
+    if (newest == null) {
+      throw SubtitleEditException('Newest revision of the video unavailable');
     }
 
     final trackLang = lang ?? _editedTrackLanguage(video) ?? 'en';
