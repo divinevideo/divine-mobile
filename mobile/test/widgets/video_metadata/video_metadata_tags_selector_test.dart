@@ -652,7 +652,7 @@ void main() {
           await submit(tester, 'news');
           expect(announcements, isEmpty);
 
-          await tester.enterText(field(), 'other ');
+          await tester.enterText(field(), 'news ');
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 400));
 
