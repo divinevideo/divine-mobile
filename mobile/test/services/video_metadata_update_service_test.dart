@@ -971,6 +971,32 @@ void main() {
         );
       });
 
+      test(
+        'refuses a concurrent collaborator addition above the limit',
+        () async {
+          final opened = _testVideo();
+          final remoteCollaborators = ['1', '2', '3', '4', '5'];
+          relaysHold(
+            newerRevision(
+              extraTags: [
+                for (final digit in remoteCollaborators)
+                  ['p', digit * 64, '', 'collaborator'],
+              ],
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened)
+                .copyWith(collaboratorPubkeys: {'6' * 64}),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateFailure>());
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+        },
+      );
+
       test('keeps a newer title when saving details after subtitles', () async {
         final opened = _testVideo();
         final subtitleRevision = newerRevision(
