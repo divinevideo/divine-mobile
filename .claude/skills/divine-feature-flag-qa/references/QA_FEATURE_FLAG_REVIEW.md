@@ -16,6 +16,8 @@ Record app version, commit SHA, platform, environment, backend revision where av
 
 The starting inventory below contains **23 flags** from the Find people branch at `be97ddad3474c1db7ab94923fb16a44ad308060c`. Reconcile it against current main and the actual release candidate before testing. Find people currently needs its feature-branch build; absence from another build is not a functional test result.
 
+The snapshot was already behind main when it was written. On main at `d9d853fa52` (2026-11-20) the registry has 22 flags: rows 1 and 2 exist only on the Find people branch, and row 24, `FF_LARGE_SCREEN_LAYOUT` from #11217, exists only on main. The other 21 rows match on both commits.
+
 Authoritative starting sources:
 
 - [Flag definitions and descriptions](https://github.com/divinevideo/divine-mobile/blob/be97ddad3474c1db7ab94923fb16a44ad308060c/mobile/lib/features/feature_flags/models/feature_flag.dart)
@@ -53,6 +55,7 @@ Defaults below describe this source configuration **without build overrides**, n
 | 21 | Bunny Playback Canary — `FF_BUNNY_PLAYBACK_CANARY` | Always off by build default; internal device opt-in | Needs an operator-approved private `BUNNY_PLAYBACK_PATHS` list. Verify actual equivalent source/rendition, timeout/503 fallback, denial behavior and no viewer-auth leakage. Test CDN canaries separately; B2 takes precedence if both are on. |
 | 22 | Concord Rooms — `FF_CONCORD_CHAT` | On with configured `CONCORD_INVITE_URL`, otherwise off unless explicitly enabled; internal | Public signed community chat, not private DMs: clear visibility, valid/invalid invitation, membership, delivery and navigation. Do not expose invitation secrets. If any path invokes held live/LiveKit functionality, stop that part and mark excluded. |
 | 23 | In-App Parent Consent Recording — `FF_MINOR_CONSENT_IN_APP_RECORDING` | Off; also requires `PARENT_CONSENT_DELIVERY_VERIFIED` | Approved test deployment and test participants/media only. Entry points, record/cancel/retry, confirmed receipt, private handling and correct review state. A local preference must not bypass the verified-delivery gate. |
+| 24 | Large Screen Layout — `FF_LARGE_SCREEN_LAYOUT` | Off; on main only, not in the snapshot | Tablet and foldable layouts: whole videos instead of cropped ones, more grid columns, rotation on large windows, and side navigation with comments beside the video in landscape. With the flag off every window must lay out as before; with it on, phones stay portrait and only windows past the large breakpoint rotate. Check resize, split-screen and screens that lock portrait. |
 
 ## Additional gates and dependencies
 
