@@ -602,6 +602,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       );
     }
 
+    // Cleanup can outlive the editor; finish it before checking the UI lifetime.
+    if (!mounted) return;
+
     _syncClipsToEditor(clipEditorBloc: clipEditorBloc);
   }
 
