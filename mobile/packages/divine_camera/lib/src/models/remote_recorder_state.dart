@@ -12,6 +12,7 @@ class RemoteRecorderState {
     required this.budget,
     required this.modeName,
     required this.isShutterActive,
+    this.isShutterEnabled = true,
     this.activeTakeStartedAt,
     this.stillShutterCount = 0,
   });
@@ -35,6 +36,9 @@ class RemoteRecorderState {
   /// run without adding recorded time.
   final bool isShutterActive;
 
+  /// Whether a shutter press can act on the recorder's current state.
+  final bool isShutterEnabled;
+
   /// How often the shutter has fired for a still, such as a stop-motion
   /// frame.
   ///
@@ -49,6 +53,7 @@ class RemoteRecorderState {
     'budgetMs': budget.inMilliseconds,
     'modeName': modeName,
     'shutterActive': isShutterActive,
+    'shutterEnabled': isShutterEnabled,
     'stillShutterCount': stillShutterCount,
   };
 }

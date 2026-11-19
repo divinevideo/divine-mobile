@@ -443,6 +443,8 @@ class VideoRecorderBloc
   /// One step of the stop-motion interval countdown.
   static const _intervalCaptureTickInterval = Duration(seconds: 1);
 
+  static const _minimumRecordingDuration = Duration(milliseconds: 30);
+
   /// The current active camera lens. Delegates to the camera service.
   DivineCameraLens get currentLens => _cameraService.currentLens;
 
@@ -508,20 +510,31 @@ class VideoRecorderBloc
       // interval are stopped by the next press too.
       final isShutterActive =
           recorder.showsActiveRecording || recorder.isIntervalCaptureRunning;
+      final totalDuration = clipManager.totalDuration;
+      const budget = VideoEditorConstants.maxDuration;
+      final canStart =
+          recorder.canRecord &&
+          recorder.recordingState == VideoRecorderState.idle &&
+          !recorder.hasRecordingInFlight &&
+          (!recorder.recorderMode.hasRecordingLimit ||
+              budget - totalDuration >= _minimumRecordingDuration);
+      final isShutterEnabled =
+          !recorder.isSwitchingCamera && (isShutterActive || canStart);
       final takeDuration = clipManager.activeRecordingDuration;
       // A take being finalized is not in the clips yet, but its time is
       // already spent.
       final recorded = isTakeRunning
-          ? clipManager.totalDuration
-          : clipManager.totalDuration + takeDuration;
+          ? totalDuration
+          : totalDuration + takeDuration;
       remote = RemoteRecorderState(
         recorded: recorded,
         activeTakeStartedAt: isTakeRunning
             ? clock.now().subtract(takeDuration)
             : null,
-        budget: VideoEditorConstants.maxDuration,
+        budget: budget,
         modeName: recorder.recorderMode.label,
         isShutterActive: isShutterActive,
+        isShutterEnabled: isShutterEnabled,
         // A stop-motion frame changes nothing else a remote shows, so the
         // Watch would otherwise not learn that its press was handled.
         stillShutterCount: recorder.stopMotionShutterTick,
@@ -529,6 +542,7 @@ class VideoRecorderBloc
       signature = (
         isTakeRunning,
         isShutterActive,
+        isShutterEnabled,
         recorded,
         recorder.recorderMode,
         recorder.stopMotionShutterTick,
@@ -1181,7 +1195,7 @@ class VideoRecorderBloc
     if (state.recordingLockedForNavigation ||
         !_cameraService.canRecord ||
         state.hasRecordingInFlight ||
-        (remainingDuration < const Duration(milliseconds: 30) &&
+        (remainingDuration < _minimumRecordingDuration &&
             state.hasRecordingLimit)) {
       Log.debug(
         '🎥 Recording start ignored - '

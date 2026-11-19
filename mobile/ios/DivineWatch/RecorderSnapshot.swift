@@ -25,6 +25,9 @@ struct RecorderSnapshot: Equatable {
   /// stop-motion capturing on its interval. The last two add no recorded time.
   var isShutterActive = false
 
+  /// Whether the phone can act on a shutter press.
+  var isShutterEnabled = true
+
   /// How often the shutter has fired for a still, such as a stop-motion
   /// frame. A still leaves `isShutterActive` unchanged, so this is what shows
   /// that a tap was handled.

@@ -134,6 +134,31 @@ void main() {
     });
 
     test(
+      'keeps the Classic budget visible when the shutter cannot start',
+      () async {
+        const fullBudget = VideoEditorConstants.maxDuration;
+        stubClips(total: fullBudget);
+        const classic = VideoRecorderBlocState(
+          isCameraInitialized: true,
+          canRecord: true,
+          recorderMode: VideoRecorderMode.classic,
+        );
+        final bloc = buildBloc()..emit(classic);
+        addTearDown(bloc.close);
+
+        expect(published.last!.recorded, fullBudget);
+        expect(published.last!.toMap()['shutterEnabled'], isFalse);
+
+        stubClips(total: const Duration(seconds: 1));
+        bloc.add(const VideoRecorderRemoteStateRefreshRequested());
+        await pumpEventQueue();
+
+        expect(published.last!.recorded, const Duration(seconds: 1));
+        expect(published.last!.toMap()['shutterEnabled'], isTrue);
+      },
+    );
+
+    test(
       'reports an active shutter while stop-motion captures on its interval',
       () {
         stubClips(total: Duration.zero);
@@ -209,6 +234,7 @@ void main() {
       final state = published.single!;
       expect(state.recorded, equals(const Duration(seconds: 5)));
       expect(state.activeTakeStartedAt, isNull);
+      expect(state.toMap()['shutterEnabled'], isFalse);
     });
 
     test('does not publish again while nothing a remote shows changed', () {
