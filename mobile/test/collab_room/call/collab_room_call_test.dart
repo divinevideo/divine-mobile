@@ -306,5 +306,80 @@ void main() {
         expect(await repliedTo(), ['first', 'second']);
       });
     });
+
+    test(
+      'closes a connection made for someone who left and came back meanwhile',
+      () async {
+        final created = Completer<Map<String, Object>>();
+        final calls = <String>[];
+        const events = MethodChannel('FlutterWebRTC/peerConnectionEventpc1');
+        messenger.setMockMethodCallHandler(events, (_) async => null);
+        addTearDown(() => messenger.setMockMethodCallHandler(events, null));
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          calls.add(call.method);
+          switch (call.method) {
+            case 'getUserMedia':
+              return {
+                'streamId': 'microphone',
+                'audioTracks': [
+                  {
+                    'id': 'mic-track',
+                    'label': 'Microphone',
+                    'kind': 'audio',
+                    'enabled': true,
+                  },
+                ],
+              };
+            case 'createPeerConnection':
+              return created.future;
+          }
+          return null;
+        });
+        final transport = _RelayTransport();
+        addTearDown(transport.incoming.close);
+        final callKey = keys.generatePrivateKey();
+        // This device offers: the smaller pubkey does.
+        final a = keys.generatePrivateKey();
+        final b = keys.generatePrivateKey();
+        final aFirst = keys.getPublicKey(a).compareTo(keys.getPublicKey(b)) < 0;
+        final meKey = aFirst ? a : b;
+        final otherKey = aFirst ? b : a;
+        final me = keys.getPublicKey(meKey);
+        final other = keys.getPublicKey(otherKey);
+        final call = WebRtcCollabRoomCall(
+          me: me,
+          others: {other},
+          callKey: callKey,
+          accountSigner: LocalNostrSigner(meKey),
+          transport: transport,
+        );
+        await call.start();
+        transport.incoming.add(
+          await CollabRoomCallChannel(
+            callKey,
+            accountPubkey: other,
+            accountSigner: LocalNostrSigner(otherKey),
+          ).seal(
+            CollabRoomCallSignal(
+              type: CollabRoomCallSignalType.hello,
+              from: other,
+              session: 'theirs',
+            ),
+            recipient: me,
+          ),
+        );
+        await pumpEventQueue();
+        expect(calls, contains('createPeerConnection'));
+
+        call
+          ..updateOthers(const {})
+          ..updateOthers({other});
+        created.complete({'peerConnectionId': 'pc1'});
+        await pumpEventQueue();
+        await call.stop();
+
+        expect(calls, contains('peerConnectionDispose'));
+      },
+    );
   });
 }

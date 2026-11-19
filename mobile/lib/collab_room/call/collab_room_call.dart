@@ -564,7 +564,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   Future<RTCPeerConnection> _connection(_Peer peer) async {
     final connection = await createPeerConnection(_iceServers);
-    if (_stopped || !_others.contains(peer.pubkey)) {
+    // Taken out of the call meanwhile, perhaps back already as a new peer:
+    // a connection kept on the old one would never be closed.
+    if (_stopped || !identical(_peers[peer.pubkey], peer)) {
       await _disposeConnection(connection);
       throw const CollabRoomCallException('The peer left the call');
     }
