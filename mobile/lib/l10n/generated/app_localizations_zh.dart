@@ -2891,6 +2891,16 @@ class AppLocalizationsZh extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '在锁定屏幕上显示新帖子的动态';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle => '帖子第一个小时的观看、点赞和评论';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Divine 的实时活动在 iPhone 设置中已关闭';
+
+  @override
   String get notificationSettingsActions => '操作';
 
   @override

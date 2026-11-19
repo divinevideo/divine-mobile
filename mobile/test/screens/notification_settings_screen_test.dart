@@ -15,12 +15,15 @@ import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 
 import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
@@ -30,6 +33,9 @@ class _MockNotificationRepository extends Mock
 
 class _MockNotificationPreferencesService extends Mock
     implements NotificationPreferencesService {}
+
+class _MockPostLiveActivityRepository extends Mock
+    implements PostLiveActivityRepository {}
 
 class _ConsentSink extends NoOpAnalyticsEventSink {
   final changes = <Map<String, Object>>[];
@@ -416,6 +422,130 @@ void main() {
       expect(sink.changes, [
         {'enabled': 1},
       ]);
+    });
+  });
+  group('post Live Activity row', () {
+    late _MockNotificationPreferencesService mockPrefsService;
+    late _MockPostLiveActivityRepository liveActivity;
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    setUp(() {
+      mockPrefsService = _MockNotificationPreferencesService();
+      when(mockPrefsService.loadPreferences)
+          .thenAnswer((_) async => const NotificationPreferences());
+      liveActivity = _MockPostLiveActivityRepository();
+      when(() => liveActivity.isToggleOn).thenReturn(true);
+      when(liveActivity.isSystemEnabled).thenAnswer((_) async => true);
+      when(() => liveActivity.systemEnabledChanges)
+          .thenAnswer((_) => const Stream<bool>.empty());
+      when(() => liveActivity.setToggleOn(any())).thenAnswer((_) async {});
+    });
+
+    Widget buildSubject({
+      PostLiveActivityRepository? repository,
+      bool flagOn = true,
+      AuthenticationSource source = AuthenticationSource.importedKeys,
+    }) {
+      final auth = createMockAuthService();
+      when(() => auth.authenticationSource).thenReturn(source);
+      return testMaterialApp(
+        mockAuthService: auth,
+        additionalOverrides: [
+          notificationRepositoryProvider.overrideWithValue(null),
+          notificationPreferencesServiceProvider.overrideWithValue(
+            mockPrefsService,
+          ),
+          isFeatureEnabledProvider(FeatureFlag.newPostNotifications)
+              .overrideWithValue(false),
+          isFeatureEnabledProvider(FeatureFlag.postLiveActivity)
+              .overrideWithValue(flagOn),
+          postLiveActivityRepositoryProvider.overrideWithValue(repository),
+        ],
+        home: const NotificationSettingsScreen(),
+      );
+    }
+
+    Finder liveActivitySwitch() => find.descendant(
+      of: find.ancestor(
+        of: find.text(l10n.notificationSettingsLiveActivityTitle),
+        matching: find.byType(Card),
+      ),
+      matching: find.byType(Switch),
+    );
+
+    testWidgets('is hidden without a repository', (tester) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.notificationSettingsLiveActivityTitle),
+        findsNothing,
+      );
+    });
+
+    testWidgets('is hidden while the flag is off', (tester) async {
+      await tester.pumpWidget(
+        buildSubject(repository: liveActivity, flagOn: false),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.notificationSettingsLiveActivityTitle),
+        findsNothing,
+      );
+    });
+
+    testWidgets('is hidden for a signer that can prompt', (tester) async {
+      await tester.pumpWidget(
+        buildSubject(
+          repository: liveActivity,
+          source: AuthenticationSource.amber,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.notificationSettingsLiveActivityTitle),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows the subtitle and writes the toggle through', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject(repository: liveActivity));
+      await tester.pumpAndSettle();
+      await scrollUntilTappable(tester, liveActivitySwitch(), 100);
+
+      expect(
+        find.text(l10n.notificationSettingsLiveActivitySubtitle),
+        findsOneWidget,
+      );
+      expect(tester.widget<Switch>(liveActivitySwitch()).value, isTrue);
+
+      await tester.tap(liveActivitySwitch());
+      await tester.pumpAndSettle();
+
+      verify(() => liveActivity.setToggleOn(false)).called(1);
+      expect(tester.widget<Switch>(liveActivitySwitch()).value, isFalse);
+    });
+
+    testWidgets('is off and disabled when iPhone Settings forbid it', (
+      tester,
+    ) async {
+      when(liveActivity.isSystemEnabled).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(buildSubject(repository: liveActivity));
+      await tester.pumpAndSettle();
+      await scrollUntilTappable(tester, liveActivitySwitch(), 100);
+
+      expect(
+        find.text(l10n.notificationSettingsLiveActivityUnavailable),
+        findsOneWidget,
+      );
+      final toggle = tester.widget<Switch>(liveActivitySwitch());
+      expect(toggle.value, isFalse);
+      expect(toggle.onChanged, isNull);
     });
   });
 }

@@ -2881,6 +2881,17 @@ class AppLocalizationsJa extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '新しい投稿のアクティビティをロック画面に表示';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      '投稿の最初の1時間の再生数、いいね、コメント';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhoneの設定でDivineのライブアクティビティがオフになっています';
+
+  @override
   String get notificationSettingsActions => 'アクション';
 
   @override

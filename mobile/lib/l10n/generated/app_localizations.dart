@@ -5149,6 +5149,24 @@ abstract class AppLocalizations {
   /// **'Occasional product and community updates'**
   String get notificationSettingsCampaignsSubtitle;
 
+  /// Title of the Notification settings switch that shows a Live Activity on the iOS Lock Screen after the user posts. Lock Screen and Live Activities are Apple's terms.
+  ///
+  /// In en, this message translates to:
+  /// **'Show new post activity on Lock Screen'**
+  String get notificationSettingsLiveActivityTitle;
+
+  /// Subtitle of the post Live Activity switch: what the activity shows and for how long.
+  ///
+  /// In en, this message translates to:
+  /// **'Views, likes and comments for your post\'s first hour'**
+  String get notificationSettingsLiveActivitySubtitle;
+
+  /// Replaces the post Live Activity switch subtitle when iOS has Live Activities turned off for the app, so the switch is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Activities are off for Divine in iPhone Settings'**
+  String get notificationSettingsLiveActivityUnavailable;
+
   /// No description provided for @notificationSettingsActions.
   ///
   /// In en, this message translates to:

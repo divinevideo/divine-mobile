@@ -3137,6 +3137,18 @@ class AppLocalizationsFr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Afficher l\'activité du nouveau post sur l\'écran verrouillé';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Vues, likes et commentaires de la première heure de ton post';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Les activités en direct sont désactivées pour Divine dans les Réglages de l\'iPhone';
+
+  @override
   String get notificationSettingsActions => 'Actions';
 
   @override

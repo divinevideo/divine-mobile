@@ -3093,6 +3093,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'إظهار نشاط المنشور الجديد على شاشة القفل';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'المشاهدات والإعجابات والتعليقات خلال الساعة الأولى من منشورك';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'الأنشطة المباشرة متوقفة لتطبيق Divine في إعدادات iPhone';
+
+  @override
   String get notificationSettingsActions => 'الإجراءات';
 
   @override

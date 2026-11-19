@@ -3097,6 +3097,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Toon activiteit van je nieuwe post op het toegangsscherm';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Weergaven, likes en reacties van het eerste uur van je post';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities staan uit voor Divine in de iPhone-instellingen';
+
+  @override
   String get notificationSettingsActions => 'Acties';
 
   @override

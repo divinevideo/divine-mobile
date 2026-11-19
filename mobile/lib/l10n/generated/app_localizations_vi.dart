@@ -3051,6 +3051,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Hiện hoạt động của bài đăng mới trên Màn hình khóa';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Lượt xem, lượt thích và bình luận trong giờ đầu của bài đăng';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities đang tắt cho Divine trong Cài đặt iPhone';
+
+  @override
   String get notificationSettingsActions => 'Thao tác';
 
   @override

@@ -3132,6 +3132,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Показвай активност на новата публикация на заключения екран';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Прегледи, харесвания и коментари през първия час на публикацията ти';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities са изключени за Divine в Настройки на iPhone';
+
+  @override
   String get notificationSettingsActions => 'Действия';
 
   @override

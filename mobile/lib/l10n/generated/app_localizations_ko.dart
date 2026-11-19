@@ -2892,6 +2892,17 @@ class AppLocalizationsKo extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '새 게시물 활동을 잠금 화면에 표시';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      '게시물의 첫 1시간 동안의 조회수, 좋아요, 댓글';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhone 설정에서 Divine의 실시간 현황이 꺼져 있어요';
+
+  @override
   String get notificationSettingsActions => '작업';
 
   @override

@@ -3021,6 +3021,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Yeni gönderi hareketini Kilit Ekranı\'nda göster';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Gönderinin ilk saatindeki görüntülenme, beğeni ve yorumlar';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Divine için Canlı Etkinlikler iPhone Ayarları\'nda kapalı';
+
+  @override
   String get notificationSettingsActions => 'İşlemler';
 
   @override

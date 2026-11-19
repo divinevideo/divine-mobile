@@ -3081,6 +3081,18 @@ class AppLocalizationsSv extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Visa aktivitet för nya inlägg på låsskärmen';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Visningar, gillamarkeringar och kommentarer under ditt inläggs första timme';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities är avstängda för Divine i iPhone-inställningarna';
+
+  @override
   String get notificationSettingsActions => 'Åtgärder';
 
   @override

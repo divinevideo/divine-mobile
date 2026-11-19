@@ -3068,6 +3068,18 @@ class AppLocalizationsMs extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Tunjukkan aktiviti pos baharu pada Skrin Kunci';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Tontonan, suka dan komen untuk sejam pertama pos anda';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities dimatikan untuk Divine dalam Tetapan iPhone';
+
+  @override
   String get notificationSettingsActions => 'Tindakan';
 
   @override

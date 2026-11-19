@@ -3093,6 +3093,18 @@ class AppLocalizationsFil extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Ipakita ang activity ng bagong post sa Lock Screen';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Views, likes at comments sa unang oras ng post mo';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Naka-off ang Live Activities para sa Divine sa Mga Setting ng iPhone';
+
+  @override
   String get notificationSettingsActions => 'Mga Aksyon';
 
   @override

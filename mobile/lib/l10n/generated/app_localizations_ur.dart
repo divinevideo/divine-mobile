@@ -3086,6 +3086,18 @@ class AppLocalizationsUr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'نئی پوسٹ کی سرگرمی لاک اسکرین پر دکھائیں';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'آپ کی پوسٹ کے پہلے گھنٹے کے ویوز، لائکس اور تبصرے';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhone کی ترتیبات میں Divine کے لیے Live Activities بند ہیں';
+
+  @override
   String get notificationSettingsActions => 'کارروائیاں';
 
   @override

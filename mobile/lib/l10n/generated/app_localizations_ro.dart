@@ -3195,6 +3195,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Arată activitatea noii postări pe ecranul de blocare';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Vizualizări, aprecieri și comentarii din prima oră a postării tale';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Activitățile live sunt dezactivate pentru Divine în Setările iPhone';
+
+  @override
   String get notificationSettingsActions => 'Acțiuni';
 
   @override

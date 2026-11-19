@@ -3115,6 +3115,18 @@ class AppLocalizationsPt extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Mostrar a atividade do novo post na Tela Bloqueada';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Visualizações, curtidas e comentários da primeira hora do seu post';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'As Atividades ao Vivo estão desativadas para o Divine em Ajustes do iPhone';
+
+  @override
   String get notificationSettingsActions => 'Ações';
 
   @override

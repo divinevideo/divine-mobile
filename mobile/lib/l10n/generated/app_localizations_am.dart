@@ -3017,6 +3017,18 @@ class AppLocalizationsAm extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'በመቆለፊያ ማያ ገጽ ላይ የአዲስ ልጥፍ እንቅስቃሴን አሳይ';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'ለልጥፍዎ የመጀመሪያ ሰዓት እይታዎች፣ መውደዶች እና አስተያየቶች';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities ለ Divine በ iPhone ቅንብሮች ውስጥ ጠፍተዋል';
+
+  @override
   String get notificationSettingsActions => 'ድርጊቶች';
 
   @override

@@ -3008,6 +3008,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Tampilkan aktivitas postingan baru di Layar Kunci';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Tayangan, suka, dan komentar untuk jam pertama postinganmu';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities dimatikan untuk Divine di Pengaturan iPhone';
+
+  @override
   String get notificationSettingsActions => 'Aksi';
 
   @override
