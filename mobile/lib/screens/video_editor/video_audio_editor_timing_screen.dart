@@ -74,12 +74,6 @@ class VideoAudioEditorTimingScreen extends StatefulWidget {
   @visibleForTesting
   final AudioClipPlayer? clipPlayer;
 
-  /// Route name for navigation.
-  static const routeName = 'video-audio-timing';
-
-  /// Route path.
-  static const path = '/video-audio-timing';
-
   @visibleForTesting
   static const videoDurationSegmentKey = Key(
     'video-audio-timing-video-duration-segment',
