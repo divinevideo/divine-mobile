@@ -11,7 +11,8 @@ enum PostAnalyticsDetailStatus {
   /// Funnelcake has not caught up yet, before the settle point.
   onTheirWay,
 
-  /// Past the settle point, views, likes and comments are confirmed zero.
+  /// Past the settle point and inside the first hour, views, likes and
+  /// comments are confirmed zero.
   nothingYet,
 
   /// Past the settle point, Funnelcake still has no record of the post.

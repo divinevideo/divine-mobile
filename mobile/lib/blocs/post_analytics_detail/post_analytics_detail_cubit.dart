@@ -21,11 +21,13 @@ part 'post_analytics_detail_state.dart';
 ///
 /// Before the settle point (`postedAt` + [settleDelay]) Funnelcake may not
 /// have caught up, so a missing post or a zero count reads as unknown, and a
-/// single reload is scheduled for the settle point.
+/// single reload is scheduled for the settle point. "Nothing yet" is a
+/// first-hour state: past [windowLength] confirmed zeros show as zeros.
 class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     with CloseGuardedEmit<PostAnalyticsDetailState> {
-  /// Creates the cubit. With [initialPerformance] it resolves without a
-  /// fetch.
+  /// Creates the cubit. With [initialPerformance] it starts resolved from
+  /// the video alone, so the screen draws its stats on the first frame, and
+  /// [load] only adds what the Live Activity knows.
   PostAnalyticsDetailCubit({
     required CreatorAnalyticsRepository repository,
     required String? ownerPubkey,
@@ -41,11 +43,28 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
        _initialPerformance = initialPerformance,
        _liveActivity = liveActivity,
        _now = now ?? DateTime.now,
-       super(const PostAnalyticsDetailState());
+       super(
+         initialPerformance == null
+             ? const PostAnalyticsDetailState()
+             : _stateFor(
+                 initialPerformance,
+                 hasEngagementData: initialPerformance.hasEngagementData,
+                 coordinate:
+                     ((coordinate?.isEmpty ?? true) ? null : coordinate) ??
+                     _coordinateOf(initialPerformance.video),
+                 postedAt: _createdAt(initialPerformance.video),
+                 running: false,
+                 now: (now ?? DateTime.now)(),
+               ),
+       );
 
   /// How long after publishing Funnelcake's counts are trusted, past the
   /// relay's worst-case write delay.
   static const settleDelay = Duration(minutes: 10);
+
+  /// How long after publishing "nothing yet" applies: the Live Activity's
+  /// window. Later, a post's confirmed zeros are just its stats.
+  static const windowLength = Duration(minutes: 60);
 
   static const _logName = 'PostAnalyticsDetailCubit';
 
@@ -60,8 +79,9 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
   /// The reload at the settle point; cancelled on [close].
   Timer? _settleReload;
 
-  /// Resolves the post: from the warm performance when given, else by
-  /// fetching the owner's analytics.
+  /// Resolves the post: from the warm performance when given, adding the
+  /// Live Activity's answers once they return, else by fetching the owner's
+  /// analytics.
   Future<void> load() async {
     final initial = _initialPerformance;
     if (initial != null) {
@@ -170,8 +190,35 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     final running = coordinate != null && await _activityRunning(coordinate);
     final postedAt = activityPostedAt ?? _createdAt(video);
     final now = _now();
-    final settlePoint = postedAt?.add(settleDelay);
-    final beforeSettle = settlePoint != null && now.isBefore(settlePoint);
+    final next = _stateFor(
+      performance,
+      hasEngagementData: hasEngagementData,
+      coordinate: coordinate,
+      postedAt: postedAt,
+      running: running,
+      now: now,
+    );
+    final emitted = emitIfOpen(next);
+    if (emitted &&
+        postedAt != null &&
+        next.status == PostAnalyticsDetailStatus.onTheirWay) {
+      _scheduleSettleReload(postedAt.add(settleDelay).difference(now));
+    }
+  }
+
+  static PostAnalyticsDetailState _stateFor(
+    VideoPerformance? performance, {
+    required bool hasEngagementData,
+    required String? coordinate,
+    required DateTime? postedAt,
+    required bool running,
+    required DateTime now,
+  }) {
+    final video = performance?.video;
+    final beforeSettle =
+        postedAt != null && now.isBefore(postedAt.add(settleDelay));
+    final inWindow =
+        postedAt != null && now.isBefore(postedAt.add(windowLength));
     final counts = video == null
         ? const PostCounts()
         : _countsOf(
@@ -179,35 +226,29 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
             hasEngagementData: hasEngagementData,
             beforeSettle: beforeSettle,
           );
-    final status = _statusFor(
-      found: video != null,
-      counts: counts,
-      beforeSettle: beforeSettle,
-    );
-    final emitted = emitIfOpen(
-      PostAnalyticsDetailState(
-        status: status,
-        performance: performance,
+    return PostAnalyticsDetailState(
+      status: _statusFor(
+        found: video != null,
         counts: counts,
-        postedAt: postedAt,
-        liveMinutes: postedAt == null
-            ? 0
-            : math.max(0, now.difference(postedAt).inMinutes),
-        coordinate: coordinate,
-        liveActivityRunning: running,
+        beforeSettle: beforeSettle,
+        inWindow: inWindow,
       ),
+      performance: performance,
+      counts: counts,
+      postedAt: postedAt,
+      liveMinutes: postedAt == null
+          ? 0
+          : math.max(0, now.difference(postedAt).inMinutes),
+      coordinate: coordinate,
+      liveActivityRunning: running,
     );
-    if (emitted &&
-        status == PostAnalyticsDetailStatus.onTheirWay &&
-        settlePoint != null) {
-      _scheduleSettleReload(settlePoint.difference(now));
-    }
   }
 
-  PostAnalyticsDetailStatus _statusFor({
+  static PostAnalyticsDetailStatus _statusFor({
     required bool found,
     required PostCounts counts,
     required bool beforeSettle,
+    required bool inWindow,
   }) {
     if (!found) {
       return beforeSettle
@@ -219,7 +260,7 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
           ? PostAnalyticsDetailStatus.ready
           : PostAnalyticsDetailStatus.onTheirWay;
     }
-    return counts.confirmedEmpty
+    return inWindow && counts.confirmedEmpty
         ? PostAnalyticsDetailStatus.nothingYet
         : PostAnalyticsDetailStatus.ready;
   }

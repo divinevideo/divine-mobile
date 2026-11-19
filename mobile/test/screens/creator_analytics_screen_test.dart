@@ -20,10 +20,12 @@ import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
@@ -32,6 +34,9 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockPostAnalyticsDetailCubit extends MockCubit<PostAnalyticsDetailState>
     implements PostAnalyticsDetailCubit {}
+
+class _MockPostLiveActivityRepository extends Mock
+    implements PostLiveActivityRepository {}
 
 class _MockCreatorAnalyticsRepository extends Mock
     implements CreatorAnalyticsRepository {}
@@ -1034,6 +1039,47 @@ void main() {
           'Failed to open post analytics: Exception: route failed',
         );
       });
+    });
+  });
+
+  group(PostAnalyticsDetailScreen, () {
+    testWidgets('draws a warm post on the first frame, before the Live '
+        'Activity answers', (tester) async {
+      final liveActivity = _MockPostLiveActivityRepository();
+      when(
+        () => liveActivity.postedAtFor(any()),
+      ).thenAnswer((_) => Completer<DateTime?>().future);
+      when(
+        () => liveActivity.isRunningFor(any()),
+      ).thenAnswer((_) => Completer<bool>().future);
+      // An address, so the Live Activity lookups actually run.
+      final video = analyticsVideo(
+        id: 'video-warm',
+        views: 120,
+      ).copyWith(vineId: 'post-d-tag');
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...postDetailOverrides(),
+            postLiveActivityRepositoryProvider.overrideWithValue(liveActivity),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: PostAnalyticsDetailScreen(
+              videoId: video.id,
+              performance: VideoPerformance.fromVideo(video),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Analytics Fixture Video'), findsOneWidget);
+      expect(find.text(l10n.analyticsViews), findsOneWidget);
+      expect(find.text('120'), findsOneWidget);
     });
   });
 

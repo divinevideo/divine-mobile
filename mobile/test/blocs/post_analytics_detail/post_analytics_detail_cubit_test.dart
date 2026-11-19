@@ -192,6 +192,45 @@ void main() {
           verifyNever(() => repository.fetchCreatorAnalytics(any()));
         },
       );
+      test(
+        'is ready with the performance before the Live Activity answers',
+        () async {
+          final postedAt = Completer<DateTime?>();
+          final running = Completer<bool>();
+          when(
+            () => liveActivity.postedAtFor(any()),
+          ).thenAnswer((_) => postedAt.future);
+          when(
+            () => liveActivity.isRunningFor(any()),
+          ).thenAnswer((_) => running.future);
+          final cubit = buildCubit(coordinate: null, initialPerformance: warm);
+          addTearDown(cubit.close);
+          final emitted = <PostAnalyticsDetailState>[];
+          final subscription = cubit.stream.listen(emitted.add);
+          addTearDown(subscription.cancel);
+
+          final loading = cubit.load();
+          await pumpEventQueue();
+
+          expect(cubit.state.status, PostAnalyticsDetailStatus.ready);
+          expect(cubit.state.performance, same(warm));
+          expect(cubit.state.liveActivityRunning, isFalse);
+          expect(emitted, isEmpty);
+
+          postedAt.complete(null);
+          running.complete(true);
+          await loading;
+          await pumpEventQueue();
+
+          expect(emitted, [
+            _state(
+              status: PostAnalyticsDetailStatus.ready,
+              liveActivityRunning: isTrue,
+            ),
+          ]);
+          verifyNever(() => repository.fetchCreatorAnalytics(any()));
+        },
+      );
     });
 
     group('finding the post', () {
@@ -312,7 +351,7 @@ void main() {
 
       blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
         'is nothingYet when every count is a confirmed zero after the settle '
-        'point',
+        'point, inside the first hour',
         setUp: () {
           now = _postedAt.add(const Duration(minutes: 14, seconds: 30));
           stubActivity(postedAt: _postedAt);
@@ -325,6 +364,23 @@ void main() {
             status: PostAnalyticsDetailStatus.nothingYet,
             counts: const PostCounts(views: 0, likes: 0, comments: 0),
           ).having((s) => s.liveMinutes, 'liveMinutes', 14),
+        ],
+      );
+
+      blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
+        'is ready with its zeros once the first hour is over',
+        setUp: () {
+          now = _postedAt.add(const Duration(minutes: 61));
+          stubActivity(postedAt: _postedAt);
+          stubFetch([_video(views: 0, likes: 0, comments: 0)]);
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          _state(
+            status: PostAnalyticsDetailStatus.ready,
+            counts: const PostCounts(views: 0, likes: 0, comments: 0),
+          ),
         ],
       );
 
