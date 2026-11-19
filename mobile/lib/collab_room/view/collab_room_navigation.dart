@@ -1,6 +1,8 @@
 // ABOUTME: The camera flows a collaborative room starts: filming your part,
 // ABOUTME: and posting the finished video with everyone as collaborators
 
+import 'dart:async';
+
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,14 +44,37 @@ Future<void> openCollabRoomPartRecorder(
           cellShape:
               room.cellShapeOf(room.ownerPubkey) ??
               SplitScreenCellShape.rectangle,
+          me: room.ownerPubkey,
+          callKey: room.callKey,
         ),
       );
   await VideoRecorderRouteData(
     collabRoom: room.id,
     entryPoint: CreationEntryPoint.collabRoom,
   ).push<void>(context);
-  if (!context.mounted) return;
-  ref.read(collabRoomPartProvider.notifier).clear();
+  // Marked finished rather than cleared even when the context is gone: a
+  // stale part would route the next editor's Done back to this room.
+  ref.read(collabRoomPartProvider.notifier).finish();
+}
+
+/// Completes once nothing covers the route of [context] any more — the
+/// screens on top finished animating out and let go of the camera and the
+/// microphone — or once that route itself is gone.
+Future<void> collabRoomUntilUncovered(BuildContext context) {
+  final route = ModalRoute.of(context);
+  final animation = route?.secondaryAnimation;
+  if (route == null || animation == null || animation.isDismissed) {
+    return Future.value();
+  }
+  final uncovered = Completer<void>();
+  void listener(AnimationStatus status) {
+    if (status != AnimationStatus.dismissed) return;
+    animation.removeStatusListener(listener);
+    if (!uncovered.isCompleted) uncovered.complete();
+  }
+
+  animation.addStatusListener(listener);
+  return Future.any([uncovered.future, route.completed.then((_) {})]);
 }
 
 /// Opens the post screen for [clip], the finished video of [room], with

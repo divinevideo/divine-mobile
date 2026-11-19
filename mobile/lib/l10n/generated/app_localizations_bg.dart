@@ -16691,6 +16691,24 @@ class AppLocalizationsBg extends AppLocalizations {
   String get collabRoomPartSendButton => 'Изпрати моята част';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Качваме частта ти… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Качено. Готово за изпращане.';
+
+  @override
+  String get collabRoomInviteAgain => 'Покани отново';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Да напуснеш ли стаята?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Само домакинът може да те покани обратно.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Частта ти не можа да се изпрати. Опитай пак.';
 
@@ -16754,6 +16772,12 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Разговорът не можа да започне. Провери дали Divine може да ползва микрофона ти.';
+
+  @override
+  String get collabRoomCallJoin => 'Влез в разговора';
+
+  @override
+  String get collabRoomCallLeave => 'Излез от разговора';
 
   @override
   String get collabRoomCallCameraFailed => 'Камерата не можа да се включи.';

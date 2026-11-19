@@ -13780,6 +13780,32 @@
   "@collabRoomPartSendButton": {
     "description": "Button that hands in your part of a collaborative video."
   },
+  "collabRoomPartUploading": "Uploading your part… {progress}",
+  "@collabRoomPartUploading": {
+    "description": "Progress under the preview of your Together part while it uploads, before you send it. {progress} is the share uploaded, already formatted as a percentage for the language.",
+    "placeholders": {
+      "progress": {
+        "type": "String",
+        "example": "42%"
+      }
+    }
+  },
+  "collabRoomPartUploaded": "Uploaded. Ready to send.",
+  "@collabRoomPartUploaded": {
+    "description": "Shown under the preview of your Together part once it is uploaded and Send only has to hand it in."
+  },
+  "collabRoomInviteAgain": "Invite again",
+  "@collabRoomInviteAgain": {
+    "description": "Button next to someone in a Together room who left, declined or was removed: the host asks them back in."
+  },
+  "collabRoomLeaveConfirmTitle": "Leave this room?",
+  "@collabRoomLeaveConfirmTitle": {
+    "description": "Title of the sheet that asks before you leave a Together room."
+  },
+  "collabRoomLeaveConfirmBody": "Only the host can invite you back in.",
+  "@collabRoomLeaveConfirmBody": {
+    "description": "Body of the sheet that asks before you leave a Together room."
+  },
   "collabRoomPartSendFailed": "Couldn't send your part. Try again.",
   "@collabRoomPartSendFailed": {
     "description": "Shown when handing in your part of a collaborative video failed."
@@ -13859,6 +13885,14 @@
   "collabRoomCallFailed": "Couldn't start the call. Check that Divine may use your microphone.",
   "@collabRoomCallFailed": {
     "description": "Shown when the microphone for a Together room's call could not be opened."
+  },
+  "collabRoomCallJoin": "Join the call",
+  "@collabRoomCallJoin": {
+    "description": "Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part."
+  },
+  "collabRoomCallLeave": "Leave the call",
+  "@collabRoomCallLeave": {
+    "description": "Button in the editor that leaves the Together room's voice call while editing your part."
   },
   "collabRoomCallCameraFailed": "Couldn't turn your camera on.",
   "@collabRoomCallCameraFailed": {

@@ -8,6 +8,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' show MediaStream;
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/collab_room/bloc/collab_room_cubit.dart';
 import 'package:openvine/collab_room/call/collab_room_call_cubit.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/collab_room/view/collab_room_navigation.dart';
 import 'package:openvine/collab_room/view/widgets/collab_room_avatar.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_cell_shape_widgets.dart';
@@ -52,8 +54,8 @@ class CollabRoomView extends StatelessWidget {
   }
 }
 
-/// Reports failed actions and opens the post screen once the video is put
-/// together.
+/// Reports failed actions, closes the room once the account left it, and
+/// opens the post screen once the video is put together.
 class _RoomListeners extends ConsumerWidget {
   const _RoomListeners({required this.child});
 
@@ -71,6 +73,35 @@ class _RoomListeners extends ConsumerWidget {
             context,
             context.l10n.collabRoomActionFailed,
           ),
+        ),
+        // Leaving, turning the invite down or calling the room off ends this
+        // screen: staying would show a room the account is no longer in, with
+        // the call already gone.
+        BlocListener<CollabRoomCubit, CollabRoomState>(
+          listenWhen: (previous, current) =>
+              previous.actionStatus == CollabRoomActionStatus.busy &&
+              current.actionStatus == CollabRoomActionStatus.idle &&
+              const {
+                CollabRoomAction.leave,
+                CollabRoomAction.decline,
+                CollabRoomAction.cancel,
+              }.contains(current.action),
+          listener: (context, state) => runDetached(
+            Navigator.of(context).maybePop(),
+            'close the collab room screen',
+            logName: 'CollabRoomView',
+            category: LogCategory.video,
+          ),
+        ),
+        // The host calling the room off, or taking this account out of it,
+        // ends the screen here too, saying why. A room that had ended before
+        // the screen opened stays, so its notice can be read.
+        BlocListener<CollabRoomCubit, CollabRoomState>(
+          listenWhen: (previous, current) =>
+              previous.room != null &&
+              !previous.endedByHost &&
+              current.endedByHost,
+          listener: _closeEndedRoom,
         ),
         BlocListener<CollabRoomCubit, CollabRoomState>(
           listenWhen: (previous, current) =>
@@ -95,6 +126,30 @@ class _RoomListeners extends ConsumerWidget {
       ],
       child: child,
     );
+  }
+
+  static void _closeEndedRoom(BuildContext context, CollabRoomState state) {
+    final l10n = context.l10n;
+    _showSnackBar(
+      context,
+      state.room!.phase == CollabRoomPhase.cancelled
+          ? l10n.collabRoomCancelled
+          : l10n.collabRoomRemovedYou,
+    );
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    if (route == null || route.isCurrent) {
+      runDetached(
+        navigator.maybePop(),
+        'close the collab room the host ended',
+        logName: 'CollabRoomView',
+        category: LogCategory.video,
+      );
+    } else {
+      // Covered by the camera flow of a part: leave that open and take the
+      // room out from under it, so coming back lands below the room.
+      navigator.removeRoute(route);
+    }
   }
 
   static void _showSnackBar(BuildContext context, String message) {
@@ -273,6 +328,22 @@ class _LayoutPreview extends StatelessWidget {
                                       .read<CollabRoomCubit>()
                                       .soundPicked(occupant(index)!.pubkey)
                                 : null,
+                          ),
+                        ),
+                      if (state.postedVideo case final video?)
+                        Center(
+                          child: DivineIconButton(
+                            icon: DivineIconName.playFill,
+                            // Over the parts' frames, like the play buttons
+                            // on other videos: a dark scrim, a white icon.
+                            type: DivineIconButtonType.ghost,
+                            semanticLabel: context.l10n.videoPlayerPlayVideo,
+                            onPressed: () => context.push(
+                              RoutePaths.videoDetailForId(
+                                video.dTag,
+                                author: video.pubkey,
+                              ),
+                            ),
                           ),
                         ),
                     ],
@@ -576,6 +647,12 @@ class _Members extends StatelessWidget {
                 member.pubkey != room.authorPubkey &&
                 member.status.isActive &&
                 state.actionStatus != CollabRoomActionStatus.busy,
+            canInviteAgain:
+                room.isAuthor &&
+                room.phase.isOpen &&
+                member.pubkey != room.authorPubkey &&
+                !member.status.isActive &&
+                state.actionStatus != CollabRoomActionStatus.busy,
           ),
       ],
     );
@@ -587,11 +664,16 @@ class _MemberRow extends StatelessWidget {
     required this.member,
     required this.room,
     required this.canRemove,
+    required this.canInviteAgain,
   });
 
   final CollabRoomMember member;
   final CollabRoom room;
   final bool canRemove;
+
+  /// Whether the host can ask this person back: they left by mistake,
+  /// declined or were removed.
+  final bool canInviteAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -643,6 +725,14 @@ class _MemberRow extends StatelessWidget {
             onPressed: () =>
                 context.read<CollabRoomCubit>().removeMember(member.pubkey),
           ),
+        if (canInviteAgain)
+          DivineButton(
+            label: l10n.collabRoomInviteAgain,
+            type: DivineButtonType.ghost,
+            size: DivineButtonSize.small,
+            onPressed: () =>
+                context.read<CollabRoomCubit>().reinvite(member.pubkey),
+          ),
       ],
     );
   }
@@ -660,9 +750,19 @@ class _Actions extends ConsumerWidget {
     final cubit = context.read<CollabRoomCubit>();
     final busy = state.actionStatus == CollabRoomActionStatus.busy;
     final myStatus = room.me?.status;
+    // Nothing left to do here: say so with a way out at the bottom, rather
+    // than leave the back button as the only one.
     if (!room.phase.isOpen ||
         (!room.isAuthor && !(myStatus?.isActive ?? false))) {
-      return const SizedBox.shrink();
+      return DivineButton(
+        label: l10n.listDone,
+        onPressed: () => runDetached(
+          _done(context),
+          'close the ended collab room',
+          logName: 'CollabRoomView',
+          category: LogCategory.video,
+        ),
+      );
     }
     final hasCell = room.cellAspectRatioOf(room.ownerPubkey) != null;
     final filming = room.phase == CollabRoomPhase.recording;
@@ -714,7 +814,7 @@ class _Actions extends ConsumerWidget {
           DivineButton(
             label: l10n.collabRoomLeaveButton,
             type: DivineButtonType.tertiary,
-            onPressed: busy ? null : cubit.leave,
+            onPressed: busy ? null : () => _confirmLeave(context),
           ),
         if (room.isAuthor)
           DivineButton(
@@ -726,8 +826,16 @@ class _Actions extends ConsumerWidget {
     );
   }
 
+  /// Lets the room go and closes its screen.
+  Future<void> _done(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    await context.read<CollabRoomCubit>().dismiss();
+    await navigator.maybePop();
+  }
+
   /// Films the part with the call paused: the camera and microphone belong
-  /// to the recorder meanwhile.
+  /// to the recorder meanwhile. The call comes back once the camera flow is
+  /// gone — unless the editor joined it already, which leaves it as it is.
   Future<void> _filmPart(
     BuildContext context,
     WidgetRef ref,
@@ -737,7 +845,37 @@ class _Actions extends ConsumerWidget {
     await call?.leave();
     if (!context.mounted) return;
     await openCollabRoomPartRecorder(context, ref, room);
+    if (!context.mounted) return;
+    // Rejoined while the recorder still animates out, the call would find
+    // the microphone taken.
+    await collabRoomUntilUncovered(context);
     if (call != null && !call.isClosed) await call.join();
+  }
+
+  /// Asks before leaving: only the host can bring someone back.
+  Future<void> _confirmLeave(BuildContext context) async {
+    final cubit = context.read<CollabRoomCubit>();
+    final navigator = Navigator.of(context);
+    final l10n = context.l10n;
+    await VineBottomSheetPrompt.show(
+      context: context,
+      sticker: DivineStickerName.stopSign,
+      title: l10n.collabRoomLeaveConfirmTitle,
+      subtitle: l10n.collabRoomLeaveConfirmBody,
+      primaryButtonText: l10n.collabRoomLeaveButton,
+      primaryButtonType: DivineButtonType.error,
+      onPrimaryPressed: () {
+        navigator.pop();
+        runDetached(
+          cubit.leave(),
+          'leave the collab room',
+          logName: 'CollabRoomView',
+          category: LogCategory.video,
+        );
+      },
+      secondaryButtonText: l10n.commonCancel,
+      onSecondaryPressed: navigator.pop,
+    );
   }
 
   Future<void> _confirmCancel(BuildContext context) async {

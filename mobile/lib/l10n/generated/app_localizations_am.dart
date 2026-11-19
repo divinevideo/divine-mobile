@@ -16142,6 +16142,23 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomPartSendButton => 'ክፍሌን ላክ';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'ክፍልዎ በመጫን ላይ… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'ተጭኗል። ለመላክ ዝግጁ ነው።';
+
+  @override
+  String get collabRoomInviteAgain => 'እንደገና ጋብዝ';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'ይህን ክፍል ይልቀቁ?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'ተመልሰው እንዲገቡ መጋበዝ የሚችለው አዘጋጁ ብቻ ነው።';
+
+  @override
   String get collabRoomPartSendFailed => 'ክፍልዎን መላክ አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
@@ -16202,6 +16219,12 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'ጥሪውን መጀመር አልተቻለም። Divine ማይክሮፎንዎን መጠቀም መፈቀዱን ያረጋግጡ።';
+
+  @override
+  String get collabRoomCallJoin => 'ጥሪውን ተቀላቀል';
+
+  @override
+  String get collabRoomCallLeave => 'ጥሪውን ልቀቅ';
 
   @override
   String get collabRoomCallCameraFailed => 'ካሜራዎን ማብራት አልተቻለም።';

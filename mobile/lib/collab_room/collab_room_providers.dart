@@ -32,10 +32,28 @@ class CollabRoomPartContext {
     required this.roomId,
     required this.cellAspectRatio,
     this.cellShape = SplitScreenCellShape.rectangle,
+    this.me,
+    this.callKey,
+    this.finished = false,
   });
 
   /// The room the part belongs to.
   final String roomId;
+
+  /// The account filming the part, for joining the room's call.
+  final String? me;
+
+  /// The room's call key, for joining its call while editing; `null` for a
+  /// room without a call.
+  final String? callKey;
+
+  /// Whether the part flow ended: the part was handed in or the camera
+  /// closed. The recorder that was filming keeps its cell until its route is
+  /// gone, but nothing else treats the camera flow as a part any more.
+  final bool finished;
+
+  /// Whether a part is being filmed or edited right now.
+  bool get isActive => !finished;
 
   /// Width / height of the person's layout cell: the recorder and the editor
   /// show what of the frame the cell keeps.
@@ -49,8 +67,8 @@ class CollabRoomPartContext {
 ///
 /// Set by the room before it opens the recorder, read by the recorder for the
 /// cell's crop and by the editor to hand the finished part back to the room
-/// instead of opening the post screen. Cleared once the part is sent or the
-/// flow is abandoned.
+/// instead of opening the post screen. Marked finished once the part is sent
+/// or the flow is abandoned.
 final collabRoomPartProvider =
     NotifierProvider<CollabRoomPartNotifier, CollabRoomPartContext?>(
       CollabRoomPartNotifier.new,
@@ -64,8 +82,21 @@ class CollabRoomPartNotifier extends Notifier<CollabRoomPartContext?> {
   /// Starts filming a part.
   void set(CollabRoomPartContext context) => state = context;
 
-  /// Ends the part flow.
-  void clear() => state = null;
+  /// Ends the part flow. The context stays, marked finished, for the screens
+  /// of the flow still animating out: a recorder losing its cell mid-exit
+  /// would rebuild as a plain camera and offer the autosaved session back.
+  void finish() {
+    final current = state;
+    if (current == null || current.finished) return;
+    state = CollabRoomPartContext(
+      roomId: current.roomId,
+      cellAspectRatio: current.cellAspectRatio,
+      cellShape: current.cellShape,
+      me: current.me,
+      callKey: current.callKey,
+      finished: true,
+    );
+  }
 }
 
 /// The room whose video the post being prepared is, so publishing it can

@@ -15787,6 +15787,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomPartSendButton => '내 파트 보내기';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return '파트를 업로드하는 중… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => '업로드했어요. 보낼 준비가 됐어요.';
+
+  @override
+  String get collabRoomInviteAgain => '다시 초대';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => '이 방에서 나갈까요?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => '호스트만 다시 초대할 수 있어요.';
+
+  @override
   String get collabRoomPartSendFailed => '파트를 보내지 못했어요. 다시 해 보세요.';
 
   @override
@@ -15847,6 +15864,12 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       '통화를 시작하지 못했어요. Divine이 마이크를 쓸 수 있는지 확인해 주세요.';
+
+  @override
+  String get collabRoomCallJoin => '통화 참여';
+
+  @override
+  String get collabRoomCallLeave => '통화 나가기';
 
   @override
   String get collabRoomCallCameraFailed => '카메라를 켜지 못했어요.';

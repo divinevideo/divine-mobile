@@ -252,7 +252,12 @@ their own part of one split-screen video
   part's URL and key to everyone in the next snapshot
 - Every device folds its own DM history into its rooms
   (`foldCollabRooms` in `dm_repository`); the author's device publishes a new
-  snapshot whenever it knows more than its last one shows
+  snapshot whenever it knows more than its last one shows. With nobody left in
+  the room, a snapshot goes to everyone it ever had, since the author's device
+  only learns its own snapshots from the messages it sent
+- The author can invite someone who left, declined or was removed again: a new
+  `invite` to them, with a snapshot listing them as invited. Everything they
+  answered before that invite no longer counts
 - The posted video tags everyone who handed in a part with the usual
   collaborator `p` tag, so the collaborator invite and kind 34238 acceptance
   run as for any other collaboration

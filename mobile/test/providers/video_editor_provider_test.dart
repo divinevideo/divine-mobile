@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/caption_mention.dart';
@@ -4654,6 +4655,42 @@ void main() {
       container.dispose();
       await database.close();
     });
+
+    test(
+      "never autosaves a Together room part over the user's own work",
+      () async {
+        stubAutosaveRow(null);
+        stubSaveDraft();
+        container
+            .read(collabRoomPartProvider.notifier)
+            .set(
+              const CollabRoomPartContext(roomId: 'room', cellAspectRatio: 1),
+            );
+        container
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/tmp/part.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              duration: const Duration(seconds: 2),
+            );
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        expect(await notifier.autosaveChanges(), isFalse);
+        verifyNever(
+          () => mockDraftStorage.saveDraft(
+            any(),
+            deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+            ownedFilesMemo: any(named: 'ownedFilesMemo'),
+          ),
+        );
+
+        // Once the part flow ends, the session autosaves as usual.
+        container.read(collabRoomPartProvider.notifier).finish();
+        expect(await notifier.autosaveChanges(), isTrue);
+      },
+    );
 
     test('saves an autosave holding clips as a new draft', () async {
       stubAutosaveRow(autosave());

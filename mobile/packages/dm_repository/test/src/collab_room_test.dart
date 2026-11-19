@@ -634,6 +634,52 @@ void main() {
         expect(room.updatedAt, 4);
       });
 
+      test('asks back someone who left: only their newer answers count', () {
+        final askedBack = snapshot(revision: 2);
+        List<DmMessage> history({bool rejoined = false}) => [
+          ...invites(),
+          roomMessage(
+            from: sam,
+            to: author,
+            type: CollabRoomMessageType.join,
+            createdAt: 2,
+          ),
+          roomMessage(
+            from: sam,
+            to: author,
+            type: CollabRoomMessageType.leave,
+            createdAt: 3,
+          ),
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: askedBack,
+            createdAt: 4,
+          ),
+          if (rejoined)
+            roomMessage(
+              from: sam,
+              to: author,
+              type: CollabRoomMessageType.join,
+              createdAt: 5,
+            ),
+        ];
+        CollabRoomMemberStatus? samIn(List<DmMessage> messages, String owner) =>
+            foldCollabRooms(
+              messages,
+              ownerPubkey: owner,
+            ).single.members.firstWhere((m) => m.pubkey == sam).status;
+
+        // The earlier leave no longer counts, on either side.
+        expect(samIn(history(), author), CollabRoomMemberStatus.invited);
+        expect(samIn(history(), sam), CollabRoomMemberStatus.invited);
+        expect(
+          samIn(history(rejoined: true), author),
+          CollabRoomMemberStatus.joined,
+        );
+      });
+
       test('keeps someone it removed out, whatever they send', () {
         final removed = snapshot(
           revision: 1,

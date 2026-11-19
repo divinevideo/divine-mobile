@@ -15579,6 +15579,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomPartSendButton => '发送我的部分';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return '正在上传你的部分… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => '已上传，可以发送了。';
+
+  @override
+  String get collabRoomInviteAgain => '再次邀请';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => '离开这个房间？';
+
+  @override
+  String get collabRoomLeaveConfirmBody => '只有房主能再次邀请你。';
+
+  @override
   String get collabRoomPartSendFailed => '无法发送你的部分，请重试。';
 
   @override
@@ -15637,6 +15654,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collabRoomCallFailed => '无法开始通话。请检查 Divine 是否可以使用你的麦克风。';
+
+  @override
+  String get collabRoomCallJoin => '加入通话';
+
+  @override
+  String get collabRoomCallLeave => '离开通话';
 
   @override
   String get collabRoomCallCameraFailed => '无法打开你的摄像头。';

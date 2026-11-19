@@ -16542,6 +16542,24 @@ class AppLocalizationsMs extends AppLocalizations {
   String get collabRoomPartSendButton => 'Hantar bahagian saya';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Memuat naik bahagian anda… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Dimuat naik. Sedia untuk dihantar.';
+
+  @override
+  String get collabRoomInviteAgain => 'Jemput semula';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Keluar dari bilik ini?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Hanya hos boleh menjemput anda semula.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Bahagian anda tidak dapat dihantar. Cuba lagi.';
 
@@ -16605,6 +16623,12 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Panggilan tidak dapat dimulakan. Pastikan Divine dibenarkan menggunakan mikrofon anda.';
+
+  @override
+  String get collabRoomCallJoin => 'Sertai panggilan';
+
+  @override
+  String get collabRoomCallLeave => 'Keluar panggilan';
 
   @override
   String get collabRoomCallCameraFailed =>

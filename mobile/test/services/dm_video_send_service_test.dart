@@ -882,6 +882,39 @@ void main() {
         },
       );
 
+      test('reports how far the ciphertext upload got', () async {
+        final videoFile = File('${tempDir.path}/part.mp4')
+          ..writeAsBytesSync(const [9, 9, 9]);
+        final ciphertext = ciphertextFile();
+        when(
+          () => encryption.encryptFile(videoFile),
+        ).thenAnswer((_) async => encryptedVideo(ciphertext));
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: ciphertext,
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((invocation) async {
+          (invocation.namedArguments[#onProgress] as void Function(double))(
+            0.5,
+          );
+          return const BlossomUploadResult(
+            success: true,
+            videoId: _ciphertextHash,
+            url: _fileUrl,
+          );
+        });
+        final progress = <double>[];
+
+        await createService().uploadVideo(
+          videoFile: videoFile,
+          mimeType: 'video/mp4',
+          onUploadProgress: progress.add,
+        );
+
+        expect(progress, [0.5]);
+      });
+
       test(
         'returns null and deletes the ciphertext when the upload fails',
         () async {
@@ -904,6 +937,56 @@ void main() {
 
           expect(result, isNull);
           expect(ciphertext.deleted.isCompleted, isTrue);
+        },
+      );
+    });
+
+    group('sendUploadedVideo', () {
+      test(
+        'sends the uploaded video as a file message, nothing more',
+        () async {
+          const metadata = DmFileMetadata(
+            fileType: 'video/mp4',
+            encryptionAlgorithm: 'aes-gcm',
+            decryptionKey: _key,
+            decryptionNonce: _nonce,
+            fileHash: _ciphertextHash,
+          );
+          when(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              fileUrl: any(named: 'fileUrl'),
+              fileMetadata: any(named: 'fileMetadata'),
+              extraTags: any(named: 'extraTags'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: 'rumor-1',
+              messageEventId: 'wrap-1',
+              recipientPubkey: _recipientPubkey,
+            ),
+          );
+
+          final result = await createService().sendUploadedVideo(
+            recipientPubkey: _recipientPubkey,
+            url: _fileUrl,
+            metadata: metadata,
+            extraTags: const [
+              ['collab-room', 'room', 'part', _recipientPubkey],
+            ],
+          );
+
+          expect(result.success, isTrue);
+          verify(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: _recipientPubkey,
+              fileUrl: _fileUrl,
+              fileMetadata: metadata,
+              extraTags: const [
+                ['collab-room', 'room', 'part', _recipientPubkey],
+              ],
+            ),
+          ).called(1);
         },
       );
     });

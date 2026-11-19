@@ -15769,6 +15769,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomPartSendButton => 'パートを送る';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'パートをアップロード中… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'アップロード完了。送信できます。';
+
+  @override
+  String get collabRoomInviteAgain => 'もう一度招待';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'このルームを抜けますか？';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'もう一度招待できるのはホストだけです。';
+
+  @override
   String get collabRoomPartSendFailed => 'パートを送信できませんでした。もう一度お試しください。';
 
   @override
@@ -15828,6 +15845,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collabRoomCallFailed => '通話を開始できませんでした。Divine がマイクを使えるか確認してください。';
+
+  @override
+  String get collabRoomCallJoin => '通話に参加';
+
+  @override
+  String get collabRoomCallLeave => '通話から抜ける';
 
   @override
   String get collabRoomCallCameraFailed => 'カメラをオンにできませんでした。';

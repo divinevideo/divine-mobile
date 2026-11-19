@@ -16684,6 +16684,24 @@ class AppLocalizationsFil extends AppLocalizations {
   String get collabRoomPartSendButton => 'Ipadala ang part ko';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Ina-upload ang part mo… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Na-upload na. Handa nang ipadala.';
+
+  @override
+  String get collabRoomInviteAgain => 'Imbitahan ulit';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Umalis sa room na ito?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Ang host lang ang puwedeng mag-imbita ulit sa iyo.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Hindi naipadala ang part mo. Subukan ulit.';
 
@@ -16747,6 +16765,12 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Hindi masimulan ang call. I-check kung puwedeng gamitin ng Divine ang mic mo.';
+
+  @override
+  String get collabRoomCallJoin => 'Sumali sa call';
+
+  @override
+  String get collabRoomCallLeave => 'Umalis sa call';
 
   @override
   String get collabRoomCallCameraFailed => 'Hindi ma-on ang camera mo.';

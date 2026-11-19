@@ -27663,6 +27663,36 @@ abstract class AppLocalizations {
   /// **'Send my part'**
   String get collabRoomPartSendButton;
 
+  /// Progress under the preview of your Together part while it uploads, before you send it. {progress} is the share uploaded, already formatted as a percentage for the language.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading your part… {progress}'**
+  String collabRoomPartUploading(String progress);
+
+  /// Shown under the preview of your Together part once it is uploaded and Send only has to hand it in.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded. Ready to send.'**
+  String get collabRoomPartUploaded;
+
+  /// Button next to someone in a Together room who left, declined or was removed: the host asks them back in.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite again'**
+  String get collabRoomInviteAgain;
+
+  /// Title of the sheet that asks before you leave a Together room.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this room?'**
+  String get collabRoomLeaveConfirmTitle;
+
+  /// Body of the sheet that asks before you leave a Together room.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the host can invite you back in.'**
+  String get collabRoomLeaveConfirmBody;
+
   /// Shown when handing in your part of a collaborative video failed.
   ///
   /// In en, this message translates to:
@@ -27782,6 +27812,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t start the call. Check that Divine may use your microphone.'**
   String get collabRoomCallFailed;
+
+  /// Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the call'**
+  String get collabRoomCallJoin;
+
+  /// Button in the editor that leaves the Together room's voice call while editing your part.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the call'**
+  String get collabRoomCallLeave;
 
   /// Shown when the camera for a Together room's call could not be opened.
   ///

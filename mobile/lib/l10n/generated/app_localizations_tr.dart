@@ -16464,6 +16464,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get collabRoomPartSendButton => 'Bölümümü gönder';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Bölümün yükleniyor… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Yüklendi. Göndermeye hazır.';
+
+  @override
+  String get collabRoomInviteAgain => 'Yeniden davet et';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Bu odadan ayrılmak istiyor musun?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Seni yalnızca ev sahibi yeniden davet edebilir.';
+
+  @override
   String get collabRoomPartSendFailed => 'Bölümün gönderilemedi. Tekrar dene.';
 
   @override
@@ -16525,6 +16543,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Görüşme başlatılamadı. Divine\'ın mikrofonunu kullanabildiğinden emin ol.';
+
+  @override
+  String get collabRoomCallJoin => 'Görüşmeye katıl';
+
+  @override
+  String get collabRoomCallLeave => 'Görüşmeden çık';
 
   @override
   String get collabRoomCallCameraFailed => 'Kameran açılamadı.';

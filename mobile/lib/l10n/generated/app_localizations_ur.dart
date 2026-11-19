@@ -16539,6 +16539,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String get collabRoomPartSendButton => 'اپنا حصہ بھیجیں';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'آپ کا حصہ اپ لوڈ ہو رہا ہے… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'اپ لوڈ ہو گیا۔ بھیجنے کے لیے تیار۔';
+
+  @override
+  String get collabRoomInviteAgain => 'دوبارہ مدعو کریں';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'یہ روم چھوڑیں؟';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'صرف میزبان آپ کو دوبارہ مدعو کر سکتا ہے۔';
+
+  @override
   String get collabRoomPartSendFailed =>
       'آپ کا حصہ نہیں بھیجا جا سکا۔ دوبارہ کوشش کریں۔';
 
@@ -16602,6 +16620,12 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'کال شروع نہیں ہو سکی۔ دیکھیں کہ Divine کو آپ کا مائیکروفون استعمال کرنے کی اجازت ہے۔';
+
+  @override
+  String get collabRoomCallJoin => 'کال میں شامل ہوں';
+
+  @override
+  String get collabRoomCallLeave => 'کال چھوڑیں';
 
   @override
   String get collabRoomCallCameraFailed => 'آپ کا کیمرہ آن نہیں ہو سکا۔';

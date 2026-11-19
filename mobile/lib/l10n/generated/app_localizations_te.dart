@@ -16918,6 +16918,24 @@ class AppLocalizationsTe extends AppLocalizations {
   String get collabRoomPartSendButton => 'నా భాగాన్ని పంపండి';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'మీ భాగాన్ని అప్‌లోడ్ చేస్తోంది… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'అప్‌లోడ్ అయింది. పంపడానికి సిద్ధం.';
+
+  @override
+  String get collabRoomInviteAgain => 'మళ్లీ ఆహ్వానించండి';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'ఈ రూమ్ నుండి వెళ్లాలా?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'హోస్ట్ మాత్రమే మిమ్మల్ని మళ్లీ ఆహ్వానించగలరు.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'మీ భాగాన్ని పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 
@@ -16981,6 +16999,12 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'కాల్ ప్రారంభించలేకపోయాం. Divine మీ మైక్రోఫోన్ వాడగలదో చూడండి.';
+
+  @override
+  String get collabRoomCallJoin => 'కాల్‌లో చేరండి';
+
+  @override
+  String get collabRoomCallLeave => 'కాల్ నుండి వెళ్లండి';
 
   @override
   String get collabRoomCallCameraFailed => 'మీ కెమెరా ఆన్ చేయలేకపోయాం.';

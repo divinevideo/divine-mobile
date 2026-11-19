@@ -737,6 +737,16 @@ CollabRoom? foldCollabRoom(
   // about the others through the author's snapshots.
   for (final message in ordered) {
     final sender = message.senderPubkey;
+    // Inviting someone again — say they left by mistake — wipes what they
+    // said before: from here on only their answers to the new invite count.
+    if (sender == author &&
+        message.type == CollabRoomMessageType.invite &&
+        listed(message.recipientPubkey)) {
+      statuses[message.recipientPubkey] = published.members
+          .firstWhere((m) => m.pubkey == message.recipientPubkey)
+          .status;
+      continue;
+    }
     if (sender == author || !listed(sender)) continue;
     if (message.recipientPubkey != author) continue;
     if (!isAuthor && sender != ownerPubkey) continue;

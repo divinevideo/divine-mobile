@@ -3,9 +3,11 @@ import 'dart:ui' show Locale;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart';
-import 'package:flutter/widgets.dart' show ListView, Scrollable;
+import 'package:flutter/widgets.dart'
+    show ListView, Navigator, NavigatorState, Scrollable, SizedBox;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show MaterialPageRoute, Scaffold;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/collab_room/bloc/collab_room_cubit.dart';
@@ -13,8 +15,10 @@ import 'package:openvine/collab_room/view/collab_room_view.dart';
 import 'package:openvine/collab_room/view/widgets/collab_room_avatar.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
 
+import '../../helpers/go_router.dart';
 import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
@@ -30,6 +34,7 @@ CollabRoom _room({
   CollabRoomPhase phase = CollabRoomPhase.lobby,
   CollabRoomMemberStatus samStatus = CollabRoomMemberStatus.joined,
   String? layout,
+  String? videoAddress,
 }) => foldCollabRooms([
   DmMessage(
     id: '1' * 64,
@@ -46,6 +51,7 @@ CollabRoom _room({
         revision: 0,
         phase: phase,
         layout: layout,
+        videoAddress: videoAddress,
         members: [
           CollabRoomMember(
             pubkey: _author,
@@ -199,6 +205,91 @@ void main() {
         );
         expect(find.text(l10n.collabRoomPosted), findsOneWidget);
         expect(find.text(l10n.collabRoomFilmPartButton), findsNothing);
+        await scrollTo(tester, l10n.listDone);
+        expect(find.text(l10n.listDone), findsOneWidget);
+      });
+    });
+
+    group('a posted room', () {
+      final posted = CollabRoomState(
+        status: CollabRoomStatus.ready,
+        room: _room(
+          owner: _sam,
+          phase: CollabRoomPhase.posted,
+          layout: 'sideBySide',
+          videoAddress: '34236:$_author:take-one',
+        ),
+        layout: SplitScreenLayoutPreset.sideBySide,
+      );
+
+      testWidgets('plays the posted video', (tester) async {
+        final router = MockGoRouter();
+        when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
+        when(() => cubit.state).thenReturn(posted);
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: MockGoRouterProvider(
+              goRouter: router,
+              child: BlocProvider<CollabRoomCubit>.value(
+                value: cubit,
+                child: const CollabRoomView(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsLabel(l10n.videoPlayerPlayVideo));
+
+        verify(
+          () => router.push<Object?>(
+            RoutePaths.videoDetailForId('take-one', author: _author),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('shows no play button before the video is posted', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(
+              owner: _sam,
+              phase: CollabRoomPhase.recording,
+              layout: 'sideBySide',
+            ),
+            layout: SplitScreenLayoutPreset.sideBySide,
+          ),
+        );
+
+        expect(find.bySemanticsLabel(l10n.videoPlayerPlayVideo), findsNothing);
+      });
+
+      testWidgets('Done lets the room go and closes it', (tester) async {
+        when(() => cubit.state).thenReturn(posted);
+        when(cubit.dismiss).thenAnswer((_) async {});
+        await tester.pumpWidget(testMaterialApp(home: const SizedBox()));
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .push(
+              MaterialPageRoute<void>(
+                builder: (_) => BlocProvider<CollabRoomCubit>.value(
+                  value: cubit,
+                  child: const CollabRoomView(),
+                ),
+              ),
+            );
+        await tester.pumpAndSettle();
+        await scrollTo(tester, l10n.listDone);
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.listDone));
+        await tester.pumpAndSettle();
+
+        verify(cubit.dismiss).called(1);
+        expect(find.byType(CollabRoomView), findsNothing);
       });
     });
 
@@ -223,6 +314,57 @@ void main() {
         );
         await tester.tap(find.text(l10n.collabRoomJoinButton));
         verify(cubit.join).called(1);
+      });
+
+      testWidgets('leaving asks first, then leaves', (tester) async {
+        when(cubit.leave).thenAnswer((_) async {});
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _sam),
+          ),
+        );
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.collabRoomLeaveButton),
+          200,
+          scrollable: roomList(),
+        );
+        await tester.tap(find.text(l10n.collabRoomLeaveButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.collabRoomLeaveConfirmTitle), findsOneWidget);
+        verifyNever(cubit.leave);
+
+        await tester.tap(find.text(l10n.collabRoomLeaveButton).last);
+        await tester.pumpAndSettle();
+        verify(cubit.leave).called(1);
+      });
+
+      testWidgets('the host asks someone who declined back in', (
+        tester,
+      ) async {
+        when(() => cubit.reinvite(any())).thenAnswer((_) async {});
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(
+              owner: _author,
+              samStatus: CollabRoomMemberStatus.declined,
+            ),
+          ),
+        );
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.collabRoomInviteAgain),
+          200,
+          scrollable: roomList(),
+        );
+        await tester.tap(find.text(l10n.collabRoomInviteAgain));
+
+        verify(() => cubit.reinvite(_sam)).called(1);
       });
 
       testWidgets('starting asks the cubit to start', (tester) async {
@@ -319,6 +461,139 @@ void main() {
           lobby.copyWith(layout: SplitScreenLayoutPreset.circleBottomRight),
         );
         expect(tester.element(avatar), same(before));
+      });
+
+      for (final action in [
+        CollabRoomAction.leave,
+        CollabRoomAction.decline,
+        CollabRoomAction.cancel,
+      ]) {
+        testWidgets('closes the room once ${action.name} went through', (
+          tester,
+        ) async {
+          final ready = CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _sam),
+            action: action,
+            actionStatus: CollabRoomActionStatus.busy,
+          );
+          final changes = StreamController<CollabRoomState>();
+          addTearDown(changes.close);
+          whenListen(cubit, changes.stream, initialState: ready);
+          await tester.pumpWidget(testMaterialApp(home: const SizedBox()));
+          tester
+              .state<NavigatorState>(find.byType(Navigator))
+              .push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BlocProvider<CollabRoomCubit>.value(
+                    value: cubit,
+                    child: const CollabRoomView(),
+                  ),
+                ),
+              );
+          await tester.pumpAndSettle();
+          expect(find.byType(CollabRoomView), findsOneWidget);
+
+          final done = ready.copyWith(
+            actionStatus: CollabRoomActionStatus.idle,
+          );
+          when(() => cubit.state).thenReturn(done);
+          changes.add(done);
+          await tester.pumpAndSettle();
+
+          expect(find.byType(CollabRoomView), findsNothing);
+        });
+      }
+
+      for (final (reason, ended) in [
+        (
+          'calls the room off',
+          _room(owner: _sam, phase: CollabRoomPhase.cancelled),
+        ),
+        (
+          'takes this account out',
+          _room(
+            owner: _sam,
+            phase: CollabRoomPhase.recording,
+            samStatus: CollabRoomMemberStatus.removed,
+          ),
+        ),
+      ]) {
+        testWidgets('closes for a member once the host $reason', (
+          tester,
+        ) async {
+          final open = CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _sam, phase: CollabRoomPhase.recording),
+          );
+          final changes = StreamController<CollabRoomState>();
+          addTearDown(changes.close);
+          whenListen(cubit, changes.stream, initialState: open);
+          // A screen below with its own Scaffold, to show the snackbar on.
+          await tester.pumpWidget(
+            testMaterialApp(home: const Scaffold(body: SizedBox())),
+          );
+          tester
+              .state<NavigatorState>(find.byType(Navigator))
+              .push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BlocProvider<CollabRoomCubit>.value(
+                    value: cubit,
+                    child: const CollabRoomView(),
+                  ),
+                ),
+              );
+          await tester.pumpAndSettle();
+
+          final closed = open.copyWith(room: ended);
+          when(() => cubit.state).thenReturn(closed);
+          changes.add(closed);
+          await tester.pumpAndSettle();
+
+          expect(find.byType(CollabRoomView), findsNothing);
+          expect(
+            find.text(
+              ended.phase == CollabRoomPhase.cancelled
+                  ? l10n.collabRoomCancelled
+                  : l10n.collabRoomRemovedYou,
+            ),
+            findsOneWidget,
+          );
+        });
+      }
+
+      testWidgets('stays open on a room that had ended before', (
+        tester,
+      ) async {
+        const loading = CollabRoomState();
+        final changes = StreamController<CollabRoomState>();
+        addTearDown(changes.close);
+        whenListen(cubit, changes.stream, initialState: loading);
+        await tester.pumpWidget(testMaterialApp(home: const SizedBox()));
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .push(
+              MaterialPageRoute<void>(
+                builder: (_) => BlocProvider<CollabRoomCubit>.value(
+                  value: cubit,
+                  child: const CollabRoomView(),
+                ),
+              ),
+            );
+        // The loading spinner never settles: pump past the push instead.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final cancelled = CollabRoomState(
+          status: CollabRoomStatus.ready,
+          room: _room(owner: _sam, phase: CollabRoomPhase.cancelled),
+        );
+        when(() => cubit.state).thenReturn(cancelled);
+        changes.add(cancelled);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CollabRoomView), findsOneWidget);
+        expect(find.text(l10n.collabRoomCancelled), findsOneWidget);
       });
 
       testWidgets('a failed action shows a snackbar', (tester) async {

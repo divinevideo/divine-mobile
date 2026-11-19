@@ -169,9 +169,13 @@ class DmVideoSendService {
   /// Returns where the ciphertext lives and the metadata that verifies and
   /// decrypts it, or `null` when the upload fails. The ciphertext temp file is
   /// deleted either way.
+  ///
+  /// [onUploadProgress], when supplied, receives the ciphertext upload's
+  /// completion fraction (0.0 to 1.0) as Blossom reports it.
   Future<({String url, DmFileMetadata metadata})?> uploadVideo({
     required File videoFile,
     required String mimeType,
+    void Function(double fraction)? onUploadProgress,
   }) async {
     final enc = await _encryption.encryptFile(videoFile);
     try {
@@ -179,6 +183,7 @@ class DmVideoSendService {
       final reading = _readPreview(videoFile);
       final upload = await _blossom.uploadEncryptedFile(
         ciphertextFile: enc.ciphertextFile,
+        onProgress: onUploadProgress,
       );
       final preview = await reading;
       if (!upload.success || upload.videoId == null) return null;
@@ -202,6 +207,26 @@ class DmVideoSendService {
       await _deleteCiphertextQuietly(enc.ciphertextFile);
     }
   }
+
+  /// Sends a video already uploaded with [uploadVideo] — its ciphertext at
+  /// [url], decrypted with [metadata] — to [recipientPubkey] as an encrypted
+  /// file message, with [extraTags] forwarded to
+  /// [DmRepository.sendFileMessage].
+  ///
+  /// Uploading first lets a caller start the slow part while the user still
+  /// decides, so the send itself is only the message.
+  @useResult
+  Future<NIP17SendResult> sendUploadedVideo({
+    required String recipientPubkey,
+    required String url,
+    required DmFileMetadata metadata,
+    List<List<String>> extraTags = const [],
+  }) => _dmRepository.sendFileMessage(
+    recipientPubkey: recipientPubkey,
+    fileUrl: url,
+    fileMetadata: metadata,
+    extraTags: extraTags,
+  );
 
   /// Best-effort deletion of the ciphertext temp file.
   ///

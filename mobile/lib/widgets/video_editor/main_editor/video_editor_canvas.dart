@@ -2942,7 +2942,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final gate = _decoderReleaseGate = Completer<void>();
     _isMetadataRouteActive = true;
     // A collaborative room's part goes back to its room, not to a post.
-    final partRoomId = ref.read(collabRoomPartProvider)?.roomId;
+    final part = ref.read(collabRoomPartProvider);
+    final partRoomId = part != null && part.isActive ? part.roomId : null;
     final navigation = context.push(
       partRoomId != null
           ? RoutePaths.collabRoomPartFor(partRoomId)

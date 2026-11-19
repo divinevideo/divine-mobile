@@ -4,7 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show DmMessage;
+import 'package:models/models.dart' show DmFileMetadata, DmMessage;
 import 'package:openvine/collab_room/bloc/collab_room_part_cubit.dart';
 import 'package:openvine/collab_room/collab_room_service.dart';
 
@@ -14,6 +14,17 @@ const _author =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const _roomId = '0123456789abcdef0123456789abcdef';
+
+const CollabRoomUpload _upload = (
+  url: 'https://media.example/part',
+  metadata: DmFileMetadata(
+    fileType: 'video/mp4',
+    encryptionAlgorithm: 'aes-gcm',
+    decryptionKey: 'key',
+    decryptionNonce: 'nonce',
+    fileHash: 'hash',
+  ),
+);
 
 CollabRoom _room(CollabRoomPhase phase) => foldCollabRooms([
   DmMessage(
@@ -61,24 +72,139 @@ void main() {
       service = _MockCollabRoomService();
     });
 
-    blocTest<CollabRoomPartCubit, CollabRoomPartStatus>(
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
       'hands the part in while the room films',
       setUp: () {
         when(
           () => service.watchRoom(_roomId),
         ).thenAnswer((_) => Stream.value(_room(CollabRoomPhase.recording)));
-        when(() => service.sendPart(any(), video)).thenAnswer((_) async {});
+        when(
+          () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
+        ).thenAnswer((_) async => _upload);
+        when(
+          () => service.handInPart(any(), _upload),
+        ).thenAnswer((_) async {});
       },
       build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
       act: (cubit) => cubit.send(video),
       expect: () => const [
-        CollabRoomPartStatus.sending,
-        CollabRoomPartStatus.sent,
+        CollabRoomPartState(status: CollabRoomPartStatus.sending),
+        CollabRoomPartState(
+          status: CollabRoomPartStatus.sending,
+          uploadProgress: 0,
+        ),
+        CollabRoomPartState(
+          status: CollabRoomPartStatus.sending,
+          uploadProgress: 1,
+        ),
+        CollabRoomPartState(
+          status: CollabRoomPartStatus.sent,
+          uploadProgress: 1,
+        ),
       ],
-      verify: (_) => verify(() => service.sendPart(any(), video)).called(1),
+      verify: (_) => verify(() => service.handInPart(any(), _upload)).called(1),
     );
 
-    blocTest<CollabRoomPartCubit, CollabRoomPartStatus>(
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
+      'sends the part uploaded ahead instead of uploading it again',
+      setUp: () {
+        when(
+          () => service.watchRoom(_roomId),
+        ).thenAnswer((_) => Stream.value(_room(CollabRoomPhase.recording)));
+        when(
+          () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
+        ).thenAnswer((_) async => _upload);
+        when(
+          () => service.handInPart(any(), _upload),
+        ).thenAnswer((_) async {});
+      },
+      build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
+      act: (cubit) async {
+        cubit.prepare(video);
+        await cubit.send(video);
+      },
+      verify: (_) => verify(
+        () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
+      ).called(1),
+    );
+
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
+      'uploads again on the next Send after an upload failed',
+      setUp: () {
+        when(
+          () => service.watchRoom(_roomId),
+        ).thenAnswer((_) => Stream.value(_room(CollabRoomPhase.recording)));
+        var attempts = 0;
+        when(
+          () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
+        ).thenAnswer((_) async {
+          if (attempts++ == 0) {
+            throw const CollabRoomException('offline');
+          }
+          return _upload;
+        });
+        when(
+          () => service.handInPart(any(), _upload),
+        ).thenAnswer((_) async {});
+      },
+      build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
+      act: (cubit) async {
+        cubit.prepare(video);
+        await cubit.send(video);
+        await cubit.send(video);
+      },
+      expect: () => [
+        isA<CollabRoomPartState>().having((s) => s.uploadProgress, 'up', 0),
+        isA<CollabRoomPartState>().having(
+          (s) => s.status,
+          'status',
+          CollabRoomPartStatus.sending,
+        ),
+        isA<CollabRoomPartState>()
+            .having((s) => s.status, 'status', CollabRoomPartStatus.failed)
+            .having((s) => s.uploadProgress, 'uploadProgress', isNull),
+        isA<CollabRoomPartState>().having(
+          (s) => s.status,
+          'status',
+          CollabRoomPartStatus.sending,
+        ),
+        isA<CollabRoomPartState>().having((s) => s.uploadProgress, 'up', 0),
+        isA<CollabRoomPartState>().having((s) => s.uploadProgress, 'up', 1),
+        isA<CollabRoomPartState>().having(
+          (s) => s.status,
+          'status',
+          CollabRoomPartStatus.sent,
+        ),
+      ],
+      errors: () => [isA<CollabRoomException>()],
+    );
+
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
+      'reports how far the upload got, in whole percents',
+      setUp: () =>
+          when(
+            () =>
+                service.uploadPart(video, onProgress: any(named: 'onProgress')),
+          ).thenAnswer((invocation) async {
+            final onProgress =
+                invocation.namedArguments[#onProgress] as void Function(double);
+            onProgress(0.004);
+            onProgress(0.5);
+            return _upload;
+          }),
+      build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
+      act: (cubit) async {
+        cubit.prepare(video);
+        await pumpEventQueue();
+      },
+      expect: () => const [
+        CollabRoomPartState(uploadProgress: 0),
+        CollabRoomPartState(uploadProgress: 0.5),
+        CollabRoomPartState(uploadProgress: 1),
+      ],
+    );
+
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
       'refuses a part for a room that stopped filming',
       setUp: () => when(
         () => service.watchRoom(_roomId),
@@ -86,18 +212,18 @@ void main() {
       build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
       act: (cubit) => cubit.send(video),
       expect: () => const [
-        CollabRoomPartStatus.sending,
-        CollabRoomPartStatus.failed,
+        CollabRoomPartState(status: CollabRoomPartStatus.sending),
+        CollabRoomPartState(status: CollabRoomPartStatus.failed),
       ],
       errors: () => [isA<CollabRoomException>()],
     );
 
-    blocTest<CollabRoomPartCubit, CollabRoomPartStatus>(
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
       'does not send a part twice',
-      seed: () => CollabRoomPartStatus.sent,
+      seed: () => const CollabRoomPartState(status: CollabRoomPartStatus.sent),
       build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
       act: (cubit) => cubit.send(video),
-      expect: () => const <CollabRoomPartStatus>[],
+      expect: () => const <CollabRoomPartState>[],
     );
   });
 }

@@ -209,6 +209,9 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   /// How long to wait for the network paths before sending what was found.
   static const _gatherTimeout = Duration(seconds: 3);
 
+  /// How long to keep gathering once a path through the internet is found.
+  static const _candidateGrace = Duration(milliseconds: 250);
+
   final String _me;
   final Set<String> _others;
   final CollabRoomCallChannel _channel;
@@ -243,7 +246,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
         'video': false,
       }),
     );
-    await Helper.setSpeakerphoneOn(true);
+    await _device(() => Helper.setSpeakerphoneOn(true));
     final since = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 5;
     _subscription = _transport
         .watch(_channel.pubkey, since: since)
@@ -575,19 +578,36 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     );
   }
 
-  /// The local description once the network paths are found, or what was
-  /// found when [_gatherTimeout] runs out.
+  /// The local description once the network paths worth sending are found.
+  ///
+  /// Every path goes inside the offer or answer, so this waits for them, but
+  /// not for all of them: once a path through the internet (server-reflexive
+  /// or relayed) is in, the rest rarely matter, and waiting for the gathering
+  /// to finish cost seconds on both sides of every connection. Gives up after
+  /// [_gatherTimeout] with whatever was found, for a network where STUN never
+  /// answers.
   Future<RTCSessionDescription?> _gathered(
     RTCPeerConnection connection,
   ) async {
-    final complete = Completer<void>();
-    connection.onIceGatheringState = (state) {
-      if (state == RTCIceGatheringState.RTCIceGatheringStateComplete &&
-          !complete.isCompleted) {
-        complete.complete();
+    final ready = Completer<void>();
+    void done() {
+      if (!ready.isCompleted) ready.complete();
+    }
+
+    Timer? grace;
+    connection
+      ..onIceGatheringState = (state) {
+        if (state == RTCIceGatheringState.RTCIceGatheringStateComplete) done();
       }
-    };
-    await complete.future.timeout(_gatherTimeout, onTimeout: () {});
+      ..onIceCandidate = (candidate) {
+        final line = candidate.candidate ?? '';
+        if (line.contains(' typ srflx') || line.contains(' typ relay')) {
+          // A moment more for the same kind of path on another interface.
+          grace ??= Timer(_candidateGrace, done);
+        }
+      };
+    await ready.future.timeout(_gatherTimeout, onTimeout: () {});
+    grace?.cancel();
     return connection.getLocalDescription();
   }
 

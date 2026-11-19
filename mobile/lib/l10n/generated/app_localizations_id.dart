@@ -16431,6 +16431,24 @@ class AppLocalizationsId extends AppLocalizations {
   String get collabRoomPartSendButton => 'Kirim bagianku';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Mengunggah bagianmu… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Terunggah. Siap dikirim.';
+
+  @override
+  String get collabRoomInviteAgain => 'Undang lagi';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Keluar dari ruangan ini?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Hanya host yang bisa mengundangmu kembali.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Bagianmu tidak bisa dikirim. Coba lagi.';
 
@@ -16494,6 +16512,12 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Panggilan tidak bisa dimulai. Pastikan Divine boleh memakai mikrofonmu.';
+
+  @override
+  String get collabRoomCallJoin => 'Gabung panggilan';
+
+  @override
+  String get collabRoomCallLeave => 'Keluar dari panggilan';
 
   @override
   String get collabRoomCallCameraFailed => 'Kameramu tidak bisa dinyalakan.';

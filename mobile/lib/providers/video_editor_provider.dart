@@ -19,6 +19,7 @@ import 'package:models/models.dart'
         VideoEvent,
         stripInspiredByAttribution,
         stripSoundCredit;
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -981,12 +982,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return npubs;
   }
 
+  /// Whether the session films a Together room's part. A part is no draft to
+  /// come back to, and its autosave would replace the user's own autosaved
+  /// work in the one autosave slot.
+  bool get _isCollabRoomPart =>
+      ref.read(collabRoomPartProvider)?.isActive ?? false;
+
   /// Trigger autosave with debounce to prevent excessive saves.
   ///
   /// Can be called from other providers (e.g., ClipManager) to trigger
   /// autosave after changes. Uses debouncing to batch rapid changes.
   void triggerAutosave() {
-    if (_suppressAutosave) return;
+    if (_suppressAutosave || _isCollabRoomPart) return;
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(_autosaveDebounce, () {
       if (!ref.mounted) return;
@@ -1097,6 +1104,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   Future<bool> _performAutosave() async {
+    if (_isCollabRoomPart) return false;
     final session = _autosaveSession;
 
     try {

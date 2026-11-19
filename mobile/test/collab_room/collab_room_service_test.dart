@@ -94,6 +94,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(File(''));
+      registerFallbackValue(_metadata);
     });
 
     setUp(() {
@@ -335,6 +336,26 @@ void main() {
         );
       });
 
+      test('calls off a room everyone left with everyone it had', () async {
+        final empty = (await roomFrom([
+          _message(
+            from: _author,
+            to: _sam,
+            type: CollabRoomMessageType.invite,
+            snapshot: _lobby(samStatus: CollabRoomMemberStatus.left),
+          ),
+        ]))!;
+
+        await service().publish(
+          empty,
+          empty.toSnapshot(revision: 1, phase: CollabRoomPhase.cancelled),
+        );
+
+        // Sent to nobody, the call-off would never reach the author's own
+        // record of the room and it would stay open there.
+        expect(sentMessages().map((s) => s.$1), unorderedEquals([_sam, _kai]));
+      });
+
       test('tells someone it takes out of the room, once', () async {
         final removed = room.toSnapshot(
           revision: 1,
@@ -411,7 +432,53 @@ void main() {
       });
     });
 
+    group('reinvite', () {
+      test('invites someone back and tells the others', () async {
+        final room = (await roomFrom([
+          _message(
+            from: _author,
+            to: _sam,
+            type: CollabRoomMessageType.invite,
+            snapshot: _lobby(samStatus: CollabRoomMemberStatus.joined),
+          ),
+        ]))!;
+        final askedBack = room.toSnapshot(
+          revision: 1,
+          members: [
+            for (final member in room.members)
+              if (member.pubkey == _kai)
+                member.copyWith(status: CollabRoomMemberStatus.invited)
+              else
+                member,
+          ],
+        );
+
+        await service().reinvite(room, _kai, askedBack);
+
+        final sent = sentMessages();
+        expect(sent.map((s) => s.$1), [_kai, _sam]);
+        expect(
+          sent.first.$2,
+          anyElement(equals(['collab-room', _roomId, 'invite', _kai])),
+        );
+        expect(
+          sent.last.$2,
+          anyElement(equals(['collab-room', _roomId, 'state', _sam])),
+        );
+      });
+    });
+
     group('sendPart', () {
+      void stubUpload() =>
+          when(
+            () => videos.uploadVideo(
+              videoFile: any(named: 'videoFile'),
+              mimeType: any(named: 'mimeType'),
+            ),
+          ).thenAnswer(
+            (_) async => (url: 'https://media.example/a', metadata: _metadata),
+          );
+
       test('sends a member part to the author as a video message', () async {
         owner = _sam;
         final room = (await roomFrom([
@@ -425,11 +492,12 @@ void main() {
             ),
           ),
         ]))!;
+        stubUpload();
         when(
-          () => videos.sendVideo(
+          () => videos.sendUploadedVideo(
             recipientPubkey: any(named: 'recipientPubkey'),
-            videoFile: any(named: 'videoFile'),
-            mimeType: any(named: 'mimeType'),
+            url: any(named: 'url'),
+            metadata: any(named: 'metadata'),
             extraTags: any(named: 'extraTags'),
           ),
         ).thenAnswer((_) async => _sent(_author));
@@ -437,10 +505,10 @@ void main() {
         await service().sendPart(room, File('part.mp4'));
 
         final captured = verify(
-          () => videos.sendVideo(
+          () => videos.sendUploadedVideo(
             recipientPubkey: _author,
-            videoFile: any(named: 'videoFile'),
-            mimeType: 'video/mp4',
+            url: 'https://media.example/a',
+            metadata: _metadata,
             extraTags: captureAny(named: 'extraTags'),
           ),
         ).captured;
@@ -460,11 +528,12 @@ void main() {
             snapshot: _lobby(samStatus: CollabRoomMemberStatus.joined),
           ),
         ]))!;
+        stubUpload();
         when(
-          () => videos.sendVideo(
+          () => videos.sendUploadedVideo(
             recipientPubkey: any(named: 'recipientPubkey'),
-            videoFile: any(named: 'videoFile'),
-            mimeType: any(named: 'mimeType'),
+            url: any(named: 'url'),
+            metadata: any(named: 'metadata'),
             extraTags: any(named: 'extraTags'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));

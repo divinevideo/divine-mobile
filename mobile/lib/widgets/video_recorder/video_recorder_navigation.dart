@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/collab_room/call/collab_room_call_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -192,6 +193,10 @@ Future<void> _openVideoEditorFromRecorder(
   }
 
   await navigation;
+  if (!context.mounted || bloc.isClosed) return;
+  // A room part's editor may have joined the room's call, which holds the
+  // microphone the camera is about to open.
+  await leaveCollabRoomPartCall(ref);
   if (!context.mounted || bloc.isClosed) return;
   bloc.add(const VideoRecorderInitializeRequested());
 }

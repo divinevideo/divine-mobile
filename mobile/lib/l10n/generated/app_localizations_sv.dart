@@ -16559,6 +16559,23 @@ class AppLocalizationsSv extends AppLocalizations {
   String get collabRoomPartSendButton => 'Skicka min del';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Laddar upp din del… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Uppladdad. Redo att skicka.';
+
+  @override
+  String get collabRoomInviteAgain => 'Bjud in igen';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Lämna rummet?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'Bara värden kan bjuda in dig igen.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Det gick inte att skicka din del. Försök igen.';
 
@@ -16622,6 +16639,12 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Det gick inte att starta samtalet. Kolla att Divine får använda mikrofonen.';
+
+  @override
+  String get collabRoomCallJoin => 'Gå med i samtalet';
+
+  @override
+  String get collabRoomCallLeave => 'Lämna samtalet';
 
   @override
   String get collabRoomCallCameraFailed => 'Det gick inte att slå på kameran.';

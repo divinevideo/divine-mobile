@@ -16490,6 +16490,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get collabRoomPartSendButton => 'Gửi phần của mình';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Đang tải phần của bạn lên… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Đã tải lên. Sẵn sàng gửi.';
+
+  @override
+  String get collabRoomInviteAgain => 'Mời lại';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Rời phòng này?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Chỉ chủ phòng mới mời bạn quay lại được.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Không gửi được phần của bạn. Hãy thử lại.';
 
@@ -16552,6 +16570,12 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Không bắt đầu được cuộc gọi. Hãy kiểm tra Divine có được dùng micro của bạn không.';
+
+  @override
+  String get collabRoomCallJoin => 'Tham gia cuộc gọi';
+
+  @override
+  String get collabRoomCallLeave => 'Rời cuộc gọi';
 
   @override
   String get collabRoomCallCameraFailed => 'Không bật được camera của bạn.';

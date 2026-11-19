@@ -16759,6 +16759,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String get collabRoomPartSendButton => 'Invia la mia parte';
 
   @override
+  String collabRoomPartUploading(String progress) {
+    return 'Carico la tua parte… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Caricata. Pronta da inviare.';
+
+  @override
+  String get collabRoomInviteAgain => 'Invita di nuovo';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Lasciare questa stanza?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Solo l\'host può invitarti di nuovo.';
+
+  @override
   String get collabRoomPartSendFailed =>
       'Impossibile inviare la tua parte. Riprova.';
 
@@ -16822,6 +16840,12 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get collabRoomCallFailed =>
       'Impossibile avviare la chiamata. Controlla che Divine possa usare il microfono.';
+
+  @override
+  String get collabRoomCallJoin => 'Entra nella chiamata';
+
+  @override
+  String get collabRoomCallLeave => 'Esci dalla chiamata';
 
   @override
   String get collabRoomCallCameraFailed =>

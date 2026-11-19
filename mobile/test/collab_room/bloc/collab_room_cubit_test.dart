@@ -734,6 +734,122 @@ void main() {
           verify(() => service.deleteRoomFiles(_roomId)).called(1);
         },
       );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'waits for an update on its way instead of dropping the call-off',
+        setUp: () {
+          final first = Completer<void>();
+          addTearDown(() {
+            if (!first.isCompleted) first.complete();
+          });
+          var calls = 0;
+          when(() => service.publish(any(), any())).thenAnswer((
+            invocation,
+          ) async {
+            published.add(
+              invocation.positionalArguments[1] as CollabRoomSnapshot,
+            );
+            if (calls++ == 0) await first.future;
+          });
+          sendFirst = first.complete;
+        },
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          await cubit.layoutPicked(SplitScreenLayoutPreset.stacked);
+          await pumpEventQueue();
+          final cancelling = cubit.cancel();
+          await pumpEventQueue();
+          sendFirst();
+          await cancelling;
+        },
+        verify: (_) => expect(published.last.phase, CollabRoomPhase.cancelled),
+      );
+    });
+
+    group('dismiss', () {
+      CollabRoomSnapshot ended(CollabRoomPhase phase) => CollabRoomSnapshot(
+        revision: 3,
+        phase: phase,
+        layout: _recording.layout,
+        members: _recording.members,
+      );
+
+      for (final phase in [CollabRoomPhase.posted, CollabRoomPhase.cancelled]) {
+        blocTest<CollabRoomCubit, CollabRoomState>(
+          'deletes the parts of a room that was ${phase.name}',
+          build: build,
+          act: (cubit) async {
+            rooms.add(_room(ended(phase), owner: _sam));
+            await pumpEventQueue();
+            await cubit.dismiss();
+          },
+          verify: (_) =>
+              verify(() => service.deleteRoomFiles(_roomId)).called(1),
+        );
+      }
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'keeps the parts of a room still open',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_recording, owner: _sam));
+          await pumpEventQueue();
+          await cubit.dismiss();
+        },
+        verify: (_) => verifyNever(() => service.deleteRoomFiles(_roomId)),
+      );
+    });
+
+    group('reinvite', () {
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'asks someone who declined back in',
+        setUp: () => when(
+          () => service.reinvite(any(), any(), any()),
+        ).thenAnswer((_) async {}),
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 1,
+                phase: CollabRoomPhase.lobby,
+                members: [
+                  _member(_author, .joined),
+                  _member(_sam, .joined),
+                  _member(_kai, .declined),
+                ],
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.reinvite(_kai);
+        },
+        verify: (_) {
+          final snapshot =
+              verify(
+                    () => service.reinvite(any(), _kai, captureAny()),
+                  ).captured.single
+                  as CollabRoomSnapshot;
+          expect(snapshot.revision, 2);
+          expect(
+            snapshot.members.firstWhere((m) => m.pubkey == _kai).status,
+            CollabRoomMemberStatus.invited,
+          );
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'leaves someone still in the room as they are',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          await cubit.reinvite(_sam);
+        },
+        verify: (_) => verifyNever(() => service.reinvite(any(), any(), any())),
+      );
     });
 
     group('compose', () {
@@ -819,6 +935,80 @@ void main() {
       cubit.aspectRatioPicked(model.AspectRatio.square);
       expect(cubit.state.aspectRatio, model.AspectRatio.square);
       expect(cubit.state.effectiveSoundPubkey, _author);
+    });
+  });
+
+  // Outside the cubit's group: its tearDown waits on a room stream only a
+  // cubit listens to.
+  group(CollabRoomState, () {
+    group('endedByHost', () {
+      CollabRoomState seenBy(
+        String owner,
+        CollabRoomPhase phase, {
+        CollabRoomMemberStatus samStatus = CollabRoomMemberStatus.joined,
+      }) => CollabRoomState(
+        status: CollabRoomStatus.ready,
+        room: _room(
+          CollabRoomSnapshot(
+            revision: 3,
+            phase: phase,
+            layout: _recording.layout,
+            members: [_member(_author, .joined, 0), _member(_sam, samStatus)],
+          ),
+          owner: owner,
+        ),
+      );
+
+      test('is true for a member once the host called the room off', () {
+        expect(seenBy(_sam, CollabRoomPhase.cancelled).endedByHost, isTrue);
+      });
+
+      test('is true for a member the host took out', () {
+        expect(
+          seenBy(
+            _sam,
+            CollabRoomPhase.recording,
+            samStatus: CollabRoomMemberStatus.removed,
+          ).endedByHost,
+          isTrue,
+        );
+      });
+
+      test('is false for the host, and while the room is open', () {
+        expect(seenBy(_author, CollabRoomPhase.cancelled).endedByHost, isFalse);
+        expect(seenBy(_sam, CollabRoomPhase.recording).endedByHost, isFalse);
+        expect(seenBy(_sam, CollabRoomPhase.posted).endedByHost, isFalse);
+      });
+    });
+
+    group('postedVideo', () {
+      test('names the posted video by author and d tag', () {
+        final state = CollabRoomState(
+          status: CollabRoomStatus.ready,
+          room: _room(
+            CollabRoomSnapshot(
+              revision: 3,
+              phase: CollabRoomPhase.posted,
+              layout: _recording.layout,
+              members: _recording.members,
+              videoAddress: '34236:$_author:take:one',
+            ),
+            owner: _sam,
+          ),
+        );
+
+        expect(state.postedVideo?.pubkey, _author);
+        expect(state.postedVideo?.dTag, 'take:one');
+      });
+
+      test('names none before the video is posted', () {
+        final state = CollabRoomState(
+          status: CollabRoomStatus.ready,
+          room: _room(_recording, owner: _sam),
+        );
+
+        expect(state.postedVideo, isNull);
+      });
     });
   });
 }

@@ -26,7 +26,7 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 |---|---|---|
 | Capture | Yes | Default mode. The sound chip picks a sound to record against: it plays during each take, can only change while there are no clips, and the clips open muted with the sound as its own track. The color mask button on the control rail swaps the background live while recording; each take is keyed right after recording. The mask is only offered on devices whose renderer can draw the live key. |
 | Stop Motion | Yes | Output must be at least 1 s. |
-| Together | Yes, for your own part | Up to four people each film their own cell of a split-screen layout. The editor shows your cell's crop and sends the finished part back to the room; the host puts the parts together and posts with everyone as collaborators. |
+| Together | Yes, for your own part | Up to four people each film their own cell of a split-screen layout. The editor shows your cell's crop, can join the room's voice call to talk while editing, and sends the finished part back to the room; the part plays and uploads while you look at it, so Send only hands it in. The host puts the parts together and posts with everyone as collaborators; from then on everyone in the room can play the posted video from the room. |
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 

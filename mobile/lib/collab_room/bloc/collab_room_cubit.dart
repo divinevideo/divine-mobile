@@ -8,6 +8,7 @@ import 'package:bloc/bloc.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:nostr_sdk/aid.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/collab_room/collab_room_composer.dart';
 import 'package:openvine/collab_room/collab_room_layout.dart';
@@ -382,10 +383,54 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     );
   }
 
+  /// Asks [pubkey] back into the room, as the author: someone who left by
+  /// mistake, declined or was removed. Their earlier answers no longer count.
+  Future<void> reinvite(String pubkey) async {
+    final room = state.room;
+    if (room == null || !room.isAuthor || !room.phase.isOpen) return;
+    final member = room.members.where((m) => m.pubkey == pubkey).firstOrNull;
+    if (member == null ||
+        member.pubkey == room.authorPubkey ||
+        member.status.isActive) {
+      return;
+    }
+    await _run(.update, () async {
+      final revision = state.nextRevision;
+      emitIfOpen(state.copyWith(lobbyRevision: revision));
+      await _service.reinvite(
+        room,
+        pubkey,
+        room.toSnapshot(
+          revision: revision,
+          members: [
+            for (final m in room.members)
+              if (m.pubkey == pubkey)
+                CollabRoomMember(
+                  pubkey: m.pubkey,
+                  status: CollabRoomMemberStatus.invited,
+                  cell: m.cell,
+                )
+              else
+                m,
+          ],
+        ),
+      );
+    });
+  }
+
   /// Calls the room off, as the author.
   Future<void> cancel() async {
+    // Confirmed in a sheet that stays open while an update goes out, so wait
+    // for that update rather than drop the call-off.
+    if (state.actionStatus == .busy) {
+      await stream.firstWhere(
+        (state) => state.actionStatus != .busy,
+        // Closed meanwhile: nothing left to call off from here.
+        orElse: () => state,
+      );
+    }
     final room = state.room;
-    if (room == null || !room.isAuthor) return;
+    if (isClosed || room == null || !room.isAuthor) return;
     await _publishNext(
       .cancel,
       room,
@@ -527,6 +572,14 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(actionStatus: .failed));
     }
+  }
+
+  /// Lets go of a room that ended, before its screen closes: deletes the
+  /// parts this device kept of it. An open room keeps them.
+  Future<void> dismiss() async {
+    final room = state.room;
+    if (room == null || room.phase.isOpen) return;
+    await _service.deleteRoomFiles(_roomId);
   }
 
   @override

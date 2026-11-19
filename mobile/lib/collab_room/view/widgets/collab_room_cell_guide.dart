@@ -22,10 +22,12 @@ class CollabRoomCellGuide extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final (:cellAspectRatio, :cellShape) = ref.watch(
       collabRoomPartProvider.select(
-        (part) => (
-          cellAspectRatio: part?.cellAspectRatio,
-          cellShape: part?.cellShape,
-        ),
+        (part) => part == null || !part.isActive
+            ? (cellAspectRatio: null, cellShape: null)
+            : (
+                cellAspectRatio: part.cellAspectRatio,
+                cellShape: part.cellShape,
+              ),
       ),
     );
     if (cellAspectRatio == null) return const SizedBox.shrink();

@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show Locale;
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -14,8 +18,38 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCollabRoomPartCubit extends MockCubit<CollabRoomPartStatus>
+class _MockCollabRoomPartCubit extends MockCubit<CollabRoomPartState>
     implements CollabRoomPartCubit {}
+
+/// A player that only tracks play and pause.
+class _FakePlayer extends DivineVideoPlayerController {
+  _FakePlayer() : super();
+
+  final _states = StreamController<DivineVideoPlayerState>.broadcast();
+  DivineVideoPlayerState _state = const DivineVideoPlayerState(
+    status: PlaybackStatus.playing,
+  );
+
+  @override
+  DivineVideoPlayerState get state => _state;
+
+  @override
+  Stream<DivineVideoPlayerState> get stateStream => _states.stream;
+
+  void _set(PlaybackStatus status) {
+    _state = DivineVideoPlayerState(status: status);
+    _states.add(_state);
+  }
+
+  @override
+  Future<void> play() async => _set(PlaybackStatus.playing);
+
+  @override
+  Future<void> pause() async => _set(PlaybackStatus.paused);
+
+  @override
+  Future<void> dispose() => _states.close();
+}
 
 void main() {
   group(CollabRoomPartView, () {
@@ -34,7 +68,7 @@ void main() {
 
     setUp(() {
       cubit = _MockCollabRoomPartCubit();
-      when(() => cubit.state).thenReturn(CollabRoomPartStatus.idle);
+      when(() => cubit.state).thenReturn(const CollabRoomPartState());
     });
 
     Future<void> pump(
@@ -64,6 +98,24 @@ void main() {
         expect(find.text(l10n.collabRoomPartRendering), findsOneWidget);
       });
 
+      testWidgets('how far the upload got', (tester) async {
+        when(
+          () => cubit.state,
+        ).thenReturn(const CollabRoomPartState(uploadProgress: 0.42));
+        await pump(tester, clip: rendered);
+
+        expect(find.text(l10n.collabRoomPartUploading('42%')), findsOneWidget);
+      });
+
+      testWidgets('an upload that is done', (tester) async {
+        when(
+          () => cubit.state,
+        ).thenReturn(const CollabRoomPartState(uploadProgress: 1));
+        await pump(tester, clip: rendered);
+
+        expect(find.text(l10n.collabRoomPartUploaded), findsOneWidget);
+      });
+
       testWidgets('a failed render with retry', (tester) async {
         var retried = 0;
         await pump(tester, failed: true, onRetry: () => retried++);
@@ -87,6 +139,53 @@ void main() {
             verify(() => cubit.send(captureAny())).captured.single as File;
         expect(sent.path, '/part.mp4');
       });
+    });
+  });
+
+  group(CollabRoomPartPreviewToggle, () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    testWidgets('pauses on a tap and plays again on the next', (tester) async {
+      final player = _FakePlayer();
+      addTearDown(player.dispose);
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: CollabRoomPartPreviewToggle(
+            controller: player,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+      expect(find.byType(DivineIcon), findsNothing);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoMetadataPausePreviewSemanticLabel),
+      );
+      await tester.pump();
+      expect(player.state.status, PlaybackStatus.paused);
+      expect(find.byType(DivineIcon), findsOneWidget);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoMetadataPlayPreviewSemanticLabel),
+      );
+      await tester.pump();
+      expect(player.state.status, PlaybackStatus.playing);
+      expect(find.byType(DivineIcon), findsNothing);
+    });
+
+    testWidgets('shows no play button while buffering', (tester) async {
+      final player = _FakePlayer().._set(PlaybackStatus.buffering);
+      addTearDown(player.dispose);
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: CollabRoomPartPreviewToggle(
+            controller: player,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+
+      expect(find.byType(DivineIcon), findsNothing);
     });
   });
 }

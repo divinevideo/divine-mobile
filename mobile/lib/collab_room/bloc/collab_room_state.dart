@@ -199,6 +199,21 @@ class CollabRoomState extends Equatable {
         composeStatus != CollabRoomComposeStatus.running;
   }
 
+  /// Whether the author ended the room for this account: called it off, or
+  /// took the account out of it.
+  bool get endedByHost {
+    final room = this.room;
+    if (room == null || room.isAuthor) return false;
+    return room.phase == CollabRoomPhase.cancelled ||
+        room.me?.status == CollabRoomMemberStatus.removed;
+  }
+
+  /// The video the author posted, once they did.
+  AId? get postedVideo {
+    final address = room?.snapshot.videoAddress;
+    return address == null ? null : AId.fromString(address);
+  }
+
   /// Returns a copy with the given fields replaced.
   CollabRoomState copyWith({
     CollabRoomStatus? status,

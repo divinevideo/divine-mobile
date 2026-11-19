@@ -11,6 +11,9 @@ import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:path/path.dart' as p;
 
+/// A part's video uploaded, its key not handed to anyone yet.
+typedef CollabRoomUpload = ({String url, DmFileMetadata metadata});
+
 /// A room message could not be delivered, or a part could not be uploaded or
 /// read back.
 ///
@@ -123,6 +126,44 @@ class CollabRoomService {
     return roomId;
   }
 
+  /// Asks [pubkey], who left, declined or was removed, back into [room] with
+  /// [snapshot], which lists them as invited again: they get a fresh invite,
+  /// everyone else still in the room the update.
+  ///
+  /// Throws a [CollabRoomException] when the invite could not be delivered.
+  Future<void> reinvite(
+    CollabRoom room,
+    String pubkey,
+    CollabRoomSnapshot snapshot,
+  ) async {
+    if (!room.isAuthor) throw StateError('Only the author invites');
+    final invited = await _sendToEach(
+      recipients: [pubkey],
+      roomId: room.id,
+      type: CollabRoomMessageType.invite,
+      snapshot: snapshot,
+      content: _l10n.collabRoomInviteDmBody,
+    );
+    if (invited == 0) {
+      throw const CollabRoomException('The invite could not be delivered');
+    }
+    final others = [
+      for (final member in snapshot.members)
+        if (member.pubkey != room.authorPubkey &&
+            member.pubkey != pubkey &&
+            member.status.isActive)
+          member.pubkey,
+    ];
+    if (others.isEmpty) return;
+    await _sendToEach(
+      recipients: others,
+      roomId: room.id,
+      type: CollabRoomMessageType.state,
+      snapshot: snapshot,
+      content: _l10n.collabRoomUpdatedDmBody,
+    );
+  }
+
   /// Joins [room].
   Future<void> join(CollabRoom room) =>
       _answer(room, CollabRoomMessageType.join, _l10n.collabRoomJoinDmBody);
@@ -156,7 +197,8 @@ class CollabRoomService {
   }
 
   /// Sends [snapshot] of [room] to everyone it concerns: the people still in
-  /// the room, and anyone the snapshot takes out of it, once.
+  /// the room, and anyone the snapshot takes out of it, once — or, with
+  /// nobody left in the room, everyone it ever had.
   ///
   /// Throws a [CollabRoomException] when it reached nobody.
   Future<void> publish(CollabRoom room, CollabRoomSnapshot snapshot) async {
@@ -165,12 +207,21 @@ class CollabRoomService {
       for (final member in room.snapshot.members)
         if (member.status.isActive) member.pubkey,
     };
-    final recipients = [
+    final others = [
+      for (final member in snapshot.members)
+        if (member.pubkey != room.authorPubkey) member.pubkey,
+    ];
+    final active = [
       for (final member in snapshot.members)
         if (member.pubkey != room.authorPubkey &&
             (member.status.isActive || wasActive.contains(member.pubkey)))
           member.pubkey,
     ];
+    // The author's device reads the room back from the messages it sent, so
+    // a snapshot sent to nobody would never take effect there: calling off a
+    // room everyone left would leave it open. With nobody in the room, the
+    // update goes to everyone it ever had.
+    final recipients = active.isNotEmpty ? active : others;
     if (recipients.isEmpty) return;
     final delivered = await _sendToEach(
       recipients: recipients,
@@ -196,19 +247,39 @@ class CollabRoomService {
     return _l10n.collabRoomUpdatedDmBody;
   }
 
-  /// Hands in [video] as the account's part of [room].
+  /// Encrypts and uploads [video] as a part without handing it in, so the
+  /// slow half can run while the user still looks at the part. [onProgress]
+  /// hears how much of the upload is done, from 0 to 1.
   ///
-  /// A member sends it to the author as an encrypted video message. The
-  /// author uploads it the same way and publishes it in a fresh snapshot, so
-  /// everyone sees it.
+  /// Throws a [CollabRoomException] when the upload failed.
+  Future<CollabRoomUpload> uploadPart(
+    File video, {
+    void Function(double fraction)? onProgress,
+  }) async {
+    final upload = await _videos.uploadVideo(
+      videoFile: video,
+      mimeType: 'video/mp4',
+      onUploadProgress: onProgress,
+    );
+    if (upload == null) {
+      throw const CollabRoomException('The part could not be uploaded');
+    }
+    return upload;
+  }
+
+  /// Hands in [upload], from [uploadPart], as the account's part of [room].
   ///
-  /// Throws a [CollabRoomException] when the upload or the message failed.
-  Future<void> sendPart(CollabRoom room, File video) async {
+  /// A member sends its link and key to the author in an encrypted file
+  /// message. The author publishes it in a fresh snapshot, so everyone sees
+  /// it.
+  ///
+  /// Throws a [CollabRoomException] when the message reached nobody.
+  Future<void> handInPart(CollabRoom room, CollabRoomUpload upload) async {
     if (!room.isAuthor) {
-      final result = await _videos.sendVideo(
+      final result = await _videos.sendUploadedVideo(
         recipientPubkey: room.authorPubkey,
-        videoFile: video,
-        mimeType: 'video/mp4',
+        url: upload.url,
+        metadata: upload.metadata,
         extraTags: collabRoomTags(
           roomId: room.id,
           type: CollabRoomMessageType.part,
@@ -223,13 +294,6 @@ class CollabRoomService {
       }
       return;
     }
-    final upload = await _videos.uploadVideo(
-      videoFile: video,
-      mimeType: 'video/mp4',
-    );
-    if (upload == null) {
-      throw const CollabRoomException('The part could not be uploaded');
-    }
     final part = CollabRoomPart(
       pubkey: room.ownerPubkey,
       url: upload.url,
@@ -243,6 +307,11 @@ class CollabRoomService {
       ),
     );
   }
+
+  /// Uploads [video] and hands it in as the account's part of [room] — see
+  /// [uploadPart] and [handInPart].
+  Future<void> sendPart(CollabRoom room, File video) async =>
+      handInPart(room, await uploadPart(video));
 
   /// Tells everyone in [roomId] that its video was posted at [videoAddress],
   /// and deletes the parts kept on this device.
