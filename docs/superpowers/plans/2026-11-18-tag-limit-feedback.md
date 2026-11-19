@@ -47,6 +47,9 @@ All paths below are relative to `mobile/` unless they start with `docs/`.
   - `'flags the overflow of a pasted list'`: initial = first 9 of `ten`, add `['a', 'b']`, expect `selectedTags` = 9 + `'a'`, notice `tagLimitReached`.
   - `'does not flag a tag the video already has'`: seed `ten`, add `['tag3']`, expect `const <TagsPickerState>[]`.
   - `'limit notice wins over a too-long tag in the same paste'`: initial = first 9, add `[tooLong, 'x', 'y']`, expect `'x'` added and notice `tagLimitReached`.
+  - `'keeps a limit notice when a too-long tag is pasted at the limit'`: seed ten tags and the limit notice, add `[tooLong]`, expect no emit.
+  - In the `TagsPickerSuggestionSelected` group: `'is turned away with a limit notice once the limit is reached'`.
+  - A `turnsAwayAtLimit` group: true for a new tag at the limit; false below the limit, for a tag the video already has, for a sticker's hashtag, and for input that is not a tag.
   - In the `TagsPickerTagRemoved` group: `'clears a limit notice'` mirroring the existing too-long one with `notice: TagsPickerNotice.tagLimitReached`.
   - In the `TagsPickerQueryChanged` group: `'keeps a limit notice when the cleared field sends an empty query'` and `'keeps a limit notice while typing at the limit'`, both seeded with ten tags and `notice: TagsPickerNotice.tagLimitReached`, `wait` past the debounce as the neighbouring debounce tests do, and the notice stays `tagLimitReached`.
   - `'keeps a limit notice when a tag the video already has is committed'`: seed ten tags and the limit notice, add `['tag3']`, expect no emit.
@@ -119,7 +122,7 @@ git commit -m "fix(hashtags): report when a tag is turned away at the 10-tag lim
   - Extend `'explains the tag limit once a video has 10 tags'`: after `'eleven '`, expect `find.text(warning)` one and `find.text(standing)` nothing.
   - `'announces a repeat rejection'`: capture `SystemChannels.accessibility` announcements exactly as `test/widgets/support_capped_text_field_test.dart` `'announces every rejection'` does (mock handler + `addTearDown` nulling it). Open with `tenTags`, enter `'news'`, submit twice. Expect `announcements.where((m) => m == warning)` has length 1 (the first is carried by the hint's live region).
   - `'with an empty field at the limit says nothing new'`: open with `tenTags`, submit with empty field; expect `find.text(standing)` one, `find.text(warning)` nothing, and zero captured announcements.
-  - Also in that group: `'shows the warning in the warning colour'`, `'announces the first rejection through a live region'`, `'a repeat rejection ended with a space is announced'`, `'after a rejection, a pasted list with one new tag among tags the video already has is announced'`, and the two `'after a rejection, a tag the video already has …'` tests, for return and for space.
+  - Also in that group: `'shows the warning in the warning colour'`, `'announces the first rejection through a live region'`, `'a repeat rejection ended with a space is announced'`, `'after a rejection, a pasted list with one new tag among tags the video already has is announced'`, the two `'after a rejection, a tag the video already has …'` tests, for return and for space, and `'with an empty field after a rejection does not announce again'`.
 
 - [ ] **Step 3: Run to verify they fail**
 
