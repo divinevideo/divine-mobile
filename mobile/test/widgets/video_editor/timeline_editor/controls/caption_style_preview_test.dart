@@ -1,10 +1,13 @@
-// ABOUTME: Tests for CaptionStylePreview: a word-highlighting style lights up
-// ABOUTME: the sample caption's words one after another.
+// ABOUTME: Tests for CaptionStylePreview: it loops the given cues, wraps them
+// ABOUTME: only between words, and a word-highlighting style lights up their
+// ABOUTME: words one after another.
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/caption_preview_cues.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
 
@@ -17,17 +20,25 @@ void main() {
     WidgetTester tester, {
     required CaptionStyle style,
     required double loopValue,
+    CaptionPreviewCues cues = CaptionPreviewCues.fallback,
+    double width = 200,
+    double height = 80,
+    double fontSizeFactor = 0.62,
   }) {
     return tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: CaptionStylePreview(
-          style: style,
-          loopValue: loopValue,
-          loopMs: 2400,
-          width: 200,
-          height: 80,
+        home: Center(
+          child: CaptionStylePreview(
+            style: style,
+            cues: cues,
+            loopValue: loopValue,
+            loopMs: 2400,
+            width: width,
+            height: height,
+            fontSizeFactor: fontSizeFactor,
+          ),
         ),
       ),
     );
@@ -45,6 +56,22 @@ void main() {
       return true;
     });
     return lit;
+  }
+
+  /// The lines the preview caption [text] is wrapped into, grouping its
+  /// characters by the line their caret sits on.
+  List<String> lines(WidgetTester tester, String text) {
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.byType(RichText).last,
+    );
+    final lines = <double, StringBuffer>{};
+    for (var offset = 0; offset < text.length; offset++) {
+      final top = paragraph
+          .getOffsetForCaret(TextPosition(offset: offset), Rect.zero)
+          .dy;
+      (lines[top] ??= StringBuffer()).write(text[offset]);
+    }
+    return [for (final line in lines.values) line.toString().trim()];
   }
 
   group(CaptionStylePreview, () {
@@ -66,6 +93,38 @@ void main() {
 
       await pump(tester, style: karaoke, loopValue: 0.45);
       expect(litWords(tester), ['For']);
+    });
+
+    testWidgets('shows the given cues one after the other', (tester) async {
+      const cues = CaptionPreviewCues('Welcome back to', 'my kitchen');
+      final style = CaptionCustomStyle.initial().resolve();
+
+      await pump(tester, style: style, cues: cues, loopValue: 0.25);
+      expect(find.text('Welcome back to'), findsOneWidget);
+      expect(find.text('my kitchen'), findsNothing);
+
+      await pump(tester, style: style, cues: cues, loopValue: 0.75);
+      expect(find.text('my kitchen'), findsOneWidget);
+      expect(find.text('Welcome back to'), findsNothing);
+    });
+
+    testWidgets('wraps a cue only between words', (tester) async {
+      const cue = 'Unfortunately we need to talk';
+
+      // The saved styles row: a tile far narrower than the cue's first word.
+      await pump(
+        tester,
+        style: CaptionCustomStyle.initial().resolve(),
+        cues: const CaptionPreviewCues(cue, 'Okay'),
+        loopValue: 0.25,
+        width: 96,
+        height: 56,
+        fontSizeFactor: 0.5,
+      );
+
+      final wrapped = lines(tester, cue);
+      expect(wrapped, hasLength(greaterThan(1)));
+      expect(wrapped.join(' '), equals(cue));
     });
 
     testWidgets('lights up nothing for a style without highlights', (

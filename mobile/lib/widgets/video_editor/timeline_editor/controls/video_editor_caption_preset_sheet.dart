@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/caption_preview_cues.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
@@ -83,11 +84,13 @@ String captionPresetDisplayName(AppLocalizations l10n, String presetId) =>
 /// built-in preset or a custom style), or `null` when dismissed.
 ///
 /// [selectedId] highlights the active preset; [currentCustomStyle] seeds the
-/// Custom tile and its editor when a custom style is already active.
+/// Custom tile and its editor when a custom style is already active. Every
+/// preview, in this sheet and the ones it opens, shows [previewCues].
 Future<CaptionStyleSelection?> showCaptionStyleSheet(
   BuildContext context, {
   required String selectedId,
   CaptionCustomStyle? currentCustomStyle,
+  CaptionPreviewCues previewCues = CaptionPreviewCues.fallback,
 }) {
   return VineBottomSheet.show<CaptionStyleSelection>(
     context: context,
@@ -95,6 +98,7 @@ Future<CaptionStyleSelection?> showCaptionStyleSheet(
     buildScrollBody: (scrollController) => CaptionPresetPickerView(
       selectedId: selectedId,
       currentCustomStyle: currentCustomStyle,
+      previewCues: previewCues,
       scrollController: scrollController,
     ),
   );
@@ -107,6 +111,7 @@ class CaptionPresetPickerView extends StatefulWidget {
   const CaptionPresetPickerView({
     required this.selectedId,
     this.currentCustomStyle,
+    this.previewCues = CaptionPreviewCues.fallback,
     this.scrollController,
     super.key,
   });
@@ -116,6 +121,9 @@ class CaptionPresetPickerView extends StatefulWidget {
 
   /// The active custom style, when one is set.
   final CaptionCustomStyle? currentCustomStyle;
+
+  /// The cues every style preview loops through.
+  final CaptionPreviewCues previewCues;
 
   /// Sheet-provided controller so drag-to-resize keeps working.
   final ScrollController? scrollController;
@@ -168,6 +176,7 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
     final style = await showCaptionCustomStyleSheet(
       context,
       initial: widget.currentCustomStyle ?? CaptionCustomStyle.initial(),
+      previewCues: widget.previewCues,
     );
     if (style != null && mounted) {
       Navigator.of(context).pop(CaptionCustomSelection(style));
@@ -180,6 +189,7 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
     final style = await showSavedCaptionStylesSheet(
       context,
       currentCustomStyle: widget.currentCustomStyle,
+      previewCues: widget.previewCues,
     );
     if (style != null && mounted) {
       Navigator.of(context).pop(CaptionCustomSelection(style));
@@ -230,6 +240,7 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
         final label = captionPresetDisplayName(l10n, preset.id);
         return _StyleTile(
           style: preset.style,
+          cues: widget.previewCues,
           label: label,
           selected: !hasCustom && preset.id == widget.selectedId,
           controller: _controller,
@@ -313,6 +324,7 @@ class _CaptionTileFrame extends StatelessWidget {
 class _StyleTile extends StatelessWidget {
   const _StyleTile({
     required this.style,
+    required this.cues,
     required this.label,
     required this.selected,
     required this.controller,
@@ -321,6 +333,7 @@ class _StyleTile extends StatelessWidget {
   });
 
   final CaptionStyle style;
+  final CaptionPreviewCues cues;
   final String label;
   final bool selected;
   final AnimationController controller;
@@ -338,6 +351,7 @@ class _StyleTile extends StatelessWidget {
           animation: controller,
           builder: (context, _) => CaptionStylePreview(
             style: style,
+            cues: cues,
             loopValue: controller.value,
             loopMs: loopMs,
             width: constraints.maxWidth,

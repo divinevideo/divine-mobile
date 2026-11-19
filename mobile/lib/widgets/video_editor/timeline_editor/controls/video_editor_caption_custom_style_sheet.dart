@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/saved_caption_styles/saved_caption_styles_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/caption_preview_cues.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
@@ -24,10 +25,12 @@ import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
 
 /// Shows the custom caption-style editor seeded with [initial]; resolves with
-/// the edited style, or `null` when dismissed.
+/// the edited style, or `null` when dismissed. The live preview loops
+/// [previewCues].
 Future<CaptionCustomStyle?> showCaptionCustomStyleSheet(
   BuildContext context, {
   required CaptionCustomStyle initial,
+  CaptionPreviewCues previewCues = CaptionPreviewCues.fallback,
 }) {
   return VineBottomSheet.show<CaptionCustomStyle>(
     context: context,
@@ -41,6 +44,7 @@ Future<CaptionCustomStyle?> showCaptionCustomStyleSheet(
     ),
     buildScrollBody: (scrollController) => _CaptionCustomStylePage(
       initial: initial,
+      previewCues: previewCues,
       scrollController: scrollController,
     ),
   );
@@ -54,10 +58,12 @@ Future<CaptionCustomStyle?> showCaptionCustomStyleSheet(
 class _CaptionCustomStylePage extends ConsumerWidget {
   const _CaptionCustomStylePage({
     required this.initial,
+    required this.previewCues,
     required this.scrollController,
   });
 
   final CaptionCustomStyle initial;
+  final CaptionPreviewCues previewCues;
   final ScrollController scrollController;
 
   @override
@@ -69,6 +75,7 @@ class _CaptionCustomStylePage extends ConsumerWidget {
       create: (_) => SavedCaptionStylesCubit(repository: repository),
       child: _CaptionCustomStyleView(
         initial: initial,
+        previewCues: previewCues,
         scrollController: scrollController,
       ),
     );
@@ -78,10 +85,12 @@ class _CaptionCustomStylePage extends ConsumerWidget {
 class _CaptionCustomStyleView extends StatefulWidget {
   const _CaptionCustomStyleView({
     required this.initial,
+    required this.previewCues,
     required this.scrollController,
   });
 
   final CaptionCustomStyle initial;
+  final CaptionPreviewCues previewCues;
   final ScrollController scrollController;
 
   @override
@@ -212,6 +221,7 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
           child: ExcludeSemantics(
             child: _Preview(
               style: _style,
+              cues: widget.previewCues,
               controller: _controller,
               loopMs: _loopMs,
             ),
@@ -388,11 +398,13 @@ typedef _SaveOutcome = ({String message, bool failed});
 class _Preview extends StatelessWidget {
   const _Preview({
     required this.style,
+    required this.cues,
     required this.controller,
     required this.loopMs,
   });
 
   final CaptionCustomStyle style;
+  final CaptionPreviewCues cues;
   final AnimationController controller;
   final int loopMs;
 
@@ -407,6 +419,7 @@ class _Preview extends StatelessWidget {
             animation: controller,
             builder: (context, _) => CaptionStylePreview(
               style: style.resolve(),
+              cues: cues,
               loopValue: controller.value,
               loopMs: loopMs,
               width: constraints.maxWidth,

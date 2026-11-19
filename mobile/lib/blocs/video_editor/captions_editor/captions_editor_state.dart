@@ -80,6 +80,11 @@ class CaptionsEditorState extends Equatable {
   /// normalized [committedCues].
   CaptionTrack get committedTrack => track.copyWith(cues: committedCues);
 
+  /// What the style previews show: this session's first two captions, in
+  /// timeline order, once it has two.
+  CaptionPreviewCues get previewCues =>
+      CaptionPreviewCues.fromCues(committedCues);
+
   /// Copy with the given fields replaced. Pass [clearCustomStyle] to drop a
   /// custom style (selecting a built-in preset again), and [clearFailure] when
   /// leaving a failed state.

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/captions_editor/captions_editor_cubit.dart';
+import 'package:openvine/models/video_editor/caption_preview_cues.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
@@ -478,6 +479,16 @@ void main() {
 
         cubit.state.committedCues;
         expect(cubit.state.cues, equals(const [late_, cleared, early]));
+      });
+
+      test('previewCues shows the captions in timeline order', () {
+        final cubit = build(initialCues: const [late_, cleared, early]);
+        addTearDown(cubit.close);
+
+        expect(
+          cubit.state.previewCues,
+          equals(const CaptionPreviewCues('First', 'Second')),
+        );
       });
     });
 
