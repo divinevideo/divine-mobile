@@ -52,7 +52,11 @@ Future<void> recordLibraryReaction(
   LibraryReactionMerge? mergeTakes,
   ExtractReactionPoster? extractThumbnail,
   Future<void> Function(List<String> paths)? cleanupAbandoned,
-  Future<void> Function(BuildContext context)? openEditor,
+  Future<void> Function(
+    BuildContext context,
+    CreationAnalyticsSession analyticsSession,
+  )?
+  openEditor,
 }) async {
   final router = GoRouter.maybeOf(context);
   if (router != null &&
@@ -414,12 +418,13 @@ Future<void> recordLibraryReaction(
     manager.insertClip(0, result);
     // Queue before the editor can publish/discard and flush this session.
     reaction.adoptGeneratedFiles();
-    analytics.handOffToEditor(analyticsSession);
     if (openEditor != null) {
-      await openEditor(context);
+      await openEditor(context, analyticsSession);
     } else {
-      await const VideoEditorRouteData(from: VideoEditorScreen.libraryOrigin)
-          .push<void>(context);
+      await VideoEditorRouteData(
+        from: VideoEditorScreen.libraryOrigin,
+        $extra: analyticsSession,
+      ).push<void>(context);
     }
   } finally {
     abandonAnalytics();

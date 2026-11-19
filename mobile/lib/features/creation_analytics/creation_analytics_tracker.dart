@@ -15,7 +15,6 @@ enum CreationFunnelStage { camera, recording, editor, publishing }
 /// Owns the recorder events of a flow that can open the camera repeatedly.
 class CreationAnalyticsSession {
   bool _closed = false;
-  bool _handingOffToEditor = false;
 }
 
 /// App-scoped tracker for the active creation session.
@@ -37,6 +36,7 @@ class CreationAnalyticsTracker {
   DateTime? _cameraOpenedAt;
   CreationFunnelStage? _lastStage;
   CreationAnalyticsSession? _cameraSession;
+  CreationAnalyticsSession? _editorSession;
   bool _cameraOpenedLogged = false;
   bool _recordingStarted = false;
   bool _recordingCompleted = false;
@@ -129,19 +129,24 @@ class CreationAnalyticsTracker {
     );
   }
 
-  /// The next editor opening can continue this recorder's funnel.
-  void handOffToEditor(CreationAnalyticsSession session) {
-    if (_accepts(session)) session._handingOffToEditor = true;
+  /// Claims a reaction at editor mount, before the editor can open a recorder.
+  Future<void> claimEditorSession(CreationAnalyticsSession session) async {
+    final mode = activeRecorderMode(session);
+    if (mode == null) return;
+    session._closed = true;
+    _cameraSession = null;
+    _editorSession = session;
+    await editorOpened(mode);
+  }
+
+  /// Ends a mounted reaction editor without abandoning a newer session.
+  Future<void> abandonEditorSession(CreationAnalyticsSession session) async {
+    if (identical(_editorSession, session)) await creationAbandoned();
   }
 
   Future<void> editorOpened(VideoRecorderMode mode) async {
     if (_cameraSession case final session?) {
-      if (session._handingOffToEditor && !session._closed) {
-        // Keep the funnel for the editor, and revoke any late camera callbacks.
-        session._closed = true;
-      } else {
-        unawaited(creationAbandoned(session: session));
-      }
+      unawaited(creationAbandoned(session: session));
       _cameraSession = null;
     }
     _ensureSession(mode);
@@ -234,6 +239,7 @@ class CreationAnalyticsTracker {
     required bool cameraOpenedLogged,
   }) {
     _mode = mode;
+    _editorSession = null;
     _cameraOpenedAt = openedAt;
     _lastStage = CreationFunnelStage.camera;
     _cameraOpenedLogged = cameraOpenedLogged;

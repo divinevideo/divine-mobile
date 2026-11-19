@@ -200,7 +200,7 @@ void main() {
       required LibraryReactionLayout? layout,
       LibraryReactionMerge? merge,
       NavigatorObserver? observer,
-      Future<void> Function()? onOpenEditor,
+      Future<void> Function(CreationAnalyticsSession)? onOpenEditor,
       bool reducedMotion = false,
       bool pushed = false,
     }) async {
@@ -217,10 +217,10 @@ void main() {
               extractThumbnail: (path) async =>
                   (path: '$path.jpg', timestamp: Duration.zero),
               cleanupAbandoned: (paths) async => abandoned.addAll(paths),
-              openEditor: (_) async {
+              openEditor: (_, session) async {
                 deferredWhenEditorOpened = [...editor.deferredPaths];
                 events.add('open editor');
-                await onOpenEditor?.call();
+                await onOpenEditor?.call(session);
               },
             ),
             child: const Text('react'),
@@ -322,6 +322,32 @@ void main() {
       },
     );
 
+    testWidgets('an unmounted editor push leaves no reaction funnel open', (
+      tester,
+    ) async {
+      await start(
+        tester,
+        record: null,
+        observer: _CameraReplyObserver((route, navigator) {
+          reportCameraUse(route, navigator);
+          manager.insertClip(0, _clip('capture'));
+          navigator.pop(true);
+        }),
+        layout: (_, _, _, _) async => _clip('layout'),
+        // The navigation returns without a destination claiming the session.
+        onOpenEditor: (_) async {},
+      );
+
+      expect(events.last, 'open editor');
+      expect(analytics.events.map((event) => event.name), [
+        'camera_opened',
+        'recording_started',
+        'recording_completed',
+        'creation_abandoned',
+      ]);
+      expect(tracker.activeMode, isNull);
+    });
+
     testWidgets('library re-recording continues the funnel into the editor', (
       tester,
     ) async {
@@ -343,7 +369,7 @@ void main() {
           expect(takes?.single.id, 'capture-2');
           return _clip('layout');
         },
-        onOpenEditor: () => tracker.editorOpened(.capture),
+        onOpenEditor: tracker.claimEditorSession,
       );
 
       expect(captures, 2);

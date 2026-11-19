@@ -10,6 +10,7 @@ import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 class _RecordingSink implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
   Completer<void>? abandonment;
+  Completer<void>? editorOpening;
 
   @override
   Future<void> logEvent({
@@ -18,6 +19,7 @@ class _RecordingSink implements AnalyticsEventSink {
   }) async {
     events.add((name: name, parameters: parameters));
     if (name == 'creation_abandoned') await abandonment?.future;
+    if (name == 'editor_opened') await editorOpening?.future;
   }
 
   @override
@@ -184,6 +186,69 @@ void main() {
           'camera_opened',
           'recording_started',
         ]);
+        expect(tracker.activeMode, VideoRecorderMode.classic);
+      },
+    );
+
+    test('an editor recorder opened before editor initialization joins the reaction', () async {
+      final sink = _RecordingSink()..editorOpening = Completer<void>();
+      var now = DateTime.utc(2026, 11, 19);
+      final tracker = CreationAnalyticsTracker(analytics: sink, now: () => now);
+      final reaction = CreationAnalyticsSession();
+
+      await tracker.cameraOpened(
+        mode: .capture,
+        entryPoint: 'library',
+        session: reaction,
+      );
+      await tracker.recordingStarted(.capture, session: reaction);
+      final mount = tracker.claimEditorSession(reaction);
+      now = now.add(const Duration(seconds: 8));
+
+      // The editor has mounted and Add clip is usable. Its provider is still
+      // initializing, so the old editorOpened callback has not run yet.
+      await tracker.cameraOpened(mode: .capture, entryPoint: 'editor');
+      await tracker.recordingStarted(.capture);
+      sink.editorOpening!.complete();
+      await mount;
+      await tracker.publishStarted(.capture);
+
+      expect(sink.events.map((event) => event.name), [
+        'camera_opened',
+        'recording_started',
+        'editor_opened',
+        'publish_started',
+      ]);
+      expect(sink.events.last.parameters['time_since_camera_open_ms'], 8000);
+    });
+
+    test(
+      'a late reaction editor release leaves the next camera live',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        final reaction = CreationAnalyticsSession();
+
+        await tracker.cameraOpened(
+          mode: .capture,
+          entryPoint: 'library',
+          session: reaction,
+        );
+        await tracker.claimEditorSession(reaction);
+        await tracker.abandonEditorSession(reaction);
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+        await tracker.claimEditorSession(reaction);
+        await tracker.abandonEditorSession(reaction);
+        await tracker.recordingStarted(.classic);
+
+        expect(sink.events.map((event) => event.name), [
+          'camera_opened',
+          'editor_opened',
+          'creation_abandoned',
+          'camera_opened',
+          'recording_started',
+        ]);
+        expect(sink.events[2].parameters['last_stage'], 'editor');
         expect(tracker.activeMode, VideoRecorderMode.classic);
       },
     );
