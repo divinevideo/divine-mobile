@@ -32,8 +32,8 @@ Defaults below describe this source configuration **without build overrides**, n
 
 | # | Feature / key | Code default | QA focus |
 |---|---|---|---|
-| 1 | Find People — `FF_FIND_PEOPLE` | Off; internal | Explore/empty Following/onboarding entry points; real creator/video pairs; real thumbnails; matching video/profile navigation; follow, dismiss, pagination and exclusions. |
-| 2 | Feed People Suggestions — `FF_FEED_PEOPLE_SUGGESTIONS` | Off; internal | Requires both `FF_FIND_PEOPLE` and `FF_FEED_PEOPLE_SUGGESTIONS`. In the native Home feed, verify one slot after ten videos, up to three creators in a carousel with no Load more action, pause/resume, Keep watching, video pagination, late responses and logical video indices. |
+| 1 | Find People — `FF_FIND_PEOPLE` | Off; internal; Find people branch only | Explore/empty Following/onboarding entry points; real creator/video pairs; real thumbnails; matching video/profile navigation; follow, dismiss, pagination and exclusions. |
+| 2 | Feed People Suggestions — `FF_FEED_PEOPLE_SUGGESTIONS` | Off; internal; Find people branch only | Requires both `FF_FIND_PEOPLE` and `FF_FEED_PEOPLE_SUGGESTIONS`. In the Home feed, which uses the shared native-player feed and so includes web, verify one slot after ten videos, up to three creators in a carousel with no Load more action, pause/resume, Keep watching, video pagination, late responses and logical video indices. |
 | 3 | Short Links — `FF_SHORT_LINKS_SHARING` | On native, off web; internal | Share real video/profile links; resolve externally, across browsers, logged out and with the app installed. Verify web CORS and full-link fallback. |
 | 4 | Publishing Ideas — `FF_PUBLISHING_IDEAS` | Off; internal | Meaningful title/description/hashtag ideas, editable and optional; cancellation, service failure, data handling and no unintended publication. |
 | 5 | Enhanced Analytics — `FF_ENHANCED_ANALYTICS` | Off | The snapshot defines the flag but has no feature call site. Recheck usage before testing events, destinations, consent, revocation and account isolation. Assess retirement if still unused. |
