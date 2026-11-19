@@ -21,7 +21,7 @@ const _metadata = DmFileMetadata(
   encryptionAlgorithm: 'aes-gcm',
   decryptionKey: 'key',
   decryptionNonce: 'nonce',
-  fileHash: 'hash-one',
+  fileHash: '1111111111111111111111111111111111111111111111111111111111111111',
   originalFileHash: 'plain-one',
   fileSize: 42,
   dimensions: '1080x1920',
@@ -374,7 +374,10 @@ void main() {
           metadata: _metadata,
         ),
       );
-      expect(parsed?.part?.fileHash, 'hash-one');
+      expect(
+        parsed?.part?.fileHash,
+        '1111111111111111111111111111111111111111111111111111111111111111',
+      );
     });
 
     test('ignores a message of a conversation the account is not in', () {
@@ -578,6 +581,106 @@ void main() {
             createdAt: createdAt,
           ),
       ];
+
+      test('ignores a take from a previous invitation delivered late', () {
+        final reinvite = snapshot(
+          revision: 2,
+          phase: CollabRoomPhase.recording,
+          members: const [
+            CollabRoomMember(
+              pubkey: author,
+              status: CollabRoomMemberStatus.joined,
+            ),
+            CollabRoomMember(
+              pubkey: sam,
+              status: CollabRoomMemberStatus.invited,
+              inviteRevision: 2,
+            ),
+          ],
+        );
+        final room = foldCollabRooms([
+          ...invites(),
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: reinvite,
+            createdAt: 2,
+          ),
+          roomMessage(
+            from: sam,
+            to: author,
+            type: CollabRoomMessageType.join,
+            createdAt: 3,
+            tags: collabRoomTags(
+              roomId: roomId,
+              type: CollabRoomMessageType.join,
+              recipientPubkey: author,
+              inviteRevision: 2,
+            ),
+          ),
+          partMessage(from: sam, createdAt: 4),
+        ], ownerPubkey: author).single;
+
+        expect(room.participants.map((m) => m.pubkey), [author, sam]);
+        expect(room.parts, isEmpty);
+      });
+
+      test('only publishes part keys to joined members', () {
+        const part = CollabRoomPart(
+          pubkey: author,
+          url: 'https://media.example/part',
+          metadata: _metadata,
+        );
+        final state = snapshot(
+          revision: 2,
+          phase: CollabRoomPhase.recording,
+          members: const [
+            CollabRoomMember(
+              pubkey: author,
+              status: CollabRoomMemberStatus.joined,
+            ),
+            CollabRoomMember(
+              pubkey: sam,
+              status: CollabRoomMemberStatus.joined,
+            ),
+            CollabRoomMember(
+              pubkey: kai,
+              status: CollabRoomMemberStatus.removed,
+            ),
+          ],
+          parts: const [part],
+        );
+        final updates = [
+          for (final recipient in [sam, kai])
+            roomMessage(
+              from: author,
+              to: recipient,
+              type: CollabRoomMessageType.state,
+              state: state,
+              createdAt: 2,
+            ),
+        ];
+        expect(
+          parseCollabRoomMessage(
+            updates.first,
+            ownerPubkey: sam,
+          )?.snapshot?.parts,
+          [part],
+        );
+        expect(
+          parseCollabRoomMessage(
+            updates.last,
+            ownerPubkey: kai,
+          )?.snapshot?.parts,
+          isEmpty,
+        );
+        final local = foldCollabRooms(
+          [...invites(), ...updates],
+          ownerPubkey: author,
+        ).single;
+        expect(local.parts.values, [part]);
+      });
 
       test('lists everyone it invited, itself first', () {
         final room = foldCollabRooms(

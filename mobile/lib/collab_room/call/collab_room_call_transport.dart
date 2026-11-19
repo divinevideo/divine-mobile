@@ -36,6 +36,9 @@ class NostrCollabRoomCallTransport implements CollabRoomCallTransport {
 
   @override
   Future<void> publish(Event event) async {
-    await _client.publishEvent(event);
+    final result = await _client.publishEvent(event);
+    if (result is! PublishSuccess) {
+      throw StateError('No relay accepted the call signal');
+    }
   }
 }

@@ -528,6 +528,7 @@ void main() {
           );
           final changes = StreamController<CollabRoomState>();
           addTearDown(changes.close);
+          when(cubit.dismiss).thenAnswer((_) async {});
           whenListen(cubit, changes.stream, initialState: open);
           // A screen below with its own Scaffold, to show the snackbar on.
           await tester.pumpWidget(

@@ -16676,6 +16676,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Notre salon vidéo a changé. Ouvre Divine pour voir les nouveautés.';
 
   @override
+  String get collabRoomCameraMode => 'Ensemble';
+
+  @override
   String get collabRoomTitle => 'Faites-le ensemble';
 
   @override

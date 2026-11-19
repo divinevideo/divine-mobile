@@ -28,7 +28,7 @@ const _metadata = DmFileMetadata(
   encryptionAlgorithm: 'aes-gcm',
   decryptionKey: 'key',
   decryptionNonce: 'nonce',
-  fileHash: 'hash-sam',
+  fileHash: '2222222222222222222222222222222222222222222222222222222222222222',
 );
 
 var _nextId = 0;
@@ -109,7 +109,8 @@ final _recording = CollabRoomSnapshot(
         encryptionAlgorithm: 'aes-gcm',
         decryptionKey: 'key',
         decryptionNonce: 'nonce',
-        fileHash: 'hash-author',
+        fileHash:
+            '3333333333333333333333333333333333333333333333333333333333333333',
       ),
     ),
     CollabRoomPart(
@@ -277,9 +278,9 @@ void main() {
         },
         verify: (cubit) {
           expect(cubit.state.partFiles[_sam], (
-            fileHash: 'hash-sam',
-            path: '/parts/hash-sam.mp4',
-            thumbnailPath: '/parts/hash-sam.mp4.jpg',
+            fileHash: '2222222222222222222222222222222222222222222222222222222222222222',
+            path: '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4',
+            thumbnailPath: '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4.jpg',
           ));
           expect(cubit.state.partFiles.keys, containsAll([_author, _sam]));
           expect(cubit.state.fetchingParts, isEmpty);
@@ -867,8 +868,8 @@ void main() {
           expect(cubit.state.composedClip?.id, 'composed');
           final cells = composed.single;
           expect(cells.map((c) => c.file.path), [
-            '/parts/hash-author.mp4',
-            '/parts/hash-sam.mp4',
+            '/parts/3333333333333333333333333333333333333333333333333333333333333333.mp4',
+            '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4',
           ]);
           expect(cells.map((c) => c.withSound), [false, true]);
           expect(cells.first.rect.left, lessThan(cells.last.rect.left));

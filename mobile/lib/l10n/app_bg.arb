@@ -6565,6 +6565,7 @@
   "collabRoomPostedDmBody": "Видеото ни е публикувано! Благодаря, че беше част от него.",
   "collabRoomCancelledDmBody": "Отмених нашата видео стая.",
   "collabRoomUpdatedDmBody": "Нещо се промени в нашата видео стая. Отвори Divine и виж.",
+  "collabRoomCameraMode": "Заедно",
   "collabRoomTitle": "Направете го заедно",
   "collabRoomMissing": "Тази стая вече я няма.",
   "collabRoomYou": "Ти",

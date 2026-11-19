@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
 import 'package:openvine/collab_room/call/collab_room_call_transport.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -183,10 +184,15 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     required String me,
     required Set<String> others,
     required String callKey,
+    required NostrSigner accountSigner,
     required CollabRoomCallTransport transport,
   }) : _me = me,
        _others = {...others},
-       _channel = CollabRoomCallChannel(callKey),
+       _channel = CollabRoomCallChannel(
+         callKey,
+         accountPubkey: me,
+         accountSigner: accountSigner,
+       ),
        _transport = transport,
        _session = _newSession();
 
@@ -223,9 +229,12 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   StreamSubscription<Event>? _subscription;
   MediaStream? _audio;
   MediaStream? _video;
+  Future<void>? _openingAudio;
+  Future<void>? _openingVideo;
   bool _micOn = true;
   bool _stopped = false;
   CollabRoomCallLobby? _lobby;
+  final _lobbyTimes = <String, int>{};
 
   /// Ids of the messages handled so far. Every relay the app reads from
   /// delivers the same message, and an answer applied twice fails.
@@ -240,83 +249,125 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   @override
   Future<void> start() async {
-    _audio = await _device(
+    if (_stopped) return;
+    await (_openingAudio = _openAudio());
+    if (_stopped) return;
+    await _device(() => Helper.setSpeakerphoneOn(true));
+    if (_stopped) return;
+    final since = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 5;
+    _subscription = _transport
+        .watch(_channel.pubkey, since: since)
+        .listen(_onEvent, onError: _onTransportError);
+    await _hello();
+    _emit();
+  }
+
+  Future<void> _openAudio() async {
+    final audio = await _device(
       () => navigator.mediaDevices.getUserMedia({
         'audio': true,
         'video': false,
       }),
     );
-    await _device(() => Helper.setSpeakerphoneOn(true));
-    final since = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 5;
-    _subscription = _transport
-        .watch(_channel.pubkey, since: since)
-        .listen(_onEvent, onError: _onTransportError);
-    await _send(
-      CollabRoomCallSignal(
-        type: CollabRoomCallSignalType.hello,
-        from: _me,
-        session: _session,
-        micOn: _micOn,
-        cameraOn: _video != null,
-      ),
-    );
-    _emit();
+    if (_stopped) {
+      await _releaseMedia(audio);
+      return;
+    }
+    _audio = audio;
   }
+
+  Future<void> _hello({Set<String>? recipients}) => _send(
+    CollabRoomCallSignal(
+      type: CollabRoomCallSignalType.hello,
+      from: _me,
+      session: _session,
+      micOn: _micOn,
+      cameraOn: _video != null,
+    ),
+    recipients: recipients,
+  );
 
   @override
   Future<void> setMicOn(bool on) async {
+    if (_stopped) return;
     _micOn = on;
     for (final track in _audio?.getAudioTracks() ?? <MediaStreamTrack>[]) {
       track.enabled = on;
     }
-    await _sendState();
     _emit();
+    await _sendState();
   }
 
   @override
   Future<void> setCameraOn(bool on) async {
-    if (on == (_video != null)) return;
+    if (_stopped || on == (_video != null)) return;
     if (on) {
-      _video = await _device(
-        () => navigator.mediaDevices.getUserMedia({
-          'audio': false,
-          'video': {
-            'facingMode': 'user',
-            'width': {'ideal': 640},
-            'height': {'ideal': 480},
-            'frameRate': {'ideal': 24},
-          },
-        }),
-      );
+      await (_openingVideo = _openVideo());
     } else {
       final video = _video;
       _video = null;
-      await _attachVideo(null);
-      for (final track in video?.getTracks() ?? <MediaStreamTrack>[]) {
-        await track.stop();
+      _emit();
+      try {
+        await _attachVideo(null);
+      } finally {
+        await _releaseMedia(video);
       }
-      await video?.dispose();
     }
-    if (on) await _attachVideo(_video?.getVideoTracks().firstOrNull);
-    await _sendState();
     _emit();
+    await _sendState();
+  }
+
+  Future<void> _openVideo() async {
+    final video = await _device(
+      () => navigator.mediaDevices.getUserMedia({
+        'audio': false,
+        'video': {
+          'facingMode': 'user',
+          'width': {'ideal': 640},
+          'height': {'ideal': 480},
+          'frameRate': {'ideal': 24},
+        },
+      }),
+    );
+    if (_stopped) {
+      await _releaseMedia(video);
+      return;
+    }
+    _video = video;
+    try {
+      await _attachVideo(video.getVideoTracks().firstOrNull);
+    } on Object {
+      if (identical(_video, video)) {
+        _video = null;
+        await _releaseMedia(video);
+      }
+      rethrow;
+    }
   }
 
   Future<void> _attachVideo(MediaStreamTrack? track) async {
-    for (final peer in _peers.values) {
+    for (final peer in _peers.values.toList()) {
       await peer.videoSender?.replaceTrack(track);
     }
   }
 
   @override
   void updateOthers(Set<String> others) {
+    final added = others.difference(_others);
     _others
       ..clear()
       ..addAll(others);
     for (final pubkey in _peers.keys.toList()) {
       if (!others.contains(pubkey)) {
-        _enqueue(() => _closePeer(pubkey));
+        unawaited(
+          _closePeer(pubkey).onError((error, stackTrace) {
+            Log.warning('Could not close a call peer', name: _logName);
+          }),
+        );
       }
+    }
+    if (_subscription != null && added.isNotEmpty) {
+      _enqueue(() => _hello(recipients: added));
     }
   }
 
@@ -324,6 +375,36 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    final hadSubscription = _subscription != null;
+    await _subscription?.cancel();
+    final audio = _audio;
+    final video = _video;
+    _audio = null;
+    _video = null;
+    try {
+      await Future.wait([
+        for (final media in [_openingAudio, _openingVideo])
+          if (media != null) media.onError((Object _, StackTrace _) {}),
+        _releaseMedia(audio),
+        _releaseMedia(video),
+        for (final pubkey in _peers.keys.toList()) _closePeer(pubkey),
+      ]);
+    } finally {
+      await _changes.close();
+      if (hadSubscription) unawaited(_sayGoodbye());
+    }
+  }
+
+  static Future<void> _releaseMedia(MediaStream? stream) async {
+    if (stream == null) return;
+    try {
+      await Future.wait(stream.getTracks().map((track) => track.stop()));
+    } finally {
+      await stream.dispose();
+    }
+  }
+
+  Future<void> _sayGoodbye() async {
     try {
       await _send(
         CollabRoomCallSignal(
@@ -333,33 +414,20 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
           micOn: _micOn,
         ),
       );
-    } on Exception catch (error) {
+    } on Object catch (error) {
       Log.warning(
         'Could not say goodbye to the call: $error',
         name: _logName,
         category: LogCategory.video,
       );
     }
-    await _subscription?.cancel();
-    for (final pubkey in _peers.keys.toList()) {
-      await _closePeer(pubkey);
-    }
-    for (final stream in [_audio, _video]) {
-      for (final track in stream?.getTracks() ?? <MediaStreamTrack>[]) {
-        await track.stop();
-      }
-      await stream?.dispose();
-    }
-    _audio = null;
-    _video = null;
-    await _changes.close();
   }
 
   void _onEvent(Event event) {
     if (!_seen.add(event.id)) return;
     _enqueue(() async {
-      final signal = await _channel.open(event);
-      if (signal == null || !signal.isFor(_me)) return;
+      final signal = await _channel.open(event, others: _others);
+      if (_stopped || signal == null || !signal.isFor(_me)) return;
       if (!_others.contains(signal.from)) return;
       await _onSignal(signal);
     });
@@ -393,6 +461,10 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   }
 
   Future<void> _onSignal(CollabRoomCallSignal signal) async {
+    if ((signal.toSession != null && signal.toSession != _session) ||
+        (signal.type == .offer && !collabRoomCallOffers(signal.from, _me))) {
+      return;
+    }
     Log.info(
       'Call ${signal.type.name} from ${pubkeyForLogs(signal.from)}',
       name: _logName,
@@ -402,6 +474,11 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       signal.from,
       () => _Peer(signal.from),
     );
+    if (signal.type != .hello &&
+        signal.type != .offer &&
+        peer.session != signal.session) {
+      return;
+    }
     peer
       ..micOn = signal.micOn
       ..cameraOn = signal.cameraOn;
@@ -449,8 +526,8 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
       case CollabRoomCallSignalType.state:
         break;
       case CollabRoomCallSignalType.lobby:
-        final current = _lobby;
-        if (current == null || signal.sentAt! > current.sentAt) {
+        if (signal.sentAt! > (_lobbyTimes[signal.from] ?? 0)) {
+          _lobbyTimes[signal.from] = signal.sentAt!;
           _lobby = CollabRoomCallLobby(
             from: signal.from,
             layout: signal.layout,
@@ -470,9 +547,14 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   Future<RTCPeerConnection> _connection(_Peer peer) async {
     final connection = await createPeerConnection(_iceServers);
+    if (_stopped || !_others.contains(peer.pubkey)) {
+      await _disposeConnection(connection);
+      throw const CollabRoomCallException('The peer left the call');
+    }
     peer.connection = connection;
     connection
       ..onConnectionState = (state) {
+        if (!identical(peer.connection, connection)) return;
         Log.info(
           'Call connection to ${pubkeyForLogs(peer.pubkey)}: ${state.name}',
           name: _logName,
@@ -485,6 +567,7 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
             peer.retries < 2) {
           peer.retries++;
           _enqueue(() async {
+            if (!identical(peer.connection, connection)) return;
             await _resetPeer(peer, keepRetries: true);
             await _offer(peer);
           });
@@ -492,21 +575,20 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
         _emit();
       }
       ..onTrack = (event) async {
-        try {
-          final remote = peer.stream ??= await createLocalMediaStream(
-            'peer-${peer.pubkey}',
-          );
+        _enqueue(() async {
+          if (!identical(peer.connection, connection)) return;
+          var remote = peer.stream;
+          if (remote == null) {
+            remote = await createLocalMediaStream('peer-${peer.pubkey}');
+            if (!identical(peer.connection, connection)) {
+              await remote.dispose();
+              return;
+            }
+            peer.stream = remote;
+          }
           await remote.addTrack(event.track);
           _emit();
-        } on Object catch (error) {
-          // flutter_webrtc throws strings; the call goes on without this
-          // track's picture.
-          Log.warning(
-            'Could not show a call track: $error',
-            name: _logName,
-            category: LogCategory.video,
-          );
-        }
+        });
       };
     return connection;
   }
@@ -613,14 +695,26 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
 
   Future<void> _resetPeer(_Peer peer, {bool keepRetries = false}) async {
     final connection = peer.connection;
+    final stream = peer.stream;
     peer
       ..connection = null
       ..videoSender = null
+      ..stream = null
       ..connected = false;
     if (!keepRetries) peer.retries = 0;
-    await connection?.close();
-    await peer.stream?.dispose();
-    peer.stream = null;
+    try {
+      if (connection != null) await _disposeConnection(connection);
+    } finally {
+      await stream?.dispose();
+    }
+  }
+
+  static Future<void> _disposeConnection(RTCPeerConnection connection) async {
+    try {
+      await connection.close();
+    } finally {
+      await connection.dispose();
+    }
   }
 
   Future<void> _closePeer(String pubkey) async {
@@ -661,12 +755,24 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     ),
   );
 
-  Future<void> _send(CollabRoomCallSignal signal) async {
-    await _transport.publish(await _channel.seal(signal));
+  Future<void> _send(
+    CollabRoomCallSignal signal, {
+    Set<String>? recipients,
+  }) => Future.wait([
+    for (final peer in signal.to == null ? recipients ?? _others : [signal.to!])
+      if (_others.contains(peer)) _sendTo(signal, peer),
+  ]);
+
+  Future<void> _sendTo(CollabRoomCallSignal signal, String peer) async {
+    final event = await _channel.seal(signal, recipient: peer);
+    if (_others.contains(peer) &&
+        (!_stopped || signal.type == CollabRoomCallSignalType.bye)) {
+      await _transport.publish(event);
+    }
   }
 
   void _emit() {
-    if (_changes.isClosed) return;
+    if (_stopped || _changes.isClosed) return;
     _changes.add(
       CollabRoomCallSnapshot(
         micOn: _micOn,

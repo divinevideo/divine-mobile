@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Onze video staat online! Bedankt dat je erbij was.",
   "collabRoomCancelledDmBody": "Ik heb onze videoruimte afgeblazen.",
   "collabRoomUpdatedDmBody": "Er is iets veranderd in onze videoruimte. Open Divine om te kijken.",
+  "collabRoomCameraMode": "Samen",
   "collabRoomTitle": "Samen maken",
   "collabRoomMissing": "Deze ruimte bestaat niet meer.",
   "collabRoomYou": "Jij",

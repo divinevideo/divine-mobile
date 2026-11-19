@@ -16455,6 +16455,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'حدث تغيير في غرفة الفيديو. افتح Divine لمعرفة الجديد.';
 
   @override
+  String get collabRoomCameraMode => 'معًا';
+
+  @override
   String get collabRoomTitle => 'صناعة مشتركة';
 
   @override

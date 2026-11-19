@@ -8,6 +8,7 @@ import 'package:models/models.dart' show NostrHexUtils;
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/signer/nostr_signer.dart';
 
 /// Kind the call's connection messages travel as: a NIP-59 wrap addressed to
 /// the call key.
@@ -43,7 +44,7 @@ enum CollabRoomCallSignalType {
 }
 
 /// The longest seat list a lobby message carries: a room holds four people.
-const _maxLobbySeats = 8;
+const _maxLobbySeats = 4;
 
 /// One connection message between two people in a room's call.
 class CollabRoomCallSignal extends Equatable {
@@ -175,6 +176,7 @@ class CollabRoomCallSignal extends Equatable {
         return null;
       }
       seats = rawSeats.cast<String>();
+      if (seats.toSet().length != seats.length) return null;
     }
     return CollabRoomCallSignal(
       type: type,
@@ -213,26 +215,45 @@ class CollabRoomCallSignal extends Equatable {
 
 /// Seals and opens a room's connection messages with its call key.
 ///
-/// Every message is signed by the call key and encrypted to it, so a relay
-/// sees only who the call key is and that it is talking. Only the people the
-/// room's snapshots reached know the key.
+/// The room key conceals the routing information from relays. The signal
+/// itself is NIP-44 encrypted between the sender and recipient accounts.
+/// Knowing the room key alone neither identifies a sender nor opens a signal.
 class CollabRoomCallChannel {
   /// Creates a channel for the call key [callKey] (a private key in hex).
-  CollabRoomCallChannel(this._callKey)
-    : pubkey = keys.getPublicKey(_callKey),
-      _signer = LocalNostrSigner(_callKey);
+  CollabRoomCallChannel(
+    this._callKey, {
+    required String accountPubkey,
+    required NostrSigner accountSigner,
+  }) : pubkey = keys.getPublicKey(_callKey),
+       _roomSigner = LocalNostrSigner(_callKey),
+       _accountPubkey = accountPubkey,
+       _accountSigner = accountSigner;
 
   final String _callKey;
-  final LocalNostrSigner _signer;
+  final LocalNostrSigner _roomSigner;
+  final String _accountPubkey;
+  final NostrSigner _accountSigner;
 
   /// The call key's public key: the author of every message of this call.
   final String pubkey;
 
-  /// Seals [signal] into a signed ephemeral event.
-  Future<Event> seal(CollabRoomCallSignal signal) async {
-    final content = await _signer.nip44Encrypt(
+  /// Seals [signal] into a short-lived event for [recipient].
+  Future<Event> seal(
+    CollabRoomCallSignal signal, {
+    required String recipient,
+  }) async {
+    if (signal.from != _accountPubkey ||
+        (signal.to != null && signal.to != recipient)) {
+      throw ArgumentError('Invalid call signal routing');
+    }
+    final payload = await _accountSigner.nip44Encrypt(
+      recipient,
+      jsonEncode({...signal._toJson(), 'to': recipient, 'room': pubkey}),
+    );
+    if (payload == null) throw StateError('The call signal did not encrypt');
+    final content = await _roomSigner.nip44Encrypt(
       pubkey,
-      jsonEncode(signal._toJson()),
+      jsonEncode({'from': _accountPubkey, 'to': recipient, 'body': payload}),
     );
     if (content == null) throw StateError('The call message did not encrypt');
     final expiresAt =
@@ -246,9 +267,11 @@ class CollabRoomCallChannel {
     ], content)..sign(_callKey);
   }
 
-  /// Opens [event], or returns `null` when it is not a valid message of this
-  /// call.
-  Future<CollabRoomCallSignal?> open(Event event) async {
+  /// Opens a valid signal addressed to this account by one of [others].
+  Future<CollabRoomCallSignal?> open(
+    Event event, {
+    required Set<String> others,
+  }) async {
     if (event.kind != collabRoomCallSignalKind ||
         event.pubkey != pubkey ||
         !event.isValid ||
@@ -256,9 +279,29 @@ class CollabRoomCallChannel {
       return null;
     }
     try {
-      final plaintext = await _signer.nip44Decrypt(pubkey, event.content);
+      final plaintext = await _roomSigner.nip44Decrypt(pubkey, event.content);
       if (plaintext == null) return null;
-      return CollabRoomCallSignal._fromJson(jsonDecode(plaintext));
+      final envelope = jsonDecode(plaintext);
+      if (envelope is! Map<String, Object?> ||
+          envelope['to'] != _accountPubkey ||
+          envelope['from'] is! String ||
+          envelope['body'] is! String) {
+        return null;
+      }
+      final from = envelope['from']! as String;
+      if (!others.contains(from)) return null;
+      final body = await _accountSigner.nip44Decrypt(
+        from,
+        envelope['body']! as String,
+      );
+      if (body == null) return null;
+      final payload = jsonDecode(body);
+      if (payload is! Map<String, Object?> || payload['room'] != pubkey) {
+        return null;
+      }
+      final signal = CollabRoomCallSignal._fromJson(payload);
+      if (signal?.from != from || signal?.to != _accountPubkey) return null;
+      return signal;
     } on FormatException {
       return null;
     } on Exception {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -26,7 +27,10 @@ const CollabRoomUpload _upload = (
   ),
 );
 
-CollabRoom _room(CollabRoomPhase phase) => foldCollabRooms([
+CollabRoom _room(
+  CollabRoomPhase phase, {
+  CollabRoomMemberStatus memberStatus = CollabRoomMemberStatus.joined,
+}) => foldCollabRooms([
   DmMessage(
     id: '1' * 64,
     conversationId: DmRepository.computeConversationId([_author, _sam]),
@@ -41,16 +45,15 @@ CollabRoom _room(CollabRoomPhase phase) => foldCollabRooms([
       snapshot: CollabRoomSnapshot(
         revision: 0,
         phase: phase,
-        members: const [
-          CollabRoomMember(
+        members: [
+          const CollabRoomMember(
             pubkey: _author,
             status: CollabRoomMemberStatus.joined,
             cell: 0,
           ),
           CollabRoomMember(
             pubkey: _sam,
-            status: CollabRoomMemberStatus.joined,
-            cell: 1,
+            status: memberStatus,
           ),
         ],
       ),
@@ -129,7 +132,7 @@ void main() {
     );
 
     blocTest<CollabRoomPartCubit, CollabRoomPartState>(
-      'uploads again on the next Send after an upload failed',
+      'uploads again on the next Send after a file read failed',
       setUp: () {
         when(
           () => service.watchRoom(_roomId),
@@ -139,7 +142,7 @@ void main() {
           () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
         ).thenAnswer((_) async {
           if (attempts++ == 0) {
-            throw const CollabRoomException('offline');
+            throw const FileSystemException('File unavailable');
           }
           return _upload;
         });
@@ -176,7 +179,7 @@ void main() {
           CollabRoomPartStatus.sent,
         ),
       ],
-      errors: () => [isA<CollabRoomException>()],
+      errors: () => [isA<FileSystemException>()],
     );
 
     blocTest<CollabRoomPartCubit, CollabRoomPartState>(
@@ -215,6 +218,39 @@ void main() {
         CollabRoomPartState(status: CollabRoomPartStatus.sending),
         CollabRoomPartState(status: CollabRoomPartStatus.failed),
       ],
+      errors: () => [isA<CollabRoomException>()],
+    );
+
+    blocTest<CollabRoomPartCubit, CollabRoomPartState>(
+      'does not send an upload if the host removed the member in the meantime',
+      build: () => CollabRoomPartCubit(service: service, roomId: _roomId),
+      act: (cubit) async {
+        var room = _room(CollabRoomPhase.recording);
+        final uploading = Completer<void>();
+        final upload = Completer<CollabRoomUpload>();
+        when(
+          () => service.watchRoom(_roomId),
+        ).thenAnswer((_) => Stream.value(room));
+        when(
+          () => service.uploadPart(video, onProgress: any(named: 'onProgress')),
+        ).thenAnswer((_) {
+          uploading.complete();
+          return upload.future;
+        });
+
+        final sending = cubit.send(video);
+        await uploading.future;
+        room = _room(
+          CollabRoomPhase.recording,
+          memberStatus: CollabRoomMemberStatus.removed,
+        );
+        upload.complete(_upload);
+        await sending;
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, CollabRoomPartStatus.failed);
+        verifyNever(() => service.handInPart(any(), _upload));
+      },
       errors: () => [isA<CollabRoomException>()],
     );
 

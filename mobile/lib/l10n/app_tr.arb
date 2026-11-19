@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Videomuz yayında! Parçası olduğun için teşekkürler.",
   "collabRoomCancelledDmBody": "Video odamızı iptal ettim.",
   "collabRoomUpdatedDmBody": "Video odamızda bir şey değişti. Yenilikleri görmek için Divine'ı aç.",
+  "collabRoomCameraMode": "Birlikte",
   "collabRoomTitle": "Birlikte yapın",
   "collabRoomMissing": "Bu oda artık yok.",
   "collabRoomYou": "Sen",

@@ -6501,6 +6501,7 @@
   "collabRoomPostedDmBody": "ቪዲዮአችን ታትሟል! ስለተሳተፉ እናመሰግናለን።",
   "collabRoomCancelledDmBody": "የቪዲዮ ክፍላችንን ሰርዣለሁ።",
   "collabRoomUpdatedDmBody": "በቪዲዮ ክፍላችን ለውጥ አለ። ለማየት Divineን ይክፈቱ።",
+  "collabRoomCameraMode": "በጋራ",
   "collabRoomTitle": "አብሮ መሥራት",
   "collabRoomMissing": "ይህ ክፍል ከአሁን በኋላ የለም።",
   "collabRoomYou": "እርስዎ",

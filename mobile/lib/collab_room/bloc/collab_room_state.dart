@@ -183,9 +183,12 @@ class CollabRoomState extends Equatable {
   /// Whether the room's layout fits everyone still in it.
   bool get layoutFits {
     final room = this.room;
-    return room != null &&
-        room.layoutPreset?.cellCount == room.participants.length &&
-        room.participants.every((member) => member.cell != null);
+    final count = room?.layoutPreset?.cellCount;
+    if (room == null || count == null) return false;
+    final cells = room.participants.map((member) => member.cell).toList();
+    return cells.length == count &&
+        cells.toSet().length == count &&
+        cells.every((cell) => cell != null && cell >= 0 && cell < count);
   }
 
   /// Whether the author can put the video together.

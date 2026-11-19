@@ -4708,6 +4708,27 @@ void main() {
       verifyNever(() => mockDraftStorage.deleteDraft(any()));
     });
 
+    test(
+      'saving a Together post as a draft preserves the unrelated autosave',
+      () async {
+        stubSaveDraft();
+        const roomId = '0123456789abcdef0123456789abcdef';
+        container.read(collabRoomPostProvider.notifier).set(roomId);
+        container.read(clipManagerProvider.notifier).replaceClips([
+          sessionClip,
+        ]);
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        expect(
+          await notifier.saveAsDraft(enforceCreateNewDraft: true),
+          DraftSaveOutcome.saved,
+        );
+        final saved = keptDrafts().single;
+        expect(saved.collabRoomId, roomId);
+        verifyNever(() => mockDraftStorage.deleteDraft(any()));
+      },
+    );
+
     test('does not copy a draft returned after its owner changes', () async {
       final lookup = Completer<DivineVideoDraft?>();
       final lookupStarted = Completer<void>();

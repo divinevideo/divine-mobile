@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "動画を公開しました！参加してくれてありがとう。",
   "collabRoomCancelledDmBody": "動画ルームを中止しました。",
   "collabRoomUpdatedDmBody": "動画ルームに変更がありました。Divine を開いて確認してください。",
+  "collabRoomCameraMode": "一緒に",
   "collabRoomTitle": "みんなで作る",
   "collabRoomMissing": "このルームはもうありません。",
   "collabRoomYou": "あなた",

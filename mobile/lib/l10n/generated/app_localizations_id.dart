@@ -16303,6 +16303,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Ada yang berubah di ruang video kita. Buka Divine untuk lihat.';
 
   @override
+  String get collabRoomCameraMode => 'Bersama';
+
+  @override
   String get collabRoomTitle => 'Bikin bareng';
 
   @override

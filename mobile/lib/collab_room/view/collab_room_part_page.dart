@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -37,6 +39,24 @@ class CollabRoomPartPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final part = ref.watch(collabRoomPartProvider);
+    if (part == null || !part.isActive || part.roomId != roomId) {
+      return RouteErrorScreen(message: context.l10n.collabRoomMissing);
+    }
+    final liveRoom = ref.watch(collabRoomLiveProvider(roomId));
+    if (liveRoom.isLoading) {
+      return const Scaffold(
+        body: Center(child: DivineCircularProgressIndicator()),
+      );
+    }
+    final room = liveRoom.value;
+    if (room == null ||
+        part.me != room.ownerPubkey ||
+        part.inviteRevision != room.me?.inviteRevision ||
+        room.phase != CollabRoomPhase.recording ||
+        room.me?.status != CollabRoomMemberStatus.joined) {
+      return RouteErrorScreen(message: context.l10n.collabRoomMissing);
+    }
     final service = ref.watch(collabRoomServiceProvider);
     final (:clip, :failed) = ref.watch(
       videoEditorProvider.select(
@@ -45,7 +65,11 @@ class CollabRoomPartPage extends ConsumerWidget {
     );
     return BlocProvider(
       key: ValueKey((service, roomId)),
-      create: (_) => CollabRoomPartCubit(service: service, roomId: roomId),
+      create: (_) => CollabRoomPartCubit(
+        service: service,
+        roomId: roomId,
+        inviteRevision: part.inviteRevision,
+      ),
       child: BlocListener<CollabRoomPartCubit, CollabRoomPartState>(
         listenWhen: (previous, current) => previous.status != current.status,
         listener: (context, state) {

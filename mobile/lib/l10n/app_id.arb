@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Video kita sudah tayang! Makasih sudah ikut.",
   "collabRoomCancelledDmBody": "Aku membatalkan ruang video kita.",
   "collabRoomUpdatedDmBody": "Ada yang berubah di ruang video kita. Buka Divine untuk lihat.",
+  "collabRoomCameraMode": "Bersama",
   "collabRoomTitle": "Bikin bareng",
   "collabRoomMissing": "Ruangan ini sudah tidak ada.",
   "collabRoomYou": "Kamu",

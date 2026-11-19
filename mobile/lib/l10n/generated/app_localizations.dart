@@ -27423,6 +27423,12 @@ abstract class AppLocalizations {
   /// **'Our video room changed. Open Divine to see what\'s new.'**
   String get collabRoomUpdatedDmBody;
 
+  /// Short camera mode label for filming a video with other people.
+  ///
+  /// In en, this message translates to:
+  /// **'Together'**
+  String get collabRoomCameraMode;
+
   /// Title of the screen of a collaborative video room, where up to four people each film their own part of a split-screen video.
   ///
   /// In en, this message translates to:

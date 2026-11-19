@@ -34,8 +34,7 @@ bool collabRoomCallIsOpen(CollabRoom room) {
       collabRoomCallOthers(room).isNotEmpty;
 }
 
-/// Joins the room's call while the room screen shows, with the microphone on,
-/// and keeps who is called in step with who is in the room.
+/// Offers the room's call and keeps its membership in step with the room.
 ///
 /// The call is the room's [collabRoomCallProvider], which a part's editor
 /// shares, so it outlives the camera flow on top of the room.
@@ -67,99 +66,52 @@ class CollabRoomCallScope extends ConsumerWidget {
     );
     return BlocProvider.value(
       value: call,
-      child: _JoinsCall(
-        call: call,
-        child: MultiBlocListener(
-          listeners: [
-            BlocListener<CollabRoomCubit, CollabRoomState>(
-              listenWhen: (previous, current) =>
-                  previous.room?.participants != current.room?.participants,
-              listener: (context, state) => context
-                  .read<CollabRoomCallCubit>()
-                  .othersChanged(collabRoomCallOthers(state.room!)),
-            ),
-            // The author's lobby changes reach the others through the call in
-            // a fraction of the time its snapshot takes.
-            BlocListener<CollabRoomCubit, CollabRoomState>(
-              listenWhen: (previous, current) {
-                final room = current.room;
-                return room != null &&
-                    room.isAuthor &&
-                    room.phase == CollabRoomPhase.lobby &&
-                    (previous.layout != current.layout ||
-                        !listEquals(
-                          previous.lobbySeatOrder,
-                          current.lobbySeatOrder,
-                        ));
-              },
-              listener: (context, state) => runDetached(
-                context.read<CollabRoomCallCubit>().shareLobby(
-                  layout: state.layout?.name,
-                  seats: state.lobbySeatOrder,
-                  revision: state.nextRevision - 1,
-                ),
-                'share the collab room lobby',
-                logName: 'CollabRoomCallScope',
-                category: LogCategory.video,
+      child: MultiBlocListener(
+        listeners: [
+          // The author's lobby changes reach the others through the call in
+          // a fraction of the time its snapshot takes.
+          BlocListener<CollabRoomCubit, CollabRoomState>(
+            listenWhen: (previous, current) {
+              final room = current.room;
+              return room != null &&
+                  room.isAuthor &&
+                  room.phase == CollabRoomPhase.lobby &&
+                  (previous.layout != current.layout ||
+                      !listEquals(
+                        previous.lobbySeatOrder,
+                        current.lobbySeatOrder,
+                      ));
+            },
+            listener: (context, state) => runDetached(
+              context.read<CollabRoomCallCubit>().shareLobby(
+                layout: state.layout?.name,
+                seats: state.lobbySeatOrder,
+                revision: state.nextRevision - 1,
               ),
+              'share the collab room lobby',
+              logName: 'CollabRoomCallScope',
+              category: LogCategory.video,
             ),
-            BlocListener<CollabRoomCallCubit, CollabRoomCallState>(
-              listenWhen: (previous, current) =>
-                  current.call.lobby != null &&
-                  previous.call.lobby != current.call.lobby,
-              listener: (context, state) {
-                final lobby = state.call.lobby!;
-                context.read<CollabRoomCubit>().lobbyHinted(
-                  from: lobby.from,
-                  layout: lobby.layout,
-                  seats: lobby.seats,
-                  revision: lobby.revision,
-                );
-              },
-            ),
-          ],
-          child: child,
-        ),
+          ),
+          BlocListener<CollabRoomCallCubit, CollabRoomCallState>(
+            listenWhen: (previous, current) =>
+                current.call.lobby != null &&
+                previous.call.lobby != current.call.lobby,
+            listener: (context, state) {
+              final lobby = state.call.lobby!;
+              context.read<CollabRoomCubit>().lobbyHinted(
+                from: lobby.from,
+                layout: lobby.layout,
+                seats: lobby.seats,
+                revision: lobby.revision,
+              );
+            },
+          ),
+        ],
+        child: child,
       ),
     );
   }
-}
-
-/// Joins [call] once the room shows, with everyone else in the room.
-///
-/// A call the editor of a part already joined stays as it is.
-class _JoinsCall extends StatefulWidget {
-  const _JoinsCall({required this.call, required this.child});
-
-  final CollabRoomCallCubit call;
-  final Widget child;
-
-  @override
-  State<_JoinsCall> createState() => _JoinsCallState();
-}
-
-class _JoinsCallState extends State<_JoinsCall> {
-  @override
-  void initState() {
-    super.initState();
-    // After the first frame: the cubit's listeners must not hear it change
-    // while the tree is building.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final room = context.read<CollabRoomCubit>().state.room;
-      if (room == null) return;
-      widget.call.othersChanged(collabRoomCallOthers(room));
-      runDetached(
-        widget.call.join(),
-        'join the collab room call',
-        logName: 'CollabRoomCallScope',
-        category: LogCategory.video,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }
 
 /// The mute and camera buttons, and where the call stands.
@@ -210,7 +162,7 @@ class CollabRoomCallControls extends StatelessWidget {
                     : l10n.collabRoomCallUnmute,
                 onPressed: inCall
                     ? cubit.toggleMic
-                    : !canJoin
+                    : !canJoin || state.others.isEmpty
                     ? null
                     : () => runDetached(
                         cubit.join(),
@@ -231,6 +183,13 @@ class CollabRoomCallControls extends StatelessWidget {
                     : l10n.collabRoomCallCameraOn,
                 onPressed: inCall ? cubit.toggleCamera : null,
               ),
+              if (!canJoin)
+                DivineIconButton(
+                  icon: DivineIconName.signOut,
+                  type: DivineIconButtonType.secondary,
+                  semanticLabel: l10n.collabRoomCallLeave,
+                  onPressed: cubit.leave,
+                ),
             ],
           ),
           if (notice != null)
@@ -266,11 +225,13 @@ class CollabRoomLiveVideo extends StatefulWidget {
 
 class _CollabRoomLiveVideoState extends State<CollabRoomLiveVideo> {
   final _renderer = RTCVideoRenderer();
+  late final Future<void> _initializing;
   bool _ready = false;
 
   @override
   void initState() {
     super.initState();
+    _initializing = _renderer.initialize();
     runDetached(
       _attach(),
       'show a collab room call video',
@@ -280,7 +241,7 @@ class _CollabRoomLiveVideoState extends State<CollabRoomLiveVideo> {
   }
 
   Future<void> _attach() async {
-    await _renderer.initialize();
+    await _initializing;
     if (!mounted) return;
     _renderer.srcObject = widget.stream;
     setState(() => _ready = true);
@@ -297,7 +258,7 @@ class _CollabRoomLiveVideoState extends State<CollabRoomLiveVideo> {
   @override
   void dispose() {
     runDetached(
-      _renderer.dispose(),
+      _initializing.whenComplete(_renderer.dispose),
       'release a collab room call video',
       logName: 'CollabRoomLiveVideo',
       category: LogCategory.video,
@@ -325,8 +286,17 @@ class CollabRoomEditorCallButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final id = collabRoomPartCallId(ref.watch(collabRoomPartProvider));
-    if (id == null) return const SizedBox.shrink();
+    final part = ref.watch(collabRoomPartProvider);
+    final id = collabRoomPartCallId(part);
+    if (id == null || part == null) return const SizedBox.shrink();
+    final room = ref.watch(collabRoomLiveProvider(id.roomId)).value;
+    if (room == null ||
+        room.ownerPubkey != id.me ||
+        room.callKey != id.callKey ||
+        room.me?.inviteRevision != part.inviteRevision ||
+        !collabRoomCallIsOpen(room)) {
+      return const SizedBox.shrink();
+    }
     final call = ref.watch(collabRoomCallProvider(id));
     return BlocSelector<CollabRoomCallCubit, CollabRoomCallState, _EditorCall>(
       bloc: call,

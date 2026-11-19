@@ -16412,6 +16412,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'ہمارے ویڈیو روم میں تبدیلی ہوئی ہے۔ دیکھنے کے لیے Divine کھولیں۔';
 
   @override
+  String get collabRoomCameraMode => 'ساتھ مل کر';
+
+  @override
   String get collabRoomTitle => 'مل کر بنائیں';
 
   @override

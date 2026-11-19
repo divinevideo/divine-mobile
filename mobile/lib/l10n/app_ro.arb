@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Videoul nostru e online! Mersi că ai fost parte din el.",
   "collabRoomCancelledDmBody": "Am anulat camera noastră video.",
   "collabRoomUpdatedDmBody": "Ceva s-a schimbat în camera noastră video. Deschide Divine să vezi.",
+  "collabRoomCameraMode": "Împreună",
   "collabRoomTitle": "Faceți-l împreună",
   "collabRoomMissing": "Camera asta nu mai există.",
   "collabRoomYou": "Tu",

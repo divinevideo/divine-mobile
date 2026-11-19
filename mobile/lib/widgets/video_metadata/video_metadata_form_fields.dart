@@ -1,6 +1,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
@@ -218,16 +219,16 @@ class _VideoMetadataFormFieldsState
   }
 }
 
-/// Shows the "Post time" tile unless the recording is a video reply — a
-/// reply belongs to its thread now, and scheduled replies are out of scope
-/// (#3538).
+/// Shows the "Post time" tile for posts with a scheduling flow. Replies and
+/// Together posts are delivered to their thread or room when published.
 class _ScheduleSelectorGate extends ConsumerWidget {
   const _ScheduleSelectorGate();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final replyContext = ref.watch(videoReplyContextProvider);
-    if (replyContext != null) return const SizedBox.shrink();
+    final roomId = ref.watch(collabRoomPostProvider);
+    if (replyContext != null || roomId != null) return const SizedBox.shrink();
     return const VideoMetadataScheduleSelector();
   }
 }

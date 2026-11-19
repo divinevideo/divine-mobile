@@ -84,23 +84,37 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
   /// state, so it stays out of [CollabRoomCallState].
   CollabRoomCall? _call;
   StreamSubscription<CollabRoomCallSnapshot>? _changes;
+  Future<void>? _stopping;
+  CollabRoomCall? _changingCamera;
+  bool _closing = false;
 
   /// Joins the call with the microphone on.
   Future<void> join() async {
-    if (_call != null || state.others.isEmpty) return;
-    final call = _call = _createCall(
-      me: _me,
-      others: state.others,
-      callKey: _callKey,
-    );
+    if (_closing ||
+        _call != null ||
+        _stopping != null ||
+        state.others.isEmpty) {
+      return;
+    }
     emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joining));
-    _changes = call.changes.listen(
-      (snapshot) => emitIfOpen(state.copyWith(call: snapshot)),
-    );
+    CollabRoomCall? call;
     try {
+      call = _call = _createCall(
+        me: _me,
+        others: state.others,
+        callKey: _callKey,
+      );
+      _changes = call.changes.listen((snapshot) {
+        if (identical(_call, call)) {
+          emitIfOpen(state.copyWith(call: snapshot));
+        }
+      });
       await call.start();
-      emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joined));
-    } on Exception catch (error, stackTrace) {
+      if (identical(_call, call)) {
+        emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joined));
+      }
+    } on Object catch (error, stackTrace) {
+      if (!identical(_call, call) || _closing) return;
       addError(error, stackTrace);
       await _hangUp();
       emitIfOpen(state.copyWith(status: CollabRoomCallStatus.failed));
@@ -121,19 +135,29 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
 
   /// Mutes or unmutes the microphone.
   Future<void> toggleMic() async {
-    await _call?.setMicOn(!state.call.micOn);
+    try {
+      await _call?.setMicOn(!state.call.micOn);
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
   }
 
   /// Turns the camera on or off.
   Future<void> toggleCamera() async {
     final call = _call;
-    if (call == null) return;
+    if (call == null || identical(_changingCamera, call)) return;
+    _changingCamera = call;
     try {
       await call.setCameraOn(!state.call.cameraOn);
-      emitIfOpen(state.copyWith(cameraFailed: false));
-    } on Exception catch (error, stackTrace) {
+      if (identical(_call, call)) {
+        emitIfOpen(state.copyWith(cameraFailed: false));
+      }
+    } on Object catch (error, stackTrace) {
+      if (!identical(_call, call)) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(cameraFailed: true));
+    } finally {
+      if (identical(_changingCamera, call)) _changingCamera = null;
     }
   }
 
@@ -149,7 +173,7 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     if (call == null || state.status != CollabRoomCallStatus.joined) return;
     try {
       await call.shareLobby(layout: layout, seats: seats, revision: revision);
-    } on Exception catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
     }
   }
@@ -164,16 +188,30 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
     _call?.updateOthers(others);
   }
 
-  Future<void> _hangUp() async {
+  Future<void> _hangUp() {
+    final stopping = _stopping;
+    if (stopping != null) return stopping;
     final call = _call;
     _call = null;
-    await _changes?.cancel();
-    _changes = null;
-    await call?.stop();
+    if (call == null) return Future.value();
+    return _stopping = _stopCall(call).whenComplete(() {
+      _stopping = null;
+    });
+  }
+
+  Future<void> _stopCall(CollabRoomCall call) async {
+    try {
+      await _changes?.cancel();
+      _changes = null;
+      await call.stop();
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
   }
 
   @override
   Future<void> close() async {
+    _closing = true;
     await _hangUp();
     return super.close();
   }

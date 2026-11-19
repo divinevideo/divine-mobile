@@ -129,6 +129,12 @@ class _RoomListeners extends ConsumerWidget {
   }
 
   static void _closeEndedRoom(BuildContext context, CollabRoomState state) {
+    runDetached(
+      context.read<CollabRoomCubit>().dismiss(),
+      'delete the collab room parts',
+      logName: 'CollabRoomView',
+      category: LogCategory.video,
+    );
     final l10n = context.l10n;
     _showSnackBar(
       context,
@@ -834,8 +840,7 @@ class _Actions extends ConsumerWidget {
   }
 
   /// Films the part with the call paused: the camera and microphone belong
-  /// to the recorder meanwhile. The call comes back once the camera flow is
-  /// gone — unless the editor joined it already, which leaves it as it is.
+  /// to the recorder meanwhile. Someone can choose to rejoin in the editor.
   Future<void> _filmPart(
     BuildContext context,
     WidgetRef ref,
@@ -845,11 +850,6 @@ class _Actions extends ConsumerWidget {
     await call?.leave();
     if (!context.mounted) return;
     await openCollabRoomPartRecorder(context, ref, room);
-    if (!context.mounted) return;
-    // Rejoined while the recorder still animates out, the call would find
-    // the microphone taken.
-    await collabRoomUntilUncovered(context);
-    if (call != null && !call.isClosed) await call.join();
   }
 
   /// Asks before leaving: only the host can bring someone back.

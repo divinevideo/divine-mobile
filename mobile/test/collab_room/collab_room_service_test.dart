@@ -26,7 +26,7 @@ const _metadata = DmFileMetadata(
   encryptionAlgorithm: 'aes-gcm',
   decryptionKey: 'key',
   decryptionNonce: 'nonce',
-  fileHash: 'hash',
+  fileHash: '1111111111111111111111111111111111111111111111111111111111111111',
 );
 
 var _nextId = 0;
@@ -61,6 +61,7 @@ CollabRoomSnapshot _lobby({
   int revision = 0,
   CollabRoomPhase phase = CollabRoomPhase.lobby,
   CollabRoomMemberStatus samStatus = CollabRoomMemberStatus.invited,
+  CollabRoomMemberStatus kaiStatus = CollabRoomMemberStatus.declined,
 }) => CollabRoomSnapshot(
   revision: revision,
   phase: phase,
@@ -70,10 +71,7 @@ CollabRoomSnapshot _lobby({
       status: CollabRoomMemberStatus.joined,
     ),
     CollabRoomMember(pubkey: _sam, status: samStatus),
-    const CollabRoomMember(
-      pubkey: _kai,
-      status: CollabRoomMemberStatus.declined,
-    ),
+    CollabRoomMember(pubkey: _kai, status: kaiStatus),
   ],
 );
 
@@ -112,6 +110,7 @@ void main() {
           content: any(named: 'content'),
           additionalTags: any(named: 'additionalTags'),
           skipNip04Fallback: any(named: 'skipNip04Fallback'),
+          backgroundDelivery: any(named: 'backgroundDelivery'),
         ),
       ).thenAnswer(
         (invocation) async =>
@@ -149,6 +148,7 @@ void main() {
           content: any(named: 'content'),
           additionalTags: captureAny(named: 'additionalTags'),
           skipNip04Fallback: true,
+          backgroundDelivery: any(named: 'backgroundDelivery'),
         ),
       ).captured.slices(2))
         (call[0] as String, call[1] as List<List<String>>),
@@ -233,6 +233,7 @@ void main() {
             content: any(named: 'content'),
             additionalTags: any(named: 'additionalTags'),
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('refused'));
 
@@ -285,6 +286,7 @@ void main() {
             content: any(named: 'content'),
             additionalTags: any(named: 'additionalTags'),
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
 
@@ -392,6 +394,7 @@ void main() {
             content: any(named: 'content'),
             additionalTags: any(named: 'additionalTags'),
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
           ),
         );
       });
@@ -403,6 +406,7 @@ void main() {
             content: any(named: 'content'),
             additionalTags: any(named: 'additionalTags'),
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
 
@@ -410,6 +414,41 @@ void main() {
           service().publish(room, room.toSnapshot(revision: 1)),
           throwsA(isA<CollabRoomException>()),
         );
+      });
+
+      test('rejects a concurrent update built on an older snapshot', () async {
+        final roomService = service();
+        final sending = Completer<void>();
+        final firstDelivery = Completer<NIP17SendResult>();
+        when(
+          () => dm.sendMessage(
+            recipientPubkey: _sam,
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: true,
+            backgroundDelivery: any(named: 'backgroundDelivery'),
+          ),
+        ).thenAnswer((_) {
+          sending.complete();
+          return firstDelivery.future;
+        });
+
+        final first = roomService.publish(
+          room,
+          room.toSnapshot(
+            revision: 1,
+            phase: CollabRoomPhase.recording,
+          ),
+        );
+        await sending.future;
+        final stale = expectLater(
+          roomService.publish(room, room.toSnapshot(revision: 1)),
+          throwsA(isA<CollabRoomException>()),
+        );
+        firstDelivery.complete(_sent(_sam));
+        await Future.wait([first, stale]);
+
+        expect(sentMessages().map((message) => message.$1), [_sam]);
       });
 
       test('refuses a publish from a member', () async {
@@ -525,7 +564,10 @@ void main() {
             from: _author,
             to: _sam,
             type: CollabRoomMessageType.invite,
-            snapshot: _lobby(samStatus: CollabRoomMemberStatus.joined),
+            snapshot: _lobby(
+              phase: CollabRoomPhase.recording,
+              samStatus: CollabRoomMemberStatus.joined,
+            ),
           ),
         ]))!;
         stubUpload();
@@ -550,7 +592,10 @@ void main() {
             from: _author,
             to: _sam,
             type: CollabRoomMessageType.invite,
-            snapshot: _lobby(samStatus: CollabRoomMemberStatus.joined),
+            snapshot: _lobby(
+              phase: CollabRoomPhase.recording,
+              samStatus: CollabRoomMemberStatus.joined,
+            ),
           ),
         ]))!;
         when(
@@ -615,6 +660,39 @@ void main() {
         expect(first.path, contains(_author));
       });
 
+      test('shares a download between preview and composition', () async {
+        final roomService = service();
+        final files = await Future.wait([
+          roomService.partFile(_roomId, part),
+          roomService.partFile(_roomId, part),
+        ]);
+        expect(decrypted, hasLength(1));
+        expect(files.first.path, files.last.path);
+        expect(await files.last.readAsBytes(), [1, 2, 3]);
+      });
+
+      test(
+        'rejects an invalid ciphertext hash before reading the part',
+        () async {
+          const invalidPart = CollabRoomPart(
+            pubkey: _sam,
+            url: 'https://media.example/sam',
+            metadata: DmFileMetadata(
+              fileType: 'video/mp4',
+              encryptionAlgorithm: 'aes-gcm',
+              decryptionKey: 'key',
+              decryptionNonce: 'nonce',
+              fileHash: 'invalid',
+            ),
+          );
+          await expectLater(
+            service().partFile(_roomId, invalidPart),
+            throwsA(isA<CollabRoomException>()),
+          );
+          expect(decrypted, isEmpty);
+        },
+      );
+
       test('deletes the parts of a room', () async {
         final file = await service().partFile(_roomId, part);
         await service().deleteRoomFiles(_roomId);
@@ -630,6 +708,50 @@ void main() {
     });
 
     group('markPosted', () {
+      test(
+        'retries the posted snapshot for a recipient without a copy',
+        () async {
+          const address = '34236:$_author:d';
+          final recording = _lobby(
+            phase: CollabRoomPhase.recording,
+            samStatus: CollabRoomMemberStatus.joined,
+            kaiStatus: CollabRoomMemberStatus.joined,
+          );
+          final posted = service().markPosted(_roomId, address);
+          scheduleMicrotask(() {
+            history.add([
+              _message(
+                from: _author,
+                to: _sam,
+                type: CollabRoomMessageType.invite,
+                snapshot: recording,
+              ),
+              _message(
+                from: _author,
+                to: _sam,
+                type: CollabRoomMessageType.state,
+                createdAt: 2,
+                snapshot: CollabRoomSnapshot(
+                  revision: 1,
+                  phase: CollabRoomPhase.posted,
+                  members: recording.members,
+                  videoAddress: address,
+                ),
+              ),
+            ]);
+          });
+          await posted;
+
+          final (recipient, tags) = sentMessages().single;
+          final state = tags.firstWhere(
+            (tag) => tag.first == 'collab-room-state',
+          );
+          expect(recipient, _kai);
+          expect(CollabRoomSnapshot.decode(state[1])?.videoAddress, address);
+          expect(CollabRoomSnapshot.decode(state[1])?.revision, 1);
+        },
+      );
+
       test('publishes the posted video to everyone', () async {
         final posted = service().markPosted(_roomId, '34236:$_author:d');
         scheduleMicrotask(
@@ -674,6 +796,7 @@ void main() {
             content: any(named: 'content'),
             additionalTags: any(named: 'additionalTags'),
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
           ),
         );
       });

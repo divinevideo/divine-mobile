@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/collab_room/call/collab_room_call_signal.dart';
@@ -9,15 +10,30 @@ const _callKey =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _otherKey =
     '2222222222222222222222222222222222222222222222222222222222222222';
-const _author =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const _authorKey =
+    '3333333333333333333333333333333333333333333333333333333333333333';
+const _samKey =
+    '4444444444444444444444444444444444444444444444444444444444444444';
+final String _author = keys.getPublicKey(_authorKey);
+final String _sam = keys.getPublicKey(_samKey);
 
 void main() {
   group(CollabRoomCallChannel, () {
-    final channel = CollabRoomCallChannel(_callKey);
+    final authorSigner = LocalNostrSigner(_authorKey);
+    final sender = CollabRoomCallChannel(
+      _callKey,
+      accountPubkey: _author,
+      accountSigner: authorSigner,
+    );
+    final channel = CollabRoomCallChannel(
+      _callKey,
+      accountPubkey: _sam,
+      accountSigner: LocalNostrSigner(_samKey),
+    );
+    Future<CollabRoomCallSignal?> open(Event event) =>
+        channel.open(event, others: {_author});
 
-    const offer = CollabRoomCallSignal(
+    final offer = CollabRoomCallSignal(
       type: CollabRoomCallSignalType.offer,
       from: _author,
       session: 's1',
@@ -29,49 +45,65 @@ void main() {
       cameraOn: true,
     );
 
-    test('seals a message only the call key can open', () async {
-      final event = await channel.seal(offer);
+    test('seals the offer for the intended account', () async {
+      final event = await sender.seal(offer, recipient: _sam);
 
       expect(event.kind, collabRoomCallSignalKind);
       expect(event.pubkey, channel.pubkey);
       expect(event.isSigned, isTrue);
       expect(event.content, isNot(contains('v=0')));
-      expect(await channel.open(event), offer);
+      expect(await open(event), offer);
+      expect(await channel.open(event, others: const {}), isNull);
+      expect(await sender.open(event, others: {_sam}), isNull);
     });
 
     test('carries the lobby the author describes', () async {
-      const lobby = CollabRoomCallSignal(
+      final lobby = CollabRoomCallSignal(
         type: CollabRoomCallSignalType.lobby,
         from: _author,
         session: 's1',
+        to: _sam,
         layout: 'circleTopLeft',
         seats: [_sam, _author],
         revision: 4,
         sentAt: 1700000000000000,
       );
 
-      expect(await channel.open(await channel.seal(lobby)), lobby);
+      expect(await open(await sender.seal(lobby, recipient: _sam)), lobby);
     });
 
     test('ignores a message of another call', () async {
-      final event = await CollabRoomCallChannel(_otherKey).seal(offer);
-      expect(await channel.open(event), isNull);
+      final other = CollabRoomCallChannel(
+        _otherKey,
+        accountPubkey: _author,
+        accountSigner: authorSigner,
+      );
+      final event = await other.seal(offer, recipient: _sam);
+      expect(await open(event), isNull);
     });
 
     test('ignores a tampered message', () async {
-      final event = await channel.seal(offer);
+      final event = await sender.seal(offer, recipient: _sam);
       final tampered = Event.fromJson({
         ...event.toJson(),
         'content': '${event.content}x',
       });
-      expect(await channel.open(tampered), isNull);
+      expect(await open(tampered), isNull);
     });
 
     Future<Event> sealRaw(Object json) async {
       final signer = LocalNostrSigner(_callKey);
+      final payload = await authorSigner.nip44Encrypt(
+        _sam,
+        jsonEncode(
+          json is Map<String, Object?>
+              ? {...json, 'room': channel.pubkey, 'to': _sam}
+              : json,
+        ),
+      );
       final content = await signer.nip44Encrypt(
         channel.pubkey,
-        jsonEncode(json),
+        jsonEncode({'from': _author, 'to': _sam, 'body': payload}),
       );
       return Event(channel.pubkey, collabRoomCallSignalKind, const [], content!)
         ..sign(_callKey);
@@ -136,7 +168,7 @@ void main() {
       ),
     ]) {
       test('ignores $name', () async {
-        expect(await channel.open(await sealRaw(json)), isNull);
+        expect(await open(await sealRaw(json)), isNull);
       });
     }
 
@@ -149,19 +181,19 @@ void main() {
         const [],
         content!,
       )..sign(_callKey);
-      expect(await channel.open(event), isNull);
+      expect(await open(event), isNull);
     });
   });
 
   group(CollabRoomCallSignal, () {
     test('is read by its recipient, or everyone when it has none', () {
-      const toSam = CollabRoomCallSignal(
+      final toSam = CollabRoomCallSignal(
         type: CollabRoomCallSignalType.answer,
         from: _author,
         session: 's',
         to: _sam,
       );
-      const toAll = CollabRoomCallSignal(
+      final toAll = CollabRoomCallSignal(
         type: CollabRoomCallSignalType.hello,
         from: _author,
         session: 's',
@@ -175,8 +207,11 @@ void main() {
 
   group('collabRoomCallOffers', () {
     test('lets exactly one of two people offer', () {
-      expect(collabRoomCallOffers(_author, _sam), isTrue);
-      expect(collabRoomCallOffers(_sam, _author), isFalse);
+      final offers = [
+        if (collabRoomCallOffers(_author, _sam)) _author,
+        if (collabRoomCallOffers(_sam, _author)) _sam,
+      ];
+      expect(offers, hasLength(1));
     });
   });
 }

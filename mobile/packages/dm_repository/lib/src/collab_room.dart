@@ -103,6 +103,7 @@ class CollabRoomMember extends Equatable {
     required this.pubkey,
     required this.status,
     this.cell,
+    this.inviteRevision = 0,
   });
 
   /// Hex public key.
@@ -114,16 +115,24 @@ class CollabRoomMember extends Equatable {
   /// Index of the layout cell the person fills, once the author fixed it.
   final int? cell;
 
-  /// Returns a copy with [status] and, when given, [cell].
-  CollabRoomMember copyWith({CollabRoomMemberStatus? status, int? cell}) =>
-      CollabRoomMember(
-        pubkey: pubkey,
-        status: status ?? this.status,
-        cell: cell ?? this.cell,
-      );
+  /// The host snapshot revision that last invited this member.
+  final int inviteRevision;
+
+  /// Returns a copy with the new status, seat or invitation revision.
+  CollabRoomMember copyWith({
+    CollabRoomMemberStatus? status,
+    int? cell,
+    bool clearCell = false,
+    int? inviteRevision,
+  }) => CollabRoomMember(
+    pubkey: pubkey,
+    status: status ?? this.status,
+    cell: clearCell ? null : cell ?? this.cell,
+    inviteRevision: inviteRevision ?? this.inviteRevision,
+  );
 
   @override
-  List<Object?> get props => [pubkey, status, cell];
+  List<Object?> get props => [pubkey, status, cell, inviteRevision];
 }
 
 /// A finished part: an encrypted video on Blossom and how to read it.
@@ -183,7 +192,7 @@ class CollabRoomPart extends Equatable {
         key is! String ||
         nonce is! String ||
         hash is! String ||
-        hash.isEmpty ||
+        !NostrHexUtils.isValidHex32(hash) ||
         (originalHash != null && originalHash is! String) ||
         (size != null && size is! int) ||
         (dimensions != null && dimensions is! String)) {
@@ -261,7 +270,7 @@ class CollabRoomSnapshot extends Equatable {
   final String? callKey;
 
   /// The JSON the state tag carries.
-  String encode() => jsonEncode({
+  String encode({bool includeParts = true}) => jsonEncode({
     'rev': revision,
     'phase': phase.name,
     'members': [
@@ -270,12 +279,14 @@ class CollabRoomSnapshot extends Equatable {
           'p': member.pubkey,
           's': member.status.name,
           if (member.cell != null) 'cell': member.cell,
+          if (member.inviteRevision > 0) 'invite': member.inviteRevision,
         },
     ],
     if (layout != null) 'layout': layout,
     'aspect': aspectRatio,
     if (soundPubkey != null) 'sound': soundPubkey,
-    if (parts.isNotEmpty) 'parts': [for (final part in parts) part._toJson()],
+    if (includeParts && parts.isNotEmpty)
+      'parts': [for (final part in parts) part._toJson()],
     if (videoAddress != null) 'video': videoAddress,
     if (callKey != null) 'call': callKey,
   });
@@ -324,15 +335,24 @@ class CollabRoomSnapshot extends Equatable {
           .where((s) => s.name == raw['s'])
           .firstOrNull;
       final cell = raw['cell'];
+      final invite = raw['invite'] ?? 0;
       if (pubkey is! String ||
           !NostrHexUtils.isValidPubkey(pubkey) ||
           status == null ||
+          invite is! int ||
+          invite < 0 ||
+          invite > revision ||
           (cell != null && (cell is! int || cell < 0)) ||
           members.any((m) => m.pubkey == pubkey)) {
         return null;
       }
       members.add(
-        CollabRoomMember(pubkey: pubkey, status: status, cell: cell as int?),
+        CollabRoomMember(
+          pubkey: pubkey,
+          status: status,
+          cell: cell as int?,
+          inviteRevision: invite,
+        ),
       );
     }
     if (members.isEmpty || members.length > collabRoomMaxParticipants) {
@@ -341,7 +361,9 @@ class CollabRoomSnapshot extends Equatable {
     final parts = <CollabRoomPart>[];
     for (final raw in rawParts) {
       final part = CollabRoomPart._fromJson(raw);
-      if (part == null || !members.any((m) => m.pubkey == part.pubkey)) {
+      if (part == null ||
+          !members.any((m) => m.pubkey == part.pubkey) ||
+          parts.any((p) => p.pubkey == part.pubkey)) {
         return null;
       }
       parts.add(part);
@@ -382,19 +404,39 @@ List<List<String>> collabRoomTags({
   required CollabRoomMessageType type,
   required String recipientPubkey,
   CollabRoomSnapshot? snapshot,
+  int? inviteRevision,
 }) {
   final carriesSnapshot =
       type == CollabRoomMessageType.invite ||
       type == CollabRoomMessageType.state;
   if (!isValidCollabRoomId(roomId) ||
       !NostrHexUtils.isValidPubkey(recipientPubkey) ||
+      (inviteRevision != null && (carriesSnapshot || inviteRevision < 0)) ||
       carriesSnapshot != (snapshot != null)) {
     throw ArgumentError('Invalid collab room message');
   }
   return [
     _markerTag,
-    [collabRoomTagName, roomId, type.name, recipientPubkey],
-    if (snapshot != null) [collabRoomStateTagName, snapshot.encode()],
+    [
+      collabRoomTagName,
+      roomId,
+      type.name,
+      recipientPubkey,
+      if (inviteRevision != null && inviteRevision > 0) '$inviteRevision',
+    ],
+    if (snapshot != null)
+      [
+        collabRoomStateTagName,
+        snapshot.encode(
+          includeParts:
+              snapshot.phase.isOpen &&
+              snapshot.members.any(
+                (m) =>
+                    m.pubkey == recipientPubkey &&
+                    m.status == CollabRoomMemberStatus.joined,
+              ),
+        ),
+      ],
   ];
 }
 
@@ -408,6 +450,7 @@ class CollabRoomMessage extends Equatable {
     required this.senderPubkey,
     required this.recipientPubkey,
     required this.createdAt,
+    this.inviteRevision = 0,
     this.snapshot,
     this.part,
   });
@@ -430,6 +473,9 @@ class CollabRoomMessage extends Equatable {
   /// Unix seconds.
   final int createdAt;
 
+  /// The invitation this reply or part belongs to.
+  final int inviteRevision;
+
   /// The room snapshot on an invite or state message.
   final CollabRoomSnapshot? snapshot;
 
@@ -444,6 +490,7 @@ class CollabRoomMessage extends Equatable {
     senderPubkey,
     recipientPubkey,
     createdAt,
+    inviteRevision,
     snapshot,
     part,
   ];
@@ -476,13 +523,20 @@ CollabRoomMessage? parseCollabRoomMessage(
   final roomTags = tags
       .where((t) => t.isNotEmpty && t[0] == collabRoomTagName)
       .toList();
-  if (roomTags.length != 1 || roomTags.single.length != 4) return null;
-  final [_, roomId, typeName, recipient] = roomTags.single;
+  if (roomTags.length != 1 ||
+      roomTags.single.length < 4 ||
+      roomTags.single.length > 5) {
+    return null;
+  }
+  final [_, roomId, typeName, recipient, ...extra] = roomTags.single;
+  final inviteRevision = extra.isEmpty ? 0 : int.tryParse(extra.single);
   final type = CollabRoomMessageType.values
       .where((t) => t.name == typeName)
       .firstOrNull;
   if (!isValidCollabRoomId(roomId) ||
       type == null ||
+      inviteRevision == null ||
+      inviteRevision < 0 ||
       !NostrHexUtils.isValidPubkey(recipient) ||
       recipient == message.senderPubkey) {
     return null;
@@ -503,6 +557,7 @@ CollabRoomMessage? parseCollabRoomMessage(
       .toList();
   if (type == CollabRoomMessageType.invite ||
       type == CollabRoomMessageType.state) {
+    if (extra.isNotEmpty) return null;
     if (stateTags.length != 1 || stateTags.single.length != 2) return null;
     snapshot = CollabRoomSnapshot.decode(stateTags.single[1]);
     if (snapshot == null) return null;
@@ -513,6 +568,7 @@ CollabRoomMessage? parseCollabRoomMessage(
     final metadata = message.fileMetadata;
     if (metadata == null ||
         !metadata.isVideo ||
+        !NostrHexUtils.isValidHex32(metadata.fileHash) ||
         !message.content.startsWith('https://')) {
       return null;
     }
@@ -529,6 +585,7 @@ CollabRoomMessage? parseCollabRoomMessage(
     senderPubkey: message.senderPubkey,
     recipientPubkey: recipient,
     createdAt: message.createdAt,
+    inviteRevision: inviteRevision,
     snapshot: snapshot,
     part: part,
   );
@@ -617,6 +674,7 @@ class CollabRoom extends Equatable {
       for (final member in snapshot.members) member.pubkey: member.status,
     };
     if (members.any((m) => published[m.pubkey] != m.status)) return true;
+    if (participants.length < 2) return false;
     final publishedParts = {
       for (final part in snapshot.parts) part.pubkey: part.fileHash,
     };
@@ -647,7 +705,7 @@ class CollabRoom extends Equatable {
       soundPubkey: soundPubkey ?? snapshot.soundPubkey,
       parts: [
         for (final member in nextMembers)
-          if (member.status.isActive || member.pubkey == authorPubkey)
+          if (member.status == CollabRoomMemberStatus.joined)
             ?nextParts[member.pubkey],
       ],
       videoAddress: videoAddress ?? snapshot.videoAddress,
@@ -714,23 +772,43 @@ CollabRoom? foldCollabRoom(
         (isAuthor || m.recipientPubkey == ownerPubkey),
   );
   CollabRoomSnapshot? snapshot;
+  var snapshotReachedMember = false;
+  CollabRoomPart? ownPart;
+  var ownPartRevision = -1;
   for (final message in fromAuthor) {
     final next = message.snapshot;
-    if (next != null &&
-        (snapshot == null || next.revision >= snapshot.revision)) {
+    if (next == null) continue;
+    final reachedMember = next.members.any(
+      (m) =>
+          m.pubkey == message.recipientPubkey &&
+          m.status == CollabRoomMemberStatus.joined,
+    );
+    if (snapshot == null ||
+        next.revision > snapshot.revision ||
+        (next.revision == snapshot.revision &&
+            (reachedMember || !snapshotReachedMember))) {
       snapshot = next;
+      snapshotReachedMember = reachedMember;
+    }
+    if (isAuthor && next.revision >= ownPartRevision) {
+      final part = next.parts.where((p) => p.pubkey == author).firstOrNull;
+      if (part != null) {
+        ownPart = part;
+        ownPartRevision = next.revision;
+      }
     }
   }
   if (snapshot == null) return null;
   final published = snapshot;
-  bool listed(String pubkey) =>
-      published.members.any((m) => m.pubkey == pubkey);
-  if (!isAuthor && !listed(ownerPubkey)) return null;
+  final members = {
+    for (final member in published.members) member.pubkey: member,
+  };
+  if (!isAuthor && !members.containsKey(ownerPubkey)) return null;
 
   final statuses = {
     for (final member in published.members) member.pubkey: member.status,
   };
-  final parts = {for (final part in published.parts) part.pubkey: part};
+  final memberParts = <String, CollabRoomPart>{};
 
   // What members tell the author: the author's device folds every answer
   // and part in, the member's device only its own, since a member hears
@@ -741,13 +819,21 @@ CollabRoom? foldCollabRoom(
     // said before: from here on only their answers to the new invite count.
     if (sender == author &&
         message.type == CollabRoomMessageType.invite &&
-        listed(message.recipientPubkey)) {
-      statuses[message.recipientPubkey] = published.members
-          .firstWhere((m) => m.pubkey == message.recipientPubkey)
-          .status;
+        members.containsKey(message.recipientPubkey)) {
+      final member = members[message.recipientPubkey]!;
+      if (member.inviteRevision != 0) continue;
+      statuses[message.recipientPubkey] = member.status;
+      // The published snapshot may already contain a take from the new
+      // invite. Only the older takes being replayed here should be reset.
+      memberParts.remove(message.recipientPubkey);
       continue;
     }
-    if (sender == author || !listed(sender)) continue;
+    final member = members[sender];
+    if (sender == author ||
+        member == null ||
+        message.inviteRevision != member.inviteRevision) {
+      continue;
+    }
     if (message.recipientPubkey != author) continue;
     if (!isAuthor && sender != ownerPubkey) continue;
     if (statuses[sender] == CollabRoomMemberStatus.removed) continue;
@@ -756,10 +842,14 @@ CollabRoom? foldCollabRoom(
         statuses[sender] = CollabRoomMemberStatus.joined;
       case CollabRoomMessageType.decline:
         statuses[sender] = CollabRoomMemberStatus.declined;
+        memberParts.remove(sender);
       case CollabRoomMessageType.leave:
         statuses[sender] = CollabRoomMemberStatus.left;
+        memberParts.remove(sender);
       case CollabRoomMessageType.part:
-        parts[sender] = message.part!;
+        if (statuses[sender] == CollabRoomMemberStatus.joined) {
+          memberParts[sender] = message.part!;
+        }
       case CollabRoomMessageType.invite:
       case CollabRoomMessageType.state:
         break;
@@ -770,6 +860,11 @@ CollabRoom? foldCollabRoom(
     for (final member in published.members)
       member.copyWith(status: statuses[member.pubkey]),
   ];
+  final parts = {
+    if (published.phase.isOpen && ownPart != null) author: ownPart,
+    for (final part in published.parts) part.pubkey: part,
+    ...memberParts,
+  };
   return CollabRoom(
     id: roomId,
     authorPubkey: author,
@@ -781,7 +876,7 @@ CollabRoom? foldCollabRoom(
     ],
     parts: {
       for (final MapEntry(:key, :value) in parts.entries)
-        if (statuses[key]?.isActive ?? key == author) key: value,
+        if (statuses[key] == CollabRoomMemberStatus.joined) key: value,
     },
     updatedAt: ordered.last.createdAt,
   );

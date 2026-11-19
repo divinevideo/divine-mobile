@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "¡Nuestro video ya está publicado! Gracias por ser parte.",
   "collabRoomCancelledDmBody": "Cancelé nuestra sala de video.",
   "collabRoomUpdatedDmBody": "Nuestra sala de video cambió. Abrí Divine para ver qué hay de nuevo.",
+  "collabRoomCameraMode": "Juntos",
   "collabRoomTitle": "Hacelo en equipo",
   "collabRoomMissing": "Esta sala ya no está.",
   "collabRoomYou": "Vos",

@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "نُشر الفيديو! شكرًا على المشاركة.",
   "collabRoomCancelledDmBody": "ألغيتُ غرفة الفيديو الخاصة بنا.",
   "collabRoomUpdatedDmBody": "حدث تغيير في غرفة الفيديو. افتح Divine لمعرفة الجديد.",
+  "collabRoomCameraMode": "معًا",
   "collabRoomTitle": "صناعة مشتركة",
   "collabRoomMissing": "هذه الغرفة لم تعد موجودة.",
   "collabRoomYou": "أنت",

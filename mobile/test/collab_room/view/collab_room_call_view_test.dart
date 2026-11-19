@@ -213,12 +213,16 @@ void main() {
       await tester.pumpWidget(
         testMaterialApp(
           additionalOverrides: [
+            collabRoomLiveProvider.overrideWith(
+              (ref, id) =>
+                  Stream.value(_room(owner: author, callKey: _callKey)),
+            ),
             collabRoomCallProvider.overrideWith((ref, id) => cubit),
           ],
           home: const _WithPart(part: part),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text(l10n.collabRoomCallJoin));
       await tester.pump();
@@ -258,12 +262,16 @@ void main() {
       await tester.pumpWidget(
         testMaterialApp(
           additionalOverrides: [
+            collabRoomLiveProvider.overrideWith(
+              (ref, id) =>
+                  Stream.value(_room(owner: author, callKey: _callKey)),
+            ),
             collabRoomCallProvider.overrideWith((ref, id) => cubit),
           ],
           home: const _WithPart(part: part),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.collabRoomCallJoin));
       await tester.pump();
 

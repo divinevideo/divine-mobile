@@ -12,7 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show NIP71VideoKinds, NativeProofData;
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
@@ -60,7 +60,6 @@ import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
@@ -181,6 +180,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   /// Creates the publish service with callbacks wired to this notifier.
   Future<VideoPublishService> _createPublishService({
     required OnProgressChanged onProgressChanged,
+    required bool isCollabRoomPost,
   }) async {
     return VideoPublishService(
       rerenderDraft: DraftRenderParametersService(
@@ -203,6 +203,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       ),
       languagePreferenceService: ref.read(languagePreferenceServiceProvider),
       scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
+      onCollabVideoPublished: isCollabRoomPost
+          ? ref.read(collabRoomServiceProvider).markPosted
+          : null,
       performanceMonitor: ref.read(performanceMonitoringServiceProvider),
       isDmRestricted: () => ref.read(isDmRestrictedProvider),
       onProgressChanged: ({required String draftId, required double progress}) {
@@ -257,6 +260,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   /// Called on app startup to query only drafts with `publishing` or `failed`
   /// status and surface them to the user via [BackgroundPublishFailed].
   Future<void> resumePendingPublishes(BuildContext context) async {
+    unawaited(_resumeCollabRoomNotifications());
     final List<DivineVideoDraft> pendingDrafts;
     try {
       pendingDrafts = await _draftService.getDraftsByPublishStatuses(const {
@@ -338,6 +342,38 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
               PublishError.fromPersistedString(draft.publishError) ??
               const PublishError(PublishErrorKind.interrupted),
         ),
+      );
+    }
+  }
+
+  Future<void> _resumeCollabRoomNotifications() async {
+    final storage = _draftService;
+    try {
+      final drafts = await storage.getDraftsByPublishStatuses({
+        PublishStatus.published,
+      });
+      final roomDrafts = drafts.where((draft) => draft.collabRoomId != null);
+      if (!ref.mounted || roomDrafts.isEmpty) return;
+      final publishService = await _createPublishService(
+        isCollabRoomPost: true,
+        onProgressChanged: ({required draftId, required progress}) {},
+      );
+      for (final draft in roomDrafts) {
+        if (!ref.mounted ||
+            await storage.isDraftOwnedByAnotherAccount(draft.id)) {
+          continue;
+        }
+        final result = await publishService.publishVideo(draft: draft);
+        if (result is PublishSuccess && !result.collabRoomNotificationPending) {
+          await storage.deleteDraft(draft.id);
+        }
+      }
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not recover Together room notifications',
+        category: .video,
+        error: error,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -439,13 +475,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     final creationTracker = ref.read(creationAnalyticsTrackerProvider);
     final recorderMode =
         creationTracker.activeMode ?? VideoRecorderMode.capture;
-    // Read up front, like the rest: an account switch can dispose this
-    // notifier while the upload still runs.
-    final collabRoomId = ref.read(collabRoomPostProvider);
-    final collabRooms = collabRoomId == null
-        ? null
-        : ref.read(collabRoomServiceProvider);
-    final authorPubkey = ref.read(authServiceProvider).currentPublicKeyHex;
+    final isCollabRoomPost = draft.collabRoomId != null;
 
     CreationAnalyticsPublishAttempt? publishAttempt;
     try {
@@ -660,6 +690,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
       final backgroundPublishBloc = context.read<BackgroundPublishBloc>();
       final publishService = await _createPublishService(
+        isCollabRoomPost: isCollabRoomPost,
         onProgressChanged: ({required draftId, required progress}) {
           // The bloc closes with the account that started the publish, while
           // the upload goes on reporting.
@@ -731,30 +762,18 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       if (didNavigate) {
         // Clear editor state after navigation animation completes (~350ms).
         // Draft is already saved for background upload.
-        Future.delayed(const Duration(milliseconds: 600), clearAll);
+        Future.delayed(
+          const Duration(milliseconds: 600),
+          () => clearAll(keepAutosavedDraft: isCollabRoomPost),
+        );
       }
 
       final result = await publishmentProcess;
 
       // Handle result
       switch (result) {
-        case PublishSuccess(:final stableId):
+        case PublishSuccess():
           await creationTracker.publishSucceeded(publishAttempt);
-          if (collabRoomId != null &&
-              collabRooms != null &&
-              stableId != null &&
-              authorPubkey != null) {
-            runDetached(
-              collabRooms.markPosted(
-                collabRoomId,
-                '${NIP71VideoKinds.addressableShortVideo}:'
-                '$authorPubkey:$stableId',
-              ),
-              'tell the collab room its video was posted',
-              logName: 'VideoPublishNotifier',
-              category: LogCategory.video,
-            );
-          }
           Log.info(
             '🎉 Video published successfully',
             name: 'VideoPublishNotifier',

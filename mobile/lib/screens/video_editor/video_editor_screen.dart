@@ -26,6 +26,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
+import 'package:openvine/collab_room/call/collab_room_call_providers.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
@@ -586,6 +587,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     required ClipEditorBloc clipEditorBloc,
     required Duration playhead,
   }) async {
+    await leaveCollabRoomPartCall(ref);
+    if (!mounted) return;
     final initialClips = ref.read(clipManagerProvider).clips;
     final initialIds = initialClips.map((c) => c.id).toSet();
     // A stop-motion composition adds the new stills into its single frames clip
@@ -819,6 +822,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     required double cellAspectRatio,
     required int maxClips,
   }) async {
+    await leaveCollabRoomPartCall(ref);
+    if (!context.mounted) return null;
     final notifier = ref.read(clipManagerProvider.notifier);
     final initialIds = notifier.clips.map((c) => c.id).toSet();
 
@@ -1381,6 +1386,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// length (at most [VideoEditorConstants.maxDuration]). All takes are
   /// committed in a single history entry so one undo removes them together.
   Future<void> _openVoiceOver({required VideoEditorMainBloc mainBloc}) async {
+    await leaveCollabRoomPartCall(ref);
+    if (!mounted) return;
     final availableDuration = resolveVoiceOverAvailableDuration(
       clipDuration: _clipEditorBloc.state.totalDuration,
       maxDuration: VideoEditorConstants.maxDuration,

@@ -5478,6 +5478,7 @@
   "collabRoomPostedDmBody": "Live na ang video natin! Salamat sa pagsali.",
   "collabRoomCancelledDmBody": "Kinansela ko ang video room natin.",
   "collabRoomUpdatedDmBody": "May nagbago sa video room natin. I-open ang Divine para makita.",
+  "collabRoomCameraMode": "Magkasama",
   "collabRoomTitle": "Gawin nang sabay-sabay",
   "collabRoomMissing": "Wala na ang room na ito.",
   "collabRoomYou": "Ikaw",

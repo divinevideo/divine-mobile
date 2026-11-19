@@ -16499,6 +16499,9 @@ class AppLocalizationsNl extends AppLocalizations {
       'Er is iets veranderd in onze videoruimte. Open Divine om te kijken.';
 
   @override
+  String get collabRoomCameraMode => 'Samen';
+
+  @override
   String get collabRoomTitle => 'Samen maken';
 
   @override

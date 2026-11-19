@@ -1,10 +1,12 @@
 // ABOUTME: Runs collaborative recording rooms over NIP-17 DMs: invites,
 // ABOUTME: answers, the author's snapshots, and the encrypted parts.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
@@ -49,10 +51,12 @@ class CollabRoomService {
     required CollabRoomPartDecrypt decryptPart,
     required AppLocalizations l10n,
     required Future<Directory> Function() storageDirectory,
+    bool isDmRestricted = false,
   }) : _dm = dmRepository,
        _videos = videoSendService,
        _decrypt = decryptPart,
        _l10n = l10n,
+       _isDmRestricted = isDmRestricted,
        _storageDirectory = storageDirectory;
 
   /// Builds the decrypt function from the app's [DmVideoDecryptor].
@@ -63,7 +67,12 @@ class CollabRoomService {
   final DmVideoSendService _videos;
   final CollabRoomPartDecrypt _decrypt;
   final AppLocalizations _l10n;
+  final bool _isDmRestricted;
   final Future<Directory> Function() _storageDirectory;
+  final _partDownloads = <(String, String, String), Future<File>>{};
+  final _roomFileDeletes = <(String, String), Future<void>>{};
+  final _roomWrites = <(String, String), Future<void>>{};
+  final _publishedRevisions = <(String, String), int>{};
 
   /// The account the rooms belong to.
   String get ownerPubkey => _dm.userPubkey;
@@ -71,7 +80,7 @@ class CollabRoomService {
   /// Every room the account is in, newest first.
   Stream<List<CollabRoom>> watchRooms() {
     final owner = ownerPubkey;
-    if (owner.isEmpty) return Stream.value(const []);
+    if (owner.isEmpty || _isDmRestricted) return Stream.value(const []);
     return _dm.watchCollabRoomMessages().map(
       (messages) => foldCollabRooms(messages, ownerPubkey: owner),
     );
@@ -135,7 +144,7 @@ class CollabRoomService {
     CollabRoom room,
     String pubkey,
     CollabRoomSnapshot snapshot,
-  ) async {
+  ) => _writeSnapshot(room, snapshot, (sent) async {
     if (!room.isAuthor) throw StateError('Only the author invites');
     final invited = await _sendToEach(
       recipients: [pubkey],
@@ -147,6 +156,7 @@ class CollabRoomService {
     if (invited == 0) {
       throw const CollabRoomException('The invite could not be delivered');
     }
+    sent();
     final others = [
       for (final member in snapshot.members)
         if (member.pubkey != room.authorPubkey &&
@@ -162,7 +172,7 @@ class CollabRoomService {
       snapshot: snapshot,
       content: _l10n.collabRoomUpdatedDmBody,
     );
-  }
+  });
 
   /// Joins [room].
   Future<void> join(CollabRoom room) =>
@@ -190,6 +200,7 @@ class CollabRoomService {
       roomId: room.id,
       type: type,
       content: content,
+      inviteRevision: room.me?.inviteRevision,
     );
     if (delivered == 0) {
       throw CollabRoomException('The ${type.name} could not be delivered');
@@ -200,8 +211,18 @@ class CollabRoomService {
   /// the room, and anyone the snapshot takes out of it, once — or, with
   /// nobody left in the room, everyone it ever had.
   ///
-  /// Throws a [CollabRoomException] when it reached nobody.
-  Future<void> publish(CollabRoom room, CollabRoomSnapshot snapshot) async {
+  /// Throws a [CollabRoomException] if a recipient's update could not be
+  /// sent or queued for retry.
+  Future<void> publish(
+    CollabRoom room,
+    CollabRoomSnapshot snapshot,
+  ) => _publish(room, snapshot);
+
+  Future<void> _publish(
+    CollabRoom room,
+    CollabRoomSnapshot snapshot, {
+    Set<String> alreadyNotified = const {},
+  }) => _writeSnapshot(room, snapshot, (sent) async {
     if (!room.isAuthor) throw StateError('Only the author publishes a room');
     final wasActive = {
       for (final member in room.snapshot.members)
@@ -221,7 +242,9 @@ class CollabRoomService {
     // a snapshot sent to nobody would never take effect there: calling off a
     // room everyone left would leave it open. With nobody in the room, the
     // update goes to everyone it ever had.
-    final recipients = active.isNotEmpty ? active : others;
+    final recipients = (active.isNotEmpty ? active : others)
+        .where((person) => !alreadyNotified.contains(person))
+        .toList();
     if (recipients.isEmpty) return;
     final delivered = await _sendToEach(
       recipients: recipients,
@@ -229,14 +252,42 @@ class CollabRoomService {
       type: CollabRoomMessageType.state,
       snapshot: snapshot,
       content: _stateText(room.snapshot, snapshot),
+      countQueued: true,
     );
-    if (delivered == 0) {
-      throw const CollabRoomException('The room update reached nobody');
+    if (delivered > 0) sent();
+    if (delivered != recipients.length) {
+      throw const CollabRoomException('Some room updates could not be sent');
+    }
+  });
+
+  /// A room screen and its part or post flow can write concurrently. Queue
+  /// those writes and reject an update built on a superseded snapshot.
+  Future<void> _writeSnapshot(
+    CollabRoom room,
+    CollabRoomSnapshot snapshot,
+    Future<void> Function(void Function() sent) write,
+  ) async {
+    final key = (room.ownerPubkey, room.id);
+    final pending = _roomWrites[key];
+    final done = Completer<void>();
+    _roomWrites[key] = done.future;
+    try {
+      if (pending != null) await pending;
+      if (ownerPubkey != room.ownerPubkey ||
+          room.snapshot.revision < (_publishedRevisions[key] ?? 0)) {
+        throw const CollabRoomException('The room changed before the update');
+      }
+      await write(() => _publishedRevisions[key] = snapshot.revision);
+    } finally {
+      if (identical(_roomWrites[key], done.future)) {
+        unawaited(_roomWrites.remove(key));
+      }
+      done.complete();
     }
   }
 
   String _stateText(CollabRoomSnapshot before, CollabRoomSnapshot after) {
-    if (after.phase != before.phase) {
+    if (after.phase != before.phase || after.phase == CollabRoomPhase.posted) {
       return switch (after.phase) {
         CollabRoomPhase.recording => _l10n.collabRoomStartedDmBody,
         CollabRoomPhase.posted => _l10n.collabRoomPostedDmBody,
@@ -275,6 +326,12 @@ class CollabRoomService {
   ///
   /// Throws a [CollabRoomException] when the message reached nobody.
   Future<void> handInPart(CollabRoom room, CollabRoomUpload upload) async {
+    if (_isDmRestricted ||
+        room.ownerPubkey != ownerPubkey ||
+        room.phase != CollabRoomPhase.recording ||
+        room.me?.status != CollabRoomMemberStatus.joined) {
+      throw const CollabRoomException('The room no longer takes this part');
+    }
     if (!room.isAuthor) {
       final result = await _videos.sendUploadedVideo(
         recipientPubkey: room.authorPubkey,
@@ -284,6 +341,7 @@ class CollabRoomService {
           roomId: room.id,
           type: CollabRoomMessageType.part,
           recipientPubkey: room.authorPubkey,
+          inviteRevision: room.me?.inviteRevision,
         ),
       );
       if (!result.success) {
@@ -293,6 +351,9 @@ class CollabRoomService {
         );
       }
       return;
+    }
+    if (room.participants.length < 2) {
+      throw const CollabRoomException('No other member can receive this part');
     }
     final part = CollabRoomPart(
       pubkey: room.ownerPubkey,
@@ -316,19 +377,45 @@ class CollabRoomService {
   /// Tells everyone in [roomId] that its video was posted at [videoAddress],
   /// and deletes the parts kept on this device.
   ///
-  /// Does nothing unless the account is the room's author and the room is
-  /// still open. Throws a [CollabRoomException] when the update reached
-  /// nobody.
+  /// Retries the same snapshot for recipients whose posted message was
+  /// not recorded in the host's history.
   Future<void> markPosted(String roomId, String videoAddress) async {
-    final room = await watchRoom(roomId).first;
-    if (room == null || !room.isAuthor || !room.phase.isOpen) return;
-    await publish(
+    final owner = ownerPubkey;
+    if (_isDmRestricted || AId.fromString(videoAddress)?.pubkey != owner) {
+      return;
+    }
+    await _roomWrites[(owner, roomId)];
+    final messages = await _dm.watchCollabRoomMessages().first;
+    final room = foldCollabRooms(
+      messages,
+      ownerPubkey: owner,
+    ).where((room) => room.id == roomId).firstOrNull;
+    if (room == null || !room.isAuthor) return;
+    final snapshot = room.phase.isOpen
+        ? room.toSnapshot(
+            revision: room.snapshot.revision + 1,
+            phase: CollabRoomPhase.posted,
+            videoAddress: videoAddress,
+          )
+        : room.snapshot;
+    if (snapshot.phase != CollabRoomPhase.posted ||
+        snapshot.videoAddress != videoAddress) {
+      return;
+    }
+    final delivered = {
+      for (final message in messages)
+        if (parseCollabRoomMessage(message, ownerPubkey: owner)
+            case final parsed?
+            when parsed.roomId == roomId &&
+                parsed.senderPubkey == owner &&
+                parsed.snapshot?.phase == CollabRoomPhase.posted &&
+                parsed.snapshot?.videoAddress == videoAddress)
+          parsed.recipientPubkey,
+    };
+    await _publish(
       room,
-      room.toSnapshot(
-        revision: room.snapshot.revision + 1,
-        phase: CollabRoomPhase.posted,
-        videoAddress: videoAddress,
-      ),
+      snapshot,
+      alreadyNotified: delivered,
     );
     await deleteRoomFiles(roomId);
   }
@@ -338,8 +425,34 @@ class CollabRoomService {
   ///
   /// Throws whatever the download or decryption throws.
   Future<File> partFile(String roomId, CollabRoomPart part) async {
-    final directory = await _roomDirectory(roomId);
-    final file = File(p.join(directory.path, '${part.fileHash}.mp4'));
+    if (!NostrHexUtils.isValidHex32(part.fileHash)) {
+      throw const CollabRoomException('Invalid part ciphertext hash');
+    }
+    final owner = ownerPubkey;
+    if (_roomFileDeletes.containsKey((owner, roomId))) {
+      throw const CollabRoomException('The room is clearing its local parts');
+    }
+    final key = (owner, roomId, part.fileHash.toLowerCase());
+    final inFlight = _partDownloads[key];
+    if (inFlight != null) return inFlight;
+
+    final download = _downloadPart(roomId, part, owner, key.$3);
+    _partDownloads[key] = download;
+    try {
+      return await download;
+    } finally {
+      unawaited(_partDownloads.remove(key));
+    }
+  }
+
+  Future<File> _downloadPart(
+    String roomId,
+    CollabRoomPart part,
+    String owner,
+    String hash,
+  ) async {
+    final directory = await _roomDirectory(roomId, owner);
+    final file = File(p.join(directory.path, '$hash.mp4'));
     if (file.existsSync()) return file;
     final bytes = await _decrypt(
       DmMessage(
@@ -353,6 +466,11 @@ class CollabRoomService {
         fileMetadata: part.metadata,
       ),
     );
+    if (ownerPubkey != owner) {
+      throw const CollabRoomException(
+        'The account changed while reading a part',
+      );
+    }
     await directory.create(recursive: true);
     final partial = File('${file.path}.part');
     await partial.writeAsBytes(bytes, flush: true);
@@ -361,16 +479,36 @@ class CollabRoomService {
 
   /// Deletes every part of [roomId] kept on this device.
   Future<void> deleteRoomFiles(String roomId) async {
-    final directory = await _roomDirectory(roomId);
+    final owner = ownerPubkey;
+    final key = (owner, roomId);
+    final inFlight = _roomFileDeletes[key];
+    if (inFlight != null) return inFlight;
+    final deletion = _deleteRoomFiles(roomId, owner);
+    _roomFileDeletes[key] = deletion;
+    try {
+      await deletion;
+    } finally {
+      unawaited(_roomFileDeletes.remove(key));
+    }
+  }
+
+  Future<void> _deleteRoomFiles(String roomId, String owner) async {
+    final downloads = [
+      for (final entry in _partDownloads.entries)
+        if (entry.key.$1 == owner && entry.key.$2 == roomId)
+          entry.value.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
+    ];
+    await Future.wait(downloads);
+    final directory = await _roomDirectory(roomId, owner);
     if (directory.existsSync()) await directory.delete(recursive: true);
   }
 
-  Future<Directory> _roomDirectory(String roomId) async {
+  Future<Directory> _roomDirectory(String roomId, String owner) async {
     if (!isValidCollabRoomId(roomId)) {
       throw ArgumentError.value(roomId, 'roomId');
     }
     final root = await _storageDirectory();
-    return Directory(p.join(root.path, 'collab_rooms', ownerPubkey, roomId));
+    return Directory(p.join(root.path, 'collab_rooms', owner, roomId));
   }
 
   /// Sends the room message to each of [recipients] and returns how many
@@ -381,9 +519,19 @@ class CollabRoomService {
     required CollabRoomMessageType type,
     required String content,
     CollabRoomSnapshot? snapshot,
+    int? inviteRevision,
+    bool countQueued = false,
   }) async {
+    if (_isDmRestricted) {
+      throw const CollabRoomException('The account cannot use Together rooms');
+    }
+    final owner = ownerPubkey;
+    final backgroundDelivery = snapshot?.phase == CollabRoomPhase.posted;
     var delivered = 0;
     for (final recipient in recipients) {
+      if (ownerPubkey != owner) {
+        throw const CollabRoomException('The account changed while sending');
+      }
       final result = await _dm.sendMessage(
         recipientPubkey: recipient,
         content: content,
@@ -392,10 +540,16 @@ class CollabRoomService {
           type: type,
           recipientPubkey: recipient,
           snapshot: snapshot,
+          inviteRevision: inviteRevision,
         ),
         skipNip04Fallback: true,
+        backgroundDelivery: backgroundDelivery,
       );
-      if (result.success) delivered++;
+      if (result.success ||
+          ((countQueued || backgroundDelivery) &&
+              result.queuedRumorId != null)) {
+        delivered++;
+      }
     }
     return delivered;
   }

@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Unser Video ist online! Danke, dass du dabei warst.",
   "collabRoomCancelledDmBody": "Ich hab unseren Videoraum abgesagt.",
   "collabRoomUpdatedDmBody": "In unserem Videoraum hat sich was getan. Öffne Divine und schau nach.",
+  "collabRoomCameraMode": "Zusammen",
   "collabRoomTitle": "Gemeinsam machen",
   "collabRoomMissing": "Diesen Raum gibt's nicht mehr.",
   "collabRoomYou": "Du",

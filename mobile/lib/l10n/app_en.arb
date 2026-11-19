@@ -13620,6 +13620,10 @@
   "@collabRoomUpdatedDmBody": {
     "description": "Plaintext body of the DM the host sends everyone when a collaborative video room changes, for example when someone joins or hands in their part."
   },
+  "collabRoomCameraMode": "Together",
+  "@collabRoomCameraMode": {
+    "description": "Short camera mode label for filming a video with other people."
+  },
   "collabRoomTitle": "Make it together",
   "@collabRoomTitle": {
     "description": "Title of the screen of a collaborative video room, where up to four people each film their own part of a split-screen video."

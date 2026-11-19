@@ -16555,6 +16555,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'May nagbago sa video room natin. I-open ang Divine para makita.';
 
   @override
+  String get collabRoomCameraMode => 'Magkasama';
+
+  @override
   String get collabRoomTitle => 'Gawin nang sabay-sabay';
 
   @override

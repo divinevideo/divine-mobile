@@ -7749,6 +7749,7 @@
   "collabRoomPostedDmBody": "Video kita dah keluar! Terima kasih kerana turut serta.",
   "collabRoomCancelledDmBody": "Saya batalkan bilik video kita.",
   "collabRoomUpdatedDmBody": "Ada perubahan dalam bilik video kita. Buka Divine untuk lihat.",
+  "collabRoomCameraMode": "Bersama",
   "collabRoomTitle": "Buat bersama",
   "collabRoomMissing": "Bilik ini sudah tiada.",
   "collabRoomYou": "Anda",

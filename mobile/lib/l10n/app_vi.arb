@@ -7749,6 +7749,7 @@
   "collabRoomPostedDmBody": "Video của chúng ta đã lên sóng! Cảm ơn bạn đã tham gia.",
   "collabRoomCancelledDmBody": "Mình đã hủy phòng video của chúng ta.",
   "collabRoomUpdatedDmBody": "Phòng video của chúng ta có thay đổi. Mở Divine để xem nhé.",
+  "collabRoomCameraMode": "Cùng nhau",
   "collabRoomTitle": "Cùng nhau làm",
   "collabRoomMissing": "Phòng này không còn nữa.",
   "collabRoomYou": "Bạn",

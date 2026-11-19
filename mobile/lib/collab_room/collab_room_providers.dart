@@ -3,10 +3,13 @@
 
 import 'dart:io';
 
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:openvine/collab_room/collab_room_service.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -22,8 +25,15 @@ final collabRoomServiceProvider = Provider<CollabRoomService>((ref) {
     ),
     l10n: currentAppL10n(ref.watch(sharedPreferencesProvider)),
     storageDirectory: () async => Directory(await getDocumentsPath()),
+    isDmRestricted: ref.watch(isDmRestrictedProvider),
   );
 });
+
+/// The current room, including membership changes while a part is edited.
+final StreamProviderFamily<CollabRoom?, String> collabRoomLiveProvider =
+    StreamProvider.autoDispose.family<CollabRoom?, String>(
+      (ref, roomId) => ref.watch(collabRoomServiceProvider).watchRoom(roomId),
+    );
 
 /// The room part the camera flow is filming, while it runs.
 class CollabRoomPartContext {
@@ -34,6 +44,7 @@ class CollabRoomPartContext {
     this.cellShape = SplitScreenCellShape.rectangle,
     this.me,
     this.callKey,
+    this.inviteRevision = 0,
     this.finished = false,
   });
 
@@ -46,6 +57,9 @@ class CollabRoomPartContext {
   /// The room's call key, for joining its call while editing; `null` for a
   /// room without a call.
   final String? callKey;
+
+  /// Membership generation that authorized this recording.
+  final int inviteRevision;
 
   /// Whether the part flow ended: the part was handed in or the camera
   /// closed. The recorder that was filming keeps its cell until its route is
@@ -85,15 +99,21 @@ class CollabRoomPartNotifier extends Notifier<CollabRoomPartContext?> {
   /// Ends the part flow. The context stays, marked finished, for the screens
   /// of the flow still animating out: a recorder losing its cell mid-exit
   /// would rebuild as a plain camera and offer the autosaved session back.
-  void finish() {
+  void finish({CollabRoomPartContext? expected}) {
+    if (!ref.mounted) return;
     final current = state;
-    if (current == null || current.finished) return;
+    if (current == null ||
+        current.finished ||
+        (expected != null && !identical(current, expected))) {
+      return;
+    }
     state = CollabRoomPartContext(
       roomId: current.roomId,
       cellAspectRatio: current.cellAspectRatio,
       cellShape: current.cellShape,
       me: current.me,
       callKey: current.callKey,
+      inviteRevision: current.inviteRevision,
       finished: true,
     );
   }
@@ -112,7 +132,7 @@ class CollabRoomPostNotifier extends Notifier<String?> {
   String? build() => null;
 
   /// Marks the post being prepared as [roomId]'s video.
-  void set(String roomId) => state = roomId;
+  void set(String? roomId) => state = roomId;
 
   /// Ends the room post flow.
   void clear() => state = null;

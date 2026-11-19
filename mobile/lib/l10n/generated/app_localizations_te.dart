@@ -16790,6 +16790,9 @@ class AppLocalizationsTe extends AppLocalizations {
       'మన వీడియో రూమ్‌లో మార్పు వచ్చింది. చూడటానికి Divine తెరవండి.';
 
   @override
+  String get collabRoomCameraMode => 'కలిసి';
+
+  @override
   String get collabRoomTitle => 'కలిసి చేయండి';
 
   @override

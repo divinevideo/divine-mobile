@@ -16566,6 +16566,9 @@ class AppLocalizationsBg extends AppLocalizations {
       'Нещо се промени в нашата видео стая. Отвори Divine и виж.';
 
   @override
+  String get collabRoomCameraMode => 'Заедно';
+
+  @override
   String get collabRoomTitle => 'Направете го заедно';
 
   @override

@@ -6448,6 +6448,7 @@
   "collabRoomPostedDmBody": "Vår video är ute! Tack för att du var med.",
   "collabRoomCancelledDmBody": "Jag ställde in vårt videorum.",
   "collabRoomUpdatedDmBody": "Något har ändrats i vårt videorum. Öppna Divine och kolla.",
+  "collabRoomCameraMode": "Tillsammans",
   "collabRoomTitle": "Gör det tillsammans",
   "collabRoomMissing": "Det här rummet finns inte längre.",
   "collabRoomYou": "Du",

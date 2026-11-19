@@ -15649,6 +15649,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomUpdatedDmBody => '動画ルームに変更がありました。Divine を開いて確認してください。';
 
   @override
+  String get collabRoomCameraMode => '一緒に';
+
+  @override
   String get collabRoomTitle => 'みんなで作る';
 
   @override

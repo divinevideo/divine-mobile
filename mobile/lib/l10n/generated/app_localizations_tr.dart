@@ -16340,6 +16340,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video odamızda bir şey değişti. Yenilikleri görmek için Divine\'ı aç.';
 
   @override
+  String get collabRoomCameraMode => 'Birlikte';
+
+  @override
   String get collabRoomTitle => 'Birlikte yapın';
 
   @override

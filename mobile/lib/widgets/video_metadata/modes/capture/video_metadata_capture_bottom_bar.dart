@@ -4,6 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -52,10 +53,12 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
   }
 
   Future<void> _onSaveForLater(BuildContext context, WidgetRef ref) async {
+    final isCollabRoomPost = ref.read(collabRoomPostProvider) != null;
     // Gallery save runs first, before the alreadyInProgress guard below: the
     // Save-for-later button is disabled while a draft save is in flight, so a
     // concurrent tap landing here is a narrow race, not the common path.
     await saveToGallery(context, ref);
+    if (!context.mounted) return;
 
     final notifier = ref.read(videoEditorProvider.notifier);
 
@@ -98,9 +101,10 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
       unawaited(notifier.cancelRenderVideo());
       router.go(VideoFeedPage.pathForIndex(0));
       // Clear editor state after navigation animation completes (~600ms)
+      final publish = ref.read(videoPublishProvider.notifier);
       Future.delayed(
         const Duration(milliseconds: 600),
-        ref.read(videoPublishProvider.notifier).clearAll,
+        () => publish.clearAll(keepAutosavedDraft: isCollabRoomPost),
       );
     }
   }

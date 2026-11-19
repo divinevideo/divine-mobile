@@ -16362,6 +16362,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phòng video của chúng ta có thay đổi. Mở Divine để xem nhé.';
 
   @override
+  String get collabRoomCameraMode => 'Cùng nhau';
+
+  @override
   String get collabRoomTitle => 'Cùng nhau làm';
 
   @override

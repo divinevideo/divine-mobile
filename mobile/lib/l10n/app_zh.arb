@@ -7749,6 +7749,7 @@
   "collabRoomPostedDmBody": "我们的视频发布啦！谢谢你的参与。",
   "collabRoomCancelledDmBody": "我取消了我们的视频房间。",
   "collabRoomUpdatedDmBody": "我们的视频房间有变化，打开 Divine 看看。",
+  "collabRoomCameraMode": "一起拍",
   "collabRoomTitle": "一起来拍",
   "collabRoomMissing": "这个房间已经不存在了。",
   "collabRoomYou": "你",

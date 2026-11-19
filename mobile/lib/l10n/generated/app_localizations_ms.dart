@@ -16415,6 +16415,9 @@ class AppLocalizationsMs extends AppLocalizations {
       'Ada perubahan dalam bilik video kita. Buka Divine untuk lihat.';
 
   @override
+  String get collabRoomCameraMode => 'Bersama';
+
+  @override
   String get collabRoomTitle => 'Buat bersama';
 
   @override

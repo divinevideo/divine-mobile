@@ -16743,6 +16743,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Ceva s-a schimbat în camera noastră video. Deschide Divine să vezi.';
 
   @override
+  String get collabRoomCameraMode => 'Împreună';
+
+  @override
   String get collabRoomTitle => 'Faceți-l împreună';
 
   @override

@@ -254,14 +254,22 @@ class VideoRecorderScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final part = fromEditor ? ref.watch(collabRoomPartProvider) : null;
+    final collabPart = part?.isActive ?? false;
     final view = VideoRecorderView(
       fromEditor: fromEditor,
       entryPoint: entryPoint,
+      collabPart: collabPart,
     );
     return _VideoRecorderBlocScope(
       child: switch (cropGuideAspectRatio) {
         final aspectRatio? => ClipCropGuide(
           aspectRatio: aspectRatio,
+          child: view,
+        ),
+        null when collabPart => ClipCropGuide(
+          aspectRatio: part!.cellAspectRatio,
+          shape: part.cellShape,
           child: view,
         ),
         null => view,

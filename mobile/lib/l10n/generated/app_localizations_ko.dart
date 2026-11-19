@@ -15666,6 +15666,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomUpdatedDmBody => '우리 영상 방에 변화가 있어요. Divine을 열고 확인해 보세요.';
 
   @override
+  String get collabRoomCameraMode => '함께';
+
+  @override
   String get collabRoomTitle => '함께 만들기';
 
   @override

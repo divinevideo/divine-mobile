@@ -16020,6 +16020,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomUpdatedDmBody => 'በቪዲዮ ክፍላችን ለውጥ አለ። ለማየት Divineን ይክፈቱ።';
 
   @override
+  String get collabRoomCameraMode => 'በጋራ';
+
+  @override
   String get collabRoomTitle => 'አብሮ መሥራት';
 
   @override

@@ -15459,6 +15459,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomUpdatedDmBody => '我们的视频房间有变化，打开 Divine 看看。';
 
   @override
+  String get collabRoomCameraMode => '一起拍';
+
+  @override
   String get collabRoomTitle => '一起来拍';
 
   @override

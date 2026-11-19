@@ -2,9 +2,11 @@
 // ABOUTME: parts handed in, and putting them together into one video
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:bloc/bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -63,6 +65,8 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   /// Holds the lobby's pending publish: a resource handle cancelled on close,
   /// not state.
   Timer? _lobbyPublishTimer;
+  int _lastPublishedRevision = 0;
+  bool _syncAfterAction = false;
   final CollabRoomComposer _composer;
   final CollabRoomThumbnailer _thumbnailer;
   late final StreamSubscription<CollabRoom?> _subscription;
@@ -108,14 +112,25 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       ),
     );
     if (!keepsRoomInSync) return;
-    if (room.needsBroadcast && state.actionStatus != .busy) {
-      unawaited(
-        _publishNext(.update, room, (revision) {
-          return room.toSnapshot(revision: revision);
-        }),
-      );
+    _syncRoom(room);
+    if (room.phase == CollabRoomPhase.recording &&
+        room.me?.status == CollabRoomMemberStatus.joined) {
+      _fetchParts(room);
     }
-    _fetchParts(room);
+  }
+
+  void _syncRoom(CollabRoom room) {
+    if (!room.needsBroadcast) return;
+    if (state.actionStatus == .busy) {
+      _syncAfterAction = true;
+      return;
+    }
+    if (room.snapshot.revision < _lastPublishedRevision) return;
+    unawaited(
+      _publishNext(.update, room, (revision) {
+        return room.toSnapshot(revision: revision);
+      }),
+    );
   }
 
   void _onRoomError(Object error, StackTrace stackTrace) {
@@ -142,6 +157,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     try {
       final file = await _service.partFile(_roomId, part);
       final thumbnail = await _thumbnailer(file.path);
+      if (state.room?.parts[part.pubkey] != part) return;
       emitIfOpen(
         state.copyWith(
           partFiles: {
@@ -172,7 +188,10 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   Future<void> decline() => _run(.decline, () => _service.decline(state.room!));
 
   /// Leaves the room, as a member.
-  Future<void> leave() => _run(.leave, () => _service.leave(state.room!));
+  Future<void> leave() => _run(.leave, () async {
+    await _service.leave(state.room!);
+    await _service.deleteRoomFiles(_roomId);
+  });
 
   /// Picks the layout the room is filmed in, as the author. Once filming
   /// started, the new layout is published straight away.
@@ -251,6 +270,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     if (room == null ||
         !room.isAuthor ||
         room.phase != CollabRoomPhase.lobby ||
+        cell < 0 ||
         cell >= seats.length) {
       return;
     }
@@ -405,16 +425,16 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
           members: [
             for (final m in room.members)
               if (m.pubkey == pubkey)
-                CollabRoomMember(
-                  pubkey: m.pubkey,
+                m.copyWith(
                   status: CollabRoomMemberStatus.invited,
-                  cell: m.cell,
+                  inviteRevision: revision,
                 )
               else
                 m,
           ],
         ),
       );
+      _lastPublishedRevision = revision;
     });
   }
 
@@ -472,6 +492,28 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       if (clip == null) {
         throw const CollabRoomException('The render produced no video');
       }
+      final current = state.room;
+      if (isClosed ||
+          current == null ||
+          current.phase != room.phase ||
+          current.layout != room.layout ||
+          current.aspectRatio != room.aspectRatio ||
+          state.effectiveSoundPubkey != sound ||
+          !const ListEquality<CollabRoomMember>().equals(
+            current.participants,
+            room.participants,
+          ) ||
+          !const MapEquality<String, CollabRoomPart>().equals(
+            current.parts,
+            room.parts,
+          )) {
+        final path = clip.video?.file?.path;
+        if (path != null) {
+          final output = File(path);
+          if (output.existsSync()) await output.delete();
+        }
+        throw const CollabRoomException('The room changed during rendering');
+      }
       emitIfOpen(
         state.copyWith(
           composeStatus: CollabRoomComposeStatus.done,
@@ -506,13 +548,9 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     return [
       for (final member in members)
         if (fillsCell(member))
-          CollabRoomMember(
-            pubkey: member.pubkey,
-            status: member.status,
-            cell: order.indexOf(member.pubkey),
-          )
+          member.copyWith(cell: order.indexOf(member.pubkey))
         else
-          CollabRoomMember(pubkey: member.pubkey, status: member.status),
+          member.copyWith(clearCell: true),
     ];
   }
 
@@ -523,12 +561,11 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     List<String> order,
   ) => [
     for (final member in members)
-      CollabRoomMember(
-        pubkey: member.pubkey,
-        status: member.status,
+      member.copyWith(
         cell: order.contains(member.pubkey)
             ? order.indexOf(member.pubkey)
             : null,
+        clearCell: !order.contains(member.pubkey),
       ),
   ];
 
@@ -557,6 +594,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     final revision = state.nextRevision;
     emitIfOpen(state.copyWith(lobbyRevision: revision));
     await _service.publish(room, snapshotAt(revision));
+    _lastPublishedRevision = revision;
   });
 
   Future<void> _run(
@@ -571,6 +609,12 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     } on Exception catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(actionStatus: .failed));
+    } finally {
+      if (_syncAfterAction && !isClosed) {
+        _syncAfterAction = false;
+        final room = state.room;
+        if (room != null) _syncRoom(room);
+      }
     }
   }
 
@@ -578,7 +622,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   /// parts this device kept of it. An open room keeps them.
   Future<void> dismiss() async {
     final room = state.room;
-    if (room == null || room.phase.isOpen) return;
+    if (room == null || (room.phase.isOpen && !state.endedByHost)) return;
     await _service.deleteRoomFiles(_roomId);
   }
 

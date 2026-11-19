@@ -249,22 +249,25 @@ their own part of one split-screen video
   finished parts, and the posted video's address. The highest revision wins
 - Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
   Blossom sent to the author as a NIP-17 file message. The author forwards each
-  part's URL and key to everyone in the next snapshot
+  part's URL and key to joined members while the room is open
 - Every device folds its own DM history into its rooms
   (`foldCollabRooms` in `dm_repository`); the author's device publishes a new
   snapshot whenever it knows more than its last one shows. With nobody left in
   the room, a snapshot goes to everyone it ever had, since the author's device
   only learns its own snapshots from the messages it sent
 - The author can invite someone who left, declined or was removed again: a new
-  `invite` to them, with a snapshot listing them as invited. Everything they
-  answered before that invite no longer counts
+  `invite` to them, with a snapshot listing them as invited and the member's
+  new `invite` revision. Replies and parts for a repeat invitation carry
+  that revision as a fifth field in their `collab-room` tag, so delayed
+  answers or takes from the previous invitation are ignored
 - The posted video tags everyone who handed in a part with the usual
   collaborator `p` tag, so the collaborator invite and kind 34238 acceptance
   run as for any other collaboration
 - The snapshot also carries the room's call key, a private key the author
-  generates. While the room screen is open, everyone in the room talks over a
-  peer-to-peer WebRTC call set up through kind 1059 events signed by the call
-  key, NIP-44 encrypted to the call key's own pubkey, with
+  generates. Joined members can opt into a peer-to-peer WebRTC call. Each
+  signal is NIP-44 encrypted between the sender and recipient's accounts
+  and bound to the room key's public key. A short-lived kind 1059 event wraps
+  the encrypted signal and routing information using the room key, with
   `["p", "<call pubkey>"]` and a NIP-40 `["expiration", ...]` ten minutes out.
   relay.divine.video accepts only an allowlist of kinds, and none of its
   ephemeral kinds fits. The JSON inside says `hello`, `offer`, `answer`,
@@ -274,9 +277,8 @@ their own part of one split-screen video
   waiting for the next snapshot, which is held back half a second to batch
   taps and then signed through the account's signer. It is only a preview:
   members apply it only from the author's pubkey and only in the lobby, and the
-  first snapshot with a revision past the one it names replaces it. Everyone
-  who holds the call key can write to the call, so the snapshot stays the
-  record
+  first snapshot with a revision past the one it names replaces it. The
+  signed room snapshot stays the record
 
 ## Event Subscription Requirements
 

@@ -67,8 +67,10 @@ class CollabRoomPartCubit extends Cubit<CollabRoomPartState>
   CollabRoomPartCubit({
     required CollabRoomService service,
     required String roomId,
+    int inviteRevision = 0,
   }) : _service = service,
        _roomId = roomId,
+       _inviteRevision = inviteRevision,
        super(const CollabRoomPartState());
 
   /// The smallest step of progress worth showing: Blossom reports every
@@ -77,6 +79,7 @@ class CollabRoomPartCubit extends Cubit<CollabRoomPartState>
 
   final CollabRoomService _service;
   final String _roomId;
+  final int _inviteRevision;
 
   /// The upload of the part on screen, by its path: a resource handle like a
   /// stream subscription, not state. A new render uploads afresh; a failed
@@ -126,23 +129,35 @@ class CollabRoomPartCubit extends Cubit<CollabRoomPartState>
   Future<void> send(File video) async {
     if (state.status == .sending || state.status == .sent) return;
     emitIfOpen(state.copyWith(status: CollabRoomPartStatus.sending));
+    CollabRoomUpload? upload;
     try {
-      final room = await _service.watchRoom(_roomId).first;
-      if (room == null || room.phase != CollabRoomPhase.recording) {
-        throw const CollabRoomException('The room no longer takes parts');
-      }
-      final upload = await _uploadOf(video);
+      await _roomTakingParts();
+      upload = await _uploadOf(video);
+      if (isClosed) return;
+      final room = await _roomTakingParts();
+      if (isClosed) return;
       await _service.handInPart(room, upload);
       emitIfOpen(state.copyWith(status: CollabRoomPartStatus.sent));
-    } on CollabRoomException catch (error, stackTrace) {
-      _upload = null;
+    } on Exception catch (error, stackTrace) {
+      if (upload == null) _upload = null;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(
           status: CollabRoomPartStatus.failed,
-          clearUploadProgress: true,
+          clearUploadProgress: upload == null,
         ),
       );
     }
+  }
+
+  Future<CollabRoom> _roomTakingParts() async {
+    final room = await _service.watchRoom(_roomId).first;
+    if (room == null ||
+        room.phase != CollabRoomPhase.recording ||
+        room.me?.status != CollabRoomMemberStatus.joined ||
+        room.me?.inviteRevision != _inviteRevision) {
+      throw const CollabRoomException('The room no longer takes this part');
+    }
+    return room;
   }
 }

@@ -5994,6 +5994,7 @@
   "collabRoomPostedDmBody": "우리 영상이 올라갔어요! 함께해 줘서 고마워요.",
   "collabRoomCancelledDmBody": "우리 영상 방을 취소했어요.",
   "collabRoomUpdatedDmBody": "우리 영상 방에 변화가 있어요. Divine을 열고 확인해 보세요.",
+  "collabRoomCameraMode": "함께",
   "collabRoomTitle": "함께 만들기",
   "collabRoomMissing": "이 방은 더 이상 없어요.",
   "collabRoomYou": "나",
