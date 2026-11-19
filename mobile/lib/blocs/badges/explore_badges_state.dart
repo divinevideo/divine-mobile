@@ -25,6 +25,7 @@ class ExploreBadgesState extends Equatable {
     this.refreshFailures = 0,
     this.visibleCount = pageSize,
     this.previews = const {},
+    this.videoPreviews = const {},
     this.refreshGeneration = 0,
     this.previewGeneration = 0,
     this.isRefreshing = false,
@@ -53,6 +54,9 @@ class ExploreBadgesState extends Equatable {
 
   /// Indexed accepted-member previews, never a complete membership count.
   final Map<String, List<String>> previews;
+
+  /// Playable previews supplied in the first discovery response.
+  final Map<String, List<BadgeVideoPreview>> videoPreviews;
 
   /// The latest discovery read, used to ignore superseded refreshes.
   final int refreshGeneration;
@@ -90,6 +94,7 @@ class ExploreBadgesState extends Equatable {
     int? refreshFailures,
     int? visibleCount,
     Map<String, List<String>>? previews,
+    Map<String, List<BadgeVideoPreview>>? videoPreviews,
     int? refreshGeneration,
     int? previewGeneration,
     bool? isRefreshing,
@@ -104,6 +109,7 @@ class ExploreBadgesState extends Equatable {
       refreshFailures: refreshFailures ?? this.refreshFailures,
       visibleCount: visibleCount ?? this.visibleCount,
       previews: previews ?? this.previews,
+      videoPreviews: videoPreviews ?? this.videoPreviews,
       refreshGeneration: refreshGeneration ?? this.refreshGeneration,
       previewGeneration: previewGeneration ?? this.previewGeneration,
       isRefreshing: isRefreshing ?? this.isRefreshing,
@@ -121,6 +127,7 @@ class ExploreBadgesState extends Equatable {
     refreshFailures,
     visibleCount,
     previews,
+    videoPreviews,
     refreshGeneration,
     previewGeneration,
     isRefreshing,

@@ -4,6 +4,7 @@ import 'package:badge_repository/src/badge_account_state_closed_exception.dart';
 import 'package:badge_repository/src/badge_coordinate.dart';
 import 'package:badge_repository/src/badge_dismissal_sync.dart';
 import 'package:badge_repository/src/badge_read_incomplete_exception.dart';
+import 'package:badge_repository/src/indexed_badge_discovery.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -563,6 +564,57 @@ class BadgeRepository {
   /// Most accepted holders one community preview shows.
   static const holderPreviewLimit = 3;
 
+  /// Reads the active indexed first page in server rank order.
+  ///
+  /// The trusted API verifies definitions and applies public deletion and
+  /// moderation state. Viewer-specific visibility is checked on-device.
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async {
+    final api = _funnelcakeApiClient;
+    if (api == null) throw const FunnelcakeNotConfiguredException();
+    final cards = await api.getBadgeDiscovery().timeout(
+      const Duration(milliseconds: 750),
+    );
+    if (_disposed) return const [];
+    final result = <IndexedBadgeDiscovery>[];
+    final seen = <String>{};
+    final counts = <String, int>{};
+    for (final card in cards) {
+      final event = card.definition;
+      final definition = Nip58BadgeParser.parseDefinition(event);
+      if (definition == null ||
+          definition.dTag != event.dTagValue ||
+          !isBadgePubkey(event.pubkey) ||
+          !event.isValid ||
+          !_badgeSignaturePattern.hasMatch(event.sig)) {
+        throw const FormatException('Invalid indexed badge definition');
+      }
+      if ((_isHiddenPubkey?.call(event.pubkey) ?? false) ||
+          !seen.add(definition.coordinate)) {
+        continue;
+      }
+      final count = counts.update(
+        event.pubkey,
+        (value) => value + 1,
+        ifAbsent: () => 1,
+      );
+      if (!_discoveryIssuerPubkeys.contains(event.pubkey) &&
+          count > _discoveryDefinitionsPerIssuer) {
+        continue;
+      }
+      result.add((
+        definition: definition,
+        videos: [
+          for (final video in card.videos)
+            if (isBadgePubkey(video.id) &&
+                isBadgePubkey(video.pubkey) &&
+                !(_isHiddenPubkey?.call(video.pubkey) ?? false))
+              video,
+        ],
+      ));
+    }
+    return result;
+  }
+
   /// Recent public and pinned catalogue badge definitions, newest first.
   ///
   /// Needs no signer and drops the viewer's hidden pubkeys. Reads the
@@ -577,12 +629,34 @@ class BadgeRepository {
   /// Throws [BadgeReadIncompleteException] when discovery goes unanswered.
   /// Omits issuers with inconclusive deletion reads. If none can be shown
   /// and a deletion read was inconclusive, the caller must retry.
-  Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
+  Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() =>
+      _loadRelayDiscovery();
+
+  /// Supplement the indexed page with definitions on configured external relays.
+  Future<List<Nip58BadgeDefinition>> loadFederatedDiscovery() {
+    final primary = Uri.tryParse(
+      _definitionRelayUrl ?? _nostrClient.defaultRelayUrl,
+    );
+    final relays = _nostrClient.configuredRelays
+        .where((url) => Uri.tryParse(url)?.host != primary?.host)
+        .where(_nostrClient.isRelayAllowed)
+        .toList();
+    return relays.isEmpty
+        ? Future.value(const [])
+        : _loadRelayDiscovery(externalRelays: relays);
+  }
+
+  Future<List<Nip58BadgeDefinition>> _loadRelayDiscovery({
+    List<String>? externalRelays,
+  }) async {
     final [recentEvents, pinnedEvents] = await Future.wait([
       _readDiscoveryWindow([
         Filter(kinds: [EventKind.badgeDefinition], limit: _discoveryWindowSize),
-      ]),
-      _readPinnedDiscoveryCatalogues(),
+      ], externalRelays: externalRelays),
+      if (externalRelays == null)
+        _readPinnedDiscoveryCatalogues()
+      else
+        Future.value(const <Event>[]),
     ], eagerError: true);
     final events = [
       ...recentEvents
@@ -653,6 +727,7 @@ class BadgeRepository {
             issuer.key,
             issuer.value,
             remaining,
+            externalRelays: externalRelays,
           ).timeout(remaining);
         } on Exception catch (error, stackTrace) {
           excludeUnsettledIssuer(
@@ -768,8 +843,9 @@ class BadgeRepository {
   Future<QueryResult> _readDiscoveryIssuerDeletions(
     String issuer,
     List<Nip58BadgeDefinition> candidates,
-    Duration timeout,
-  ) => _nostrClient.readEvents(
+    Duration timeout, {
+    List<String>? externalRelays,
+  }) => _nostrClient.readEvents(
     [
       Filter(
         kinds: [EventKind.eventDeletion],
@@ -790,21 +866,28 @@ class BadgeRepository {
         limit: _discoveryDeletionLimit,
       ),
     ],
-    tempRelays: _publicReadRelays,
-    relayTypes: _definitionRelayUrl == null ? RelayType.all : [RelayType.temp],
+    tempRelays: externalRelays == null
+        ? _publicReadRelays
+        : [...?_publicReadRelays, ...externalRelays],
+    relayTypes: _definitionRelayUrl == null && externalRelays == null
+        ? RelayType.all
+        : RelayType.onlyTemp,
     useCache: false,
     timeout: timeout,
     requireAllRelaysSettled: true,
     maxCollectedEvents: _discoveryDeletionLimit,
   );
 
-  Future<List<Event>> _readDiscoveryWindow(List<Filter> filters) async {
+  Future<List<Event>> _readDiscoveryWindow(
+    List<Filter> filters, {
+    List<String>? externalRelays,
+  }) async {
     final result = await _nostrClient.readEvents(
       filters,
-      tempRelays: _publicReadRelays,
-      relayTypes: _definitionRelayUrl == null
+      tempRelays: externalRelays ?? _publicReadRelays,
+      relayTypes: _definitionRelayUrl == null && externalRelays == null
           ? RelayType.all
-          : [RelayType.temp],
+          : RelayType.onlyTemp,
       useCache: false,
       timeout: _discoveryReadTimeout,
       requireAllRelaysSettled: true,

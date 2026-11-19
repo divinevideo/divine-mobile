@@ -26,6 +26,65 @@ const _badge = <String, dynamic>{
 };
 
 void main() {
+  group('FunnelcakeApiClient.getBadgeDiscovery', () {
+    test('fetches ranked definitions and clips in one request', () async {
+      var calls = 0;
+      final transport = MockClient((request) async {
+        calls++;
+        expect(request.url.path, '/api/badges/discovery');
+        expect(request.url.queryParameters, {'limit': '48'});
+        return http.Response(
+          jsonEncode({
+            'badges': [
+              {
+                'definition': _badge,
+                'holder_count': 12,
+                'follower_count': 7,
+                'videos': [
+                  {
+                    'id': 'a' * 64,
+                    'pubkey': _issuer,
+                    'title': 'Clip',
+                    'thumbnail': '',
+                  },
+                ],
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+      final result = await client.getBadgeDiscovery();
+      expect(calls, 1);
+      expect(result.single.definition.toJson(), _badge);
+      expect(result.single.holderCount, 12);
+      expect(result.single.followerCount, 7);
+      expect(result.single.videos.single.id, 'a' * 64);
+    });
+
+    test('a malformed indexed payload is a typed failure', () async {
+      final transport = MockClient(
+        (_) async => http.Response('{"badges":[7]}', 200),
+      );
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+      await expectLater(
+        client.getBadgeDiscovery(),
+        throwsA(isA<FunnelcakeException>()),
+      );
+    });
+  });
+
   group('FunnelcakeApiClient.getBadgeDefinitions', () {
     late FunnelcakeApiClient client;
     late MockClient transport;

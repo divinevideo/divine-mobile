@@ -22,12 +22,14 @@ class BadgeCommunityCard extends ConsumerWidget {
     required this.definition,
     required this.onTap,
     this.memberPubkeys = const [],
+    this.compactArtwork = false,
     super.key,
   });
 
   final Nip58BadgeDefinition definition;
   final VoidCallback onTap;
   final List<String> memberPubkeys;
+  final bool compactArtwork;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,6 +58,65 @@ class BadgeCommunityCard extends ConsumerWidget {
       ...definition.thumbnails,
     ].whereType<String>().where(isUsableNetworkImageUrl).firstOrNull;
     final fallback = _BadgeMonogram(name: name);
+    final artwork = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio(
+        aspectRatio: badgeArtworkAspectRatio,
+        child: ColoredBox(
+          color: context.vineColors.surfaceContainerHigh,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (image == null)
+                fallback
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) => VineCachedImage(
+                    imageUrl: image,
+                    fit: BoxFit.contain,
+                    resizePolicy: ResizeImagePolicy.fit,
+                    memCacheWidth:
+                        (constraints.maxWidth *
+                                MediaQuery.devicePixelRatioOf(
+                                  context,
+                                ))
+                            .ceil()
+                            .clamp(1, 1024),
+                    memCacheHeight:
+                        (constraints.maxHeight *
+                                MediaQuery.devicePixelRatioOf(
+                                  context,
+                                ))
+                            .ceil()
+                            .clamp(1, 1024),
+                    placeholder: (_, _) => fallback,
+                    errorWidget: (_, _, _) => fallback,
+                    fadeInDuration: Duration.zero,
+                    fadeOutDuration: Duration.zero,
+                  ),
+                ),
+              if (members.isNotEmpty)
+                PositionedDirectional(
+                  end: 8,
+                  bottom: 8,
+                  child: Row(
+                    spacing: 4,
+                    children: [
+                      for (final pubkey in members) _MemberFace(pubkey: pubkey),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final title = Text(
+      name,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: VineTheme.titleSmallFont(color: context.vineColors.onSurface),
+    );
     return Semantics(
       // The issuer goes in the label: Android reads a value before the label.
       label: isOfficial
@@ -78,69 +139,19 @@ class BadgeCommunityCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: AspectRatio(
-                  aspectRatio: badgeArtworkAspectRatio,
-                  child: ColoredBox(
-                    color: context.vineColors.surfaceContainerHigh,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (image == null)
-                          fallback
-                        else
-                          LayoutBuilder(
-                            builder: (context, constraints) => VineCachedImage(
-                              imageUrl: image,
-                              fit: BoxFit.contain,
-                              resizePolicy: ResizeImagePolicy.fit,
-                              memCacheWidth:
-                                  (constraints.maxWidth *
-                                          MediaQuery.devicePixelRatioOf(
-                                            context,
-                                          ))
-                                      .ceil()
-                                      .clamp(1, 1024),
-                              memCacheHeight:
-                                  (constraints.maxHeight *
-                                          MediaQuery.devicePixelRatioOf(
-                                            context,
-                                          ))
-                                      .ceil()
-                                      .clamp(1, 1024),
-                              placeholder: (_, _) => fallback,
-                              errorWidget: (_, _, _) => fallback,
-                              fadeInDuration: Duration.zero,
-                              fadeOutDuration: Duration.zero,
-                            ),
-                          ),
-                        if (members.isNotEmpty)
-                          PositionedDirectional(
-                            end: 8,
-                            bottom: 8,
-                            child: Row(
-                              spacing: 4,
-                              children: [
-                                for (final pubkey in members)
-                                  _MemberFace(pubkey: pubkey),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: VineTheme.titleSmallFont(
-                  color: context.vineColors.onSurface,
-                ),
-              ),
+              if (compactArtwork)
+                Row(
+                  spacing: 8,
+                  children: [
+                    SizedBox(width: 64, child: artwork),
+                    Expanded(child: title),
+                  ],
+                )
+              else ...[
+                artwork,
+                const SizedBox(height: 8),
+                title,
+              ],
               if (definition.description case final description?
                   when description.trim().isNotEmpty) ...[
                 const SizedBox(height: 4),

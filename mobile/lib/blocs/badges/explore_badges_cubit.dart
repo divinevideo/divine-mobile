@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart'
+    show FunnelcakeApiException, FunnelcakeNotConfiguredException;
 import 'package:openvine/blocs/close_guard.dart';
 
 part 'explore_badges_state.dart';
@@ -43,29 +45,30 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       ),
     );
     try {
-      final definitions = await _repository.loadPublicDefinitions();
-      if (isClosed || generation != state.refreshGeneration) return;
-      final previousIds = {
-        for (final definition in state.definitions)
-          definition.coordinate: definition.event.id,
+      List<IndexedBadgeDiscovery>? indexed;
+      try {
+        indexed = await _repository.loadIndexedDiscovery();
+      } on FunnelcakeNotConfiguredException {
+        // An unconfigured API is supported by relay-only environments.
+      } on FunnelcakeApiException catch (error, stackTrace) {
+        if (error.statusCode != 404) addError(error, stackTrace);
+      } on Exception catch (error, stackTrace) {
+        addError(error, stackTrace);
+      }
+      if (indexed == null) {
+        final definitions = await _repository.loadPublicDefinitions();
+        if (!_isCurrent(generation)) return;
+        _applyDefinitions(definitions, generation, const {});
+        return;
+      }
+
+      if (!_isCurrent(generation)) return;
+      final definitions = indexed.map((card) => card.definition).toList();
+      final videoPreviews = {
+        for (final card in indexed) card.definition.coordinate: card.videos,
       };
-      final previews = {
-        for (final definition in definitions)
-          if (previousIds[definition.coordinate] == definition.event.id &&
-              state.previews.containsKey(definition.coordinate))
-            definition.coordinate: state.previews[definition.coordinate]!,
-      };
-      emitIfOpen(
-        state.copyWith(
-          status: ExploreBadgesStatus.loaded,
-          definitions: List.unmodifiable(definitions),
-          isRefreshing: false,
-          previewGeneration: generation,
-          previews: Map.unmodifiable(previews),
-          previewQueue: const [],
-          requestedPreviews: Set.unmodifiable(previews.keys),
-        ),
-      );
+      _applyDefinitions(definitions, generation, videoPreviews);
+      unawaited(_appendFederated(generation, definitions));
     } catch (error, stackTrace) {
       // Log even a superseded read: its failure is still a relay symptom.
       addError(error, stackTrace);
@@ -82,6 +85,64 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       );
       _drainPreviews();
     }
+  }
+
+  Future<void> _appendFederated(
+    int generation,
+    List<Nip58BadgeDefinition> indexed,
+  ) async {
+    try {
+      final federated = await _repository.loadFederatedDiscovery();
+      if (!_isCurrent(generation) || federated.isEmpty) return;
+      final coordinates = indexed
+          .map((definition) => definition.coordinate)
+          .toSet();
+      emitIfOpen(
+        state.copyWith(
+          definitions: List.unmodifiable([
+            ...indexed,
+            ...federated.where(
+              (definition) => coordinates.add(definition.coordinate),
+            ),
+          ]),
+        ),
+      );
+    } catch (error, stackTrace) {
+      // External relays are supplemental and never replace the indexed page.
+      if (_isCurrent(generation)) addError(error, stackTrace);
+    }
+  }
+
+  bool _isCurrent(int generation) =>
+      !isClosed && generation == state.refreshGeneration;
+
+  void _applyDefinitions(
+    List<Nip58BadgeDefinition> definitions,
+    int generation,
+    Map<String, List<BadgeVideoPreview>> videos,
+  ) {
+    final previousIds = {
+      for (final definition in state.definitions)
+        definition.coordinate: definition.event.id,
+    };
+    final previews = {
+      for (final definition in definitions)
+        if (previousIds[definition.coordinate] == definition.event.id &&
+            state.previews.containsKey(definition.coordinate))
+          definition.coordinate: state.previews[definition.coordinate]!,
+    };
+    emitIfOpen(
+      state.copyWith(
+        status: ExploreBadgesStatus.loaded,
+        definitions: List.unmodifiable(definitions),
+        isRefreshing: false,
+        previewGeneration: generation,
+        videoPreviews: Map.unmodifiable(videos),
+        previews: Map.unmodifiable(previews),
+        previewQueue: const [],
+        requestedPreviews: Set.unmodifiable(previews.keys),
+      ),
+    );
   }
 
   /// Updates local gallery visibility using the currently loaded definitions.
@@ -128,6 +189,7 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   void loadPreview(String coordinate) {
     if (isClosed ||
         state.isRefreshing ||
+        state.videoPreviews.containsKey(coordinate) ||
         state.requestedPreviews.contains(coordinate) ||
         !state.visibleDefinitions.any((d) => d.coordinate == coordinate)) {
       return;

@@ -3,11 +3,18 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 
-class _MockBadgeRepository extends Mock implements BadgeRepository {}
+class _IndexedRepository extends Mock implements BadgeRepository {}
+
+class _MockBadgeRepository extends Mock implements BadgeRepository {
+  @override
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async =>
+      throw const FunnelcakeNotConfiguredException();
+}
 
 void main() {
   setUpAll(
@@ -46,6 +53,38 @@ void main() {
         expect(cubit.state.visibleDefinitions, hasLength(55));
         expect(cubit.state.hasMore, isFalse);
         verify(repository.loadPublicDefinitions).called(1);
+      },
+    );
+
+    test(
+      'publishes ranked clips while the external relay read is pending',
+      () async {
+        final indexed = _IndexedRepository();
+        final waiting = Completer<List<Nip58BadgeDefinition>>();
+        final video = (
+          id: 'a' * 64,
+          pubkey: 'b' * 64,
+          title: 'Clip',
+          thumbnail: '',
+        );
+        when(indexed.loadIndexedDiscovery).thenAnswer(
+          (_) async => [
+            (definition: _definition, videos: [video]),
+          ],
+        );
+        when(indexed.loadFederatedDiscovery).thenAnswer((_) => waiting.future);
+        final cubit = ExploreBadgesCubit(repository: indexed);
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.status, ExploreBadgesStatus.loaded);
+        expect(cubit.state.videoPreviews[_definition.coordinate], [video]);
+        expect(waiting.isCompleted, isFalse);
+        verifyNever(indexed.loadPublicDefinitions);
+        waiting.complete([_definition]);
+        await pumpEventQueue();
+        expect(cubit.state.definitions, [_definition]);
       },
     );
 
