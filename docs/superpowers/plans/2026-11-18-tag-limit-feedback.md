@@ -4,7 +4,7 @@
 
 **Goal:** When the tags picker turns a tag away because the video already has 10, say so in warning colour, say how to make room, and keep the typed text.
 
-**Architecture:** Extend the design lead's `TagsPickerNotice` (#10053) with a `tagLimitReached` reason set by `TagsPickerBloc._withAddedTags`. `_TagInputHint` renders a new string in `accentWarning` for that notice and keeps the existing muted line for the plain at-limit state. `_addTag` keeps the field text when the video is already at the limit and announces repeat rejections with `announceDetached`.
+**Architecture:** Extend the design lead's `TagsPickerNotice` (#10053) with a `tagLimitReached` reason set by `TagsPickerBloc._withAddedTags`. `_TagInputHint` renders a new string in `accentWarning` for that notice and keeps the existing muted line for the plain at-limit state. `_addTag` keeps the field text when `TagsPickerState.turnsAwayAtLimit(raw)` is true, and both submit paths announce repeat rejections with `announceDetached`.
 
 **Tech Stack:** Flutter, flutter_bloc, bloc_test, gen-l10n (ARB).
 
@@ -24,7 +24,7 @@ All paths below are relative to `mobile/` unless they start with `docs/`.
 ## Review Focus
 
 1. **Typing a tag then a space at 10** (the separator path, not return): the warning must appear. The typed text is cleared on this path, a known limit the design accepts; Task 2 pins the warning.
-2. **Re-submitting a tag the video already has, while at 10**: not a rejection, no warning. Task 1 pins it.
+2. **Re-submitting a tag the video already has, while at 10**: not a rejection: no new notice, no announcement, and a warning already showing stays. Tasks 1 and 2 pin it.
 3. **A sticker hashtag filling the 10th slot**: sticker tags count toward the limit, so a new tag is turned away with the warning. Task 1 pins it.
 4. **Submitting an empty field at 10**: must not announce or warn. Task 2 pins it.
 5. **Removing a tag after a rejection, then pressing return again**: warning clears and the kept text is added. Task 2 pins it.
@@ -34,12 +34,13 @@ All paths below are relative to `mobile/` unless they start with `docs/`.
 ### Task 1: Bloc reports a limit rejection
 
 **Files:**
-- Modify: `lib/blocs/tags_picker/tags_picker_state.dart` (`TagsPickerNotice`)
-- Modify: `lib/blocs/tags_picker/tags_picker_bloc.dart` (`_withAddedTags`, its doc comment)
+- Modify: `lib/blocs/tags_picker/tags_picker_state.dart` (`TagsPickerNotice`, `turnsAwayAtLimit`)
+- Modify: `lib/blocs/tags_picker/tags_picker_bloc.dart` (`_withAddedTags`, its doc comment, `_onQueryChanged`)
 - Test: `test/blocs/tags_picker/tags_picker_bloc_test.dart`, group `'$TagsPickerBloc hashtag limits'`
 
 **Interfaces:**
 - Produces: `TagsPickerNotice.tagLimitReached` — doc: a valid tag not already on the video was dropped because the video carries `HashtagExtractor.maxHashtagsPerVideo` tags.
+- Produces: `TagsPickerState.turnsAwayAtLimit(String raw)` — whether committing `raw` would be turned away for the limit.
 
 - [ ] **Step 1: Write the failing tests** in the existing `'$TagsPickerBloc hashtag limits'` → `TagsPickerTagsAdded` group, reusing its `createBloc`, `ten`, `tooLong`:
   - Replace `'ignores further tags once the limit is reached'` (expects no emit today) with `'flags a tag turned away at the limit'`: seed `ten`, add `['eleven']`, expect one state with `selectedTags == ten.toSet()` and `notice == TagsPickerNotice.tagLimitReached`.
@@ -47,7 +48,8 @@ All paths below are relative to `mobile/` unless they start with `docs/`.
   - `'does not flag a tag the video already has'`: seed `ten`, add `['tag3']`, expect `const <TagsPickerState>[]`.
   - `'limit notice wins over a too-long tag in the same paste'`: initial = first 9, add `[tooLong, 'x', 'y']`, expect `'x'` added and notice `tagLimitReached`.
   - In the `TagsPickerTagRemoved` group: `'clears a limit notice'` mirroring the existing too-long one with `notice: TagsPickerNotice.tagLimitReached`.
-  - In the `TagsPickerQueryChanged` coverage (same file, either group): `'keeps a limit notice through the empty-query debounce'`: seed `TagsPickerState(selectedTags: ten.toSet(), notice: TagsPickerNotice.tagLimitReached)`, add `TagsPickerQueryChanged('')`, `wait` past the debounce as the neighbouring debounce tests do, expect every emitted state's `notice` to stay `tagLimitReached`.
+  - In the `TagsPickerQueryChanged` group: `'keeps a limit notice when the cleared field sends an empty query'` and `'keeps a limit notice while typing at the limit'`, both seeded with ten tags and `notice: TagsPickerNotice.tagLimitReached`, `wait` past the debounce as the neighbouring debounce tests do, and the notice stays `tagLimitReached`.
+  - `'keeps a limit notice when a tag the video already has is committed'`: seed ten tags and the limit notice, add `['tag3']`, expect no emit.
   - In the `sticker tags` group: `'flags a tag turned away when a sticker fills the last slot'`: bloc with 9 initial tags and one sticker tag (construct as that group does), add `['new']`, expect notice `tagLimitReached`; and `'does not flag a sticker hashtag at the limit'` adding the sticker's own tag, expect no emit.
 
 - [ ] **Step 2: Run to verify they fail**
@@ -105,7 +107,7 @@ git commit -m "fix(hashtags): report when a tag is turned away at the 10-tag lim
 - Test: `test/widgets/video_metadata/video_metadata_tags_selector_test.dart`, group `'hashtag limits'`
 
 **Interfaces:**
-- Consumes: `TagsPickerNotice.tagLimitReached`, `TagsPickerState.isAtTagLimit`, `TagsPickerState.notice` (Task 1).
+- Consumes: `TagsPickerNotice.tagLimitReached`, `TagsPickerState.isAtTagLimit`, `TagsPickerState.notice`, `TagsPickerState.turnsAwayAtLimit` (Task 1).
 - Produces: `AppLocalizations.videoMetadataTagsPickerTagLimitRemoveToAdd(int max)`.
 
 - [ ] **Step 1: Add the ARB key** to `app_en.arb` after `videoMetadataTagsPickerTagLimitReached`, with an `@` entry: description "Warning under the tags field when a tag was not added because the video already has the maximum number of hashtags.", placeholder `max` type `int`. Translate into every other locale, starting from that locale's existing `videoMetadataTagsPickerTagLimitReached` and adding the remedy in the register `LOCALIZATION_STYLE_GUIDE.md` sets for it, with every plural category the locale's existing string uses. Run `flutter gen-l10n`.
@@ -125,8 +127,9 @@ Expected: the new tests FAIL (warning not found / controller cleared).
 
 - [ ] **Step 4: Implement**
   - `_TagInputHint`: helper selection becomes notice `tagLimitReached` → `l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(max)` in `accentWarning`; else `isAtTagLimit` → existing standing string, muted; else the existing too-long/counter logic unchanged. Keep the `Semantics(liveRegion: true)` wrapper. Update its doc comment.
-  - `_addTag(String raw)`: read `final bloc = context.read<TagsPickerBloc>()` and capture `atLimit = bloc.state.isAtTagLimit` before dispatching. If `atLimit && raw.trim().isNotEmpty`: if `bloc.state.notice == TagsPickerNotice.tagLimitReached`, call `announceDetached` (import `package:openvine/utils/semantics_announcement.dart`) as `announceDetached(context, context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(HashtagExtractor.maxHashtagsPerVideo), description: 'announce repeated tag limit rejection', logName: 'VideoMetadataTagsSelector')`; dispatch `TagsPickerTagsAdded([raw])` and return without clearing the field or dispatching `TagsPickerSearchCleared`. Otherwise behave as today. One-line comment on why the text stays (the creator can add it once a tag is removed).
-  - No change to `_onSearchChanged` beyond what the tests demand; the separator path relies on the bloc notice and the live region.
+  - `_addTag(String raw)`: read `final bloc = context.read<TagsPickerBloc>()`. If `bloc.state.turnsAwayAtLimit(raw)`: call `_announceRepeatLimitRejection(bloc.state, [raw])`, dispatch `TagsPickerTagsAdded([raw])` and return without clearing the field or dispatching `TagsPickerSearchCleared`. Else if `bloc.state.isAtTagLimit` (an empty return or a tag the video already has): clear the field and dispatch nothing, which leaves any notice in place. Otherwise behave as today. One-line comment on why the text stays (the creator can add it once a tag is removed).
+  - `_announceRepeatLimitRejection(state, tokens)`: when `state.notice` is already `tagLimitReached` and any token `turnsAwayAtLimit`, call `announceDetached` (import `package:openvine/utils/semantics_announcement.dart`) as `announceDetached(context, context.l10n.videoMetadataTagsPickerTagLimitRemoveToAdd(HashtagExtractor.maxHashtagsPerVideo), description: 'announce repeated tag limit rejection', logName: 'VideoMetadataTagsSelector')`.
+  - `_onSearchChanged` calls the same `_announceRepeatLimitRejection` before dispatching, so a repeat rejection ended with a space, or pasted in a list, is announced too.
 
 - [ ] **Step 5: Run to verify they pass, plus the l10n and selector suites**
 

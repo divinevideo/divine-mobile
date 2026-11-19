@@ -46,9 +46,10 @@ in review.
   the video was dropped because the video is at the limit.
 - `_withAddedTags` sets it whenever such a token is dropped, for a single
   typed tag and for the overflow of a pasted list. A token that duplicates an
-  existing or sticker tag is not a rejection and sets nothing. If one paste
-  hits both "too long" and the limit, the limit notice wins, since it is the
-  one that blocks the rest. (Claude's call.)
+  existing or sticker tag is not a rejection: it adds no notice, and a limit
+  notice already showing stays while the video is at the limit. If one paste
+  hits both "too long" and the limit, the limit notice wins, since no new tag
+  fits until one is removed. (Claude's call.)
 - Removing a tag resets `notice`, and the empty-query debounce keeps it
   (hm21's fix in #10053). Typing a non-empty query resets a too-long notice
   but keeps the limit notice while the video is still at the limit: the
@@ -57,17 +58,19 @@ in review.
   building; Claude's call.)
 
 **Field** (`_addTag` in `video_metadata_tags_selector.dart`):
-- If the video is already at the limit when the creator submits, keep the
-  typed text in the field instead of clearing it, so it can be added once a
-  tag is removed. Otherwise clear as today. The widget decides from
+- If the submitted tag would be turned away for the limit, keep the typed
+  text in the field instead of clearing it, so it can be added once a tag is
+  removed. Otherwise clear as today. The widget decides from
   `TagsPickerState.turnsAwayAtLimit(raw)` before dispatching, because the
-  bloc answers asynchronously; that getter is the one rejection rule both
-  layers share, so a tag the video already has is never treated as turned
-  away. At the limit, a tag the video already has clears the field and
+  bloc answers asynchronously; the bloc applies the same rule when it drops
+  the tag, so a tag the video already has is never treated as turned away.
+  At the limit, a tag the video already has clears the field and
   leaves any notice alone. A pasted list that partly fits still clears; the notice
   explains the drop. At the limit, pressing return on an empty field does
   nothing. Typing a tag then a space (rather than return) at the limit still
-  clears the text; the warning explains it. (Claude's calls.)
+  clears the text; the warning explains it. A tag the video already has,
+  ended with a space, leaves the warning in place as return does. (Claude's
+  calls.)
 
 **Hint line** (`_TagInputHint`):
 - `notice == tagLimitReached` → new string, `context.vineColors.accentWarning`.
@@ -93,11 +96,15 @@ of #11226; the PR says so. (Claude's call.)
 ## Tests
 
 - Bloc: limit notice for a typed tag at 10; for paste overflow; none for a
-  duplicate at 10; cleared by removing a tag; survives the empty-query
-  debounce; limit wins over "too long" in one paste.
-- Widget: at 10, submitting keeps the typed text and shows the new string;
-  removing a tag clears it and the kept text can then be added; below the
-  limit the field still clears.
+  duplicate at 10, and a duplicate keeps a limit notice already showing;
+  cleared by removing a tag; survives the empty-query debounce and typing at
+  the limit; limit wins over "too long" in one paste; `turnsAwayAtLimit` for
+  new, existing, sticker and invalid tags.
+- Widget: at 10, submitting keeps the typed text and shows the new string,
+  marked as a live region; removing a tag clears it and the kept text can
+  then be added; below the limit the field still clears; only a repeat
+  rejection is announced explicitly, on return, on space and in a pasted
+  list; a tag the video already has is not announced and keeps the warning.
 - Each new test is checked to fail with its guard removed.
 
 ## Left to the builder
