@@ -1,6 +1,7 @@
 """Release announcements require store availability, not submission or track state."""
 
 import copy
+import http.client
 import io
 import json
 import unittest
@@ -163,6 +164,7 @@ class DraftProducerTest(unittest.TestCase):
     def test_failures_are_safe_nonfatal_and_retried(self):
         for error in [
             TimeoutError("synthetic-secret"), urllib.error.URLError("synthetic-secret"),
+            http.client.BadStatusLine("private payload synthetic-secret"),
             urllib.error.HTTPError(
                 "https://campaigns.example", 500, "synthetic-secret", {},
                 io.BytesIO(b"private payload"),
@@ -189,13 +191,15 @@ class DraftProducerTest(unittest.TestCase):
 
 
 class CoordinatorDraftIntegrationTest(unittest.TestCase):
-    def test_optional_draft_failure_does_not_fail_release_tick_and_dry_run_never_posts(self):
+    def test_tick_only_drafts_confirmed_ios_availability_even_at_android_production_level(self):
         from release_train import runner
 
         source = snapshot()
         source.update(now=100, cm=[], changes={}, candidate=None)
         source["ios"]["versions"][0]["id"] = "synthetic-version"
         source["ios"].update(builds=[], group_valid=True, review_submissions=[])
+        source["android"].update(internal=[], lifecycle_complete=True, managed_publishing=False)
+        source["android"]["production"][0].update(sha="a" * 40, status="completed")
         for dry_run in [False, True]:
             with self.subTest(dry_run=dry_run):
                 runtime = Mock()
@@ -210,7 +214,7 @@ class CoordinatorDraftIntegrationTest(unittest.TestCase):
                     "GITHUB_SHA": "a" * 40,
                     "GITHUB_WORKFLOW_SHA": "a" * 40,
                     "RELEASE_TRAIN_IOS": "app-store",
-                    "RELEASE_TRAIN_ANDROID": "off",
+                    "RELEASE_TRAIN_ANDROID": "production",
                     "RELEASE_DRY_RUN": "true" if dry_run else "false",
                 }
                 with (
@@ -220,11 +224,13 @@ class CoordinatorDraftIntegrationTest(unittest.TestCase):
                     patch("urllib.request.build_opener") as opener,
                     patch("sys.stdout", new_callable=io.StringIO) as output,
                 ):
-                    opener.return_value.open.side_effect = TimeoutError("synthetic-secret")
-                    self.assertEqual(runner.main(env), 0)
+                    opener.return_value.open.side_effect = http.client.BadStatusLine("synthetic-secret")
+                    self.assertEqual(runner.main(env), 0, output.getvalue())
                     self.assertNotIn("synthetic-secret", output.getvalue())
                     if dry_run:
                         opener.assert_not_called()
                     else:
-                        self.assertEqual(opener.return_value.open.call_count, 1)
+                        opener.return_value.open.assert_called_once()
+                        request = opener.return_value.open.call_args.args[0]
+                        self.assertEqual(json.loads(request.data)["sourceId"], "ios:app_store")
                         self.assertIn("will retry next tick", output.getvalue())

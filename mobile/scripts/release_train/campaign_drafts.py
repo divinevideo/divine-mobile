@@ -14,6 +14,7 @@ The receiving API deduplicates platform/channel/version across ticks and restart
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import urllib.error
@@ -140,6 +141,6 @@ def publish_release_drafts(
         except urllib.error.HTTPError as error:
             error.close()
             messages.append("Release campaign draft unavailable; will retry next tick.")
-        except (OSError, ValueError):
+        except (http.client.HTTPException, OSError, ValueError):
             messages.append("Release campaign draft unavailable; will retry next tick.")
     return messages
