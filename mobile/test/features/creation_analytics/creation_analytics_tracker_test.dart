@@ -357,6 +357,35 @@ void main() {
     });
 
     test(
+      'a standalone camera opens while an ordinary publish is pending',
+      () async {
+        final sink = _RecordingSink();
+        final tracker = CreationAnalyticsTracker(analytics: sink);
+        await tracker.cameraOpened(mode: .capture, entryPoint: 'bottom_nav');
+        await tracker.recordingStarted(.capture);
+        await tracker.editorOpened(.capture);
+        final attempt = await tracker.publishStarted(.capture);
+        final eventCount = sink.events.length;
+
+        expect(tracker.activeRecorderMode(null), isNull);
+        await tracker.cameraOpened(mode: .classic, entryPoint: 'bottom_nav');
+        await tracker.publishSucceeded(attempt);
+        await tracker.recordingStarted(.classic);
+
+        expect(sink.events.skip(eventCount).map((event) => event.name), [
+          'camera_opened',
+          'publish_succeeded',
+          'recording_started',
+        ]);
+        expect(sink.events[eventCount].parameters, {
+          'mode': 'classic',
+          'entry_point': 'bottom_nav',
+        });
+        expect(tracker.activeMode, VideoRecorderMode.classic);
+      },
+    );
+
+    test(
       'a late reaction publish failure preserves the new camera mode',
       () async {
         final sink = _RecordingSink();

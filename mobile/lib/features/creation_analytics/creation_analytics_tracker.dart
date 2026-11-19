@@ -62,7 +62,7 @@ class CreationAnalyticsTracker {
     bool continuesEditorSession = false,
   }) {
     if (!_accepts(session) ||
-        _replacesEditorSession(
+        _startsAfterEditorOrPublish(
           session,
           continuesEditorSession: continuesEditorSession,
         )) {
@@ -78,15 +78,15 @@ class CreationAnalyticsTracker {
     bool continuesEditorSession = false,
   }) async {
     if (session?._closed ?? false) return;
-    final replacesEditor = _replacesEditorSession(
+    final startsNewFunnel = _startsAfterEditorOrPublish(
       session,
       continuesEditorSession: continuesEditorSession,
     );
     final previous = _cameraSession;
-    if (replacesEditor || !identical(previous, session)) {
+    if (startsNewFunnel || !identical(previous, session)) {
       // A publish attempt suppresses abandonment analytics. The replacement
       // still needs a fresh funnel even when there is no abandonment event.
-      if (replacesEditor || previous != null) {
+      if (startsNewFunnel || previous != null) {
         unawaited(creationAbandoned(session: previous));
       }
       _cameraSession = session;
@@ -246,11 +246,14 @@ class CreationAnalyticsTracker {
     );
   }
 
-  // A standalone camera can mount before the old reaction editor is disposed.
-  bool _replacesEditorSession(
+  // A standalone camera can open while the preceding editor is disposing or
+  // its publish is still finishing in the background.
+  bool _startsAfterEditorOrPublish(
     CreationAnalyticsSession? session, {
     required bool continuesEditorSession,
-  }) => _editorSession != null && (session != null || !continuesEditorSession);
+  }) =>
+      (_editorSession != null || _publishAttempt != null) &&
+      (session != null || !continuesEditorSession);
 
   bool _accepts(CreationAnalyticsSession? session) =>
       identical(_cameraSession, session) && !(session?._closed ?? false);
