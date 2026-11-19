@@ -5,35 +5,70 @@ void main() {
   final postedAt = DateTime.utc(2026, 11, 19, 12);
   final windowEnd = postedAt.add(const Duration(minutes: 60));
 
-  LiveActivityRegistration registration() => LiveActivityRegistration.forPost(
-    activityId: 'a1',
-    ownerPubkey: 'owner',
-    activityPushToken: 'tok',
-    postCoordinate: '34236:owner:d',
-    postEventIds: const ['e1', 'e2'],
-    postedAt: postedAt,
-    showFirstRunNote: true,
+  LiveActivityRegistration registration({
+    String activityId = 'a1',
+    String ownerPubkey = 'owner',
+    String activityPushToken = 'tok',
+    String postCoordinate = '34236:owner:d',
+    List<String> postEventIds = const ['e1', 'e2'],
+    DateTime? postedAtOverride,
+    DateTime? windowEndsAt,
+    bool showFirstRunNote = true,
+    LiveActivityRegistrationState state = LiveActivityRegistrationState.active,
+  }) => LiveActivityRegistration(
+    activityId: activityId,
+    ownerPubkey: ownerPubkey,
+    activityPushToken: activityPushToken,
+    postCoordinate: postCoordinate,
+    postEventIds: postEventIds,
+    postedAt: postedAtOverride ?? postedAt,
+    windowEndsAt: windowEndsAt ?? windowEnd,
+    showFirstRunNote: showFirstRunNote,
+    state: state,
   );
 
   group(LiveActivityRegistration, () {
     test('forPost ends the window 60 minutes after posting', () {
-      final r = registration();
-      expect(r.windowEndsAt, equals(postedAt.add(const Duration(minutes: 60))));
+      final r = LiveActivityRegistration.forPost(
+        activityId: 'a1',
+        ownerPubkey: 'owner',
+        activityPushToken: 'tok',
+        postCoordinate: '34236:owner:d',
+        postEventIds: const ['e1', 'e2'],
+        postedAt: postedAt,
+        showFirstRunNote: true,
+      );
+      expect(r.windowEndsAt, equals(windowEnd));
       expect(r.state, equals(LiveActivityRegistrationState.active));
+      expect(r, equals(registration()));
     });
 
     test('ended returns an ended copy and leaves the original', () {
       final r = registration();
       final ended = r.ended();
-      expect(ended.state, equals(LiveActivityRegistrationState.ended));
+      expect(ended, equals(registration(state: .ended)));
       expect(r.state, equals(LiveActivityRegistrationState.active));
-      expect(ended, isNot(equals(r)));
-      expect(ended.activityId, equals(r.activityId));
-      expect(ended.windowEndsAt, equals(r.windowEndsAt));
     });
 
     test('is equal when every field matches', () {
       expect(registration(), equals(registration()));
+    });
+
+    test('is unequal when any single field differs', () {
+      final differing = <String, LiveActivityRegistration>{
+        'activityId': registration(activityId: 'a2'),
+        'ownerPubkey': registration(ownerPubkey: 'other'),
+        'activityPushToken': registration(activityPushToken: 'tok2'),
+        'postCoordinate': registration(postCoordinate: '34236:owner:e'),
+        'postEventIds': registration(postEventIds: ['e1']),
+        'postedAt': registration(postedAtOverride: windowEnd),
+        'windowEndsAt': registration(windowEndsAt: postedAt),
+        'showFirstRunNote': registration(showFirstRunNote: false),
+        'state': registration(state: LiveActivityRegistrationState.ended),
+      };
+      for (final entry in differing.entries) {
+        expect(registration(), isNot(equals(entry.value)), reason: entry.key);
+      }
     });
 
     test('liveActivityWire has exactly the request keys', () {
@@ -54,55 +89,66 @@ void main() {
   });
 
   group(RunningLiveActivity, () {
+    RunningLiveActivity running({
+      String id = 'a',
+      String ownerPubkey = 'o',
+      DateTime? startedAt,
+      String? postCoordinate,
+      String? postEventId,
+      LiveActivityState state = LiveActivityState.active,
+    }) => RunningLiveActivity(
+      id: id,
+      ownerPubkey: ownerPubkey,
+      startedAt: startedAt ?? postedAt,
+      postCoordinate: postCoordinate,
+      postEventId: postEventId,
+      state: state,
+    );
+
     test('is equal when every field matches', () {
-      RunningLiveActivity make() => RunningLiveActivity(
-        id: 'a',
-        ownerPubkey: 'o',
-        startedAt: postedAt,
-        state: LiveActivityState.active,
-      );
-      expect(make(), equals(make()));
-      expect(
-        make(),
-        isNot(
-          equals(
-            RunningLiveActivity(
-              id: 'a',
-              ownerPubkey: 'o',
-              startedAt: postedAt,
-              state: LiveActivityState.ended,
-              postEventId: 'e',
-            ),
-          ),
-        ),
-      );
+      expect(running(), equals(running()));
+    });
+
+    test('is unequal when any single field differs', () {
+      final differing = <String, RunningLiveActivity>{
+        'id': running(id: 'b'),
+        'ownerPubkey': running(ownerPubkey: 'p'),
+        'startedAt': running(startedAt: windowEnd),
+        'postCoordinate': running(postCoordinate: 'c'),
+        'postEventId': running(postEventId: 'e'),
+        'state': running(state: LiveActivityState.ended),
+      };
+      for (final entry in differing.entries) {
+        expect(running(), isNot(equals(entry.value)), reason: entry.key);
+      }
     });
   });
 
   group(LiveActivityPlatformEvent, () {
-    // Built at runtime so == compares props rather than a const identity.
-    var enabled = true;
-    var activityId = 'a';
-    var token = 't';
-    var state = LiveActivityState.stale;
+    EnablementChanged enablement({bool enabled = true}) =>
+        EnablementChanged(enabled: enabled);
+    PushTokenChanged token({String id = 'a', String token = 't'}) =>
+        PushTokenChanged(activityId: id, token: token);
+    ActivityStateChanged stateChange({
+      String id = 'a',
+      LiveActivityState state = LiveActivityState.stale,
+    }) => ActivityStateChanged(activityId: id, state: state);
 
-    test('events compare by value', () {
+    test('equal events compare equal', () {
+      expect(enablement(), equals(enablement()));
+      expect(token(), equals(token()));
+      expect(stateChange(), equals(stateChange()));
+    });
+
+    test('events differing in a single field compare unequal', () {
+      expect(enablement(), isNot(equals(enablement(enabled: false))));
+      expect(token(), isNot(equals(token(id: 'b'))));
+      expect(token(), isNot(equals(token(token: 'u'))));
+      expect(stateChange(), isNot(equals(stateChange(id: 'b'))));
       expect(
-        EnablementChanged(enabled: enabled),
-        equals(EnablementChanged(enabled: enabled)),
+        stateChange(),
+        isNot(equals(stateChange(state: LiveActivityState.active))),
       );
-      expect(
-        PushTokenChanged(activityId: activityId, token: token),
-        equals(PushTokenChanged(activityId: activityId, token: token)),
-      );
-      expect(
-        ActivityStateChanged(activityId: activityId, state: state),
-        equals(ActivityStateChanged(activityId: activityId, state: state)),
-      );
-      enabled = false;
-      activityId = 'b';
-      token = 'u';
-      state = LiveActivityState.active;
     });
   });
 }
