@@ -68,6 +68,8 @@ final class VideoRecorderAppLifecycleChanged extends VideoRecorderEvent {
 /// mask settings or the autosave offer, so a press cannot start a take behind
 /// it and the sound picker's previews get the MediaSession back. Sheets shown
 /// with `showWithRemoteRecordPaused` send this and its resume themselves.
+/// Each pause needs a matching resume; overlapping sheets keep control paused
+/// until the last one closes.
 final class VideoRecorderRemoteRecordPaused extends VideoRecorderEvent {
   const VideoRecorderRemoteRecordPaused();
 }

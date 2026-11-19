@@ -411,6 +411,9 @@ class VideoRecorderBloc
   /// off natively but leaves this set, so the resume turns it back on.
   bool _remoteRecordControlEnabled = false;
 
+  // An asynchronous autosave lookup can put its offer over another sheet.
+  int _remoteRecordPauseCount = 0;
+
   /// How long the zoom ruler stays visible after the last pinch activity
   /// before the auto-hide timer clears it.
   static const _zoomIndicatorHideDelay = Duration(milliseconds: 1000);
@@ -685,6 +688,8 @@ class VideoRecorderBloc
     VideoRecorderRemoteRecordPaused event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    _remoteRecordPauseCount++;
+    if (_remoteRecordPauseCount != 1) return;
     // Recorded even before setup has turned remote control on, so setup
     // can honor it.
     emit(state.copyWith(isRemoteRecordPaused: true));
@@ -702,6 +707,9 @@ class VideoRecorderBloc
     VideoRecorderRemoteRecordResumed event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    if (_remoteRecordPauseCount == 0) return;
+    _remoteRecordPauseCount--;
+    if (_remoteRecordPauseCount != 0) return;
     emit(state.copyWith(isRemoteRecordPaused: false));
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: true);

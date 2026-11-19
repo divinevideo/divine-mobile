@@ -4416,6 +4416,48 @@ void main() {
           );
         });
 
+        test('stays paused until both overlapping sheets close', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          verify(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).called(1);
+
+          bloc
+            ..add(const VideoRecorderRemoteRecordPaused())
+            ..add(const VideoRecorderRemoteRecordPaused())
+            ..add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          trigger!();
+          await pumpEventQueue();
+
+          expect(bloc.state.isRemoteRecordPaused, isTrue);
+          verifyNever(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          );
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          expect(bloc.state.isRemoteRecordPaused, isFalse);
+          trigger!();
+          await pumpEventQueue();
+          verify(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).called(1);
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
         test('is ignored on the Upload tab, which shows no preview', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
