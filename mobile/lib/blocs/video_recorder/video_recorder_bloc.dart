@@ -793,14 +793,11 @@ class VideoRecorderBloc
     final resumed = event.state == AppLifecycleState.resumed;
     if (!event.isTabTransition) _isAppForeground = resumed;
     if (resumed && !_isAppForeground) return;
-    // Upload intentionally keeps the preview paused. Track the foreground
-    // transition anyway so switching back to a capture tab enables the remote.
-    if (resumed && state.recorderMode == VideoRecorderMode.upload) {
-      _remotePreviewReady = true;
-      return;
-    }
     _remotePreviewReady = false;
     _syncRemoteRecorder(state);
+    // Upload intentionally keeps the preview paused. Track the foreground
+    // transition anyway so switching back to a capture tab enables the remote.
+    if (resumed && state.recorderMode == VideoRecorderMode.upload) return;
     // The camera goes with the app, so the loop would only tick on into
     // captures that fail.
     if (event.state != AppLifecycleState.resumed) _stopIntervalCapture(emit);
