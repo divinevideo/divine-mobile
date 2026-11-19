@@ -657,6 +657,35 @@ void main() {
       );
 
       blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
+        'never offers or performs Stop for an address that names another '
+        'account',
+        setUp: () {
+          stubActivity(postedAt: _postedAt, running: true);
+          stubFetch(const []);
+          when(
+            () => liveActivity.stopForPost(any()),
+          ).thenAnswer((_) async {});
+        },
+        build: () => buildCubit(coordinate: '34236:$_otherOwner:$_dTag'),
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.stop();
+        },
+        expect: () => [
+          _state(
+            status: PostAnalyticsDetailStatus.cantFind,
+            liveActivityRunning: isFalse,
+            postedAt: isNull,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(() => liveActivity.isRunningFor(any()));
+          verifyNever(() => liveActivity.postedAtFor(any()));
+          verifyNever(() => liveActivity.stopForPost(any()));
+        },
+      );
+
+      blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
         'keeps the control when ending the activity fails',
         setUp: () {
           stubActivity(postedAt: _postedAt, running: true);

@@ -101,7 +101,11 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
   Future<void> stop() async {
     final liveActivity = _liveActivity;
     final coordinate = state.coordinate;
-    if (liveActivity == null || coordinate == null) return;
+    if (liveActivity == null ||
+        coordinate == null ||
+        !_ownsCoordinate(coordinate)) {
+      return;
+    }
     try {
       await liveActivity.stopForPost(coordinate);
     } on Object catch (error, stackTrace) {
@@ -178,16 +182,27 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     return null;
   }
 
+  /// Whether [coordinate] addresses a post of the signed-in owner, the only
+  /// account whose Live Activity this screen may read or stop.
+  bool _ownsCoordinate(String? coordinate) {
+    final owner = _ownerPubkey;
+    if (coordinate == null || owner == null || owner.isEmpty) return false;
+    return AId.fromString(coordinate)?.pubkey == owner;
+  }
+
   Future<void> _resolve(
     VideoPerformance? performance, {
     required bool hasEngagementData,
   }) async {
     final video = performance?.video;
     final coordinate = _routeCoordinate ?? _coordinateOf(video);
-    final activityPostedAt = coordinate == null
+    // Only the signed-in owner's own activity may answer, as in _findPost.
+    final ownCoordinate = _ownsCoordinate(coordinate) ? coordinate : null;
+    final activityPostedAt = ownCoordinate == null
         ? null
-        : await _activityPostedAt(coordinate);
-    final running = coordinate != null && await _activityRunning(coordinate);
+        : await _activityPostedAt(ownCoordinate);
+    final running =
+        ownCoordinate != null && await _activityRunning(ownCoordinate);
     final postedAt = activityPostedAt ?? _createdAt(video);
     final now = _now();
     final next = _stateFor(
