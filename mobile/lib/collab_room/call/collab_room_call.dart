@@ -17,7 +17,7 @@ import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/collab_room/call/collab_room_call_signal.dart'
-    show CollabRoomCallException;
+    show CollabRoomCallException, CollabRoomMicrophoneException;
 
 const _logName = 'CollabRoomCall';
 
@@ -378,12 +378,17 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
   }
 
   Future<void> _openAudio() async {
-    final audio = await _device(
-      () => navigator.mediaDevices.getUserMedia({
-        'audio': true,
-        'video': false,
-      }),
-    );
+    final MediaStream audio;
+    try {
+      audio = await _device(
+        () => navigator.mediaDevices.getUserMedia({
+          'audio': true,
+          'video': false,
+        }),
+      );
+    } on Exception catch (error) {
+      throw CollabRoomMicrophoneException('$error');
+    }
     if (_stopped) {
       await _releaseMedia(audio);
       return;
@@ -493,12 +498,12 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     _relayRetry?.cancel();
     _helloRetry?.cancel();
     final hadSubscription = _subscription != null;
-    await _subscription?.cancel();
     final audio = _audio;
     final video = _video;
     _audio = null;
     _video = null;
     try {
+      await _subscription?.cancel();
       await Future.wait([
         for (final media in [_openingAudio, _openingVideo])
           if (media != null) media.onError((Object _, StackTrace _) {}),

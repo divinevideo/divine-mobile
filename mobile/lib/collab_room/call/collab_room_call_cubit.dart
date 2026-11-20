@@ -38,6 +38,7 @@ class CollabRoomCallState extends Equatable {
     this.call = const CollabRoomCallSnapshot(),
     this.cameraFailed = false,
     this.steppedAside = false,
+    this.muted = false,
   });
 
   /// The other people in the room.
@@ -56,6 +57,10 @@ class CollabRoomCallState extends Equatable {
   /// recorder, which need the microphone: it does not join on its own then.
   final bool steppedAside;
 
+  /// Whether the user muted the microphone. It stays muted when the call
+  /// steps aside and comes back, or joins again after failing.
+  final bool muted;
+
   /// Returns a copy with the given fields replaced.
   CollabRoomCallState copyWith({
     Set<String>? others,
@@ -63,16 +68,25 @@ class CollabRoomCallState extends Equatable {
     CollabRoomCallSnapshot? call,
     bool? cameraFailed,
     bool? steppedAside,
+    bool? muted,
   }) => CollabRoomCallState(
     others: others ?? this.others,
     status: status ?? this.status,
     call: call ?? this.call,
     cameraFailed: cameraFailed ?? this.cameraFailed,
     steppedAside: steppedAside ?? this.steppedAside,
+    muted: muted ?? this.muted,
   );
 
   @override
-  List<Object?> get props => [others, status, call, cameraFailed, steppedAside];
+  List<Object?> get props => [
+    others,
+    status,
+    call,
+    cameraFailed,
+    steppedAside,
+    muted,
+  ];
 }
 
 /// Runs this device's side of a room's call.
@@ -106,7 +120,7 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
   CollabRoomCall? _changingCamera;
   bool _closing = false;
 
-  /// Joins the call with the microphone on.
+  /// Joins the call, with the microphone on unless the user muted it.
   Future<void> join() async {
     if (_closing ||
         _call != null ||
@@ -142,9 +156,17 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
         },
       );
       await call.start();
+      // A user who muted stays muted in the call that comes back.
+      if (state.muted && identical(_call, call)) await call.setMicOn(false);
       if (identical(_call, call)) {
         emitIfOpen(state.copyWith(status: CollabRoomCallStatus.joined));
       }
+    } on CollabRoomMicrophoneException catch (error, stackTrace) {
+      // The microphone was refused: say that, not that nobody answered.
+      if (!identical(_call, call) || _closing) return;
+      addError(error, stackTrace);
+      await _hangUp();
+      emitIfOpen(state.copyWith(status: CollabRoomCallStatus.failed));
     } on CollabRoomCallException catch (error, stackTrace) {
       if (!identical(_call, call) || _closing) return;
       addError(error, stackTrace);
@@ -188,8 +210,10 @@ class CollabRoomCallCubit extends Cubit<CollabRoomCallState>
 
   /// Mutes or unmutes the microphone.
   Future<void> toggleMic() async {
+    final on = !state.call.micOn;
+    emitIfOpen(state.copyWith(muted: !on));
     try {
-      await _call?.setMicOn(!state.call.micOn);
+      await _call?.setMicOn(on);
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
     }

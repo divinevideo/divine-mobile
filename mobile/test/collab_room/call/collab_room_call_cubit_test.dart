@@ -14,11 +14,13 @@ class _FakeCall implements CollabRoomCall {
   _FakeCall({
     this.failStart = false,
     this.unreachable = false,
+    this.refusedMicrophone = false,
     this.failCamera = false,
   });
 
   final bool failStart;
   final bool unreachable;
+  final bool refusedMicrophone;
   final bool failCamera;
   final controller = StreamController<CollabRoomCallSnapshot>.broadcast();
   final log = <String>[];
@@ -35,6 +37,9 @@ class _FakeCall implements CollabRoomCall {
   Future<void> start() async {
     log.add('start');
     if (failStart) throw Exception('no microphone');
+    if (refusedMicrophone) {
+      throw const CollabRoomMicrophoneException('Permission denied');
+    }
     if (unreachable) {
       throw const CollabRoomCallException('No relay accepted the call signal');
     }
@@ -143,6 +148,43 @@ void main() {
       },
       errors: () => [isA<CollabRoomCallException>()],
     );
+
+    blocTest<CollabRoomCallCubit, CollabRoomCallState>(
+      'reports a refused microphone as such, not as others out of reach',
+      build: () => build(fake: _FakeCall(refusedMicrophone: true)),
+      act: (cubit) => cubit.join(),
+      verify: (cubit) =>
+          expect(cubit.state.status, CollabRoomCallStatus.failed),
+      errors: () => [isA<CollabRoomMicrophoneException>()],
+    );
+
+    test('keeps the microphone muted when the call comes back', () async {
+      final calls = <_FakeCall>[];
+      final cubit = CollabRoomCallCubit(
+        me: _author,
+        callKey: 'f' * 64,
+        others: {_sam},
+        createCall: ({required me, required others, required callKey}) {
+          final fresh = _FakeCall();
+          calls.add(fresh);
+          return fresh;
+        },
+      );
+      addTearDown(cubit.close);
+
+      await cubit.join();
+      await pumpEventQueue();
+      await cubit.toggleMic();
+      await cubit.stepAside();
+      await cubit.comeBack();
+      await pumpEventQueue();
+
+      expect(calls, hasLength(2));
+      // The new call opened the microphone on, then muted it at once.
+      expect(calls.last.mic, isFalse);
+      expect(cubit.state.call.micOn, isFalse);
+      expect(cubit.state.muted, isTrue);
+    });
 
     blocTest<CollabRoomCallCubit, CollabRoomCallState>(
       'mutes and turns the camera on',

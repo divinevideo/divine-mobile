@@ -62,6 +62,18 @@ class CollabRoomCallException implements Exception {
   String toString() => 'CollabRoomCallException: $message';
 }
 
+/// The device would not open the microphone for the call: the permission
+/// was refused, or another app holds it. Expected, like any
+/// [CollabRoomCallException], but the user has to act on it differently than
+/// on others that cannot be reached.
+class CollabRoomMicrophoneException extends CollabRoomCallException {
+  /// Creates an exception saying [message].
+  const CollabRoomMicrophoneException(super.message);
+
+  @override
+  String toString() => 'CollabRoomMicrophoneException: $message';
+}
+
 /// One connection message between two people in a room's call.
 class CollabRoomCallSignal extends Equatable {
   /// Creates a message.

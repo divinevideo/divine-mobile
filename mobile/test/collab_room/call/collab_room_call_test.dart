@@ -179,6 +179,8 @@ void main() {
         accountSigner: LocalNostrSigner('2' * 64),
         transport: _SilentTransport(),
       );
+      // Starting holds the process-wide audio session; stopping lets go.
+      addTearDown(call.stop);
 
       // flutter_webrtc throws a plain string here, which the call cubit's
       // `on Exception` would let escape uncaught.
