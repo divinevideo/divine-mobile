@@ -15,6 +15,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
@@ -26,11 +27,11 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Remote record triggers are paused while it is open, the way the sound
 /// picker pauses them, so a volume key cannot start a take behind it.
-Future<void> showVideoRecorderChromaKeySettings(BuildContext context) async {
-  final bloc = context.read<VideoRecorderBloc>()
-    ..add(const VideoRecorderRemoteRecordPaused());
-  try {
-    await VineBottomSheet.show<void>(
+Future<void> showVideoRecorderChromaKeySettings(BuildContext context) {
+  final bloc = context.read<VideoRecorderBloc>();
+  return showWithRemoteRecordPaused(
+    bloc,
+    () => VineBottomSheet.show<void>(
       context: context,
       contentTitle: context.l10n.videoEditorChromaKeyTitle,
       barrierColor: VineTheme.transparent,
@@ -49,10 +50,8 @@ Future<void> showVideoRecorderChromaKeySettings(BuildContext context) async {
       ),
       buildScrollBody: (scrollController) =>
           _ChromaKeySettings(scrollController: scrollController),
-    );
-  } finally {
-    bloc.addIfOpen(const VideoRecorderRemoteRecordResumed());
-  }
+    ),
+  );
 }
 
 /// The settings panel, bound to the recorder, under the button that turns the

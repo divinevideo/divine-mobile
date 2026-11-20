@@ -1394,6 +1394,60 @@ void main() {
       });
     });
 
+    group('Why six seconds prompt', () {
+      testWidgets('holds remote record while the prompt is open', (
+        tester,
+      ) async {
+        when(() => recorderBloc.isClosed).thenReturn(false);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(testPrefs),
+              ..._stubServiceOverrides(),
+              videoEditorProvider.overrideWith(
+                _NonAutosaveVideoEditorNotifier.new,
+              ),
+            ],
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoRecorderBloc>.value(value: recorderBloc),
+                BlocProvider<CameraPermissionBloc>(
+                  create: (_) => MockCameraPermissionBloc(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: VideoRecorderView(),
+              ),
+            ),
+          ),
+        );
+        // Post-frame callback, then the prompt's preference write.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsOneWidget);
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+
+        // Tap the barrier above the sheet.
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsNothing);
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        ).called(1);
+      });
+    });
+
     group('Autosave Restore Flow', () {
       testWidgets('a Library reaction skips recovery from an older project', (
         tester,

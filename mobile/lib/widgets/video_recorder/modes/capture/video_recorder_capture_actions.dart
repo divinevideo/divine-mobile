@@ -13,6 +13,7 @@ import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_chroma_key_settings.dart';
+import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 
 /// Width of the pill behind the rail's icons: each icon is 24 wide with 8 of
 /// padding around it, and the pill leaves 4 on either side.
@@ -387,20 +388,25 @@ class _StabilizationButton extends StatelessWidget {
     final bloc = context.read<VideoRecorderBloc>();
     final state = bloc.state;
 
-    final selected = await VineBottomSheetSelectionMenu.show(
-      context: context,
-      title: Text(
-        l10n.videoRecorderStabilizationLabel,
-        style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
-      ),
-      selectedValue: state.videoStabilizationMode.toNativeString(),
-      options: [
-        for (final mode in state.availableVideoStabilizationModes)
-          VineBottomSheetSelectionOptionData(
-            label: _stabilizationModeLabel(l10n, mode),
-            value: mode.toNativeString(),
+    final selected = await showWithRemoteRecordPaused(
+      bloc,
+      () => VineBottomSheetSelectionMenu.show(
+        context: context,
+        title: Text(
+          l10n.videoRecorderStabilizationLabel,
+          style: VineTheme.titleMediumFont(
+            color: context.vineColors.primaryText,
           ),
-      ],
+        ),
+        selectedValue: state.videoStabilizationMode.toNativeString(),
+        options: [
+          for (final mode in state.availableVideoStabilizationModes)
+            VineBottomSheetSelectionOptionData(
+              label: _stabilizationModeLabel(l10n, mode),
+              value: mode.toNativeString(),
+            ),
+        ],
+      ),
     );
 
     if (selected == null || !context.mounted || bloc.isClosed) return;

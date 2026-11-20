@@ -43,6 +43,7 @@ import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_cap
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/modes/classic/video_recorder_classic_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_upload_stack.dart';
+import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
@@ -528,13 +529,16 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     if (!mounted) return;
 
     final navigator = Navigator.of(context);
-    await VineBottomSheetPrompt.show(
-      context: context,
-      sticker: .videoClapBoard,
-      title: context.l10n.videoRecorderWhySixSecondsTitle,
-      subtitle: context.l10n.videoRecorderWhySixSecondsSubtitle,
-      secondaryButtonText: context.l10n.videoRecorderWhySixSecondsButton,
-      onSecondaryPressed: navigator.pop,
+    await showWithRemoteRecordPaused(
+      context.read<VideoRecorderBloc>(),
+      () => VineBottomSheetPrompt.show<void>(
+        context: context,
+        sticker: .videoClapBoard,
+        title: context.l10n.videoRecorderWhySixSecondsTitle,
+        subtitle: context.l10n.videoRecorderWhySixSecondsSubtitle,
+        secondaryButtonText: context.l10n.videoRecorderWhySixSecondsButton,
+        onSecondaryPressed: navigator.pop,
+      ),
     );
   }
 

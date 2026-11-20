@@ -26,6 +26,7 @@ import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Closes the video recorder.
@@ -285,51 +286,58 @@ Future<void> offerAutosavedSession(
     );
   }
 
-  await VineBottomSheetPrompt.show(
-    context: context,
-    sticker: .videoClapBoard,
-    title: context.l10n.videoRecorderAutosaveFoundTitle,
-    subtitle: context.l10n.videoRecorderAutosaveFoundSubtitle,
-    primaryButtonText: context.l10n.videoRecorderAutosaveContinueButton,
-    onPrimaryPressed: () => runOnce(() async {
-      final restoreSuccessful = await ref
-          .read(videoEditorProvider.notifier)
-          .restoreDraft();
+  // The offer opens over the live preview, often while the camera is still
+  // starting, so a volume key press would otherwise start a take behind it.
+  await showWithRemoteRecordPaused(
+    context.read<VideoRecorderBloc>(),
+    () => VineBottomSheetPrompt.show<void>(
+      context: context,
+      sticker: .videoClapBoard,
+      title: context.l10n.videoRecorderAutosaveFoundTitle,
+      subtitle: context.l10n.videoRecorderAutosaveFoundSubtitle,
+      primaryButtonText: context.l10n.videoRecorderAutosaveContinueButton,
+      onPrimaryPressed: () => runOnce(() async {
+        final restoreSuccessful = await ref
+            .read(videoEditorProvider.notifier)
+            .restoreDraft();
 
-      if (!context.mounted) return;
-      // Dismissing the offer while it restored leaves the user on the recorder
-      // with the restored clips, rather than carrying them into the editor.
-      final continueToEditor = openEditorOnRestore && offerOpen;
-      closeOffer();
+        if (!context.mounted) return;
+        // Dismissing the offer while it restored leaves the user on the
+        // recorder with the restored clips, rather than carrying them into
+        // the editor.
+        final continueToEditor = openEditorOnRestore && offerOpen;
+        closeOffer();
 
-      if (!restoreSuccessful) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            context.l10n.videoRecorderAutosaveRestoreFailure,
-            error: true,
-          ),
-        );
-        return;
-      }
+        if (!restoreSuccessful) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              context.l10n.videoRecorderAutosaveRestoreFailure,
+              error: true,
+            ),
+          );
+          return;
+        }
 
-      // Match the restored clips' aspect ratio so the user can't mix ratios on
-      // subsequent recordings. The legacy restoreDraft set this on the recorder
-      // directly; with the bloc the View owns the cross-feature dispatch.
-      final clips = ref.read(clipManagerProvider).clips;
-      if (clips.isNotEmpty) {
-        context.read<VideoRecorderBloc>().add(
-          VideoRecorderAspectRatioSet(clips.first.targetAspectRatio),
-        );
-      }
+        // Match the restored clips' aspect ratio so the user can't mix ratios
+        // on subsequent recordings. The legacy restoreDraft set this on the
+        // recorder directly; with the bloc the View owns the cross-feature
+        // dispatch.
+        final clips = ref.read(clipManagerProvider).clips;
+        if (clips.isNotEmpty) {
+          context.read<VideoRecorderBloc>().add(
+            VideoRecorderAspectRatioSet(clips.first.targetAspectRatio),
+          );
+        }
 
-      if (!continueToEditor) return;
-      await openVideoEditorFromRecorder(context, ref);
-    }, 'restore autosaved recorder draft'),
-    secondaryButtonText: context.l10n.videoRecorderAutosaveDiscardButton,
-    onSecondaryPressed: () => runOnce(() async {
-      await ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
-      closeOffer();
-    }, 'discard autosaved recorder draft'),
+        if (!continueToEditor) return;
+        await openVideoEditorFromRecorder(context, ref);
+      }, 'restore autosaved recorder draft'),
+      secondaryButtonText: context.l10n.videoRecorderAutosaveDiscardButton,
+      onSecondaryPressed: () => runOnce(() async {
+        await ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
+        closeOffer();
+      }, 'discard autosaved recorder draft'),
+    ),
   );
   offerOpen = false;
 }

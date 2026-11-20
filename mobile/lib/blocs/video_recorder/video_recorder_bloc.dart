@@ -694,8 +694,10 @@ class VideoRecorderBloc
     Emitter<VideoRecorderBlocState> emit,
   ) async {
     // Recorded even before setup has turned remote control on, so setup
-    // can honor it.
-    emit(state.copyWith(isRemoteRecordPaused: true));
+    // can honor it. A sheet opening over another one only adds to the count.
+    final pauseCount = state.remoteRecordPauseCount + 1;
+    emit(state.copyWith(remoteRecordPauseCount: pauseCount));
+    if (pauseCount != 1) return;
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: false);
       Log.debug(
@@ -710,7 +712,12 @@ class VideoRecorderBloc
     VideoRecorderRemoteRecordResumed event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    emit(state.copyWith(isRemoteRecordPaused: false));
+    // An unmatched resume is ignored, and control stays paused until the
+    // last open sheet closes.
+    if (!state.isRemoteRecordPaused) return;
+    final pauseCount = state.remoteRecordPauseCount - 1;
+    emit(state.copyWith(remoteRecordPauseCount: pauseCount));
+    if (pauseCount != 0) return;
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: true);
       if (_isClosing) return;
@@ -2335,7 +2342,12 @@ class VideoRecorderBloc
     // An unfinished stop-motion session stays in the library, see
     // _applyRecorderMode.
     emit(
-      VideoRecorderBlocState(isLiveChromaKeySupported: _liveChromaKeySupported),
+      VideoRecorderBlocState(
+        isLiveChromaKeySupported: _liveChromaKeySupported,
+        // A reset leaves native remote control as it is, so the sheets that
+        // paused it still need their resumes to count.
+        remoteRecordPauseCount: state.remoteRecordPauseCount,
+      ),
     );
   }
 
@@ -3100,7 +3112,7 @@ class VideoRecorderBloc
         editorNavigationInProgress: state.editorNavigationInProgress,
         // A sheet that paused remote control can be open across the re-sync
         // that initialize emits, and stays paused until it closes.
-        isRemoteRecordPaused: state.isRemoteRecordPaused,
+        remoteRecordPauseCount: state.remoteRecordPauseCount,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on
@@ -3135,6 +3147,16 @@ class VideoRecorderBloc
       Log.debug(
         '🎮 Remote record trigger ignored - no preview on '
         '${state.recorderMode.name}',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+    // A sheet's pause reaches the camera asynchronously, so a press can land
+    // between the sheet opening and remote control going off.
+    if (state.isRemoteRecordPaused) {
+      Log.debug(
+        '🎮 Remote record trigger ignored - a sheet covers the preview',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );

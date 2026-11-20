@@ -4023,6 +4023,19 @@ void main() {
         act: (bloc) => bloc.add(const VideoRecorderResetRequested()),
         expect: () => const [VideoRecorderBlocState()],
       );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the pause of a sheet that is still open',
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              zoomLevel: 3,
+              remoteRecordPauseCount: 1,
+            ),
+          ),
+        act: (bloc) => bloc.add(const VideoRecorderResetRequested()),
+        expect: () => const [VideoRecorderBlocState(remoteRecordPauseCount: 1)],
+      );
     });
 
     group('VideoRecorderRecorderModeSet', () {
@@ -4491,6 +4504,65 @@ void main() {
           trigger!();
           await pumpEventQueue();
 
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
+        test('is ignored while a sheet covers the preview', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          // The press lands before the pause has turned remote control off.
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          trigger!();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+        });
+
+        test('stays paused until both overlapping sheets close', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          verify(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).called(1);
+
+          bloc
+            ..add(const VideoRecorderRemoteRecordPaused())
+            ..add(const VideoRecorderRemoteRecordPaused())
+            ..add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          trigger!();
+          await pumpEventQueue();
+
+          expect(bloc.state.isRemoteRecordPaused, isTrue);
+          verifyNever(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          );
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          expect(bloc.state.isRemoteRecordPaused, isFalse);
+          trigger!();
+          await pumpEventQueue();
+          verify(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).called(1);
           verify(
             () => cameraService.startRecording(
               maxDuration: any(named: 'maxDuration'),
