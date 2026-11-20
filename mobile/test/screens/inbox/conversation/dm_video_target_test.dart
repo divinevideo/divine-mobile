@@ -101,6 +101,70 @@ void main() {
       });
     });
 
+    group('a NIP-19 link that cannot name a video', () {
+      String link(String reference) => 'https://divine.video/video/$reference';
+
+      test('resolves nothing for an naddr of a non-addressable kind', () {
+        for (final kind in [22, 30023]) {
+          final reference = NIP19Tlv.encodeNaddr(
+            Naddr(id: 'clip', author: author, kind: kind),
+          );
+          expect(resolveDmVideoTarget(content: link(reference)), isNull);
+        }
+      });
+
+      test('resolves nothing for an naddr whose author is not a key', () {
+        final reference = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'clip', author: 'ab' * 16, kind: 34236),
+        );
+        expect(resolveDmVideoTarget(content: link(reference)), isNull);
+      });
+
+      test('resolves nothing for an nevent whose id is not an event id', () {
+        final reference = NIP19Tlv.encodeNevent(Nevent(id: 'ab' * 16));
+        expect(resolveDmVideoTarget(content: link(reference)), isNull);
+      });
+    });
+
+    group('an nevent link without an author', () {
+      final url = divineVideoShareUrl(eventId, kind: 22);
+
+      test('takes the author of a regular citation of the same event', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: eventId,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+        expect(target!.authorPubkey, author);
+      });
+
+      test('ignores a regular citation of another event', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: DmSharedVideoRef(
+            coordinateOrId: 'cc' * 32,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+        expect(target!.authorPubkey, isNull);
+      });
+
+      test('ignores an addressable citation whose d tag is the event id', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: '34236:$author:$eventId',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+        expect(target!.authorPubkey, isNull);
+      });
+    });
+
     test('opens an nevent as an exact event rather than a d tag', () {
       final url = divineVideoShareUrl(eventId, kind: 22);
       final target = resolveDmVideoTarget(content: url);
