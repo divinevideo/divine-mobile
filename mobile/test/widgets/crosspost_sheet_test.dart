@@ -298,6 +298,50 @@ void main() {
       expect(find.text(l10n.crosspostErrorNetwork), findsNothing);
     });
 
+    testWidgets('reports a retry that cannot sign as a generic failure', (
+      tester,
+    ) async {
+      await openSheet(tester);
+      // The first attempt follows the tap and may prompt; the retry for a
+      // source that is not indexed yet runs in the background and may not.
+      when(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+        ),
+      ).thenThrow(
+        const CrosspostingApiException(
+          'Not indexed',
+          statusCode: 404,
+          code: 'not_found',
+        ),
+      );
+      when(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+          allowUserInteraction: false,
+        ),
+      ).thenThrow(const CrosspostingPassiveSigningUnavailable());
+      await tester.tap(find.text(l10n.crosspostSubmit));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      await tester.runAsync(() async {});
+      await tester.pumpAndSettle();
+
+      verify(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+          allowUserInteraction: false,
+        ),
+      ).called(1);
+      expect(find.text(l10n.crosspostFailedGeneric), findsOneWidget);
+      expect(find.text(l10n.crosspostErrorUnauthorized), findsNothing);
+      expect(find.text(l10n.crosspostErrorNetwork), findsNothing);
+    });
+
     testWidgets('closes the sheet, not the page under it, from a tab', (
       tester,
     ) async {
