@@ -91,6 +91,13 @@ void main() {
             clock.elapse(const Duration(seconds: 2));
             clock.flushMicrotasks();
             expect(attempts, 2);
+            verify(
+              () => client.createCrossposts(
+                eventId: eventId,
+                platforms: ['instagram'],
+                allowUserInteraction: false,
+              ),
+            ).called(1);
             expect(result, isNull);
             clock.elapse(const Duration(seconds: 3));
             clock.flushMicrotasks();

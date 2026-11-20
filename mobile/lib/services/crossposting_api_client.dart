@@ -251,7 +251,7 @@ class CrosspostingApiException implements Exception {
 /// A background request cannot obtain a signature without user interaction.
 class CrosspostingPassiveSigningUnavailable extends CrosspostingApiException {
   const CrosspostingPassiveSigningUnavailable()
-    : super('Background signature unavailable', code: 'unauthorized');
+    : super('Background signature unavailable');
 }
 
 /// Client for the Divine crossposter service

@@ -166,6 +166,7 @@ String _submitErrorText(
   VideoCrosspostSubmitError.notEligible => l10n.crosspostErrorNotEligible,
   VideoCrosspostSubmitError.notConnected => l10n.crosspostErrorNotConnected,
   VideoCrosspostSubmitError.unauthorized => l10n.crosspostErrorUnauthorized,
+  VideoCrosspostSubmitError.signingUnavailable => l10n.crosspostFailedGeneric,
   VideoCrosspostSubmitError.network || null => l10n.crosspostErrorNetwork,
 };
 

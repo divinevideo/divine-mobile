@@ -1382,6 +1382,38 @@ void main() {
 
       group('getCrossposts', () {
         test(
+          'uses the passive transport for polls and silent submits',
+          () async {
+            final passive = _MockHttpClient();
+            when(() => passive.get(any(), headers: any(named: 'headers')))
+                .thenAnswer((_) async => http.Response('{"jobs":[]}', 200));
+            when(
+              () => passive.post(
+                any(),
+                headers: any(named: 'headers'),
+                body: any(named: 'body'),
+              ),
+            ).thenAnswer((_) async => http.Response('{"jobs":[]}', 200));
+            final api = CrosspostingApiClient(
+              nip98AuthService: nip98AuthService,
+              ownerPubkey: _ownerPubkey,
+              httpClient: httpClient,
+              passiveHttpClient: passive,
+            );
+            addTearDown(api.close);
+            expect(await api.getCrossposts(eventId: eventId), isEmpty);
+            expect(
+              await api.createCrossposts(
+                eventId: eventId,
+                platforms: ['instagram'],
+                allowUserInteraction: false,
+              ),
+              isEmpty,
+            );
+            verifyZeroInteractions(httpClient);
+          },
+        );
+        test(
           'does not fall back to interactive signing or send unsigned',
           () async {
             when(

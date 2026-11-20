@@ -193,13 +193,19 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   }
 
   VideoCrosspostSubmitError _submitErrorFor(CrosspostingApiException e) =>
-      switch (e.code) {
-        'not_owner' => VideoCrosspostSubmitError.notOwner,
-        'not_eligible' => VideoCrosspostSubmitError.notEligible,
-        'not_connected' => VideoCrosspostSubmitError.notConnected,
-        'unauthorized' => VideoCrosspostSubmitError.unauthorized,
-        _ => VideoCrosspostSubmitError.network,
+      switch (e) {
+        CrosspostingPassiveSigningUnavailable() =>
+          VideoCrosspostSubmitError.signingUnavailable,
+        _ => _submitErrorForCode(e.code),
       };
+
+  VideoCrosspostSubmitError _submitErrorForCode(String? code) => switch (code) {
+    'not_owner' => VideoCrosspostSubmitError.notOwner,
+    'not_eligible' => VideoCrosspostSubmitError.notEligible,
+    'not_connected' => VideoCrosspostSubmitError.notConnected,
+    'unauthorized' => VideoCrosspostSubmitError.unauthorized,
+    _ => VideoCrosspostSubmitError.network,
+  };
 
   @override
   Future<void> close() {

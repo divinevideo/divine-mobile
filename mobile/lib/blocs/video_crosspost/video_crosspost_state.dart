@@ -27,6 +27,7 @@ enum VideoCrosspostSubmitError {
   notEligible,
   notConnected,
   unauthorized,
+  signingUnavailable,
   network,
 }
 
