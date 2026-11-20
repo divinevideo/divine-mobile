@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:bloc/bloc.dart';
@@ -789,7 +790,7 @@ void main() {
         });
       });
 
-      test('acknowledgeDetectionFailure clears a timeout too', () {
+      test('a colour set by hand clears a timeout too', () {
         fakeAsync((async) {
           final cubit = build(
             detect: (_) => Completer<ChromaKeyDetection>().future,
@@ -804,7 +805,8 @@ void main() {
             ChromaKeyDetectionStatus.timedOut,
           );
 
-          cubit.acknowledgeDetectionFailure();
+          // The user tapped the preview instead of waiting for a retry.
+          cubit.setKeyColor(const Color(0xFF19A55B));
 
           expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
         });
@@ -937,7 +939,55 @@ void main() {
       });
     });
 
-    test('acknowledgeDetectionFailure clears the reported failure', () {
+    group('useTappedPatch', () {
+      /// A flat RGBA patch of [color], 13 pixels square.
+      Uint8List patchOf(Color color, {double shadow = 0}) {
+        const count = 13 * 13;
+        final bytes = Uint8List(count * 4);
+        for (var i = 0; i < count; i++) {
+          // Every third pixel darker, like a screen with a soft shadow.
+          final scale = i % 3 == 0 ? 1 - shadow : 1.0;
+          bytes[i * 4] = (color.r * 255 * scale).round();
+          bytes[i * 4 + 1] = (color.g * 255 * scale).round();
+          bytes[i * 4 + 2] = (color.b * 255 * scale).round();
+          bytes[i * 4 + 3] = 255;
+        }
+        return bytes;
+      }
+
+      test('keys on the tapped color and measures how far to reach', () {
+        final cubit = build();
+        addTearDown(cubit.close);
+        const blueWall = Color(0xFF1F4FC8);
+
+        cubit.useTappedPatch(patchOf(blueWall));
+        final flat = cubit.state.chromaKey.key;
+        expect(flat.color, blueWall);
+
+        cubit.useTappedPatch(patchOf(blueWall, shadow: 0.3));
+        // A shadowed patch needs a wider key than a flat one.
+        expect(
+          cubit.state.chromaKey.key.similarity,
+          greaterThan(flat.similarity),
+        );
+      });
+
+      test('answers a failed measurement', () {
+        final cubit = build(
+          detect: (_) async =>
+              throw const ChromaKeyDetectionException('no screen'),
+        );
+        addTearDown(cubit.close);
+
+        return cubit.detectFromFootage().then((_) {
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.failure);
+          cubit.useTappedPatch(patchOf(const Color(0xFF1F4FC8)));
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        });
+      });
+    });
+
+    test('a colour set by hand clears the reported failure', () {
       final cubit = build(
         detect: (_) async =>
             throw const ChromaKeyDetectionException('no screen'),
@@ -946,7 +996,13 @@ void main() {
 
       return cubit.detectFromFootage().then((_) {
         expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.failure);
-        cubit.acknowledgeDetectionFailure();
+
+        // The edge does not answer a missing screen colour, so the panel
+        // keeps saying what went wrong.
+        cubit.setSmoothness(0.3);
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.failure);
+
+        cubit.setKeyColor(const Color(0xFF19A55B));
         expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
       });
     });

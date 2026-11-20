@@ -10743,23 +10743,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'مقدار ما يختفي من هذا اللون';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'الحافة';
+  String get videoEditorChromaKeyEdgeLabel => 'حافة ناعمة';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'ينعّم القص حتى لا يبدو الشعر مسنّنًا';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'التسرّب';
+  String get videoEditorChromaKeySpillLabel => 'إزالة الأثر اللوني';
 
   @override
   String get videoEditorChromaKeySpillHint => 'يزيل أثر هذا اللون عن الشخص';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'ضبط دقيق';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'استبدلها بـ';
 
   @override
   String get videoEditorChromaKeyBackgroundNone => 'لا شيء';
+
+  @override
+  String get videoEditorChromaKeyBackgroundBlack => 'أسود';
 
   @override
   String get videoEditorChromaKeyBackgroundColor => 'لون';
@@ -10769,10 +10775,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'مقطع';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10789,6 +10791,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'استغرقت قراءة المقطع وقتًا طويلًا. يمكن تجربة «كشف تلقائي» مرة أخرى، أو اختيار اللون يدويًا.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'المس اللون المراد إزالته';
+
+  @override
+  String get videoEditorChromaKeyDetecting =>
+      'جارٍ البحث عن اللون المراد إزالته…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'اختر مقطعًا';

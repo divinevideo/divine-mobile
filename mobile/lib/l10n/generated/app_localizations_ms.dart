@@ -10737,18 +10737,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Berapa banyak warna itu yang hilang';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Tepi';
+  String get videoEditorChromaKeyEdgeLabel => 'Tepi lembut';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Melembutkan potongan supaya rambut tidak bergerigi';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Limpahan';
+  String get videoEditorChromaKeySpillLabel => 'Buang rona';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Menarik keluar rona warna itu daripada subjek anda';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Penalaan halus';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ganti dengan';
@@ -10757,17 +10760,16 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Tiada';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Hitam';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Warna';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Imej';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10784,6 +10786,13 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Membaca klip mengambil masa terlalu lama. Cuba Kesan automatik sekali lagi, atau pilih warnanya secara manual.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Ketik warna yang anda mahu buang';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Mencari warna untuk dibuang…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';

@@ -10954,18 +10954,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'Ile maskowanego koloru znika';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Krawędź';
+  String get videoEditorChromaKeyEdgeLabel => 'Miękka krawędź';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Zmiękcza wycięcie, żeby włosy nie były poszarpane';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Poświata';
+  String get videoEditorChromaKeySpillLabel => 'Usuń odcień';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Ściąga odcień maskowanego koloru z twojego obiektu';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Dostrajanie';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Zastąp przez';
@@ -10974,17 +10977,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nic';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Czarny';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Kolor';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Obraz';
+  String get videoEditorChromaKeyBackgroundImage => 'Zdjęcie';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Wideo nie przechowuje przezroczystości, więc w eksporcie będzie czarne.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -11001,6 +11003,13 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Odczyt klipu trwał za długo. Spróbuj ponownie „Wykryj automatycznie” albo wybierz kolor ręcznie.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Dotknij koloru, który chcesz usunąć';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Szukam koloru do usunięcia…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Wybierz klip';

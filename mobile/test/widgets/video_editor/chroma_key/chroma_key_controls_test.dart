@@ -1,5 +1,5 @@
-// ABOUTME: Pins the chroma-key controls to the active palette so the panel
-// ABOUTME: stays readable once light mode reaches the video editor.
+// ABOUTME: Pins what the chroma-key controls show up front, what folds under
+// ABOUTME: Fine-tune, and that the panel reads the active palette.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -91,16 +91,57 @@ void main() {
         .map((t) => t.style?.color)
         .toSet();
 
-    testWidgets('shows the background tip without being asked', (tester) async {
+    /// Restarts the cubit on [state] before the panel is pumped.
+    void startOn(ChromaKeyEditorState state) => whenListen(
+      cubit,
+      const Stream<ChromaKeyEditorState>.empty(),
+      initialState: state,
+    );
+
+    Future<void> openFineTune(WidgetTester tester, {bool settle = true}) async {
+      final en = lookupAppLocalizations(const Locale('en'));
+      final fineTune = find.text(en.videoEditorChromaKeyFineTune);
+      // At large text sizes the row sits below the fold of a phone.
+      await tester.ensureVisible(fineTune);
+      await tester.pump();
+      await tester.tap(fineTune);
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+    }
+
+    testWidgets('keeps the wall tip back until a measurement fails', (
+      tester,
+    ) async {
       await pump(tester, VineTheme.theme);
 
       final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
+      expect(find.text(en.videoEditorChromaKeyDetectFailed), findsNothing);
+    });
+
+    testWidgets('says what the wall needs once no screen was found', (
+      tester,
+    ) async {
+      startOn(
+        const ChromaKeyEditorState(
+          chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+          detectionStatus: ChromaKeyDetectionStatus.failure,
+        ),
+      );
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.videoEditorChromaKeyDetectFailed), findsOneWidget);
       expect(
         find.text(en.videoEditorChromaKeySurfaceHint),
         findsOneWidget,
         reason:
-            'What a background swap needs used to surface only as a failed '
-            'detect, after the clip was already shot (#8547).',
+            'What a background swap needs explains the failure the user just '
+            'saw (#8547).',
       );
       expect(
         en.videoEditorChromaKeySurfaceHint.toLowerCase(),
@@ -111,16 +152,32 @@ void main() {
       );
     });
 
-    testWidgets('offers every backdrop and warns about black on the track', (
+    testWidgets('reports a timeout without blaming the wall', (tester) async {
+      startOn(
+        const ChromaKeyEditorState(
+          chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+          detectionStatus: ChromaKeyDetectionStatus.timedOut,
+        ),
+      );
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.videoEditorChromaKeyDetectTimedOut), findsOneWidget);
+      // The decode stalled; the wall was never looked at.
+      expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
+    });
+
+    testWidgets('offers every backdrop and names the empty one Black', (
       tester,
     ) async {
       await pump(tester, VineTheme.theme);
 
       final en = lookupAppLocalizations(const Locale('en'));
       expect(find.text(en.videoEditorChromaKeyBackgroundVideo), findsOneWidget);
-      // A single H.264 track has nothing under it, so "Nothing" flattens to
-      // black and the panel has to say so.
-      expect(find.text(en.videoEditorChromaKeyTransparentHint), findsOneWidget);
+      // A single H.264 track has nothing under it, so an empty backdrop is
+      // black — and the chip says so instead of a warning under it.
+      expect(find.text(en.videoEditorChromaKeyBackgroundBlack), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeyBackgroundNone), findsNothing);
       expect(
         find.text(en.videoEditorChromaKeyCanvasTransparentHint),
         findsNothing,
@@ -135,19 +192,19 @@ void main() {
       final en = lookupAppLocalizations(const Locale('en'));
       // A live key has no second track to play a library clip on.
       expect(find.text(en.videoEditorChromaKeyBackgroundVideo), findsNothing);
+      // The layer is composited over the track, so an empty backdrop really
+      // is see-through rather than black.
       expect(find.text(en.videoEditorChromaKeyBackgroundNone), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeyBackgroundBlack), findsNothing);
       expect(find.text(en.videoEditorChromaKeyBackgroundColor), findsOneWidget);
       expect(find.text(en.videoEditorChromaKeyBackgroundImage), findsOneWidget);
-      // The layer is composited over the track, so "Nothing" really is
-      // see-through — the black warning would be wrong here.
       expect(
         find.text(en.videoEditorChromaKeyCanvasTransparentHint),
         findsOneWidget,
       );
-      expect(find.text(en.videoEditorChromaKeyTransparentHint), findsNothing);
     });
 
-    testWidgets('resolves the hint through l10n rather than a literal', (
+    testWidgets('resolves its copy through l10n rather than a literal', (
       tester,
     ) async {
       await pump(tester, VineTheme.theme, locale: const Locale('de'));
@@ -157,38 +214,77 @@ void main() {
       // German is the half that a literal cannot fake.
       final de = lookupAppLocalizations(const Locale('de'));
       final en = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(de.videoEditorChromaKeySurfaceHint), findsOneWidget);
-      expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
+      expect(find.text(de.videoEditorChromaKeyFineTune), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeyFineTune), findsNothing);
     });
 
-    testWidgets('puts the hint above auto-detect', (tester) async {
+    testWidgets('asks what replaces the color before how strongly', (
+      tester,
+    ) async {
       await pump(tester, VineTheme.theme);
 
       final en = lookupAppLocalizations(const Locale('en'));
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      // The backdrop is what most people open the mask for, so it leads;
+      // the key's own tuning comes last. find.text alone passes in any order.
       expect(
-        tester.getTopLeft(find.text(en.videoEditorChromaKeySurfaceHint)).dy,
-        lessThan(
-          tester.getTopLeft(find.text(en.videoEditorChromaKeyAutoDetect)).dy,
-        ),
-        reason:
-            'The hint has to be read before the button it qualifies, or the '
-            'panel is still inert to a first-time user (#8547). find.text '
-            'alone passes with the hint moved below the fold.',
+        top(en.videoEditorChromaKeyBackgroundLabel),
+        lessThan(top(en.videoEditorChromaKeyAmountLabel)),
       );
+      expect(
+        top(en.videoEditorChromaKeyAmountLabel),
+        lessThan(top(en.videoEditorChromaKeyFineTune)),
+      );
+    });
+
+    testWidgets('keeps the key settings folded until Fine-tune opens', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      final folded = [
+        en.videoEditorChromaKeyAutoDetect,
+        en.videoEditorChromaKeyPresetGreen,
+        en.videoEditorChromaKeyScreenColorLabel,
+        en.videoEditorChromaKeyEdgeLabel,
+        en.videoEditorChromaKeySpillLabel,
+      ];
+      for (final label in folded) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
+      expect(
+        tester.getSemantics(find.text(en.videoEditorChromaKeyFineTune)),
+        isSemantics(isButton: true, hasExpandedState: true, isExpanded: false),
+      );
+
+      await openFineTune(tester);
+
+      for (final label in folded) {
+        expect(find.text(label), findsWidgets, reason: label);
+      }
+      expect(
+        tester.getSemantics(find.text(en.videoEditorChromaKeyFineTune)),
+        isSemantics(isButton: true, hasExpandedState: true, isExpanded: true),
+      );
+      // Edge and tint are not self-explanatory, so their hints are drawn.
+      expect(find.text(en.videoEditorChromaKeyEdgeHint), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeySpillHint), findsOneWidget);
+      semantics.dispose();
     });
 
     testWidgets('leaves everything but Auto-detect live while measuring', (
       tester,
     ) async {
-      whenListen(
-        cubit,
-        const Stream<ChromaKeyEditorState>.empty(),
-        initialState: const ChromaKeyEditorState(
+      startOn(
+        const ChromaKeyEditorState(
           chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
           detectionStatus: ChromaKeyDetectionStatus.detecting,
         ),
       );
       await pump(tester, VineTheme.theme, settle: false);
+      await openFineTune(tester, settle: false);
 
       final en = lookupAppLocalizations(const Locale('en'));
       final autoDetect = tester.widget<DivineButton>(
@@ -224,18 +320,25 @@ void main() {
     });
 
     testWidgets('holds at the largest system text scale', (tester) async {
+      startOn(
+        const ChromaKeyEditorState(
+          chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+          detectionStatus: ChromaKeyDetectionStatus.failure,
+        ),
+      );
       await pump(
         tester,
         VineTheme.theme,
         textScaler: const TextScaler.linear(2),
       );
+      await openFineTune(tester);
 
       expect(tester.takeException(), isNull);
       expect(
         find.text(
           lookupAppLocalizations(
             const Locale('en'),
-          ).videoEditorChromaKeySurfaceHint,
+          ).videoEditorChromaKeySpillHint,
         ),
         findsOneWidget,
       );
@@ -266,20 +369,19 @@ void main() {
       expect(colors, contains(VineTheme.darkColors.onSurfaceVariant));
     });
 
-    testWidgets('lifts the transparent hint off the muted register on dark', (
+    testWidgets('lifts the canvas hint off the muted register on dark', (
       tester,
     ) async {
-      await pump(tester, VineTheme.theme);
+      await pump(tester, VineTheme.theme, surface: ChromaKeySurface.canvas);
 
-      // The one value this migration moves on dark. `onSurfaceMuted` is 50%
-      // white — 5.30:1 on the canvas this screen used to paint — and the hint
-      // now takes the same `onSurfaceVariant` as the panel's other secondary
-      // text, 11.19:1 on the canvas it paints today.
+      // `onSurfaceMuted` is 50% white — 5.30:1 on the canvas this screen used
+      // to paint — and the hint takes the same `onSurfaceVariant` as the
+      // panel's other secondary text, 11.19:1 on the canvas it paints today.
       final hint = tester.widget<Text>(
         find.text(
           lookupAppLocalizations(
             const Locale('en'),
-          ).videoEditorChromaKeyTransparentHint,
+          ).videoEditorChromaKeyCanvasTransparentHint,
         ),
       );
       expect(hint.style?.color, VineTheme.darkColors.onSurfaceVariant);

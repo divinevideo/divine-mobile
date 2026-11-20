@@ -10813,18 +10813,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Gaano karami ng na-mask na kulay ang mawawala';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Gilid';
+  String get videoEditorChromaKeyEdgeLabel => 'Malambot na gilid';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Pinapalambot ang gupit para hindi magaspang ang buhok';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Spill';
+  String get videoEditorChromaKeySpillLabel => 'Alisin ang tint';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Inaalis ang tint ng na-mask na kulay sa subject mo';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'I-fine-tune';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Palitan ng';
@@ -10833,17 +10836,16 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Wala';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Itim';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Kulay';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Larawan';
+  String get videoEditorChromaKeyBackgroundImage => 'Litrato';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10860,6 +10862,13 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Masyadong natagalan ang pagbasa ng clip. Subukan ulit ang Auto-detect, o pumili ng kulay nang manual.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'I-tap ang kulay na gusto mong alisin';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Hinahanap ang kulay na aalisin…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';

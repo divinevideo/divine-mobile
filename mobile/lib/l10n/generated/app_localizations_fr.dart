@@ -10899,18 +10899,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Quelle part de la couleur masquée disparaît';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Contour';
+  String get videoEditorChromaKeyEdgeLabel => 'Contour adouci';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Adoucit la découpe pour que les cheveux ne soient pas crénelés';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Débordement';
+  String get videoEditorChromaKeySpillLabel => 'Retirer la teinte';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Retire la teinte de la couleur masquée sur ton sujet';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Réglages fins';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Remplacer par';
@@ -10919,17 +10922,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Rien';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Noir';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Couleur';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Image';
+  String get videoEditorChromaKeyBackgroundImage => 'Photo';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'La vidéo ne gère pas la transparence : à l\'export, ce sera du noir.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10946,6 +10948,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'La lecture du clip a pris trop de temps. Relance « Détection auto », ou choisis la couleur à la main.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Touche la couleur à retirer';
+
+  @override
+  String get videoEditorChromaKeyDetecting =>
+      'Recherche de la couleur à retirer…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Choisir un clip';

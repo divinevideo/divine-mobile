@@ -139,8 +139,8 @@ void main() {
     }
 
     // A measurement the screen never asked to be told about: the colour is
-    // distinct from the green preset's 0xFF00B140 and the similarity renders
-    // as "10" against the preset's "20", so both are legible on screen.
+    // distinct from the green preset's 0xFF00B140 and the similarity of 0.1
+    // from the preset's 0.2, so both are legible on screen.
     const measured = ChromaKeyDetection(
       color: Color(0xFF19A55B),
       similarity: 0.1,
@@ -166,6 +166,23 @@ void main() {
       return (swatch.decoration! as BoxDecoration).color;
     }
 
+    /// Opens Fine-tune, where Auto-detect, the presets and the swatch wait.
+    ///
+    /// Pumped by hand: a running measurement spins Auto-detect for as long as
+    /// it runs, so `pumpAndSettle` would never return.
+    Future<void> openFineTune(
+      WidgetTester tester,
+      AppLocalizations l10n,
+    ) async {
+      final fineTune = find.text(l10n.videoEditorChromaKeyFineTune);
+      // Below the fold of the default test surface, under the preview.
+      await tester.ensureVisible(fineTune);
+      await tester.pump();
+      await tester.tap(fineTune);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
     testWidgets('starts auto-detect as soon as the screen opens', (
       tester,
     ) async {
@@ -185,6 +202,7 @@ void main() {
       expect(calls, 1);
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      await openFineTune(tester, l10n);
       final autoDetect = tester.widget<DivineButton>(
         find.widgetWithText(
           DivineButton,
@@ -251,6 +269,9 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.videoEditorChromaKeyDetectFailed), findsNothing);
+      // A stalled decode says nothing about the wall, so no tip about it.
+      expect(find.text(l10n.videoEditorChromaKeySurfaceHint), findsNothing);
+      await openFineTune(tester, l10n);
       final autoDetect = tester.widget<DivineButton>(
         find.widgetWithText(
           DivineButton,
@@ -276,17 +297,20 @@ void main() {
       await pump(tester, detect: (_) => detection.future);
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      await openFineTune(tester, l10n);
       // The green preset the panel opens on, so the assertions below cannot
       // pass on a measurement that never reached the controls.
+      // The Amount slider leads the panel, ahead of everything in Fine-tune.
+      double amount() =>
+          tester.widget<DivineSlider>(find.byType(DivineSlider).first).value;
       expect(screenColor(tester, l10n), const Color(0xFF00B140));
-      expect(find.text('20'), findsOneWidget);
+      expect(amount(), closeTo(0.2, 1e-9));
 
       detection.complete(measured);
       await tester.pump();
 
       expect(screenColor(tester, l10n), const Color(0xFF19A55B));
-      expect(find.text('10'), findsOneWidget);
-      expect(find.text('20'), findsNothing);
+      expect(amount(), closeTo(0.1, 1e-9));
     });
 
     testWidgets('tells the user when no screen was found', (tester) async {
@@ -301,8 +325,12 @@ void main() {
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.videoEditorChromaKeyDetectFailed), findsOneWidget);
+      // Now the tip about what the footage needs explains something the user
+      // just saw go wrong (#8547).
+      expect(find.text(l10n.videoEditorChromaKeySurfaceHint), findsOneWidget);
       // The key the sliders and swatch act on has to survive, or the user is
       // left with nothing to adjust by hand.
+      await openFineTune(tester, l10n);
       expect(screenColor(tester, l10n), const Color(0xFF00B140));
     });
 
@@ -363,6 +391,7 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         // A key the user already tuned is restored, not re-measured over.
         expect(detectCalls, 0);
+        await openFineTune(tester, l10n);
         expect(screenColor(tester, l10n), const ChromaKey.blueScreen().color);
 
         final remove = find.text(l10n.videoEditorChromaKeyRemove);

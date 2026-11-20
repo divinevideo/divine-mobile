@@ -11006,18 +11006,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మాస్క్ చేసిన రంగులో ఎంత భాగం అదృశ్యమవుతుంది';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'ఎడ్జ్';
+  String get videoEditorChromaKeyEdgeLabel => 'మృదువైన అంచు';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'కటౌట్‌ను మృదువుగా చేస్తుంది కాబట్టి జుట్టు బెల్లం రంగులోకి మారదు';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'స్పిల్';
+  String get videoEditorChromaKeySpillLabel => 'రంగు ఛాయను తొలగించండి';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'మాస్క్ చేసిన రంగు ఛాయను మీ సబ్జెక్ట్ నుండి తొలగిస్తుంది';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'సూక్ష్మ సర్దుబాటు';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'దీనితో భర్తీ చేయండి';
@@ -11026,17 +11029,16 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'ఏమీ లేదు';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'నలుపు';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'రంగు';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'చిత్రం';
+  String get videoEditorChromaKeyBackgroundImage => 'ఫోటో';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'క్లిప్';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -11053,6 +11055,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'క్లిప్‌ను చదవడానికి చాలా సమయం పట్టింది. ఆటో-డిటెక్ట్‌ను మళ్లీ ప్రయత్నించండి, లేదా రంగును మీరే ఎంచుకోండి.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'మీరు తొలగించాలనుకునే రంగుపై నొక్కండి';
+
+  @override
+  String get videoEditorChromaKeyDetecting =>
+      'తొలగించాల్సిన రంగును వెతుకుతోంది…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';

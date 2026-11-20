@@ -10493,16 +10493,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'ከሚወገደው ቀለም ምን ያህል እንደሚጠፋ';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'ጠርዝ';
+  String get videoEditorChromaKeyEdgeLabel => 'ለስላሳ ጠርዝ';
 
   @override
   String get videoEditorChromaKeyEdgeHint => 'ፀጉር እንዳይሸበሸብ መቁረጡን ያለሰልሳል';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'ቀለም መፍሰስ';
+  String get videoEditorChromaKeySpillLabel => 'ቅልሙን ያስወግዱ';
 
   @override
   String get videoEditorChromaKeySpillHint => 'የሚወገደውን ቀለም ቅልም ከሰውዬው ላይ ያነሳል';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'ጥሩ ማስተካከያ';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'በዚህ ተካ';
@@ -10511,17 +10514,16 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'ምንም';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'ጥቁር';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'ቀለም';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'ምስል';
+  String get videoEditorChromaKeyBackgroundImage => 'ፎቶ';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'ቅንጥብ';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10538,6 +10540,12 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'ቅንጥቡን ለማንበብ ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'ሊያስወግዱት የሚፈልጉትን ቀለም ይንኩ';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'የሚወገደውን ቀለም በመፈለግ ላይ…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';

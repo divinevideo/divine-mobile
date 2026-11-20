@@ -10840,18 +10840,21 @@ class AppLocalizationsEs extends AppLocalizations {
       'Cuánto del color enmascarado desaparece';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Borde';
+  String get videoEditorChromaKeyEdgeLabel => 'Borde suave';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Suaviza el recorte para que el pelo no quede dentado';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Derrame';
+  String get videoEditorChromaKeySpillLabel => 'Quitar tono';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Quita el tono del color enmascarado de tu sujeto';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Ajuste fino';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Sustituir por';
@@ -10860,17 +10863,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nada';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Negro';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Color';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Imagen';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'El vídeo no admite transparencia, así que esto se exporta en negro.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10887,6 +10889,12 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Leer el clip tardó demasiado. Probá «Detectar automáticamente» de nuevo, o elegí el color a mano.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Tocá el color que querés quitar';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Buscando el color a quitar…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Elegir un clip';

@@ -10863,18 +10863,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wie viel von der maskierten Farbe verschwindet';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Kante';
+  String get videoEditorChromaKeyEdgeLabel => 'Weiche Kante';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Macht den Ausschnitt weicher, damit Haare nicht ausfransen';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Farbstich';
+  String get videoEditorChromaKeySpillLabel => 'Farbstich entfernen';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Zieht den Farbstich der maskierten Farbe von deinem Motiv ab';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Feinabstimmung';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ersetzen durch';
@@ -10883,17 +10886,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nichts';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Schwarz';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Farbe';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Bild';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video kann keine Transparenz speichern – das wird beim Export schwarz.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10910,6 +10912,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Das Lesen des Clips hat zu lange gedauert. Versuch „Automatisch erkennen“ noch mal – oder wähl die Farbe von Hand.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Tippe auf die Farbe, die verschwinden soll';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Farbe wird gesucht…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Clip auswählen';

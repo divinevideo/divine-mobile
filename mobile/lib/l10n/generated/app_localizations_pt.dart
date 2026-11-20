@@ -10825,18 +10825,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Quanto da cor mascarada desaparece';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Contorno';
+  String get videoEditorChromaKeyEdgeLabel => 'Borda suave';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Suaviza o recorte para o cabelo não ficar serrilhado';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Derrame';
+  String get videoEditorChromaKeySpillLabel => 'Remover tom';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Tira o tom da cor mascarada do primeiro plano';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Ajuste fino';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Substituir por';
@@ -10845,17 +10848,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nada';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Preto';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Cor';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Imagem';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clipe';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'O vídeo não guarda transparência, por isso isto é exportado a preto.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10872,6 +10874,13 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Ler o clipe demorou demais. Tente Detetar automaticamente de novo, ou escolha a cor na mão.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Toque na cor que você quer remover';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Procurando a cor para remover…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Escolher um clipe';

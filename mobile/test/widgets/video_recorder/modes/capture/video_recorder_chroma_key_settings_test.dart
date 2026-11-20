@@ -4,12 +4,14 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_chroma_key_settings.dart';
+import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 
 import '../../../../helpers/image_picker_stub.dart';
@@ -50,12 +52,16 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        BlocProvider<VideoRecorderBloc>.value(
-          value: recorderBloc,
-          child: const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: Center(child: _OpenSettingsButton())),
+        // The screen shows the camera preview, whose ghost frame reads the
+        // recorded clips through Riverpod.
+        ProviderScope(
+          child: BlocProvider<VideoRecorderBloc>.value(
+            value: recorderBloc,
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: Center(child: _OpenSettingsButton())),
+            ),
           ),
         ),
       );
@@ -77,6 +83,31 @@ void main() {
           find.text(l10n.videoEditorChromaKeyDetectFailed),
           findsOneWidget,
         );
+        // What the wall needs, now that the user has seen it fail.
+        expect(
+          find.text(l10n.videoEditorChromaKeySurfaceHint),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says the camera picture can be tapped for the color', (
+        tester,
+      ) async {
+        await pumpHost(tester);
+        await openSettings(tester);
+
+        // The same screen as the editor's, with the camera where the clip is.
+        expect(find.byType(VideoRecorderCameraPreview), findsOneWidget);
+        expect(find.text(l10n.videoEditorChromaKeyTapToPick), findsOneWidget);
+      });
+
+      testWidgets('keeps the wall tip back until a measurement fails', (
+        tester,
+      ) async {
+        await pumpHost(tester);
+        await openSettings(tester);
+
+        expect(find.text(l10n.videoEditorChromaKeySurfaceHint), findsNothing);
       });
     });
 
@@ -87,7 +118,7 @@ void main() {
         await pumpHost(tester);
         await openSettings(tester);
 
-        expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsOneWidget);
+        expect(find.text(l10n.videoEditorChromaKeyFineTune), findsOneWidget);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
         ).called(1);
@@ -95,11 +126,11 @@ void main() {
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
         );
 
-        // Tap the clear area above the sheet to close it.
-        await tester.tapAt(const Offset(540, 40));
+        // Settings act on the camera as they change; Close just returns.
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsNothing);
+        expect(find.text(l10n.videoEditorChromaKeyFineTune), findsNothing);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
         ).called(1);
@@ -119,12 +150,14 @@ void main() {
             const VideoRecorderChromaKeyEnabledSet(enabled: false),
           ),
         ).called(1);
-        expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsNothing);
+        expect(find.text(l10n.videoEditorChromaKeyFineTune), findsNothing);
       });
 
       testWidgets('measures the wall on Auto-detect', (tester) async {
         await pumpHost(tester);
         await openSettings(tester);
+        await tester.tap(find.text(l10n.videoEditorChromaKeyFineTune));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyAutoDetect));
 
@@ -142,6 +175,9 @@ void main() {
         // The busy button's spinner never settles, so the sheet is pumped
         // through its opening rather than settled.
         await tester.tap(find.byType(_OpenSettingsButton));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text(l10n.videoEditorChromaKeyFineTune));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -165,6 +201,8 @@ void main() {
       testWidgets('switches to the blue-screen preset', (tester) async {
         await pumpHost(tester);
         await openSettings(tester);
+        await tester.tap(find.text(l10n.videoEditorChromaKeyFineTune));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyPresetBlue));
 
@@ -181,7 +219,8 @@ void main() {
         await pumpHost(tester);
         await openSettings(tester);
 
-        await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundNone));
+        // Recorded clips go on the track, where an empty backdrop is black.
+        await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundBlack));
 
         verify(
           () => recorderBloc.add(
@@ -190,7 +229,7 @@ void main() {
         ).called(1);
       });
 
-      testWidgets('shows a backdrop photo it could not take over the sheet', (
+      testWidgets('shows a backdrop photo it could not take over the screen', (
         tester,
       ) async {
         overrideSharedChannel(imagePickerChannel, (call) async {
@@ -202,8 +241,8 @@ void main() {
         await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundImage));
         await tester.pumpAndSettle();
 
-        // Shown is not enough: on the recorder's scaffold the message sits
-        // underneath the open sheet, where nobody can see or reach it.
+        // Shown is not enough: on the recorder's scaffold alone the message
+        // would sit underneath this screen, where nobody can see or reach it.
         expect(
           find.text(l10n.videoEditorChromaKeyImagePickFailed).hitTestable(),
           findsOneWidget,

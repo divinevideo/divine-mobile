@@ -10730,24 +10730,30 @@ class AppLocalizationsUr extends AppLocalizations {
       'ماسک کیا گیا رنگ کتنا غائب ہوگا';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'کنارہ';
+  String get videoEditorChromaKeyEdgeLabel => 'نرم کنارہ';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'کٹاؤ کو نرم کرتا ہے تاکہ بال کھردرے نہ لگیں';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'رنگ کی جھلک';
+  String get videoEditorChromaKeySpillLabel => 'رنگ کی جھلک ہٹائیں';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'ماسک کیے گئے رنگ کی جھلک آپ کے سبجیکٹ سے ہٹاتا ہے';
 
   @override
+  String get videoEditorChromaKeyFineTune => 'باریک ترتیب';
+
+  @override
   String get videoEditorChromaKeyBackgroundLabel => 'اس سے بدلیں';
 
   @override
   String get videoEditorChromaKeyBackgroundNone => 'کچھ نہیں';
+
+  @override
+  String get videoEditorChromaKeyBackgroundBlack => 'سیاہ';
 
   @override
   String get videoEditorChromaKeyBackgroundColor => 'رنگ';
@@ -10757,10 +10763,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'کلپ';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10777,6 +10779,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'کلپ پڑھنے میں بہت وقت لگ گیا۔ «خودکار شناخت» دوبارہ آزمائیں، یا رنگ خود منتخب کریں۔';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'جس رنگ کو ہٹانا ہے اس پر ٹیپ کریں';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'ہٹانے والا رنگ تلاش ہو رہا ہے…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';

@@ -3,8 +3,14 @@
 // This is a port of pro_video_editor's render-side keyer so the editor preview
 // and the exported file agree. The formula is specified once, in the plugin's
 // `ChromaKeyMath` (Kotlin), and implemented by its GLES fragment shader and by
-// Apple's Core Image colour cube. This file is the third implementation and
+// its Metal kernel on Apple. This file is the third implementation and
 // must stay in lockstep with it — every constant below is copied from there.
+//
+// Like the renderers, the matte is ramped on the binomial average of each
+// pixel's 3x3 neighbourhood of key distances
+// (`ChromaKeyMath.neighbourhoodDistance`). The preview filters the picture as
+// drawn on screen, so its neighbourhood is three screen pixels rather than
+// three video pixels; at a phone's size the two are about equal.
 //
 // Differences from the render-side shader, both deliberate:
 //
@@ -44,6 +50,32 @@ uniform sampler2D uTexture;
 
 out vec4 fragColor;
 
+// Flutter's texture is premultiplied; the key is specified on straight RGB.
+// A fully transparent pixel (the rounded corners the player is clipped to, or
+// a letterbox gap) carries no colour to key and reads as black; the centre's
+// own zero alpha is folded back in below, so it never reaches the output.
+vec3 straight(vec4 premultiplied) {
+  return premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a
+                               : vec3(0.0);
+}
+
+// The key distance of one pixel: chroma, plus brightness weighted by how
+// neutral the key is (`ChromaKeyMath.distance`).
+float keyDistance(vec3 rgb) {
+  float y = dot(rgb, vec3(0.299, 0.587, 0.114));
+  vec2 cbcr = vec2(
+      dot(rgb, vec3(-0.168736, -0.331264, 0.5)),
+      dot(rgb, vec3(0.5, -0.418688, -0.081312)));
+  return length(vec3(cbcr - uKeyCbCr, (y - uKeyLuma) * uLumaWeight));
+}
+
+// The key distance of the neighbour `offset` pixels away, clamped to the edge.
+float tap(vec2 uv, vec2 offset) {
+  vec2 texel = 1.0 / uSize;
+  vec2 coord = clamp(uv + offset * texel, 0.5 * texel, 1.0 - 0.5 * texel);
+  return keyDistance(straight(texture(uTexture, coord)));
+}
+
 void main() {
   vec2 uv = FlutterFragCoord().xy / uSize;
 // Impeller's OpenGLES backend hands the texture over y-flipped.
@@ -52,22 +84,26 @@ void main() {
 #endif
 
   vec4 src = texture(uTexture, uv);
-
-  // Flutter's texture is premultiplied; the key is specified on straight RGB.
-  // A fully transparent source pixel (the rounded corners the player is clipped
-  // to, or a letterbox gap) carries no colour to key, and `outA` below folds
-  // its zero alpha back in, so the branch value never reaches the output.
-  vec3 rgb = src.a > 0.0 ? src.rgb / src.a : vec3(0.0);
+  vec3 rgb = straight(src);
 
   float y = dot(rgb, vec3(0.299, 0.587, 0.114));
   vec2 cbcr = vec2(
       dot(rgb, vec3(-0.168736, -0.331264, 0.5)),
       dot(rgb, vec3(0.5, -0.418688, -0.081312)));
 
-  // Matte: distance in the chroma plane, plus brightness weighted by how
-  // neutral the key is, ramped by smoothstep. `max` keeps a zero-width ramp
-  // from dividing by zero.
-  float d = length(vec3(cbcr - uKeyCbCr, (y - uKeyLuma) * uLumaWeight));
+  // Matte: the neighbourhood's binomial average, ramped by smoothstep. The
+  // weights are symmetric, so the y-flip above leaves it unchanged. `max`
+  // keeps a zero-width ramp from dividing by zero.
+  float nw = tap(uv, vec2(-1.0, -1.0));
+  float n = tap(uv, vec2(0.0, -1.0));
+  float ne = tap(uv, vec2(1.0, -1.0));
+  float w = tap(uv, vec2(-1.0, 0.0));
+  float c = keyDistance(rgb);
+  float e = tap(uv, vec2(1.0, 0.0));
+  float sw = tap(uv, vec2(-1.0, 1.0));
+  float s = tap(uv, vec2(0.0, 1.0));
+  float se = tap(uv, vec2(1.0, 1.0));
+  float d = (4.0 * c + 2.0 * (n + w + e + s) + nw + ne + sw + se) / 16.0;
   float a = smoothstep(uSimilarity, uSimilarity + max(uSmoothness, 1e-4), d);
 
   // Spill: remove the chroma component pointing at the key hue, keeping y so a

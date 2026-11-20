@@ -10141,16 +10141,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => '这个颜色被抠掉多少';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => '边缘';
+  String get videoEditorChromaKeyEdgeLabel => '柔化边缘';
 
   @override
   String get videoEditorChromaKeyEdgeHint => '让抠像边缘更柔和，头发不会毛刺';
 
   @override
-  String get videoEditorChromaKeySpillLabel => '溢色';
+  String get videoEditorChromaKeySpillLabel => '去除色偏';
 
   @override
   String get videoEditorChromaKeySpillHint => '把这个颜色映在主体上的色偏去掉';
+
+  @override
+  String get videoEditorChromaKeyFineTune => '微调';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '替换为';
@@ -10159,16 +10162,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => '无';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => '黑色';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => '颜色';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => '图片';
+  String get videoEditorChromaKeyBackgroundImage => '照片';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => '片段';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint => '片段后面的内容会透出来。';
@@ -10183,6 +10186,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       '读取片段花的时间太长了。再试一次「自动识别」，或者手动选颜色。';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => '点按要去掉的颜色';
+
+  @override
+  String get videoEditorChromaKeyDetecting => '正在查找要去掉的颜色…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';

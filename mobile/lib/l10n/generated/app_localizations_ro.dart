@@ -10962,18 +10962,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cât din culoarea mascată dispare';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Margine';
+  String get videoEditorChromaKeyEdgeLabel => 'Margine moale';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Înmoaie decupajul ca părul să nu iasă zimțat';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Reflexie';
+  String get videoEditorChromaKeySpillLabel => 'Elimină nuanța';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Scoate nuanța culorii mascate de pe subiect';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Reglaj fin';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Înlocuiește cu';
@@ -10982,17 +10985,16 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nimic';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Negru';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Culoare';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Imagine';
+  String get videoEditorChromaKeyBackgroundImage => 'Fotografie';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -11009,6 +11011,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Citirea clipului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Atinge culoarea pe care vrei s-o elimini';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Caut culoarea de eliminat…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';
