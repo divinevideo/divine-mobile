@@ -41,14 +41,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
     final liveActivityRepository = ref.watch(
       postLiveActivityRepositoryProvider,
     );
-    // The auth source changes only with auth state, which the watch covers.
-    ref.watch(currentAuthStateProvider);
     final showLiveActivity =
         liveActivityRepository != null &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.postLiveActivity)) &&
-        signsWithoutPrompting(
-          ref.watch(authServiceProvider).authenticationSource,
-        );
+        _signsWithoutPrompting(ref);
 
     final page = BlocProvider(
       // Both providers watch authServiceProvider, so their identities can
@@ -98,6 +94,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
       child: page,
     );
   }
+}
+
+/// Whether the signed-in account signs without a prompt, so Live Activities
+/// can register for it.
+///
+/// Watched only once the toggle could show at all, so the screen takes no
+/// auth dependency on devices without Live Activities. The auth source
+/// changes only with auth state, which the watch covers.
+bool _signsWithoutPrompting(WidgetRef ref) {
+  ref.watch(currentAuthStateProvider);
+  return signsWithoutPrompting(
+    ref.watch(authServiceProvider).authenticationSource,
+  );
 }
 
 /// View: renders the notification settings UI from the Cubit state.
