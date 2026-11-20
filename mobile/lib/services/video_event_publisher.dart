@@ -1253,6 +1253,10 @@ class VideoEventPublisher {
   /// addressable ref `39307:<pubkey>:subtitles:<vineId>`, or `null` on
   /// failure (not authenticated, no addressable id, sign/publish failed).
   ///
+  /// The event takes [video]'s own Nostr timestamp. A republished video is
+  /// stamped after its earlier revisions, so its subtitle event replaces the
+  /// one they referenced even when two saves land in the same second.
+  ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
   Future<String?> publishSubtitleEvent({
@@ -1269,6 +1273,7 @@ class VideoEventPublisher {
       vttContent: vttContent,
       blossomUrl: blossomUrl,
       lang: lang,
+      createdAt: video.nostrCreatedAt,
     );
   }
 
@@ -1278,7 +1283,8 @@ class VideoEventPublisher {
   ///
   /// Unlike [publishSubtitleEvent] this needs no published [VideoEvent], so
   /// the initial publish can attach captions before the video event exists —
-  /// addressable `a` refs make the forward reference safe.
+  /// addressable `a` refs make the forward reference safe. [createdAt]
+  /// defaults to the signer's current time.
   ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
@@ -1288,6 +1294,7 @@ class VideoEventPublisher {
     required String blossomUrl,
     String lang = 'en',
     int? videoKind,
+    int? createdAt,
   }) async {
     final pubkey = _authService?.currentPublicKeyHex;
     if (pubkey == null || vineId.isEmpty) return null;
@@ -1306,6 +1313,7 @@ class VideoEventPublisher {
         ['m', 'text/vtt'],
         ['l', lang],
       ],
+      createdAt: createdAt,
     );
     if (event == null) {
       Log.error(
