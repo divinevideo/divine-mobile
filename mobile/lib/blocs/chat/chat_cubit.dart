@@ -33,6 +33,19 @@ const pocChatDefaultChannel = 'general';
 /// Every room in [pocChatCommunityId].
 const List<String> pocChatChannels = [pocChatDefaultChannel, 'introductions'];
 
+/// Why a room could not load, or stopped receiving messages.
+enum ChatLoadFailure {
+  /// The room loaded, or is still loading.
+  none,
+
+  /// The relay could not be reached, reconnecting gave up, or the room's
+  /// history never finished loading.
+  connection,
+
+  /// Any other load failure.
+  other,
+}
+
 class ChatState {
   const ChatState({
     this.account = '',
@@ -52,7 +65,7 @@ class ChatState {
     this.sending = false,
     this.loading = false,
     this.sendFailed = false,
-    this.loadFailed = false,
+    this.loadFailure = ChatLoadFailure.none,
     this.pendingIds = const [],
     this.retiredPendingIds = const [],
   });
@@ -67,9 +80,12 @@ class ChatState {
   final bool sending;
   final bool loading;
   final bool sendFailed;
-  final bool loadFailed;
+  final ChatLoadFailure loadFailure;
   final List<String> pendingIds;
   final List<String> retiredPendingIds;
+
+  /// The room is not usable until a retry succeeds.
+  bool get loadFailed => loadFailure != ChatLoadFailure.none;
 
   ChatState copyWith({
     List<ChatMessage>? messages,
@@ -81,7 +97,7 @@ class ChatState {
     bool? sending,
     bool? loading,
     bool? sendFailed,
-    bool? loadFailed,
+    ChatLoadFailure? loadFailure,
     List<String>? pendingIds,
     List<String>? retiredPendingIds,
   }) => ChatState(
@@ -96,7 +112,7 @@ class ChatState {
     sending: sending ?? this.sending,
     loading: loading ?? this.loading,
     sendFailed: sendFailed ?? this.sendFailed,
-    loadFailed: loadFailed ?? this.loadFailed,
+    loadFailure: loadFailure ?? this.loadFailure,
     pendingIds: pendingIds ?? this.pendingIds,
     retiredPendingIds: retiredPendingIds ?? this.retiredPendingIds,
   );
@@ -146,14 +162,16 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
         category: LogCategory.storage,
       );
     }
-    emitIfOpen(state.copyWith(loading: true, loadFailed: false));
+    emitIfOpen(
+      state.copyWith(loading: true, loadFailure: ChatLoadFailure.none),
+    );
     _updates ??= _repo.changes.listen(
       (_) {
         refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
       },
       onError: (Object error, StackTrace stack) {
         addError(error, stack);
-        emitIfOpen(state.copyWith(loadFailed: true));
+        emitIfOpen(state.copyWith(loadFailure: _loadFailureFor(error)));
       },
     );
     final stream = pocStreamForChannel?.call(state.selectedChannelId);
@@ -174,12 +192,20 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
     } on Object catch (error, stack) {
       addError(error, stack);
-      emitIfOpen(state.copyWith(loadFailed: true));
+      emitIfOpen(state.copyWith(loadFailure: _loadFailureFor(error)));
     } finally {
       _starting = false;
       emitIfOpen(state.copyWith(loading: false));
     }
   }
+
+  /// A relay that cannot be reached, or never finishes sending history, is a
+  /// connection problem the user can retry; anything else is [ChatLoadFailure.other].
+  static ChatLoadFailure _loadFailureFor(Object error) => switch (error) {
+    RelayConnectionException() ||
+    TimeoutException() => ChatLoadFailure.connection,
+    _ => ChatLoadFailure.other,
+  };
 
   /// Forwards [messages] to [onRead]; callers pass only what the foreground
   /// view rendered.

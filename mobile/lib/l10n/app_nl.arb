@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Openbare testkamers",
   "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
   "messagesNoRooms": "Nog geen kamers",
+  "messagesRoomConnectionError": "Kan deze kamer niet bereiken. Controleer je verbinding en probeer het opnieuw.",
   "followedHashtagsTitle": "Gevolgde hashtags",
   "manageHashtags": "Hashtags beheren",
   "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden.",

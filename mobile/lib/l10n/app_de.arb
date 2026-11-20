@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Öffentliche Testräume",
   "messagesPublicTestDisclosure": "Diese Testräume sind öffentlich. Alle mit Zugang können deine Nachrichten lesen.",
   "messagesNoRooms": "Noch keine Räume",
+  "messagesRoomConnectionError": "Dieser Raum ist gerade nicht erreichbar. Überprüfe deine Verbindung und versuch es nochmal.",
   "followedHashtagsTitle": "Abonnierte Hashtags",
   "manageHashtags": "Hashtags verwalten",
   "followedHashtagsEmpty": "Folge einem Hashtag auf seiner Seite, um ihn hier zu finden.",

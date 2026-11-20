@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Salons de test publics",
   "messagesPublicTestDisclosure": "Ces salons de test sont publics. Toute personne y ayant accès peut lire vos messages.",
   "messagesNoRooms": "Aucun salon pour le moment",
+  "messagesRoomConnectionError": "Impossible d'accéder à ce salon. Vérifie ta connexion et réessaie.",
   "followedHashtagsTitle": "Hashtags suivis",
   "manageHashtags": "Gérer les hashtags",
   "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici.",

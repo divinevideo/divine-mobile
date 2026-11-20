@@ -15067,6 +15067,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get messagesNoRooms => 'まだルームはありません';
 
   @override
+  String get messagesRoomConnectionError =>
+      'このルームに接続できませんでした。接続を確認して、もう一度お試しください。';
+
+  @override
   String get followedHashtagsTitle => 'フォロー中のハッシュタグ';
 
   @override

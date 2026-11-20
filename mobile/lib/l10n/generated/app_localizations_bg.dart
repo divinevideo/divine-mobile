@@ -15959,6 +15959,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get messagesNoRooms => 'Все още няма стаи';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Не успяхме да се свържем с тази стая. Провери връзката си и опитай пак.';
+
+  @override
   String get followedHashtagsTitle => 'Следвани хаштагове';
 
   @override

@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Offentliga testrum",
   "messagesPublicTestDisclosure": "Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.",
   "messagesNoRooms": "Inga rum ännu",
+  "messagesRoomConnectionError": "Det går inte att nå det här rummet. Kontrollera din anslutning och försök igen.",
   "followedHashtagsTitle": "Hashtaggar du följer",
   "manageHashtags": "Hantera hashtaggar",
   "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här.",

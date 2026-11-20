@@ -893,12 +893,19 @@ void main() {
         expectNoSend();
       });
 
-      for (final state in [
-        const ChatState(sending: true),
-        const ChatState(loading: true),
-        const ChatState(loadFailed: true),
+      for (final (label, state) in [
+        ('sending', const ChatState(sending: true)),
+        ('loading', const ChatState(loading: true)),
+        (
+          'load failure: other',
+          const ChatState(loadFailure: ChatLoadFailure.other),
+        ),
+        (
+          'load failure: connection',
+          const ChatState(loadFailure: ChatLoadFailure.connection),
+        ),
       ]) {
-        testWidgets('Enter respects the composer access gate: $state', (
+        testWidgets('Enter respects the composer access gate: $label', (
           tester,
         ) async {
           await pumpComposer(tester);
@@ -910,35 +917,85 @@ void main() {
         });
       }
     });
-    testWidgets(
-      'failed initial loading disables the composer and offers retry',
-      (tester) async {
-        final cubit = _ChatCubit();
-        when(() => cubit.state).thenReturn(const ChatState(loadFailed: true));
-        when(cubit.visibleMessages).thenReturn([]);
-        whenListen(cubit, const Stream<ChatState>.empty());
-        when(cubit.start).thenAnswer((_) async {});
-        await _pumpChatWidget(
-          tester,
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BlocProvider<ChatCubit>.value(
-              value: cubit,
-              child: const ChatScreen(),
+    for (final (failure, message) in [
+      (
+        ChatLoadFailure.other,
+        (AppLocalizations l10n) => l10n.dmConversationLoadError,
+      ),
+      (
+        ChatLoadFailure.connection,
+        (AppLocalizations l10n) => l10n.messagesRoomConnectionError,
+      ),
+    ]) {
+      testWidgets(
+        'a $failure load failure explains itself, disables the composer and '
+        'offers retry',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _ChatCubit();
+          when(() => cubit.state).thenReturn(ChatState(loadFailure: failure));
+          when(cubit.visibleMessages).thenReturn([]);
+          whenListen(cubit, const Stream<ChatState>.empty());
+          when(cubit.start).thenAnswer((_) async {});
+          await _pumpChatWidget(
+            tester,
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<ChatCubit>.value(
+                value: cubit,
+                child: const ChatScreen(),
+              ),
             ),
+          );
+          expect(find.text(message(l10n)), findsOneWidget);
+          expect(
+            tester.takeAnnouncements().map((a) => a.message),
+            [message(l10n)],
+          );
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).enabled,
+            isFalse,
+          );
+          await tester.tap(find.text(l10n.commonRetry));
+          verify(cubit.start).called(1);
+        },
+      );
+    }
+    testWidgets('a loaded room that loses its relay announces it once', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final cubit = _ChatCubit();
+      final states = StreamController<ChatState>();
+      addTearDown(states.close);
+      whenListen(cubit, states.stream, initialState: const ChatState());
+      when(cubit.visibleMessages).thenReturn([]);
+      await _pumpChatWidget(
+        tester,
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BlocProvider<ChatCubit>.value(
+            value: cubit,
+            child: const ChatScreen(),
           ),
-        );
-        expect(
-          tester.widget<TextField>(find.byType(TextField)).enabled,
-          isFalse,
-        );
-        await tester.tap(
-          find.text(lookupAppLocalizations(const Locale('en')).commonRetry),
-        );
-        verify(cubit.start).called(1);
-      },
-    );
+        ),
+      );
+      expect(tester.takeAnnouncements(), isEmpty);
+
+      states.add(const ChatState(loadFailure: ChatLoadFailure.connection));
+      await tester.pump();
+      await tester.pump();
+      states.add(const ChatState(loadFailure: ChatLoadFailure.connection));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        [l10n.messagesRoomConnectionError],
+      );
+    });
 
     group('undelivered message', () {
       const author =

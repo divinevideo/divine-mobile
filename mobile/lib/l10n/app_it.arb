@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Stanze di prova pubbliche",
   "messagesPublicTestDisclosure": "Queste stanze di prova sono pubbliche. Chiunque abbia accesso può leggere i tuoi messaggi.",
   "messagesNoRooms": "Ancora nessuna stanza",
+  "messagesRoomConnectionError": "Impossibile raggiungere questa stanza. Controlla la connessione e riprova.",
   "followedHashtagsTitle": "Hashtag seguiti",
   "manageHashtags": "Gestisci hashtag",
   "followedHashtagsEmpty": "Segui un hashtag dalla sua pagina per trovarlo qui.",

@@ -16000,6 +16000,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get messagesNoRooms => 'Noch keine Räume';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Dieser Raum ist gerade nicht erreichbar. Überprüfe deine Verbindung und versuch es nochmal.';
+
+  @override
   String get followedHashtagsTitle => 'Abonnierte Hashtags';
 
   @override

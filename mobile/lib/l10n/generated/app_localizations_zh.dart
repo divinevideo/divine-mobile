@@ -14887,6 +14887,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messagesNoRooms => '暂无聊天室';
 
   @override
+  String get messagesRoomConnectionError => '无法连接到这个聊天室。请检查网络连接后重试。';
+
+  @override
   String get followedHashtagsTitle => '已关注的话题标签';
 
   @override

@@ -15085,6 +15085,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesNoRooms => '아직 채팅방이 없어요';
 
   @override
+  String get messagesRoomConnectionError =>
+      '이 채팅방에 연결할 수 없어요. 연결 상태를 확인하고 다시 시도해 보세요.';
+
+  @override
   String get followedHashtagsTitle => '팔로우 중인 해시태그';
 
   @override

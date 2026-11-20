@@ -16182,6 +16182,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get messagesNoRooms => 'ఇంకా గదులు లేవు';
 
   @override
+  String get messagesRoomConnectionError =>
+      'ఈ గదిని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get followedHashtagsTitle => 'అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు';
 
   @override

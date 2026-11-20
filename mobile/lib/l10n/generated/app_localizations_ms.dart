@@ -15805,6 +15805,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get messagesNoRooms => 'Belum ada bilik';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Tidak dapat mencapai bilik ini. Semak sambungan anda dan cuba lagi.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtag yang diikuti';
 
   @override

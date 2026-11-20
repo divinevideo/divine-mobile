@@ -15865,6 +15865,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get messagesNoRooms => 'لا توجد غرف بعد';
 
   @override
+  String get messagesRoomConnectionError =>
+      'تعذّر الوصول إلى هذه الغرفة. يُرجى التحقق من الاتصال والمحاولة مرة أخرى.';
+
+  @override
   String get followedHashtagsTitle => 'الوسوم التي تتابعها';
 
   @override

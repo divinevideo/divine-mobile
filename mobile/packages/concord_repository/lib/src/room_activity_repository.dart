@@ -168,11 +168,12 @@ class RoomActivityRepository {
   Future<void> _initialize(_ActivitySource source) async {
     source
       ..loading = true
-      ..loadFailed = false;
+      ..loadError = null;
     _publish(source);
     source.subscription ??= source.channel.repository.changes.listen(
       (_) => _refreshInBackground(source),
-      onError: (Object error, StackTrace stack) => _failed(source),
+      onError: (Object error, StackTrace stack) =>
+          _failed(source, error, stack),
     );
     try {
       final saved = await source.channel.store.get(source.readKey);
@@ -190,33 +191,33 @@ class RoomActivityRepository {
       );
       await source.channel.repository.waitForHistory();
       if (_closed) return;
-      if (source.loadFailed) {
-        throw StateError('Room history could not be loaded');
+      if (source.loadError case final failure?) {
+        Error.throwWithStackTrace(failure.error, failure.stackTrace);
       }
       source
         ..started = true
         ..loading = false;
       await _refresh(source);
-    } on Object {
-      _failed(source);
+    } on Object catch (error, stack) {
+      _failed(source, error, stack);
       rethrow;
     }
   }
 
-  void _failed(_ActivitySource source) {
+  void _failed(_ActivitySource source, Object error, StackTrace stack) {
     if (_closed) return;
     source
       ..started = false
       ..loading = false
-      ..loadFailed = true;
+      ..loadError ??= AsyncError(error, stack);
     _publish(source);
   }
 
   void _refreshInBackground(_ActivitySource source) {
     if (_closed) return;
     unawaited(
-      _refresh(source).catchError((Object _) {
-        _failed(source);
+      _refresh(source).catchError((Object error, StackTrace stack) {
+        _failed(source, error, stack);
       }),
     );
   }
@@ -281,7 +282,7 @@ class RoomActivityRepository {
       recentAuthors: List.unmodifiable(authors),
       historyLimited: source.historyLimited,
       loading: source.loading,
-      loadFailed: source.loadFailed,
+      loadFailed: source.loadError != null,
     );
     _notify();
   }
@@ -352,7 +353,7 @@ class _ActivitySource {
   Set<String> readIds = {};
   bool started = false;
   bool loading = true;
-  bool loadFailed = false;
+  AsyncError? loadError;
   bool historyLimited = false;
   Future<void>? starting;
   Future<void> writes = Future.value();

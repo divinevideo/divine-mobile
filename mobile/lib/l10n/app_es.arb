@@ -6267,6 +6267,7 @@
   "messagesPublicTestRooms": "Salas públicas de prueba",
   "messagesPublicTestDisclosure": "Estas salas de prueba son públicas. Cualquiera con acceso puede leer tus mensajes.",
   "messagesNoRooms": "Todavía no hay salas",
+  "messagesRoomConnectionError": "No se pudo conectar con esta sala. Verificá tu conexión e intentá de nuevo.",
   "followedHashtagsTitle": "Hashtags que sigues",
   "manageHashtags": "Gestionar hashtags",
   "followedHashtagsEmpty": "Sigue un hashtag desde su página para encontrarlo aquí.",

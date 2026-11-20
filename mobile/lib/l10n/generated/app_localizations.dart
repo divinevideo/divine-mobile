@@ -26391,6 +26391,12 @@ abstract class AppLocalizations {
   /// **'No rooms yet'**
   String get messagesNoRooms;
 
+  /// Shown inside a community room when the relay cannot be reached, reconnecting gave up, or the room's history never finished loading. A Retry button sits below it.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach this room. Check your connection and try again.'**
+  String get messagesRoomConnectionError;
+
   /// Title of the account-scoped followed hashtags screen.
   ///
   /// In en, this message translates to:
