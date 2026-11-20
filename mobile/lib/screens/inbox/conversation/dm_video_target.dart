@@ -160,12 +160,12 @@ DmVideoTarget? resolveDmVideoTarget({
         videoKind: NIP71VideoKinds.shortVideo,
       );
     }
+    final citesSameId = structuredTarget?.stableId == urlStableId;
     // An addressable citation of another d tag names a different video, so
     // its author must not scope this URL's lookup.
     final citesUrl =
         structuredTarget != null &&
-        (sharedVideoRef?.isAddressable != true ||
-            structuredTarget.stableId == urlStableId);
+        (sharedVideoRef?.isAddressable != true || citesSameId);
     // The URL's own `?author=` scopes it when no citation does.
     final urlAuthor = urlMatch?.group(2);
     return DmVideoTarget(
@@ -173,7 +173,9 @@ DmVideoTarget? resolveDmVideoTarget({
       authorPubkey: citesUrl
           ? structuredTarget.authorPubkey ?? urlAuthor
           : urlAuthor,
-      videoKind: citesUrl ? structuredTarget.videoKind : null,
+      // A regular citation of another id says nothing about the URL's id,
+      // which may be a hex d tag: routing it as an exact event would lose it.
+      videoKind: citesSameId ? structuredTarget!.videoKind : null,
     );
   }
 
