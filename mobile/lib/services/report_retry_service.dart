@@ -9,10 +9,27 @@ import 'package:meta/meta.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 abstract interface class ReportChannelDriver {
+  /// Attempts one delivery of [report] to [channel] and returns whether it
+  /// was delivered.
+  ///
+  /// Throws [ReportChannelRejectedException] when the destination refused the
+  /// report itself, so the channel is given up on instead of retried.
   Future<bool> deliverReportChannel(
     PendingReport report,
     ReportChannel channel,
   );
+}
+
+/// Thrown by a [ReportChannelDriver] when a destination refused a report, so
+/// sending it again would get the same answer.
+class ReportChannelRejectedException implements Exception {
+  const ReportChannelRejectedException(this.reason);
+
+  /// Why the destination refused the report. Stored on the device only.
+  final String reason;
+
+  @override
+  String toString() => 'ReportChannelRejectedException: $reason';
 }
 
 class ReportRetryConfig {
@@ -218,6 +235,7 @@ class ReportRetryService {
   Future<void> _driveChannel(PendingReport row, ReportChannel channel) async {
     if (_disposed) return;
     bool delivered;
+    ReportChannelRejectedException? rejection;
     try {
       delivered = await _driver
           .deliverReportChannel(row, channel)
@@ -233,6 +251,9 @@ class ReportRetryService {
             return delivered;
           })
           .timeout(_config.attemptTimeout);
+    } on ReportChannelRejectedException catch (e) {
+      delivered = false;
+      rejection = e;
     } catch (e) {
       delivered = false;
     }
@@ -241,7 +262,20 @@ class ReportRetryService {
 
     // `row` is this sweep's snapshot, so count from it rather than re-reading.
     final attempts = row.attemptsOf(channel) + 1;
-    if (attempts >= _config.maxAttemptsPerChannel) {
+    if (rejection != null) {
+      // Resending gets the same refusal on every sweep, so stop here. The
+      // other destinations of the report are unaffected and keep retrying.
+      await _dao.markChannelDeadLetter(
+        reportId: row.reportId,
+        channel: channel,
+        error: '${channel.name} refused the report: ${rejection.reason}',
+      );
+      Log.warning(
+        '${channel.name} refused report ${row.reportId}; not retrying it',
+        name: 'ReportRetryService',
+        category: LogCategory.system,
+      );
+    } else if (attempts >= _config.maxAttemptsPerChannel) {
       await _dao.markChannelDeadLetter(
         reportId: row.reportId,
         channel: channel,

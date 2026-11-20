@@ -16,6 +16,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
@@ -2094,6 +2095,77 @@ void main() {
         ),
       ).captured;
       expect((captured.single as Event).id, 'e' * 64);
+    });
+
+    group('support ticket delivery', () {
+      const zendeskChannel = MethodChannel('com.openvine/zendesk_support');
+      late PlatformException ticketFailure;
+
+      setUp(() async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(zendeskChannel, (MethodCall call) async {
+              if (call.method == 'createTicket') throw ticketFailure;
+              return true;
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(zendeskChannel, null);
+        });
+        await ZendeskSupportService.initialize(
+          appId: 'test',
+          clientId: 'test',
+          zendeskUrl: 'https://test.zendesk.com',
+        );
+        ZendeskSupportService.setUserIdentity(
+          npub: Nip19.encodePubKey(testPublicKey),
+        );
+      });
+
+      Future<PendingReport> queuedRow() async {
+        final row = PendingReport(
+          reportId: 'report_t',
+          userPubkey: testPublicKey,
+          eventJson: '',
+          zendeskPayload: jsonEncode({
+            'subject': 'Content Report: spam',
+            'description': 'Content Report - NIP-56',
+            'tags': ['content-report'],
+          }),
+          createdAt: DateTime.utc(2026),
+        );
+        await dao.enqueue(row);
+        return row;
+      }
+
+      test('reports a ticket Zendesk refused as refused, so it is not '
+          'retried', () async {
+        ticketFailure = PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Bad Request',
+          details: {'status': 400, 'networkError': false, 'authFailed': false},
+        );
+        final row = await queuedRow();
+
+        await expectLater(
+          service.deliverReportChannel(row, ReportChannel.zendesk),
+          throwsA(isA<ReportChannelRejectedException>()),
+        );
+      });
+
+      test('reports a ticket that failed offline as undelivered, so it is '
+          'retried', () async {
+        ticketFailure = PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unable to resolve host',
+          details: {'status': -1, 'networkError': true, 'authFailed': false},
+        );
+        final row = await queuedRow();
+
+        expect(
+          await service.deliverReportChannel(row, ReportChannel.zendesk),
+          isFalse,
+        );
+      });
     });
 
     test(

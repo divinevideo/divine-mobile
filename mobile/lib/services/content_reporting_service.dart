@@ -219,7 +219,7 @@ class ContentReportingService implements ReportChannelDriver {
   /// Coalesces concurrent ticket requests within this service instance.
   /// Keep the request until it settles, including after a sweep times out.
   /// Zendesk external_id does not deduplicate a later lost-response retry.
-  final Map<String, Future<bool>> _zendeskInFlight = {};
+  final Map<String, Future<ZendeskTicketOutcome>> _zendeskInFlight = {};
 
   static const String reportsStorageKey = 'content_reports_history';
 
@@ -569,7 +569,8 @@ class ContentReportingService implements ReportChannelDriver {
           await _publishReportEvent(reportEvent, targetRelays);
       final zendeskFiled =
           publishToRelays &&
-          await _fileZendeskTicket(zendeskPayload, externalId: reportId);
+          await _fileZendeskTicket(zendeskPayload, externalId: reportId) ==
+              ZendeskTicketOutcome.created;
       final delivery = (relayAccepted || zendeskFiled)
           ? ReportDelivery.reached
           : ReportDelivery.localOnly;
@@ -1031,8 +1032,9 @@ class ContentReportingService implements ReportChannelDriver {
   /// Files a Zendesk ticket from a stored payload, coalescing concurrent calls
   /// for the same [externalId] onto one POST so concurrent delivery attempts
   /// cannot double-file. [externalId] also tags the ticket for best-effort
-  /// dedup of a lost-ACK retry (#8053). Never throws; a failure returns false.
-  Future<bool> _fileZendeskTicket(
+  /// dedup of a lost-ACK retry (#8053). Never throws; a failure is returned
+  /// as [ZendeskTicketOutcome.failed] or [ZendeskTicketOutcome.rejected].
+  Future<ZendeskTicketOutcome> _fileZendeskTicket(
     Map<String, dynamic> payload, {
     required String externalId,
     String? expectedNpub,
@@ -1048,13 +1050,13 @@ class ContentReportingService implements ReportChannelDriver {
     return future.whenComplete(() => _zendeskInFlight.remove(externalId));
   }
 
-  Future<bool> _fileZendeskTicketInner(
+  Future<ZendeskTicketOutcome> _fileZendeskTicketInner(
     Map<String, dynamic> payload, {
     required String externalId,
     String? expectedNpub,
   }) async {
     try {
-      final success = await ZendeskSupportService.createTicket(
+      final outcome = await ZendeskSupportService.createTicketWithOutcome(
         subject: payload['subject'] as String,
         description: payload['description'] as String,
         tags: (payload['tags'] as List).cast<String>(),
@@ -1062,20 +1064,27 @@ class ContentReportingService implements ReportChannelDriver {
         expectedNpub: expectedNpub,
       );
 
-      if (success) {
-        Log.info(
-          'Zendesk ticket created for report: $externalId',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      } else {
-        Log.warning(
-          'Failed to create Zendesk ticket for report: $externalId',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
+      switch (outcome) {
+        case ZendeskTicketOutcome.created:
+          Log.info(
+            'Zendesk ticket created for report: $externalId',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
+        case ZendeskTicketOutcome.failed:
+          Log.warning(
+            'Failed to create Zendesk ticket for report: $externalId',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
+        case ZendeskTicketOutcome.rejected:
+          Log.warning(
+            'Zendesk refused the ticket for report: $externalId',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
       }
-      return success;
+      return outcome;
     } catch (e) {
       Log.error(
         'Error creating Zendesk ticket: $e',
@@ -1083,7 +1092,7 @@ class ContentReportingService implements ReportChannelDriver {
         category: LogCategory.system,
       );
       // Don't fail the report if Zendesk ticket creation fails
-      return false;
+      return ZendeskTicketOutcome.failed;
     }
   }
 
@@ -1185,11 +1194,20 @@ class ContentReportingService implements ReportChannelDriver {
             : (jsonDecode(report.targetRelays!) as List).cast<String>();
         return _publishReportEvent(event, relays);
       case ReportChannel.zendesk:
-        return _fileZendeskTicket(
+        final outcome = await _fileZendeskTicket(
           jsonDecode(report.zendeskPayload) as Map<String, dynamic>,
           externalId: report.reportId,
           expectedNpub: Nip19.encodePubKey(report.userPubkey),
         );
+        if (outcome == ZendeskTicketOutcome.rejected) {
+          // The ticket is only the support desk's copy: the kind-1984 event,
+          // and the moderation DM when there is one, carry the report and
+          // keep retrying.
+          throw const ReportChannelRejectedException(
+            'Zendesk refused the ticket',
+          );
+        }
+        return outcome == ZendeskTicketOutcome.created;
       case ReportChannel.moderation:
         return await deliverModerationDm?.call(report) ?? false;
     }

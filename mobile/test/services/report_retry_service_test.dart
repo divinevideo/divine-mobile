@@ -13,6 +13,7 @@ import 'package:openvine/services/report_retry_service.dart';
 class _FakeDriver implements ReportChannelDriver {
   final Map<String, bool> _results = {};
   final Set<String> _throws = {};
+  final Set<String> _rejects = {};
   final List<String> calls = [];
   void Function(String)? onCall;
 
@@ -24,6 +25,8 @@ class _FakeDriver implements ReportChannelDriver {
       _results[_key(reportId, c)] = false;
   void throwOn(String reportId, ReportChannel c) =>
       _throws.add(_key(reportId, c));
+  void reject(String reportId, ReportChannel c) =>
+      _rejects.add(_key(reportId, c));
 
   @override
   Future<bool> deliverReportChannel(
@@ -34,6 +37,9 @@ class _FakeDriver implements ReportChannelDriver {
     calls.add(key);
     onCall?.call(key);
     if (_throws.contains(key)) throw StateError('boom');
+    if (_rejects.contains(key)) {
+      throw const ReportChannelRejectedException('refused');
+    }
     return _results[key] ?? false;
   }
 }
@@ -467,6 +473,41 @@ void main() {
         final row = await dao.getById('r1');
         expect(row, isNotNull);
         expect(row!.zendeskStatus, PendingReportChannelStatus.pending);
+      });
+
+      test('gives up on a destination that refused the report on its first '
+          'attempt, and keeps retrying the others', () async {
+        // Zendesk refusing a ticket answers the same way on every sweep, so
+        // retrying it only repeats the refusal and its crash report.
+        await dao.enqueue(makeReport(reportId: 'r1'));
+        driver
+          ..fail('r1', ReportChannel.relay)
+          ..reject('r1', ReportChannel.zendesk)
+          ..succeed('r1', ReportChannel.moderation);
+        final service = buildService();
+
+        await service.sweep();
+        await service.sweep(force: true);
+
+        final row = await dao.getById('r1');
+        expect(row, isNotNull);
+        expect(row!.zendeskStatus, PendingReportChannelStatus.deadLetter);
+        expect(row.relayStatus, PendingReportChannelStatus.pending);
+        expect(driver.calls.where((c) => c == 'r1:zendesk'), hasLength(1));
+        expect(driver.calls.where((c) => c == 'r1:relay'), hasLength(2));
+      });
+
+      test('retires a report once the destinations that did not refuse it '
+          'have it', () async {
+        await dao.enqueue(makeReport(reportId: 'r1'));
+        driver
+          ..succeed('r1', ReportChannel.relay)
+          ..reject('r1', ReportChannel.zendesk)
+          ..succeed('r1', ReportChannel.moderation);
+
+        await buildService().sweep();
+
+        expect(await dao.getById('r1'), isNull);
       });
     });
   });
