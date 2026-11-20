@@ -146,6 +146,10 @@ enum DivineIconName {
   image('image'),
   images('images'),
   imagesSquare('imagesSquare'),
+
+  /// An infinity loop: Boomerang, which plays a clip forward and then
+  /// backward.
+  infinity('infinity'),
   info('info'),
 
   /// Two overlapping circles with their overlap filled: two pictures

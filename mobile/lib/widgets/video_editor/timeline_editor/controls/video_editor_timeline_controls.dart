@@ -508,7 +508,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
           ),
         if (onBoomerang != null)
           TimelineActionButton(
-            icon: .arrowUUpRight,
+            icon: .infinity,
             label: context.l10n.videoEditorBoomerangLabel,
             semanticLabel: context.l10n.videoEditorBoomerangClipSemanticLabel,
             onPressed: isBoomeranging ? null : onBoomerang,
