@@ -4726,6 +4726,7 @@ void main() {
         final saved = keptDrafts().single;
         expect(saved.collabRoomId, roomId);
         verifyNever(() => mockDraftStorage.deleteDraft(any()));
+        verifyNever(() => mockDraftStorage.deleteAutosavedDraft());
       },
     );
 

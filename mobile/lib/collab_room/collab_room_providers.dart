@@ -136,4 +136,9 @@ class CollabRoomPostNotifier extends Notifier<String?> {
 
   /// Ends the room post flow.
   void clear() => state = null;
+
+  /// Ends the post flow of [roomId], if it is the one being prepared.
+  void clearIfRoom(String roomId) {
+    if (ref.mounted && state == roomId) state = null;
+  }
 }

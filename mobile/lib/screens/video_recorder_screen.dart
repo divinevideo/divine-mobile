@@ -13,6 +13,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/collab_room/view/collab_room_flow_scopes.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -153,6 +154,11 @@ class VideoRecorderRoute extends ConsumerWidget {
           analyticsSession != null && entryPoint == CreationEntryPoint.library,
       child: CameraPermissionGate(child: view),
     );
+    // Wrapped as long as the part has its cell, finished or not, so ending
+    // the flow does not rebuild the recorder that is still animating out.
+    if (collabPart != null) {
+      recorder = CollabRoomPartFlowScope(part: collabPart, child: recorder);
+    }
     final recordingId = challengeRecordingId;
     {
       recorder = ChallengeRecordingGate(
