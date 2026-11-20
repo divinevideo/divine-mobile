@@ -6,9 +6,12 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/short_link_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 void main() {
   const target = 'https://divine.video/video/CaseSensitive_Stable-ID';
@@ -21,6 +24,38 @@ void main() {
       });
 
   group('resolve', () {
+    test('round-trips standard video references through create, resolve and routing', () async {
+      final author = 'a' * 64;
+      final urls = [
+        divineVideoShareUrl('folder/clip:1', authorPubkey: author, kind: 34235),
+        divineVideoShareUrl('b' * 64, kind: 22),
+      ];
+      for (final url in urls) {
+        final transport = MockClient((request) async {
+          if (request.method == 'POST') {
+            expect(jsonDecode(request.body), {'url': url});
+          }
+          return http.Response(responseBody(url: url), 200);
+        });
+        addTearDown(transport.close);
+        final client = ShortLinkClient(client: transport, enabled: true);
+        addTearDown(client.close);
+        final short = await client.shorten(url);
+        expect(short, 'https://divine.video/l/Abc12345');
+        final link = await ShortLinkResolver(client: transport)
+            .resolve(Uri.parse(short));
+        expect(link.type, DeepLinkType.video);
+        final route = VideoRouteRef.parse(link.videoRef!)!;
+        if (url.contains('/naddr1')) {
+          expect(route.addressableId, '34235:$author:folder/clip:1');
+          expect(route.addressablePubkey, author);
+        } else {
+          expect(route.eventId, 'b' * 64);
+          expect(route.stableId, isNull);
+        }
+      }
+    });
+
     test(
       'resolves complete hex and checksum-valid npub profile destinations',
       () async {

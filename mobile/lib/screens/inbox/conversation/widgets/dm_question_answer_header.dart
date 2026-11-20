@@ -143,6 +143,7 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
         videosRepository: videosRepository,
         authorPubkey: target.authorPubkey,
         videoKind: target.videoKind,
+        videoRouteId: target.routeId,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => _QuestionAnswerLabel(

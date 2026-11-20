@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 
 /// Normalized identity and routing metadata for a video shared in a DM.
 @immutable
@@ -11,6 +12,7 @@ class DmVideoTarget {
     required this.stableId,
     this.authorPubkey,
     this.videoKind,
+    this.routeReference,
   });
 
   /// Stable id used by Divine video URLs. Repository lookups go through
@@ -25,20 +27,46 @@ class DmVideoTarget {
   /// NIP-71 video event kind when supplied by a structured reference.
   final int? videoKind;
 
+  /// Original NIP-19 reference, retained so strict addresses never become
+  /// legacy raw coordinates while travelling through DM preview widgets.
+  final String? routeReference;
+
   /// Canonical web URL for copying or sharing this video.
   ///
   /// Names the author when one is known, so the link opens this account's
   /// video rather than whichever account posted last under the same `d` tag
   /// (#10929).
-  String get canonicalUrl =>
-      divineVideoShareUrl(stableId, authorPubkey: _routingAuthor);
+  String get canonicalUrl {
+    final reference = routeReference;
+    if (reference != null) return 'https://divine.video/video/$reference';
+    return divineVideoShareUrl(
+      stableId,
+      authorPubkey: _routingAuthor,
+      kind:
+          videoKind != null &&
+              !NIP71VideoKinds.isAddressableVideoKind(videoKind!)
+          ? videoKind
+          : null,
+    );
+  }
 
   /// The repository route this video resolves by.
   ///
   /// An addressable share with a known author resolves by its coordinate
   /// alone: the bare d tag names no author, and another account's video can
   /// share it (#10384).
-  String get routeId => _authorScopedCoordinate ?? stableId;
+  String get routeId {
+    final reference = routeReference;
+    if (reference != null) return reference;
+    final coordinate = _authorScopedCoordinate;
+    if (coordinate != null) return coordinate;
+    if (videoKind != null &&
+        !NIP71VideoKinds.isAddressableVideoKind(videoKind!) &&
+        NostrHexUtils.isValidEventId(stableId)) {
+      return NIP19Tlv.encodeNevent(Nevent(id: stableId));
+    }
+    return stableId;
+  }
 
   /// The author a lookup of [routeId] is held to, when [routeId] does not
   /// already name one: a regular-event share routes by its event id, which
@@ -68,10 +96,12 @@ class DmVideoTarget {
       other is DmVideoTarget &&
           stableId == other.stableId &&
           authorPubkey == other.authorPubkey &&
-          videoKind == other.videoKind;
+          videoKind == other.videoKind &&
+          routeReference == other.routeReference;
 
   @override
-  int get hashCode => Object.hash(stableId, authorPubkey, videoKind);
+  int get hashCode =>
+      Object.hash(stableId, authorPubkey, videoKind, routeReference);
 }
 
 /// Resolves the video represented by a DM's plaintext and structured citation.
@@ -100,6 +130,36 @@ DmVideoTarget? resolveDmVideoTarget({
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
+    final lower = urlStableId.toLowerCase();
+    if (lower.startsWith('naddr1')) {
+      final address = NIP19Tlv.decodeNaddr(urlStableId);
+      if (address == null ||
+          !NostrHexUtils.isValidPubkey(address.author) ||
+          !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+        return null;
+      }
+      return DmVideoTarget(
+        stableId: address.id,
+        routeReference: urlStableId,
+        authorPubkey: address.author,
+        videoKind: address.kind,
+      );
+    }
+    if (lower.startsWith('nevent1')) {
+      final event = NIP19Tlv.decodeNevent(urlStableId);
+      if (event == null || !NostrHexUtils.isValidEventId(event.id)) return null;
+      return DmVideoTarget(
+        stableId: event.id,
+        routeReference: urlStableId,
+        authorPubkey:
+            event.author ??
+            (structuredTarget?.stableId == event.id &&
+                    sharedVideoRef?.isAddressable == false
+                ? structuredTarget?.authorPubkey
+                : null),
+        videoKind: NIP71VideoKinds.shortVideo,
+      );
+    }
     // An addressable citation of another d tag names a different video, so
     // its author must not scope this URL's lookup.
     final citesUrl =

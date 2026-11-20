@@ -2,7 +2,12 @@
 // ABOUTME: Shared by the share builders, the conversation bubble, the
 // ABOUTME: long-press handler, and the DM shared-video citation parser.
 
+import 'dart:convert';
+
+import 'package:models/src/nip71_video_kinds.dart';
 import 'package:models/src/nostr_hex_utils.dart';
+import 'package:models/src/video_event.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 
 /// Query parameter that names the author of a `/video/<id>` share link.
 ///
@@ -33,17 +38,41 @@ final divineVideoUrlLineRegex = RegExp(
   caseSensitive: false,
 );
 
-/// The canonical share link for the video whose route id is [stableId].
+/// Builds a web link containing a standard NIP-19 video reference.
 ///
-/// Appends the `author` query when [authorPubkey] is a hex pubkey, so the
-/// link resolves to that author's video rather than to whichever account
-/// last posted under the same `d` tag. [stableId] is interpolated as given;
-/// a caller holding an id that may need escaping encodes it first.
-String divineVideoShareUrl(String stableId, {String? authorPubkey}) =>
-    divineVideoUrlWithAuthor(
-      'https://divine.video/video/$stableId',
-      authorPubkey,
+/// [stableId] is the real `d` tag for an addressable [kind], or the event ID
+/// for a regular video. Pass a null [kind] for legacy links whose event kind
+/// is unknown; these retain their author query rather than inventing a kind.
+String divineVideoShareUrl(
+  String stableId, {
+  String? authorPubkey,
+  int? kind = NIP71VideoKinds.addressableShortVideo,
+}) {
+  final author = NostrHexUtils.isValidPubkey(authorPubkey)
+      ? authorPubkey!.toLowerCase()
+      : null;
+  if (kind != null &&
+      NIP71VideoKinds.isAddressableVideoKind(kind) &&
+      author != null &&
+      utf8.encode(stableId).length <= 255) {
+    final reference = NIP19Tlv.encodeNaddr(
+      Naddr(id: stableId, author: author, kind: kind),
     );
+    return 'https://divine.video/video/$reference';
+  }
+  if ((kind == NIP71VideoKinds.shortVideo ||
+          kind == NIP71VideoKinds.normalVideo) &&
+      NostrHexUtils.isValidEventId(stableId)) {
+    final reference = NIP19Tlv.encodeNevent(
+      Nevent(id: stableId.toLowerCase()),
+    );
+    return 'https://divine.video/video/$reference';
+  }
+  return divineVideoUrlWithAuthor(
+    'https://divine.video/video/${Uri.encodeComponent(stableId)}',
+    author,
+  );
+}
 
 /// [videoUrl] with the `author` query appended when [authorPubkey] is a hex
 /// pubkey, or [videoUrl] unchanged otherwise.
@@ -51,4 +80,32 @@ String divineVideoUrlWithAuthor(String videoUrl, String? authorPubkey) {
   if (!NostrHexUtils.isValidPubkey(authorPubkey)) return videoUrl;
   return '$videoUrl?$divineVideoAuthorQueryParameter='
       '${authorPubkey!.toLowerCase()}';
+}
+
+/// Builds a standard share reference without mistaking an event-ID fallback
+/// in `vineId` for a real addressable identifier.
+String divineVideoShareUrlForEvent(VideoEvent video) {
+  final identity = divineVideoShareIdentity(video);
+  return divineVideoShareUrl(
+    identity.dTag ?? video.id,
+    authorPubkey: video.pubkey,
+    kind: identity.dTag == null ? NIP71VideoKinds.shortVideo : identity.kind,
+  );
+}
+
+/// The actual protocol identity shared by URL and DM citation builders.
+/// A missing or unencodable d tag falls back to an exact event reference.
+({int kind, String? dTag}) divineVideoShareIdentity(VideoEvent video) {
+  final dTag = video.addressableDTag ?? video.rawTags['d'];
+  final kind =
+      video.eventKind ??
+      (dTag != null
+          ? NIP71VideoKinds.addressableShortVideo
+          : NIP71VideoKinds.shortVideo);
+  final addressable =
+      NIP71VideoKinds.isAddressableVideoKind(kind) &&
+      dTag != null &&
+      dTag.isNotEmpty &&
+      utf8.encode(dTag).length <= 255;
+  return (kind: kind, dTag: addressable ? dTag : null);
 }

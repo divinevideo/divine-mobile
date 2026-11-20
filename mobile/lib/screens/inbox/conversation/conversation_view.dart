@@ -38,6 +38,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -1860,7 +1861,15 @@ class _MessageList extends StatelessWidget {
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
-        await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
+        final canonical = videoTarget.canonicalUrl;
+        final shortener = ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(shortLinkClientProvider);
+        final url =
+            await (shortener?.shorten(canonical) ?? Future.value(canonical));
+        if (!context.mounted) return;
+        await ClipboardUtils.copy(context, url);
       case MessageAction.playVideo:
         await DmVideoPlayPage.open(
           context,

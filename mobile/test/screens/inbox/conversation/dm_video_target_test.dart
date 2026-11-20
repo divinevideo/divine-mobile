@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 
 void main() {
@@ -12,6 +13,59 @@ void main() {
       'aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd';
 
   group('resolveDmVideoTarget', () {
+    test('opens and copies a complete naddr without a citation', () {
+      final reference = NIP19Tlv.encodeNaddr(
+        Naddr(id: 'folder/clip:1', author: author, kind: 34235),
+      );
+      final url = 'https://divine.video/video/$reference';
+      final target = resolveDmVideoTarget(content: 'watch $url');
+      expect(target!.stableId, 'folder/clip:1');
+      expect(target.authorPubkey, author);
+      expect(target.videoKind, 34235);
+      expect(target.routeId, reference);
+      expect(target.canonicalUrl, url);
+    });
+
+    test(
+      'the embedded naddr author wins over a conflicting query and citation',
+      () {
+        final url = divineVideoShareUrl('clip', authorPubkey: author);
+        final target = resolveDmVideoTarget(
+          content: '$url?author=${'b' * 64}',
+          sharedVideoRef: DmSharedVideoRef(
+            coordinateOrId: '34236:${'b' * 64}:clip',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+        expect(target!.routeId, Uri.parse(url).pathSegments.last);
+      },
+    );
+
+    test('opens an nevent as an exact event rather than a d tag', () {
+      final url = divineVideoShareUrl(eventId, kind: 22);
+      final target = resolveDmVideoTarget(content: url);
+      expect(target!.stableId, eventId);
+      expect(target.videoKind, 22);
+      expect(target.canonicalUrl, url);
+    });
+
+    test(
+      'rejects a broken or truncated naddr instead of looking it up as a d tag',
+      () {
+        expect(
+          resolveDmVideoTarget(
+            content: 'https://divine.video/video/naddr1broken',
+          ),
+          isNull,
+        );
+        final url = divineVideoShareUrl('clip', authorPubkey: author);
+        expect(
+          resolveDmVideoTarget(content: url, contentIsTruncated: true),
+          isNull,
+        );
+      },
+    );
+
     test('resolves a canonical Divine URL', () {
       final target = resolveDmVideoTarget(
         content: 'watch https://divine.video/video/skate-loop',
@@ -43,12 +97,12 @@ void main() {
       expect(target!.stableId, eventId);
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
-      expect(target.routeId, eventId);
+      expect(target.routeId, NIP19Tlv.encodeNevent(Nevent(id: eventId)));
       // A hex route is also looked up as a d tag, so the author travels with it.
       expect(target.routeAuthor, author);
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/$eventId?author=$author',
+        divineVideoShareUrl(eventId, authorPubkey: author, kind: 22),
       );
     });
 
@@ -72,7 +126,7 @@ void main() {
       // The copied link names the author too (#10929).
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/skate-loop?author=$author',
+        divineVideoShareUrl('skate-loop', authorPubkey: author, kind: null),
       );
     });
 
@@ -289,7 +343,7 @@ void main() {
       expect(target.routeId, equals('34236:$author:$dTag'));
       expect(
         target.canonicalUrl,
-        equals('https://divine.video/video/$dTag?author=$author'),
+        equals(divineVideoShareUrl(dTag, authorPubkey: author, kind: null)),
       );
     });
 
