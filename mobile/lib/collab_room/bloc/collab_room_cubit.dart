@@ -41,9 +41,11 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     CollabRoomThumbnailer thumbnailer = _extractThumbnail,
     this.keepsRoomInSync = true,
     Duration lobbyPublishDelay = const Duration(milliseconds: 500),
+    Duration syncRetryDelay = const Duration(seconds: 5),
   }) : _service = service,
        _roomId = roomId,
        _lobbyPublishDelay = lobbyPublishDelay,
+       _syncRetryDelay = syncRetryDelay,
        _composer = composer,
        _thumbnailer = thumbnailer,
        super(const CollabRoomState()) {
@@ -60,10 +62,15 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   final CollabRoomService _service;
   final String _roomId;
   final Duration _lobbyPublishDelay;
+  final Duration _syncRetryDelay;
 
   /// Holds the lobby's pending publish: a resource handle cancelled on close,
   /// not state.
   Timer? _lobbyPublishTimer;
+
+  /// Holds the retry of a sync that failed: a resource handle cancelled on
+  /// close, not state.
+  Timer? _syncRetryTimer;
   int _lastPublishedRevision = 0;
   bool _syncAfterAction = false;
   final CollabRoomComposer _composer;
@@ -124,8 +131,9 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       return;
     }
     if (room.snapshot.revision < _lastPublishedRevision) return;
+    _syncRetryTimer?.cancel();
     unawaited(
-      _publishNext(.update, room, (revision) {
+      _publishNext(.sync, room, (revision) {
         return room.toSnapshot(revision: revision);
       }),
     );
@@ -340,13 +348,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       return;
     }
     emitIfOpen(state.copyWith(soundPubkey: pubkey));
-    // Another update going out would turn this one away: wait for it.
-    if (state.actionStatus == .busy) {
-      await stream.firstWhere(
-        (state) => state.actionStatus != .busy,
-        orElse: () => state,
-      );
-    }
+    await _untilIdle();
     final current = state.room;
     if (isClosed || current == null || state.soundPubkey != pubkey) return;
     await _publishNext(
@@ -460,13 +462,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   Future<void> cancel() async {
     // Confirmed in a sheet that stays open while an update goes out, so wait
     // for that update rather than drop the call-off.
-    if (state.actionStatus == .busy) {
-      await stream.firstWhere(
-        (state) => state.actionStatus != .busy,
-        // Closed meanwhile: nothing left to call off from here.
-        orElse: () => state,
-      );
-    }
+    await _untilIdle();
     final room = state.room;
     if (isClosed || room == null || !room.isAuthor) return;
     await _publishNext(
@@ -605,6 +601,19 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       a.length == b.length &&
       Iterable<int>.generate(a.length).every((i) => a[i] == b[i]);
 
+  /// Waits until no update is going out, which would turn the next one
+  /// away. One that ends can start a pending sync in the same turn, so this
+  /// waits again until none runs.
+  Future<void> _untilIdle() async {
+    while (!isClosed && state.actionStatus == .busy) {
+      await stream.firstWhere(
+        (state) => state.actionStatus != .busy,
+        // Closed meanwhile: nothing left to wait for.
+        orElse: () => state,
+      );
+    }
+  }
+
   /// Publishes the snapshot [snapshotAt] makes, as the author, at a revision
   /// past every one this device published before — two in flight never share
   /// one.
@@ -631,6 +640,14 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     } on Exception catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(actionStatus: .failed));
+      // Nobody asked for a sync, so nobody will tap it again: offline, the
+      // others would otherwise not hear of a join until the author acts.
+      if (action == .sync && !isClosed) {
+        _syncRetryTimer = Timer(_syncRetryDelay, () {
+          final room = state.room;
+          if (room != null && !isClosed) _syncRoom(room);
+        });
+      }
     } finally {
       if (_syncAfterAction && !isClosed) {
         _syncAfterAction = false;
@@ -652,6 +669,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   Future<void> close() async {
     final lobbyPending = _lobbyPublishTimer?.isActive ?? false;
     _lobbyPublishTimer?.cancel();
+    _syncRetryTimer?.cancel();
     await _subscription.cancel();
     // A swap or layout pick still waiting to batch would otherwise die with
     // the screen: the others already saw it through the call, but the room

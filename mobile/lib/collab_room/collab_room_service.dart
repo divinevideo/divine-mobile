@@ -260,11 +260,14 @@ class CollabRoomService {
     // nothing builds on the update. Any other update the author's device
     // cannot read back until it is out, so one that reached no relay at all
     // is taken back rather than left to arrive after a newer one.
-    if (result.confirmed == 0 && snapshot.phase != CollabRoomPhase.posted) {
+    final posted = snapshot.phase == CollabRoomPhase.posted;
+    if (result.confirmed == 0 && !posted) {
       await _withdraw(result.queued);
       throw const CollabRoomException('No room update could be sent');
     }
-    if (result.confirmed > 0) sent();
+    // A posted room's update always waits in the queue first; it still has
+    // to turn away an update a stale screen builds on the room before it.
+    if (result.confirmed > 0 || (posted && result.queued.isNotEmpty)) sent();
     if (result.confirmed + result.queued.length != recipients.length) {
       throw const CollabRoomException('Some room updates could not be sent');
     }

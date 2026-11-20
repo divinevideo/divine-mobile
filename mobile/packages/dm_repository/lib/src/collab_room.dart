@@ -766,6 +766,8 @@ CollabRoom? foldCollabRoom(
   // has a second inviter, and the timestamps that would pick between two are
   // the senders' own to choose. A second inviter forged an invite for this
   // id, and the room is not shown rather than handed to either of them.
+  // Anyone who knows the id, any past member included, can hide the room
+  // this way, but only from the accounts they invite, and never take it over.
   final inviters = {
     for (final m in ordered)
       if (m.type == CollabRoomMessageType.invite) m.senderPubkey,

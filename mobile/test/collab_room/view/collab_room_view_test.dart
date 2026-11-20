@@ -690,6 +690,36 @@ void main() {
         await tester.pump();
         expect(find.text(l10n.collabRoomActionFailed), findsOneWidget);
       });
+
+      testWidgets('a failed sync shows nothing: nobody tapped it', (
+        tester,
+      ) async {
+        final ready = CollabRoomState(
+          status: CollabRoomStatus.ready,
+          room: _room(owner: _author),
+          layout: SplitScreenLayoutPreset.sideBySide,
+        );
+        whenListen(
+          cubit,
+          Stream.value(
+            ready.copyWith(
+              action: CollabRoomAction.sync,
+              actionStatus: CollabRoomActionStatus.failed,
+            ),
+          ),
+          initialState: ready,
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: BlocProvider<CollabRoomCubit>.value(
+              value: cubit,
+              child: const CollabRoomView(),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text(l10n.collabRoomActionFailed), findsNothing);
+      });
     });
   });
 }

@@ -503,7 +503,15 @@ class WebRtcCollabRoomCall implements CollabRoomCall {
     _audio = null;
     _video = null;
     try {
-      await _subscription?.cancel();
+      // A subscription that fails to cancel must not keep the microphone,
+      // the camera or the peers.
+      await _subscription?.cancel().onError(
+        (Object error, StackTrace _) => Log.warning(
+          'Could not stop listening to the call: $error',
+          name: _logName,
+          category: LogCategory.video,
+        ),
+      );
       await Future.wait([
         for (final media in [_openingAudio, _openingVideo])
           if (media != null) media.onError((Object _, StackTrace _) {}),

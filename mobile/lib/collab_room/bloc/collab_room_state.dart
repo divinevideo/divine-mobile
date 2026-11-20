@@ -34,6 +34,10 @@ enum CollabRoomAction {
 
   /// Call the room off, as the author.
   cancel,
+
+  /// Bring the others up to what the author's device knows, as the author:
+  /// nobody tapped anything, so a failure is retried rather than reported.
+  sync,
 }
 
 /// How the last [CollabRoomAction] went.

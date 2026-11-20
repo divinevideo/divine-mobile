@@ -541,6 +541,56 @@ void main() {
         },
       );
 
+      test(
+        'keeps a posted update that waits in the queue, and turns away an '
+        'update built on the room before it',
+        () async {
+          final roomService = service();
+          when(
+            () => dm.sendMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+              backgroundDelivery: any(named: 'backgroundDelivery'),
+            ),
+          ).thenAnswer(
+            (_) async => const NIP17SendResult.failure(
+              'offline',
+              retryablePending: true,
+              queuedRumorId: 'queued',
+            ),
+          );
+          final revision = room.snapshot.revision + 1;
+
+          await expectLater(
+            roomService.publish(
+              room,
+              room.toSnapshot(
+                revision: revision,
+                phase: CollabRoomPhase.posted,
+              ),
+            ),
+            completes,
+          );
+          verifyNever(() => dm.cancelOutgoingSend(rumorId: 'queued'));
+
+          await expectLater(
+            roomService.publish(room, room.toSnapshot(revision: revision)),
+            throwsA(isA<CollabRoomException>()),
+          );
+          verify(
+            () => dm.sendMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+              backgroundDelivery: any(named: 'backgroundDelivery'),
+            ),
+          ).called(1);
+        },
+      );
+
       test('rejects a concurrent update built on an older snapshot', () async {
         final roomService = service();
         final sending = Completer<void>();

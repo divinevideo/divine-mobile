@@ -66,9 +66,11 @@ class _RoomListeners extends ConsumerWidget {
     return MultiBlocListener(
       listeners: [
         BlocListener<CollabRoomCubit, CollabRoomState>(
+          // A sync nobody tapped is retried, not reported.
           listenWhen: (previous, current) =>
               previous.actionStatus != current.actionStatus &&
-              current.actionStatus == CollabRoomActionStatus.failed,
+              current.actionStatus == CollabRoomActionStatus.failed &&
+              current.action != CollabRoomAction.sync,
           listener: (context, state) => _showSnackBar(
             context,
             context.l10n.collabRoomActionFailed,

@@ -171,11 +171,15 @@ void main() {
     /// Lets the first of two publishes finish, in a test that holds it.
     late void Function() sendFirst;
 
-    CollabRoomCubit build({bool keepsRoomInSync = true}) => CollabRoomCubit(
+    CollabRoomCubit build({
+      bool keepsRoomInSync = true,
+      Duration syncRetryDelay = const Duration(seconds: 5),
+    }) => CollabRoomCubit(
       service: service,
       roomId: _roomId,
       keepsRoomInSync: keepsRoomInSync,
       lobbyPublishDelay: Duration.zero,
+      syncRetryDelay: syncRetryDelay,
       thumbnailer: (path) async => '$path.jpg',
       composer:
           ({required cells, required aspectRatio, required taskId}) async {
@@ -254,6 +258,45 @@ void main() {
             CollabRoomMemberStatus.joined,
           );
         },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'tries a sync that failed again, as a sync nobody has to retry',
+        setUp: () {
+          var calls = 0;
+          when(() => service.publish(any(), any())).thenAnswer((
+            invocation,
+          ) async {
+            if (calls++ == 0) throw const CollabRoomException('offline');
+            published.add(
+              invocation.positionalArguments[1] as CollabRoomSnapshot,
+            );
+          });
+        },
+        build: () => build(syncRetryDelay: const Duration(milliseconds: 1)),
+        act: (_) => rooms.add(
+          _room(
+            _lobby,
+            messages: [
+              _message(
+                from: _kai,
+                to: _author,
+                type: CollabRoomMessageType.join,
+                createdAt: 2,
+              ),
+            ],
+          ),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (cubit) {
+          expect(
+            published.single.members.last.status,
+            CollabRoomMemberStatus.joined,
+          );
+          expect(cubit.state.action, CollabRoomAction.sync);
+          expect(cubit.state.actionStatus, CollabRoomActionStatus.idle);
+        },
+        errors: () => [isA<CollabRoomException>()],
       );
 
       blocTest<CollabRoomCubit, CollabRoomState>(
@@ -955,6 +998,66 @@ void main() {
           expect(cells.map((c) => c.withSound), [false, true]);
           expect(cells.first.rect.left, lessThan(cells.last.rect.left));
           expect(cells.first.rect, isA<Rect>());
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'publishes a pick made while an update and a sync are going out',
+        setUp: () {
+          final first = Completer<void>();
+          addTearDown(() {
+            if (!first.isCompleted) first.complete();
+          });
+          var calls = 0;
+          when(() => service.publish(any(), any())).thenAnswer((
+            invocation,
+          ) async {
+            published.add(
+              invocation.positionalArguments[1] as CollabRoomSnapshot,
+            );
+            if (calls++ == 0) await first.future;
+          });
+          sendFirst = first.complete;
+        },
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_recording));
+          await pumpEventQueue();
+          // A layout pick goes out and is held there.
+          final busy = cubit.layoutPicked(SplitScreenLayoutPreset.stacked);
+          await pumpEventQueue();
+          // That snapshot comes back, and Sam's part, which it does not show
+          // yet, lands with it: a sync waits for the update.
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 3,
+                phase: CollabRoomPhase.recording,
+                layout: SplitScreenLayoutPreset.stacked.name,
+                members: _recording.members,
+                parts: [_recording.parts.first],
+              ),
+              messages: [
+                _message(
+                  from: _sam,
+                  to: _author,
+                  type: CollabRoomMessageType.part,
+                  createdAt: 3,
+                ),
+              ],
+            ),
+          );
+          await pumpEventQueue();
+          final picking = cubit.soundPicked(_sam);
+          await pumpEventQueue();
+          sendFirst();
+          await busy;
+          await picking;
+        },
+        verify: (_) {
+          expect(published, hasLength(3));
+          expect(published[1].parts.map((part) => part.pubkey), contains(_sam));
+          expect(published.last.soundPubkey, _sam);
         },
       );
 
