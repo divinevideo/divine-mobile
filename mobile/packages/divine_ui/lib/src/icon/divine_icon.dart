@@ -76,6 +76,10 @@ enum DivineIconName {
   clockCountdown3('clock_countdown_3'),
   closedCaptioning('closed_captioning'),
   closedCaptioningFill('closed_captioning_fill'),
+
+  /// A frame split diagonally into a color and a checkerboard: the color mask,
+  /// which turns one color in a clip or the camera picture transparent.
+  colorMask('color_mask'),
   compass('compass'),
   copy('copy'),
   copyNpub('copy_npub'),

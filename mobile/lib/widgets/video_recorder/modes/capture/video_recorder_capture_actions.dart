@@ -339,7 +339,7 @@ class _ColorMaskButton extends StatelessWidget {
       (VideoRecorderBloc b) => b.state.isChromaKeyEnabled,
     );
     return _RailButton(
-      icon: .selection,
+      icon: .colorMask,
       label: context.l10n.videoEditorChromaKeyLabel,
       caption: context.l10n.videoEditorChromaKeyLabel,
       identifier: SemanticIds.cameraColorMaskButton,
