@@ -181,16 +181,38 @@ class SubtitleRepository {
     // The playback model keeps only the base language, and a copy restored
     // from a cache has no raw tags. Editing needs the full language of the
     // selected reference to replace that track, so read it from the newest
-    // revision.
-    for (final tag in newestTags) {
-      if (tag.length < 5 ||
-          tag.first != 'text-track' ||
-          tag[1] != video.textTrackRef) {
+    // revision. A save or another device can have replaced that track since
+    // the copy was opened: then the copy's own tags name it, or else the
+    // newest revision's only caption track in that base language is it.
+    final ref = video.textTrackRef;
+    final newest = _trackLanguageAt(newestTags, ref);
+    if (newest != null) return newest.isEmpty ? video.textTrackLang : newest;
+    final opened = _trackLanguageAt(video.nostrEventTags, ref);
+    if (opened != null && opened.isNotEmpty) return opened;
+    final baseLanguage = video.textTrackLang?.toLowerCase();
+    final sameBase = {
+      for (final tag in newestTags)
+        if (tag.length > 4 &&
+            tag.first == 'text-track' &&
+            const {'', 'captions', 'subtitles'}.contains(tag[3]) &&
+            tag[4].trim().split('-').first.toLowerCase() == baseLanguage)
+          tag[4].trim(),
+    };
+    return sameBase.length == 1 ? sameBase.single : video.textTrackLang;
+  }
+
+  /// The language of the `text-track` at [ref] among [tags]: `''` when that
+  /// track names none, or null when [tags] holds no track at [ref].
+  static String? _trackLanguageAt(List<List<String>> tags, String? ref) {
+    String? language;
+    for (final tag in tags) {
+      if (tag.length < 2 || tag.first != 'text-track' || tag[1] != ref) {
         continue;
       }
-      final language = tag[4].trim();
-      if (language.isNotEmpty) return language;
+      final named = tag.length > 4 ? tag[4].trim() : '';
+      if (named.isNotEmpty) return named;
+      language = '';
     }
-    return video.textTrackLang;
+    return language;
   }
 }

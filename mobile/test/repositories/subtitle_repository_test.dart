@@ -295,6 +295,161 @@ void main() {
       ).called(1);
     });
 
+    group('edited caption language', () {
+      const portuguese = 'https://media.divine.video/portuguese.vtt';
+      List<String> track(String ref, String type, String language) => [
+        'text-track',
+        ref,
+        '',
+        type,
+        language,
+      ];
+      final openedFromCache = _video.copyWith(
+        textTrackRef: portuguese,
+        textTrackLang: 'pt',
+      );
+
+      /// Saves from [video] while the newest revision carries [tracks], and
+      /// returns the language the republish was given.
+      Future<String?> savedLanguage(
+        VideoEvent video,
+        List<List<String>> tracks,
+      ) async {
+        when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+          (_) async => LatestVideoRevisionFound(
+            Event('a' * 64, 34236, [
+              ['d', 'my-vine-id'],
+              ...tracks,
+            ], ''),
+          ),
+        );
+        when(
+          () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            url: 'https://media.divine.video/hash',
+            videoId: 'hash',
+          ),
+        );
+        when(
+          () => publisher.republishWithSubtitles(
+            existingEvent: any(named: 'existingEvent'),
+            textTrackRef: any(named: 'textTrackRef'),
+            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+          ),
+        ).thenAnswer((_) async => _updatedVideo);
+        when(
+          () => publisher.publishSubtitleEvent(
+            video: any(named: 'video'),
+            vttContent: any(named: 'vttContent'),
+            blossomUrl: any(named: 'blossomUrl'),
+            lang: any(named: 'lang'),
+          ),
+        ).thenAnswer((_) async => '39307:pk1:subtitles:my-vine-id');
+
+        await repo.publishEditedSubtitles(video: video, cues: _cues);
+
+        return verify(
+              () => publisher.republishWithSubtitles(
+                existingEvent: any(named: 'existingEvent'),
+                textTrackRef: any(named: 'textTrackRef'),
+                extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+                textTrackLang: captureAny(named: 'textTrackLang'),
+              ),
+            ).captured.single
+            as String?;
+      }
+
+      // A save whose subtitle event failed, or an edit on another device,
+      // replaced the track the copy in hand names.
+      test('takes the only caption track in the base language once the '
+          'selected one was replaced', () async {
+        expect(
+          await savedLanguage(openedFromCache, [
+            track(
+              'https://media.divine.video/chapters.vtt',
+              'chapters',
+              'pt-PT',
+            ),
+            track(
+              'https://media.divine.video/replacement.vtt',
+              'captions',
+              'pt-BR',
+            ),
+          ]),
+          'pt-BR',
+        );
+      });
+
+      test(
+        "takes the opened copy's own language when its raw tags name it",
+        () async {
+          expect(
+            await savedLanguage(
+              openedFromCache.copyWith(
+                nostrEventTags: [track(portuguese, 'captions', 'pt-PT')],
+              ),
+              [
+                track(
+                  'https://media.divine.video/brazil.vtt',
+                  'captions',
+                  'pt-BR',
+                ),
+                track(
+                  'https://media.divine.video/portugal.vtt',
+                  'captions',
+                  'pt-PT',
+                ),
+              ],
+            ),
+            'pt-PT',
+          );
+        },
+      );
+
+      test(
+        'keeps the base language when several caption tracks share it',
+        () async {
+          expect(
+            await savedLanguage(openedFromCache, [
+              track(
+                'https://media.divine.video/brazil.vtt',
+                'captions',
+                'pt-BR',
+              ),
+              track(
+                'https://media.divine.video/portugal.vtt',
+                'captions',
+                'pt-PT',
+              ),
+            ]),
+            'pt',
+          );
+        },
+      );
+
+      test('keeps the base language when the selected track is still there '
+          'without one', () async {
+        const untagged = 'https://media.divine.video/untagged.vtt';
+        expect(
+          await savedLanguage(
+            _video.copyWith(textTrackRef: untagged, textTrackLang: 'en'),
+            [
+              track(untagged, 'captions', ''),
+              track(
+                'https://media.divine.video/british.vtt',
+                'subtitles',
+                'en-GB',
+              ),
+            ],
+          ),
+          'en',
+        );
+      });
+    });
+
     test('throws SubtitleEditException when vineId is null', () async {
       final noId = VideoEvent(
         id: 'v',
