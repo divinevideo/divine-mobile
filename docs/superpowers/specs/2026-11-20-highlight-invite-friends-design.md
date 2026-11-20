@@ -26,7 +26,7 @@ often it becomes wallpaper.
 
 ## Constraints
 
-- The highlight card is rabble's (#10594, #10772); he should review.
+- The highlight card comes from #10594 and #10772; its author should review.
 - Invite codes and signup gating are retired; this adds neither.
 - Eligibility logic lives below the widget (cubit/repository), per the
   repo's layering rules.
@@ -40,7 +40,7 @@ often it becomes wallpaper.
 1. **An invite line inside the highlight card (picked).** One more row
    under "See your stats →". Smallest change, and it reads as part of
    the celebration.
-2. A separate small card under the highlight. Leaves rabble's code
+2. A separate small card under the highlight. Leaves the existing card code
    alone, but two stacked cards read more like an ad and re-derive
    "posted today."
 3. Option 1, sharing today's video instead of the download link. Shows
@@ -103,7 +103,7 @@ often it becomes wallpaper.
 
 ## Verification
 
-- Matt reviews it running in the iOS simulator before the PR is opened
+- The product owner reviews it running in the iOS simulator before the PR is opened
   for peer review.
 - Staging is down outside specific windows, and the local stack cannot
   produce a post from the simulator (the app only accepts clips from its

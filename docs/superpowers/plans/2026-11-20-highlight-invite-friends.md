@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** On days a creator posted, the daily highlight card in Inbox shows a "Bring your friends in →" row that opens the share sheet with the download link, at most 3 posting days a week per account.
+**Goal:** On days a creator posted, the daily highlight card in Inbox shows a "Bring your friends →" link that opens an editable invite page, which shares the message plus the download link, at most 3 posting days a week per account.
+
+> **Revision (after the first simulator review):** Tasks 1-3 are done. Tasks 6 and 7 replace Task 3's in-card share with an invite page, and run before Tasks 4 and 5.
 
 **Architecture:** The repository decides eligibility (posted today, weekly limit) and exposes it as `CreatorHighlight.showInvite`; it also persists the weekly record. The cubit records the invite as seen when the card is presented. The card renders the row and opens the share sheet itself, anchored to the row.
 
@@ -14,8 +16,8 @@
 
 - Link: `AppConstants.downloadUrl` (`https://divine.video/download`); no new constant.
 - Share only through `showShareSheet` from `mobile/lib/utils/share_sheet.dart`.
-- Row copy: "Bring your friends in" (arrow is the existing `DivineIconName.arrowRight`, as on "See your stats").
-- Share message: "Come make loops with me on Divine. React, comment, and collab with me in the app: {url}"
+- Link copy: "Bring your friends" (arrow is the existing `DivineIconName.arrowRight`, as on "See your stats"), on the same line as "See your stats".
+- Default message: "I'm making loops on Divine. You can react and collaborate with me!" The link is always appended on its own line when shared; a cleared message shares only the link.
 - Weekly limit: 3 posting days per Monday-start week, per account, counted when the row is seen; the same day counts once.
 - No new dependencies, permissions, or backend changes. No invite codes or gating.
 - Colors through `context.vineColors` (same `accentPositive` as the stats link); text through `VineTheme.*Font()`.
@@ -144,18 +146,55 @@ git add mobile/lib/features/creator_highlights mobile/lib/l10n mobile/test
 git commit -m "feat(creator-highlights): invite friends from the daily highlight"
 ```
 
-### Task 4: Demo in the iOS simulator on the local stack (Matt's gate)
+### Task 6: One-line links, shorter copy, card hands the tap up
 
-No code. Nothing is pushed or opened as a PR before Matt has seen this.
+**Files:**
+- Modify: `mobile/lib/features/creator_highlights/creator_highlight_card.dart`, `mobile/lib/features/creator_highlights/creator_highlights_inbox_view.dart`
+- Modify: `mobile/lib/l10n/app_en.arb` (`creatorHighlightInvite` → "Bring your friends"; remove `creatorHighlightInviteMessage`), generated l10n, `_knownUntranslatedDebt`
+- Test: `mobile/test/features/creator_highlights/creator_highlight_card_test.dart`
 
-- [ ] **Step 1: Start the stack.** `export BLOSSOM_PUBLIC_URL=http://localhost:43003 && local_stack/up.sh`. Expected: services healthy per `local_stack/preflight.sh`.
-- [ ] **Step 2: Build and run** from `mobile/`: `flutter run -d <iPhone simulator> --dart-define=DEFAULT_ENV=LOCAL` (if the Swift package floor error appears, see `.claude/rules/ios_build_troubleshooting.md` Cause 3). Simulator UI is in Xcode's DeviceHub app.
-- [ ] **Step 3: Walk the path with Matt.** Sign in to a local account, post a loop, open Inbox: the card shows "Bring your friends in →"; tapping it opens the share sheet with the message and link; tapping the card body still opens stats.
+**Interfaces:**
+- Produces: `CreatorHighlightCard({..., required VoidCallback onInvite})`; the inbox view wires it to `const InviteFriendsRouteData().push<void>(context)` through its existing `_open` (Task 7 defines the route; until then, wire a temporary no-op only if Task 7 lands in the same commit series before any commit that would not compile).
+
+- [ ] **Step 1: Rewrite the invite tests** in the card test: tapping the row calls `onInvite` once and `onAnalytics` zero times; the share-channel interception and message assertion are removed from this file (sharing moves to the page). Keep the visibility, semantics and no-double-announcement tests. Add: `'both links share a line when they fit'`: at the default test width, `tester.getTopLeft` of the stats text and the invite text have equal `dy`.
+- [ ] **Step 2: Run and confirm failure** (`onInvite` undefined; same-line test fails).
+- [ ] **Step 3: Implement.** Put the stats row and `_InviteAction` in a `Wrap(spacing: 20, crossAxisAlignment: WrapCrossAlignment.center)`; `_InviteAction` takes the callback instead of sharing. Drop the share-sheet import from the card. Update the ARB key value and remove the message key.
+- [ ] **Step 4: Run** `flutter test test/features/creator_highlights/ test/l10n/arb_consistency_test.dart`, orphaned-ARB and semantic-label guards, analyze. Expected: PASS.
+- [ ] **Step 5: Commit** with Task 7 if the route is needed to compile (see Interfaces); message `feat(creator-highlights): put both highlight links on one line`.
+
+### Task 7: The invite page
+
+**Files:**
+- Create: `mobile/lib/features/creator_highlights/invite_friends_screen.dart`
+- Modify: `mobile/lib/router/route_paths.dart` (`inviteFriends = '/invite-friends'`), `mobile/lib/router/routes/video_routes.dart` (+ regenerated `video_routes.g.dart`)
+- Modify: `mobile/lib/l10n/app_en.arb` (`inviteFriendsTitle` "Bring your friends", `inviteFriendsMessageLabel` "Your message" for the field's label/semantics, `inviteFriendsDefaultMessage`, `inviteFriendsShare` "Share"), generated l10n, `_knownUntranslatedDebt`
+- Test: `mobile/test/features/creator_highlights/invite_friends_screen_test.dart`
+
+**Interfaces:**
+- Produces: `InviteFriendsScreen` (`routeName = 'invite-friends'`, `path = RoutePaths.inviteFriends`), `InviteFriendsRouteData` (root navigator, like `CreatorAnalyticsRouteData`), and a top-level `String inviteShareText(String message, String url)` returning `url` when `message.trim()` is empty, else `'${message.trim()}\n$url'`.
+
+- [ ] **Step 1: Write failing tests** (share-channel interception as in `settings_share_divine_test.dart`):
+  - `inviteShareText`: message + newline + url; whitespace-only message → url alone.
+  - `'starts with the default message and shows the link'`.
+  - `'shares the edited message and the link'`: `enterText` a new message, tap Share → one share call whose text is `inviteShareText(edited, AppConstants.downloadUrl)`.
+  - `'a cleared message shares only the link'`.
+  - `'a completed share returns'` / `'a dismissed share stays'`: channel returns a success activity vs `''` (share_plus's dismissed result); assert the page pops or stays (pump it under a `MaterialApp` with a home that pushes it).
+- [ ] **Step 2: Run and confirm failure.**
+- [ ] **Step 3: Implement.** A `StatefulWidget` owning a `TextEditingController` seeded from `inviteFriendsDefaultMessage` (no bloc: no business logic or repository). App-bar title from `inviteFriendsTitle`. Multiline field per `ui_theming.md` (`.multiline`, `newline`, `.sentences`, `maxLines: null`, `minLines: 3`), the link as secondary text below, a `DivineButton` labelled `inviteFriendsShare`. On tap: capture `shareAnchorForContext` of the button before awaiting, `showShareSheetAtOrigin`, then pop only when `result.status == ShareResultStatus.success` and `context.mounted`. Add the route and run `dart run build_runner build --delete-conflicting-outputs`.
+- [ ] **Step 4: Run** the new test, highlight tests, `test/l10n/`, routing guards (`check_literal_navigation_paths.sh`, `check_hand_written_route_ceiling.sh`, `check_layer_direction.sh`), analyze, format. Expected: PASS.
+- [ ] **Step 5: Commit** `feat(creator-highlights): let people edit the invite before sharing`.
+
+### Task 4: Demo in the iOS simulator on the local stack (product review gate)
+
+No code. Nothing is pushed or opened as a PR before the product owner has seen it.
+
+- [ ] **Step 1-2 (revised):** the simulator cannot post, so build with the throwaway demo patch (highlight always reports a post today; scratchpad `apply_demo.py`) against `DEFAULT_ENV=PRODUCTION`, then revert the patch before any commit. Simulator UI is in Xcode's DeviceHub app.
+- [ ] **Step 3: Walk the path with the product owner.** Sign in to a local account, post a loop, open Inbox: the card shows "Bring your friends in →"; tapping it opens the share sheet with the message and link; tapping the card body still opens stats.
 - [ ] **Step 4: Show the hidden cases.** An account with no post today shows no row. Seed `creator_highlight_invite_<pubkey>` with three other dates this week (developer tooling or a debug prefs write, reverted afterward) and confirm the row is hidden.
-- [ ] **Step 5: Capture screenshots** (light and dark) for the PR, and note any copy or timing changes Matt asks for; apply them as a follow-up commit through Task 3's tests.
+- [ ] **Step 5: Capture screenshots** (light and dark) for the PR, and note any copy or timing changes requested; apply them as a follow-up commit through Task 3's tests.
 
-### Task 5: Translations, then PR (after Matt approves the copy)
+### Task 5: Translations, then PR (after the copy is approved)
 
 - [ ] **Step 1:** Translate both keys into every `app_*.arb` per `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, keep `{url}` intact, remove them from `_knownUntranslatedDebt`, run `flutter gen-l10n` and `flutter test test/l10n/`. Expected: PASS.
 - [ ] **Step 2:** Commit: `feat(l10n): translate the highlight invite`.
-- [ ] **Step 3:** Rebase on `origin/main`, run `bash scripts/ci/run_guards.sh` and the creator-highlights tests, then ask Matt draft vs ready per his PR rules (reviewers: rabble for the card, plus the mapped team). Title: `feat(creator-highlights): invite friends on days you post`.
+- [ ] **Step 3:** Rebase on `origin/main`, run `bash scripts/ci/run_guards.sh` and the creator-highlights tests, then decide draft vs ready (reviewers: the card's author, plus the mapped team). Title: `feat(creator-highlights): invite friends on days you post`.
