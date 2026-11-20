@@ -97,6 +97,7 @@ void main() {
           ),
           videosRepository: mockVideosRepository,
         );
+        addTearDown(cubit.close);
         await cubit.stream.first;
         verify(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
@@ -104,7 +105,6 @@ void main() {
             fallbackRouteIds: any(named: 'fallbackRouteIds', that: isEmpty),
           ),
         ).called(1);
-        await cubit.close();
       });
 
       blocTest<VideoLinkPreviewCubit, VideoLinkPreviewState>(
