@@ -3,6 +3,7 @@
 // ABOUTME: the author query parameter (#10929).
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -245,11 +246,20 @@ void main() {
     const author =
         'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
 
-    test('names a hex author in the query, lower-cased', () {
-      expect(
-        divineVideoShareUrl('abc123', authorPubkey: author.toUpperCase()),
-        equals('https://divine.video/video/abc123?author=$author'),
+    test('encodes the complete address using standard NIP-19', () {
+      final url = divineVideoShareUrl(
+        'folder/clip:1',
+        authorPubkey: author.toUpperCase(),
       );
+      final reference = Uri.parse(url).pathSegments.last;
+      final address = NIP19Tlv.decodeNaddr(reference)!;
+      expect(
+        address.id,
+        'folder/clip:1',
+      );
+      expect(address.author, author);
+      expect(address.kind, 34236);
+      expect(Uri.parse(url).hasQuery, isFalse);
     });
 
     test('omits the query when no usable author is known', () {
@@ -267,9 +277,35 @@ void main() {
       final url = divineVideoShareUrl('abc123', authorPubkey: author);
       final match = divineVideoUrlRegex.firstMatch(url);
 
-      expect(match?.group(1), equals('abc123'));
-      expect(match?.group(2), equals(author));
+      expect(NIP19Tlv.decodeNaddr(match!.group(1)!)!.id, 'abc123');
+      expect(match.group(2), isNull);
       expect(divineVideoUrlLineRegex.hasMatch(url), isTrue);
+    });
+
+    test('preserves the actual addressable video kind', () {
+      final url = divineVideoShareUrl(
+        'clip',
+        authorPubkey: author,
+        kind: 34235,
+      );
+      expect(
+        NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!.kind,
+        34235,
+      );
+    });
+
+    test('uses nevent for a regular event even when it has a d tag', () {
+      final id = 'a' * 64;
+      final url = divineVideoShareUrl(id, authorPubkey: author, kind: 22);
+      expect(NIP19Tlv.decodeNevent(Uri.parse(url).pathSegments.last)!.id, id);
+      expect(Uri.parse(url).hasQuery, isFalse);
+    });
+
+    test('keeps legacy output when the kind is unknown', () {
+      expect(
+        divineVideoShareUrl('old-tag', authorPubkey: author, kind: null),
+        'https://divine.video/video/old-tag?author=$author',
+      );
     });
   });
 

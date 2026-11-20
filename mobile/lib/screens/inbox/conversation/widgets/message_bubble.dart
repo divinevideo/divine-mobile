@@ -588,6 +588,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                 videoStableId: videoStableId,
                                 authorPubkey: videoAuthorPubkey,
                                 videoKind: videoKind,
+                                videoRouteId: _content.videoTarget?.routeId,
                                 isSent: isSent,
                                 enableTap: !isFailedOwnSend,
                                 dmReplyContext: dmReplyContext,
@@ -1090,6 +1091,7 @@ class _VideoLinkPreview extends ConsumerWidget {
     required this.enableTap,
     this.authorPubkey,
     this.videoKind,
+    this.videoRouteId,
     this.dmReplyContext,
   });
 
@@ -1101,6 +1103,7 @@ class _VideoLinkPreview extends ConsumerWidget {
   final bool enableTap;
   final String? authorPubkey;
   final int? videoKind;
+  final String? videoRouteId;
   final DmReplyContext? dmReplyContext;
 
   @override
@@ -1116,6 +1119,7 @@ class _VideoLinkPreview extends ConsumerWidget {
         videosRepository: videosRepository,
         authorPubkey: authorPubkey,
         videoKind: videoKind,
+        videoRouteId: videoRouteId,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {
@@ -1214,6 +1218,7 @@ class _QuotedVideoPreview extends ConsumerWidget {
         videosRepository: videosRepository,
         authorPubkey: target.authorPubkey,
         videoKind: target.videoKind,
+        videoRouteId: target.routeId,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {

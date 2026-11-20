@@ -50,9 +50,11 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
     required VideosRepository videosRepository,
     String? authorPubkey,
     int? videoKind,
+    String? videoRouteId,
   }) : _videoStableId = videoStableId,
        _authorPubkey = authorPubkey,
        _videoKind = videoKind,
+       _videoRouteId = videoRouteId,
        _videosRepository = videosRepository,
        super(const VideoLinkPreviewLoading()) {
     // Schedule as microtask so the first emit happens after callers
@@ -68,6 +70,7 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
   final String _videoStableId;
   final String? _authorPubkey;
   final int? _videoKind;
+  final String? _videoRouteId;
   final VideosRepository _videosRepository;
 
   Future<void> _resolve() async {
@@ -78,7 +81,7 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
         videoKind: _videoKind,
       );
       final video = await _videosRepository.fetchVideoWithStatsForRouteId(
-        target.routeId,
+        _videoRouteId ?? target.routeId,
         expectedAuthor: target.routeAuthor,
       );
       if (isClosed) return;

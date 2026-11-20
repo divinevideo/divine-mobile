@@ -81,7 +81,7 @@ void main() {
       expect(content, contains('collaborate'));
       expect(
         content,
-        contains('https://divine.video/video/video-id'),
+        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
         reason:
             'Plaintext fallback must include a divine.video URL so non-Divine '
             'Nostr clients can preview the video and verify the invite '
@@ -90,7 +90,7 @@ void main() {
       // The d tag alone can name another account's video (#10929).
       expect(
         content,
-        contains('https://divine.video/video/video-id?author=$creatorPubkey'),
+        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
       );
       expect(_containsTag(tags, const ['divine', 'collab-invite']), isTrue);
       expect(
@@ -237,7 +237,10 @@ void main() {
               ).captured.single
               as String;
 
-      expect(captured, contains('https://divine.video/video/video-id'));
+      expect(
+        captured,
+        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
+      );
       expect(
         captured.endsWith(CollaboratorInviteService.invitePlaintextSuffix),
         isTrue,
@@ -285,14 +288,16 @@ void main() {
 
       expect(
         captured,
-        contains('https://divine.video/video/custom-d-tag'),
-        reason:
-            'URL must use the d-tag (third segment of the parameterized '
-            'addressable) so it deep-links via the existing /video/:id route.',
+        contains(divineVideoShareUrl('custom-d-tag', authorPubkey: 'c' * 64)),
+        reason: 'The address must retain the actual author and d tag.',
       );
       expect(
         captured,
-        isNot(contains('https://divine.video/video/video-id')),
+        isNot(
+          contains(
+            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+          ),
+        ),
         reason: 'URL must reflect the videoAddress passed in, not a default.',
       );
     });
@@ -341,7 +346,7 @@ void main() {
 
       expect(
         captured,
-        contains('https://divine.video/video/foo:bar'),
+        contains(divineVideoShareUrl('foo:bar', authorPubkey: 'c' * 64)),
         reason:
             'd-tag is everything after kind:pubkey: — colons within it must '
             'survive into the URL so divine.video can resolve the stableId.',
@@ -394,7 +399,12 @@ void main() {
                 ).captured.single
                 as String;
 
-        expect(captured, contains('https://divine.video/video/video-id'));
+        expect(
+          captured,
+          contains(
+            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+          ),
+        );
         expect(captured, contains('Skate loop'));
         // Sanity-check that we actually produced the Spanish body — not
         // the English fallback that lookupAppLocalizations could silently
@@ -448,7 +458,12 @@ void main() {
                 ).captured.single
                 as String;
 
-        expect(captured, contains('https://divine.video/video/video-id'));
+        expect(
+          captured,
+          contains(
+            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+          ),
+        );
       },
     );
 

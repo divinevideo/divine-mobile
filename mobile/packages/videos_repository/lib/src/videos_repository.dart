@@ -3825,9 +3825,7 @@ class VideosRepository {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
           expectedPubkey: author,
-          expectedEventId: candidate.stableId == null
-              ? candidate.eventId
-              : null,
+          expectedRoute: candidate,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -3869,7 +3867,7 @@ class VideosRepository {
       missed.add('relayAddressable');
     }
 
-    if (candidate.stableId != null) {
+    if (candidate.stableId != null && !candidate.isNaddr) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
         author: author,
@@ -4361,9 +4359,11 @@ class VideosRepository {
       );
     }
 
-    if (author != null) {
-      candidates.removeWhere((event) => event.pubkey != author);
-    }
+    candidates.removeWhere(
+      (event) =>
+          !candidate.matchesEvent(event) ||
+          (author != null && event.pubkey != author),
+    );
 
     if (candidates.isEmpty) return null;
     return _parseAndHydrateFirstRouteVideo(
@@ -4473,7 +4473,7 @@ class VideosRepository {
   Future<VideoEvent?> _fetchVideoFromRouteApi(
     String routeId, {
     String? expectedPubkey,
-    String? expectedEventId,
+    VideoRouteRef? expectedRoute,
     bool permissive = false,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
@@ -4482,13 +4482,13 @@ class VideosRepository {
     }
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
-    if (event == null ||
-        (expectedEventId != null && event.id != expectedEventId)) {
-      return null;
-    }
+    if (event == null) return null;
     // Checked before content filtering, so another author's filtered video
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
+    if (expectedRoute != null && !expectedRoute.matchesEvent(event)) {
+      return null;
+    }
 
     final video = _tryParseAndFilter(
       event,

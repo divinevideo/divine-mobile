@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -79,6 +80,27 @@ void main() {
               .having((s) => s.video.totalLoops, 'video.totalLoops', 1234),
         ],
       );
+
+      test('preserves an naddr reference through preview resolution', () async {
+        final reference = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'clip', author: testVideo.pubkey, kind: 34235),
+        );
+        final cubit = VideoLinkPreviewCubit(
+          videoStableId: 'clip',
+          authorPubkey: testVideo.pubkey,
+          videoKind: 34235,
+          videoRouteId: reference,
+          videosRepository: mockVideosRepository,
+        );
+        await cubit.stream.first;
+        verify(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            reference,
+            fallbackRouteIds: any(named: 'fallbackRouteIds', that: isEmpty),
+          ),
+        ).called(1);
+        await cubit.close();
+      });
 
       blocTest<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         'resolves an author-named addressable share by its coordinate alone',
