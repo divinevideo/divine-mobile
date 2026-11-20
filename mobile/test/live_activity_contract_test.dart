@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/post_analytics_detail/post_analytics_detail_cubit.dart';
@@ -13,8 +14,7 @@ import 'package:openvine/features/creator_analytics/creator_analytics_repository
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 
-class _MockCreatorAnalyticsRepository extends Mock
-    implements CreatorAnalyticsRepository {}
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _MockPostLiveActivityRepository extends Mock
     implements PostLiveActivityRepository {}
@@ -29,6 +29,10 @@ const _videoId =
     'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2';
 const _dTag = 'post-d-tag';
 const _coordinate = '34236:$_owner:$_dTag';
+
+/// Single-version `ok` update cases in the fixture, including the one whose
+/// views lookup fails.
+const _drivenCaseCount = 6;
 
 final _postedAt = DateTime.utc(2026, 11, 19, 12);
 
@@ -75,52 +79,70 @@ void main() {
     });
 
     group('counts', () {
-      final cases = (fixture['counts'] as List)
-          .cast<Map<String, dynamic>>()
-          .where(_isSingleVersionUpdate)
-          .toList();
+      final all = (fixture['counts'] as List).cast<Map<String, dynamic>>();
+      final cases = all.where(_isSingleVersionUpdate).toList();
 
-      test('the fixture has single-version update cases', () {
-        expect(cases, isNotEmpty);
+      test('every single-version update case is driven', () {
+        // Pinned so a fixture that shrinks, or a filter that drifts, is
+        // noticed rather than silently running fewer cases.
+        expect(cases, hasLength(_drivenCaseCount));
       });
 
       for (final c in cases) {
         test('single-version count case ${c['name']}', () async {
           final version =
               (c['versions'] as List).single as Map<String, dynamic>;
-          // The analytics repository fills a missing bulk `views` from the
-          // per-post lookup, so the video the cubit sees carries the merge.
-          final views = version['views'] as int? ?? c['viewsFallback'] as int?;
-          final created = _postedAt;
-          final video = VideoEvent(
-            id: _videoId,
-            pubkey: _owner,
-            createdAt: created.millisecondsSinceEpoch ~/ 1000,
-            content: '',
-            timestamp: created,
-            title: 'My post',
-            vineId: _dTag,
-            rawTags: {if (views != null) 'views': '$views'},
-            nostrLikeCount: version['reactions'] as int?,
-            nostrCommentCount: version['comments'] as int?,
-          );
-          final repository = _MockCreatorAnalyticsRepository();
-          final liveActivity = _MockPostLiveActivityRepository();
-          when(() => repository.fetchCreatorAnalytics(_owner)).thenAnswer(
-            (_) async => CreatorAnalyticsSnapshot(
-              videos: [video],
-              socialCounts: null,
-              diagnostics: CreatorAnalyticsDiagnostics(
-                totalVideos: 1,
-                videosWithAnyViews: 0,
-                videosMissingViews: 1,
-                videosHydratedByBulkStats: 0,
-                videosHydratedByViewsEndpoint: 0,
-                sourcesUsed: const {AnalyticsDataSource.authorVideos},
-                fetchedAt: _postedAt,
-              ),
+          final fallback = c['viewsFallback'];
+          final api = _MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(true);
+          when(() => api.getSocialCounts(any())).thenAnswer((_) async => null);
+          when(
+            () => api.getVideosByAuthor(
+              pubkey: _owner,
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => VideosByAuthorResponse(
+              videos: [
+                VideoStats(
+                  id: _videoId,
+                  pubkey: _owner,
+                  createdAt: _postedAt,
+                  kind: 34236,
+                  dTag: _dTag,
+                  title: 'My post',
+                  thumbnail: 'thumb',
+                  videoUrl: 'videoUrl',
+                  reactions: 0,
+                  comments: 0,
+                  reposts: 0,
+                  engagementScore: 0,
+                ),
+              ],
             ),
           );
+          // The bulk entry carries the case's own values, views null where
+          // the fixture says null, so the app's fallback merge has to run.
+          when(() => api.getBulkVideoStats(any())).thenAnswer(
+            (_) async => BulkVideoStatsResponse(
+              stats: {
+                _videoId: BulkVideoStatsEntry(
+                  eventId: _videoId,
+                  reactions: version['reactions'] as int,
+                  comments: version['comments'] as int,
+                  reposts: 0,
+                  views: version['views'] as int?,
+                ),
+              },
+            ),
+          );
+          when(() => api.getVideoViewStats(any())).thenAnswer(
+            (_) async => fallback == 'failed'
+                ? throw const FunnelcakeException('views lookup failed')
+                : VideoViewStats(views: fallback as int?),
+          );
+          final liveActivity = _MockPostLiveActivityRepository();
           when(
             () => liveActivity.postedAtFor(any()),
           ).thenAnswer((_) async => null);
@@ -131,7 +153,7 @@ void main() {
             Duration(seconds: c['secondsSincePosted'] as int),
           );
           final cubit = PostAnalyticsDetailCubit(
-            repository: repository,
+            repository: FunnelcakeCreatorAnalyticsRepository(api),
             ownerPubkey: _owner,
             videoId: _videoId,
             coordinate: _coordinate,
@@ -142,7 +164,12 @@ void main() {
 
           await cubit.load();
 
-          final expected = c['expected'] as Map<String, dynamic>;
+          // The server skips a push when the views lookup fails; the app has
+          // no skip, so it shows what it knows: views unknown, the rest as
+          // the bulk stats gave them.
+          final expected = fallback == 'failed'
+              ? {'views': null, 'likes': 3, 'comments': 1}
+              : c['expected'] as Map<String, dynamic>;
           expect(cubit.state.counts.views, expected['views']);
           expect(cubit.state.counts.likes, expected['likes']);
           expect(cubit.state.counts.comments, expected['comments']);
@@ -157,5 +184,6 @@ bool _isSingleVersionUpdate(Map<String, dynamic> c) {
   return c['response'] == 'ok' &&
       versions.length == 1 &&
       versions.single is Map &&
-      (c['expected'] as Map)['action'] == 'update';
+      ((c['expected'] as Map)['action'] == 'update' ||
+          c['viewsFallback'] == 'failed');
 }
