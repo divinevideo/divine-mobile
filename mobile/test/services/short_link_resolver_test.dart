@@ -38,7 +38,7 @@ void main() {
           return http.Response(responseBody(url: url), 200);
         });
         addTearDown(transport.close);
-        final client = ShortLinkClient(client: transport, enabled: true);
+        final client = ShortLinkClient(client: transport);
         addTearDown(client.close);
         final short = await client.shorten(url);
         expect(short, 'https://divine.video/l/Abc12345');
