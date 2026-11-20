@@ -38,11 +38,11 @@ enum ChatLoadFailure {
   /// The room loaded, or is still loading.
   none,
 
-  /// The chat relay could not be reached, or the connection dropped and
-  /// reconnecting gave up. Retrying reconnects.
+  /// The relay could not be reached, reconnecting gave up, or the room's
+  /// history never finished loading.
   connection,
 
-  /// Anything else. Retrying reloads the room.
+  /// Any other load failure.
   other,
 }
 
@@ -200,7 +200,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   }
 
   /// A relay that cannot be reached, or never finishes sending history, is a
-  /// connection problem the user can retry; anything else is a load failure.
+  /// connection problem the user can retry; anything else is [ChatLoadFailure.other].
   static ChatLoadFailure _loadFailureFor(Object error) => switch (error) {
     RelayConnectionException() ||
     TimeoutException() => ChatLoadFailure.connection,

@@ -9,10 +9,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// Web and native Nostr transport for the explicitly configured Concord relay.
 /// A publication succeeds only after the relay accepts its event ID.
 ///
-/// Network and relay failures surface as [RelayConnectionException],
-/// [RelayRejectedException] or [TimeoutException], which callers treat as
-/// expected and retryable. Work that outlives [close] fails with a
-/// [StateError], because only the gateway's owner closes it.
+/// Relay failures can surface as [RelayConnectionException],
+/// [RelayRejectedException] or [TimeoutException]. [connect] and [publish]
+/// can also surface the socket's own error. Pending work interrupted by
+/// [close] fails with a [StateError].
 class WebSocketRelayGateway
     implements
         RelayGateway,
@@ -204,6 +204,8 @@ class WebSocketRelayGateway
   ///
   /// The stream ends with a [RelayConnectionException] once reconnecting gives
   /// up, or a [RelayRejectedException] if the relay closes the subscription.
+  /// [close] ends it without an error. Subscribing after [close] fails with a
+  /// [StateError].
   @override
   Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) {
     if (_closed) return Stream.error(StateError('Relay gateway is closed'));
@@ -256,6 +258,7 @@ class WebSocketRelayGateway
   /// * [RelayConnectionException] if the connection drops first.
   /// * [TimeoutException] if no acknowledgement arrives in [publishTimeout].
   /// * anything [connect] throws.
+  /// * [ArgumentError] if [event] has no `id`.
   @override
   Future<void> publish(Map<String, dynamic> event) async {
     final id = event['id'];

@@ -1,10 +1,8 @@
 // MPL-2.0
 
-/// The Concord relay could not be reached, or the connection dropped before
-/// the relay answered.
+/// The Concord relay connection dropped, or reconnecting to it gave up.
 ///
-/// This is an expected network condition, not a programming error: callers
-/// show it as a connection problem and let the user retry, which reconnects.
+/// This is an expected network condition, not a programming error.
 class RelayConnectionException implements Exception {
   const RelayConnectionException(this.message);
 
@@ -23,7 +21,7 @@ class RelayConnectionException implements Exception {
 class RelayRejectedException implements Exception {
   const RelayRejectedException(this.message);
 
-  /// The relay's reason, for logs. Never shown to users.
+  /// What the relay refused and its reason, for logs. Never shown to users.
   final String message;
 
   @override
