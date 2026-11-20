@@ -81,7 +81,13 @@ void main() {
       expect(content, contains('collaborate'));
       expect(
         content,
-        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
+        contains(
+          divineVideoShareUrl(
+            'video-id',
+            authorPubkey: creatorPubkey,
+            kind: 34236,
+          ),
+        ),
         reason:
             'Plaintext fallback must include a divine.video URL so non-Divine '
             'Nostr clients can preview the video and verify the invite '
@@ -90,7 +96,13 @@ void main() {
       // The d tag alone can name another account's video (#10929).
       expect(
         content,
-        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
+        contains(
+          divineVideoShareUrl(
+            'video-id',
+            authorPubkey: creatorPubkey,
+            kind: 34236,
+          ),
+        ),
       );
       expect(_containsTag(tags, const ['divine', 'collab-invite']), isTrue);
       expect(
@@ -239,7 +251,13 @@ void main() {
 
       expect(
         captured,
-        contains(divineVideoShareUrl('video-id', authorPubkey: creatorPubkey)),
+        contains(
+          divineVideoShareUrl(
+            'video-id',
+            authorPubkey: creatorPubkey,
+            kind: 34236,
+          ),
+        ),
       );
       expect(
         captured.endsWith(CollaboratorInviteService.invitePlaintextSuffix),
@@ -288,14 +306,24 @@ void main() {
 
       expect(
         captured,
-        contains(divineVideoShareUrl('custom-d-tag', authorPubkey: 'c' * 64)),
+        contains(
+          divineVideoShareUrl(
+            'custom-d-tag',
+            authorPubkey: 'c' * 64,
+            kind: 34236,
+          ),
+        ),
         reason: 'The address must retain the actual author and d tag.',
       );
       expect(
         captured,
         isNot(
           contains(
-            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
           ),
         ),
         reason: 'URL must reflect the videoAddress passed in, not a default.',
@@ -346,7 +374,9 @@ void main() {
 
       expect(
         captured,
-        contains(divineVideoShareUrl('foo:bar', authorPubkey: 'c' * 64)),
+        contains(
+          divineVideoShareUrl('foo:bar', authorPubkey: 'c' * 64, kind: 34236),
+        ),
         reason:
             'd-tag is everything after kind:pubkey: — colons within it must '
             'survive into the URL so divine.video can resolve the stableId.',
@@ -402,7 +432,11 @@ void main() {
         expect(
           captured,
           contains(
-            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
           ),
         );
         expect(captured, contains('Skate loop'));
@@ -461,7 +495,11 @@ void main() {
         expect(
           captured,
           contains(
-            divineVideoShareUrl('video-id', authorPubkey: creatorPubkey),
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
           ),
         );
       },

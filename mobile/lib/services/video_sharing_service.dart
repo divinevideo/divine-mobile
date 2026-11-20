@@ -356,8 +356,8 @@ class VideoSharingService {
   /// The NIP-19 address includes [authorPubkey], [kind] and the real `d` tag.
   static String shareUrlForStableId(
     String stableId, {
+    required int kind,
     String? authorPubkey,
-    int kind = NIP71VideoKinds.addressableShortVideo,
   }) => divineVideoShareUrl(stableId, authorPubkey: authorPubkey, kind: kind);
 
   /// Generate external share URL for the video.

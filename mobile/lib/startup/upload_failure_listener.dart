@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show NIP71VideoKinds;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
@@ -353,6 +354,7 @@ Future<void> _onConfirmationShare(
   final canonical = VideoSharingService.shareUrlForStableId(
     stableId,
     authorPubkey: authorPubkey,
+    kind: NIP71VideoKinds.getPreferredAddressableKind(),
   );
   final sharePositionOrigin = shareAnchorForContext(context);
   final shortener = container.read(shortLinkClientProvider);
