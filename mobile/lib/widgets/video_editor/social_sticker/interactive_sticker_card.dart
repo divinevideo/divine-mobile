@@ -86,7 +86,7 @@ const StickerResponses sampleStickerResponses = StickerResponses(
 const double _avatarSize = 72;
 
 /// The size of an avatar on an Add yours, smaller to leave room for the
-/// count beside its button.
+/// count under them in the row beside its button.
 const double _compactAvatarSize = 60;
 
 /// How wide a replies sticker's thumbnail is, upright like a video.
@@ -303,26 +303,31 @@ class _AddYours extends StatelessWidget {
     final l10n = context.l10n;
     final responses = this.responses;
     final latest = responses?.latest ?? const <StickerResponsePreview>[];
+    // The count goes under the avatars, where it has all the room the button
+    // leaves: beside them, most languages cut it short.
     final joined = SizedBox(
       height: interactiveCardRowHeight,
-      child: Row(
-        spacing: 14,
+      child: Column(
+        mainAxisAlignment: .center,
+        crossAxisAlignment: .start,
+        spacing: 8,
         children: [
-          // Nobody yet leaves the room to "Be the first".
           if (latest.isNotEmpty)
             _Avatars(responses: latest, size: _compactAvatarSize),
-          Expanded(
-            child: responses == null
-                ? const SizedBox.shrink()
-                : StickerTextLine(
-                    text: responses.countIsAtLeast
-                        ? l10n.videoStickerAddYoursJoinedAtLeast(
-                            responses.countAtLeastLabel,
-                          )
-                        : l10n.videoStickerAddYoursJoined(responses.count),
-                    style: interactiveCardTextStyle(34),
-                  ),
-          ),
+          if (responses != null)
+            // A count longer still is made smaller rather than cut short.
+            FittedBox(
+              fit: .scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: StickerTextLine(
+                text: responses.countIsAtLeast
+                    ? l10n.videoStickerAddYoursJoinedAtLeast(
+                        responses.countAtLeastLabel,
+                      )
+                    : l10n.videoStickerAddYoursJoined(responses.count),
+                style: interactiveCardTextStyle(34),
+              ),
+            ),
         ],
       ),
     );
