@@ -201,6 +201,43 @@ void main() {
           );
         });
 
+        testWidgets('a count too long for the row scaled down, not cut short', (
+          tester,
+        ) async {
+          const vietnamese = Locale('vi');
+          final vi = lookupAppLocalizations(vietnamese);
+          await pump(
+            tester,
+            InteractiveStickerCopy(
+              data: addYours,
+              responses: const StickerResponses(
+                count: 500,
+                countIsAtLeast: true,
+                latest: [
+                  StickerResponsePreview(),
+                  StickerResponsePreview(),
+                  StickerResponsePreview(),
+                ],
+              ),
+              onJoin: () {},
+              onOpenResponses: () {},
+            ),
+            locale: vietnamese,
+          );
+          final count = find.text(vi.videoStickerAddYoursJoinedAtLeast('500+'));
+
+          expect(
+            tester.renderObject<RenderParagraph>(count).didExceedMaxLines,
+            isFalse,
+          );
+          expect(
+            tester.getRect(count).right,
+            lessThanOrEqualTo(
+              tester.getRect(find.text(vi.videoStickerAddYoursButton)).left,
+            ),
+          );
+        });
+
         testWidgets('an Add yours the same size with or without who joined, '
             'so the copy lies on the frames', (tester) async {
           await pump(
