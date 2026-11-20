@@ -16761,4 +16761,25 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Byt den här platsen';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Sida vid sida';
+
+  @override
+  String get collabRoomArrangementSeries => 'Efter varandra';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Varje del';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Tryck på två delar för att byta ordning på dem.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Alla filmar sin egen del, upp till $seconds s. Delarna spelas efter varandra.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'Alla delar är klara. Sätt ihop dem!';
 }

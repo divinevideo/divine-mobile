@@ -16833,4 +16833,26 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Deze plek wisselen';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Naast elkaar';
+
+  @override
+  String get collabRoomArrangementSeries => 'Na elkaar';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Elk deel';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Tik op twee delen om hun volgorde te wisselen.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Iedereen filmt een eigen deel, tot $seconds s. De delen spelen na elkaar af.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Alle delen zijn binnen. Voeg ze samen!';
 }

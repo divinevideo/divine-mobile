@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "カメラをオンにできませんでした。",
   "collabRoomCallMuted": "ミュート中",
   "collabRoomSwapSeatHint": "レイアウトの2か所をタップすると入れ替わります。",
-  "collabRoomSwapSeatSemanticLabel": "この場所を入れ替える"
+  "collabRoomSwapSeatSemanticLabel": "この場所を入れ替える",
+  "collabRoomArrangementSideBySide": "左右に並べる",
+  "collabRoomArrangementSeries": "順番につなぐ",
+  "collabRoomPartLengthLabel": "各パートの長さ",
+  "collabRoomSwapOrderHint": "2つのパートをタップすると順番が入れ替わります。",
+  "collabRoomFilmSeriesHint": "それぞれが自分のパートを最大{seconds}秒で撮ります。パートは順番に再生されます。",
+  "collabRoomSeriesReadyHint": "全員のパートがそろいました。つなげましょう！"
 }

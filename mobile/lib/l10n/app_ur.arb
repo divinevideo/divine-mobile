@@ -7846,5 +7846,11 @@
   "collabRoomCallCameraFailed": "آپ کا کیمرہ آن نہیں ہو سکا۔",
   "collabRoomCallMuted": "خاموش",
   "collabRoomSwapSeatHint": "لے آؤٹ میں دو جگہوں کو تھپتھپائیں تاکہ وہ آپس میں بدل جائیں۔",
-  "collabRoomSwapSeatSemanticLabel": "یہ جگہ بدلیں"
+  "collabRoomSwapSeatSemanticLabel": "یہ جگہ بدلیں",
+  "collabRoomArrangementSideBySide": "ساتھ ساتھ",
+  "collabRoomArrangementSeries": "ایک کے بعد ایک",
+  "collabRoomPartLengthLabel": "ہر حصہ",
+  "collabRoomSwapOrderHint": "ترتیب بدلنے کے لیے دو حصوں کو تھپتھپائیں۔",
+  "collabRoomFilmSeriesHint": "ہر کوئی اپنا حصہ خود فلماتا ہے، زیادہ سے زیادہ {seconds} سیکنڈ۔ حصے ایک کے بعد ایک چلتے ہیں۔",
+  "collabRoomSeriesReadyHint": "سب حصے آ گئے۔ انہیں جوڑیں!"
 }

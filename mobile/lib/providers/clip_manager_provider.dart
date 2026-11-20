@@ -11,6 +11,7 @@ import 'package:divine_camera/divine_camera.dart'
 import 'package:flutter/widgets.dart' show Offset;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -199,11 +200,15 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Calculates the remaining recording time available.
   ///
-  /// Returns the difference between [VideoEditorConstants.maxDuration] and
+  /// Returns the difference between [ClipManagerState.durationLimit] and
   /// the sum of all clip durations.
   Duration get remainingDuration {
-    return VideoEditorConstants.maxDuration - totalDuration;
+    return state.durationLimit - totalDuration;
   }
+
+  /// The length a room part filmed in series may run, while one is filmed.
+  static Duration? _partDurationLimit(CollabRoomPartContext? part) =>
+      part != null && part.isActive ? part.partLength : null;
 
   /// Calculates the total duration of all recorded clips.
   Duration get totalDuration {
@@ -229,7 +234,19 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         category: .video,
       );
     });
-    return ClipManagerState();
+    // A room part filmed in series stops at the length its host set, in the
+    // recorder and in the recorder the editor opens alike.
+    ref.listen(
+      collabRoomPartProvider.select(_partDurationLimit),
+      (_, limit) => state = state.copyWith(
+        durationLimit: limit ?? VideoEditorConstants.maxDuration,
+      ),
+    );
+    return ClipManagerState(
+      durationLimit:
+          _partDurationLimit(ref.read(collabRoomPartProvider)) ??
+          VideoEditorConstants.maxDuration,
+    );
   }
 
   /// Trigger autosave via VideoEditorProvider (debounced).
@@ -1296,7 +1313,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       name: 'ClipManagerNotifier',
       category: .video,
     );
-    state = ClipManagerState();
+    state = ClipManagerState(durationLimit: state.durationLimit);
   }
 
   /// Remove all clips without resetting peer providers or deleting autosave.
@@ -1320,7 +1337,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       name: 'ClipManagerNotifier',
       category: .video,
     );
-    state = ClipManagerState();
+    state = ClipManagerState(durationLimit: state.durationLimit);
   }
 
   void _resetCaptureSession() {

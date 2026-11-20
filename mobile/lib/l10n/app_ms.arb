@@ -7846,5 +7846,11 @@
   "collabRoomCallCameraFailed": "Kamera anda tidak dapat dihidupkan.",
   "collabRoomCallMuted": "Disenyapkan",
   "collabRoomSwapSeatHint": "Ketik dua tempat dalam susun atur untuk menukarnya.",
-  "collabRoomSwapSeatSemanticLabel": "Tukar tempat ini"
+  "collabRoomSwapSeatSemanticLabel": "Tukar tempat ini",
+  "collabRoomArrangementSideBySide": "Sebelah-menyebelah",
+  "collabRoomArrangementSeries": "Satu demi satu",
+  "collabRoomPartLengthLabel": "Setiap bahagian",
+  "collabRoomSwapOrderHint": "Ketik dua bahagian untuk menukar susunannya.",
+  "collabRoomFilmSeriesHint": "Semua orang merakam bahagian sendiri, sehingga {seconds} saat. Bahagian dimainkan satu demi satu.",
+  "collabRoomSeriesReadyHint": "Semua bahagian sudah masuk. Gabungkan sekarang!"
 }

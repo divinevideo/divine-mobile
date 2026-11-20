@@ -16687,4 +16687,24 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Đổi vị trí này';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Cạnh nhau';
+
+  @override
+  String get collabRoomArrangementSeries => 'Lần lượt';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Mỗi phần';
+
+  @override
+  String get collabRoomSwapOrderHint => 'Chạm vào hai phần để đổi thứ tự.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Mỗi người quay phần của mình, tối đa $seconds giây. Các phần phát lần lượt.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'Đã có đủ các phần. Ghép lại thôi!';
 }

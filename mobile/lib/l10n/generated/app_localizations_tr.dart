@@ -16667,4 +16667,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Bu yeri değiştir';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Yan yana';
+
+  @override
+  String get collabRoomArrangementSeries => 'Art arda';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Her bölüm';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Sıralarını değiştirmek için iki bölüme dokun.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Herkes kendi bölümünü en fazla $seconds sn çeker. Bölümler art arda oynar.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'Tüm bölümler geldi. Birleştir!';
 }

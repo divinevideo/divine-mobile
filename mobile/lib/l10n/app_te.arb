@@ -9469,5 +9469,11 @@
   "collabRoomCallCameraFailed": "మీ కెమెరా ఆన్ చేయలేకపోయాం.",
   "collabRoomCallMuted": "మ్యూట్ అయింది",
   "collabRoomSwapSeatHint": "స్థానాలు మార్చుకోవడానికి లేఅవుట్‌లో రెండు చోట్ల తాకండి.",
-  "collabRoomSwapSeatSemanticLabel": "ఈ స్థానాన్ని మార్చండి"
+  "collabRoomSwapSeatSemanticLabel": "ఈ స్థానాన్ని మార్చండి",
+  "collabRoomArrangementSideBySide": "పక్కపక్కనే",
+  "collabRoomArrangementSeries": "ఒకదాని తర్వాత ఒకటి",
+  "collabRoomPartLengthLabel": "ప్రతి భాగం",
+  "collabRoomSwapOrderHint": "క్రమాన్ని మార్చడానికి రెండు భాగాలను తాకండి.",
+  "collabRoomFilmSeriesHint": "ప్రతి ఒక్కరూ తమ భాగాన్ని {seconds} సె. వరకు చిత్రీకరిస్తారు. భాగాలు ఒకదాని తర్వాత ఒకటి ప్లే అవుతాయి.",
+  "collabRoomSeriesReadyHint": "అన్ని భాగాలు వచ్చాయి. వాటిని కలపండి!"
 }

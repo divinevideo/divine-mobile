@@ -16889,4 +16889,26 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Palitan ang puwestong ito';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Magkatabi';
+
+  @override
+  String get collabRoomArrangementSeries => 'Sunud-sunod';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Bawat part';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'I-tap ang dalawang part para pagpalitin ang pagkakasunod nila.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Bawat isa ay nagfi-film ng sariling part, hanggang ${seconds}s. Sunud-sunod silang ipe-play.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Nandito na lahat ng part. Pagsamahin na!';
 }

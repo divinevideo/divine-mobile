@@ -16896,4 +16896,25 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Размени това място';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Един до друг';
+
+  @override
+  String get collabRoomArrangementSeries => 'Един след друг';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Всяка част';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Докосни две части, за да размениш реда им.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Всеки заснема своята част, до $seconds сек. Частите вървят една след друга.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'Всички части са тук. Сглоби ги!';
 }

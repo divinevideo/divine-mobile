@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Det gick inte att slå på kameran.",
   "collabRoomCallMuted": "Avstängd mikrofon",
   "collabRoomSwapSeatHint": "Tryck på två platser i layouten för att byta dem.",
-  "collabRoomSwapSeatSemanticLabel": "Byt den här platsen"
+  "collabRoomSwapSeatSemanticLabel": "Byt den här platsen",
+  "collabRoomArrangementSideBySide": "Sida vid sida",
+  "collabRoomArrangementSeries": "Efter varandra",
+  "collabRoomPartLengthLabel": "Varje del",
+  "collabRoomSwapOrderHint": "Tryck på två delar för att byta ordning på dem.",
+  "collabRoomFilmSeriesHint": "Alla filmar sin egen del, upp till {seconds} s. Delarna spelas efter varandra.",
+  "collabRoomSeriesReadyHint": "Alla delar är klara. Sätt ihop dem!"
 }

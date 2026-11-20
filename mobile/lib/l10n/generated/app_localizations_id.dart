@@ -16631,4 +16631,26 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Tukar tempat ini';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Berdampingan';
+
+  @override
+  String get collabRoomArrangementSeries => 'Berurutan';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Tiap bagian';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Ketuk dua bagian untuk menukar urutannya.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Semua merekam bagiannya sendiri, maksimal $seconds dtk. Bagian-bagiannya diputar berurutan.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Semua bagian sudah masuk. Satukan sekarang!';
 }

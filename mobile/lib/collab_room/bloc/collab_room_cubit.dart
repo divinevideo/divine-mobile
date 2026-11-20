@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' show Color;
 
 import 'package:bloc/bloc.dart';
 import 'package:collection/collection.dart';
@@ -38,6 +39,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     required CollabRoomService service,
     required String roomId,
     CollabRoomComposer composer = composeCollabRoom,
+    CollabRoomSeriesComposer seriesComposer = composeCollabRoomSeries,
     CollabRoomThumbnailer thumbnailer = _extractThumbnail,
     this.keepsRoomInSync = true,
     Duration lobbyPublishDelay = const Duration(milliseconds: 500),
@@ -47,6 +49,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
        _lobbyPublishDelay = lobbyPublishDelay,
        _syncRetryDelay = syncRetryDelay,
        _composer = composer,
+       _seriesComposer = seriesComposer,
        _thumbnailer = thumbnailer,
        super(const CollabRoomState()) {
     _subscription = _service
@@ -74,6 +77,7 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   int _lastPublishedRevision = 0;
   bool _syncAfterAction = false;
   final CollabRoomComposer _composer;
+  final CollabRoomSeriesComposer _seriesComposer;
   final CollabRoomThumbnailer _thumbnailer;
   late final StreamSubscription<CollabRoom?> _subscription;
 
@@ -134,6 +138,21 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     _syncRetryTimer?.cancel();
     unawaited(
       _publishNext(.sync, room, (revision) {
+        // In series nobody picks a layout: whoever joined or left while
+        // filming is seated, or their seat closed, along with the news.
+        if (room.inSeries &&
+            room.phase == CollabRoomPhase.recording &&
+            !room.seatsFitLayout) {
+          final count = room.participants.length;
+          final layout = room.layoutPreset?.cellCount == count
+              ? room.layoutPreset
+              : collabRoomLayoutsFor(count).firstOrNull;
+          return room.toSnapshot(
+            revision: revision,
+            layout: layout?.name,
+            members: _assignCells(room.members, room.authorPubkey),
+          );
+        }
         return room.toSnapshot(revision: revision);
       }),
     );
@@ -221,6 +240,60 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     );
   }
 
+  /// Sets the space between the cells, as the author in the lobby. The change
+  /// shows at once and goes out with the lobby's next message.
+  void gapChanged(double gap) {
+    if (!_authorInLobby) return;
+    final clamped = gap.clamp(0.0, SplitScreenLayoutGeometry.maxGap);
+    // A thousandth of the frame's shorter side is about a pixel: finer steps
+    // only make the message longer.
+    emitIfOpen(state.copyWith(pickedGap: (clamped * 1000).round() / 1000));
+    _scheduleLobbyPublish();
+  }
+
+  /// Picks the colour of the gaps, as the author in the lobby. The gaps are
+  /// part of the video, so the colour is always opaque.
+  void borderColorChanged(Color color) {
+    if (!_authorInLobby) return;
+    emitIfOpen(
+      state.copyWith(pickedBorderColor: color.withValues(alpha: 1)),
+    );
+    _scheduleLobbyPublish();
+  }
+
+  /// Picks whether the parts play side by side or one after another, as the
+  /// author in the lobby.
+  void arrangementPicked(CollabRoomArrangement arrangement) {
+    if (!_authorInLobby) return;
+    emitIfOpen(state.copyWith(pickedArrangement: arrangement));
+    _scheduleLobbyPublish();
+  }
+
+  /// Picks how long each part plays in series, as the author in the lobby,
+  /// kept to what fits the people in the room.
+  void partLengthChanged(Duration length) {
+    final room = state.room;
+    if (room == null || !_authorInLobby) return;
+    final step = collabRoomPartLengthStep.inMilliseconds;
+    final rounded = Duration(
+      milliseconds: (length.inMilliseconds / step).round() * step,
+    );
+    emitIfOpen(
+      state.copyWith(
+        pickedPartLength: collabRoomPartLengthFor(
+          rounded,
+          room.participants.length,
+        ),
+      ),
+    );
+    _scheduleLobbyPublish();
+  }
+
+  bool get _authorInLobby {
+    final room = state.room;
+    return room != null && room.isAuthor && room.phase == CollabRoomPhase.lobby;
+  }
+
   /// Publishes the lobby once the author stops changing it, so the others
   /// get one message for a run of taps. The screen shows each change at once,
   /// and the room's call passes it on to the others straight away.
@@ -248,7 +321,16 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       for (final member in room.seats) member.pubkey,
     ]);
     final layoutChanged = layout != null && room.layout != layout.name;
-    if (!seatsMoved && !layoutChanged) return;
+    final gap = state.pickedGap;
+    final border = _rgbOf(state.pickedBorderColor);
+    final arrangement = state.pickedArrangement;
+    final partLength = state.pickedPartLength;
+    final settingsChanged =
+        (gap != null && room.snapshot.gap != gap) ||
+        (border != null && room.snapshot.borderColor != border) ||
+        (arrangement != null && room.arrangement != arrangement) ||
+        (partLength != null && room.snapshot.partLength != partLength);
+    if (!seatsMoved && !layoutChanged && !settingsChanged) return;
     // A message already on its way would swallow this one: wait for it.
     if (state.actionStatus == .busy) {
       if (!flushing) {
@@ -265,6 +347,10 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
         revision: revision,
         layout: layout?.name,
         members: seatsMoved ? _seated(room.members, order) : null,
+        gap: gap,
+        borderColor: border,
+        arrangement: arrangement,
+        partLength: partLength,
       ),
     );
     // Undelivered, the swap would show here and nowhere else.
@@ -342,9 +428,11 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   /// room, so the others see it and it survives the screen closing.
   Future<void> soundPicked(String pubkey) async {
     final room = state.room;
+    // In series every part keeps its own sound.
     if (room == null ||
         !room.isAuthor ||
-        room.phase != CollabRoomPhase.recording) {
+        room.phase != CollabRoomPhase.recording ||
+        room.inSeries) {
       return;
     }
     emitIfOpen(state.copyWith(soundPubkey: pubkey));
@@ -381,6 +469,11 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
         phase: CollabRoomPhase.recording,
         layout: layout.name,
         members: members,
+        gap: state.pickedGap,
+        borderColor: _rgbOf(state.pickedBorderColor),
+        arrangement: state.pickedArrangement,
+        // Fixed with the seats: someone leaving later shortens nobody's part.
+        partLength: state.inSeries ? state.partLength : null,
       ),
     );
   }
@@ -484,29 +577,10 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     if (!state.canCompose || room == null) return;
     emitIfOpen(state.copyWith(composeStatus: CollabRoomComposeStatus.running));
     try {
-      final rects = room.cellRects;
-      final shapes = room.cellShapes;
       final sound = state.effectiveSoundPubkey;
-      final cells = <CollabRoomComposeCell>[];
-      // In cell order, not the order people joined in: the renderer stacks
-      // the cells as listed, so a picture-in-picture window listed before
-      // the cell it sits on would end up under it.
-      for (var cell = 0; cell < rects.length; cell++) {
-        final member = room.memberInCell(cell)!;
-        final part = room.parts[member.pubkey]!;
-        final file = await _service.partFile(_roomId, part);
-        cells.add((
-          file: file,
-          rect: rects[cell],
-          shape: shapes[cell],
-          withSound: member.pubkey == sound,
-        ));
-      }
-      final clip = await _composer(
-        cells: cells,
-        aspectRatio: room.frameAspectRatio,
-        taskId: 'collab_room_$_roomId',
-      );
+      final clip = room.inSeries
+          ? await _composeSeries(room)
+          : await _composeSideBySide(room, sound);
       if (clip == null) {
         throw const CollabRoomException('The render produced no video');
       }
@@ -516,6 +590,10 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
           current.phase != room.phase ||
           current.layout != room.layout ||
           current.aspectRatio != room.aspectRatio ||
+          current.cellGap != room.cellGap ||
+          current.borderColor != room.borderColor ||
+          current.arrangement != room.arrangement ||
+          current.partLength != room.partLength ||
           state.effectiveSoundPubkey != sound ||
           !const ListEquality<CollabRoomMember>().equals(
             current.participants,
@@ -543,6 +621,59 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
       emitIfOpen(state.copyWith(composeStatus: CollabRoomComposeStatus.failed));
     }
   }
+
+  /// Every part in its cell of the layout, the one of [sound] heard.
+  Future<DivineVideoClip?> _composeSideBySide(
+    CollabRoom room,
+    String? sound,
+  ) async {
+    final rects = room.cellRects;
+    final shapes = room.cellShapes;
+    final cells = <CollabRoomComposeCell>[];
+    // In cell order, not the order people joined in: the renderer stacks
+    // the cells as listed, so a picture-in-picture window listed before
+    // the cell it sits on would end up under it.
+    for (var cell = 0; cell < rects.length; cell++) {
+      final member = room.memberInCell(cell)!;
+      final part = room.parts[member.pubkey]!;
+      final file = await _service.partFile(_roomId, part);
+      cells.add((
+        file: file,
+        rect: rects[cell],
+        shape: shapes[cell],
+        withSound: member.pubkey == sound,
+      ));
+    }
+    return _composer(
+      cells: cells,
+      aspectRatio: room.frameAspectRatio,
+      backgroundColor: room.borderColor,
+      taskId: 'collab_room_$_roomId',
+    );
+  }
+
+  /// Every part full frame, one after another in seat order.
+  Future<DivineVideoClip?> _composeSeries(CollabRoom room) async {
+    final length = room.partLength;
+    final parts = <CollabRoomSeriesPart>[];
+    for (var cell = 0; cell < room.participants.length; cell++) {
+      final member = room.memberInCell(cell)!;
+      final part = room.parts[member.pubkey]!;
+      parts.add((
+        file: await _service.partFile(_roomId, part),
+        length: length,
+      ));
+    }
+    return _seriesComposer(
+      parts: parts,
+      aspectRatio: room.frameAspectRatio,
+      taskId: 'collab_room_$_roomId',
+    );
+  }
+
+  /// [color] as the 24-bit RGB value a snapshot carries, or `null`.
+  static int? _rgbOf(Color? color) =>
+      color == null ? null : color.toARGB32() & 0xFFFFFF;
 
   static CollabRoomMember _leaveOutIfInvited(CollabRoomMember member) =>
       member.status == CollabRoomMemberStatus.invited

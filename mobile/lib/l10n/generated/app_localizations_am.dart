@@ -16337,4 +16337,24 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'ይህን ቦታ ይቀይሩ';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'ጎን ለጎን';
+
+  @override
+  String get collabRoomArrangementSeries => 'አንዱ ከሌላው በኋላ';
+
+  @override
+  String get collabRoomPartLengthLabel => 'እያንዳንዱ ክፍል';
+
+  @override
+  String get collabRoomSwapOrderHint => 'ቅደም ተከተሉን ለመቀያየር ሁለት ክፍሎችን ይንኩ።';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'እያንዳንዱ ሰው የራሱን ክፍል እስከ $seconds ሰከንድ ይቀርጻል። ክፍሎቹ አንዱ ከሌላው በኋላ ይጫወታሉ።';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!';
 }

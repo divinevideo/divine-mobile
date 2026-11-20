@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -133,6 +134,74 @@ void main() {
       final state = container.read(clipManagerProvider);
       expect(state.clips.length, equals(1));
       expect(state.totalDuration, equals(const Duration(seconds: 2)));
+    });
+
+    group('durationLimit', () {
+      const series = CollabRoomPartContext(
+        roomId: '0123456789abcdef0123456789abcdef',
+        cellAspectRatio: 9 / 16,
+        partLength: Duration(seconds: 2),
+      );
+
+      test('is the post length outside a room part', () {
+        expect(
+          container.read(clipManagerProvider).durationLimit,
+          VideoEditorConstants.maxDuration,
+        );
+      });
+
+      test('follows the part length while a part is filmed in series', () {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final parts = container.read(collabRoomPartProvider.notifier)
+          ..set(series);
+        notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/path/to/video.mp4'),
+          duration: const Duration(milliseconds: 500),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        expect(
+          container.read(clipManagerProvider).durationLimit,
+          const Duration(seconds: 2),
+        );
+        expect(notifier.remainingDuration, const Duration(milliseconds: 1500));
+        expect(
+          container.read(clipManagerProvider).remainingDuration,
+          const Duration(milliseconds: 1500),
+        );
+
+        parts.finish(expected: series);
+        expect(
+          container.read(clipManagerProvider).durationLimit,
+          VideoEditorConstants.maxDuration,
+        );
+      });
+
+      test('keeps the post length for a part side by side', () {
+        container
+            .read(collabRoomPartProvider.notifier)
+            .set(
+              const CollabRoomPartContext(
+                roomId: '0123456789abcdef0123456789abcdef',
+                cellAspectRatio: 9 / 32,
+              ),
+            );
+        expect(
+          container.read(clipManagerProvider).durationLimit,
+          VideoEditorConstants.maxDuration,
+        );
+      });
+
+      test('keeps the part length when the clips are cleared', () {
+        container.read(collabRoomPartProvider.notifier).set(series);
+        container.read(clipManagerProvider.notifier).clearClips();
+        expect(
+          container.read(clipManagerProvider).durationLimit,
+          const Duration(seconds: 2),
+        );
+      });
     });
 
     group('resetRecording', () {

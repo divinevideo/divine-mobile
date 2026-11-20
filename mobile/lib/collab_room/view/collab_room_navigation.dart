@@ -74,6 +74,7 @@ Future<void> openCollabRoomPartRecorder(
     me: room.ownerPubkey,
     callKey: room.callKey,
     inviteRevision: room.me?.inviteRevision ?? 0,
+    partLength: room.inSeries ? room.partLength : null,
   );
   final partSession = ref.read(collabRoomPartProvider.notifier)..set(part);
   try {

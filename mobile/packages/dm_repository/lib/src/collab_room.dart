@@ -23,6 +23,8 @@ final RegExp _roomIdPattern = RegExp(r'^[0-9a-f]{32}$');
 
 final RegExp _callKeyPattern = RegExp(r'^[0-9a-f]{64}$');
 
+final RegExp _rgbPattern = RegExp(r'^[0-9a-f]{6}$');
+
 /// Creates a random room id: 16 bytes as lowercase hex.
 String newCollabRoomId([Random? random]) {
   final source = random ?? Random.secure();
@@ -94,6 +96,15 @@ enum CollabRoomMemberStatus {
 
   /// Whether the person still takes part.
   bool get isActive => this == invited || this == joined;
+}
+
+/// How a room's parts come together in the posted video.
+enum CollabRoomArrangement {
+  /// Every part plays at once, each in its own cell of the layout.
+  sideBySide,
+
+  /// The parts play one after another, full frame, in seat order.
+  series,
 }
 
 /// One person in a room and the layout cell they fill.
@@ -235,7 +246,14 @@ class CollabRoomSnapshot extends Equatable {
     this.parts = const [],
     this.videoAddress,
     this.callKey,
-  });
+    this.gap,
+    this.borderColor,
+    this.arrangement = CollabRoomArrangement.sideBySide,
+    this.partLength,
+  }) : assert(
+         borderColor == null || (borderColor >= 0 && borderColor <= 0xFFFFFF),
+         'borderColor is an RGB value',
+       );
 
   /// Grows with every snapshot the author publishes; the highest wins.
   final int revision;
@@ -269,6 +287,22 @@ class CollabRoomSnapshot extends Equatable {
   /// before calls existed, which has no call.
   final String? callKey;
 
+  /// Space between two cells of the video, as a fraction of the frame's
+  /// shorter side, or `null` for a room made before the author could set it,
+  /// which keeps the app's default.
+  final double? gap;
+
+  /// The colour of the gaps, as a 24-bit RGB value, or `null` for a room
+  /// whose author has not picked one, which keeps the app's default.
+  final int? borderColor;
+
+  /// How the parts come together. A snapshot without one is side by side.
+  final CollabRoomArrangement arrangement;
+
+  /// How long each part plays when the parts play one after another, or
+  /// `null` before the author picked a length.
+  final Duration? partLength;
+
   /// The JSON the state tag carries.
   String encode({bool includeParts = true}) => jsonEncode({
     'rev': revision,
@@ -289,6 +323,12 @@ class CollabRoomSnapshot extends Equatable {
       'parts': [for (final part in parts) part._toJson()],
     if (videoAddress != null) 'video': videoAddress,
     if (callKey != null) 'call': callKey,
+    if (gap != null) 'gap': gap,
+    if (borderColor != null)
+      'border': borderColor!.toRadixString(16).padLeft(6, '0'),
+    if (arrangement != CollabRoomArrangement.sideBySide)
+      'arrange': arrangement.name,
+    if (partLength != null) 'partMs': partLength!.inMilliseconds,
   });
 
   /// Reads a snapshot back, or `null` when [source] is not a valid one.
@@ -313,6 +353,15 @@ class CollabRoomSnapshot extends Equatable {
     final rawParts = json['parts'] ?? const <Object?>[];
     final video = json['video'];
     final call = json['call'];
+    final gap = json['gap'];
+    final border = json['border'];
+    final arrangeName = json['arrange'];
+    final arrangement = arrangeName == null
+        ? CollabRoomArrangement.sideBySide
+        : CollabRoomArrangement.values
+              .where((a) => a.name == arrangeName)
+              .firstOrNull;
+    final partMs = json['partMs'];
     if (revision is! int ||
         revision < 0 ||
         phase == null ||
@@ -324,7 +373,12 @@ class CollabRoomSnapshot extends Equatable {
         rawParts is! List<Object?> ||
         (video != null && video is! String) ||
         (call != null &&
-            (call is! String || !_callKeyPattern.hasMatch(call)))) {
+            (call is! String || !_callKeyPattern.hasMatch(call))) ||
+        (gap != null && (gap is! num || gap < 0 || gap > 1)) ||
+        (border != null &&
+            (border is! String || !_rgbPattern.hasMatch(border))) ||
+        arrangement == null ||
+        (partMs != null && (partMs is! int || partMs <= 0))) {
       return null;
     }
     final members = <CollabRoomMember>[];
@@ -378,6 +432,12 @@ class CollabRoomSnapshot extends Equatable {
       parts: parts,
       videoAddress: video as String?,
       callKey: call as String?,
+      gap: (gap as num?)?.toDouble(),
+      borderColor: border == null
+          ? null
+          : int.parse(border as String, radix: 16),
+      arrangement: arrangement,
+      partLength: partMs == null ? null : Duration(milliseconds: partMs as int),
     );
   }
 
@@ -392,6 +452,10 @@ class CollabRoomSnapshot extends Equatable {
     parts,
     videoAddress,
     callKey,
+    gap,
+    borderColor,
+    arrangement,
+    partLength,
   ];
 }
 
@@ -651,6 +715,9 @@ class CollabRoom extends Equatable {
   /// The key the room's call runs on, or `null` for a room without a call.
   String? get callKey => snapshot.callKey;
 
+  /// How the parts come together in the posted video.
+  CollabRoomArrangement get arrangement => snapshot.arrangement;
+
   /// This account's own entry, or `null` when it is not in the room.
   CollabRoomMember? get me =>
       members.where((m) => m.pubkey == ownerPubkey).firstOrNull;
@@ -700,6 +767,10 @@ class CollabRoom extends Equatable {
     List<CollabRoomMember>? members,
     Map<String, CollabRoomPart>? parts,
     String? videoAddress,
+    double? gap,
+    int? borderColor,
+    CollabRoomArrangement? arrangement,
+    Duration? partLength,
   }) {
     final nextMembers = members ?? this.members;
     final nextParts = parts ?? this.parts;
@@ -717,6 +788,10 @@ class CollabRoom extends Equatable {
       ],
       videoAddress: videoAddress ?? snapshot.videoAddress,
       callKey: snapshot.callKey,
+      gap: gap ?? snapshot.gap,
+      borderColor: borderColor ?? snapshot.borderColor,
+      arrangement: arrangement ?? snapshot.arrangement,
+      partLength: partLength ?? snapshot.partLength,
     );
   }
 

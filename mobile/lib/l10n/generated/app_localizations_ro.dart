@@ -17075,4 +17075,26 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Schimbă acest loc';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Unul lângă altul';
+
+  @override
+  String get collabRoomArrangementSeries => 'Una după alta';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Fiecare parte';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Atinge două părți ca să le schimbi ordinea.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Fiecare își filmează propria parte, de până la $seconds s. Părțile rulează una după alta.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Toate părțile au ajuns. Pune-le cap la cap!';
 }

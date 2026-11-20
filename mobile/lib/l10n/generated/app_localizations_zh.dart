@@ -15767,4 +15767,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => '交换这个位置';
+
+  @override
+  String get collabRoomArrangementSideBySide => '左右并排';
+
+  @override
+  String get collabRoomArrangementSeries => '依次播放';
+
+  @override
+  String get collabRoomPartLengthLabel => '每段时长';
+
+  @override
+  String get collabRoomSwapOrderHint => '点按两个片段即可交换顺序。';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return '每个人拍自己的部分，最长 $seconds 秒。各部分依次播放。';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => '所有部分都到齐了。合成视频吧！';
 }

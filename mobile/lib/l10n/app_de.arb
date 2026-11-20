@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Deine Kamera ließ sich nicht einschalten.",
   "collabRoomCallMuted": "Stumm",
   "collabRoomSwapSeatHint": "Tippe zwei Plätze im Layout an, um sie zu tauschen.",
-  "collabRoomSwapSeatSemanticLabel": "Diesen Platz tauschen"
+  "collabRoomSwapSeatSemanticLabel": "Diesen Platz tauschen",
+  "collabRoomArrangementSideBySide": "Nebeneinander",
+  "collabRoomArrangementSeries": "Nacheinander",
+  "collabRoomPartLengthLabel": "Jeder Teil",
+  "collabRoomSwapOrderHint": "Tippe zwei Teile an, um ihre Reihenfolge zu tauschen.",
+  "collabRoomFilmSeriesHint": "Alle filmen ihren eigenen Teil, bis zu {seconds} s. Die Teile laufen nacheinander.",
+  "collabRoomSeriesReadyHint": "Alle Teile sind da. Setz sie zusammen!"
 }

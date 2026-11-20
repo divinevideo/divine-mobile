@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Je camera kon niet aan.",
   "collabRoomCallMuted": "Gedempt",
   "collabRoomSwapSeatHint": "Tik op twee plekken in de indeling om ze te wisselen.",
-  "collabRoomSwapSeatSemanticLabel": "Deze plek wisselen"
+  "collabRoomSwapSeatSemanticLabel": "Deze plek wisselen",
+  "collabRoomArrangementSideBySide": "Naast elkaar",
+  "collabRoomArrangementSeries": "Na elkaar",
+  "collabRoomPartLengthLabel": "Elk deel",
+  "collabRoomSwapOrderHint": "Tik op twee delen om hun volgorde te wisselen.",
+  "collabRoomFilmSeriesHint": "Iedereen filmt een eigen deel, tot {seconds} s. De delen spelen na elkaar af.",
+  "collabRoomSeriesReadyHint": "Alle delen zijn binnen. Voeg ze samen!"
 }

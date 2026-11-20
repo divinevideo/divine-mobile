@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
@@ -145,16 +144,17 @@ class _RecordingProgressBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (:totalDuration, :activeDuration) = ref.watch(
+    final (:totalDuration, :activeDuration, :limit) = ref.watch(
       clipManagerProvider.select(
         (s) => (
           totalDuration: s.totalDuration,
           activeDuration: s.activeRecordingDuration,
+          limit: s.durationLimit,
         ),
       ),
     );
 
-    final maxMs = VideoEditorConstants.maxDuration.inMilliseconds;
+    final maxMs = limit.inMilliseconds;
     final currentMs = (totalDuration + activeDuration).inMilliseconds;
     // Under max: primary fills up, remaining (disabled bg) shrinks.
     // Over max: primary is capped at maxDuration, primaryContainer grows

@@ -2,6 +2,7 @@
 // ABOUTME: the people in the room, and the host's or member's next step
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' show MediaStream;
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/collab_room/bloc/collab_room_cubit.dart';
 import 'package:openvine/collab_room/call/collab_room_call_cubit.dart';
@@ -23,6 +25,8 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_cell_shape_widgets.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The room screen under its [CollabRoomCubit].
@@ -211,7 +215,9 @@ class _RoomContent extends StatelessWidget {
           Padding(padding: _sides, child: CollabRoomCallControls()),
           SizedBox(height: 16),
           Padding(padding: _sides, child: _Notice()),
+          _ArrangementPicker(),
           _LayoutChoices(),
+          _LobbyControls(),
           SizedBox(height: 16),
           Padding(padding: _sides, child: _Members()),
           SizedBox(height: 24),
@@ -222,8 +228,31 @@ class _RoomContent extends StatelessWidget {
   }
 }
 
+/// The space between two frames of the preview of a room in series, as a
+/// fraction of a frame's width.
+const _seriesFrameSpacing = 0.05;
+
+/// Where each of [count] frames sits in the preview of a room in series:
+/// side by side in play order, as fractions of a strip [_seriesStripAspect]
+/// wide, each the shape of the video.
+List<({Rect rect, SplitScreenCellShape shape})> _seriesCells(int count) {
+  final width = 1 / (count + _seriesFrameSpacing * (count - 1));
+  return [
+    for (var i = 0; i < count; i++)
+      (
+        rect: Rect.fromLTWH(i * width * (1 + _seriesFrameSpacing), 0, width, 1),
+        shape: SplitScreenCellShape.rectangle,
+      ),
+  ];
+}
+
+/// Width / height of the strip that shows [count] frames of [frame] in a row.
+double _seriesStripAspect(int count, double frame) =>
+    frame * (count + _seriesFrameSpacing * (count - 1));
+
 /// The video's frame with each person in their cell: their finished part
-/// once it is in, their avatar until then.
+/// once it is in, their avatar until then. In series, one frame per part in
+/// the order they play.
 class _LayoutPreview extends StatelessWidget {
   const _LayoutPreview();
 
@@ -235,23 +264,31 @@ class _LayoutPreview extends StatelessWidget {
     final room = state.room!;
     final frame = room.frameAspectRatio;
     final layout = state.layout;
-    final cells =
-        layout?.cells(aspectRatio: frame.value, gap: collabRoomCellGap) ??
-        const [
-          (
-            rect: Rect.fromLTWH(0, 0, 1, 1),
-            shape: SplitScreenCellShape.rectangle,
-          ),
-        ];
-    CollabRoomMember? occupant(int cell) => room.phase == CollabRoomPhase.lobby
+    final inLobby = room.phase == CollabRoomPhase.lobby;
+    final series = state.inSeries;
+    final seatCount = math.max(
+      1,
+      inLobby ? state.lobbySeats.length : room.participants.length,
+    );
+    final cells = series
+        ? _seriesCells(seatCount)
+        : layout?.cells(aspectRatio: frame.value, gap: state.gap) ??
+              const [
+                (
+                  rect: Rect.fromLTWH(0, 0, 1, 1),
+                  shape: SplitScreenCellShape.rectangle,
+                ),
+              ];
+    CollabRoomMember? occupant(int cell) => inLobby
         ? state.lobbySeats.elementAtOrNull(cell)
         : room.memberInCell(cell);
     final canSwapSeats =
         room.isAuthor &&
-        room.phase == CollabRoomPhase.lobby &&
+        inLobby &&
         state.lobbySeats.length >= collabRoomMinParticipants;
+    // In series every part keeps its own sound.
     final canPickSound =
-        room.isAuthor && room.phase == CollabRoomPhase.recording;
+        room.isAuthor && room.phase == CollabRoomPhase.recording && !series;
     final call = context.select(
       (CollabRoomCallCubit? cubit) => cubit?.state.call,
     );
@@ -268,7 +305,9 @@ class _LayoutPreview extends StatelessWidget {
       constraints: const BoxConstraints(maxHeight: _maxHeight),
       child: Center(
         child: AspectRatio(
-          aspectRatio: frame.value,
+          aspectRatio: series
+              ? _seriesStripAspect(seatCount, frame.value)
+              : frame.value,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final size = constraints.biggest;
@@ -281,8 +320,10 @@ class _LayoutPreview extends StatelessWidget {
               return ClipRRect(
                 borderRadius: .circular(12),
                 child: ColoredBox(
-                  // Fixed media chrome: the gaps are part of the video.
-                  color: VineTheme.backgroundColor,
+                  // The gaps are part of the video, in the colour the host
+                  // picked whatever the appearance. In series nothing sits
+                  // between the parts.
+                  color: series ? VineTheme.transparent : state.borderColor,
                   child: Stack(
                     children: [
                       for (final (index, (:rect, :shape)) in cells.indexed)
@@ -316,8 +357,12 @@ class _LayoutPreview extends StatelessWidget {
                             ),
                             hasSound:
                                 room.phase == CollabRoomPhase.recording &&
+                                !series &&
                                 occupant(index)?.pubkey ==
                                     state.effectiveSoundPubkey,
+                            order: series && occupant(index) != null
+                                ? index + 1
+                                : null,
                             isSelected: state.selectedSeat == index,
                             tapLabel: canSwapSeats
                                 ? context.l10n.collabRoomSwapSeatSemanticLabel
@@ -383,6 +428,7 @@ class _Cell extends StatelessWidget {
     required this.isSelected,
     required this.tapLabel,
     required this.onTap,
+    this.order,
   });
 
   /// The cell's shape in its rect.
@@ -410,6 +456,9 @@ class _Cell extends StatelessWidget {
   /// What tapping the cell does, for screen readers.
   final String tapLabel;
   final VoidCallback? onTap;
+
+  /// When the part plays, counted from 1, in a room in series.
+  final int? order;
 
   @override
   Widget build(BuildContext context) {
@@ -457,6 +506,11 @@ class _Cell extends StatelessWidget {
               Positioned.fromRect(
                 rect: badgeAt(Alignment.topRight) & _Badge.size,
                 child: const _Badge(icon: DivineIconName.speakerHigh),
+              ),
+            if (order case final order?)
+              Positioned.fromRect(
+                rect: badgeAt(Alignment.bottomLeft) & _Badge.size,
+                child: _OrderBadge(order: order),
               ),
             if (isMuted)
               Positioned.fromRect(
@@ -520,6 +574,35 @@ class _Badge extends StatelessWidget {
   }
 }
 
+/// When a part plays in a room in series, over its frame in the preview.
+class _OrderBadge extends StatelessWidget {
+  const _OrderBadge({required this.order});
+
+  final int order;
+
+  @override
+  Widget build(BuildContext context) {
+    // Fixed media chrome over footage, and a fixed size: a larger font would
+    // not fit the badge.
+    return ExcludeSemantics(
+      child: MediaQuery.withNoTextScaling(
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: VineTheme.scrim50,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$order',
+              style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// One line on where the room stands and what comes next.
 class _Notice extends StatelessWidget {
   const _Notice();
@@ -541,16 +624,25 @@ class _Notice extends StatelessWidget {
       CollabRoomPhase.lobby when myStatus == CollabRoomMemberStatus.invited =>
         l10n.collabRoomInviteCardBody,
       CollabRoomPhase.lobby => l10n.collabRoomWaitingForHost,
-      CollabRoomPhase.recording when room.isAuthor && !state.layoutFits =>
+      // In series the host's device seats whoever joined or left on its own.
+      CollabRoomPhase.recording
+          when room.isAuthor && !state.layoutFits && !room.inSeries =>
         room.participants.length > (room.layoutPreset?.cellCount ?? 0)
             ? l10n.collabRoomPickLayoutForAll
             : l10n.collabRoomPickNewLayout,
       CollabRoomPhase.recording
           when !room.parts.containsKey(room.ownerPubkey) =>
-        l10n.collabRoomFilmHint,
+        room.inSeries
+            ? l10n.collabRoomFilmSeriesHint(
+                _formatSeconds(room.partLength, l10n.localeName),
+              )
+            : l10n.collabRoomFilmHint,
       CollabRoomPhase.recording when room.isAuthor && !room.allPartsIn =>
         l10n.collabRoomComposeWaiting,
-      CollabRoomPhase.recording when room.isAuthor => l10n.collabRoomSoundHint,
+      CollabRoomPhase.recording when room.isAuthor =>
+        room.inSeries
+            ? l10n.collabRoomSeriesReadyHint
+            : l10n.collabRoomSoundHint,
       CollabRoomPhase.recording => l10n.collabRoomPartSent,
     };
     return Text(
@@ -570,8 +662,10 @@ class _LayoutChoices extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<CollabRoomCubit>().state;
     final room = state.room!;
+    // In series nothing shows the layout: the parts each fill the frame.
     final shows =
         room.isAuthor &&
+        !state.inSeries &&
         (room.phase == CollabRoomPhase.lobby ||
             (room.phase == CollabRoomPhase.recording && !state.layoutFits));
     final choices = state.layoutChoices;
@@ -633,6 +727,228 @@ class _LayoutChoices extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [length] in seconds with one decimal, as [locale] writes numbers.
+String _formatSeconds(Duration length, String locale) =>
+    NumberFormat('0.0', locale).format(length.inMilliseconds / 1000);
+
+/// Whether the parts play side by side or one after another: the host's
+/// pick before filming.
+class _ArrangementPicker extends StatelessWidget {
+  const _ArrangementPicker();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.vineColors;
+    final room = context.select((CollabRoomCubit c) => c.state.room!);
+    final arrangement = context.select(
+      (CollabRoomCubit c) => c.state.arrangement,
+    );
+    if (!room.isAuthor || room.phase != CollabRoomPhase.lobby) {
+      return const SizedBox.shrink();
+    }
+    final cubit = context.read<CollabRoomCubit>();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.controlFill,
+          borderRadius: .circular(10),
+          border: .all(color: colors.controlOutline),
+        ),
+        child: Row(
+          children: [
+            for (final (option, label) in [
+              (
+                CollabRoomArrangement.sideBySide,
+                l10n.collabRoomArrangementSideBySide,
+              ),
+              (CollabRoomArrangement.series, l10n.collabRoomArrangementSeries),
+            ])
+              _ArrangementSegment(
+                label: label,
+                selected: option == arrangement,
+                onTap: () => cubit.arrangementPicked(option),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrangementSegment extends StatelessWidget {
+  const _ArrangementSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const double _minTapTarget = 48;
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: _minTapTarget),
+            alignment: Alignment.center,
+            padding: const .symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: selected ? colors.controlSelectedFill : null,
+              borderRadius: .circular(10),
+              border: .all(
+                color: selected ? colors.accentBrand : VineTheme.transparent,
+              ),
+            ),
+            child: ExcludeSemantics(
+              child: Text(
+                label,
+                textAlign: .center,
+                style: VineTheme.labelMediumFont(
+                  color: selected ? colors.accentBrand : colors.mutedText,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The host's controls before filming: the gap between the cells and its
+/// colour side by side, or how long each part plays in series.
+class _LobbyControls extends StatelessWidget {
+  const _LobbyControls();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.vineColors;
+    final state = context.watch<CollabRoomCubit>().state;
+    final room = state.room!;
+    if (!room.isAuthor || room.phase != CollabRoomPhase.lobby) {
+      return const SizedBox.shrink();
+    }
+    final cubit = context.read<CollabRoomCubit>();
+    final labelStyle = VineTheme.bodySmallFont(color: colors.secondaryText);
+    if (!state.inSeries) {
+      final borderColor = state.borderColor;
+      return Padding(
+        padding: const .only(top: 16),
+        child: Column(
+          crossAxisAlignment: .stretch,
+          spacing: 8,
+          children: [
+            Padding(
+              padding: _sides,
+              child: _SliderRow(
+                label: l10n.videoEditorLayoutGapLabel,
+                labelStyle: labelStyle,
+                slider: DivineSlider(
+                  value: state.gap,
+                  max: SplitScreenLayoutGeometry.maxGap,
+                  semanticLabel: l10n.videoEditorLayoutGapLabel,
+                  onChanged: cubit.gapChanged,
+                ),
+              ),
+            ),
+            VideoEditorColorRow(
+              selected: borderColor,
+              padding: _sides,
+              semanticLabel: l10n.videoEditorLayoutBorderColorLabel,
+              onSelected: cubit.borderColorChanged,
+              onCustom: () async {
+                final picked = await showFullColorPicker(
+                  context,
+                  initialColor: borderColor,
+                );
+                if (picked != null) cubit.borderColorChanged(picked);
+              },
+            ),
+          ],
+        ),
+      );
+    }
+    const step = collabRoomPartLengthStep;
+    const min = collabRoomMinPartLength;
+    final max = collabRoomMaxPartLength(room.participants.length);
+    final seconds = _formatSeconds(state.partLength, l10n.localeName);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: .start,
+        spacing: 8,
+        children: [
+          Text(l10n.collabRoomSwapOrderHint, style: labelStyle),
+          _SliderRow(
+            label: l10n.collabRoomPartLengthLabel,
+            labelStyle: labelStyle,
+            value: l10n.libraryClipDuration(seconds),
+            slider: DivineSlider(
+              value: state.partLength.inMilliseconds / 1000,
+              min: min.inMilliseconds / 1000,
+              max: max.inMilliseconds / 1000,
+              divisions: (max - min).inMilliseconds ~/ step.inMilliseconds,
+              semanticLabel: l10n.collabRoomPartLengthLabel,
+              semanticValue: (value) => l10n.libraryClipDuration(
+                _formatSeconds(
+                  Duration(milliseconds: (value * 1000).round()),
+                  l10n.localeName,
+                ),
+              ),
+              onChanged: (value) => cubit.partLengthChanged(
+                Duration(milliseconds: (value * 1000).round()),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A label, a slider and, when given, the value it is set to, in one row.
+class _SliderRow extends StatelessWidget {
+  const _SliderRow({
+    required this.label,
+    required this.labelStyle,
+    required this.slider,
+    this.value,
+  });
+
+  final String label;
+  final TextStyle labelStyle;
+  final Widget slider;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = this.value;
+    return Row(
+      spacing: 12,
+      children: [
+        ExcludeSemantics(child: Text(label, style: labelStyle)),
+        Expanded(child: slider),
+        if (value != null)
+          ExcludeSemantics(child: Text(value, style: labelStyle)),
+      ],
     );
   }
 }
