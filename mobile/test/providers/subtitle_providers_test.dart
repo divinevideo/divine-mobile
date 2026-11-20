@@ -3,7 +3,9 @@
 // ABOUTME: and relay query fallback.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -294,6 +296,32 @@ void main() {
           tempRelays: any(named: 'tempRelays'),
         ),
       );
+    });
+
+    test('plays the file the first ref names when the embedded copy is '
+        'older', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      // The subtitle event the embedded copy comes from is replaced after
+      // the video names its new file, and that publish can fail (#11250).
+      const editedVtt = 'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nEdited\n';
+      final editedUrl = Uri.parse(
+        'https://media.divine.video/${sha256.convert(utf8.encode(editedVtt))}',
+      );
+      when(
+        () => mockHttpClient.get(editedUrl),
+      ).thenAnswer((_) async => http.Response(editedVtt, 200));
+
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: 'test-id',
+          textTrackRef: editedUrl.toString(),
+          textTrackContent: 'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nOld\n',
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Edited'));
     });
 
     test(
