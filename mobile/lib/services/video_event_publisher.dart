@@ -127,8 +127,7 @@ class VideoEventPublisher {
   /// Null disables the write (tests, callers with no storage wired).
   final PublishedEventLocalEcho? _publishedEventLocalEcho;
 
-  /// Reads the newest revision a republish rebuilds from, resolved at call
-  /// time so this long-lived publisher does not rebuild with the repository.
+  /// The videos repository a republish reads its newest revision from.
   final VideosRepository Function()? _videosRepositoryGetter;
   final SignedEventRelayPublisher _relayPublisher;
   late final VideoAudioPublisher _audioPublisher;

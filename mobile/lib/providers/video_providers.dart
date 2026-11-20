@@ -307,8 +307,9 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
   final profileRepository = ref.watch(profileRepositoryProvider);
   final profileStatsDao = ref.watch(databaseProvider).profileStatsDao;
   final savedSoundsService = ref.watch(savedSoundsServiceProvider);
+  final videosRepository = ref.watch(videosRepositoryProvider);
   final consentResolver = AudioReuseConsentResolver(
-    videosRepository: ref.watch(videosRepositoryProvider),
+    videosRepository: videosRepository,
   );
 
   // REST-first publish: POST the signed event to {eventPublishBaseUrl}/api/events with
@@ -351,9 +352,10 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
     publishedEventLocalEcho: PublishedEventLocalEcho(
       (event) => ref.read(videoLocalStorageProvider).saveEventsBatch([event]),
     ),
-    // ref.read at call time, for the same reason: the repository rebuilds
-    // with content filters and auth, and this provider must not.
-    videosRepositoryGetter: () => ref.read(videosRepositoryProvider),
+    // The watch above already rebuilds this provider with the repository, so
+    // hand over that instance. Reading `ref` here would throw for a publish
+    // still in flight on the instance that rebuild replaced.
+    videosRepositoryGetter: () => videosRepository,
   );
 }
 
