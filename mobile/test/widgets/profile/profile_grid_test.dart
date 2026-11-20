@@ -1401,6 +1401,53 @@ void main() {
       );
     }
 
+    testWidgets('keeps a tab flung behind an opaque route where it stopped', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          useNestedNavigator: true,
+          videos: videos(30),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final nested = tester.state<NestedScrollViewState>(
+        find.byType(NestedScrollView),
+      );
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -600),
+        4000,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      final inner = nested.innerController.positions.single;
+      expect(inner.isScrollingNotifier.value, isTrue);
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).last,
+      );
+      navigator.push<void>(
+        PageRouteBuilder<void>(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const SizedBox.shrink(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      final hiddenPixels = inner.pixels;
+      expect(hiddenPixels, greaterThan(0));
+      await tester.pump(const Duration(seconds: 2));
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(inner.pixels, equals(hiddenPixels));
+    });
+
     testWidgets('keeps a visible fling going when the view padding changes', (
       tester,
     ) async {
