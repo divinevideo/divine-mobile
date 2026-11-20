@@ -175,7 +175,8 @@ void main() {
       },
     );
 
-    test('uploads VTT, publishes 39307, republishes with both refs', () async {
+    test('uploads VTT, republishes the video with both refs, then publishes '
+        '39307', () async {
       when(
         () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
       ).thenAnswer(
@@ -209,13 +210,20 @@ void main() {
 
       expect(updated, _updatedVideo);
 
-      verify(
+      // The video names the subtitle event before it is replaced, so a video
+      // republish that fails leaves the captions every revision serves alone.
+      verifyInOrder([
         () => publisher.republishWithSubtitles(
           existingEvent: _video,
           textTrackRef: 'https://media.divine.video/hash',
           extraTextTrackRefs: const ['39307:pk1:subtitles:my-vine-id'],
         ),
-      ).called(1);
+        () => publisher.publishSubtitleEvent(
+          video: _updatedVideo,
+          vttContent: any(named: 'vttContent'),
+          blossomUrl: 'https://media.divine.video/hash',
+        ),
+      ]);
     });
 
     test('keeps the region in the selected caption language when the copy '
@@ -324,9 +332,8 @@ void main() {
       );
     });
 
-    test(
-      'throws SubtitleEditException when subtitle event publish fails',
-      () async {
+    group('after the Blossom upload', () {
+      setUp(() {
         when(
           () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
         ).thenAnswer(
@@ -336,6 +343,44 @@ void main() {
             videoId: 'hash',
           ),
         );
+      });
+
+      test('publishes no subtitle event when the video republish '
+          'fails', () async {
+        when(
+          () => publisher.republishWithSubtitles(
+            existingEvent: any(named: 'existingEvent'),
+            textTrackRef: any(named: 'textTrackRef'),
+            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        await expectLater(
+          repo.publishEditedSubtitles(video: _video, cues: _cues),
+          throwsA(isA<SubtitleEditException>()),
+        );
+
+        verifyNever(
+          () => publisher.publishSubtitleEvent(
+            video: any(named: 'video'),
+            vttContent: any(named: 'vttContent'),
+            blossomUrl: any(named: 'blossomUrl'),
+            lang: any(named: 'lang'),
+          ),
+        );
+      });
+
+      test('returns the republished video when only the subtitle event '
+          'publish fails', () async {
+        when(
+          () => publisher.republishWithSubtitles(
+            existingEvent: any(named: 'existingEvent'),
+            textTrackRef: any(named: 'textTrackRef'),
+            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+          ),
+        ).thenAnswer((_) async => _updatedVideo);
         when(
           () => publisher.publishSubtitleEvent(
             video: any(named: 'video'),
@@ -345,12 +390,14 @@ void main() {
           ),
         ).thenAnswer((_) async => null);
 
-        expect(
-          () => repo.publishEditedSubtitles(video: _video, cues: _cues),
-          throwsA(isA<SubtitleEditException>()),
+        final updated = await repo.publishEditedSubtitles(
+          video: _video,
+          cues: _cues,
         );
-      },
-    );
+
+        expect(updated, _updatedVideo);
+      });
+    });
 
     group('refuses before uploading anything', () {
       for (final (reason, revision) in [
