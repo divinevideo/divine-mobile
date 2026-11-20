@@ -1,5 +1,5 @@
 // ABOUTME: Normalized identity for videos shared inside DM messages.
-// ABOUTME: Resolves legacy Divine URLs and structured q references consistently.
+// ABOUTME: Resolves NIP-19 and legacy Divine URLs and structured q references.
 
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
@@ -15,27 +15,34 @@ class DmVideoTarget {
     this.routeReference,
   });
 
-  /// Stable id used by Divine video URLs. Repository lookups go through
-  /// [routeId], which is this id unless the share is addressable and names a
-  /// hex author.
+  /// The video's `d` tag, or the event id of a regular event. Repository
+  /// lookups go through [routeId].
   final String stableId;
 
-  /// Author as a structured NIP-18 reference carried it, or else as the URL's
-  /// `?author=` query named it. Routing uses it only when it is a hex pubkey.
+  /// Author named by the URL's `naddr`/`nevent`, else by a citing NIP-18
+  /// reference, else by the URL's `?author=` query. Routing uses it only when
+  /// it is a hex pubkey.
   final String? authorPubkey;
 
-  /// NIP-71 video event kind when supplied by a structured reference.
+  /// NIP-71 video event kind, from the URL's `naddr` or a structured
+  /// reference; an `nevent` URL is taken as kind 22.
   final int? videoKind;
 
-  /// Original NIP-19 reference, retained so strict addresses never become
-  /// legacy raw coordinates while travelling through DM preview widgets.
+  /// The URL's `naddr`/`nevent`, re-encoded from its decoded fields, kept so
+  /// routing stays exact: an `naddr` never degrades to a raw coordinate that
+  /// matches any kind, nor an `nevent` to a bare id also looked up as a `d`
+  /// tag.
   final String? routeReference;
 
   /// Canonical web URL for copying or sharing this video.
   ///
-  /// Names the author when one is known, so the link opens this account's
-  /// video rather than whichever account posted last under the same `d` tag
-  /// (#10929).
+  /// Echoes [routeReference] when the message carried one, and encodes a
+  /// regular event as an `nevent`. Any other share keeps the legacy link,
+  /// which names the author when one is known so it opens this account's video
+  /// rather than whichever account posted last under the same `d` tag
+  /// (#10929). An addressable share stays legacy because a raw coordinate's
+  /// kind may be the 34236 alias Divine once used for kind 34235 videos, and an
+  /// `naddr` of the wrong kind resolves to nothing.
   String get canonicalUrl {
     final reference = routeReference;
     if (reference != null) return 'https://divine.video/video/$reference';
@@ -52,9 +59,10 @@ class DmVideoTarget {
 
   /// The repository route this video resolves by.
   ///
-  /// An addressable share with a known author resolves by its coordinate
-  /// alone: the bare d tag names no author, and another account's video can
-  /// share it (#10384).
+  /// A NIP-19 reference routes as itself, and a regular event with a hex id
+  /// as an `nevent`, so neither is also looked up as a `d` tag. An addressable
+  /// share with a known author resolves by its coordinate alone: the bare d
+  /// tag names no author, and another account's video can share it (#10384).
   String get routeId {
     final reference = routeReference;
     if (reference != null) return reference;
@@ -69,8 +77,8 @@ class DmVideoTarget {
   }
 
   /// The author a lookup of [routeId] is held to, when [routeId] does not
-  /// already name one: a regular-event share routes by its event id, which
-  /// the repository also looks up as a `d` tag anyone can publish under.
+  /// already name one: a bare hex or d-tag route is also looked up as a `d`
+  /// tag anyone can publish under.
   String? get routeAuthor =>
       _authorScopedCoordinate == null ? _routingAuthor : null;
 
@@ -106,11 +114,13 @@ class DmVideoTarget {
 
 /// Resolves the video represented by a DM's plaintext and structured citation.
 ///
-/// Canonical Divine URLs remain the primary stable identity for compatibility
-/// with older messages. A valid NIP-18 `q` reference contributes author/kind
-/// routing metadata when it cites the URL's video (a regular-event reference,
-/// or an addressable one naming the same d tag), or supplies the identity when
-/// no URL is present.
+/// A Divine URL in the text is the primary identity. An `naddr` or `nevent`
+/// URL carries its own identity and overrides the citation; one that does not
+/// decode to a video resolves to null rather than to a `d`-tag lookup. For a
+/// legacy URL, a valid NIP-18 `q` reference contributes its author when it
+/// cites the URL's video (a regular-event reference, or an addressable one
+/// naming the same d tag), and its kind only when it cites the URL's own id.
+/// With no URL, the reference supplies the identity.
 ///
 /// When [contentIsTruncated] is true, [content] is a bounded prefix of the
 /// full body and a URL match that runs to its end, or into a cut author query,

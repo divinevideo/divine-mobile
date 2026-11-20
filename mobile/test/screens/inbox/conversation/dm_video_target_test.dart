@@ -226,7 +226,7 @@ void main() {
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
       expect(target.routeId, NIP19Tlv.encodeNevent(Nevent(id: eventId)));
-      // A hex route is also looked up as a d tag, so the author travels with it.
+      // The nevent is exact, but the lookup is still held to the cited author.
       expect(target.routeAuthor, author);
       expect(
         target.canonicalUrl,
