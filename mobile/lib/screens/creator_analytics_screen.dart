@@ -1150,9 +1150,12 @@ class _PostStatsMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final (status, liveMinutes) = context.select(
-      (PostAnalyticsDetailCubit cubit) =>
-          (cubit.state.status, cubit.state.liveMinutes),
+    final (status, liveMinutes, running) = context.select(
+      (PostAnalyticsDetailCubit cubit) => (
+        cubit.state.status,
+        cubit.state.liveMinutes,
+        cubit.state.liveActivityRunning,
+      ),
     );
     final message = switch (status) {
       PostAnalyticsDetailStatus.nothingYet => l10n.analyticsNoViewsYet(
@@ -1171,7 +1174,7 @@ class _PostStatsMessage extends StatelessWidget {
           style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
         ),
         _ViewPostButton(videoId: videoId),
-        const _StopLiveActivityButton(),
+        if (running) const _StopLiveActivityButton(),
       ],
     );
   }
@@ -1182,6 +1185,9 @@ class _PostStatsCouldNotLoad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final running = context.select(
+      (PostAnalyticsDetailCubit cubit) => cubit.state.liveActivityRunning,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       spacing: 16,
@@ -1195,7 +1201,8 @@ class _PostStatsCouldNotLoad extends StatelessWidget {
           label: context.l10n.analyticsRetry,
           onPressed: context.read<PostAnalyticsDetailCubit>().retry,
         ),
-        const _StopLiveActivityButton(),
+        // Added only while running so the column leaves no gap for it.
+        if (running) const _StopLiveActivityButton(),
       ],
     );
   }

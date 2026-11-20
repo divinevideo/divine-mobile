@@ -1242,6 +1242,31 @@ void main() {
         });
       });
 
+      group('a message with Stop hidden', () {
+        for (final (state, lastButton) in [
+          (PostAnalyticsDetailStatus.cantFind, l10n.analyticsViewPost),
+          (PostAnalyticsDetailStatus.couldNotLoad, l10n.analyticsRetry),
+        ]) {
+          testWidgets('$state ends at its last button, with no gap', (
+            tester,
+          ) async {
+            await pumpView(
+              tester,
+              PostAnalyticsDetailState(status: state, coordinate: coordinate),
+            );
+            final button = find.widgetWithText(DivineButton, lastButton);
+            final column = find
+                .ancestor(of: button, matching: find.byType(Column))
+                .first;
+
+            expect(
+              tester.getRect(button).bottom,
+              equals(tester.getRect(column).bottom),
+            );
+          });
+        }
+      });
+
       testWidgets('Stop only while the Lock Screen activity runs', (
         tester,
       ) async {
