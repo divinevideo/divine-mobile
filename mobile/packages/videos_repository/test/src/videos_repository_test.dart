@@ -14226,7 +14226,7 @@ void main() {
         expect(result!.id, equals(eventId));
       });
 
-      for (final source in ['REST', 'cache']) {
+      for (final source in ['REST', 'cache', 'relay']) {
         test(
           'an naddr rejects the same author and d tag under the wrong kind '
           'from $source',
@@ -14240,9 +14240,11 @@ void main() {
               videoUrl: 'https://example.com/video.mp4',
               createdAt: 1739350000,
             );
-            when(
-              () => mockNostrClient.queryEvents(any()),
-            ).thenAnswer((_) async => <Event>[]);
+            // A relay answers every filter the event satisfies, so only the
+            // naddr's exact-kind query keeps it out.
+            _answerQueriesFrom(mockNostrClient, [
+              if (source == 'relay') event,
+            ]);
             when(
               () => mockFunnelcakeClient.getVideoEvent('shared-kind'),
             ).thenAnswer((_) async => source == 'REST' ? event : null);
