@@ -604,7 +604,7 @@ void main() {
       expect(sharedText, 'https://divine.video/l/Abc12345');
     });
 
-    testWidgets('a failing OS share is logged rather than left unhandled', (
+    testWidgets('a failing OS share does not escape as an unhandled error', (
       tester,
     ) async {
       var shareCalls = 0;
