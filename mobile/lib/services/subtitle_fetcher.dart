@@ -226,32 +226,6 @@ Future<SubtitleFetchResult?> _fetchTranslation({
   }
 }
 
-/// Resolves subtitle cues with ordered fallback.
-///
-/// When [lang] and [sha256] are supplied, try a verified translation first.
-/// A pending, failed, or unmarked response immediately falls back to the
-/// original chain; translation requests never poll or replace creator captions
-/// with an unmarked server transcript.
-///
-/// Original strategy (first source with cues wins): embedded content, then
-/// HTTP/relay refs, then the plain Blossom URL with bounded transcription polling.
-/// [sourcePreference] can place refs before embedded content for the editor.
-///
-/// A source that resolves to zero cues does not end the chain — the next
-/// source still gets a turn. When no source yields cues, the returned status
-/// says why: [SubtitleFetchStatus.processing] if any source reported the track
-/// is still being generated, [SubtitleFetchStatus.empty] if a track was served
-/// but held no cues, otherwise [SubtitleFetchStatus.unavailable].
-///
-/// Only a body carrying the WebVTT signature counts as a served track — see
-/// [SubtitleFetchResult.fromBody].
-///
-/// [isCancelled] reports that the caller no longer wants the result: its
-/// provider was disposed or rebuilt. An account switch disposes the container
-/// that owns [httpClient], and closing that client fails an in-flight request.
-/// Once cancelled the chain stops trying sources and polling, and records a
-/// failure at debug level rather than as a warning, since nobody is waiting on
-/// the subtitles (#10290).
 /// Whether [embedded] captions are the file [primaryRef] names.
 ///
 /// A Blossom ref names its file by SHA-256, and a subtitle save republishes
@@ -271,6 +245,34 @@ bool embeddedCaptionsMatchRef(String embedded, String? primaryRef) {
 
 final _contentHash = RegExp(r'^[0-9a-fA-F]{64}$');
 
+/// Resolves subtitle cues with ordered fallback.
+///
+/// When [lang] and [sha256] are supplied, try a verified translation first.
+/// A pending, failed, or unmarked response immediately falls back to the
+/// original chain; translation requests never poll or replace creator captions
+/// with an unmarked server transcript.
+///
+/// Original strategy (first source with cues wins): embedded content, then
+/// HTTP/relay refs, then the plain Blossom URL with bounded transcription polling.
+/// Embedded content goes after the refs instead when it is older than the file
+/// the first ref names ([embeddedCaptionsMatchRef]), or when [sourcePreference]
+/// places refs first for the editor.
+///
+/// A source that resolves to zero cues does not end the chain — the next
+/// source still gets a turn. When no source yields cues, the returned status
+/// says why: [SubtitleFetchStatus.processing] if any source reported the track
+/// is still being generated, [SubtitleFetchStatus.empty] if a track was served
+/// but held no cues, otherwise [SubtitleFetchStatus.unavailable].
+///
+/// Only a body carrying the WebVTT signature counts as a served track — see
+/// [SubtitleFetchResult.fromBody].
+///
+/// [isCancelled] reports that the caller no longer wants the result: its
+/// provider was disposed or rebuilt. An account switch disposes the container
+/// that owns [httpClient], and closing that client fails an in-flight request.
+/// Once cancelled the chain stops trying sources and polling, and records a
+/// failure at debug level rather than as a warning, since nobody is waiting on
+/// the subtitles (#10290).
 Future<SubtitleFetchResult> fetchSubtitleCues({
   required http.Client httpClient,
   required NostrClient? nostrClient,
