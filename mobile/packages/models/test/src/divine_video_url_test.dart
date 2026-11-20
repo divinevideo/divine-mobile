@@ -316,6 +316,22 @@ void main() {
         'https://divine.video/video/old-tag?author=$author',
       );
     });
+
+    test('encodes a legacy id itself, so callers pass it unencoded', () {
+      expect(
+        divineVideoShareUrl('folder/clip:1', authorPubkey: author, kind: null),
+        'https://divine.video/video/folder%2Fclip%3A1?author=$author',
+      );
+    });
+
+    test('falls back to the legacy link for a d tag over 255 bytes', () {
+      // 256 UTF-8 bytes: one too many for a NIP-19 TLV entry.
+      final dTag = '🙂' * 64;
+      expect(
+        divineVideoShareUrl(dTag, authorPubkey: author, kind: 34236),
+        'https://divine.video/video/${'%F0%9F%99%82' * 64}?author=$author',
+      );
+    });
   });
 
   group('divineVideoUrlWithAuthor', () {
