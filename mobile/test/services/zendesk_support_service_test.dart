@@ -1119,6 +1119,232 @@ void main() {
         isNot(contains('reporter@example.com')),
       );
     });
+
+    group('outcome', () {
+      // A retry service gives up on a refused ticket and keeps retrying the
+      // rest, so a status in the wrong bucket either loses a ticket or retries
+      // one forever.
+      for (final (status, outcome) in [
+        (400, ZendeskTicketOutcome.rejected),
+        (403, ZendeskTicketOutcome.rejected),
+        (422, ZendeskTicketOutcome.rejected),
+        (408, ZendeskTicketOutcome.failed),
+        (429, ZendeskTicketOutcome.failed),
+        (500, ZendeskTicketOutcome.failed),
+        (503, ZendeskTicketOutcome.failed),
+      ]) {
+        test('is ${outcome.name} for an HTTP $status', () async {
+          await initializeWithCreateTicketFailures([
+            PlatformException(
+              code: 'CREATE_FAILED',
+              message: 'HTTP $status',
+              details: {
+                'status': status,
+                'networkError': false,
+                'authFailed': false,
+              },
+            ),
+          ]);
+
+          final result = await ZendeskSupportService.createTicketWithOutcome(
+            subject: 'Content Report',
+            description: 'Test report',
+          );
+
+          expect(result, outcome);
+        });
+      }
+
+      test('is failed, not rejected, for the 400 the Android SDK sends when '
+          'it cannot authenticate', () async {
+        const authFailure = {
+          'status': 400,
+          'networkError': false,
+          'authFailed': true,
+        };
+        await initializeWithCreateTicketFailures([
+          PlatformException(
+            code: 'CREATE_FAILED',
+            message: 'Response body was null, failed to auth user.',
+            details: authFailure,
+          ),
+          PlatformException(
+            code: 'CREATE_FAILED',
+            message: 'Response body was null, failed to auth user.',
+            details: authFailure,
+          ),
+        ]);
+
+        final result = await ZendeskSupportService.createTicketWithOutcome(
+          subject: 'Content Report',
+          description: 'Test report',
+        );
+
+        expect(result, ZendeskTicketOutcome.failed);
+      });
+
+      test('is failed for a network error', () async {
+        await initializeWithCreateTicketFailures([
+          PlatformException(
+            code: 'CREATE_FAILED',
+            message: 'Unable to resolve host',
+            details: {'status': -1, 'networkError': true, 'authFailed': false},
+          ),
+        ]);
+
+        final result = await ZendeskSupportService.createTicketWithOutcome(
+          subject: 'Content Report',
+          description: 'Test report',
+        );
+
+        expect(result, ZendeskTicketOutcome.failed);
+      });
+    });
+  });
+
+  // Zendesk Android SDK 5.1.2 on an SDK app set up for JWT, as its
+  // ZendeskAccessInterceptor and Support.provider() behave: an anonymous
+  // identity is refused with a synthetic 400 and the SDK clears its stored
+  // identity, a token the JWT endpoint rejects fails without clearing it, and
+  // with no identity the bridge answers NO_IDENTITY.
+  group('ZendeskSupportService.createTicket on a JWT SDK app', () {
+    late List<String> calls;
+    late String? sdkIdentity;
+    late bool sdkAcceptsJwt;
+    late bool refreshSucceeds;
+    late bool Function(int refresh) zendeskAcceptsToken;
+    late DateTime now;
+    var refreshes = 0;
+
+    setUp(() async {
+      calls = [];
+      sdkIdentity = null;
+      sdkAcceptsJwt = false;
+      refreshSucceeds = true;
+      zendeskAcceptsToken = (_) => true;
+      now = DateTime.utc(2026, 11, 19, 17);
+      refreshes = 0;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            calls.add(call.method);
+            switch (call.method) {
+              case 'setUserIdentity':
+                sdkIdentity = 'anonymous';
+                return true;
+              case 'createTicket':
+                switch (sdkIdentity) {
+                  case null:
+                    throw PlatformException(
+                      code: 'NO_IDENTITY',
+                      message: 'Set an identity before creating a ticket',
+                    );
+                  case 'anonymous':
+                    sdkIdentity = null;
+                    throw PlatformException(
+                      code: 'CREATE_FAILED',
+                      message:
+                          'The expected type of authentication is jwt. '
+                          'The local identity is present.\n'
+                          'The local identity is anonymous.',
+                      details: {
+                        'status': 400,
+                        'networkError': false,
+                        'authFailed': true,
+                        'expectedAuth': 'jwt',
+                      },
+                    );
+                }
+                if (!sdkAcceptsJwt) {
+                  throw PlatformException(
+                    code: 'CREATE_FAILED',
+                    message: 'Response body was null, failed to auth user.',
+                    details: {
+                      'status': 400,
+                      'networkError': false,
+                      'authFailed': true,
+                    },
+                  );
+                }
+                return true;
+            }
+            return true;
+          });
+
+      ZendeskSupportService.setTestHooks(
+        now: () => now,
+        jwtIdentityRefresh:
+            ({required nip98Service, required relayManagerUrl}) async {
+              refreshes++;
+              calls.add('refreshJwt');
+              if (!refreshSucceeds) return false;
+              sdkIdentity = 'jwt';
+              sdkAcceptsJwt = zendeskAcceptsToken(refreshes);
+              return true;
+            },
+      );
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      ZendeskSupportService.setUserIdentity(
+        npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
+        displayName: 'Test User',
+      );
+      ZendeskSupportService.storeAuthContext(
+        nip98Service: _FakeNip98AuthService(),
+        relayManagerUrl: 'https://test-relay.divine.video',
+      );
+      calls.clear();
+    });
+
+    Future<bool> createReportTicket() => ZendeskSupportService.createTicket(
+      subject: 'Content Report',
+      description: 'Test report',
+    );
+
+    test('retries a rejected JWT with a fresh one, not an anonymous identity '
+        'the app refuses', () async {
+      // The first pre-auth token is refused by the JWT endpoint.
+      zendeskAcceptsToken = (refresh) => refresh > 1;
+
+      final created = await createReportTicket();
+
+      expect(created, isTrue);
+      expect(calls, [
+        'refreshJwt',
+        'createTicket',
+        'refreshJwt',
+        'createTicket',
+      ]);
+    });
+
+    test('sets a JWT again when the SDK dropped the one it was given '
+        'moments ago', () async {
+      expect(await createReportTicket(), isTrue);
+      // A 401 makes the SDK clear its stored identity.
+      sdkIdentity = null;
+      now = now.add(const Duration(minutes: 1));
+      calls.clear();
+
+      final created = await createReportTicket();
+
+      expect(created, isTrue);
+      expect(calls, ['createTicket', 'refreshJwt', 'createTicket']);
+    });
+
+    test('does not fall back to an anonymous identity when the app expects '
+        'JWT and none can be set', () async {
+      refreshSucceeds = false;
+      await ZendeskSupportService.setAnonymousIdentityWithUserInfo();
+      calls.clear();
+
+      final created = await createReportTicket();
+
+      expect(created, isFalse);
+      expect(calls, ['refreshJwt', 'createTicket', 'refreshJwt']);
+    });
   });
 
   group('ZendeskSupportService identity consistency', () {
