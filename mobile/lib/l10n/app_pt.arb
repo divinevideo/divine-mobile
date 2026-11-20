@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Trocar câmera",
   "videoRecorderToggleDualCameraLabel": "Gravar com as duas câmeras",
   "videoRecorderDualCameraSwapLabel": "Inverter câmeras",
+  "videoRecorderDualCameraShapeHint": "Alternar entre retrato e quadrado",
   "videoRecorderZoomLevelLabel": "Zoom para {zoom}×",
   "videoRecorderToggleGridLabel": "Alternar grade",
   "videoRecorderToggleGhostFrameLabel": "Alternar quadro fantasma",

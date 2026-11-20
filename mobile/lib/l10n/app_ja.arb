@@ -3481,6 +3481,7 @@
   "videoRecorderSwitchCameraLabel": "カメラを切り替え",
   "videoRecorderToggleDualCameraLabel": "両方のカメラで撮影",
   "videoRecorderDualCameraSwapLabel": "カメラを入れ替え",
+  "videoRecorderDualCameraShapeHint": "縦長と正方形を切り替え",
   "videoRecorderZoomLevelLabel": "{zoom}× にズーム",
   "videoRecorderTapToStartLabel": "どこかタップして録画を開始",
   "videoRecorderToggleAspectRatioLabel": "アスペクト比を切り替え",

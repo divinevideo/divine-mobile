@@ -2199,6 +2199,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              secondaryPipScale: any(named: 'secondaryPipScale'),
+              secondaryPipRotation: any(named: 'secondaryPipRotation'),
+              secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
             ),
           ).thenReturn(take);
           when(() => clipManager.saveClipToLibrary(take)).thenAnswer(
@@ -2277,6 +2280,9 @@ void main() {
                 targetAspectRatio: any(named: 'targetAspectRatio'),
                 lensMetadata: any(named: 'lensMetadata'),
                 secondaryPipCenter: any(named: 'secondaryPipCenter'),
+                secondaryPipScale: any(named: 'secondaryPipScale'),
+                secondaryPipRotation: any(named: 'secondaryPipRotation'),
+                secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
               ),
             ).thenReturn(clip);
 
@@ -2352,6 +2358,9 @@ void main() {
                 lensMetadata: any(named: 'lensMetadata'),
                 limitClipDuration: any(named: 'limitClipDuration'),
                 secondaryPipCenter: any(named: 'secondaryPipCenter'),
+                secondaryPipScale: any(named: 'secondaryPipScale'),
+                secondaryPipRotation: any(named: 'secondaryPipRotation'),
+                secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
               ),
             );
             verifyNever(() => clipManager.saveClipToLibrary(any()));
@@ -2390,6 +2399,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              secondaryPipScale: any(named: 'secondaryPipScale'),
+              secondaryPipRotation: any(named: 'secondaryPipRotation'),
+              secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
             ),
           ).thenReturn(
             DivineVideoClip(

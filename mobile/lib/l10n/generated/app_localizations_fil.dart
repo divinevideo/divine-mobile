@@ -9128,6 +9128,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Pagpalitin ang mga camera';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Magpalit sa pagitan ng patayo at parisukat';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'I-zoom sa $zoom×';
   }

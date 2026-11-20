@@ -2854,6 +2854,7 @@
   "videoRecorderSwitchCameraLabel": "Смени камерата",
   "videoRecorderToggleDualCameraLabel": "Запис с двете камери",
   "videoRecorderDualCameraSwapLabel": "Размени камерите",
+  "videoRecorderDualCameraShapeHint": "Превключи между вертикален и квадратен формат",
   "videoRecorderZoomLevelLabel": "Мащабиране до {zoom}×",
   "videoRecorderToggleGridLabel": "Превключване на мрежата",
   "videoRecorderToggleGhostFrameLabel": "Превключване на призрачна рамка",

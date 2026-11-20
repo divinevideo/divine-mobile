@@ -9063,6 +9063,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'کیمرے آپس میں بدلیں';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'عمودی اور مربع کے درمیان تبدیل کریں';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom× تک زوم کریں';
   }

@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/services/video_recorder/dual_camera_thumbnail_composer.dart';
 import 'package:path/path.dart' as p;
@@ -43,11 +45,17 @@ void main() {
     Future<img.Image> compose(
       Offset center, {
       double targetAspectRatio = frameWidth / frameHeight,
+      double scale = 1,
+      double rotation = 0,
+      model.AspectRatio shape = model.AspectRatio.vertical,
     }) async {
       final result = await composeDualCameraThumbnail(
         mainThumbnailPath: mainPath,
         secondaryThumbnailPath: secondPath,
         pipCenter: center,
+        pipScale: scale,
+        pipRotation: rotation,
+        pipAspectRatio: shape,
         targetAspectRatio: targetAspectRatio,
         outputPath: outputPath,
       );
@@ -87,6 +95,34 @@ void main() {
         expect(isBlue(composite.getPixel(200, top.round() - 4)), isTrue);
       },
     );
+
+    test(
+      'draws a pinched and turned window as the viewfinder showed it',
+      () async {
+        final composite = await compose(
+          const Offset(0.5, 0.5),
+          scale: 1.5,
+          rotation: math.pi / 2,
+        );
+
+        // 180 by 320 upright, so lying on its side it reaches 160 left and
+        // right of the centre and only 90 up and down.
+        expect(isRed(composite.getPixel(350, 400)), isTrue);
+        expect(isBlue(composite.getPixel(380, 400)), isTrue);
+        expect(isBlue(composite.getPixel(200, 530)), isTrue);
+      },
+    );
+
+    test('draws a square window as tall as it is wide', () async {
+      final composite = await compose(
+        const Offset(0.5, 0.5),
+        shape: model.AspectRatio.square,
+      );
+
+      // 120 wide, so 60 above and below the centre instead of 107.
+      expect(isRed(composite.getPixel(200, 400 + 50)), isTrue);
+      expect(isBlue(composite.getPixel(200, 400 + 75)), isTrue);
+    });
 
     test('rounds the corners like the viewfinder window', () async {
       final composite = await compose(const Offset(0.5, 0.5));

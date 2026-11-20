@@ -3481,6 +3481,7 @@
   "videoRecorderSwitchCameraLabel": "تبديل الكاميرا",
   "videoRecorderToggleDualCameraLabel": "التسجيل بالكاميرتين معًا",
   "videoRecorderDualCameraSwapLabel": "تبديل الكاميرتين",
+  "videoRecorderDualCameraShapeHint": "التبديل بين الوضع الطولي والمربع",
   "videoRecorderZoomLevelLabel": "تكبير إلى {zoom}×",
   "videoRecorderTapToStartLabel": "اضغط في أي مكان لبدء التسجيل",
   "videoRecorderToggleAspectRatioLabel": "تبديل نسبة العرض إلى الارتفاع",

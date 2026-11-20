@@ -15191,6 +15191,12 @@ abstract class AppLocalizations {
   /// **'Swap cameras'**
   String get videoRecorderDualCameraSwapLabel;
 
+  /// Screen-reader hint for the long press on the small second-camera window in the recorder; a long press switches the window between a portrait (9:16) and a square (1:1) shape.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between portrait and square'**
+  String get videoRecorderDualCameraShapeHint;
+
   /// Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.
   ///
   /// In en, this message translates to:

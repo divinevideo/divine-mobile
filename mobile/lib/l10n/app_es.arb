@@ -2621,6 +2621,7 @@
   "videoRecorderSwitchCameraLabel": "Cambiar cámara",
   "videoRecorderToggleDualCameraLabel": "Grabar con las dos cámaras",
   "videoRecorderDualCameraSwapLabel": "Intercambiar cámaras",
+  "videoRecorderDualCameraShapeHint": "Cambiar entre vertical y cuadrado",
   "videoRecorderZoomLevelLabel": "Zoom a {zoom}×",
   "videoRecorderToggleGridLabel": "Mostrar u ocultar cuadrícula",
   "videoRecorderToggleGhostFrameLabel": "Mostrar u ocultar fotograma fantasma",

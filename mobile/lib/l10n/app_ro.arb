@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Schimbă camera",
   "videoRecorderToggleDualCameraLabel": "Filmează cu ambele camere",
   "videoRecorderDualCameraSwapLabel": "Inversează camerele",
+  "videoRecorderDualCameraShapeHint": "Comută între vertical și pătrat",
   "videoRecorderZoomLevelLabel": "Zoom la {zoom}×",
   "videoRecorderToggleGridLabel": "Activează/dezactivează grila",
   "videoRecorderToggleGhostFrameLabel": "Activează/dezactivează cadrul fantomă",

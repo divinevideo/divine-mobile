@@ -5381,6 +5381,7 @@
   "videoRecorderSwitchCameraLabel": "కెమెరాను మార్చండి",
   "videoRecorderToggleDualCameraLabel": "రెండు కెమెరాలతో రికార్డ్ చేయండి",
   "videoRecorderDualCameraSwapLabel": "కెమెరాలను మార్చుకోండి",
+  "videoRecorderDualCameraShapeHint": "నిలువు మరియు చతురస్రం మధ్య మార్చండి",
   "videoRecorderZoomLevelLabel": "దీనికి జూమ్ చేయండి {zoom}×",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",

@@ -9270,6 +9270,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Inversează camerele';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Comută între vertical și pătrat';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoom la $zoom×';
   }

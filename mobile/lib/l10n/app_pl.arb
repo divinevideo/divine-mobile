@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Przełącz aparat",
   "videoRecorderToggleDualCameraLabel": "Nagrywaj oboma aparatami",
   "videoRecorderDualCameraSwapLabel": "Zamień aparaty",
+  "videoRecorderDualCameraShapeHint": "Przełącz między pionowym a kwadratowym",
   "videoRecorderZoomLevelLabel": "Powiększ do {zoom}×",
   "videoRecorderToggleGridLabel": "Przełącz siatkę",
   "videoRecorderToggleGhostFrameLabel": "Przełącz klatkę odniesienia",

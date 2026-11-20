@@ -1920,6 +1920,7 @@
   "videoRecorderSwitchCameraLabel": "Magpalit ng camera",
   "videoRecorderToggleDualCameraLabel": "Mag-record gamit ang dalawang camera",
   "videoRecorderDualCameraSwapLabel": "Pagpalitin ang mga camera",
+  "videoRecorderDualCameraShapeHint": "Magpalit sa pagitan ng patayo at parisukat",
   "videoRecorderZoomLevelLabel": "I-zoom sa {zoom}×",
   "videoRecorderToggleGridLabel": "I-toggle ang grid",
   "videoRecorderToggleGhostFrameLabel": "I-toggle ang ghost frame",

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,9 @@ void main() {
       String id, {
       Duration duration = const Duration(seconds: 4),
       Offset pipCenter = SecondaryCameraTake.defaultPipCenter,
+      double pipScale = 1,
+      double pipRotation = 0,
+      model.AspectRatio pipAspectRatio = model.AspectRatio.vertical,
     }) => SecondaryCameraTake(
       clip: DivineVideoClip(
         id: id,
@@ -48,6 +52,9 @@ void main() {
         volume: 0,
       ),
       pipCenter: pipCenter,
+      pipScale: pipScale,
+      pipRotation: pipRotation,
+      pipAspectRatio: pipAspectRatio,
     );
 
     List<WidgetLayer> layersFor(
@@ -168,6 +175,49 @@ void main() {
       final height = width / (9 / 16);
       expect(layer.offset.dx, closeTo((canvas.width - width) / 2, 1e-9));
       expect(layer.offset.dy, closeTo(-(canvas.height - height) / 2, 1e-9));
+    });
+
+    test('pinches and turns the layer like the viewfinder window, whole '
+        'inside the frame', () {
+      final layer = layersFor([
+        clip(
+          'a',
+          take: take(
+            'a_second',
+            pipCenter: const Offset(1, 0),
+            pipScale: 1.5,
+            pipRotation: math.pi / 2,
+          ),
+        ),
+      ]).single;
+
+      expect(layer.scale, 1.5);
+      expect(layer.rotation, math.pi / 2);
+      // 486 by 864 upright, so on its side it covers 864 by 486.
+      expect(layer.offset.dx, closeTo((canvas.width - 864) / 2, 1e-6));
+      expect(layer.offset.dy, closeTo(-(canvas.height - 486) / 2, 1e-6));
+    });
+
+    test('masks a square window to the middle of the second picture, whole '
+        'inside the frame', () {
+      final layer = layersFor([
+        clip(
+          'a',
+          take: take(
+            'a_second',
+            pipCenter: const Offset(0.5, 0),
+            pipAspectRatio: model.AspectRatio.square,
+          ),
+        ),
+      ]).single;
+
+      final width = canvas.width * SecondaryCameraTake.pipWidthFraction;
+      expect(layer.width, closeTo(width, 1e-9));
+      expect(layer.mask?.center, const Offset(0.5, 0.5));
+      expect(layer.mask?.size.width, closeTo(1, 1e-9));
+      expect(layer.mask?.size.height, closeTo(9 / 16, 1e-9));
+      // Kept inside by the square it shows, not by the taller layer box.
+      expect(layer.offset.dy, closeTo(-(canvas.height - width) / 2, 1e-6));
     });
 
     group('a square take', () {

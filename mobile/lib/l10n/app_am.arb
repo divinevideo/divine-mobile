@@ -3244,6 +3244,7 @@
   "videoRecorderSwitchCameraLabel": "ካሜራ ቀይር",
   "videoRecorderToggleDualCameraLabel": "በሁለቱም ካሜራዎች ቅረጽ",
   "videoRecorderDualCameraSwapLabel": "ካሜራዎችን አቀያይር",
+  "videoRecorderDualCameraShapeHint": "በቁም እና በካሬ መካከል ቀይር",
   "videoRecorderZoomLevelLabel": "ወደ {zoom}× አጉላ",
   "videoRecorderToggleGridLabel": "ፍርግርግ ቀያይር",
   "videoRecorderToggleGhostFrameLabel": "የGhost ፍሬም ሁኔታ ቀይር",

@@ -76,6 +76,9 @@ class VideoRecorderBlocState extends Equatable {
     this.isDualCameraChosen = false,
     this.secondaryPreviewTextureId,
     this.dualCameraPipCenter = SecondaryCameraTake.defaultPipCenter,
+    this.dualCameraPipScale = 1.0,
+    this.dualCameraPipRotation = 0.0,
+    this.dualCameraPipAspectRatio = model.AspectRatio.vertical,
     this.hasFlash = true,
     this.isScreenFlashActive = false,
     this.countdownValue = 0,
@@ -181,6 +184,18 @@ class VideoRecorderBlocState extends Equatable {
   /// there.
   final Offset dualCameraPipCenter;
 
+  /// How much the creator pinched the second camera's window larger or
+  /// smaller; see [SecondaryCameraTake.pipScale].
+  final double dualCameraPipScale;
+
+  /// How far the creator turned the second camera's window, in radians
+  /// clockwise; see [SecondaryCameraTake.pipRotation].
+  final double dualCameraPipRotation;
+
+  /// The second camera's window shape, portrait or square; see
+  /// [SecondaryCameraTake.pipAspectRatio].
+  final model.AspectRatio dualCameraPipAspectRatio;
+
   /// Whether the camera has flash capability.
   final bool hasFlash;
 
@@ -251,8 +266,8 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether the capture rail lists every control with its name, rather than
   /// only flash, lens and aspect ratio.
   ///
-  /// Folds back when a take or a stop-motion interval starts, and a recorder
-  /// opened anew starts folded.
+  /// Folds back when a take or a stop-motion interval starts or dual-camera
+  /// capture is turned on or off, and a recorder opened anew starts folded.
   final bool isActionRailExpanded;
 
   /// True while [VideoRecorderRecordingStartRequested] is in-flight (between
@@ -510,6 +525,9 @@ class VideoRecorderBlocState extends Equatable {
     int? secondaryPreviewTextureId,
     bool clearSecondaryPreviewTextureId = false,
     Offset? dualCameraPipCenter,
+    double? dualCameraPipScale,
+    double? dualCameraPipRotation,
+    model.AspectRatio? dualCameraPipAspectRatio,
     bool? hasFlash,
     bool? isScreenFlashActive,
     int? countdownValue,
@@ -575,6 +593,11 @@ class VideoRecorderBlocState extends Equatable {
           ? null
           : (secondaryPreviewTextureId ?? this.secondaryPreviewTextureId),
       dualCameraPipCenter: dualCameraPipCenter ?? this.dualCameraPipCenter,
+      dualCameraPipScale: dualCameraPipScale ?? this.dualCameraPipScale,
+      dualCameraPipRotation:
+          dualCameraPipRotation ?? this.dualCameraPipRotation,
+      dualCameraPipAspectRatio:
+          dualCameraPipAspectRatio ?? this.dualCameraPipAspectRatio,
       hasFlash: hasFlash ?? this.hasFlash,
       isScreenFlashActive: isScreenFlashActive ?? this.isScreenFlashActive,
       countdownValue: countdownValue ?? this.countdownValue,
@@ -651,6 +674,9 @@ class VideoRecorderBlocState extends Equatable {
     isDualCameraChosen,
     secondaryPreviewTextureId,
     dualCameraPipCenter,
+    dualCameraPipScale,
+    dualCameraPipRotation,
+    dualCameraPipAspectRatio,
     hasFlash,
     isScreenFlashActive,
     countdownValue,

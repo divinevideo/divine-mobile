@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_camera/divine_camera.dart'
     show SecondaryCameraPreviewWidget;
@@ -35,15 +38,23 @@ void main() {
     Future<void> pump(
       WidgetTester tester, {
       Offset center = SecondaryCameraTake.defaultPipCenter,
+      double scale = 1,
+      double rotation = 0,
+      model.AspectRatio shape = model.AspectRatio.vertical,
       VideoRecorderState recordingState = VideoRecorderState.idle,
       Size box = frame,
       model.AspectRatio aspectRatio = model.AspectRatio.vertical,
+      Stream<VideoRecorderBlocState>? states,
     }) async {
+      if (states != null) when(() => bloc.stream).thenAnswer((_) => states);
       when(() => bloc.state).thenReturn(
         VideoRecorderBlocState(
           isDualCameraEnabled: true,
           secondaryPreviewTextureId: 2,
           dualCameraPipCenter: center,
+          dualCameraPipScale: scale,
+          dualCameraPipRotation: rotation,
+          dualCameraPipAspectRatio: shape,
           recordingState: recordingState,
           cameraSensorAspectRatio: 9 / 16,
           aspectRatio: aspectRatio,
@@ -84,6 +95,75 @@ void main() {
         );
         expect(rect.center.dx, closeTo(frame.width * 0.25, 0.01));
         expect(rect.center.dy, closeTo(frame.height * 0.5, 0.01));
+      });
+
+      testWidgets('shows the window as large and as turned as it was left', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          center: const Offset(0.5, 0.5),
+          scale: 1.5,
+          rotation: 0.5,
+        );
+
+        final size = tester.getSize(find.byType(SecondaryCameraPreviewWidget));
+        expect(
+          size.width,
+          closeTo(
+            frame.width * SecondaryCameraTake.pipWidthFraction * 1.5,
+            0.01,
+          ),
+        );
+        final turn = tester.widget<Transform>(
+          find
+              .ancestor(
+                of: find.byType(SecondaryCameraPreviewWidget),
+                matching: find.byType(Transform),
+              )
+              .first,
+        );
+        expect(turn.transform.storage[1], closeTo(math.sin(0.5), 1e-9));
+      });
+
+      testWidgets('shows a square window as tall as it is wide', (
+        tester,
+      ) async {
+        await pump(tester, shape: model.AspectRatio.square);
+
+        final size = tester.getSize(find.byType(SecondaryCameraPreviewWidget));
+        expect(
+          size.width,
+          closeTo(frame.width * SecondaryCameraTake.pipWidthFraction, 0.01),
+        );
+        expect(size.height, closeTo(size.width, 0.01));
+      });
+
+      testWidgets('eases into a new shape', (tester) async {
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        await pump(tester, states: states.stream);
+        final width = frame.width * SecondaryCameraTake.pipWidthFraction;
+
+        final square = bloc.state.copyWith(
+          dualCameraPipAspectRatio: model.AspectRatio.square,
+        );
+        when(() => bloc.state).thenReturn(square);
+        states.add(square);
+        await tester.pump();
+        await tester.pump(VideoRecorderDualCameraWindow.resizeDuration ~/ 2);
+
+        final halfway = tester.getSize(
+          find.byType(SecondaryCameraPreviewWidget),
+        );
+        expect(halfway.height, lessThan(width * 16 / 9));
+        expect(halfway.height, greaterThan(width));
+
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(find.byType(SecondaryCameraPreviewWidget)).height,
+          closeTo(width, 0.01),
+        );
       });
 
       testWidgets('rounds the window like the editor masks the take', (
@@ -147,7 +227,7 @@ void main() {
         expect(rect.left, closeTo(0, 0.01));
         final moved =
             verify(() => bloc.add(captureAny())).captured.single
-                as VideoRecorderDualCameraPipMoved;
+                as VideoRecorderDualCameraPipChanged;
         final frameLeft = (tall.width - frameWidth) / 2;
         expect(
           moved.center.dx,
@@ -181,9 +261,43 @@ void main() {
       testWidgets('tapping swaps the cameras', (tester) async {
         await pump(tester);
 
-        await tester.tap(window());
+        // A finger on the device stays down across frames.
+        final finger = await tester.startGesture(tester.getCenter(window()));
+        await tester.pump();
+        await finger.up();
+        await tester.pump();
 
         verify(() => bloc.add(const VideoRecorderCameraSwitched())).called(1);
+      });
+
+      testWidgets('a long press switches the window between portrait and '
+          'square', (tester) async {
+        await pump(tester);
+
+        await tester.longPress(window());
+
+        verify(
+          () => bloc.add(const VideoRecorderDualCameraPipShapeToggled()),
+        ).called(1);
+        verifyNever(() => bloc.add(const VideoRecorderCameraSwitched()));
+      });
+
+      testWidgets('two fingers that barely move do not swap the cameras', (
+        tester,
+      ) async {
+        await pump(tester);
+        final center = tester.getCenter(window());
+
+        final top = await tester.startGesture(center - const Offset(0, 20));
+        await tester.pump();
+        final bottom = await tester.startGesture(center + const Offset(0, 20));
+        await tester.pump();
+        await top.up();
+        await tester.pump();
+        await bottom.up();
+        await tester.pump();
+
+        verifyNever(() => bloc.add(const VideoRecorderCameraSwitched()));
       });
 
       testWidgets('does not swap while a take is recording', (tester) async {
@@ -204,9 +318,100 @@ void main() {
 
         final moved =
             verify(() => bloc.add(captureAny())).captured.single
-                as VideoRecorderDualCameraPipMoved;
-        expect(moved.center.dx, closeTo(0.5 - 40 / frame.width, 0.02));
-        expect(moved.center.dy, closeTo(0.5 + 80 / frame.height, 0.02));
+                as VideoRecorderDualCameraPipChanged;
+        expect(moved.center.dx, closeTo(0.5 - 40 / frame.width, 0.01));
+        expect(moved.center.dy, closeTo(0.5 + 80 / frame.height, 0.01));
+        expect(moved.scale, 1);
+        expect(moved.rotation, 0);
+      });
+
+      testWidgets('follows a dragging finger without easing', (tester) async {
+        await pump(tester, center: const Offset(0.5, 0.5));
+        final start = tester.getCenter(window());
+
+        final finger = await tester.startGesture(start);
+        await tester.pump();
+        await finger.moveBy(const Offset(30, 0));
+        await tester.pump();
+        await finger.moveBy(const Offset(10, 0));
+        await tester.pump();
+
+        expect(tester.getCenter(window()).dx, closeTo(start.dx + 40, 0.01));
+        await finger.up();
+      });
+
+      testWidgets('pinching the window resizes it', (tester) async {
+        await pump(tester, center: const Offset(0.5, 0.5));
+        final center = tester.getCenter(window());
+
+        final top = await tester.startGesture(center - const Offset(0, 40));
+        final bottom = await tester.startGesture(center + const Offset(0, 40));
+        await tester.pump();
+        await top.moveBy(const Offset(0, -20));
+        await tester.pump();
+        await bottom.moveBy(const Offset(0, 20));
+        await tester.pump();
+        await top.up();
+        await bottom.up();
+        await tester.pump();
+
+        final changed =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipChanged;
+        expect(changed.scale, closeTo(1.5, 0.01));
+        expect(changed.center.dy, closeTo(0.5, 0.01));
+      });
+
+      testWidgets(
+        'a second finger beside the window joins the pinch instead of the '
+        'viewfinder',
+        (tester) async {
+          await pump(tester, center: const Offset(0.5, 0.3));
+          final center = tester.getCenter(window());
+
+          final onWindow = await tester.startGesture(center);
+          await tester.pump();
+          // Below the window, which reaches 72 down from its center.
+          final beside = await tester.startGesture(
+            center + const Offset(0, 120),
+          );
+          await tester.pump();
+          await beside.moveBy(const Offset(0, 60));
+          await onWindow.up();
+          await beside.up();
+          await tester.pump();
+
+          final changed =
+              verify(() => bloc.add(captureAny())).captured.single
+                  as VideoRecorderDualCameraPipChanged;
+          expect(changed.scale, closeTo(1.5, 0.01));
+        },
+      );
+
+      testWidgets('turning the window settles it at a quarter turn when '
+          'close', (tester) async {
+        await pump(tester, center: const Offset(0.5, 0.5));
+        final center = tester.getCenter(window());
+
+        final left = await tester.startGesture(center - const Offset(30, 0));
+        final right = await tester.startGesture(center + const Offset(30, 0));
+        await tester.pump();
+        // Nearly a quarter turn clockwise: about 2.3° past it.
+        await left.moveTo(center - const Offset(-1.2, 30));
+        await right.moveTo(center + const Offset(-1.2, 30));
+        await left.up();
+        await right.up();
+        await tester.pump();
+
+        final changed =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipChanged;
+        // The fingers' turn may come out a full circle off; the recorder
+        // stores it the short way round.
+        expect(
+          changed.rotation % (2 * math.pi),
+          closeTo(math.pi / 2, 1e-12),
+        );
       });
     });
   });

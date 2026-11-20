@@ -321,7 +321,8 @@ class VideoRecorderBloc
       // while one runs would only undo it.
       transformer: droppable(),
     );
-    on<VideoRecorderDualCameraPipMoved>(_onDualCameraPipMoved);
+    on<VideoRecorderDualCameraPipChanged>(_onDualCameraPipChanged);
+    on<VideoRecorderDualCameraPipShapeToggled>(_onDualCameraPipShapeToggled);
     on<VideoRecorderStopMotionFrameCaptured>(
       _onStopMotionFrameCaptured,
       transformer: droppable(),
@@ -1497,6 +1498,9 @@ class VideoRecorderBloc
         captureChromaKey: captureChromaKey,
         secondaryRecording: secondaryRecording,
         secondaryPipCenter: state.dualCameraPipCenter,
+        secondaryPipScale: state.dualCameraPipScale,
+        secondaryPipRotation: state.dualCameraPipRotation,
+        secondaryPipAspectRatio: state.dualCameraPipAspectRatio,
       );
       if (ownsOriginalTimeline()) clipManager.resetRecording();
       await owner.retain(detached);
@@ -1512,6 +1516,9 @@ class VideoRecorderBloc
       captureChromaKey: captureChromaKey,
       secondaryRecording: secondaryRecording,
       secondaryPipCenter: state.dualCameraPipCenter,
+      secondaryPipScale: state.dualCameraPipScale,
+      secondaryPipRotation: state.dualCameraPipRotation,
+      secondaryPipAspectRatio: state.dualCameraPipAspectRatio,
     );
     final initialSave = clipManager.saveClipToLibrary(clip).then((saved) async {
       if (saved) return;
@@ -1680,6 +1687,9 @@ class VideoRecorderBloc
       mainThumbnailPath: mainThumbnail,
       secondaryThumbnailPath: secondThumbnail,
       pipCenter: take.pipCenter,
+      pipScale: take.pipScale,
+      pipRotation: take.pipRotation,
+      pipAspectRatio: take.pipAspectRatio,
       targetAspectRatio: clip.targetAspectRatio.value,
       outputPath: p.join(
         p.dirname(mainThumbnail),
@@ -2369,7 +2379,14 @@ class VideoRecorderBloc
     final enable = !dualCamera.isDualCameraEnabled;
     if (enable && !dualCamera.isDualCameraSupported) return;
 
-    emit(state.copyWith(isDualCameraChosen: enable));
+    emit(
+      state.copyWith(
+        isDualCameraChosen: enable,
+        // Either way the rail folds and leaves the viewfinder to the change
+        // the creator just made.
+        isActionRailExpanded: false,
+      ),
+    );
     await _reconcileDualCamera(emit, dualCamera);
   }
 
@@ -2406,16 +2423,40 @@ class VideoRecorderBloc
     }
   }
 
-  void _onDualCameraPipMoved(
-    VideoRecorderDualCameraPipMoved event,
+  void _onDualCameraPipChanged(
+    VideoRecorderDualCameraPipChanged event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    // Turned into -pi..pi, so a window spun around twice stores the same
+    // angle as one turned the short way.
+    final turn = event.rotation % (2 * math.pi);
     emit(
       state.copyWith(
         dualCameraPipCenter: Offset(
           event.center.dx.clamp(0.0, 1.0),
           event.center.dy.clamp(0.0, 1.0),
         ),
+        // The viewfinder may keep a turned window below the pinch's smallest
+        // size so it stays whole; it never grows past the largest.
+        dualCameraPipScale: event.scale.clamp(
+          0.0,
+          SecondaryCameraTake.pipMaxScale,
+        ),
+        dualCameraPipRotation: turn > math.pi ? turn - 2 * math.pi : turn,
+      ),
+    );
+  }
+
+  void _onDualCameraPipShapeToggled(
+    VideoRecorderDualCameraPipShapeToggled event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        dualCameraPipAspectRatio: switch (state.dualCameraPipAspectRatio) {
+          model.AspectRatio.vertical => model.AspectRatio.square,
+          model.AspectRatio.square => model.AspectRatio.vertical,
+        },
       ),
     );
   }
@@ -3042,7 +3083,7 @@ class VideoRecorderBloc
   /// rail, the timer setting, the take in flight, the navigation lock and the
   /// editor navigation in progress, the remote record pause, the stop-motion
   /// session and interval loop, the chroma-key setup, the dual-camera choice
-  /// and window position, and (while initialized) the screen flash carry over;
+  /// and window placement, and (while initialized) the screen flash carry over;
   /// flash resets to `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
@@ -3079,9 +3120,13 @@ class VideoRecorderBloc
             (_dualCamera?.isDualCameraSupported ?? false),
         isDualCameraEnabled: _dualCamera?.isDualCameraEnabled ?? false,
         secondaryPreviewTextureId: _dualCamera?.secondaryCamera?.textureId,
-        // Where the user dragged the window outlives a re-sync, a swap
-        // included, and so does the choice to film with both cameras.
+        // Where the user dragged, pinched and turned the window outlives a
+        // re-sync, a swap included, and so does the choice to film with both
+        // cameras.
         dualCameraPipCenter: state.dualCameraPipCenter,
+        dualCameraPipScale: state.dualCameraPipScale,
+        dualCameraPipRotation: state.dualCameraPipRotation,
+        dualCameraPipAspectRatio: state.dualCameraPipAspectRatio,
         isDualCameraChosen: state.isDualCameraChosen,
         videoStabilizationMode: _cameraService.videoStabilizationMode,
         availableVideoStabilizationModes:
