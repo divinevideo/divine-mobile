@@ -54,6 +54,7 @@ void main() {
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
+          allowUserInteraction: false,
         ),
       ).thenAnswer((invocation) async {
         if (!signerAvailable) return null;
@@ -91,6 +92,15 @@ void main() {
         final client = buildContainer().read(crosspostingApiClientProvider);
         await client.getCrossposts(eventId: eventId);
 
+        verify(
+          () => auth.createAndSignEvent(
+            kind: 27235,
+            content: '',
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+            allowUserInteraction: false,
+          ),
+        ).called(1);
         verifyNever(auth.getBoundDivineAccessToken);
         final headers = requests.single.headers;
         final authorization = headers['Authorization']!;
@@ -112,11 +122,7 @@ void main() {
 
       await expectLater(
         client.getCrossposts(eventId: eventId),
-        throwsA(
-          isA<CrosspostingApiException>()
-              .having((e) => e.statusCode, 'statusCode', 401)
-              .having((e) => e.code, 'code', 'unauthorized'),
-        ),
+        throwsA(isA<CrosspostingPassiveSigningUnavailable>()),
       );
       expect(requests, isEmpty);
     });
