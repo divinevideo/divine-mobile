@@ -43,7 +43,7 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show RankedSounds, SoundSearchRelays, SoundsRepository;
+    show RankedSounds, SoundSearchRelays, SoundSearchSource, SoundsRepository;
 
 import '../../../helpers/recording_analytics_event_sink.dart';
 import '../../../helpers/recording_performance_monitor.dart';
@@ -159,7 +159,10 @@ void main() {
         usageCounts: const <String, int>{},
       ),
       Map<String, List<AudioEvent>> searchResults = const {},
+      SoundSearchSource searchSource = SoundSearchSource.relays,
       SoundSearchRelays searchRelays = SoundSearchRelays.answered,
+      Map<String, String> searchCursors = const {},
+      SoundsRepository? soundsRepository,
       List<String>? relaySearches,
       AudioEvent? consentSound,
       bool? consentResult,
@@ -299,8 +302,19 @@ void main() {
               final sounds = pendingSearch != null && query.isNotEmpty
                   ? await pendingSearch.future
                   : searchResults[query] ?? const <AudioEvent>[];
-              return (sounds: sounds, relays: searchRelays);
+              return (
+                sounds: sounds,
+                source: searchSource,
+                relays: searchSource == SoundSearchSource.funnelcake
+                    ? SoundSearchRelays.notAsked
+                    : searchRelays,
+                usageCounts: const <String, int>{},
+                nextCursor: searchCursors[query],
+              );
             }),
+            // Only a later page of a search reads it.
+            if (soundsRepository != null)
+              soundsRepositoryProvider.overrideWithValue(soundsRepository),
           ],
           child: routed
               // Above a page to return to, as in the app, so Done can pop.
@@ -1643,6 +1657,85 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Crowd ambience'), findsOneWidget);
+      });
+
+      group('answered by Funnelcake', () {
+        testWidgets('shows what it found despite a typo, in its order', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'coalness': [
+                  _createTestAudioEvent(id: 'typo', title: 'Coolness lol'),
+                  // Ranked second by Funnelcake, though its title is what
+                  // was typed: ordered by fit, it would lead.
+                  _createTestAudioEvent(id: 'exact', title: 'Coalness'),
+                ],
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          await tester.enterText(find.byType(TextField).first, 'coalness');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Coolness lol'), findsOneWidget);
+          expect(
+            tester.getTopLeft(find.text('Coolness lol')).dy,
+            lessThan(tester.getTopLeft(find.text('Coalness')).dy),
+          );
+        });
+
+        testWidgets('loads the next page of what it found', (tester) async {
+          final repository = _MockSoundsRepository();
+          final onNextPage = _createTestAudioEvent(
+            id: 'next',
+            title: 'Cool late',
+          );
+          when(
+            () => repository.searchSounds('cool', cursor: '25'),
+          ).thenAnswer(
+            (_) async => (
+              sounds: [onNextPage],
+              source: SoundSearchSource.funnelcake,
+              relays: SoundSearchRelays.notAsked,
+              usageCounts: const <String, int>{},
+              nextCursor: null,
+            ),
+          );
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'cool': [
+                  _createTestAudioEvent(id: 'first', title: 'Cool beat'),
+                ],
+              },
+              searchCursors: const {'cool': '25'},
+              soundsRepository: repository,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          await tester.enterText(find.byType(TextField).first, 'cool');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Cool beat'), findsOneWidget);
+          expect(find.text('Cool late'), findsOneWidget);
+          verify(() => repository.searchSounds('cool', cursor: '25')).called(1);
+        });
       });
 
       testWidgets('keeps loaded matches on screen while the query settles', (
@@ -3013,6 +3106,7 @@ void main() {
           expect(trace.name, SoundPickerTelemetry.searchTraceName);
           expect(trace.attributes, {
             'outcome': 'results',
+            'source': 'relays',
             'result_bucket': '1_10',
           });
           expect(trace.metrics, {'result_count': 1});
@@ -3048,6 +3142,7 @@ void main() {
             expect(find.text('Rain on a tin roof'), findsOneWidget);
             expect(monitor.traces.single.attributes, {
               'outcome': 'fallback',
+              'source': 'relays',
               'reason': 'timed_out',
               'result_bucket': '1_10',
             });

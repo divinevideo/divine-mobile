@@ -134,19 +134,20 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], who
+/// answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -158,14 +159,86 @@ Future<SoundSearchResults> soundSearchResults(Ref ref, String query) async {
   // open does not construct one — and with it a Nostr client — for a query
   // nobody has typed yet.
   if (!soundSearchSendsQuery(query)) {
-    return (sounds: const <AudioEvent>[], relays: SoundSearchRelays.notAsked);
+    return (
+      sounds: const <AudioEvent>[],
+      source: SoundSearchSource.relays,
+      relays: SoundSearchRelays.notAsked,
+      usageCounts: const <String, int>{},
+      nextCursor: null,
+    );
   }
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.searchSounds(query);
 }
 
-/// Whether [soundSearchResultsProvider] sends [query] to the relays.
+/// Every page a search for [query] has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+@riverpod
+class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
+  late _SearchPager _pager;
+
+  @override
+  Future<PagedSounds> build(String query) async {
+    final first = await ref.watch(soundSearchResultsProvider(query).future);
+    // Made anew with each build, so a page still loading for the list this
+    // build replaced cannot move the new one's cursor. The repository is
+    // read only for a later page, which only a search that asked it has.
+    _pager = _SearchPager(
+      (cursor) => ref
+          .read(soundsRepositoryProvider)
+          .searchSounds(query, cursor: cursor),
+    );
+    return PagedSounds.first(_pager.take(first));
+  }
+
+  @override
+  Future<SoundPage> _nextPage() => _pager.next();
+}
+
+/// Walks the pages of a sound search, each holding only sounds the pages
+/// before it did not.
+class _SearchPager {
+  _SearchPager(this._search);
+
+  /// Asks for the page a cursor names.
+  final Future<SoundSearchResults> Function(String? cursor) _search;
+
+  final _seen = <String>{};
+  String? _cursor;
+
+  /// [results] as the list's next page, keeping where the page after it
+  /// starts for [next].
+  SoundPage take(SoundSearchResults results) {
+    _cursor = results.nextCursor;
+    // Funnelcake ranks while the list is paged through, so a sound can come
+    // round again on a later page.
+    return (
+      sounds: [
+        for (final sound in results.sounds)
+          if (_seen.add(sound.id)) sound,
+      ],
+      usageCounts: results.usageCounts,
+      hasMore: results.nextCursor != null,
+    );
+  }
+
+  /// The page after the last one taken.
+  Future<SoundPage> next() async => take(await _search(_cursor));
+}
+
+/// Whether [soundSearchResultsProvider] sends [query] out to be searched.
 ///
 /// A query with no search terms, or one holding a private key, is answered
 /// with no sounds before anything is asked.
@@ -606,17 +679,17 @@ Future<Map<String, SoundCover?>> forYouSoundCovers(Ref ref) async {
   return _coversFor(ref, pages);
 }
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 @riverpod
 Future<Map<String, SoundCover?>> soundSearchCovers(
   Ref ref,
   String query,
 ) async {
-  final (:sounds, relays: _) = await ref.watch(
-    soundSearchResultsProvider(query).future,
+  final pages = await ref.watch(
+    soundSearchPagesProvider(query).selectAsync((list) => list.pages),
   );
-  return _coversFor(ref, [sounds]);
+  return _coversFor(ref, pages);
 }
 
 /// How long the picker's lists and covers outlive the picker.

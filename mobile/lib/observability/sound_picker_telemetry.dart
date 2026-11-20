@@ -7,7 +7,7 @@ import 'package:analytics/analytics.dart';
 import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show SoundSearchRelays;
+    show SoundSearchRelays, SoundSearchSource;
 import 'package:unified_logger/unified_logger.dart';
 
 /// The sound picker's list tabs, as its load telemetry names them.
@@ -40,10 +40,11 @@ enum SoundPickOutcome {
 ///
 /// * `surface_load` for [AnalyticsSurface.soundPicker], once per tab: the
 ///   time from the tab opening until its list first shows.
-/// * A `sound_search` Firebase Performance trace per relay search, from the
-///   debounced query until its results arrive. A search the relays did not
-///   answer, which the picker covers with cached matches, ends as
-///   `fallback`, so it never counts as a relay result.
+/// * A `sound_search` Firebase Performance trace per search, from the
+///   debounced query until its first page arrives, with the `source` that
+///   answered it: Funnelcake, or the relays it falls back to. A search the
+///   relays did not answer either, which the picker covers with cached
+///   matches, ends as `fallback`, so it never counts as a result.
 /// * A `sound_selected` Analytics event when a pick is attached, refused or
 ///   fails.
 ///
@@ -57,7 +58,7 @@ class SoundPickerTelemetry {
        _analytics = analytics,
        _performanceMonitor = performanceMonitor;
 
-  /// The Firebase Performance trace timing a relay search.
+  /// The Firebase Performance trace timing a search.
   static const searchTraceName = 'sound_search';
 
   /// The Analytics event reporting how a pick ended.
@@ -146,7 +147,7 @@ class SoundPickerTelemetry {
     );
   }
 
-  /// Starts timing a relay search. One still in flight is reported
+  /// Starts timing a search. One still in flight is reported
   /// abandoned: the user searched for something else before it answered.
   void startSearch() {
     abandonSearch();
@@ -156,20 +157,27 @@ class SoundPickerTelemetry {
       ..start();
   }
 
-  /// Reports that the search in flight answered with [resultCount] sounds,
-  /// and how the relays answered it.
+  /// Reports that the search in flight answered with [resultCount] sounds on
+  /// its first page, who answered it, and how the relays answered it.
   ///
-  /// Only an answer from the relays is `results` or `empty`. Otherwise the
-  /// sounds are cached matches standing in for one, and the search ends as
-  /// `fallback`, with [relays] as its `reason`.
-  void completeSearch(int resultCount, {required SoundSearchRelays relays}) {
-    final reason = _fallbackReason(relays);
+  /// An answer from Funnelcake or the relays is `results` or `empty`.
+  /// Otherwise the sounds are cached matches standing in for the relays, and
+  /// the search ends as `fallback`, with [relays] as its `reason`.
+  void completeSearch(
+    int resultCount, {
+    required SoundSearchSource source,
+    required SoundSearchRelays relays,
+  }) {
+    final reason = source == SoundSearchSource.funnelcake
+        ? null
+        : _fallbackReason(relays);
     _finishSearch(
       reason != null
           ? 'fallback'
           : resultCount == 0
           ? 'empty'
           : 'results',
+      source: source,
       reason: reason,
       resultCount: resultCount,
     );
@@ -220,14 +228,19 @@ class SoundPickerTelemetry {
     );
   }
 
-  void _finishSearch(String outcome, {String? reason, int? resultCount}) {
+  void _finishSearch(
+    String outcome, {
+    SoundSearchSource? source,
+    String? reason,
+    int? resultCount,
+  }) {
     final search = _search;
     if (search == null) return;
     _search = null;
     _searchStopwatch.stop();
     Log.info(
-      'Sound search: outcome=$outcome, reason=${reason ?? '-'}, '
-      'results=${resultCount ?? '-'}, '
+      'Sound search: outcome=$outcome, source=${source?.name ?? '-'}, '
+      'reason=${reason ?? '-'}, results=${resultCount ?? '-'}, '
       '${_searchStopwatch.elapsedMilliseconds}ms',
       name: 'SoundPickerTelemetry',
       category: LogCategory.ui,
@@ -235,6 +248,7 @@ class SoundPickerTelemetry {
     search.finish(
       attributes: {
         'outcome': outcome,
+        'source': ?source?.name,
         'reason': ?reason,
         if (resultCount != null) 'result_bucket': _resultBucket(resultCount),
       },

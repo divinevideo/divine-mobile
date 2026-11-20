@@ -94,6 +94,21 @@ AudioEvent createTestAudioEvent({
   );
 }
 
+/// A page of a sound search that found [sounds], answered by [source].
+SoundSearchResults searchPage(
+  List<AudioEvent> sounds, {
+  SoundSearchSource source = SoundSearchSource.funnelcake,
+  SoundSearchRelays relays = SoundSearchRelays.notAsked,
+  Map<String, int> usageCounts = const {},
+  String? nextCursor,
+}) => (
+  sounds: sounds,
+  source: source,
+  relays: relays,
+  usageCounts: usageCounts,
+  nextCursor: nextCursor,
+);
+
 /// [sounds] followed by enough others to fill the screen, so a list whose
 /// first page this is does not load more by itself.
 List<AudioEvent> filledUp(List<AudioEvent> sounds) => [
@@ -961,8 +976,9 @@ void main() {
         when(
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
         ).thenAnswer(
-          (_) async => (
-            sounds: [createTestAudioEvent(id: 'found')],
+          (_) async => searchPage(
+            [createTestAudioEvent(id: 'found')],
+            source: SoundSearchSource.relays,
             relays: SoundSearchRelays.timedOut,
           ),
         );
@@ -1007,6 +1023,144 @@ void main() {
         verifyNever(
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
         );
+      });
+    });
+
+    group('soundSearchPagesProvider', () {
+      setUp(() {
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer() {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      void answerSearch(
+        SoundSearchResults Function(String? cursor) pageAt,
+      ) {
+        when(
+          () => mockRepository.searchSounds(
+            any(),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              pageAt(invocation.namedArguments[#cursor] as String?),
+        );
+      }
+
+      test('follows the cursor as the list is scrolled', () async {
+        final best = createTestAudioEvent(id: 'best');
+        final again = createTestAudioEvent(id: 'again');
+        final next = createTestAudioEvent(id: 'next');
+        answerSearch(
+          (cursor) => switch (cursor) {
+            null => searchPage(
+              [best, again],
+              usageCounts: {'best': 9, 'again': 2},
+              nextCursor: '50',
+            ),
+            _ => searchPage([again, next], usageCounts: {'next': 4}),
+          },
+        );
+        final container = buildContainer();
+        final subscription = container.listen(
+          soundSearchPagesProvider('cool'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        final first = await container.read(
+          soundSearchPagesProvider('cool').future,
+        );
+        expect(first.sounds, [best, again]);
+        expect(first.hasMore, isTrue);
+
+        await container
+            .read(soundSearchPagesProvider('cool').notifier)
+            .loadMore();
+
+        final result = container
+            .read(soundSearchPagesProvider('cool'))
+            .requireValue;
+        // The ranking moved, so a sound from the first page came round again.
+        expect(result.pages, [
+          [best, again],
+          [next],
+        ]);
+        expect(result.usageCounts, {'best': 9, 'again': 2, 'next': 4});
+        expect(result.hasMore, isFalse);
+        verify(() => mockRepository.searchSounds('cool', cursor: '50'))
+            .called(1);
+      });
+
+      test('keeps loading past a page that found nothing', () async {
+        final late = createTestAudioEvent(id: 'late');
+        answerSearch(
+          (cursor) => switch (cursor) {
+            null => searchPage(const [], nextCursor: '25'),
+            _ => searchPage([late]),
+          },
+        );
+        final container = buildContainer();
+        final subscription = container.listen(
+          soundSearchPagesProvider('cool'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        final first = await container.read(
+          soundSearchPagesProvider('cool').future,
+        );
+        expect(first.sounds, isEmpty);
+        expect(first.canLoadMore, isTrue);
+
+        await container
+            .read(soundSearchPagesProvider('cool').notifier)
+            .loadMore();
+
+        expect(
+          container.read(soundSearchPagesProvider('cool')).requireValue.sounds,
+          [late],
+        );
+      });
+
+      test('holds a relay answer as its only page', () async {
+        final found = createTestAudioEvent(id: 'found');
+        answerSearch(
+          (_) => searchPage(
+            [found],
+            source: SoundSearchSource.relays,
+            relays: SoundSearchRelays.answered,
+          ),
+        );
+
+        final result = await buildContainer().read(
+          soundSearchPagesProvider('cool').future,
+        );
+
+        expect(result.sounds, [found]);
+        expect(result.hasMore, isFalse);
+      });
+
+      test('reads no repository for a blank query', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final result = await container.read(
+          soundSearchPagesProvider('  ').future,
+        );
+
+        expect(result.sounds, isEmpty);
+        expect(result.hasMore, isFalse);
       });
     });
 
@@ -1833,6 +1987,42 @@ void main() {
           isTrue,
         );
         verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      });
+
+      test('covers the sounds of every page a search loaded', () async {
+        stubBothSourceVideos();
+        final [onFirstPage, onSecondPage] = soundsFrom(const [
+          verticalReference,
+          normalReference,
+        ]);
+        when(
+          () => mockRepository.searchSounds(
+            any(),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async => invocation.namedArguments[#cursor] == null
+              ? searchPage([onFirstPage], nextCursor: '50')
+              : searchPage([onSecondPage]),
+        );
+        final container = buildContainer(const []);
+        final subscription = container.listen(
+          soundSearchCoversProvider('clip'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await container.read(soundSearchCoversProvider('clip').future);
+
+        await container
+            .read(soundSearchPagesProvider('clip').notifier)
+            .loadMore();
+        await pumpEventQueue();
+        final covers = await container.read(
+          soundSearchCoversProvider('clip').future,
+        );
+
+        expect(covers.keys, containsAll([verticalReference, normalReference]));
       });
 
       group('reuse', () {

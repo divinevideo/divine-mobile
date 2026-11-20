@@ -5,7 +5,7 @@ import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/sound_picker_telemetry.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show SoundSearchRelays;
+    show SoundSearchRelays, SoundSearchSource;
 
 import '../helpers/recording_analytics_event_sink.dart';
 import '../helpers/recording_performance_monitor.dart';
@@ -218,12 +218,17 @@ void main() {
       test('times a search until its results arrive', () {
         telemetry
           ..startSearch()
-          ..completeSearch(23, relays: SoundSearchRelays.answered);
+          ..completeSearch(
+            23,
+            source: SoundSearchSource.relays,
+            relays: SoundSearchRelays.answered,
+          );
 
         final trace = monitor.traces.single;
         expect(trace.name, 'sound_search');
         expect(trace.attributes, {
           'outcome': 'results',
+          'source': 'relays',
           'result_bucket': '11_50',
         });
         expect(trace.metrics, {'result_count': 23});
@@ -234,7 +239,11 @@ void main() {
         for (final count in [0, 1, 10, 11, 50, 51]) {
           telemetry
             ..startSearch()
-            ..completeSearch(count, relays: SoundSearchRelays.answered);
+            ..completeSearch(
+              count,
+              source: SoundSearchSource.relays,
+              relays: SoundSearchRelays.answered,
+            );
         }
 
         expect(
@@ -254,27 +263,35 @@ void main() {
         ]) {
           telemetry
             ..startSearch()
-            ..completeSearch(3, relays: relays);
+            ..completeSearch(
+              3,
+              source: SoundSearchSource.relays,
+              relays: relays,
+            );
         }
 
         expect(monitor.traces.map((trace) => trace.attributes), [
           {
             'outcome': 'fallback',
+            'source': 'relays',
             'reason': 'timed_out',
             'result_bucket': '1_10',
           },
           {
             'outcome': 'fallback',
+            'source': 'relays',
             'reason': 'no_relays',
             'result_bucket': '1_10',
           },
           {
             'outcome': 'fallback',
+            'source': 'relays',
             'reason': 'relay_error',
             'result_bucket': '1_10',
           },
           {
             'outcome': 'fallback',
+            'source': 'relays',
             'reason': 'not_asked',
             'result_bucket': '1_10',
           },
@@ -288,13 +305,40 @@ void main() {
       test('reports a fallback with no cached matches as a fallback', () {
         telemetry
           ..startSearch()
-          ..completeSearch(0, relays: SoundSearchRelays.timedOut);
+          ..completeSearch(
+            0,
+            source: SoundSearchSource.relays,
+            relays: SoundSearchRelays.timedOut,
+          );
 
         expect(monitor.traces.single.attributes, {
           'outcome': 'fallback',
+          'source': 'relays',
           'reason': 'timed_out',
           'result_bucket': '0',
         });
+      });
+
+      test('reports a Funnelcake answer as results, not a fallback', () {
+        // Funnelcake answering is why the relays were not searched.
+        for (final count in [4, 0]) {
+          telemetry
+            ..startSearch()
+            ..completeSearch(
+              count,
+              source: SoundSearchSource.funnelcake,
+              relays: SoundSearchRelays.notAsked,
+            );
+        }
+
+        expect(monitor.traces.map((trace) => trace.attributes), [
+          {
+            'outcome': 'results',
+            'source': 'funnelcake',
+            'result_bucket': '1_10',
+          },
+          {'outcome': 'empty', 'source': 'funnelcake', 'result_bucket': '0'},
+        ]);
       });
 
       test('reports a failed search', () {
@@ -329,7 +373,11 @@ void main() {
 
       test('reports nothing while no search is in flight', () {
         telemetry
-          ..completeSearch(4, relays: SoundSearchRelays.answered)
+          ..completeSearch(
+            4,
+            source: SoundSearchSource.funnelcake,
+            relays: SoundSearchRelays.notAsked,
+          )
           ..failSearch()
           ..abandonSearch();
 

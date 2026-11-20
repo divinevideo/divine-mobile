@@ -250,19 +250,20 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
   }
 }
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], who
+/// answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -272,19 +273,20 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 @ProviderFor(soundSearchResults)
 final soundSearchResultsProvider = SoundSearchResultsFamily._();
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], who
+/// answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -301,19 +303,20 @@ final class SoundSearchResultsProvider
     with
         $FutureModifier<SoundSearchResults>,
         $FutureProvider<SoundSearchResults> {
-  /// Community sounds matching a free-text [query], and how the relays
-  /// answered it.
+  /// The first page of the community sounds matching a free-text [query], who
+  /// answered it and how the relays answered it.
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-  /// queries plus the in-memory cache for partial matches, and a
-  /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to no sounds without a round trip;
-  /// the caller shows the trending list instead of searching.
+  /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+  /// typo-tolerant search, ranked best match first, and when that cannot
+  /// answer, the relays' full-text and tag queries plus the in-memory cache,
+  /// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+  /// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+  /// queries resolve to no sounds without a round trip; the caller shows the
+  /// newest list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is up to two relay queries
-  /// per character.
+  /// distinct string, so feeding it raw keystrokes is a search per character.
   ///
   /// Usage:
   /// ```dart
@@ -364,21 +367,22 @@ final class SoundSearchResultsProvider
 }
 
 String _$soundSearchResultsHash() =>
-    r'9581d692eadc6ceb60bc77b533f34e8e4391a9c0';
+    r'b1eb964d928af106c265ff3debfa21d4286b21fa';
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], who
+/// answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -396,19 +400,20 @@ final class SoundSearchResultsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Community sounds matching a free-text [query], and how the relays
-  /// answered it.
+  /// The first page of the community sounds matching a free-text [query], who
+  /// answered it and how the relays answered it.
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-  /// queries plus the in-memory cache for partial matches, and a
-  /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to no sounds without a round trip;
-  /// the caller shows the trending list instead of searching.
+  /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+  /// typo-tolerant search, ranked best match first, and when that cannot
+  /// answer, the relays' full-text and tag queries plus the in-memory cache,
+  /// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+  /// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+  /// queries resolve to no sounds without a round trip; the caller shows the
+  /// newest list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is up to two relay queries
-  /// per character.
+  /// distinct string, so feeding it raw keystrokes is a search per character.
   ///
   /// Usage:
   /// ```dart
@@ -420,6 +425,177 @@ final class SoundSearchResultsFamily extends $Family
 
   @override
   String toString() => r'soundSearchResultsProvider';
+}
+
+/// Every page a search for [query] has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+@ProviderFor(SoundSearchPages)
+final soundSearchPagesProvider = SoundSearchPagesFamily._();
+
+/// Every page a search for [query] has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+final class SoundSearchPagesProvider
+    extends $AsyncNotifierProvider<SoundSearchPages, PagedSounds> {
+  /// Every page a search for [query] has loaded, starting with
+  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
+  /// its end ([SoundSearchPages.loadMore]).
+  ///
+  /// Only Funnelcake's answers have more than one page. Its pages can hold
+  /// fewer sounds than asked for, none even, and still not be the last, so the
+  /// list follows its cursor rather than counting sounds.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final results = ref.watch(soundSearchPagesProvider(query));
+  /// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+  /// ```
+  SoundSearchPagesProvider._({
+    required SoundSearchPagesFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundSearchPagesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundSearchPagesHash();
+
+  @override
+  String toString() {
+    return r'soundSearchPagesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  SoundSearchPages create() => SoundSearchPages();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundSearchPagesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundSearchPagesHash() => r'88517b009b1c4ad93f98171baafd058f7c79df55';
+
+/// Every page a search for [query] has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+final class SoundSearchPagesFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SoundSearchPages,
+          AsyncValue<PagedSounds>,
+          PagedSounds,
+          FutureOr<PagedSounds>,
+          String
+        > {
+  SoundSearchPagesFamily._()
+    : super(
+        retry: null,
+        name: r'soundSearchPagesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Every page a search for [query] has loaded, starting with
+  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
+  /// its end ([SoundSearchPages.loadMore]).
+  ///
+  /// Only Funnelcake's answers have more than one page. Its pages can hold
+  /// fewer sounds than asked for, none even, and still not be the last, so the
+  /// list follows its cursor rather than counting sounds.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final results = ref.watch(soundSearchPagesProvider(query));
+  /// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+  /// ```
+
+  SoundSearchPagesProvider call(String query) =>
+      SoundSearchPagesProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'soundSearchPagesProvider';
+}
+
+/// Every page a search for [query] has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+abstract class _$SoundSearchPages extends $AsyncNotifier<PagedSounds> {
+  late final _$args = ref.$arg as String;
+  String get query => _$args;
+
+  FutureOr<PagedSounds> build(String query);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
 }
 
 /// Family provider to fetch a single sound by event ID.
@@ -1379,14 +1555,14 @@ final class ForYouSoundCoversProvider
 
 String _$forYouSoundCoversHash() => r'f97f9dd50cfc07914a71b535d84b27f66548d148';
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 @ProviderFor(soundSearchCovers)
 final soundSearchCoversProvider = SoundSearchCoversFamily._();
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 final class SoundSearchCoversProvider
     extends
@@ -1398,8 +1574,8 @@ final class SoundSearchCoversProvider
     with
         $FutureModifier<Map<String, SoundCover?>>,
         $FutureProvider<Map<String, SoundCover?>> {
-  /// Covers for the sounds a community search reached, keyed like
-  /// [trendingSoundCovers].
+  /// Covers for the sounds a community search reached, on every page it has
+  /// loaded, keyed like [trendingSoundCovers].
   SoundSearchCoversProvider._({
     required SoundSearchCoversFamily super.from,
     required String super.argument,
@@ -1444,10 +1620,10 @@ final class SoundSearchCoversProvider
   }
 }
 
-String _$soundSearchCoversHash() => r'f3069cf397c4baf79fe2a9e32fe38d1e71fd510c';
+String _$soundSearchCoversHash() => r'b46b96e0cd15ca6d0fab0c5d31efe4fa2caff336';
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 final class SoundSearchCoversFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Map<String, SoundCover?>>, String> {
@@ -1460,8 +1636,8 @@ final class SoundSearchCoversFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Covers for the sounds a community search reached, keyed like
-  /// [trendingSoundCovers].
+  /// Covers for the sounds a community search reached, on every page it has
+  /// loaded, keyed like [trendingSoundCovers].
 
   SoundSearchCoversProvider call(String query) =>
       SoundSearchCoversProvider._(argument: query, from: this);
