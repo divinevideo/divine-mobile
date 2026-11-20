@@ -354,7 +354,6 @@ Future<void> _onConfirmationShare(
   String? authorPubkey,
 ) async {
   unawaited(container.read(postPublishExperimentProvider).shareTapped(offer));
-  // Preserve the OS share sheet assigned to the experiment's viewShare arm.
   final canonical = VideoSharingService.shareUrlForStableId(
     stableId,
     authorPubkey: authorPubkey,
@@ -364,6 +363,8 @@ Future<void> _onConfirmationShare(
   final shortener = container.read(shortLinkClientProvider);
   final url = await (shortener?.shorten(canonical) ?? Future.value(canonical));
   if (!context.mounted) return;
+  // The viewShare arm's treatment is the OS share sheet; moving Share into the
+  // in-app share menu is a new, separately named variant.
   await showShareSheetAtOrigin(
     ShareParams(text: url),
     sharePositionOrigin: sharePositionOrigin,
