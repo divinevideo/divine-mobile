@@ -8,12 +8,14 @@ import 'dart:io';
 import 'dart:ui' show Locale;
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:characters/characters.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/utils/nostr_timestamp.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -1182,6 +1184,96 @@ void main() {
           contains(equals(['summary', 'Caption from this edit'])),
         );
       });
+
+      // The editor stores the title and caption trimmed, and the caption cut
+      // to its limit, once any metadata field changes. Text that differs from
+      // the opened copy only by that was not edited, so a newer value from
+      // another device must win.
+      test('keeps a newer title and caption when this edit only trimmed '
+          'them', () async {
+        relaysHold(
+          newerRevision(
+            title: 'Title from the other device',
+            content: 'Caption from the other device',
+          ),
+        );
+        final opened = _testVideo(
+          title: '  Opened title ',
+          content: ' Opened caption\n',
+        );
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened).copyWith(
+            title: 'Opened title',
+            description: 'Opened caption',
+            tags: const {'fromthisedit'},
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags,
+          contains(equals(['title', 'Title from the other device'])),
+        );
+        expect(
+          capturedTags,
+          contains(equals(['summary', 'Caption from the other device'])),
+        );
+        expect(capturedTags, contains(equals(['t', 'fromthisedit'])));
+      });
+
+      test('keeps a newer caption when this edit only cut the opened one to '
+          'the limit', () async {
+        relaysHold(newerRevision(content: 'Caption from the other device'));
+        // One character but several code units each, so a cut by code unit
+        // would not match the editor's.
+        final longCaption =
+            '👍🏽' * (VideoEditorConstants.descriptionLimit + 1);
+        final opened = _testVideo(content: longCaption);
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(opened).copyWith(
+            description: longCaption.characters
+                .take(VideoEditorConstants.descriptionLimit)
+                .toString(),
+            tags: const {'fromthisedit'},
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags,
+          contains(equals(['summary', 'Caption from the other device'])),
+        );
+      });
+
+      test(
+        'publishes the cut caption when no other device changed it',
+        () async {
+          final longCaption = 'x' * (VideoEditorConstants.descriptionLimit + 1);
+          relaysHold(newerRevision(content: longCaption));
+          final opened = _testVideo(content: longCaption);
+          final cut = longCaption.substring(
+            0,
+            VideoEditorConstants.descriptionLimit,
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(
+              opened,
+            ).copyWith(description: cut),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['summary', cut])));
+        },
+      );
 
       test('stamps the replacement after the newer revision', () async {
         final newer = NostrTimestamp.now(driftTolerance: 0) + 1000;
