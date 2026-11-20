@@ -251,5 +251,90 @@ void main() {
 
       expect(cache.saved?.map((video) => video.id).toList(), ['3' * 64]);
     });
+
+    // NIP-01 keeps the lower id when two revisions share a created_at.
+    feedBlocTest(
+      'takes an announced revision with the same timestamp and a lower id',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('5')],
+      ),
+      act: (_) => replacements.add(_revision('3', title: 'Tie')),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+          'videos',
+          [('3' * 64, 'Tie')],
+        ),
+      ],
+    );
+
+    feedBlocTest(
+      'keeps the revision it holds when a tie has a higher id',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('3')],
+      ),
+      act: (_) => replacements.add(_revision('5', title: 'Tie')),
+      wait: Duration.zero,
+      expect: () => <VideoFeedBlocState>[],
+    );
+
+    late _MockVideosRepository rebuilt;
+    late StreamController<VideoEvent> rebuiltReplacements;
+    late StreamController<VideosRepository> repositories;
+
+    feedBlocTest(
+      'follows the replacements of a rebuilt repository',
+      setUp: () {
+        rebuilt = _MockVideosRepository();
+        rebuiltReplacements = StreamController<VideoEvent>.broadcast();
+        repositories = StreamController<VideosRepository>.broadcast(
+          sync: true,
+        );
+        addTearDown(rebuiltReplacements.close);
+        addTearDown(repositories.close);
+        when(
+          () => rebuilt.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(
+          () => rebuilt.replacedVideos,
+        ).thenAnswer((_) => rebuiltReplacements.stream);
+        when(() => rebuilt.isVideoKnownDeleted(any())).thenReturn(false);
+        when(() => rebuilt.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+      },
+      build: () => VideoFeedBloc(
+        videosRepository: videos,
+        replacedVideosStream: videos.replacedVideos,
+        removalRepositoryStream: repositories.stream,
+        followRepository: _MockFollowRepository(),
+        curatedListRepository: _MockCuratedListRepository(),
+        homeFeedCache: cache,
+      ),
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('1')],
+      ),
+      act: (_) async {
+        repositories.add(rebuilt);
+        await pumpEventQueue();
+        rebuiltReplacements.add(
+          _revision('3', createdAt: 1700000500, title: 'Edited'),
+        );
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+          'videos',
+          [('3' * 64, 'Edited')],
+        ),
+      ],
+    );
   });
 }
