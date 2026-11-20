@@ -204,17 +204,19 @@ class _VideoRecorderDualCameraWindowState
                     button: true,
                     enabled: state.canSwap,
                     label: context.l10n.videoRecorderDualCameraSwapLabel,
+                    // Screen-reader actions carry no fingers, so the touch
+                    // flags below do not apply to them.
+                    onTap: state.canSwap ? _swapCameras : null,
                     onLongPress: _switchShape,
                     onLongPressHint:
                         context.l10n.videoRecorderDualCameraShapeHint,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
+                      excludeFromSemantics: true,
                       onTap: state.canSwap
                           ? () {
                               if (_isMultiTouch || _didLongPress) return;
-                              context.read<VideoRecorderBloc>().add(
-                                const VideoRecorderCameraSwitched(),
-                              );
+                              _swapCameras();
                             }
                           : null,
                       child: _WindowFrame(textureId: state.textureId),
@@ -328,6 +330,10 @@ class _VideoRecorderDualCameraWindowState
     _longPressTimer?.cancel();
     _longPressTimer = null;
   }
+
+  void _swapCameras() => context.read<VideoRecorderBloc>().add(
+    const VideoRecorderCameraSwitched(),
+  );
 
   /// Switches the window between portrait and square.
   void _switchShape() {

@@ -2888,6 +2888,39 @@ void main() {
         ],
       );
 
+      // A camera swap re-syncs, and the second camera's window keeps where,
+      // how large, how turned and in which shape the creator left it.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the dual-camera window placement',
+        build: buildBlocCapturingUpdateState,
+        seed: () => const VideoRecorderBlocState(
+          dualCameraPipCenter: Offset(0.6, 0.4),
+          dualCameraPipScale: 1.5,
+          dualCameraPipRotation: 0.4,
+          dualCameraPipAspectRatio: model.AspectRatio.square,
+        ),
+        act: (_) => updateStateCallback(forceCameraRebuild: true),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having(
+                (s) => s.dualCameraPipCenter,
+                'dualCameraPipCenter',
+                const Offset(0.6, 0.4),
+              )
+              .having((s) => s.dualCameraPipScale, 'dualCameraPipScale', 1.5)
+              .having(
+                (s) => s.dualCameraPipRotation,
+                'dualCameraPipRotation',
+                0.4,
+              )
+              .having(
+                (s) => s.dualCameraPipAspectRatio,
+                'dualCameraPipAspectRatio',
+                model.AspectRatio.square,
+              ),
+        ],
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps the navigation lock until the next initialize',
         build: buildBlocCapturingUpdateState,

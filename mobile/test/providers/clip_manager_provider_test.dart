@@ -1286,11 +1286,17 @@ void main() {
           originalAspectRatio: 9 / 16,
           secondaryRecording: second,
           secondaryPipCenter: const Offset(0.2, 0.3),
+          secondaryPipScale: 1.5,
+          secondaryPipRotation: 0.4,
+          secondaryPipAspectRatio: .square,
         );
 
         final take = clip.secondaryCamera;
         expect(take, isNotNull);
         expect(take!.pipCenter, const Offset(0.2, 0.3));
+        expect(take.pipScale, 1.5);
+        expect(take.pipRotation, 0.4);
+        expect(take.pipAspectRatio, model.AspectRatio.square);
         expect(take.clip.id, '${clip.id}_second');
         expect(take.clip.video?.file?.path, '/documents/VID_1_second.mp4');
         expect(take.clip.volume, 0);

@@ -46,6 +46,7 @@ void main() {
       model.AspectRatio aspectRatio = model.AspectRatio.vertical,
       Stream<VideoRecorderBlocState>? states,
       Key? windowKey,
+      Widget? beneath,
     }) async {
       if (states != null) when(() => bloc.stream).thenAnswer((_) => states);
       when(() => bloc.state).thenReturn(
@@ -71,7 +72,14 @@ void main() {
               alignment: Alignment.topLeft,
               child: SizedBox.fromSize(
                 size: box,
-                child: VideoRecorderDualCameraWindow(key: windowKey),
+                child: Stack(
+                  children: [
+                    if (beneath != null) Positioned.fill(child: beneath),
+                    Positioned.fill(
+                      child: VideoRecorderDualCameraWindow(key: windowKey),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -362,6 +370,49 @@ void main() {
             verify(() => bloc.add(captureAny())).captured.single
                 as VideoRecorderDualCameraPipChanged;
         expect(changed.center.dx, closeTo(0.5 + 40 / frame.width, 0.01));
+      });
+
+      testWidgets('lets a tap beside the window through to the viewfinder', (
+        tester,
+      ) async {
+        var viewfinderTaps = 0;
+        await pump(
+          tester,
+          beneath: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => viewfinderTaps++,
+          ),
+        );
+
+        // The default window sits top left; the bottom right is free.
+        await tester.tapAt(Offset(frame.width - 20, frame.height - 20));
+
+        expect(viewfinderTaps, 1);
+      });
+
+      testWidgets('a screen-reader tap swaps the cameras after a pinch', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pump(tester, center: const Offset(0.5, 0.5));
+        final center = tester.getCenter(window());
+        final top = await tester.startGesture(center - const Offset(0, 20));
+        await tester.pump();
+        final bottom = await tester.startGesture(center + const Offset(0, 20));
+        await tester.pump();
+        await top.up();
+        await bottom.up();
+        await tester.pump();
+
+        tester.semantics.tap(
+          find.semantics.byPredicate(
+            (node) => node.identifier == SemanticIds.cameraDualCameraWindow,
+          ),
+        );
+        await tester.pump();
+
+        verify(() => bloc.add(const VideoRecorderCameraSwitched())).called(1);
+        semantics.dispose();
       });
 
       testWidgets('two fingers that barely move do not swap the cameras', (
