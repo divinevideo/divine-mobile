@@ -41,10 +41,12 @@ final divineVideoUrlLineRegex = RegExp(
 /// The divine.video link for a video, as an `naddr` or `nevent` reference.
 ///
 /// [stableId] is the real `d` tag for an addressable [kind], or the event ID
-/// for a regular one. A null [kind] (the event kind is unknown), a non-hex
-/// [authorPubkey] for an addressable kind, or a `d` tag over NIP-19's
-/// 255-byte entry limit falls back to the legacy `/video/<id>?author=<hex>`
-/// link. That path encodes [stableId] itself, so pass it unencoded.
+/// for a regular one. Otherwise it falls back to the legacy `/video/<id>`
+/// link, with `?author=<hex>` when [authorPubkey] is a hex key: for a null
+/// [kind] (the event kind is unknown), an addressable kind without a hex
+/// [authorPubkey] or with a `d` tag over NIP-19's 255-byte entry limit, and a
+/// regular kind whose id is not a 64-char hex event id. That path encodes
+/// [stableId] itself, so pass it unencoded.
 String divineVideoShareUrl(
   String stableId, {
   required int? kind,
@@ -97,9 +99,9 @@ String divineVideoShareUrlForEvent(VideoEvent video) {
 
 /// The protocol identity the URL and DM citation builders share.
 ///
-/// A null `dTag` means the `d` tag is missing, empty or too long to encode, so
-/// callers cite the event id; `kind` stays the event's kind even then (see
-/// [divineVideoShareUrlForEvent]).
+/// A null `dTag` means the event is not addressable, or its `d` tag is
+/// missing, empty or too long to encode, so callers cite the event id; `kind`
+/// stays the event's kind even then (see [divineVideoShareUrlForEvent]).
 ({int kind, String? dTag}) divineVideoShareIdentity(VideoEvent video) {
   final dTag = video.addressableDTag ?? video.rawTags['d'];
   final kind =
