@@ -92,18 +92,9 @@ void main() {
         reason:
             'Plaintext fallback must include a divine.video URL so non-Divine '
             'Nostr clients can preview the video and verify the invite '
-            'matches a real video before accepting (#3942).',
-      );
-      // The d tag alone can name another account's video (#10929).
-      expect(
-        content,
-        contains(
-          divineVideoShareUrl(
-            'video-id',
-            authorPubkey: creatorPubkey,
-            kind: 34236,
-          ),
-        ),
+            'matches a real video before accepting (#3942). The link names '
+            'its author because the d tag alone can name another '
+            "account's video (#10929).",
       );
       expect(_containsTag(tags, const ['divine', 'collab-invite']), isTrue);
       expect(
@@ -349,8 +340,8 @@ void main() {
       );
 
       // NIP-01 doesn't reserve `:` in d-tags. A naive split-on-colon parser
-      // truncates everything past the third segment, producing
-      // `https://divine.video/video/foo` for a stableId of `foo:bar`.
+      // truncates everything past the third segment, encoding a d tag of
+      // `foo` instead of `foo:bar`.
       const colonyVideoAddress =
           '34236:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc:foo:bar';
 
@@ -380,7 +371,7 @@ void main() {
         ),
         reason:
             'd-tag is everything after kind:pubkey: — colons within it must '
-            'survive into the URL so divine.video can resolve the stableId.',
+            'survive into the encoded address.',
       );
     });
 

@@ -817,7 +817,12 @@ void main() {
   group('sharing utilities', () {
     for (final dTag in <String?>[null, 'actual-coordinate', '🙂' * 64]) {
       test(
-        'URL and DM citation share the same real identity for d=$dTag',
+        'URL and DM citation share the same real identity for '
+        '${dTag == null
+            ? 'no d tag'
+            : dTag.length > 32
+            ? 'an over-long d tag'
+            : 'd=$dTag'}',
         () async {
           final video = VideoEvent(
             id: _testVideoId,
@@ -1055,8 +1060,8 @@ void main() {
 
       final url = service.generateShareUrl(video);
 
-      // Always emits an https URL — never a nostr: URI. The route
-      // handler accepts raw event IDs as well as d-tags / NIP-19 refs.
+      // Always an https URL, never a nostr: URI; a missing d tag shares the
+      // exact event as an nevent.
       expect(
         url,
         equals(divineVideoShareUrl(eventId, kind: 22)),
