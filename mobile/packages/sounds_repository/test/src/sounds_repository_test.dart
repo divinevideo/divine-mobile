@@ -732,6 +732,39 @@ void main() {
         });
       });
 
+      test('narrows the relay results to the followed accounts', () async {
+        answerTagQuery([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Rain followed',
+          ),
+          createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey2,
+            title: 'Rain stranger',
+          ),
+        ]);
+
+        final results = await repository.searchSounds(
+          'rain',
+          followedBy: const [testPubkey1],
+        );
+
+        expect(results.sounds.map((sound) => sound.id), [testEventId1]);
+        final filters =
+            verify(
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(that: isTagQuery),
+                  ),
+                ).captured.single
+                as List<Filter>;
+        expect(
+          filters.map((filter) => filter.authors),
+          everyElement([testPubkey1]),
+        );
+      });
+
       test('narrows the relay results to a kind by their tags', () async {
         answerTagQuery([
           createAudioEvent(
@@ -806,6 +839,7 @@ void main() {
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
               kind: any(named: 'kind'),
+              authors: any(named: 'authors'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -820,6 +854,7 @@ void main() {
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
               kind: any(named: 'kind'),
+              authors: any(named: 'authors'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -914,6 +949,43 @@ void main() {
               kind: SoundKind.effect,
             ),
           ).called(1);
+        });
+
+        test('searches only the followed accounts it can ask about', () async {
+          answerSearch(const []);
+
+          await searching.searchSounds(
+            'rain',
+            followedBy: const [testPubkey1, 'not-a-key'],
+          );
+
+          verify(
+            () => funnelcake.searchSounds(
+              query: 'rain',
+              authors: [testPubkey1],
+            ),
+          ).called(1);
+        });
+
+        test('finds nothing, without asking, when no followed account is '
+            'left', () async {
+          final results = await searching.searchSounds(
+            'rain',
+            followedBy: const ['not-a-key'],
+          );
+
+          expect(results.sounds, isEmpty);
+          expect(results.relays, SoundSearchRelays.notAsked);
+          verifyNever(
+            () => funnelcake.searchSounds(
+              query: any(named: 'query'),
+              kind: any(named: 'kind'),
+              authors: any(named: 'authors'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
         });
 
         test('asks Funnelcake for the page after cursor', () async {
@@ -1024,6 +1096,7 @@ void main() {
               () => funnelcake.searchSounds(
                 query: any(named: 'query'),
                 kind: any(named: 'kind'),
+                authors: any(named: 'authors'),
                 limit: any(named: 'limit'),
                 cursor: any(named: 'cursor'),
               ),
@@ -1040,6 +1113,7 @@ void main() {
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
               kind: any(named: 'kind'),
+              authors: any(named: 'authors'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -1861,6 +1935,7 @@ void main() {
           () => funnelcake.searchSounds(
             query: any(named: 'query'),
             kind: any(named: 'kind'),
+            authors: any(named: 'authors'),
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),

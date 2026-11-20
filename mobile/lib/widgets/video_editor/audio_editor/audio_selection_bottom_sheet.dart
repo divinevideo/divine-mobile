@@ -150,10 +150,11 @@ class _AudioSelectionBottomSheetState
   ProviderSubscription<AsyncValue<PagedSounds>>? _tabLoadListener;
   StreamSubscription<SavedSoundsState>? _savedSoundsListener;
 
-  /// The search being timed: the query the Newest tab sends, and the kind
-  /// it is narrowed to.
+  /// The search being timed: the query the open tab sends, the kind it is
+  /// narrowed to, and whether it is For you's, within the followed accounts.
   String _timedSearchQuery = '';
   SoundKind? _timedSearchKind;
+  bool _timedSearchFollowed = false;
   ProviderSubscription<AsyncValue<SoundSearchResults>>? _searchListener;
 
   @override
@@ -295,16 +296,27 @@ class _AudioSelectionBottomSheetState
     _savedSoundsListener = null;
   }
 
-  /// Times the search the Newest tab sends for the debounced query and the
+  /// The debounced query the open tab sends out: every tab's but My
+  /// sounds', whose query is often a private label.
+  String get _sentSearchQuery =>
+      _category == AudioCategory.mySounds ? '' : _debouncedQuery;
+
+  /// Times the search the open tab sends for the debounced query and the
   /// chosen kind.
   ///
   /// A search still in flight when the query, the kind or the tab changes is
   /// reported abandoned: the picker stops listening to it.
   void _syncSearchTiming() {
-    final query = _category == AudioCategory.newest ? _debouncedQuery : '';
-    if (query == _timedSearchQuery && _kind == _timedSearchKind) return;
+    final query = _sentSearchQuery;
+    final followed = _category == AudioCategory.forYou;
+    if (query == _timedSearchQuery &&
+        _kind == _timedSearchKind &&
+        followed == _timedSearchFollowed) {
+      return;
+    }
     _timedSearchQuery = query;
     _timedSearchKind = _kind;
+    _timedSearchFollowed = followed;
     _searchListener?.close();
     _searchListener = null;
     _telemetry.abandonSearch();
@@ -312,7 +324,7 @@ class _AudioSelectionBottomSheetState
 
     _telemetry.startSearch();
     _searchListener = _listenUntilSettled(
-      soundSearchResultsProvider(query, kind: _kind),
+      soundSearchResultsProvider(query, kind: _kind, followed: followed),
       (results, {required wasSettled}) {
         final answer = results.value;
         if (answer == null) {
@@ -414,9 +426,9 @@ class _AudioSelectionBottomSheetState
   ///
   /// [first] tells who answered, [pages] holds what was found. Funnelcake
   /// finds sounds despite typos, ranks them, and narrows them to the chosen
-  /// kind by their audio rather than by tags most sounds lack, so the Newest
-  /// tab shows these in its order in place of [_communitySounds], which only
-  /// matches the words as typed.
+  /// kind by their audio rather than by tags most sounds lack, so the open tab
+  /// shows these in its order in place of its own list narrowed to the words
+  /// as typed.
   PagedSounds? _rankedSearch(
     AsyncValue<SoundSearchResults> first,
     AsyncValue<PagedSounds> pages,
@@ -995,21 +1007,47 @@ class _AudioSelectionBottomSheetState
       titleOf: (sound) => sound.personalLabel ?? sound.audio.title,
       audioOf: (sound) => sound.audio,
     );
-    // Only the Newest tab sends the search out. The field is shared, so on
-    // any other tab the query stays local: on My sounds it is often a
-    // private label, which must not go out as a search.
-    final newestQuery = _category == AudioCategory.newest
-        ? _debouncedQuery
-        : '';
+    // The open tab sends the search out: For you within the accounts the
+    // viewer follows, Popular and New among every sound. My sounds keeps its
+    // query local, as there it is often a private label, which must not go
+    // out as a search.
+    final sentQuery = _sentSearchQuery;
+    final searchesFollowed = _category == AudioCategory.forYou;
     final searchResults = ref.watch(
-      soundSearchResultsProvider(newestQuery, kind: _kind),
+      soundSearchResultsProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
     );
     final searchPages = ref.watch(
-      soundSearchPagesProvider(newestQuery, kind: _kind),
+      soundSearchPagesProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
     );
     final searchLookup = ref.watch(
-      soundSearchCoversProvider(newestQuery, kind: _kind),
+      soundSearchCoversProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
     );
+    final loadMoreSearch = ref
+        .read(
+          soundSearchPagesProvider(
+            sentQuery,
+            kind: _kind,
+            followed: searchesFollowed,
+          ).notifier,
+        )
+        .loadMore;
+    // Funnelcake's answer for the open tab, which that tab lists in its
+    // order in place of narrowing its own list by the words as typed.
+    final ranked = _rankedSearch(searchResults, searchPages);
+    PagedSounds? rankedIn(AudioCategory category) =>
+        category == _category ? ranked : null;
     final searchCovers = settled(searchLookup);
 
     final bundledVineSounds =
@@ -1085,6 +1123,7 @@ class _AudioSelectionBottomSheetState
           page,
         ).where((sound) => !_cannotBeReused(sound, forYouLookup)).toList(),
     ];
+    final forYouFound = rankedIn(AudioCategory.forYou);
     // Its own Material, so the rows' ink shows over the sheet's background.
     final lists = Material(
       type: MaterialType.transparency,
@@ -1098,9 +1137,18 @@ class _AudioSelectionBottomSheetState
             _SoundsContent(
               scrollController: listScrollController,
               selectionCardHeight: _selectionCardHeight,
-              // A search orders by fit instead, with no daily mix.
+              // A search orders by fit instead, with no daily mix; once
+              // Funnelcake has answered it, Divine's matches lead and the
+              // followed accounts' follow in its order.
               sounds: _searchQuery.isEmpty
                   ? _rankedForYou(followedPages, divineSounds)
+                  : forYouFound != null
+                  ? [
+                      ..._soundsBySearchFit(divineSounds),
+                      ...forYouFound.sounds.where(
+                        (sound) => !_cannotBeReused(sound, searchLookup),
+                      ),
+                    ]
                   : _soundsBySearchFit([
                       for (final page in followedPages) ...page,
                       ...divineSounds,
@@ -1108,9 +1156,14 @@ class _AudioSelectionBottomSheetState
               selectedSound: _selectedItem,
               audioService: _audioService,
               onSelect: _selectSound,
-              coversBySourceVideo: forYouCovers,
-              paging: loadsMoreOnScroll ? forYouAsync.value : null,
-              onLoadMore: kind == null
+              coversBySourceVideo: forYouFound == null
+                  ? forYouCovers
+                  : {...?forYouCovers, ...?searchCovers},
+              paging:
+                  forYouFound ?? (loadsMoreOnScroll ? forYouAsync.value : null),
+              onLoadMore: forYouFound != null
+                  ? loadMoreSearch
+                  : kind == null
                   ? ref.read(forYouSoundsProvider.notifier).loadMore
                   : ref
                         .read(
@@ -1125,32 +1178,49 @@ class _AudioSelectionBottomSheetState
           else
             loadingState,
           popularAsync.when(
-            data: (popular) => _SoundsContent(
-              scrollController: listScrollController,
-              selectionCardHeight: _selectionCardHeight,
-              sounds: _soundsBySearchFit(
-                _filterAudioEvents(popular.sounds)
-                    .where((sound) => !_cannotBeReused(sound, popularLookup))
-                    .toList(),
-              ),
-              selectedSound: _selectedItem,
-              audioService: _audioService,
-              onSelect: _selectSound,
-              usageCounts: popular.usageCounts,
-              coversBySourceVideo: popularCovers,
-              paging: loadsMoreOnScroll ? popular : null,
-              onLoadMore: kind == null
-                  ? ref.read(popularSoundsProvider.notifier).loadMore
-                  : ref
-                        .read(
-                          soundsOfKindProvider(
-                            kind,
-                            SoundListOfKind.popular,
-                          ).notifier,
-                        )
-                        .loadMore,
-              emptyState: emptyState,
-            ),
+            data: (popular) {
+              final found = rankedIn(AudioCategory.popular);
+              final listed = {for (final sound in popular.sounds) sound.id};
+              // A search result's video is looked up with the search.
+              bool canBeReused(AudioEvent sound) => !_cannotBeReused(
+                sound,
+                listed.contains(sound.id) ? popularLookup : searchLookup,
+              );
+              return _SoundsContent(
+                scrollController: listScrollController,
+                selectionCardHeight: _selectionCardHeight,
+                sounds: found != null
+                    ? found.sounds.where(canBeReused).toList()
+                    : _soundsBySearchFit(
+                        _filterAudioEvents(
+                          popular.sounds,
+                        ).where(canBeReused).toList(),
+                      ),
+                selectedSound: _selectedItem,
+                audioService: _audioService,
+                onSelect: _selectSound,
+                usageCounts: found == null
+                    ? popular.usageCounts
+                    : {...popular.usageCounts, ...found.usageCounts},
+                coversBySourceVideo: found == null
+                    ? popularCovers
+                    : {...?popularCovers, ...?searchCovers},
+                paging: found ?? (loadsMoreOnScroll ? popular : null),
+                onLoadMore: found != null
+                    ? loadMoreSearch
+                    : kind == null
+                    ? ref.read(popularSoundsProvider.notifier).loadMore
+                    : ref
+                          .read(
+                            soundsOfKindProvider(
+                              kind,
+                              SoundListOfKind.popular,
+                            ).notifier,
+                          )
+                          .loadMore,
+                emptyState: emptyState,
+              );
+            },
             loading: () => loadingState,
             error: (error, stack) => _ErrorState(
               error: error,
@@ -1166,7 +1236,7 @@ class _AudioSelectionBottomSheetState
                 sound,
                 newest.contains(sound.id) ? trendingLookup : searchLookup,
               );
-              final ranked = _rankedSearch(searchResults, searchPages);
+              final ranked = rankedIn(AudioCategory.newest);
               return _SoundsContent(
                 scrollController: listScrollController,
                 selectionCardHeight: _selectionCardHeight,
@@ -1177,7 +1247,9 @@ class _AudioSelectionBottomSheetState
                     : _soundsBySearchFit(
                         _communitySounds(
                           nostrSounds,
-                          searchResults,
+                          _category == AudioCategory.newest
+                              ? searchResults
+                              : const AsyncLoading<SoundSearchResults>(),
                         ).where(canBeReused).toList(),
                       ),
                 selectedSound: _selectedItem,
@@ -1191,14 +1263,7 @@ class _AudioSelectionBottomSheetState
                     : {...trendingCovers, ...?searchCovers},
                 paging: ranked ?? (loadsMoreOnScroll ? newestList : null),
                 onLoadMore: ranked != null
-                    ? ref
-                          .read(
-                            soundSearchPagesProvider(
-                              newestQuery,
-                              kind: _kind,
-                            ).notifier,
-                          )
-                          .loadMore
+                    ? loadMoreSearch
                     : kind == null
                     ? ref.read(trendingSoundsProvider.notifier).loadMore
                     : ref

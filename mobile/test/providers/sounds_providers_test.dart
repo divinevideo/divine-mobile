@@ -978,6 +978,7 @@ void main() {
           () => mockRepository.searchSounds(
             any(),
             kind: any(named: 'kind'),
+            followedBy: any(named: 'followedBy'),
             limit: any(named: 'limit'),
           ),
         ).thenAnswer(
@@ -1023,6 +1024,31 @@ void main() {
 
         verify(
           () => mockRepository.searchSounds('rain', kind: SoundKind.effect),
+        ).called(1);
+      });
+
+      test('searches within the followed accounts for For you', () async {
+        final followRepository = _MockFollowRepository();
+        when(
+          () => followRepository.followingPubkeys,
+        ).thenReturn(const ['alice', 'bob']);
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            followRepositoryProvider.overrideWithValue(followRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(
+          soundSearchResultsProvider('rain', followed: true).future,
+        );
+
+        verify(
+          () => mockRepository.searchSounds(
+            'rain',
+            followedBy: const ['alice', 'bob'],
+          ),
         ).called(1);
       });
 

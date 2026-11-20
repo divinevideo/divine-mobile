@@ -2734,13 +2734,16 @@ class FunnelcakeApiClient {
   /// equal matches.
   ///
   /// [kind] narrows the search to music or to effects as the server's audio
-  /// analysis classified them; `null` searches every sound. [limit] is the
+  /// analysis classified them; `null` searches every sound. [authors] narrows
+  /// it to sounds by those creators, given as hex pubkeys; empty searches
+  /// every creator's. [limit] is the
   /// most sounds a page holds; the server takes 1 to 100. [cursor] is the
   /// [SoundSearchResponse.nextCursor] of the page before. A page can hold
   /// fewer sounds than [limit], none even, and still not be the last; follow
   /// [SoundSearchResponse.nextCursor] until it is `null`.
   ///
   /// Throws:
+  /// - [ArgumentError] if [authors] holds more than [maxSoundListAuthors].
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
   /// - [FunnelcakeException] if [query] is blank, since the endpoint lists
   ///   sounds instead of searching without one.
@@ -2751,9 +2754,17 @@ class FunnelcakeApiClient {
   Future<SoundSearchResponse> searchSounds({
     required String query,
     SoundKind? kind,
+    List<String> authors = const [],
     int limit = 50,
     String? cursor,
   }) async {
+    if (authors.length > maxSoundListAuthors) {
+      throw ArgumentError.value(
+        authors.length,
+        'authors',
+        'At most $maxSoundListAuthors creators',
+      );
+    }
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
     }
@@ -2767,6 +2778,7 @@ class FunnelcakeApiClient {
       queryParameters: {
         'q': trimmed,
         if (kind != null) 'kind': _soundKindParameter(kind),
+        if (authors.isNotEmpty) 'authors': authors.join(','),
         'limit': limit.toString(),
         if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },

@@ -5193,6 +5193,29 @@ void main() {
         },
       );
 
+      test('narrows the search to creators', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"data": []}', 200));
+
+        await client.searchSounds(query: 'rain', authors: const ['a', 'b']);
+
+        expect(requestedUri().queryParameters['authors'], 'a,b');
+      });
+
+      test('refuses more creators than the server takes', () {
+        expect(
+          () => client.searchSounds(
+            query: 'rain',
+            authors: List.filled(
+              FunnelcakeApiClient.maxSoundListAuthors + 1,
+              'a',
+            ),
+          ),
+          throwsArgumentError,
+        );
+      });
+
       test('treats an empty cursor as the first page', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
