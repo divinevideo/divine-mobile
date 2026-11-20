@@ -8861,6 +8861,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectEcho => '残影';
 
   @override
+  String get videoEditorEffectTimeSplit => '时间分色';
+
+  @override
+  String get videoEditorEffectLongExposure => '长曝光';
+
+  @override
+  String get videoEditorEffectMotionOnly => '只留动态';
+
+  @override
+  String get videoEditorEffectStutter => '抽帧';
+
+  @override
+  String get videoEditorEffectTimeWarp => '时空扭曲';
+
+  @override
   String get videoEditorEffectFisheye => '鱼眼';
 
   @override
@@ -9060,6 +9075,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => '动感';
+
+  @override
+  String get videoEditorEffectCategoryTime => '时光';
 
   @override
   String get videoEditorEffectCategoryParticles => '粒子';

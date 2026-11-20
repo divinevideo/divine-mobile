@@ -9552,6 +9552,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectEcho => 'Écho';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Décalage temporel';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Pose longue';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Mouvement seul';
+
+  @override
+  String get videoEditorEffectStutter => 'Saccades';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsion temporelle';
+
+  @override
   String get videoEditorEffectFisheye => 'Fish-eye';
 
   @override
@@ -9751,6 +9766,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Mouvement';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Temps';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Particules';

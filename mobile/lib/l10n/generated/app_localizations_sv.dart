@@ -9402,6 +9402,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eko';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tidsdelning';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lång exponering';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Bara rörelse';
+
+  @override
+  String get videoEditorEffectStutter => 'Hackig';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Tidsförvrängning';
+
+  @override
   String get videoEditorEffectFisheye => 'Fisköga';
 
   @override
@@ -9601,6 +9616,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Rörelse';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Tid';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Partiklar';

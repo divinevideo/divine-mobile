@@ -9190,6 +9190,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectEcho => 'ማሚቶ';
 
   @override
+  String get videoEditorEffectTimeSplit => 'የጊዜ ክፍፍል';
+
+  @override
+  String get videoEditorEffectLongExposure => 'ረጅም ተጋላጭነት';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'እንቅስቃሴ ብቻ';
+
+  @override
+  String get videoEditorEffectStutter => 'መንተባተብ';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'የጊዜ መጣመም';
+
+  @override
   String get videoEditorEffectFisheye => 'ፊሽአይ';
 
   @override
@@ -9389,6 +9404,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'ጊዜ';
 
   @override
   String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';

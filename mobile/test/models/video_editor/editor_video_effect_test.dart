@@ -1548,20 +1548,24 @@ void main() {
       });
     });
 
-    group('looksLast', () {
+    group('customVideoEffectsInRenderOrder', () {
       CustomVideoEffect effect(String id) => CustomVideoEffect(id: id);
 
-      test('moves the looks after the other effects, keeping the order '
-          'within each', () {
+      test('runs the effects that read earlier frames first and the looks '
+          'last, keeping the order within each', () {
         expect(
-          looksLast([
+          customVideoEffectsInRenderOrder([
             effect(silverLookId),
-            effect(echoVideoEffectId),
+            effect(comicVideoEffectId),
+            effect(stutterVideoEffectId),
             effect(tealOrangeLookId),
             effect(snowVideoEffectId),
+            effect(echoVideoEffectId),
           ]).map((effect) => effect.id),
           [
+            stutterVideoEffectId,
             echoVideoEffectId,
+            comicVideoEffectId,
             snowVideoEffectId,
             silverLookId,
             tealOrangeLookId,
@@ -1569,9 +1573,13 @@ void main() {
         );
       });
 
-      test('leaves a list without looks as it is', () {
-        final effects = [effect(snowVideoEffectId), effect(echoVideoEffectId)];
-        expect(looksLast(effects), effects);
+      test('leaves a list already in that order as it is', () {
+        final effects = [
+          effect(timeWarpVideoEffectId),
+          effect(snowVideoEffectId),
+          effect(matteLookId),
+        ];
+        expect(customVideoEffectsInRenderOrder(effects), effects);
       });
     });
   });
@@ -1673,7 +1681,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(72));
+      expect(custom, hasLength(77));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1687,10 +1695,13 @@ void main() {
       }
     });
 
-    test('only the zoom blur, the spin blur, the tunnels, disco, laser and '
-        'lightning of the custom effects fire on the beat', () {
+    test('only the zoom blur, the spin blur, the time split, the stutter, the '
+        'tunnels, disco, laser and lightning of the custom effects fire on '
+        'the beat', () {
       for (final type in [
         EditorEffectType.zoomBlur,
+        EditorEffectType.timeSplit,
+        EditorEffectType.stutter,
         EditorEffectType.tunnel,
         EditorEffectType.spiralTunnel,
         EditorEffectType.disco,
@@ -1709,6 +1720,9 @@ void main() {
       expect(spinBlur.custom!.params[EditorVideoEffect.onBeatParam], isTrue);
       for (final type in [
         EditorEffectType.echo,
+        EditorEffectType.longExposure,
+        EditorEffectType.motionOnly,
+        EditorEffectType.timeWarp,
         EditorEffectType.drops,
         EditorEffectType.lightLeak,
         EditorEffectType.confetti,
@@ -1788,6 +1802,29 @@ void main() {
       for (final category in EditorEffectCategory.values) {
         expect(category.types, isNotEmpty, reason: category.name);
       }
+    });
+
+    test('lists the echo and the other effects built on earlier frames '
+        'under time, and only those read earlier frames', () {
+      expect(EditorEffectCategory.time.types, [
+        EditorEffectType.echo,
+        EditorEffectType.timeSplit,
+        EditorEffectType.longExposure,
+        EditorEffectType.motionOnly,
+        EditorEffectType.stutter,
+        EditorEffectType.timeWarp,
+      ]);
+      expect(
+        [
+          for (final type in EditorEffectType.values)
+            if (type.readsEarlierFrames) type,
+        ],
+        EditorEffectCategory.time.types,
+      );
+      expect(
+        EditorEffectCategory.values.indexOf(EditorEffectCategory.time),
+        EditorEffectCategory.values.indexOf(EditorEffectCategory.motion) + 1,
+      );
     });
 
     test('lists the swirl, ripple, fluted glass and the tunnels under '
@@ -1882,7 +1919,7 @@ void main() {
 
     test('lists the intros under intro and the outros under outro, last, '
         'each look in the same order', () {
-      expect(EditorEffectCategory.values.sublist(8), [
+      expect(EditorEffectCategory.values.sublist(9), [
         EditorEffectCategory.intro,
         EditorEffectCategory.outro,
       ]);

@@ -6897,6 +6897,26 @@
   "@videoEditorEffectEcho": {
     "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
   },
+  "videoEditorEffectTimeSplit": "Time Split",
+  "@videoEditorEffectTimeSplit": {
+    "description": "Name of a video effect: the red, green and blue of the picture come from slightly different moments, so still parts keep their colours and moving parts get rainbow ghosts."
+  },
+  "videoEditorEffectLongExposure": "Long Exposure",
+  "@videoEditorEffectLongExposure": {
+    "description": "Name of a video effect: bright parts of the picture leave trails of light, like a long-exposure photo of a torch or a sparkler."
+  },
+  "videoEditorEffectMotionOnly": "Motion Only",
+  "@videoEditorEffectMotionOnly": {
+    "description": "Name of a video effect: still parts of the picture go dark and only what moves stays visible, glowing."
+  },
+  "videoEditorEffectStutter": "Stutter",
+  "@videoEditorEffectStutter": {
+    "description": "Name of a video effect: the picture holds each frame a little longer, so it plays choppily at a few frames a second."
+  },
+  "videoEditorEffectTimeWarp": "Time Warp",
+  "@videoEditorEffectTimeWarp": {
+    "description": "Name of a video effect: each band of the picture, from top to bottom, comes from a slightly earlier moment, so moving people bend and stretch."
+  },
   "videoEditorEffectFisheye": "Fisheye",
   "@videoEditorEffectFisheye": {
     "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
@@ -7163,7 +7183,11 @@
   },
   "videoEditorEffectCategoryMotion": "Motion",
   "@videoEditorEffectCategoryMotion": {
-    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail."
+    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or streak."
+  },
+  "videoEditorEffectCategoryTime": "Time",
+  "@videoEditorEffectCategoryTime": {
+    "description": "Name of a group in the video effects picker: effects built from earlier frames as well as the current one, so they only show where something moves, such as an echo trail, rainbow ghosts or held frames."
   },
   "videoEditorEffectCategoryParticles": "Particles",
   "@videoEditorEffectCategoryParticles": {

@@ -15755,6 +15755,36 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get videoEditorEffectEcho;
 
+  /// Name of a video effect: the red, green and blue of the picture come from slightly different moments, so still parts keep their colours and moving parts get rainbow ghosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Split'**
+  String get videoEditorEffectTimeSplit;
+
+  /// Name of a video effect: bright parts of the picture leave trails of light, like a long-exposure photo of a torch or a sparkler.
+  ///
+  /// In en, this message translates to:
+  /// **'Long Exposure'**
+  String get videoEditorEffectLongExposure;
+
+  /// Name of a video effect: still parts of the picture go dark and only what moves stays visible, glowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion Only'**
+  String get videoEditorEffectMotionOnly;
+
+  /// Name of a video effect: the picture holds each frame a little longer, so it plays choppily at a few frames a second.
+  ///
+  /// In en, this message translates to:
+  /// **'Stutter'**
+  String get videoEditorEffectStutter;
+
+  /// Name of a video effect: each band of the picture, from top to bottom, comes from a slightly earlier moment, so moving people bend and stretch.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Warp'**
+  String get videoEditorEffectTimeWarp;
+
   /// Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens.
   ///
   /// In en, this message translates to:
@@ -16151,11 +16181,17 @@ abstract class AppLocalizations {
   /// **'Light'**
   String get videoEditorEffectCategoryLight;
 
-  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail.
+  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or streak.
   ///
   /// In en, this message translates to:
   /// **'Motion'**
   String get videoEditorEffectCategoryMotion;
+
+  /// Name of a group in the video effects picker: effects built from earlier frames as well as the current one, so they only show where something moves, such as an echo trail, rainbow ghosts or held frames.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get videoEditorEffectCategoryTime;
 
   /// Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture.
   ///

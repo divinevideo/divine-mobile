@@ -9664,6 +9664,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectEcho => 'ప్రతిధ్వని';
 
   @override
+  String get videoEditorEffectTimeSplit => 'టైమ్ స్ప్లిట్';
+
+  @override
+  String get videoEditorEffectLongExposure => 'లాంగ్ ఎక్స్‌పోజర్';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'కదలిక మాత్రమే';
+
+  @override
+  String get videoEditorEffectStutter => 'తడబాటు';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'టైమ్ వార్ప్';
+
+  @override
   String get videoEditorEffectFisheye => 'ఫిష్‌ఐ';
 
   @override
@@ -9863,6 +9878,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'కదలిక';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'సమయం';
 
   @override
   String get videoEditorEffectCategoryParticles => 'కణాలు';

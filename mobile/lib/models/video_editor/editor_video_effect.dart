@@ -14,6 +14,16 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 /// the native `EchoVideoEffect` on Android, iOS and macOS (#9708).
 const echoVideoEffectId = 'divine.echo';
 
+/// The ids Divine's other effects built on earlier frames are registered
+/// under with pro_video_editor, by the native `TimeVideoEffects` on Android,
+/// iOS and macOS. Like the echo trail, each reads earlier source frames of the
+/// same clip; see [EditorEffectCategory.time].
+const timeSplitVideoEffectId = 'divine.timeSplit';
+const longExposureVideoEffectId = 'divine.longExposure';
+const motionOnlyVideoEffectId = 'divine.motionOnly';
+const stutterVideoEffectId = 'divine.stutter';
+const timeWarpVideoEffectId = 'divine.timeWarp';
+
 /// The id Divine's fisheye is registered under with pro_video_editor, by the
 /// native `FisheyeVideoEffect` on Android, iOS and macOS.
 const fisheyeVideoEffectId = 'divine.fisheye';
@@ -262,8 +272,13 @@ enum EditorEffectCategory {
   /// Light is added, taken away or flashed.
   light,
 
-  /// The picture shakes, pulses or leaves a trail.
+  /// The picture shakes, pulses or streaks.
   motion,
+
+  /// The picture is built from earlier frames as well as the current one, so
+  /// the effect only shows where something moves: trails, rainbow ghosts,
+  /// held frames, bands from different moments.
+  time,
 
   /// Things fall or float over the picture.
   particles,
@@ -356,6 +371,29 @@ class EditorEffectType {
 
   /// The echo trail: moving subjects leave fading copies (#9708).
   static const echo = EditorEffectType.custom(echoVideoEffectId);
+
+  /// Time split: red shows the current frame, green the frame 100 ms earlier
+  /// and blue the one 200 ms earlier, so still parts keep their colours and
+  /// moving parts get rainbow ghosts, all the time or on the beat.
+  static const timeSplit = EditorEffectType.custom(timeSplitVideoEffectId);
+
+  /// Long exposure: bright parts leave trails, so a torch or a sparkler can
+  /// paint light in a dark room.
+  static const longExposure = EditorEffectType.custom(
+    longExposureVideoEffectId,
+  );
+
+  /// Motion only: still parts go dark and moving parts glow, from the
+  /// difference to the frame before.
+  static const motionOnly = EditorEffectType.custom(motionOnlyVideoEffectId);
+
+  /// Stutter: the picture holds frames, so it plays at 6 to 12 frames a
+  /// second, all through its window or for a moment on each beat.
+  static const stutter = EditorEffectType.custom(stutterVideoEffectId);
+
+  /// Time warp: each band of the picture, top to bottom, comes from a moment
+  /// further back, so moving people bend and stretch, as in a slit-scan.
+  static const timeWarp = EditorEffectType.custom(timeWarpVideoEffectId);
 
   /// The fisheye: the middle of the picture bulges out, as through a
   /// wide-angle lens.
@@ -620,6 +658,11 @@ class EditorEffectType {
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
     echo,
+    timeSplit,
+    longExposure,
+    motionOnly,
+    stutter,
+    timeWarp,
     fisheye,
     drops,
     lightLeak,
@@ -710,19 +753,27 @@ class EditorEffectType {
   };
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects the zoom blur, the spin blur and lightning have a hit,
-  /// the tunnels take one step deeper on each beat, and disco and laser change
+  /// custom effects the zoom blur, the spin blur, the time split and lightning
+  /// have a hit, the stutter holds frames for a moment after each beat, the
+  /// tunnels take one step deeper on each beat, and disco and laser change
   /// colour and direction on each beat; the others play all through their
   /// window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
       : customId == zoomBlurVideoEffectId ||
             customId == spinBlurVideoEffectId ||
+            customId == timeSplitVideoEffectId ||
+            customId == stutterVideoEffectId ||
             customId == tunnelVideoEffectId ||
             customId == spiralTunnelVideoEffectId ||
             customId == discoVideoEffectId ||
             customId == laserVideoEffectId ||
             customId == lightningVideoEffectId;
+
+  /// Whether this type reads earlier frames as well as the current one: the
+  /// [EditorEffectCategory.time] effects. See
+  /// [customVideoEffectsInRenderOrder] for why it matters where they run.
+  bool get readsEarlierFrames => category == EditorEffectCategory.time;
 
   /// The category the effects picker lists this type under.
   ///
@@ -766,9 +817,14 @@ class EditorEffectType {
       discoVideoEffectId ||
       laserVideoEffectId ||
       lightningVideoEffectId => EditorEffectCategory.light,
-      echoVideoEffectId ||
       zoomBlurVideoEffectId ||
       spinBlurVideoEffectId => EditorEffectCategory.motion,
+      echoVideoEffectId ||
+      timeSplitVideoEffectId ||
+      longExposureVideoEffectId ||
+      motionOnlyVideoEffectId ||
+      stutterVideoEffectId ||
+      timeWarpVideoEffectId => EditorEffectCategory.time,
       snowVideoEffectId ||
       rainVideoEffectId ||
       leavesVideoEffectId ||
@@ -1095,20 +1151,36 @@ EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
       VideoEffectType.zoomPulse => EditorEffectCategory.motion,
     };
 
-/// [effects] with the looks after the other effects, each in its own order.
+/// [effects] in the order the preview and the export draw them: the effects
+/// that read earlier frames first, then the others, then the looks, each
+/// group in its own order.
 ///
-/// A look grades the finished picture, like a colour filter. It also keeps
-/// the grade out of the earlier frames an effect like Echo reads: those come
-/// unprocessed in the preview and in the iOS export, but in the Android
-/// export from the effect before it in the chain, so a look ahead of Echo
-/// would grade its trail on Android only. The preview and the export both
-/// order them this way; see `adjustVideoEffectsOf` for the same reasoning.
-List<CustomVideoEffect> looksLast(Iterable<CustomVideoEffect> effects) => [
-  for (final effect in effects)
-    if (!lookTableAssets.containsKey(effect.id)) effect,
-  for (final effect in effects)
-    if (lookTableAssets.containsKey(effect.id)) effect,
-];
+/// The earlier frames an effect like Echo reads come unprocessed in the
+/// preview and in the iOS export, but in the Android export from the custom
+/// effect before it in the chain; the custom effects run first there, ahead
+/// of the built-in ones. So the [EditorEffectType.readsEarlierFrames] effects
+/// go first, where all three read the same frames, and whatever comes after
+/// them, such as a comic look, draws over their trails and ghosts alike. Only
+/// a second one of them still reads the first one's output on Android.
+///
+/// A look grades the finished picture, like a colour filter, so it goes last;
+/// see `adjustVideoEffectsOf` for Adjust, which goes after the looks.
+List<CustomVideoEffect> customVideoEffectsInRenderOrder(
+  Iterable<CustomVideoEffect> effects,
+) {
+  bool readsEarlierFrames(CustomVideoEffect effect) =>
+      EditorEffectType.byName(effect.id)?.readsEarlierFrames ?? false;
+  bool isLook(CustomVideoEffect effect) =>
+      lookTableAssets.containsKey(effect.id);
+  return [
+    for (final effect in effects)
+      if (readsEarlierFrames(effect)) effect,
+    for (final effect in effects)
+      if (!readsEarlierFrames(effect) && !isLook(effect)) effect,
+    for (final effect in effects)
+      if (isLook(effect)) effect,
+  ];
+}
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, like [videoEffectsOnOutput] for built-in effects.

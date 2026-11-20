@@ -49,6 +49,7 @@ import co.openvine.app.videoeffects.StainedGlassVideoEffect
 import co.openvine.app.videoeffects.SwirlVideoEffect
 import co.openvine.app.videoeffects.ThermalVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
+import co.openvine.app.videoeffects.TimeVideoEffects
 import co.openvine.app.videoeffects.TunnelVideoEffect
 import co.openvine.app.videoeffects.WindowLightVideoEffect
 import co.openvine.app.videoeffects.XRayVideoEffect
@@ -142,6 +143,7 @@ class MainActivity : FlutterFragmentActivity() {
 
         // Divine's own video effects, for the editor preview and the export (#9708).
         EchoVideoEffect.register()
+        TimeVideoEffects.register()
         FisheyeVideoEffect.register()
         DropsVideoEffect.register()
         LightLeakVideoEffect.register()

@@ -8943,6 +8943,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectEcho => 'エコー';
 
   @override
+  String get videoEditorEffectTimeSplit => 'タイムスプリット';
+
+  @override
+  String get videoEditorEffectLongExposure => '長時間露光';
+
+  @override
+  String get videoEditorEffectMotionOnly => '動きだけ';
+
+  @override
+  String get videoEditorEffectStutter => 'コマ落とし';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'タイムワープ';
+
+  @override
   String get videoEditorEffectFisheye => '魚眼';
 
   @override
@@ -9142,6 +9157,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'モーション';
+
+  @override
+  String get videoEditorEffectCategoryTime => '時間';
 
   @override
   String get videoEditorEffectCategoryParticles => 'パーティクル';

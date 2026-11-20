@@ -9491,6 +9491,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ехо';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Разделено време';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Дълга експозиция';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Само движение';
+
+  @override
+  String get videoEditorEffectStutter => 'Накъсване';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Изкривено време';
+
+  @override
   String get videoEditorEffectFisheye => 'Рибешко око';
 
   @override
@@ -9690,6 +9705,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Движение';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Време';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Частици';

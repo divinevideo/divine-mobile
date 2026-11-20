@@ -9621,6 +9621,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ecou';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Timp despicat';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Expunere lungă';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Doar mișcare';
+
+  @override
+  String get videoEditorEffectStutter => 'Sacadat';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsiune temporală';
+
+  @override
   String get videoEditorEffectFisheye => 'Ochi de pește';
 
   @override
@@ -9820,6 +9835,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Mișcare';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Timp';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Particule';

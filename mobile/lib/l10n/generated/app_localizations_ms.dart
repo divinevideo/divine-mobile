@@ -9408,6 +9408,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Gema';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Masa Terbelah';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Dedahan Panjang';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Gerakan Sahaja';
+
+  @override
+  String get videoEditorEffectStutter => 'Tersekat-sekat';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Herotan Masa';
+
+  @override
   String get videoEditorEffectFisheye => 'Mata Ikan';
 
   @override
@@ -9607,6 +9622,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Gerakan';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Masa';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Zarah';

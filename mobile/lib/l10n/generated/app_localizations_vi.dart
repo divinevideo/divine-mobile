@@ -9360,6 +9360,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectEcho => 'Tiếng vọng';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tách thời gian';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Phơi sáng dài';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Chỉ chuyển động';
+
+  @override
+  String get videoEditorEffectStutter => 'Giật hình';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Bẻ cong thời gian';
+
+  @override
   String get videoEditorEffectFisheye => 'Mắt cá';
 
   @override
@@ -9559,6 +9574,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'Chuyển động';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'Thời gian';
 
   @override
   String get videoEditorEffectCategoryParticles => 'Hạt';

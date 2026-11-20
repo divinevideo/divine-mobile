@@ -8962,6 +8962,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectEcho => '에코';
 
   @override
+  String get videoEditorEffectTimeSplit => '타임 스플릿';
+
+  @override
+  String get videoEditorEffectLongExposure => '장노출';
+
+  @override
+  String get videoEditorEffectMotionOnly => '움직임만';
+
+  @override
+  String get videoEditorEffectStutter => '스터터';
+
+  @override
+  String get videoEditorEffectTimeWarp => '타임 워프';
+
+  @override
   String get videoEditorEffectFisheye => '피시아이';
 
   @override
@@ -9161,6 +9176,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => '모션';
+
+  @override
+  String get videoEditorEffectCategoryTime => '시간';
 
   @override
   String get videoEditorEffectCategoryParticles => '파티클';

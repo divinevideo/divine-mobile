@@ -9404,6 +9404,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectEcho => 'گونج';
 
   @override
+  String get videoEditorEffectTimeSplit => 'وقت کی تقسیم';
+
+  @override
+  String get videoEditorEffectLongExposure => 'لانگ ایکسپوژر';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'صرف حرکت';
+
+  @override
+  String get videoEditorEffectStutter => 'اٹکاؤ';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'وقت کا خم';
+
+  @override
   String get videoEditorEffectFisheye => 'فش آئی';
 
   @override
@@ -9603,6 +9618,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryMotion => 'حرکت';
+
+  @override
+  String get videoEditorEffectCategoryTime => 'وقت';
 
   @override
   String get videoEditorEffectCategoryParticles => 'ذرات';
