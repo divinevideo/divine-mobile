@@ -893,13 +893,19 @@ void main() {
         expectNoSend();
       });
 
-      for (final state in [
-        const ChatState(sending: true),
-        const ChatState(loading: true),
-        const ChatState(loadFailure: ChatLoadFailure.other),
-        const ChatState(loadFailure: ChatLoadFailure.connection),
+      for (final (label, state) in [
+        ('sending', const ChatState(sending: true)),
+        ('loading', const ChatState(loading: true)),
+        (
+          'load failure: other',
+          const ChatState(loadFailure: ChatLoadFailure.other),
+        ),
+        (
+          'load failure: connection',
+          const ChatState(loadFailure: ChatLoadFailure.connection),
+        ),
       ]) {
-        testWidgets('Enter respects the composer access gate: $state', (
+        testWidgets('Enter respects the composer access gate: $label', (
           tester,
         ) async {
           await pumpComposer(tester);
@@ -944,6 +950,10 @@ void main() {
           );
           expect(find.text(message(l10n)), findsOneWidget);
           expect(
+            tester.takeAnnouncements().map((a) => a.message),
+            [message(l10n)],
+          );
+          expect(
             tester.widget<TextField>(find.byType(TextField)).enabled,
             isFalse,
           );
@@ -952,6 +962,40 @@ void main() {
         },
       );
     }
+    testWidgets('a loaded room that loses its relay announces it once', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final cubit = _ChatCubit();
+      final states = StreamController<ChatState>();
+      addTearDown(states.close);
+      whenListen(cubit, states.stream, initialState: const ChatState());
+      when(cubit.visibleMessages).thenReturn([]);
+      await _pumpChatWidget(
+        tester,
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BlocProvider<ChatCubit>.value(
+            value: cubit,
+            child: const ChatScreen(),
+          ),
+        ),
+      );
+      expect(tester.takeAnnouncements(), isEmpty);
+
+      states.add(const ChatState(loadFailure: ChatLoadFailure.connection));
+      await tester.pump();
+      await tester.pump();
+      states.add(const ChatState(loadFailure: ChatLoadFailure.connection));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        [l10n.messagesRoomConnectionError],
+      );
+    });
 
     group('undelivered message', () {
       const author =

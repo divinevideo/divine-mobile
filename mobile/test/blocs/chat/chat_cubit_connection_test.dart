@@ -186,6 +186,21 @@ void main() {
       );
     }
 
+    test('a room that fails to start for another reason is reported', () async {
+      final repository = _Repo();
+      when(() => repository.changes).thenAnswer((_) => const Stream.empty());
+      final cubit = ChatCubit(
+        repository,
+        initialize: () async => throw StateError('restore failed'),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.start();
+
+      expect(cubit.state.loadFailure, ChatLoadFailure.other);
+      verifyCrashReports().called(1);
+    });
+
     test('work that outlives the relay is still reported', () async {
       final relay = _Relay();
       final cubit = _roomOver(relay);
