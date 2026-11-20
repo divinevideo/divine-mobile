@@ -9,6 +9,7 @@ import 'package:models/models.dart'
         AudioLicenseMetadata,
         ClipSourceCredit,
         VineSound;
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
@@ -20,7 +21,9 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_clip_credits.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_collaborators_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_selector.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_expiration_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
@@ -40,6 +43,7 @@ void main() {
       bool enableIdeas = false,
       bool publishingIdeasEnabled = false,
       VideoReplyContext? replyContext,
+      String? collabRoomId,
       List<ClipSourceCredit> clipCredits = const [],
     }) {
       return ProviderScope(
@@ -58,6 +62,9 @@ void main() {
           ).overrideWithValue(publishingIdeasEnabled),
           videoReplyContextProvider.overrideWith(
             () => _TestVideoReplyContextNotifier(replyContext),
+          ),
+          collabRoomPostProvider.overrideWith(
+            () => _TestCollabRoomPostNotifier(collabRoomId),
           ),
         ],
         child: MaterialApp(
@@ -178,6 +185,17 @@ void main() {
     group('post time tile (#3538)', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
+      double gapBetweenExpirationAndCollaborators(WidgetTester tester) {
+        Rect boxOf(Finder child) => tester.getRect(
+          find.ancestor(of: child, matching: find.byType(ClipRRect)).first,
+        );
+        final expiration = boxOf(find.byType(VideoMetadataExpirationSelector));
+        final collaborators = boxOf(
+          find.byType(VideoMetadataCollaboratorsInput),
+        );
+        return collaborators.top - expiration.bottom;
+      }
+
       testWidgets('renders when scheduling is on', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
@@ -192,7 +210,9 @@ void main() {
         expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
       });
 
-      testWidgets('hides for a video reply', (tester) async {
+      testWidgets('hides for a video reply without leaving a gap', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           buildWidget(
             replyContext: const VideoReplyContext(
@@ -205,6 +225,17 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+        expect(gapBetweenExpirationAndCollaborators(tester), equals(16));
+      });
+
+      testWidgets('hides for a Together post without leaving a gap', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(collabRoomId: 'f' * 32));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+        expect(gapBetweenExpirationAndCollaborators(tester), equals(16));
       });
     });
 
@@ -596,6 +627,15 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
     lastAllowVideoReuse = allowVideoReuse;
     state = state.copyWith(allowVideoReuse: allowVideoReuse);
   }
+}
+
+class _TestCollabRoomPostNotifier extends CollabRoomPostNotifier {
+  _TestCollabRoomPostNotifier(this._initialRoomId);
+
+  final String? _initialRoomId;
+
+  @override
+  String? build() => _initialRoomId;
 }
 
 class _TestVideoReplyContextNotifier extends VideoReplyContextNotifier {
