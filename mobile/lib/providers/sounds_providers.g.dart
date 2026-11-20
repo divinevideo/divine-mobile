@@ -160,8 +160,9 @@ String _$soundsRepositoryHash() => r'88713c2898cb6802d5dbfeb3a6f79d210d2dc802';
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -176,8 +177,9 @@ final trendingSoundsProvider = TrendingSoundsProvider._();
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -190,8 +192,9 @@ final class TrendingSoundsProvider
   /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
   /// it fills a screen.
   ///
-  /// Unnamed sounds no other account used are left out
-  /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+  /// From Funnelcake's sound index, and from the relays when it cannot answer
+  /// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+  /// until a second video uses it; a search still finds it.
   ///
   /// Usage:
   /// ```dart
@@ -217,14 +220,15 @@ final class TrendingSoundsProvider
   TrendingSounds create() => TrendingSounds();
 }
 
-String _$trendingSoundsHash() => r'a9bbfc997ee11a4178a221faabe06d82aebc832f';
+String _$trendingSoundsHash() => r'bcaeeb259b0f7007a0250b14e9df3f412d35bf9b';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -724,7 +728,7 @@ final class SoundsOfKindProvider
   }
 }
 
-String _$soundsOfKindHash() => r'66e29036b906bbeacc2410739e80bc24cced7aa3';
+String _$soundsOfKindHash() => r'13781cb087cf068b4750aec7dc6831e269040ec1';
 
 /// The sounds of [kind] in one of the picker's lists ([list]), loading the
 /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
@@ -1214,167 +1218,6 @@ final class SoundUsageCountFamily extends $Family
   String toString() => r'soundUsageCountProvider';
 }
 
-/// Batched reuse counts for the trending sounds list, keyed by the event id a
-/// reusing video references (`AudioEvent.attributionEventId`).
-///
-/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-/// in a single query through
-/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-/// round trip however many sounds it shows.
-///
-/// Sounds with no referenceable Nostr event — bundled assets, unpublished
-/// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all. So is a sound whose count could
-/// not be looked up.
-///
-/// Usage:
-/// ```dart
-/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-/// final count = counts?[sound.attributionEventId];
-/// ```
-
-@ProviderFor(trendingSoundUsageCounts)
-final trendingSoundUsageCountsProvider = TrendingSoundUsageCountsProvider._();
-
-/// Batched reuse counts for the trending sounds list, keyed by the event id a
-/// reusing video references (`AudioEvent.attributionEventId`).
-///
-/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-/// in a single query through
-/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-/// round trip however many sounds it shows.
-///
-/// Sounds with no referenceable Nostr event — bundled assets, unpublished
-/// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all. So is a sound whose count could
-/// not be looked up.
-///
-/// Usage:
-/// ```dart
-/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-/// final count = counts?[sound.attributionEventId];
-/// ```
-
-final class TrendingSoundUsageCountsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<Map<String, int>>,
-          Map<String, int>,
-          FutureOr<Map<String, int>>
-        >
-    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
-  /// Batched reuse counts for the trending sounds list, keyed by the event id a
-  /// reusing video references (`AudioEvent.attributionEventId`).
-  ///
-  /// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-  /// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-  /// in a single query through
-  /// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-  /// round trip however many sounds it shows.
-  ///
-  /// Sounds with no referenceable Nostr event — bundled assets, unpublished
-  /// imports — carry no id and are absent from the map, and a list made only of
-  /// those never reaches the repository at all. So is a sound whose count could
-  /// not be looked up.
-  ///
-  /// Usage:
-  /// ```dart
-  /// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-  /// final count = counts?[sound.attributionEventId];
-  /// ```
-  TrendingSoundUsageCountsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'trendingSoundUsageCountsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$trendingSoundUsageCountsHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<Map<String, int>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<Map<String, int>> create(Ref ref) {
-    return trendingSoundUsageCounts(ref);
-  }
-}
-
-String _$trendingSoundUsageCountsHash() =>
-    r'c5492e930811075fb6fa755317b14139e842cc43';
-
-/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-/// loads more asks only about its new rows. Each lookup scans a capped number
-/// of videos for the whole batch, so asking again about every row loaded
-/// would also spread that cap ever thinner.
-
-@ProviderFor(_soundUsageCountCache)
-final _soundUsageCountCacheProvider = _SoundUsageCountCacheProvider._();
-
-/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-/// loads more asks only about its new rows. Each lookup scans a capped number
-/// of videos for the whole batch, so asking again about every row loaded
-/// would also spread that cap ever thinner.
-
-final class _SoundUsageCountCacheProvider
-    extends
-        $FunctionalProvider<
-          _SoundUsageCountCache,
-          _SoundUsageCountCache,
-          _SoundUsageCountCache
-        >
-    with $Provider<_SoundUsageCountCache> {
-  /// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-  /// loads more asks only about its new rows. Each lookup scans a capped number
-  /// of videos for the whole batch, so asking again about every row loaded
-  /// would also spread that cap ever thinner.
-  _SoundUsageCountCacheProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'_soundUsageCountCacheProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$_soundUsageCountCacheHash();
-
-  @$internal
-  @override
-  $ProviderElement<_SoundUsageCountCache> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  _SoundUsageCountCache create(Ref ref) {
-    return _soundUsageCountCache(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(_SoundUsageCountCache value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<_SoundUsageCountCache>(value),
-    );
-  }
-}
-
-String _$_soundUsageCountCacheHash() =>
-    r'47dc3de33708337d2aad049beee12c833d138479';
-
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
 /// page as the list is scrolled ([PopularSounds.loadMore]).
@@ -1509,7 +1352,8 @@ String _$divineSoundsHash() => r'9810f55d815543cfd9e2405e3e6a4100861b3f64';
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1524,7 +1368,8 @@ final forYouSoundsProvider = ForYouSoundsProvider._();
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1537,7 +1382,8 @@ final class ForYouSoundsProvider
   /// The newest sounds published by people the viewer follows, for the
   /// picker's "For you" list, loading older ones page by page as it is
   /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-  /// screen.
+  /// screen. From Funnelcake's sound index, and from the relays when it cannot
+  /// answer ([SoundsRepository.fetchFollowedSounds]).
   ///
   /// Divine's own sounds are left out even when the viewer follows a Divine
   /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1564,12 +1410,13 @@ final class ForYouSoundsProvider
   ForYouSounds create() => ForYouSounds();
 }
 
-String _$forYouSoundsHash() => r'185df5339a875ba58195d980c44b8452d019e458';
+String _$forYouSoundsHash() => r'4cf60a3fb14d49d38f9eca30f6addbe6f83f20b7';
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1601,9 +1448,9 @@ abstract class _$ForYouSounds extends $AsyncNotifier<PagedSounds> {
 /// found: deleted, or filtered out for this viewer. A sound the lookup has
 /// not reached yet, or could not, is absent.
 ///
-/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-/// lookup rather than one per row, and the list never waits on it. Sounds
-/// that came from no video are absent too.
+/// The whole list resolves in one batched lookup rather than one per row,
+/// and the list never waits on it. Sounds that came from no video are absent
+/// too.
 ///
 /// Usage:
 /// ```dart
@@ -1619,9 +1466,9 @@ final trendingSoundCoversProvider = TrendingSoundCoversProvider._();
 /// found: deleted, or filtered out for this viewer. A sound the lookup has
 /// not reached yet, or could not, is absent.
 ///
-/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-/// lookup rather than one per row, and the list never waits on it. Sounds
-/// that came from no video are absent too.
+/// The whole list resolves in one batched lookup rather than one per row,
+/// and the list never waits on it. Sounds that came from no video are absent
+/// too.
 ///
 /// Usage:
 /// ```dart
@@ -1644,9 +1491,9 @@ final class TrendingSoundCoversProvider
   /// found: deleted, or filtered out for this viewer. A sound the lookup has
   /// not reached yet, or could not, is absent.
   ///
-  /// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-  /// lookup rather than one per row, and the list never waits on it. Sounds
-  /// that came from no video are absent too.
+  /// The whole list resolves in one batched lookup rather than one per row,
+  /// and the list never waits on it. Sounds that came from no video are absent
+  /// too.
   ///
   /// Usage:
   /// ```dart

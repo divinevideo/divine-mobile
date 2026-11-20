@@ -972,15 +972,11 @@ class _AudioSelectionBottomSheetState
     final trendingCovers = trendingLookup == null
         ? null
         : settled(trendingLookup);
-    // One batched query for the whole newest list rather than a count
-    // provider per row. Absent while it resolves, and absent for good if it
-    // fails: the counts are supplementary, so the list never waits on them.
-    // A list of a kind comes with Funnelcake's counts.
-    final usageCounts = !loads(.newest)
-        ? null
-        : kind == null
-        ? ref.watch(trendingSoundUsageCountsProvider).value
-        : nostrSoundsAsync.value?.usageCounts;
+    // The newest list comes with Funnelcake's counts; read from the relays
+    // instead, it has none, and its rows show no count.
+    final usageCounts = loads(.newest)
+        ? nostrSoundsAsync.value?.usageCounts
+        : null;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
     final savedSourcesLookup = loads(.mySounds)
         ? ref.watch(

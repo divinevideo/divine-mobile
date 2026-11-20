@@ -2,7 +2,6 @@
 // ABOUTME: Provides reactive state management for sounds from SoundsRepository.
 
 import 'dart:async';
-import 'dart:math' show min;
 
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
@@ -81,11 +80,6 @@ SoundsRepository soundsRepository(Ref ref) {
   return repository;
 }
 
-/// How many sounds a page of a relay list asks for. Most of the newest are
-/// unnamed sounds no other account used, which the lists leave out, so a
-/// page asks for twice the usual to keep enough to fill the screen.
-const _relayPageSize = 100;
-
 /// How many sounds a list loads by itself, a little more than fill the
 /// screen, before it waits to be scrolled.
 const _screenfulOfSounds = 20;
@@ -97,8 +91,9 @@ const _pagesLoadedUnasked = 5;
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -107,7 +102,7 @@ const _pagesLoadedUnasked = 5;
 /// ```
 @riverpod
 class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
-  late _NewestFirstPager _pager;
+  late _CursorPager _pager;
 
   @override
   Future<PagedSounds> build() async {
@@ -115,18 +110,11 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
     _fillAScreen();
-    _pager = _NewestFirstPager(
-      fetch: (until) => repository.fetchTrendingSounds(
-        limit: _relayPageSize,
-        until: until,
-      ),
+    _pager = _CursorPager(
+      (cursor) => repository.fetchNewestSounds(cursor: cursor),
       // The imported library would fill the newest pages; it is reached
       // through search and Popular instead.
-      keep: (sounds) => repository.withoutUnusedOriginals(
-        repository.withoutLibrarySounds(
-          repository.withoutBlockedAuthors(sounds),
-        ),
-      ),
+      keep: repository.withoutLibrarySounds,
     );
     return PagedSounds.first(await _pager.next());
   }
@@ -281,21 +269,22 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
         ? ref.watch(followRepositoryProvider).followingPubkeys
         : const <String>[];
     _hideAuthorsBlockedLater();
+    _fillAScreen();
     // Made anew with each build, so a page still loading for the list this
     // build replaced cannot move the new one's cursor.
     _pager = _CursorPager(
       (cursor) => switch (list) {
-        SoundListOfKind.newest => repository.fetchNewestSoundsOfKind(
-          kind,
+        SoundListOfKind.newest => repository.fetchNewestSounds(
+          kind: kind,
           cursor: cursor,
         ),
         SoundListOfKind.popular => repository.fetchPopularSoundsOfKind(
           kind,
           cursor: cursor,
         ),
-        SoundListOfKind.followed => repository.fetchFollowedSoundsOfKind(
-          kind,
+        SoundListOfKind.followed => repository.fetchFollowedSounds(
           following,
+          kind: kind,
           cursor: cursor,
         ),
       },
@@ -304,10 +293,9 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
       keep: switch (list) {
         SoundListOfKind.newest => repository.withoutLibrarySounds,
         SoundListOfKind.popular => null,
-        SoundListOfKind.followed => (sounds) => [
-          for (final sound in repository.withoutLibrarySounds(sounds))
-            if (!sound.isDivine) sound,
-        ],
+        SoundListOfKind.followed => _withoutLibraryOrDivineSounds(
+          repository,
+        ),
       },
     );
     return PagedSounds.first(await _pager.next());
@@ -316,6 +304,18 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
   @override
   Future<SoundPage> _nextPage() => _pager.next();
 }
+
+/// Narrows a page of For you to the sounds it shows: not the imported
+/// library, which search and Popular reach, nor Divine's own sounds, which
+/// the picker lists beside it from [divineSounds], tied to the ones the app
+/// ships, and would otherwise show twice.
+List<AudioEvent> Function(List<AudioEvent>) _withoutLibraryOrDivineSounds(
+  SoundsRepository repository,
+) =>
+    (sounds) => [
+      for (final sound in repository.withoutLibrarySounds(sounds))
+        if (!sound.isDivine) sound,
+    ];
 
 /// Walks the pages of a list that follows a cursor, each holding only sounds
 /// the pages before it did not.
@@ -428,78 +428,6 @@ Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
   return repository.fetchVideosUsingSoundCount(audioEventId);
 }
 
-/// Batched reuse counts for the trending sounds list, keyed by the event id a
-/// reusing video references (`AudioEvent.attributionEventId`).
-///
-/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-/// in a single query through
-/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-/// round trip however many sounds it shows.
-///
-/// Sounds with no referenceable Nostr event — bundled assets, unpublished
-/// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all. So is a sound whose count could
-/// not be looked up.
-///
-/// Usage:
-/// ```dart
-/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-/// final count = counts?[sound.attributionEventId];
-/// ```
-@riverpod
-Future<Map<String, int>> trendingSoundUsageCounts(Ref ref) async {
-  final pages = await ref.watch(
-    trendingSoundsProvider.selectAsync((list) => list.pages),
-  );
-  final ids = <String>{
-    for (final page in pages)
-      for (final sound in page) ?sound.attributionEventId,
-  };
-  if (ids.isEmpty) return const {};
-
-  return ref.watch(_soundUsageCountCacheProvider).countsFor(ids);
-}
-
-/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-/// loads more asks only about its new rows. Each lookup scans a capped number
-/// of videos for the whole batch, so asking again about every row loaded
-/// would also spread that cap ever thinner.
-@riverpod
-_SoundUsageCountCache _soundUsageCountCache(Ref ref) {
-  _keepForReopen(ref);
-  return _SoundUsageCountCache(ref.watch(soundsRepositoryProvider));
-}
-
-class _SoundUsageCountCache {
-  _SoundUsageCountCache(this._sounds);
-
-  final SoundsRepository _sounds;
-  final _counts = <String, int>{};
-
-  /// Counts for [ids]. An id counted before keeps its count, and the rest are
-  /// counted now in one batch. When that fails they are left out, so their
-  /// rows show no count and the next lookup asks again.
-  Future<Map<String, int>> countsFor(Set<String> ids) async {
-    final unknown = {
-      for (final id in ids)
-        if (!_counts.containsKey(id)) id,
-    };
-    if (unknown.isNotEmpty) {
-      try {
-        _counts.addAll(await _sounds.fetchVideosUsingSoundCounts(unknown));
-      } on Object catch (e) {
-        Log.warning(
-          'Could not count the videos using sounds: $e',
-          name: 'SoundsProviders',
-          category: LogCategory.api,
-        );
-      }
-    }
-    return {for (final id in ids) id: ?_counts[id]};
-  }
-}
-
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
 /// page as the list is scrolled ([PopularSounds.loadMore]).
@@ -565,7 +493,8 @@ Future<List<AudioEvent>> divineSounds(Ref ref) {
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -575,7 +504,7 @@ Future<List<AudioEvent>> divineSounds(Ref ref) {
 /// leads with Divine's own sounds.
 @riverpod
 class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
-  late _NewestFirstPager _pager;
+  late _CursorPager _pager;
 
   @override
   Future<PagedSounds> build() async {
@@ -584,20 +513,9 @@ class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
     _fillAScreen();
-    _pager = _NewestFirstPager(
-      fetch: (until) => repository.fetchSoundsByCreators(
-        following,
-        limit: _relayPageSize,
-        until: until,
-      ),
-      // Most of what people share is the unnamed sound of a video, which
-      // only earns a place here once someone else has used it.
-      keep: (sounds) => repository.withoutUnusedOriginals([
-        for (final sound in repository.withoutLibrarySounds(
-          repository.withoutBlockedAuthors(sounds),
-        ))
-          if (!sound.isDivine) sound,
-      ]),
+    _pager = _CursorPager(
+      (cursor) => repository.fetchFollowedSounds(following, cursor: cursor),
+      keep: _withoutLibraryOrDivineSounds(repository),
     );
     if (following.isEmpty) return const PagedSounds(pages: [[]]);
     return PagedSounds.first(await _pager.next());
@@ -708,56 +626,14 @@ mixin _LoadsMoreSounds {
   }
 }
 
-/// Walks a newest-first relay list back in time, a page per [next], each
-/// holding only sounds the pages before it did not.
-class _NewestFirstPager {
-  _NewestFirstPager({required this.fetch, required this.keep});
-
-  /// Fetches a page of the newest sounds, or with `until` of the newest
-  /// published at or before that Unix time.
-  final Future<List<AudioEvent>> Function(int? until) fetch;
-
-  /// Narrows a fetched page to the sounds the list shows.
-  final Future<List<AudioEvent>> Function(List<AudioEvent> sounds) keep;
-
-  final _seen = <String>{};
-  int? _until;
-
-  /// The next page. It holds fewer sounds than were fetched where [keep]
-  /// left some out, possibly none, while there are more to come.
-  Future<SoundPage> next() async {
-    final fetched = await fetch(_until);
-    final fresh = [
-      for (final sound in fetched)
-        if (_seen.add(sound.id)) sound,
-    ];
-    if (fresh.isEmpty) {
-      return (
-        sounds: const <AudioEvent>[],
-        usageCounts: const <String, int>{},
-        hasMore: false,
-      );
-    }
-    // `until` takes in the second it names, so sounds sharing the oldest
-    // second with this page are not skipped; the ones listed already are
-    // dropped above.
-    _until = fresh.map((sound) => sound.createdAt).reduce(min);
-    return (
-      sounds: await keep(fresh),
-      usageCounts: const <String, int>{},
-      hasMore: true,
-    );
-  }
-}
-
 /// Covers for the newest sounds list, keyed by
 /// [AudioEvent.sourceVideoReference], `null` for a video looked up and not
 /// found: deleted, or filtered out for this viewer. A sound the lookup has
 /// not reached yet, or could not, is absent.
 ///
-/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-/// lookup rather than one per row, and the list never waits on it. Sounds
-/// that came from no video are absent too.
+/// The whole list resolves in one batched lookup rather than one per row,
+/// and the list never waits on it. Sounds that came from no video are absent
+/// too.
 ///
 /// Usage:
 /// ```dart

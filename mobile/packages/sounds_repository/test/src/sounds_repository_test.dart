@@ -1653,9 +1653,9 @@ void main() {
       });
     });
 
-    group('sounds of a kind', () {
+    group('the picker lists', () {
       late _MockFunnelcakeApiClient funnelcake;
-      late SoundsRepository kinds;
+      late SoundsRepository lists;
       const followedA =
           'aa00000000000000000000000000000000000000000000000000000000000001';
       const followedB =
@@ -1665,31 +1665,46 @@ void main() {
       const divineAuthor =
           'aa00000000000000000000000000000000000000000000000000000000000004';
 
-      setUp(() {
-        funnelcake = _MockFunnelcakeApiClient();
-        when(() => funnelcake.isAvailable).thenReturn(true);
+      SoundStats indexed(String id, {int usageCount = 3}) => SoundStats(
+        id: id,
+        pubkey: testPubkey1,
+        title: 'Sound',
+        createdAt: DateTime.utc(2026),
+        usageCount: usageCount,
+      );
+
+      void answerIndex(List<SoundStats> sounds, {String? nextCursor}) {
         when(
           () => funnelcake.listSounds(
             sort: any(named: 'sort'),
             authors: any(named: 'authors'),
             kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (_) async => SoundSearchResponse(
-            sounds: [
-              for (final id in [testEventId2, testEventId1])
-                SoundStats(
-                  id: id,
-                  pubkey: testPubkey1,
-                  title: 'Sound',
-                  createdAt: DateTime.utc(2026),
-                  usageCount: id == testEventId1 ? 7 : 3,
-                ),
-            ],
-            nextCursor: 'o:50',
-          ),
+          (_) async =>
+              SoundSearchResponse(sounds: sounds, nextCursor: nextCursor),
         );
+      }
+
+      void verifyIndexNotAsked() => verifyNever(
+        () => funnelcake.listSounds(
+          sort: any(named: 'sort'),
+          authors: any(named: 'authors'),
+          kind: any(named: 'kind'),
+          limit: any(named: 'limit'),
+          cursor: any(named: 'cursor'),
+        ),
+      );
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        answerIndex([
+          indexed(testEventId2),
+          indexed(testEventId1, usageCount: 7),
+        ], nextCursor: 'o:100');
         answerIdLookup([
           createAudioEvent(
             id: testEventId1,
@@ -1702,131 +1717,352 @@ void main() {
             title: 'Crash',
           ),
         ]);
-        kinds = SoundsRepository(
+        lists = SoundsRepository(
           nostrClient: mockNostrClient,
           funnelcakeApiClient: funnelcake,
           divineSoundPublishers: const {divineAuthor},
           blockFilter: (pubkey) => pubkey == blockedAuthor,
         );
-        addTearDown(kinds.dispose);
+        addTearDown(lists.dispose);
       });
 
-      test('lists the newest of a kind in the index order', () async {
-        final page = await kinds.fetchNewestSoundsOfKind(
-          SoundKind.effect,
-          cursor: 'o:0',
+      group('fetchNewestSounds', () {
+        test('lists the newest sounds in the index order', () async {
+          final page = await lists.fetchNewestSounds();
+
+          expect(page.sounds.map((sound) => sound.id), [
+            testEventId2,
+            testEventId1,
+          ]);
+          expect(page.usageCounts, {testEventId2: 3, testEventId1: 7});
+          expect(page.nextCursor, 'o:100');
+          verify(
+            () => funnelcake.listSounds(
+              limit: SoundsRepository.newestListPageSize,
+            ),
+          ).called(1);
+        });
+
+        test('lists those of a kind from where the cursor points', () async {
+          await lists.fetchNewestSounds(kind: SoundKind.effect, cursor: 'o:0');
+
+          verify(
+            () => funnelcake.listSounds(
+              kind: SoundKind.effect,
+              limit: SoundsRepository.newestListPageSize,
+              cursor: 'o:0',
+            ),
+          ).called(1);
+        });
+
+        test("leaves out a video's own sound until a second video uses "
+            'it', () async {
+          answerIndex([
+            indexed(testEventId1, usageCount: 1),
+            indexed(testEventId2, usageCount: 2),
+            indexed(testVideoEventId, usageCount: 1),
+          ]);
+          answerIdLookup([
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Original sound - Funny God',
+            ),
+            createAudioEvent(
+              id: testEventId2,
+              pubkey: testPubkey1,
+              title: 'Original sound',
+            ),
+            createAudioEvent(
+              id: testVideoEventId,
+              pubkey: testPubkey1,
+              title: 'Named on its own',
+            ),
+          ]);
+
+          final page = await lists.fetchNewestSounds();
+
+          expect(page.sounds.map((sound) => sound.id), [
+            testEventId2,
+            testVideoEventId,
+          ]);
+        });
+
+        test('leaves out sounds by blocked authors', () async {
+          final blocking = SoundsRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: funnelcake,
+            blockFilter: (pubkey) => pubkey == testPubkey2,
+          );
+          addTearDown(blocking.dispose);
+
+          final page = await blocking.fetchNewestSounds();
+
+          expect(page.sounds.map((sound) => sound.id), [testEventId1]);
+        });
+
+        group('from the relays', () {
+          final rain = createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Rain',
+            createdAt: 2000,
+            publicTags: const ['sfx'],
+          );
+          final song = createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey2,
+            title: 'Song',
+            createdAt: 1500,
+            publicTags: const ['music'],
+          );
+
+          setUp(() => answerNewest([rain, song]));
+
+          test('lists the newest when Funnelcake is not configured', () async {
+            when(() => funnelcake.isAvailable).thenReturn(false);
+
+            final page = await lists.fetchNewestSounds();
+
+            expect(page.sounds.map((sound) => sound.id), [
+              testEventId1,
+              testEventId2,
+            ]);
+            expect(page.usageCounts, isEmpty);
+            expect(page.nextCursor, 'relays:1500');
+            expect(
+              newestReads().single.limit,
+              SoundsRepository.newestListPageSize,
+            );
+            verifyIndexNotAsked();
+          });
+
+          test('lists the newest when the index fails', () async {
+            when(
+              () => funnelcake.listSounds(
+                sort: any(named: 'sort'),
+                authors: any(named: 'authors'),
+                kind: any(named: 'kind'),
+                limit: any(named: 'limit'),
+                cursor: any(named: 'cursor'),
+              ),
+            ).thenThrow(
+              const FunnelcakeApiException(
+                message: 'Search index unavailable',
+                statusCode: 503,
+                url: 'https://api.example/api/v2/search/sounds',
+              ),
+            );
+
+            final page = await lists.fetchNewestSounds(kind: SoundKind.music);
+
+            expect(page.sounds.map((sound) => sound.id), [testEventId2]);
+          });
+
+          test(
+            'lists the newest when the index does not answer in time',
+            () async {
+              when(
+                () => funnelcake.listSounds(
+                  sort: any(named: 'sort'),
+                  authors: any(named: 'authors'),
+                  kind: any(named: 'kind'),
+                  limit: any(named: 'limit'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenThrow(const FunnelcakeTimeoutException());
+
+              final page = await lists.fetchNewestSounds();
+
+              expect(page.sounds.map((sound) => sound.id), [
+                testEventId1,
+                testEventId2,
+              ]);
+            },
+          );
+
+          test('lists from a relay cursor on, ending when nothing older '
+              'is left', () async {
+            final page = await lists.fetchNewestSounds(cursor: 'relays:2000');
+
+            expect(newestReads().single.until, 2000);
+            expect(page.nextCursor, 'relays:1500');
+
+            answerNewest([song]);
+            final last = await lists.fetchNewestSounds(cursor: 'relays:1500');
+
+            expect(last.nextCursor, isNull);
+            verifyIndexNotAsked();
+          });
+
+          test('pages on past sounds it cannot use', () async {
+            answerNewest([
+              rain,
+              createAudioEvent(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                title: 'No file',
+                url: null,
+                createdAt: 900,
+              ),
+            ]);
+            when(() => funnelcake.isAvailable).thenReturn(false);
+
+            final page = await lists.fetchNewestSounds();
+
+            expect(page.sounds.map((sound) => sound.id), [testEventId1]);
+            expect(page.nextCursor, 'relays:900');
+          });
+
+          test('lists nothing more when the relays return nothing', () async {
+            answerNewest([]);
+            when(() => funnelcake.isAvailable).thenReturn(false);
+
+            final page = await lists.fetchNewestSounds();
+
+            expect(page.sounds, isEmpty);
+            expect(page.nextCursor, isNull);
+          });
+        });
+
+        test('does not switch to the relays on a later page', () async {
+          when(
+            () => funnelcake.listSounds(
+              sort: any(named: 'sort'),
+              authors: any(named: 'authors'),
+              kind: any(named: 'kind'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenThrow(const FunnelcakeTimeoutException());
+
+          await expectLater(
+            lists.fetchNewestSounds(cursor: 'o:100'),
+            throwsA(isA<FunnelcakeTimeoutException>()),
+          );
+          expect(newestReads, throwsA(isA<TestFailure>()));
+        });
+
+        test('throws for an index cursor without a Funnelcake client', () {
+          final offline = SoundsRepository(nostrClient: mockNostrClient);
+          addTearDown(offline.dispose);
+
+          expect(
+            () => offline.fetchNewestSounds(cursor: 'o:100'),
+            throwsA(isA<FunnelcakeNotConfiguredException>()),
+          );
+        });
+      });
+
+      group('fetchPopularSoundsOfKind', () {
+        test('lists them by trend', () async {
+          await lists.fetchPopularSoundsOfKind(SoundKind.music);
+
+          verify(
+            () => funnelcake.listSounds(
+              sort: SoundListSort.trending,
+              kind: SoundKind.music,
+            ),
+          ).called(1);
+        });
+
+        test("keeps a video's own sound", () async {
+          answerIndex([indexed(testEventId1, usageCount: 1)]);
+          answerIdLookup([
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Original sound',
+            ),
+          ]);
+
+          final page = await lists.fetchPopularSoundsOfKind(SoundKind.music);
+
+          expect(page.sounds.map((sound) => sound.id), [testEventId1]);
+        });
+
+        test('lists nothing, without asking, while Funnelcake is not '
+            'configured', () async {
+          when(() => funnelcake.isAvailable).thenReturn(false);
+
+          final page = await lists.fetchPopularSoundsOfKind(SoundKind.effect);
+
+          expect(page.sounds, isEmpty);
+          expect(page.nextCursor, isNull);
+          verifyNoIdLookup();
+        });
+      });
+
+      group('fetchFollowedSounds', () {
+        test('asks the index about the most recently followed creators, '
+            'passing over blocked ones, Divine and malformed keys', () async {
+          await lists.fetchFollowedSounds(const [
+            followedA,
+            blockedAuthor,
+            'not-a-key',
+            divineAuthor,
+            'AA00000000000000000000000000000000000000000000000000000000000002',
+          ], kind: SoundKind.effect);
+
+          verify(
+            () => funnelcake.listSounds(
+              authors: [followedB, followedA],
+              kind: SoundKind.effect,
+              limit: SoundsRepository.newestListPageSize,
+            ),
+          ).called(1);
+        });
+
+        test(
+          'asks the index about at most as many creators as it takes',
+          () async {
+            final following = [
+              for (
+                var i = 0;
+                i < FunnelcakeApiClient.maxSoundListAuthors + 5;
+                i++
+              )
+                i.toRadixString(16).padLeft(64, '0'),
+            ];
+
+            await lists.fetchFollowedSounds(following);
+
+            final authors =
+                verify(
+                      () => funnelcake.listSounds(
+                        authors: captureAny(named: 'authors'),
+                        limit: SoundsRepository.newestListPageSize,
+                      ),
+                    ).captured.single
+                    as List<String>;
+            expect(
+              authors,
+              hasLength(FunnelcakeApiClient.maxSoundListAuthors),
+            );
+            expect(authors.first, following.last);
+          },
         );
 
-        expect(page.sounds.map((sound) => sound.id), [
-          testEventId2,
-          testEventId1,
-        ]);
-        expect(page.usageCounts, {testEventId2: 3, testEventId1: 7});
-        expect(page.nextCursor, 'o:50');
-        verify(
-          () => funnelcake.listSounds(
-            kind: SoundKind.effect,
-            cursor: 'o:0',
-          ),
-        ).called(1);
-      });
+        test('asks the relays about the same creators when the index '
+            'cannot answer', () async {
+          when(() => funnelcake.isAvailable).thenReturn(false);
 
-      test('lists the popular ones by trend', () async {
-        await kinds.fetchPopularSoundsOfKind(SoundKind.music);
+          await lists.fetchFollowedSounds(const [followedA, blockedAuthor]);
 
-        verify(
-          () => funnelcake.listSounds(
-            sort: SoundListSort.trending,
-            kind: SoundKind.music,
-          ),
-        ).called(1);
-      });
+          expect(newestReads().single.authors, [followedA]);
+        });
 
-      test('leaves out sounds by blocked authors', () async {
-        final blocking = SoundsRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: funnelcake,
-          blockFilter: (pubkey) => pubkey == testPubkey2,
-        );
-        addTearDown(blocking.dispose);
+        test('asks nothing when no followed creator is left', () async {
+          final page = await lists.fetchFollowedSounds(const [
+            blockedAuthor,
+            divineAuthor,
+          ]);
 
-        final page = await blocking.fetchNewestSoundsOfKind(SoundKind.effect);
-
-        expect(page.sounds.map((sound) => sound.id), [testEventId1]);
-      });
-
-      test('asks the index about the most recently followed creators, '
-          'passing over blocked ones, Divine and malformed keys', () async {
-        await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, [
-          followedA,
-          blockedAuthor,
-          'not-a-key',
-          divineAuthor,
-          followedB.toUpperCase(),
-        ]);
-
-        verify(
-          () => funnelcake.listSounds(
-            authors: [followedB, followedA],
-            kind: SoundKind.effect,
-          ),
-        ).called(1);
-      });
-
-      test(
-        'asks the index about at most as many creators as it takes',
-        () async {
-          final following = [
-            for (
-              var i = 0;
-              i < FunnelcakeApiClient.maxSoundListAuthors + 5;
-              i++
-            )
-              i.toRadixString(16).padLeft(64, '0'),
-          ];
-
-          await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, following);
-
-          final authors =
-              verify(
-                    () => funnelcake.listSounds(
-                      authors: captureAny(named: 'authors'),
-                      kind: SoundKind.effect,
-                    ),
-                  ).captured.single
-                  as List<String>;
-          expect(authors, hasLength(FunnelcakeApiClient.maxSoundListAuthors));
-          expect(authors.first, following.last);
-        },
-      );
-
-      test('asks nothing when no followed creator is left', () async {
-        final page = await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, [
-          blockedAuthor,
-          divineAuthor,
-        ]);
-
-        expect(page.sounds, isEmpty);
-        expect(page.nextCursor, isNull);
-        verifyNever(
-          () => funnelcake.listSounds(
-            sort: any(named: 'sort'),
-            authors: any(named: 'authors'),
-            kind: any(named: 'kind'),
-            cursor: any(named: 'cursor'),
-          ),
-        );
-      });
-
-      test('lists nothing, without asking, while Funnelcake is not '
-          'configured', () async {
-        when(() => funnelcake.isAvailable).thenReturn(false);
-
-        final page = await kinds.fetchPopularSoundsOfKind(SoundKind.effect);
-
-        expect(page.sounds, isEmpty);
-        expect(page.nextCursor, isNull);
-        verifyNoIdLookup();
+          expect(page.sounds, isEmpty);
+          expect(page.nextCursor, isNull);
+          verifyIndexNotAsked();
+          expect(newestReads, throwsA(isA<TestFailure>()));
+        });
       });
     });
 

@@ -4,6 +4,7 @@
 // by creator, by usage count) for audio reuse.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
@@ -743,55 +744,182 @@ class SoundsRepository {
     }
   }
 
-  /// The newest sounds of [kind], a page at a time: the picker's New list
-  /// with a kind chosen.
+  /// The newest sounds, of [kind] when one is given, a page at a time: the
+  /// picker's New list.
   ///
   /// From Funnelcake's sound index, which classifies sounds as music or
-  /// effects by their audio; almost no sound carries a tag that says so.
-  /// The index leaves out sounds that are only someone talking. Each sound is
-  /// loaded from the relays, as [fetchPopularSounds] does, and sounds by
-  /// authors the viewer blocked or muted are left out, so a page can hold
-  /// fewer sounds than the index listed, or none, and still not be the last:
-  /// pass its `nextCursor` as [cursor] for the next.
+  /// effects by their audio (almost no sound carries a tag that says so) and
+  /// leaves out sounds that are only someone talking or silent. Each sound is
+  /// loaded from the relays, as [fetchPopularSounds] does. Left out are
+  /// sounds by authors the viewer blocked or muted, and a video's own sound
+  /// shared as it was ([AudioEvent.isAutoSharedOriginal]) until a second
+  /// video uses it, as the index counts: most of the newest sounds are such,
+  /// and most of those are someone talking. So a page can hold fewer sounds
+  /// than the index listed, or none, and still not be the last: pass its
+  /// `nextCursor` as [cursor] for the next.
   ///
-  /// A single empty page, without asking, when no Funnelcake client is
-  /// available. Throws what the Funnelcake request or the relay lookup
-  /// throws.
-  Future<SoundIndexPage> fetchNewestSoundsOfKind(
-    SoundKind kind, {
+  /// When the index cannot answer the first page, because no Funnelcake
+  /// client is available or with any [Exception] on the way, the newest
+  /// sounds are read from the relays instead ([fetchTrendingSounds]),
+  /// narrowed to [kind] by their tags, and paged by time; the cursor tells
+  /// the two apart. A later page of the index does not switch: it throws
+  /// what the Funnelcake request or the relay lookup throws, or a
+  /// [FunnelcakeNotConfiguredException] without a client.
+  Future<SoundIndexPage> fetchNewestSounds({
+    SoundKind? kind,
     String? cursor,
-  }) => _listSoundsOfKind(kind, sort: SoundListSort.recent, cursor: cursor);
+  }) => _newestSoundList(kind: kind, cursor: cursor);
 
   /// The sounds of [kind] people are picking up, the most trending first, a
-  /// page at a time: the picker's Popular list with a kind chosen. See
-  /// [fetchNewestSoundsOfKind].
+  /// page at a time: the picker's Popular list with a kind chosen.
+  ///
+  /// From Funnelcake's sound index, like [fetchNewestSounds], but keeping a
+  /// video's own sound, which only ranks once people use it. A single empty
+  /// page, without asking, when no Funnelcake client is available; throws
+  /// what the Funnelcake request or the relay lookup throws, as there is no
+  /// ranking to fall back on.
   Future<SoundIndexPage> fetchPopularSoundsOfKind(
     SoundKind kind, {
     String? cursor,
-  }) => _listSoundsOfKind(kind, sort: SoundListSort.trending, cursor: cursor);
+  }) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) return _noIndexSounds;
+    return _indexPage(
+      await client.listSounds(
+        sort: SoundListSort.trending,
+        kind: kind,
+        cursor: cursor,
+      ),
+    );
+  }
 
-  /// The newest sounds of [kind] by the accounts in [following], a page at a
-  /// time: the picker's For you list with a kind chosen. See
-  /// [fetchNewestSoundsOfKind].
+  /// The newest sounds by the accounts in [following], of [kind] when one is
+  /// given, a page at a time: the picker's For you list. Narrowed and
+  /// falling back to the relays as [fetchNewestSounds] is.
   ///
   /// The index takes at most [FunnelcakeApiClient.maxSoundListAuthors]
   /// creators, so it is asked about the most recently followed of them; a
   /// contact list adds each follow at its end. Divine's sound accounts and
   /// authors the viewer blocked or muted are passed over, since their sounds
-  /// would be left out anyway. A single empty page, without asking, when
-  /// none of [following] is left to ask about.
-  Future<SoundIndexPage> fetchFollowedSoundsOfKind(
-    SoundKind kind,
+  /// would be left out anyway. The relays are asked about the same
+  /// creators. A single empty page, without asking, when none of
+  /// [following] is left to ask about.
+  Future<SoundIndexPage> fetchFollowedSounds(
     Iterable<String> following, {
+    SoundKind? kind,
     String? cursor,
   }) async {
     final authors = _indexAuthors(following);
     if (authors.isEmpty) return _noIndexSounds;
-    return _listSoundsOfKind(
-      kind,
-      sort: SoundListSort.recent,
+    return _newestSoundList(kind: kind, authors: authors, cursor: cursor);
+  }
+
+  /// How many sounds a page of [fetchNewestSounds] or [fetchFollowedSounds]
+  /// asks the index or the relays for. The most the index hands out, as it
+  /// lists many more sounds than these lists keep.
+  static const newestListPageSize = 100;
+
+  /// Marks a cursor of [fetchNewestSounds] or [fetchFollowedSounds] as the
+  /// relays' rather than the index's: the Unix time the next page starts at
+  /// follows it.
+  static const _relayCursorPrefix = 'relays:';
+
+  Future<SoundIndexPage> _newestSoundList({
+    SoundKind? kind,
+    List<String>? authors,
+    String? cursor,
+  }) async {
+    if (cursor != null && cursor.startsWith(_relayCursorPrefix)) {
+      return _relayNewestPage(
+        kind: kind,
+        authors: authors,
+        until: int.tryParse(cursor.substring(_relayCursorPrefix.length)),
+      );
+    }
+    final client = _funnelcakeApiClient;
+    if (cursor != null) {
+      if (client == null) throw const FunnelcakeNotConfiguredException();
+      return _newestIndexPage(
+        client,
+        kind: kind,
+        authors: authors,
+        cursor: cursor,
+      );
+    }
+    if (client != null && client.isAvailable) {
+      try {
+        return await _newestIndexPage(client, kind: kind, authors: authors);
+      } on Exception catch (e) {
+        final reason = e is FunnelcakeApiException
+            ? 'status ${e.statusCode}'
+            : '${e.runtimeType}';
+        Log.warning(
+          'Funnelcake could not list sounds ($reason), listing the relays',
+          name: 'SoundsRepository',
+          category: LogCategory.api,
+        );
+      }
+    }
+    return _relayNewestPage(kind: kind, authors: authors);
+  }
+
+  Future<SoundIndexPage> _newestIndexPage(
+    FunnelcakeApiClient client, {
+    SoundKind? kind,
+    List<String>? authors,
+    String? cursor,
+  }) async {
+    final page = await _indexPage(
+      await client.listSounds(
+        authors: authors ?? const [],
+        kind: kind,
+        limit: newestListPageSize,
+        cursor: cursor,
+      ),
+    );
+    final usageCounts = page.usageCounts;
+    return (
+      sounds: [
+        for (final sound in page.sounds)
+          if (!sound.isAutoSharedOriginal || (usageCounts[sound.id] ?? 0) > 1)
+            sound,
+      ],
+      usageCounts: usageCounts,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  /// A page of the newest sounds from the relays, by [authors] when given
+  /// and published at or before [until] when given, narrowed as
+  /// [fetchNewestSounds] describes, with the reuse lookup of
+  /// [withoutUnusedOriginals] in place of the index's counts.
+  ///
+  /// The next page starts at the oldest sound the relays returned, whether
+  /// or not it was kept; none follows when they returned nothing older than
+  /// [until].
+  Future<SoundIndexPage> _relayNewestPage({
+    SoundKind? kind,
+    List<String>? authors,
+    int? until,
+  }) async {
+    final events = await _newestSounds(
+      limit: newestListPageSize,
       authors: authors,
-      cursor: cursor,
+      until: until,
+    );
+    final oldest = events.isEmpty
+        ? null
+        : events.map((event) => event.createdAt).reduce(min);
+    final sounds = withoutBlockedAuthors(_processAndCacheEvents(events));
+    return (
+      sounds: await withoutUnusedOriginals([
+        for (final sound in sounds)
+          if (kind == null || sound.soundKind == kind) sound,
+      ]),
+      usageCounts: const <String, int>{},
+      nextCursor: oldest == null || oldest == until
+          ? null
+          : '$_relayCursorPrefix$oldest',
     );
   }
 
@@ -800,23 +928,6 @@ class SoundsRepository {
     usageCounts: <String, int>{},
     nextCursor: null,
   );
-
-  Future<SoundIndexPage> _listSoundsOfKind(
-    SoundKind kind, {
-    required SoundListSort sort,
-    List<String> authors = const [],
-    String? cursor,
-  }) async {
-    final client = _funnelcakeApiClient;
-    if (client == null || !client.isAvailable) return _noIndexSounds;
-    final page = await client.listSounds(
-      sort: sort,
-      authors: authors,
-      kind: kind,
-      cursor: cursor,
-    );
-    return _indexPage(page);
-  }
 
   /// [page] with its sounds loaded from the relays in its order, leaving out
   /// those by authors the viewer blocked or muted.
@@ -838,7 +949,7 @@ class SoundsRepository {
   static final _hexPubkey = RegExp(r'^[0-9a-f]{64}$');
 
   /// The creators of [following] a followed list asks the index about; see
-  /// [fetchFollowedSoundsOfKind].
+  /// [fetchFollowedSounds].
   List<String> _indexAuthors(Iterable<String> following) {
     final isBlocked = _blockFilter;
     final authors = <String>{};
@@ -878,7 +989,7 @@ class SoundsRepository {
   /// ([AudioEventKind.soundKind]), which most sounds lack.
   ///
   /// With [followedBy], only sounds by those accounts are found: the picker's
-  /// For you search. As [fetchFollowedSoundsOfKind] does, it asks about the
+  /// For you search. As [fetchFollowedSounds] does, it asks about the
   /// most recently followed of them, passing over Divine's sound accounts and
   /// blocked or muted authors, and finds nothing, without asking, when none
   /// is left.

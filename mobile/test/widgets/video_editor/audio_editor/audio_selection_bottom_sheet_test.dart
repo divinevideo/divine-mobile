@@ -259,11 +259,8 @@ void main() {
                   trendingSoundsAsync,
                   pagesToLoad: newestPagesToLoad,
                   loadedPages: loadedPages,
+                  usageCounts: usageCounts ?? const {},
                 ),
-              ),
-            if (usageCounts != null)
-              trendingSoundUsageCountsProvider.overrideWith(
-                (_) async => usageCounts,
               ),
             if (covers != null)
               trendingSoundCoversProvider.overrideWith((_) async => covers),
@@ -645,9 +642,9 @@ void main() {
     });
 
     group('Reuse counts', () {
-      // A picker row's count has to come from the one batched query the sheet
-      // runs for the whole community list; a per-row provider watch would fan
-      // out one relay COUNT per row.
+      // A picker row's count comes with the list's page, as Funnelcake hands
+      // it out; a per-row provider watch would fan out one relay COUNT per
+      // row.
       const communitySoundId =
           'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
 
@@ -3507,10 +3504,14 @@ class _FakeTrendingSounds extends TrendingSounds {
     this._initialValue, {
     this.pagesToLoad = const [],
     this.loadedPages,
+    this.usageCounts = const {},
   });
 
   final AsyncValue<List<AudioEvent>> _initialValue;
   final List<List<AudioEvent>> pagesToLoad;
+
+  /// The usage counts the first page came with.
+  final Map<String, int> usageCounts;
 
   /// Records the titles of each page [loadMore] added.
   final List<String>? loadedPages;
@@ -3519,7 +3520,11 @@ class _FakeTrendingSounds extends TrendingSounds {
   Future<PagedSounds> build() {
     return _initialValue.when(
       data: (sounds) => Future.value(
-        PagedSounds(pages: [sounds], hasMore: pagesToLoad.isNotEmpty),
+        PagedSounds(
+          pages: [sounds],
+          usageCounts: usageCounts,
+          hasMore: pagesToLoad.isNotEmpty,
+        ),
       ),
       loading: () => Completer<PagedSounds>().future,
       error: Future.error,
