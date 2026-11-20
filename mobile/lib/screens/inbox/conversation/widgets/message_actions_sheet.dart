@@ -6,7 +6,7 @@ enum MessageAction {
   /// Copy the message text to clipboard.
   copy,
 
-  /// Copy the divine.video video URL embedded in the message.
+  /// Copy a link to the message's video, shortened when a shortener exists.
   copyVideoUrl,
 
   /// Save the shared video to the device gallery.
