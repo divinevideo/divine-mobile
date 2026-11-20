@@ -219,6 +219,36 @@ void main() {
         );
       });
 
+      test('records the jobs left unmonitored without a signature', () {
+        fakeAsync((clock) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenAnswer((_) async => [queuedJob]);
+          when(
+            () => client.getCrossposts(eventId: eventId),
+          ).thenThrow(const CrosspostingPassiveSigningUnavailable());
+          unawaited(queue.submit(eventId: eventId, connections: [connection]));
+          clock.flushMicrotasks();
+          clock.elapse(const Duration(seconds: 3));
+          clock.flushMicrotasks();
+
+          expect(
+            warnings(),
+            contains(
+              allOf(
+                contains(eventId),
+                contains('without a background signature'),
+                contains('instagram queued job job-1'),
+              ),
+            ),
+          );
+          expect(clock.pendingTimers, isEmpty);
+        });
+      });
+
       test('records a submission the account change cancelled', () {
         fakeAsync((clock) {
           when(

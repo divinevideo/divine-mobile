@@ -80,7 +80,11 @@ class CrosspostSubmissionQueue {
       return;
     }
     if (result.hasPendingJobs) {
-      _log(eventId, 'stopped polling: background signature unavailable');
+      _log(
+        eventId,
+        'stopped polling without a background signature, jobs pending: $jobs',
+        warning: true,
+      );
       return;
     }
     final unsuccessful = result.jobs.any(
