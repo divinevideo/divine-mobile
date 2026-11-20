@@ -125,7 +125,10 @@ class CorruptedVideoRepairService {
       );
       return null;
     }
-    final events = _newestPerAddress(result.events);
+    final events = _newestPerAddress([
+      for (final event in result.events)
+        if (event.isValid && event.isSigned) event,
+    ]);
 
     Log.info(
       'Scanning ${events.length} video events for corrupted URLs',
