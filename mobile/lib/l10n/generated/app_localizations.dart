@@ -27441,6 +27441,18 @@ abstract class AppLocalizations {
   /// **'See your stats'**
   String get creatorHighlightAnalytics;
 
+  /// Action on the daily creator highlight in Inbox, shown on days the creator posted. Opens the system share sheet to invite friends to download Divine.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring your friends in'**
+  String get creatorHighlightInvite;
+
+  /// Message the creator sends a friend from the highlight's invite action. {url} is the Divine download link; keep it at the end and unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Come make loops with me on Divine. React, comment, and collab with me in the app: {url}'**
+  String creatorHighlightInviteMessage(String url);
+
   /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
   ///
   /// In en, this message translates to:

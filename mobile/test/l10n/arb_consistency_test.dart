@@ -613,6 +613,9 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Highlight invite: English while the copy is tuned in the simulator.
+  'creatorHighlightInvite',
+  'creatorHighlightInviteMessage',
   // Library reaction shortcut; uses English until translated.
   'libraryRecordReaction',
   // Verify: renewing a sign-in link in place; translation debt.

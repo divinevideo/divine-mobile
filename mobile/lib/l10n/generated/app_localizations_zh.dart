@@ -15474,6 +15474,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatorHighlightAnalytics => '查看你的数据';
 
   @override
+  String get creatorHighlightInvite => 'Bring your friends in';
+
+  @override
+  String creatorHighlightInviteMessage(String url) {
+    return 'Come make loops with me on Divine. React, comment, and collab with me in the app: $url';
+  }
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

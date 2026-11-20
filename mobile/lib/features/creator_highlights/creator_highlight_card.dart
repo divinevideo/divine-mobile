@@ -3,9 +3,13 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/share_sheet.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class CreatorHighlightCard extends StatefulWidget {
@@ -159,10 +163,71 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                         ),
                       ],
                     ),
+                    if (card.showInvite) const _InviteAction(),
                   ],
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Invites friends to Divine through the share sheet.
+///
+/// Its own tap target, so inviting never also opens stats, and it anchors the
+/// share sheet to itself on iPad.
+class _InviteAction extends StatelessWidget {
+  const _InviteAction();
+
+  void _share(BuildContext context) => runDetached(
+    showShareSheet(
+      context,
+      ShareParams(
+        text: context.l10n.creatorHighlightInviteMessage(
+          AppConstants.downloadUrl,
+        ),
+      ),
+    ),
+    'share creator highlight invite',
+    logName: 'CreatorHighlights',
+    category: LogCategory.ui,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    final label = context.l10n.creatorHighlightInvite;
+    return Semantics(
+      container: true,
+      button: true,
+      label: label,
+      onTap: () => _share(context),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => _share(context),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  style: VineTheme.labelLargeFont(
+                    color: colors.accentPositive,
+                  ),
+                ),
+              ),
+              DivineIcon(
+                icon: DivineIconName.arrowRight,
+                size: 16,
+                color: colors.accentPositive,
+              ),
+            ],
           ),
         ),
       ),

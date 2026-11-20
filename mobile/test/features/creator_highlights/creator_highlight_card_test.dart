@@ -1,6 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight_card.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -26,6 +28,19 @@ final _card = CreatorHighlight(
     content: 'A tiny dance',
     title: 'A tiny dance',
   ),
+);
+
+const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+
+CreatorHighlight _inviteCard({required bool showInvite}) => CreatorHighlight(
+  owner: _owner,
+  localDate: '2026-10-30',
+  createdToday: 1,
+  creationDaysThisWeek: 2,
+  views: null,
+  topVideo: null,
+  celebrate: false,
+  showInvite: showInvite,
 );
 
 void main() {
@@ -139,6 +154,90 @@ void main() {
       );
       expect(scale.transform.entry(0, 0), 1);
       expect(presented, 1);
+    });
+  });
+
+  group('invite', () {
+    late List<Map<Object?, Object?>> shareCalls;
+    late int analyticsTaps;
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    setUp(() {
+      shareCalls = [];
+      analyticsTaps = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_shareChannel, (call) async {
+            if (call.method == 'share') {
+              shareCalls.add(call.arguments as Map<Object?, Object?>);
+            }
+            return 'com.apple.UIKit.activity.CopyToPasteboard';
+          });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_shareChannel, null);
+    });
+
+    Future<void> pumpCard(WidgetTester tester, {required bool showInvite}) =>
+        tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CreatorHighlightCard(
+                highlight: _inviteCard(showInvite: showInvite),
+                isVisible: true,
+                onPresented: () {},
+                onAnalytics: () => analyticsTaps++,
+                onWatch: () {},
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('shows the invite row when the highlight offers it', (
+      tester,
+    ) async {
+      await pumpCard(tester, showInvite: true);
+      expect(find.text(l10n.creatorHighlightInvite), findsOneWidget);
+    });
+
+    testWidgets('hides the invite row otherwise', (tester) async {
+      await pumpCard(tester, showInvite: false);
+      expect(find.text(l10n.creatorHighlightAnalytics), findsOneWidget);
+      expect(find.text(l10n.creatorHighlightInvite), findsNothing);
+    });
+
+    testWidgets(
+      'tapping the invite row shares the download link and does not open stats',
+      (tester) async {
+        await pumpCard(tester, showInvite: true);
+        await tester.tap(find.text(l10n.creatorHighlightInvite));
+        await tester.pumpAndSettle();
+        expect(shareCalls, hasLength(1));
+        expect(
+          shareCalls.single['text'],
+          l10n.creatorHighlightInviteMessage(AppConstants.downloadUrl),
+        );
+        expect(analyticsTaps, 0);
+      },
+    );
+
+    testWidgets('the invite row is its own button for screen readers', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(tester, showInvite: true);
+      expect(
+        tester.getSemantics(find.text(l10n.creatorHighlightInvite)),
+        isSemantics(
+          label: l10n.creatorHighlightInvite,
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      handle.dispose();
     });
   });
 

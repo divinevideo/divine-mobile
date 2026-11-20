@@ -13664,6 +13664,17 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
+  "creatorHighlightInvite": "Bring your friends in",
+  "@creatorHighlightInvite": {
+    "description": "Action on the daily creator highlight in Inbox, shown on days the creator posted. Opens the system share sheet to invite friends to download Divine."
+  },
+  "creatorHighlightInviteMessage": "Come make loops with me on Divine. React, comment, and collab with me in the app: {url}",
+  "@creatorHighlightInviteMessage": {
+    "description": "Message the creator sends a friend from the highlight's invite action. {url} is the Divine download link; keep it at the end and unchanged.",
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
   "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
   "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",
