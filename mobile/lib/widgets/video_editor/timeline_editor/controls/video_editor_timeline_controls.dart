@@ -467,7 +467,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
           ),
         if (onChromaKey != null)
           TimelineActionButton(
-            icon: .selection,
+            icon: .colorMask,
             label: context.l10n.videoEditorChromaKeyLabel,
             semanticLabel: context.l10n.videoEditorChromaKeySemanticLabel,
             onPressed: isChromaKeying ? null : onChromaKey,
