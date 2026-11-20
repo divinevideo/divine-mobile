@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:http/http.dart' as http;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -251,6 +252,25 @@ Future<SubtitleFetchResult?> _fetchTranslation({
 /// Once cancelled the chain stops trying sources and polling, and records a
 /// failure at debug level rather than as a warning, since nobody is waiting on
 /// the subtitles (#10290).
+/// Whether [embedded] captions are the file [primaryRef] names.
+///
+/// A Blossom ref names its file by SHA-256, and a subtitle save republishes
+/// the video before the subtitle event the embedded copy comes from, so an
+/// embedded copy that hashes to something else predates the video's own
+/// track (#11250). A ref that names no hash cannot be checked and counts as
+/// matching.
+bool embeddedCaptionsMatchRef(String embedded, String? primaryRef) {
+  final segments = primaryRef == null
+      ? const <String>[]
+      : Uri.tryParse(primaryRef)?.pathSegments ?? const <String>[];
+  final name = segments.isEmpty ? '' : segments.last.split('.').first;
+  if (!_contentHash.hasMatch(name)) return true;
+  return crypto.sha256.convert(utf8.encode(embedded)).toString() ==
+      name.toLowerCase();
+}
+
+final _contentHash = RegExp(r'^[0-9a-fA-F]{64}$');
+
 Future<SubtitleFetchResult> fetchSubtitleCues({
   required http.Client httpClient,
   required NostrClient? nostrClient,
@@ -315,7 +335,11 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     return SubtitleFetchResult.fromBody(textTrackContent);
   }
 
-  if (sourcePreference == SubtitleSourcePreference.embeddedFirst) {
+  final embeddedIsCurrent =
+      textTrackContent == null ||
+      embeddedCaptionsMatchRef(textTrackContent, textTrackRefs.firstOrNull);
+  if (sourcePreference == SubtitleSourcePreference.embeddedFirst &&
+      embeddedIsCurrent) {
     final cues = accept(embedded());
     if (cues != null) return cues;
   }
@@ -339,7 +363,8 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     }
   }
 
-  if (sourcePreference == SubtitleSourcePreference.refsFirst) {
+  if (sourcePreference == SubtitleSourcePreference.refsFirst ||
+      !embeddedIsCurrent) {
     final cues = accept(embedded());
     if (cues != null) return cues;
   }

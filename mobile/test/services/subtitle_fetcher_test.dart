@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/subtitle_fetcher.dart';
@@ -24,12 +25,94 @@ class _FakeClient extends http.BaseClient {
 }
 
 const _vtt = 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nhello\n';
+const _editedVtt = 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nedited\n';
+
+/// The Blossom URL of [vtt]: its file named by the SHA-256 of its bytes.
+String _blossomUrlOf(String vtt) =>
+    'https://media.divine.video/${sha256.convert(utf8.encode(vtt))}';
+
 const _unicodeVtt =
     'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nGöbekli\n\n'
     '00:00:01.000 --> 00:00:02.000\n你好 🌿\n';
 
 void main() {
+  group(embeddedCaptionsMatchRef, () {
+    test('matches the file a Blossom ref names', () {
+      expect(embeddedCaptionsMatchRef(_vtt, _blossomUrlOf(_vtt)), isTrue);
+    });
+
+    test('matches a Blossom ref with a file extension', () {
+      expect(
+        embeddedCaptionsMatchRef(_vtt, '${_blossomUrlOf(_vtt)}.vtt'),
+        isTrue,
+      );
+    });
+
+    test('does not match a Blossom ref naming another file', () {
+      expect(
+        embeddedCaptionsMatchRef(_vtt, _blossomUrlOf(_editedVtt)),
+        isFalse,
+      );
+    });
+
+    for (final (name, ref) in [
+      ('no ref', null),
+      ('a subtitle event address', '39307:${'a' * 64}:subtitles:clip'),
+      ('a transcript URL', 'https://media.divine.video/${'a' * 64}/vtt'),
+      ('a named file', 'https://media.divine.video/edited.vtt'),
+    ]) {
+      test('cannot check $name, so treats it as matching', () {
+        expect(embeddedCaptionsMatchRef(_vtt, ref), isTrue);
+      });
+    }
+  });
+
   group('fetchSubtitleCues', () {
+    group('embedded captions older than the first ref', () {
+      // A subtitle save republishes the video before the subtitle event the
+      // embedded captions come from, so the event can lag the video (#11250).
+      test('plays the file the first ref names', () async {
+        final requests = <Uri>[];
+        final result = await fetchSubtitleCues(
+          httpClient: _FakeClient((request) async {
+            requests.add(request.url);
+            return http.Response(_editedVtt, 200);
+          }),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackContent: _vtt,
+          textTrackRefs: [_blossomUrlOf(_editedVtt)],
+        );
+
+        expect(result.cues.single.text, 'edited');
+        expect(requests.single, Uri.parse(_blossomUrlOf(_editedVtt)));
+      });
+
+      test('falls back to them when the file is unavailable', () async {
+        final result = await fetchSubtitleCues(
+          httpClient: _FakeClient((_) async => http.Response('', 404)),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackContent: _vtt,
+          textTrackRefs: [_blossomUrlOf(_editedVtt)],
+        );
+
+        expect(result.cues.single.text, 'hello');
+      });
+
+      test('are played without a request when they match it', () async {
+        final result = await fetchSubtitleCues(
+          httpClient: _FakeClient((_) async => throw StateError('no network')),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackContent: _editedVtt,
+          textTrackRefs: [_blossomUrlOf(_editedVtt)],
+        );
+
+        expect(result.cues.single.text, 'edited');
+      });
+    });
+
     test(
       'requests a verified translation before embedded content and refs',
       () async {
