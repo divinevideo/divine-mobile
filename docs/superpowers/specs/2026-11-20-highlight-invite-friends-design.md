@@ -56,18 +56,29 @@ often it becomes wallpaper.
 - **How often (my call, adjustable):** at most 3 posting days per week
   per account, counted when the row is actually seen (the card already
   records visible presentation; the invite count rides the same moment).
-- **Row:** "Bring your friends in →" in the card's accent style, under
-  "See your stats →". Its own tap target, so tapping it does not open
-  stats.
-- **Tap:** opens the system share sheet through `showShareSheet` with a
-  localized message ending in `AppConstants.downloadUrl`
-  (`https://divine.video/download`). Draft message, final wording per
-  `brand-guidelines/TONE_OF_VOICE.md`:
+- **Row:** "Bring your friends →" in the card's accent style, on the
+  same line as "See your stats →" (it drops to a second line only when
+  both don't fit, such as large text or longer translations). Its own
+  tap target, so tapping it does not open stats.
+- **Tap:** opens a full-screen "Bring your friends" page (revised after
+  the first simulator review: people should see and edit the message
+  before picking an app, and the share sheet alone only shows a cut-off
+  preview). The page has:
+  - an editable text box holding the default message:
 
-  > Come make loops with me on Divine. React, comment, and collab with
-  > me in the app: https://divine.video/download
+    > I'm making loops on Divine. You can react and collaborate with me!
 
-- **No new dependencies, permissions, or backend changes.**
+  - the download link (`AppConstants.downloadUrl`,
+    `https://divine.video/download`) shown below the text box and always
+    added on its own line when shared, so editing the message cannot drop
+    it;
+  - a Share button that opens the system share sheet through
+    `showShareSheet`, anchored to the button, with the edited message and
+    the link. If the box is cleared, only the link is shared.
+- **After sharing (my call):** a completed share returns to Inbox; a
+  dismissed share sheet leaves the person on the page to try again.
+- **No new dependencies, permissions, or backend changes.** The page is a
+  typed route like the rest of the app.
 
 ```
 ┌──────────────────────────────────────┐
@@ -75,8 +86,18 @@ often it becomes wallpaper.
 │ You made 2 videos today.             │
 │ 2 creative days this week.           │
 │                                      │
-│ See your stats →                     │
-│ Bring your friends in →              │
+│ See your stats →   Bring your friends →│
+└──────────────────────────────────────┘
+
+┌ ← Bring your friends ────────────────┐
+│ ┌──────────────────────────────────┐ │
+│ │ I'm making loops on Divine. You  │ │
+│ │ can react and collaborate with   │ │
+│ │ me!                              │ │
+│ └──────────────────────────────────┘ │
+│ divine.video/download                │
+│                                      │
+│            [ Share ]                 │
 └──────────────────────────────────────┘
 ```
 
@@ -84,12 +105,13 @@ often it becomes wallpaper.
 
 - Matt reviews it running in the iOS simulator before the PR is opened
   for peer review.
-- Run against the local stack (`local_stack/`), not staging, which is
-  down outside specific windows. For the iOS simulator, export
-  `BLOSSOM_PUBLIC_URL=http://localhost:43003` before `local_stack/up.sh`.
-- Demo path: sign in to a local account, post a loop, open Inbox, see
-  the row, tap it to open the share sheet. Also show the row hidden on a
-  day with no post and after the weekly limit.
+- Staging is down outside specific windows, and the local stack cannot
+  produce a post from the simulator (the app only accepts clips from its
+  own camera). So the review uses a throwaway demo build against
+  production whose highlight card always reports a post today; the demo
+  change is never committed.
+- Demo path: open Inbox, see the row, tap it, edit the message, share.
+  Also show the row hidden after the weekly limit.
 
 ## Left to the builder
 
@@ -97,5 +119,6 @@ often it becomes wallpaper.
   marker is the likely fit) and its key shape.
 - Exact widget structure and semantics labels.
 - Tests: cubit/repository tests for the posting-day rule and weekly
-  limit; a widget test that tapping the row hands the share sheet a
-  message containing the download link and does not open stats.
+  limit; widget tests that tapping the row opens the invite page and not
+  stats, and that sharing hands the share sheet the edited message plus
+  the link (and only the link when the message is cleared).
