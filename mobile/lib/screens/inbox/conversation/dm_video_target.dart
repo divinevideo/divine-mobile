@@ -130,6 +130,9 @@ DmVideoTarget? resolveDmVideoTarget({
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
+    // A NIP-19 reference is re-encoded from what this decoder read, so the
+    // copied link names the video the card previews: decoders disagree on a
+    // reference that repeats a field.
     final lower = urlStableId.toLowerCase();
     if (lower.startsWith('naddr1')) {
       final address = NIP19Tlv.decodeNaddr(urlStableId);
@@ -140,7 +143,14 @@ DmVideoTarget? resolveDmVideoTarget({
       }
       return DmVideoTarget(
         stableId: address.id,
-        routeReference: urlStableId,
+        routeReference: NIP19Tlv.encodeNaddr(
+          Naddr(
+            id: address.id,
+            author: address.author,
+            kind: address.kind,
+            relays: address.relays,
+          ),
+        ),
         authorPubkey: address.author,
         videoKind: address.kind,
       );
@@ -148,11 +158,16 @@ DmVideoTarget? resolveDmVideoTarget({
     if (lower.startsWith('nevent1')) {
       final event = NIP19Tlv.decodeNevent(urlStableId);
       if (event == null || !NostrHexUtils.isValidEventId(event.id)) return null;
+      final author = NostrHexUtils.isValidPubkey(event.author)
+          ? event.author
+          : null;
       return DmVideoTarget(
         stableId: event.id,
-        routeReference: urlStableId,
+        routeReference: NIP19Tlv.encodeNevent(
+          Nevent(id: event.id, relays: event.relays, author: author),
+        ),
         authorPubkey:
-            event.author ??
+            author ??
             (structuredTarget?.stableId == event.id &&
                     sharedVideoRef?.isAddressable == false
                 ? structuredTarget?.authorPubkey
