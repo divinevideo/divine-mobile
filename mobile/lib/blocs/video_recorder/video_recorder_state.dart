@@ -180,8 +180,8 @@ class VideoRecorderBlocState extends Equatable {
   final int? secondaryPreviewTextureId;
 
   /// Where the second camera's window sits in the viewfinder: its center as
-  /// fractions of the frame. The editor places the picture-in-picture layer
-  /// there.
+  /// fractions of the picture the take keeps. The editor places the
+  /// picture-in-picture layer there.
   final Offset dualCameraPipCenter;
 
   /// How much the creator pinched the second camera's window larger or

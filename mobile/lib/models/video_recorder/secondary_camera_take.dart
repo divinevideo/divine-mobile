@@ -66,8 +66,9 @@ class SecondaryCameraTake {
   /// cuts the sides off a vertical frame, still shows it whole.
   static const defaultPipCenter = Offset(0.28, 0.3);
 
-  /// The window's width as a fraction of the width of the picture the post
-  /// keeps, in the viewfinder and as the editor places the layer.
+  /// The window's width at [pipScale] 1 as a fraction of the width of the
+  /// picture the post keeps, in the viewfinder and as the editor places the
+  /// layer.
   static const pipWidthFraction = 0.3;
 
   /// The smallest [pipScale] a pinch reaches.
