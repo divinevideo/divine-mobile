@@ -285,6 +285,9 @@ class SoundsRepository {
   /// Keeps sounds by authors the viewer blocked or muted: a caller paging by
   /// [until] needs the whole page, or a page of nothing but theirs would end
   /// its list. Narrow the page with [withoutBlockedAuthors].
+  ///
+  /// Read as [_newestSounds] describes, so a busy relay does not cut a page
+  /// short, which would end a list paged by [until].
   Future<List<AudioEvent>> fetchTrendingSounds({
     int limit = 50,
     int? until,
@@ -296,14 +299,7 @@ class SoundsRepository {
     );
 
     try {
-      final events = await _nostrClient.queryEvents([
-        Filter(
-          kinds: const [audioEventKind],
-          m: audioMimeTypes,
-          limit: limit,
-          until: until,
-        ),
-      ]);
+      final events = await _newestSounds(limit: limit, until: until);
 
       final audioEvents = _processAndCacheEvents(events);
 
@@ -367,8 +363,8 @@ class SoundsRepository {
   /// connections of their own.
   static const soundLookupTimeout = Duration(seconds: 2);
 
-  /// How long the second ask of [_soundsInOrder], on connections of its own,
-  /// may take.
+  /// How long the second ask of [_soundsInOrder] and [_newestSounds], on
+  /// connections of their own, may take.
   static const freshSoundLookupTimeout = Duration(seconds: 5);
 
   /// The sounds [ids] name, in that order, loaded from the relays, so each
@@ -429,7 +425,8 @@ class SoundsRepository {
   /// Keeps sounds by authors the viewer blocked or muted, for the reason
   /// [fetchTrendingSounds] does.
   ///
-  /// Returns an empty list without querying when [pubkeys] is empty.
+  /// Returns an empty list without querying when [pubkeys] is empty. Read as
+  /// [_newestSounds] describes, like [fetchTrendingSounds].
   Future<List<AudioEvent>> fetchSoundsByCreators(
     Iterable<String> pubkeys, {
     int limit = 50,
@@ -441,16 +438,64 @@ class SoundsRepository {
     };
     if (authors.isEmpty) return const [];
 
-    final events = await _nostrClient.queryEvents([
-      Filter(
-        authors: authors.toList(),
-        kinds: const [audioEventKind],
-        m: audioMimeTypes,
-        limit: limit,
-        until: until,
-      ),
-    ]);
+    final events = await _newestSounds(
+      authors: authors.toList(),
+      limit: limit,
+      until: until,
+    );
     return _processAndCacheEvents(events);
+  }
+
+  /// How long [_newestSounds] waits for every relay to answer on the shared
+  /// connections before it asks again on connections of its own.
+  static const newestSoundsTimeout = Duration(seconds: 3);
+
+  /// The [limit] newest sound events, by [authors] when given and published
+  /// at or before [until] when given, for a list that pages back in time by
+  /// the oldest of them.
+  ///
+  /// Read from the relays alone, waiting for every one to answer. A page
+  /// holding only sounds listed already ends the list, and both shortcuts
+  /// make one:
+  ///
+  /// * The local event cache holds file events other clients published on
+  ///   other relays, many without a playable URL. Mixed in, they took most
+  ///   of a page's places, and the sounds they pushed out were never asked
+  ///   for again. It is read only when no relay can be reached, as all the
+  ///   device has then.
+  /// * A read that does not wait ends as soon as the cache has answered,
+  ///   whenever the relay is still busy with the requests queued ahead of it
+  ///   on the same connection. When the relays have not all answered within
+  ///   [newestSoundsTimeout], they are asked again on connections of their
+  ///   own, and the newest of both answers are kept.
+  Future<List<Event>> _newestSounds({
+    required int limit,
+    List<String>? authors,
+    int? until,
+  }) async {
+    final filter = Filter(
+      authors: authors,
+      kinds: const [audioEventKind],
+      m: audioMimeTypes,
+      limit: limit,
+      until: until,
+    );
+    final read = await _nostrClient.queryEventsDetailed(
+      [filter],
+      useCache: false,
+      timeout: newestSoundsTimeout,
+      requireAllRelaysSettled: true,
+    );
+    if (read.noRelays) return _nostrClient.queryEvents([filter]);
+    if (!read.timedOut) return read.events;
+    final retry = await _nostrClient.queryEventsOnFreshConnections(
+      [filter],
+      timeout: freshSoundLookupTimeout,
+    );
+    final newest = {
+      for (final event in [...read.events, ...retry.events]) event.id: event,
+    }.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return newest.take(limit).toList();
   }
 
   /// Divine's own sounds published on the network, newest first: those

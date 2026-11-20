@@ -33,6 +33,18 @@ void main() {
     const testVideoEventId =
         'e5f6789012345678901234567890abcdef1234567890123456789012abcd1234';
 
+    /// A read of the newest sounds, or the newest by some creators: one
+    /// filter for sounds, with no ids, words or tags to match.
+    final isNewestRead = predicate<List<Filter>>(
+      (filters) =>
+          filters.length == 1 &&
+          filters.single.ids == null &&
+          filters.single.search == null &&
+          filters.single.t == null &&
+          (filters.single.kinds?.contains(audioEventKind) ?? false),
+      'a read of the newest sounds',
+    );
+
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(const Duration(seconds: 10));
@@ -67,6 +79,16 @@ void main() {
         ),
       ).thenAnswer((_) => const Stream<Event>.empty());
       when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(that: isNewestRead),
+          useCache: any(named: 'useCache'),
+          timeout: any(named: 'timeout'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
       when(
         () => mockNostrClient.countEvents(
           any(),
@@ -159,6 +181,35 @@ void main() {
         (filters as List<Filter>).single.ids,
     ];
 
+    /// Answers the reads of the newest sounds on the shared connections with
+    /// [events], ended as [timedOut] says.
+    void answerNewest(List<Event> events, {bool timedOut = false}) {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(that: isNewestRead),
+          useCache: any(named: 'useCache'),
+          timeout: any(named: 'timeout'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: false),
+      );
+    }
+
+    /// The filter of each read of the newest sounds on the shared
+    /// connections.
+    List<Filter> newestReads() => [
+      for (final filters in verify(
+        () => mockNostrClient.queryEventsDetailed(
+          captureAny(that: isNewestRead),
+          useCache: any(named: 'useCache'),
+          timeout: any(named: 'timeout'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).captured)
+        (filters as List<Filter>).single,
+    ];
+
     void verifyNoIdLookup() => verifyNever(
       () => mockNostrClient.queryEventsDetailed(
         any(that: isIdLookup),
@@ -177,15 +228,13 @@ void main() {
       });
 
       test('does not reinitialize if already initialized', () async {
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            createAudioEvent(
-              id: testEventId1,
-              pubkey: testPubkey1,
-              title: 'Test Sound',
-            ),
-          ],
-        );
+        answerNewest([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Test Sound',
+          ),
+        ]);
 
         await repository.initialize();
         expect(repository.isInitialized, isTrue);
@@ -195,16 +244,13 @@ void main() {
         await repository.initialize();
         expect(repository.isInitialized, isTrue);
 
-        // Verify queryEvents was only called once
-        verify(() => mockNostrClient.queryEvents(any())).called(1);
+        expect(newestReads(), hasLength(1));
       });
     });
 
     group('fetchTrendingSounds', () {
       test('returns empty list when no sounds exist', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+        answerNewest([]);
 
         final sounds = await repository.fetchTrendingSounds();
 
@@ -212,20 +258,124 @@ void main() {
       });
 
       test('asks only for sounds up to until', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+        answerNewest([]);
 
         await repository.fetchTrendingSounds(limit: 100, until: 1500);
 
+        final filter = newestReads().single;
+        expect(filter.until, 1500);
+        expect(filter.limit, 100);
+      });
+
+      test(
+        'reads what the device holds when no relay can be reached',
+        () async {
+          final cached = createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Cached',
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(that: isNewestRead),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [cached]);
+
+          final sounds = await repository.fetchTrendingSounds(until: 1500);
+
+          expect(sounds.map((sound) => sound.id), [testEventId1]);
+          final filter =
+              (verify(
+                        () => mockNostrClient.queryEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.until, 1500);
+        },
+      );
+
+      test('waits for every relay to answer', () async {
+        await repository.fetchTrendingSounds();
+
+        verify(
+          () => mockNostrClient.queryEventsDetailed(
+            any(that: isNewestRead),
+            useCache: false,
+            timeout: SoundsRepository.newestSoundsTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).called(1);
+        verifyNever(
+          () => mockNostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+
+      test('asks again on connections of its own when a relay is still busy '
+          'and keeps the newest of both answers', () async {
+        // The shared connection ended on what the local cache held, as it
+        // does while the relay works through the requests queued ahead.
+        final cached = createAudioEvent(
+          id: testEventId1,
+          pubkey: testPubkey1,
+          title: 'Cached',
+          createdAt: 3000,
+        );
+        answerNewest([cached], timedOut: true);
+        when(
+          () => mockNostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [
+              cached,
+              createAudioEvent(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                title: 'Newest',
+                createdAt: 4000,
+              ),
+              createAudioEvent(
+                id: testVideoEventId,
+                pubkey: testPubkey2,
+                title: 'Oldest',
+                createdAt: 1000,
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+
+        final sounds = await repository.fetchTrendingSounds(
+          limit: 2,
+          until: 5000,
+        );
+
+        expect(sounds.map((sound) => sound.id), [testEventId2, testEventId1]);
         final filter =
             (verify(
-                      () => mockNostrClient.queryEvents(captureAny()),
+                      () => mockNostrClient.queryEventsOnFreshConnections(
+                        captureAny(),
+                        timeout: SoundsRepository.freshSoundLookupTimeout,
+                      ),
                     ).captured.single
                     as List<Filter>)
                 .single;
-        expect(filter.until, 1500);
-        expect(filter.limit, 100);
+        expect(filter.until, 5000);
+        expect(filter.limit, 2);
       });
 
       test('fetches and caches audio events', () async {
@@ -242,9 +392,7 @@ void main() {
           createdAt: 2000,
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event1, event2]);
+        answerNewest([event1, event2]);
 
         final sounds = await repository.fetchTrendingSounds();
 
@@ -260,20 +408,13 @@ void main() {
       });
 
       test('respects limit parameter', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+        answerNewest([]);
 
         await repository.fetchTrendingSounds(limit: 25);
 
-        final captured = verify(
-          () => mockNostrClient.queryEvents(captureAny()),
-        ).captured;
-
-        expect(captured, hasLength(1));
-        final filters = captured.first as List<Filter>;
-        expect(filters.first.limit, 25);
-        expect(filters.first.kinds, contains(audioEventKind));
+        final filter = newestReads().single;
+        expect(filter.limit, 25);
+        expect(filter.kinds, contains(audioEventKind));
       });
 
       test('asks the relay for audio MIME types only', () async {
@@ -281,12 +422,10 @@ void main() {
         // spends the limit on whatever files other clients published last.
         await repository.fetchTrendingSounds();
 
-        final captured = verify(
-          () => mockNostrClient.queryEvents(captureAny()),
-        ).captured;
-
-        final filters = captured.first as List<Filter>;
-        expect(filters.first.m, equals(SoundsRepository.audioMimeTypes));
+        expect(
+          newestReads().single.m,
+          equals(SoundsRepository.audioMimeTypes),
+        );
         expect(
           SoundsRepository.audioMimeTypes,
           containsAll(['audio/wav', 'audio/mpeg', 'audio/mp4']),
@@ -314,9 +453,7 @@ void main() {
           mimeType: null,
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [sound, pdf, untyped]);
+        answerNewest([sound, pdf, untyped]);
 
         final sounds = await repository.fetchTrendingSounds();
 
@@ -341,9 +478,7 @@ void main() {
           'sig': '',
         });
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [audioEvent, wrongKindEvent]);
+        answerNewest([audioEvent, wrongKindEvent]);
 
         final sounds = await repository.fetchTrendingSounds();
 
@@ -395,9 +530,7 @@ void main() {
       /// Loads [events] into the repository cache the way a trending fetch
       /// would, so a search can be asserted against a populated cache.
       Future<void> primeCache(List<Event> events) async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => events);
+        answerNewest(events);
         await repository.fetchTrendingSounds();
       }
 
@@ -1466,9 +1599,7 @@ void main() {
       });
 
       test('does not ask again for the sounds it holds', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [first]);
+        answerNewest([first]);
         await ranking.fetchTrendingSounds();
         answerIdLookup([second]);
 
@@ -1704,19 +1835,23 @@ void main() {
         final sounds = await repository.fetchSoundsByCreators(const ['']);
 
         expect(sounds, isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNever(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
       });
 
       test('asks for the audio of every creator at once', () async {
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            createAudioEvent(
-              id: testEventId1,
-              pubkey: testPubkey1,
-              title: 'Followed sound',
-            ),
-          ],
-        );
+        answerNewest([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Followed sound',
+          ),
+        ]);
 
         final sounds = await repository.fetchSoundsByCreators(
           const [testPubkey1, testPubkey2, testPubkey1],
@@ -1725,12 +1860,7 @@ void main() {
         );
 
         expect(sounds.single.id, testEventId1);
-        final filter =
-            (verify(
-                      () => mockNostrClient.queryEvents(captureAny()),
-                    ).captured.single
-                    as List<Filter>)
-                .single;
+        final filter = newestReads().single;
         expect(filter.authors, [testPubkey1, testPubkey2]);
         expect(filter.kinds, [audioEventKind]);
         expect(filter.m, SoundsRepository.audioMimeTypes);
@@ -1839,22 +1969,24 @@ void main() {
           blockFilter: (pubkey) => pubkey == testPubkey2,
         );
         addTearDown(blocking.dispose);
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            createAudioEvent(
-              id: testEventId1,
-              pubkey: testPubkey1,
-              title: 'Kept beat',
-              publicTags: const ['beat'],
-            ),
-            createAudioEvent(
-              id: testEventId2,
-              pubkey: testPubkey2,
-              title: 'Blocked beat',
-              publicTags: const ['beat'],
-            ),
-          ],
-        );
+        final beats = [
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Kept beat',
+            publicTags: const ['beat'],
+          ),
+          createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey2,
+            title: 'Blocked beat',
+            publicTags: const ['beat'],
+          ),
+        ];
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => beats);
+        answerNewest(beats);
         answerIdLookup([
           createAudioEvent(
             id: testEventId1,
@@ -2343,9 +2475,7 @@ void main() {
           title: 'Cached Sound',
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event]);
+        answerNewest([event]);
 
         await repository.fetchTrendingSounds();
 
@@ -2495,9 +2625,7 @@ void main() {
           title: 'Cached',
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event]);
+        answerNewest([event]);
 
         await repository.fetchTrendingSounds();
 
@@ -2803,9 +2931,7 @@ void main() {
           title: 'Streamed Sound',
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event]);
+        answerNewest([event]);
 
         final emittedLists = <List<AudioEvent>>[];
         final subscription = repository.soundsStream.listen(emittedLists.add);
@@ -2829,9 +2955,7 @@ void main() {
           title: 'To Be Cleared',
         );
 
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event]);
+        answerNewest([event]);
 
         await repository.fetchTrendingSounds();
         expect(repository.cachedSoundCount, 1);
@@ -2855,9 +2979,7 @@ void main() {
           pubkey: testPubkey1,
           title: 'Deleted',
         );
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [kept, deleted]);
+        answerNewest([kept, deleted]);
         await repository.fetchTrendingSounds();
         expect(repository.cachedSoundCount, 2);
         final emittedLists = <List<AudioEvent>>[];
@@ -2902,18 +3024,14 @@ void main() {
         );
 
         // First fetch returns event1
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event1]);
+        answerNewest([event1]);
 
         await repository.fetchTrendingSounds();
         expect(repository.cachedSoundCount, 1);
         expect(repository.getSoundFromCache(testEventId1), isNotNull);
 
         // Refresh returns event2 only
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => [event2]);
+        answerNewest([event2]);
 
         await repository.refresh();
 
@@ -3039,13 +3157,11 @@ void main() {
     group('error handling', () {
       test('initialize catches error from fetchTrendingSounds', () async {
         when(
-          () => mockNostrClient.queryEvents(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-            tempRelays: any(named: 'tempRelays'),
-            relayTypes: any(named: 'relayTypes'),
-            sendAfterAuth: any(named: 'sendAfterAuth'),
+          () => mockNostrClient.queryEventsDetailed(
+            any(that: isNewestRead),
             useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenThrow(Exception('Network error'));
 
@@ -3057,13 +3173,11 @@ void main() {
 
       test('fetchTrendingSounds rethrows on error', () async {
         when(
-          () => mockNostrClient.queryEvents(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-            tempRelays: any(named: 'tempRelays'),
-            relayTypes: any(named: 'relayTypes'),
-            sendAfterAuth: any(named: 'sendAfterAuth'),
+          () => mockNostrClient.queryEventsDetailed(
+            any(that: isNewestRead),
             useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenThrow(Exception('Network error'));
 
