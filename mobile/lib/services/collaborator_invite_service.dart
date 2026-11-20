@@ -61,7 +61,8 @@ class CollaboratorInviteService {
   final String videoLinkBase;
   final String defaultRelayHint;
 
-  /// Base URL for the invite's standard NIP-19 video reference.
+  /// Base URL of the plaintext fallback's video link, which lets non-Divine
+  /// clients preview the invited video.
   static const String defaultVideoLinkBase = 'https://divine.video/video';
 
   /// Suffix that uniquely identifies the plaintext fallback body of an
@@ -160,12 +161,14 @@ class CollaboratorInviteService {
   }
 
   String _videoUrlFor(String videoAddress) {
+    // A d tag may contain `:`, so rejoin everything after kind and pubkey.
     final parts = videoAddress.split(':');
     final url = divineVideoShareUrl(
       parts.length >= 3 ? parts.sublist(2).join(':') : '',
       authorPubkey: parts.length >= 3 ? parts[1] : null,
       kind: int.tryParse(parts.first),
     );
+    // divineVideoShareUrl always builds on defaultVideoLinkBase.
     return url.replaceFirst(defaultVideoLinkBase, videoLinkBase);
   }
 
