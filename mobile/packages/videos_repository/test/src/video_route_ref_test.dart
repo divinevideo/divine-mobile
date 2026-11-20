@@ -186,4 +186,67 @@ void main() {
       expect(const VideoRouteRef(eventId: '', stableId: '').lookupId, isNull);
     });
   });
+
+  group('VideoRouteRef.matchesEvent', () {
+    final otherId = 'e' * 64;
+
+    Event event({
+      String? id,
+      String pubkey = authorHex,
+      int kind = 34236,
+      String? d = dTag,
+    }) => Event.fromJson({
+      'id': id ?? otherId,
+      'pubkey': pubkey,
+      'created_at': 1,
+      'kind': kind,
+      'tags': [
+        if (d != null) ['d', d],
+      ],
+      'content': '',
+      'sig': '',
+    });
+
+    test('accepts the exact kind, author and d tag an naddr names', () {
+      expect(VideoRouteRef.parse(naddr)!.matchesEvent(event()), isTrue);
+    });
+
+    test('rejects an naddr match under another kind', () {
+      expect(
+        VideoRouteRef.parse(naddr)!.matchesEvent(event(kind: 34235)),
+        isFalse,
+      );
+    });
+
+    test('accepts the 34236 alias of a raw coordinate on a 34235 event', () {
+      expect(
+        VideoRouteRef.parse(coordinate)!.matchesEvent(event(kind: 34235)),
+        isTrue,
+      );
+    });
+
+    test('rejects a coordinate match with another d tag', () {
+      expect(
+        VideoRouteRef.parse(coordinate)!.matchesEvent(event(d: 'other')),
+        isFalse,
+      );
+    });
+
+    test('rejects a coordinate match by another author', () {
+      expect(
+        VideoRouteRef.parse(coordinate)!.matchesEvent(event(pubkey: 'f' * 64)),
+        isFalse,
+      );
+    });
+
+    test('holds an nevent to its event id, not a matching d tag', () {
+      final ref = VideoRouteRef.parse(nevent)!;
+      expect(ref.matchesEvent(event(id: hexId)), isTrue);
+      expect(ref.matchesEvent(event(d: hexId)), isFalse);
+    });
+
+    test('keeps a bare hex id ambiguous for older links', () {
+      expect(VideoRouteRef.parse(hexId)!.matchesEvent(event(d: hexId)), isTrue);
+    });
+  });
 }
