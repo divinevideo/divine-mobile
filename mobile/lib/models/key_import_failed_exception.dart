@@ -5,7 +5,9 @@
 ///
 /// Built to be reported off the device, so it never holds the key itself.
 class KeyImportFailedException implements Exception {
-  /// Wraps [error] with every one of [secrets] cut out of its text.
+  /// Wraps the text of [error] with every one of [secrets] cut out of it.
+  ///
+  /// [error] may be the error itself or a description already made safe.
   factory KeyImportFailedException.redacting(
     Object error,
     Iterable<String> secrets,
