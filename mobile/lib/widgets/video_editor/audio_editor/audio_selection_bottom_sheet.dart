@@ -1152,6 +1152,10 @@ class _AudioSelectionBottomSheetState
               selectedSound: _selectedItem,
               audioService: _audioService,
               onSelect: _selectSound,
+              usageCounts: {
+                ...?forYouAsync.value?.usageCounts,
+                ...?forYouFound?.usageCounts,
+              },
               coversBySourceVideo: forYouFound == null
                   ? forYouCovers
                   : {...?forYouCovers, ...?searchCovers},

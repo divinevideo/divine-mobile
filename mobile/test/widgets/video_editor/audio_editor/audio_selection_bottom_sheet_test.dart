@@ -152,6 +152,7 @@ void main() {
       Completer<Map<String, SoundCover?>>? forYouCovers,
       List<String>? loadedLists,
       List<AudioEvent> forYouSounds = const [],
+      Map<String, int> forYouUsageCounts = const {},
       List<List<AudioEvent>> laterForYouPages = const [],
       List<AudioEvent> divineSounds = const [],
       RankedSounds popularSounds = (
@@ -275,8 +276,10 @@ void main() {
             // Always overridden: the real ones read the follow list and
             // Funnelcake, neither of which a widget test should reach.
             forYouSoundsProvider.overrideWithBuild(
-              (_, _) async =>
-                  PagedSounds(pages: [forYouSounds, ...laterForYouPages]),
+              (_, _) async => PagedSounds(
+                pages: [forYouSounds, ...laterForYouPages],
+                usageCounts: forYouUsageCounts,
+              ),
             ),
             divineSoundsProvider.overrideWith((_) async => divineSounds),
             popularSoundsProvider.overrideWithBuild((_, _) async {
@@ -667,6 +670,24 @@ void main() {
 
         expect(find.text('Alpha Track'), findsOneWidget);
         expect(find.textContaining(l10n.soundVideoCount(9)), findsOneWidget);
+      });
+
+      testWidgets("shows the count on a followed account's sound", (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            forYouSounds: [
+              _createTestAudioEvent(id: communitySoundId, title: 'Alpha Track'),
+            ],
+            forYouUsageCounts: const {communitySoundId: 4},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text('Alpha Track'), findsOneWidget);
+        expect(find.textContaining(l10n.soundVideoCount(4)), findsOneWidget);
       });
 
       testWidgets('lists community sounds before any count resolves', (
