@@ -303,7 +303,7 @@ void main() {
       );
     });
 
-    test('uses nevent for a regular event even when it has a d tag', () {
+    test('uses an nevent for a regular kind and names no author', () {
       final id = 'a' * 64;
       final url = divineVideoShareUrl(id, authorPubkey: author, kind: 22);
       expect(NIP19Tlv.decodeNevent(Uri.parse(url).pathSegments.last)!.id, id);
