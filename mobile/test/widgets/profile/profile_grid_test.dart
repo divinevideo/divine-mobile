@@ -299,11 +299,11 @@ void main() {
           scrollController: scrollController,
         ),
       );
-      // An opaque route above keeps the grid built but never laid out.
       final grid = coveredByOpaqueRoute || useNestedNavigator
           ? Navigator(
               pages: [
                 MaterialPage<void>(child: profileGrid),
+                // An opaque page above keeps the grid built but never laid out.
                 if (coveredByOpaqueRoute)
                   const MaterialPage<void>(child: SizedBox.shrink()),
               ],
