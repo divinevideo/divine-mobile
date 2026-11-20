@@ -209,10 +209,10 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                           ],
                         ),
                         if (card.showInvite)
-                          VisibilityDetector(
-                            key: _inviteVisibilityKey,
+                          _InviteAction(
+                            onTap: widget.onInvite,
+                            visibilityKey: _inviteVisibilityKey,
                             onVisibilityChanged: _onInviteVisibilityChanged,
-                            child: _InviteAction(onTap: widget.onInvite),
                           ),
                       ],
                     ),
@@ -231,9 +231,18 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
 ///
 /// Its own tap target, so inviting never also opens stats.
 class _InviteAction extends StatelessWidget {
-  const _InviteAction({required this.onTap});
+  const _InviteAction({
+    required this.onTap,
+    required this.visibilityKey,
+    required this.onVisibilityChanged,
+  });
 
   final VoidCallback onTap;
+
+  /// Measures the label and arrow, not the taller tap target around them,
+  /// so blank padding at a screen edge does not count as the invite shown.
+  final Key visibilityKey;
+  final ValueChanged<VisibilityInfo> onVisibilityChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -249,24 +258,34 @@ class _InviteAction extends StatelessWidget {
         onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  style: VineTheme.labelLargeFont(
+          // Align keeps the measured row at its natural height inside the
+          // taller tap target.
+          child: Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerStart,
+            child: VisibilityDetector(
+              key: visibilityKey,
+              onVisibilityChanged: onVisibilityChanged,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: VineTheme.labelLargeFont(
+                        color: colors.accentPositive,
+                      ),
+                    ),
+                  ),
+                  DivineIcon(
+                    icon: DivineIconName.arrowRight,
+                    size: 16,
                     color: colors.accentPositive,
                   ),
-                ),
+                ],
               ),
-              DivineIcon(
-                icon: DivineIconName.arrowRight,
-                size: 16,
-                color: colors.accentPositive,
-              ),
-            ],
+            ),
           ),
         ),
       ),

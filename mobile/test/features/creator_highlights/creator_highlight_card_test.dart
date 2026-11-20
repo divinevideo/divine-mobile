@@ -333,6 +333,31 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         expect(seen, 1);
       });
+
+      testWidgets('does not report while only the tap padding shows', (
+        tester,
+      ) async {
+        // The tap target is taller than its text; a sliver of blank padding
+        // on screen is not the invite being seen.
+        await pumpCounted(tester, showInvite: true, isVisible: false);
+        final label = find.text(
+          lookupAppLocalizations(const Locale('en')).creatorHighlightInvite,
+        );
+        final target = find.ancestor(of: label, matching: find.byType(InkWell));
+        final paddingTop = tester.getRect(target.first).top;
+        final labelTop = tester.getRect(label).top;
+        expect(labelTop - paddingTop, greaterThan(4));
+        tester.view.physicalSize = Size(800, (paddingTop + labelTop) / 2);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpCounted(tester, showInvite: true);
+        expect(seen, 0);
+        tester.view.physicalSize = const Size(800, 600);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(seen, 1);
+      });
     });
 
     testWidgets('both links share a line when they fit', (tester) async {
