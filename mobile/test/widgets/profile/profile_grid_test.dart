@@ -1345,7 +1345,8 @@ void main() {
 
     for (final isOwnProfile in [false, true]) {
       testWidgets(
-        'finishes an empty load behind an opaque route (own: $isOwnProfile)',
+        'keeps scrolling after an empty load finishes behind an opaque route '
+        '(own: $isOwnProfile)',
         (tester) async {
           final controller = ScrollController();
           addTearDown(controller.dispose);
