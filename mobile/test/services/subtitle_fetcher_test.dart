@@ -101,8 +101,12 @@ void main() {
       });
 
       test('are played without a request when they match it', () async {
+        final requests = <Uri>[];
         final result = await fetchSubtitleCues(
-          httpClient: _FakeClient((_) async => throw StateError('no network')),
+          httpClient: _FakeClient((request) async {
+            requests.add(request.url);
+            return http.Response(_vtt, 200);
+          }),
           nostrClient: null,
           delay: (_) async {},
           textTrackContent: _editedVtt,
@@ -110,6 +114,7 @@ void main() {
         );
 
         expect(result.cues.single.text, 'edited');
+        expect(requests, isEmpty);
       });
     });
 
