@@ -65,7 +65,7 @@
 Run: `cd mobile && flutter test test/features/creator_highlights/creator_highlights_repository_test.dart test/features/creator_highlights/creator_highlight_test.dart`
 Expected: compile errors for `showInvite`, `inviteKey`, `markInviteShown`.
 
-- [ ] **Step 3: Implement.** Record format `'<weekStart yyyy-MM-dd>|<date>,<date>'`, Monday-start like `load`'s `weekStart` (extract a small private date-formatting helper rather than duplicating the padding expression). In `load`, `showInvite = createdToday > 0 && (dates.contains(date) || dates.length < maxInviteDaysPerWeek)`, where a record for another week reads as empty. `markInviteShown` derives the week from `DateTime.parse(localDate)`. Add `invitePrefix` to `identityChangePrefixes` and remove `inviteKey(userPubkey)` beside both `presentationKey(userPubkey)` removals.
+- [ ] **Step 3: Implement.** Record format (as built after review: sorted `yyyy-MM-dd` dates from about the last two weeks; originally `'<weekStart yyyy-MM-dd>|<date>,<date>'`), Monday-start like `load`'s `weekStart` (extract a small private date-formatting helper rather than duplicating the padding expression). In `load`, `showInvite = createdToday > 0 && (dates.contains(date) || dates.length < maxInviteDaysPerWeek)`, where a record for another week reads as empty. `markInviteShown` derives the week from `DateTime.parse(localDate)`. Add `invitePrefix` to `identityChangePrefixes` and remove `inviteKey(userPubkey)` beside both `presentationKey(userPubkey)` removals.
 
 - [ ] **Step 4: Run tests and the prefs guard**
 
@@ -80,6 +80,8 @@ git commit -m "feat(creator-highlights): decide when to invite friends from the 
 ```
 
 ### Task 2: Record the invite when the card is seen
+
+> **Superseded by review:** counting no longer rides `presented()`. The card measures the invite link's own visibility and calls `onInviteSeen`, which the Inbox wires to `CreatorHighlightsCubit.inviteSeen`; see "As built" above. The steps below record the original approach.
 
 **Files:**
 - Modify: `mobile/lib/features/creator_highlights/creator_highlights_cubit.dart` (`presented`)

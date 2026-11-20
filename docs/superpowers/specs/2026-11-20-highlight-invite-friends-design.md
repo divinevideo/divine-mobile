@@ -54,8 +54,12 @@ often it becomes wallpaper.
   `createdToday > 0`, whichever fact the card is rotating through that
   day.
 - **How often (my call, adjustable):** at most 3 posting days per week
-  per account, counted when the row is actually seen (the card already
-  records visible presentation; the invite count rides the same moment).
+  per account (Monday-start local week), counted when the invite link
+  itself has painted on screen. This is tracked separately from the card's
+  spotlight presentation, because a refresh can turn the invite on for a
+  spotlight already shown, and the card can be visible while the link is
+  below the edge. The record keeps about two weeks of dates so a local date
+  that steps back across a Monday still sees last week's count.
 - **Row:** "Bring your friends →" in the card's accent style, on the
   same line as "See your stats →" (it drops to a second line only when
   both don't fit, such as large text or longer translations). Its own

@@ -60,8 +60,11 @@ class FunnelcakeCreatorHighlightsRepository
   /// Posting days per week on which the invite may appear.
   static const maxInviteDaysPerWeek = 3;
 
-  /// Stored as `<weekStart>|<date>,<date>`; another week's record is empty.
+  /// Stored as sorted, comma-separated `yyyy-MM-dd` dates from about the last
+  /// two weeks, so a local date that steps back across a Monday (a westward
+  /// time change) still sees the previous week's count.
   static const _inviteDateSeparator = ',';
+  static const _inviteRetentionDays = 13;
 
   /// Stored as `<localDate>|<nextRotation>`; a bare date predates rotation.
   static const _markerSeparator = '|';
@@ -296,19 +299,21 @@ class FunnelcakeCreatorHighlightsRepository
       DateTime(day.year, day.month, day.day - day.weekday + 1);
 
   /// Days this week the invite was already shown to [owner].
+  Set<String> _inviteRecord(String owner) {
+    final raw = _preferences.getString(inviteKey(owner));
+    if (raw == null || raw.isEmpty) return {};
+    return raw.split(_inviteDateSeparator).toSet();
+  }
+
+  /// Days in the week starting [weekStart] the invite was already shown.
   Set<String> _invitedDays(String owner, DateTime weekStart) {
-    final record = _preferences
-        .getString(inviteKey(owner))
-        ?.split(
-          _markerSeparator,
-        );
-    if (record == null ||
-        record.length != 2 ||
-        record.first != _dateKey(weekStart) ||
-        record.last.isEmpty) {
-      return const {};
-    }
-    return record.last.split(_inviteDateSeparator).toSet();
+    final week = {
+      for (var offset = 0; offset < DateTime.daysPerWeek; offset++)
+        _dateKey(
+          DateTime(weekStart.year, weekStart.month, weekStart.day + offset),
+        ),
+    };
+    return _inviteRecord(owner).where(week.contains).toSet();
   }
 
   @override
@@ -326,14 +331,19 @@ class FunnelcakeCreatorHighlightsRepository
 
   @override
   Future<void> markInviteShown(String owner, String localDate) async {
+    final record = _inviteRecord(owner);
+    if (record.contains(localDate)) return;
     final day = DateTime.parse(localDate);
-    final weekStart = _weekStart(day);
-    final days = _invitedDays(owner, weekStart);
-    if (days.contains(localDate)) return;
+    // ISO dates sort as text; later dates stay in case the clock went back.
+    final oldest = _dateKey(
+      DateTime(day.year, day.month, day.day - _inviteRetentionDays),
+    );
+    final kept =
+        (record..add(localDate)).where((d) => d.compareTo(oldest) >= 0).toList()
+          ..sort();
     final saved = await _preferences.setString(
       inviteKey(owner),
-      '${_dateKey(weekStart)}$_markerSeparator'
-      '${[...days, localDate].join(_inviteDateSeparator)}',
+      kept.join(_inviteDateSeparator),
     );
     if (!saved) throw const CreatorHighlightPresentationException();
   }

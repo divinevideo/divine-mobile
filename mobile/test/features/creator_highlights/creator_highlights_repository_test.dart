@@ -406,24 +406,24 @@ void main() {
       expect(card!.showInvite, isFalse);
     });
     test('withholds the invite after three posting days this week', () async {
-      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-28');
+      await prefs.setString(key, '2026-10-26,2026-10-27,2026-10-28');
       final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isFalse);
     });
     test('keeps the invite on a day already counted', () async {
-      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-30');
+      await prefs.setString(key, '2026-10-26,2026-10-27,2026-10-30');
       final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test('a new week resets the limit', () async {
-      await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
+      await prefs.setString(key, '2026-10-19,2026-10-20,2026-10-21');
       final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test("another account's record does not apply", () async {
       await prefs.setString(
         FunnelcakeCreatorHighlightsRepository.inviteKey(other),
-        '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
+        '2026-10-26,2026-10-27,2026-10-28',
       );
       final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
@@ -432,14 +432,14 @@ void main() {
       final repo = local([]);
       await repo.markInviteShown(owner, '2026-10-30');
       await repo.markInviteShown(owner, '2026-10-30');
-      expect(prefs.getString(key), '2026-10-26|2026-10-30');
+      expect(prefs.getString(key), '2026-10-30');
     });
     test("a later day joins the week's record", () async {
-      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27');
+      await prefs.setString(key, '2026-10-26,2026-10-27');
       await local([]).markInviteShown(owner, '2026-10-28');
       expect(
         prefs.getString(key),
-        '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
+        '2026-10-26,2026-10-27,2026-10-28',
       );
     });
     test('three shown days withhold the invite on the fourth', () async {
@@ -451,10 +451,29 @@ void main() {
       expect(card?.createdToday, 1);
       expect(card?.showInvite, isFalse);
     });
-    test('a new week replaces the previous record', () async {
-      await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
+    test('keeps only the last two weeks of dates', () async {
+      await prefs.setString(key, '2026-10-01,2026-10-19,2026-10-20');
       await local([]).markInviteShown(owner, '2026-10-27');
-      expect(prefs.getString(key), '2026-10-26|2026-10-27');
+      expect(prefs.getString(key), '2026-10-19,2026-10-20,2026-10-27');
+    });
+    test('stepping back across a Monday keeps last week counted', () async {
+      // Three days in the week of Nov 9, a Monday Nov 16, then the phone's
+      // local date moves back to Sunday Nov 15 (a westward time change).
+      final repo = local([]);
+      for (final day in [
+        '2026-11-09',
+        '2026-11-10',
+        '2026-11-11',
+        '2026-11-16',
+      ]) {
+        await repo.markInviteShown(owner, day);
+      }
+      final sunday = DateTime(2026, 11, 15, 12);
+      final card = await repository([
+        video(published: sunday),
+      ], clock: () => sunday).load(owner);
+      expect(card?.createdToday, 1);
+      expect(card?.showInvite, isFalse);
     });
     test('a rejected invite write throws an operational exception', () async {
       final storage = _Preferences();
