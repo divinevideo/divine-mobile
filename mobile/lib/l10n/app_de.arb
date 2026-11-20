@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Kamera wechseln",
   "videoRecorderToggleDualCameraLabel": "Mit beiden Kameras aufnehmen",
   "videoRecorderDualCameraSwapLabel": "Kameras tauschen",
+  "videoRecorderDualCameraShapeHint": "Zwischen Hochformat und Quadrat wechseln",
   "videoRecorderZoomLevelLabel": "Auf {zoom}× zoomen",
   "videoRecorderToggleGridLabel": "Raster ein-/ausblenden",
   "videoRecorderToggleGhostFrameLabel": "Geisterbild ein-/ausblenden",

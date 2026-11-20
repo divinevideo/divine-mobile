@@ -9066,6 +9066,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Tukar kedudukan kamera';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Tukar antara potret dan segi empat sama';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zum ke $zoom×';
   }

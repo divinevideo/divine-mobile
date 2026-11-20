@@ -8627,6 +8627,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => '카메라 위치 바꾸기';
 
   @override
+  String get videoRecorderDualCameraShapeHint => '세로형과 정사각형 전환';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom×로 확대';
   }

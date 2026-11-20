@@ -4639,6 +4639,7 @@
   "videoRecorderSwitchCameraLabel": "کیمرہ بدلیں",
   "videoRecorderToggleDualCameraLabel": "دونوں کیمروں سے ریکارڈ کریں",
   "videoRecorderDualCameraSwapLabel": "کیمرے آپس میں بدلیں",
+  "videoRecorderDualCameraShapeHint": "عمودی اور مربع کے درمیان تبدیل کریں",
   "videoRecorderZoomLevelLabel": "{zoom}× تک زوم کریں",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",

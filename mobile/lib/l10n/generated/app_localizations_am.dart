@@ -8850,6 +8850,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'ካሜራዎችን አቀያይር';
 
   @override
+  String get videoRecorderDualCameraShapeHint => 'በቁም እና በካሬ መካከል ቀይር';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'ወደ $zoom× አጉላ';
   }

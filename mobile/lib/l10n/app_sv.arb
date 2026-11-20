@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Byt kamera",
   "videoRecorderToggleDualCameraLabel": "Spela in med båda kamerorna",
   "videoRecorderDualCameraSwapLabel": "Byt plats på kamerorna",
+  "videoRecorderDualCameraShapeHint": "Växla mellan stående och kvadratiskt",
   "videoRecorderZoomLevelLabel": "Zooma till {zoom}×",
   "videoRecorderToggleGridLabel": "Växla rutnät",
   "videoRecorderToggleGhostFrameLabel": "Växla spökram",

@@ -2199,6 +2199,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              secondaryPipScale: any(named: 'secondaryPipScale'),
+              secondaryPipRotation: any(named: 'secondaryPipRotation'),
+              secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
             ),
           ).thenReturn(take);
           when(() => clipManager.saveClipToLibrary(take)).thenAnswer(
@@ -2277,6 +2280,9 @@ void main() {
                 targetAspectRatio: any(named: 'targetAspectRatio'),
                 lensMetadata: any(named: 'lensMetadata'),
                 secondaryPipCenter: any(named: 'secondaryPipCenter'),
+                secondaryPipScale: any(named: 'secondaryPipScale'),
+                secondaryPipRotation: any(named: 'secondaryPipRotation'),
+                secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
               ),
             ).thenReturn(clip);
 
@@ -2352,6 +2358,9 @@ void main() {
                 lensMetadata: any(named: 'lensMetadata'),
                 limitClipDuration: any(named: 'limitClipDuration'),
                 secondaryPipCenter: any(named: 'secondaryPipCenter'),
+                secondaryPipScale: any(named: 'secondaryPipScale'),
+                secondaryPipRotation: any(named: 'secondaryPipRotation'),
+                secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
               ),
             );
             verifyNever(() => clipManager.saveClipToLibrary(any()));
@@ -2390,6 +2399,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              secondaryPipScale: any(named: 'secondaryPipScale'),
+              secondaryPipRotation: any(named: 'secondaryPipRotation'),
+              secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -2872,6 +2884,39 @@ void main() {
                 (s) => s.isActionRailExpanded,
                 'isActionRailExpanded',
                 isTrue,
+              ),
+        ],
+      );
+
+      // A camera swap re-syncs, and the second camera's window keeps where,
+      // how large, how turned and in which shape the creator left it.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the dual-camera window placement',
+        build: buildBlocCapturingUpdateState,
+        seed: () => const VideoRecorderBlocState(
+          dualCameraPipCenter: Offset(0.6, 0.4),
+          dualCameraPipScale: 1.5,
+          dualCameraPipRotation: 0.4,
+          dualCameraPipAspectRatio: model.AspectRatio.square,
+        ),
+        act: (_) => updateStateCallback(forceCameraRebuild: true),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having(
+                (s) => s.dualCameraPipCenter,
+                'dualCameraPipCenter',
+                const Offset(0.6, 0.4),
+              )
+              .having((s) => s.dualCameraPipScale, 'dualCameraPipScale', 1.5)
+              .having(
+                (s) => s.dualCameraPipRotation,
+                'dualCameraPipRotation',
+                0.4,
+              )
+              .having(
+                (s) => s.dualCameraPipAspectRatio,
+                'dualCameraPipAspectRatio',
+                model.AspectRatio.square,
               ),
         ],
       );

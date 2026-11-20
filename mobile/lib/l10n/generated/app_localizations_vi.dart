@@ -9017,6 +9017,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Hoán đổi camera';
 
   @override
+  String get videoRecorderDualCameraShapeHint => 'Chuyển giữa dọc và vuông';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Thu phóng tới $zoom×';
   }

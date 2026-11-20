@@ -8526,6 +8526,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => '交换摄像头';
 
   @override
+  String get videoRecorderDualCameraShapeHint => '在竖屏和方形之间切换';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '变焦到 $zoom×';
   }

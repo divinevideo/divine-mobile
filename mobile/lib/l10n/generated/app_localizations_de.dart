@@ -9184,6 +9184,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Kameras tauschen';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Zwischen Hochformat und Quadrat wechseln';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Auf $zoom× zoomen';
   }

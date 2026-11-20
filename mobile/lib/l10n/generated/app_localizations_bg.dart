@@ -9143,6 +9143,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Размени камерите';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Превключи между вертикален и квадратен формат';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Мащабиране до $zoom×';
   }

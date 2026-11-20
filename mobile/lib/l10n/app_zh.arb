@@ -4639,6 +4639,7 @@
   "videoRecorderSwitchCameraLabel": "切换摄像头",
   "videoRecorderToggleDualCameraLabel": "用前后两个摄像头录制",
   "videoRecorderDualCameraSwapLabel": "交换摄像头",
+  "videoRecorderDualCameraShapeHint": "在竖屏和方形之间切换",
   "videoRecorderZoomLevelLabel": "变焦到 {zoom}×",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",

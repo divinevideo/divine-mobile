@@ -8,7 +8,7 @@ appId: co.openvine.app.staging
 # stabilization, dual camera, color mask — is not built at all while it is
 # folded, so an assert on one of them reads "not visible" rather than finding
 # it off screen. A recorder opens folded, and starting a take or a
-# stop-motion interval folds it again.
+# stop-motion interval, or turning dual capture on or off, folds it again.
 #
 # Precondition the caller owns: **a folded rail.** The same button folds an
 # unfolded one, so calling this twice leaves the rail folded. Every flow that

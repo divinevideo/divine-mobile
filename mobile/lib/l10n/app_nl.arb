@@ -2613,6 +2613,7 @@
   "videoRecorderSwitchCameraLabel": "Camera wisselen",
   "videoRecorderToggleDualCameraLabel": "Opnemen met beide camera's",
   "videoRecorderDualCameraSwapLabel": "Camera's omwisselen",
+  "videoRecorderDualCameraShapeHint": "Wisselen tussen staand en vierkant",
   "videoRecorderZoomLevelLabel": "Zoomen naar {zoom}×",
   "videoRecorderToggleGridLabel": "Raster in-/uitschakelen",
   "videoRecorderToggleGhostFrameLabel": "Spookframe in-/uitschakelen",

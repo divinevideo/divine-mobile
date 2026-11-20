@@ -342,16 +342,34 @@ final class VideoRecorderDualCameraToggled extends VideoRecorderEvent {
   const VideoRecorderDualCameraToggled();
 }
 
-/// Moves the second camera's window in the viewfinder to [center], as
-/// fractions of the frame.
-final class VideoRecorderDualCameraPipMoved extends VideoRecorderEvent {
-  const VideoRecorderDualCameraPipMoved(this.center);
+/// Places the second camera's window in the viewfinder where a drag or a
+/// pinch left it, or where the viewfinder had to move it to show it whole.
+final class VideoRecorderDualCameraPipChanged extends VideoRecorderEvent {
+  const VideoRecorderDualCameraPipChanged({
+    required this.center,
+    required this.scale,
+    required this.rotation,
+  });
 
-  /// The window's new center, as fractions of the frame's width and height.
+  /// The window's new center, as fractions of the width and height of the
+  /// picture the take keeps.
   final Offset center;
 
+  /// The window's new size, as a multiple of its default size; see
+  /// [SecondaryCameraTake.pipScale].
+  final double scale;
+
+  /// The window's new turn, in radians clockwise.
+  final double rotation;
+
   @override
-  List<Object?> get props => [center];
+  List<Object?> get props => [center, scale, rotation];
+}
+
+/// Switches the second camera's window between the portrait picture and the
+/// square from its middle.
+final class VideoRecorderDualCameraPipShapeToggled extends VideoRecorderEvent {
+  const VideoRecorderDualCameraPipShapeToggled();
 }
 
 // === Stop-motion events ===

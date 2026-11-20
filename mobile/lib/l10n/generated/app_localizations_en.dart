@@ -9156,6 +9156,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Swap cameras';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Switch between portrait and square';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoom to $zoom×';
   }
