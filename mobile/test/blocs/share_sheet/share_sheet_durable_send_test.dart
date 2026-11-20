@@ -14,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
@@ -139,6 +140,8 @@ void main() {
           content: 'A synthetic shared reel',
           videoUrl: 'https://example.com/video.mp4',
           vineId: 'synthetic-reel',
+          addressableDTag: 'synthetic-reel',
+          eventKind: 34236,
         );
         final sheet = ShareSheetBloc(
           video: video,
@@ -196,14 +199,16 @@ void main() {
         expect(recipientPublishStarted.isCompleted, isFalse);
         final row = (await outgoing.getAllForOwner(owner)).single;
         expect(row.content, contains('Look at this'));
-        expect(
-          row.content,
-          contains('https://divine.video/video/synthetic-reel'),
-        );
+        final url = divineVideoUrlRegex.firstMatch(row.content)!.group(0)!;
+        final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;
+        expect(address.id, 'synthetic-reel');
+        expect(address.author, peer);
+        expect(address.kind, 34236);
         final rumor = Event.fromJson(
           jsonDecode(row.rumorEventJson) as Map<String, dynamic>,
         );
-        expect(rumor.tags.any((tag) => tag.first == 'q'), isTrue);
+        final citation = rumor.tags.singleWhere((tag) => tag.first == 'q');
+        expect(citation[1], '34236:$peer:synthetic-reel');
         expect(
           await conversations.getConversation(
             row.conversationId,
