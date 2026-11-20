@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,16 +32,21 @@ void main() {
   group(InviteFriendsScreen, () {
     late List<Map<Object?, Object?>> shareCalls;
     late String shareResult;
+    // Holds the sheet open until completed, like a person choosing an app.
+    Completer<String>? openSheet;
+    Object? shareError;
 
     setUp(() {
       shareCalls = [];
       shareResult = 'com.apple.UIKit.activity.Message';
+      openSheet = null;
+      shareError = null;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_shareChannel, (call) async {
-            if (call.method == 'share') {
-              shareCalls.add(call.arguments as Map<Object?, Object?>);
-            }
-            return shareResult;
+            if (call.method != 'share') return null;
+            shareCalls.add(call.arguments as Map<Object?, Object?>);
+            if (shareError case final error?) throw error;
+            return openSheet?.future ?? shareResult;
           });
     });
 
@@ -103,6 +110,48 @@ void main() {
         );
       });
 
+      testWidgets('a second tap while the sheet is open does not share again', (
+        tester,
+      ) async {
+        openSheet = Completer();
+        await pumpPushed(tester);
+        await tester.tap(find.byType(DivineButton));
+        await tester.pump();
+        await tester.tap(find.byType(DivineButton), warnIfMissed: false);
+        await tester.pump();
+        expect(shareCalls, hasLength(1));
+        openSheet!.complete('');
+        await tester.pumpAndSettle();
+        expect(find.byType(InviteFriendsScreen), findsOneWidget);
+      });
+
+      testWidgets('anchors the share sheet for iPad', (tester) async {
+        await pumpPushed(tester);
+        await share(tester);
+        final call = shareCalls.single;
+        for (final key in [
+          'originX',
+          'originY',
+          'originWidth',
+          'originHeight',
+        ]) {
+          expect(call[key], isNotNull, reason: key);
+        }
+        expect(call['originWidth'], greaterThan(0));
+      });
+
+      testWidgets('a share failure keeps the page open', (tester) async {
+        shareError = PlatformException(code: 'Share failed');
+        await pumpPushed(tester);
+        await share(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.byType(InviteFriendsScreen), findsOneWidget);
+        expect(
+          tester.widget<DivineButton>(find.byType(DivineButton)).onPressed,
+          isNotNull,
+        );
+      });
+
       testWidgets('a cleared message shares only the link', (tester) async {
         await pumpPushed(tester);
         await tester.enterText(find.byType(TextField), '');
@@ -116,6 +165,33 @@ void main() {
         await pumpPushed(tester);
         await share(tester);
         expect(find.byType(InviteFriendsScreen), findsNothing);
+      });
+
+      testWidgets('an unknown share outcome returns', (tester) async {
+        shareResult = 'dev.fluttercommunity.plus/share/unavailable';
+        await pumpPushed(tester);
+        await share(tester);
+        expect(find.byType(InviteFriendsScreen), findsNothing);
+      });
+
+      testWidgets('a page pushed over it while sharing is not popped', (
+        tester,
+      ) async {
+        openSheet = Completer();
+        await pumpPushed(tester);
+        await tester.tap(find.byType(DivineButton));
+        await tester.pump();
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .push(
+              MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('over')),
+              ),
+            );
+        await tester.pumpAndSettle();
+        openSheet!.complete('com.apple.UIKit.activity.Message');
+        await tester.pumpAndSettle();
+        expect(find.text('over'), findsOneWidget);
       });
 
       testWidgets('a dismissed share stays', (tester) async {
