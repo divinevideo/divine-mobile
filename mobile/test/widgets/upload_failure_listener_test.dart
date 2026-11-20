@@ -551,12 +551,11 @@ void main() {
         () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, null),
       );
+      String? requested;
       final transport = MockClient((request) async {
         creates++;
         final url = (jsonDecode(request.body) as Map)['url'] as String;
-        final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;
-        expect(address.author, _ownHex);
-        expect(address.kind, 34236);
+        requested = url;
         return http.Response(
           jsonEncode({
             'code': 'Abc12345',
@@ -594,6 +593,14 @@ void main() {
 
       expect(find.text(l10n.shareSheetMoreActions), findsNothing);
       expect(creates, 1);
+      // Asserted here, not in the transport: the shortener swallows a throw
+      // from its client and would only report a missing short link.
+      final address = NIP19Tlv.decodeNaddr(
+        Uri.parse(requested!).pathSegments.last,
+      )!;
+      expect(address.author, _ownHex);
+      expect(address.kind, 34236);
+      expect(address.id, _publishedStableId);
       expect(sharedText, 'https://divine.video/l/Abc12345');
     });
 
