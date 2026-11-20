@@ -961,6 +961,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) async {
           final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -994,6 +995,7 @@ void main() {
             kind: captureAny(named: 'kind'),
             content: captureAny(named: 'content'),
             tags: captureAny(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).captured;
         expect(captured[0], equals(39307));
@@ -1081,6 +1083,56 @@ void main() {
       );
     });
 
+    test(
+      "publishSubtitleEvent stamps the 39307 with the video's own timestamp",
+      () async {
+        // The republished video is stamped after every earlier revision, so
+        // its subtitle event replaces any one those revisions referenced,
+        // even when two saves land in the same second.
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPubkey);
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => createSignedEvent(
+            invocation.namedArguments[#tags] as List<List<String>>,
+          ),
+        );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (invocation) async => PublishOutcome(
+            eventId: (invocation.positionalArguments.first as Event).id,
+            acceptedBy: const ['wss://relay.divine.video'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
+
+        await publisher.publishSubtitleEvent(
+          video: existingEvent,
+          vttContent: 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nhi\n',
+          blossomUrl: 'https://media.divine.video/abc123',
+        );
+
+        verify(
+          () => mockAuthService.createAndSignEvent(
+            kind: 39307,
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: rawEventCreatedAt,
+          ),
+        ).called(1);
+      },
+    );
+
     test('publishSubtitleEvent returns null when vineId is empty', () async {
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPubkey);
 
@@ -1117,6 +1169,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((invocation) async {
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
