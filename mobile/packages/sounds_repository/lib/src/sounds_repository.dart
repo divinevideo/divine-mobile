@@ -29,6 +29,15 @@ typedef RankedSounds = ({
   Map<String, int> usageCounts,
 });
 
+/// One page of a sound list from Funnelcake's sound index: its sounds, in
+/// the index's order, Funnelcake's count of the videos using each, keyed by
+/// event id, and the cursor of the page after it, `null` on the last.
+typedef SoundIndexPage = ({
+  List<AudioEvent> sounds,
+  Map<String, int> usageCounts,
+  String? nextCursor,
+});
+
 /// Who answered a [SoundsRepository.searchSounds] query.
 enum SoundSearchSource {
   /// Funnelcake's sound search, which finds sounds despite typos and partial
@@ -689,6 +698,117 @@ class SoundsRepository {
     }
   }
 
+  /// The newest sounds of [kind], a page at a time: the picker's New list
+  /// with a kind chosen.
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio; almost no sound carries a tag that says so.
+  /// The index leaves out sounds that are only someone talking. Each sound is
+  /// loaded from the relays, as [fetchPopularSounds] does, and sounds by
+  /// authors the viewer blocked or muted are left out, so a page can hold
+  /// fewer sounds than the index listed, or none, and still not be the last:
+  /// pass its `nextCursor` as [cursor] for the next.
+  ///
+  /// A single empty page, without asking, when no Funnelcake client is
+  /// available. Throws what the Funnelcake request or the relay lookup
+  /// throws.
+  Future<SoundIndexPage> fetchNewestSoundsOfKind(
+    SoundKind kind, {
+    String? cursor,
+  }) => _listSoundsOfKind(kind, sort: SoundListSort.recent, cursor: cursor);
+
+  /// The sounds of [kind] people are picking up, the most trending first, a
+  /// page at a time: the picker's Popular list with a kind chosen. See
+  /// [fetchNewestSoundsOfKind].
+  Future<SoundIndexPage> fetchPopularSoundsOfKind(
+    SoundKind kind, {
+    String? cursor,
+  }) => _listSoundsOfKind(kind, sort: SoundListSort.trending, cursor: cursor);
+
+  /// The newest sounds of [kind] by the accounts in [following], a page at a
+  /// time: the picker's For you list with a kind chosen. See
+  /// [fetchNewestSoundsOfKind].
+  ///
+  /// The index takes at most [FunnelcakeApiClient.maxSoundListAuthors]
+  /// creators, so it is asked about the most recently followed of them; a
+  /// contact list adds each follow at its end. Divine's sound accounts and
+  /// authors the viewer blocked or muted are passed over, since their sounds
+  /// would be left out anyway. A single empty page, without asking, when
+  /// none of [following] is left to ask about.
+  Future<SoundIndexPage> fetchFollowedSoundsOfKind(
+    SoundKind kind,
+    Iterable<String> following, {
+    String? cursor,
+  }) async {
+    final authors = _indexAuthors(following);
+    if (authors.isEmpty) return _noIndexSounds;
+    return _listSoundsOfKind(
+      kind,
+      sort: SoundListSort.recent,
+      authors: authors,
+      cursor: cursor,
+    );
+  }
+
+  static const SoundIndexPage _noIndexSounds = (
+    sounds: <AudioEvent>[],
+    usageCounts: <String, int>{},
+    nextCursor: null,
+  );
+
+  Future<SoundIndexPage> _listSoundsOfKind(
+    SoundKind kind, {
+    required SoundListSort sort,
+    List<String> authors = const [],
+    String? cursor,
+  }) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) return _noIndexSounds;
+    final page = await client.listSounds(
+      sort: sort,
+      authors: authors,
+      kind: kind,
+      cursor: cursor,
+    );
+    return _indexPage(page);
+  }
+
+  /// [page] with its sounds loaded from the relays in its order, leaving out
+  /// those by authors the viewer blocked or muted.
+  Future<SoundIndexPage> _indexPage(SoundSearchResponse page) async {
+    final usageCounts = {
+      for (final sound in page.sounds)
+        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
+    };
+    return (
+      sounds: List<AudioEvent>.unmodifiable(
+        withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
+      ),
+      usageCounts: usageCounts,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  /// A lowercase hex public key.
+  static final _hexPubkey = RegExp(r'^[0-9a-f]{64}$');
+
+  /// The creators of [following] a followed list asks the index about; see
+  /// [fetchFollowedSoundsOfKind].
+  List<String> _indexAuthors(Iterable<String> following) {
+    final isBlocked = _blockFilter;
+    final authors = <String>{};
+    for (final pubkey in following.toList().reversed) {
+      if (authors.length == FunnelcakeApiClient.maxSoundListAuthors) break;
+      final author = pubkey.toLowerCase();
+      if (_hexPubkey.hasMatch(author) &&
+          !_divineSoundPublishers.contains(author) &&
+          !(isBlocked?.call(author) ?? false)) {
+        authors.add(author);
+      }
+    }
+    return authors.toList();
+  }
+
   /// Sounds matching [query], a page at a time.
   ///
   /// Funnelcake's sound search answers when it can. It finds sounds despite
@@ -775,32 +895,27 @@ class SoundsRepository {
     required int limit,
     String? cursor,
   }) async {
-    final page = await client.searchSounds(
-      query: terms.join(' '),
-      kind: kind,
-      limit: limit,
-      cursor: cursor,
-    );
-    final usageCounts = {
-      for (final sound in page.sounds)
-        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
-    };
-    final sounds = withoutBlockedAuthors(
-      await _soundsInOrder(usageCounts.keys),
+    final page = await _indexPage(
+      await client.searchSounds(
+        query: terms.join(' '),
+        kind: kind,
+        limit: limit,
+        cursor: cursor,
+      ),
     );
 
     Log.debug(
       'Funnelcake sound search for ${terms.length} term(s) found '
-      '${sounds.length} on this page, more: ${page.hasMore}',
+      '${page.sounds.length} on this page, more: ${page.nextCursor != null}',
       name: 'SoundsRepository',
       category: LogCategory.api,
     );
 
     return (
-      sounds: List<AudioEvent>.unmodifiable(sounds),
+      sounds: page.sounds,
       source: SoundSearchSource.funnelcake,
       relays: SoundSearchRelays.notAsked,
-      usageCounts: usageCounts,
+      usageCounts: page.usageCounts,
       nextCursor: page.nextCursor,
     );
   }

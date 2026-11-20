@@ -192,7 +192,7 @@ Future<SoundSearchResults> soundSearchResults(
 /// ```
 @riverpod
 class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
-  late _SearchPager _pager;
+  late _CursorPager _pager;
 
   @override
   Future<PagedSounds> build(String query, {SoundKind? kind}) async {
@@ -202,47 +202,134 @@ class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
     // Made anew with each build, so a page still loading for the list this
     // build replaced cannot move the new one's cursor. The repository is
     // read only for a later page, which only a search that asked it has.
-    _pager = _SearchPager(
-      (cursor) => ref
+    _pager = _CursorPager((cursor) async {
+      final page = await ref
           .read(soundsRepositoryProvider)
-          .searchSounds(query, kind: kind, cursor: cursor),
-    );
-    return PagedSounds.first(_pager.take(first));
+          .searchSounds(query, kind: kind, cursor: cursor);
+      return _indexPageOf(page);
+    });
+    return PagedSounds.first(_pager.take(_indexPageOf(first)));
   }
 
   @override
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// Walks the pages of a sound search, each holding only sounds the pages
-/// before it did not.
-class _SearchPager {
-  _SearchPager(this._search);
+/// [results] as a page of a list that follows a cursor.
+SoundIndexPage _indexPageOf(SoundSearchResults results) => (
+  sounds: results.sounds,
+  usageCounts: results.usageCounts,
+  nextCursor: results.nextCursor,
+);
 
-  /// Asks for the page a cursor names.
-  final Future<SoundSearchResults> Function(String? cursor) _search;
+/// The picker lists [SoundsOfKind] can narrow to a kind.
+enum SoundListOfKind {
+  /// New: the newest sounds.
+  newest,
+
+  /// Popular: the sounds people are picking up right now.
+  popular,
+
+  /// For you: the newest sounds of the accounts the viewer follows, without
+  /// Divine's own, which the picker lists beside them.
+  followed,
+}
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+@riverpod
+class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
+  late _CursorPager _pager;
+
+  @override
+  Future<PagedSounds> build(SoundKind kind, SoundListOfKind list) async {
+    _keepForReopen(ref);
+    final repository = ref.watch(soundsRepositoryProvider);
+    final following = list == SoundListOfKind.followed
+        ? ref.watch(followRepositoryProvider).followingPubkeys
+        : const <String>[];
+    _hideAuthorsBlockedLater();
+    // Made anew with each build, so a page still loading for the list this
+    // build replaced cannot move the new one's cursor.
+    _pager = _CursorPager(
+      (cursor) => switch (list) {
+        SoundListOfKind.newest => repository.fetchNewestSoundsOfKind(
+          kind,
+          cursor: cursor,
+        ),
+        SoundListOfKind.popular => repository.fetchPopularSoundsOfKind(
+          kind,
+          cursor: cursor,
+        ),
+        SoundListOfKind.followed => repository.fetchFollowedSoundsOfKind(
+          kind,
+          following,
+          cursor: cursor,
+        ),
+      },
+      // As the lists without a kind: the imported library is reached through
+      // search and Popular, and Divine's own sounds sit beside For you.
+      keep: switch (list) {
+        SoundListOfKind.newest => repository.withoutLibrarySounds,
+        SoundListOfKind.popular => null,
+        SoundListOfKind.followed => (sounds) => [
+          for (final sound in repository.withoutLibrarySounds(sounds))
+            if (!sound.isDivine) sound,
+        ],
+      },
+    );
+    return PagedSounds.first(await _pager.next());
+  }
+
+  @override
+  Future<SoundPage> _nextPage() => _pager.next();
+}
+
+/// Walks the pages of a list that follows a cursor, each holding only sounds
+/// the pages before it did not.
+class _CursorPager {
+  _CursorPager(this._load, {this.keep});
+
+  /// Loads the page a cursor names, the first for `null`.
+  final Future<SoundIndexPage> Function(String? cursor) _load;
+
+  /// Narrows a page to the sounds the list shows.
+  final List<AudioEvent> Function(List<AudioEvent> sounds)? keep;
 
   final _seen = <String>{};
   String? _cursor;
 
-  /// [results] as the list's next page, keeping where the page after it
-  /// starts for [next].
-  SoundPage take(SoundSearchResults results) {
-    _cursor = results.nextCursor;
+  /// [page] as the list's next page, keeping where the page after it starts
+  /// for [next].
+  SoundPage take(SoundIndexPage page) {
+    _cursor = page.nextCursor;
     // Funnelcake ranks while the list is paged through, so a sound can come
     // round again on a later page.
+    final fresh = [
+      for (final sound in page.sounds)
+        if (_seen.add(sound.id)) sound,
+    ];
     return (
-      sounds: [
-        for (final sound in results.sounds)
-          if (_seen.add(sound.id)) sound,
-      ],
-      usageCounts: results.usageCounts,
-      hasMore: results.nextCursor != null,
+      sounds: keep?.call(fresh) ?? fresh,
+      usageCounts: page.usageCounts,
+      hasMore: page.nextCursor != null,
     );
   }
 
   /// The page after the last one taken.
-  Future<SoundPage> next() async => take(await _search(_cursor));
+  Future<SoundPage> next() async => take(await _load(_cursor));
 }
 
 /// Whether [soundSearchResultsProvider] sends [query] out to be searched.
@@ -699,6 +786,21 @@ Future<Map<String, SoundCover?>> soundSearchCovers(
       query,
       kind: kind,
     ).selectAsync((list) => list.pages),
+  );
+  return _coversFor(ref, pages);
+}
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+@riverpod
+Future<Map<String, SoundCover?>> soundsOfKindCovers(
+  Ref ref,
+  SoundKind kind,
+  SoundListOfKind list,
+) async {
+  _keepForReopen(ref);
+  final pages = await ref.watch(
+    soundsOfKindProvider(kind, list).selectAsync((paged) => paged.pages),
   );
   return _coversFor(ref, pages);
 }

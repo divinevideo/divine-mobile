@@ -38,6 +38,7 @@ void main() {
       registerFallbackValue(const Duration(seconds: 10));
       registerFallbackValue(<int>[]);
       registerFallbackValue(SoundKind.music);
+      registerFallbackValue(SoundListSort.recent);
     });
 
     setUp(() {
@@ -1444,6 +1445,183 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         );
+      });
+    });
+
+    group('sounds of a kind', () {
+      late _MockFunnelcakeApiClient funnelcake;
+      late SoundsRepository kinds;
+      const followedA =
+          'aa00000000000000000000000000000000000000000000000000000000000001';
+      const followedB =
+          'aa00000000000000000000000000000000000000000000000000000000000002';
+      const blockedAuthor =
+          'aa00000000000000000000000000000000000000000000000000000000000003';
+      const divineAuthor =
+          'aa00000000000000000000000000000000000000000000000000000000000004';
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        when(
+          () => funnelcake.listSounds(
+            sort: any(named: 'sort'),
+            authors: any(named: 'authors'),
+            kind: any(named: 'kind'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => SoundSearchResponse(
+            sounds: [
+              for (final id in [testEventId2, testEventId1])
+                SoundStats(
+                  id: id,
+                  pubkey: testPubkey1,
+                  title: 'Sound',
+                  createdAt: DateTime.utc(2026),
+                  usageCount: id == testEventId1 ? 7 : 3,
+                ),
+            ],
+            nextCursor: 'o:50',
+          ),
+        );
+        answerIdLookup([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Boom',
+          ),
+          createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey2,
+            title: 'Crash',
+          ),
+        ]);
+        kinds = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+          divineSoundPublishers: const {divineAuthor},
+          blockFilter: (pubkey) => pubkey == blockedAuthor,
+        );
+        addTearDown(kinds.dispose);
+      });
+
+      test('lists the newest of a kind in the index order', () async {
+        final page = await kinds.fetchNewestSoundsOfKind(
+          SoundKind.effect,
+          cursor: 'o:0',
+        );
+
+        expect(page.sounds.map((sound) => sound.id), [
+          testEventId2,
+          testEventId1,
+        ]);
+        expect(page.usageCounts, {testEventId2: 3, testEventId1: 7});
+        expect(page.nextCursor, 'o:50');
+        verify(
+          () => funnelcake.listSounds(
+            kind: SoundKind.effect,
+            cursor: 'o:0',
+          ),
+        ).called(1);
+      });
+
+      test('lists the popular ones by trend', () async {
+        await kinds.fetchPopularSoundsOfKind(SoundKind.music);
+
+        verify(
+          () => funnelcake.listSounds(
+            sort: SoundListSort.trending,
+            kind: SoundKind.music,
+          ),
+        ).called(1);
+      });
+
+      test('leaves out sounds by blocked authors', () async {
+        final blocking = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+          blockFilter: (pubkey) => pubkey == testPubkey2,
+        );
+        addTearDown(blocking.dispose);
+
+        final page = await blocking.fetchNewestSoundsOfKind(SoundKind.effect);
+
+        expect(page.sounds.map((sound) => sound.id), [testEventId1]);
+      });
+
+      test('asks the index about the most recently followed creators, '
+          'passing over blocked ones, Divine and malformed keys', () async {
+        await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, [
+          followedA,
+          blockedAuthor,
+          'not-a-key',
+          divineAuthor,
+          followedB.toUpperCase(),
+        ]);
+
+        verify(
+          () => funnelcake.listSounds(
+            authors: [followedB, followedA],
+            kind: SoundKind.effect,
+          ),
+        ).called(1);
+      });
+
+      test(
+        'asks the index about at most as many creators as it takes',
+        () async {
+          final following = [
+            for (
+              var i = 0;
+              i < FunnelcakeApiClient.maxSoundListAuthors + 5;
+              i++
+            )
+              i.toRadixString(16).padLeft(64, '0'),
+          ];
+
+          await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, following);
+
+          final authors =
+              verify(
+                    () => funnelcake.listSounds(
+                      authors: captureAny(named: 'authors'),
+                      kind: SoundKind.effect,
+                    ),
+                  ).captured.single
+                  as List<String>;
+          expect(authors, hasLength(FunnelcakeApiClient.maxSoundListAuthors));
+          expect(authors.first, following.last);
+        },
+      );
+
+      test('asks nothing when no followed creator is left', () async {
+        final page = await kinds.fetchFollowedSoundsOfKind(SoundKind.effect, [
+          blockedAuthor,
+          divineAuthor,
+        ]);
+
+        expect(page.sounds, isEmpty);
+        expect(page.nextCursor, isNull);
+        verifyNever(
+          () => funnelcake.listSounds(
+            sort: any(named: 'sort'),
+            authors: any(named: 'authors'),
+            kind: any(named: 'kind'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      });
+
+      test('lists nothing, without asking, while Funnelcake is not '
+          'configured', () async {
+        when(() => funnelcake.isAvailable).thenReturn(false);
+
+        final page = await kinds.fetchPopularSoundsOfKind(SoundKind.effect);
+
+        expect(page.sounds, isEmpty);
+        expect(page.nextCursor, isNull);
+        verifyNoIdLookup();
       });
     });
 

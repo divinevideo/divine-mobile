@@ -1186,6 +1186,132 @@ void main() {
       });
     });
 
+    group('soundsOfKindProvider', () {
+      late _MockFollowRepository followRepository;
+
+      setUp(() {
+        followRepository = _MockFollowRepository();
+        when(() => followRepository.followingPubkeys).thenReturn(const []);
+        _keepEverySound(mockRepository);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer() {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            followRepositoryProvider.overrideWithValue(followRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      SoundIndexPage indexPage(
+        List<AudioEvent> sounds, {
+        String? nextCursor,
+      }) => (
+        sounds: sounds,
+        usageCounts: {for (final sound in sounds) sound.id: 1},
+        nextCursor: nextCursor,
+      );
+
+      test('pages the popular sounds of a kind by their cursor', () async {
+        final first = createTestAudioEvent(id: 'first');
+        final again = createTestAudioEvent(id: 'again');
+        final next = createTestAudioEvent(id: 'next');
+        when(
+          () => mockRepository.fetchPopularSoundsOfKind(
+            SoundKind.effect,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async => switch (invocation.namedArguments[#cursor]) {
+            null => indexPage([first, again], nextCursor: 'o:50'),
+            _ => indexPage([again, next]),
+          },
+        );
+        final container = buildContainer();
+        final provider = soundsOfKindProvider(
+          SoundKind.effect,
+          SoundListOfKind.popular,
+        );
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+
+        final firstPage = await container.read(provider.future);
+        expect(firstPage.hasMore, isTrue);
+        await container.read(provider.notifier).loadMore();
+
+        final result = container.read(provider).requireValue;
+        expect(result.pages, [
+          [first, again],
+          [next],
+        ]);
+        expect(result.hasMore, isFalse);
+        verify(
+          () => mockRepository.fetchPopularSoundsOfKind(
+            SoundKind.effect,
+            cursor: 'o:50',
+          ),
+        ).called(1);
+      });
+
+      test('lists the newest sounds of a kind', () async {
+        final newest = createTestAudioEvent(id: 'newest');
+        when(
+          () => mockRepository.fetchNewestSoundsOfKind(
+            SoundKind.music,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => indexPage([newest]));
+
+        final result = await buildContainer().read(
+          soundsOfKindProvider(SoundKind.music, SoundListOfKind.newest).future,
+        );
+
+        expect(result.sounds, [newest]);
+        expect(result.usageCounts, {'newest': 1});
+      });
+
+      test(
+        "lists the followed accounts' sounds without Divine's own",
+        () async {
+          when(
+            () => followRepository.followingPubkeys,
+          ).thenReturn(const ['alice', kHqPubkeyHex]);
+          final followed = createTestAudioEvent(id: 'followed');
+          final divine = createTestAudioEvent(
+            id: 'divine',
+            pubkey: kHqPubkeyHex,
+          );
+          when(
+            () => mockRepository.fetchFollowedSoundsOfKind(
+              SoundKind.effect,
+              any(),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) async => indexPage([followed, divine]));
+
+          final result = await buildContainer().read(
+            soundsOfKindProvider(
+              SoundKind.effect,
+              SoundListOfKind.followed,
+            ).future,
+          );
+
+          expect(result.sounds, [followed]);
+          verify(
+            () => mockRepository.fetchFollowedSoundsOfKind(
+              SoundKind.effect,
+              const ['alice', kHqPubkeyHex],
+            ),
+          ).called(1);
+        },
+      );
+    });
+
     group('soundsByCreatorProvider', () {
       test('returns sounds by creator pubkey', () async {
         const creatorPubkey = 'creator-pubkey-123';

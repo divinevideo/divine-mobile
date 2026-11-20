@@ -45,3 +45,12 @@ class SoundSearchResponse {
   /// Whether a page follows this one.
   bool get hasMore => nextCursor != null;
 }
+
+/// How a sound list without a search query is ordered.
+enum SoundListSort {
+  /// Newest first.
+  recent,
+
+  /// By trending score as of the server's last sound-index refresh.
+  trending,
+}

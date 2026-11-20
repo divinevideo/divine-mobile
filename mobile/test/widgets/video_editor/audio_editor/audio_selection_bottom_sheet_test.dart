@@ -159,6 +159,7 @@ void main() {
         usageCounts: const <String, int>{},
       ),
       Map<String, List<AudioEvent>> searchResults = const {},
+      Map<(SoundKind, SoundListOfKind), List<AudioEvent>> kindLists = const {},
       SoundSearchSource searchSource = SoundSearchSource.relays,
       SoundSearchRelays searchRelays = SoundSearchRelays.answered,
       Map<String, String> searchCursors = const {},
@@ -317,6 +318,18 @@ void main() {
                 nextCursor: searchCursors[query],
               );
             }),
+            // Always overridden: the real ones ask Funnelcake and the relays.
+            soundsOfKindProvider.overrideWithBuild(
+              (_, notifier) async => PagedSounds(
+                pages: [
+                  kindLists[(notifier.kind, notifier.list)] ??
+                      const <AudioEvent>[],
+                ],
+              ),
+            ),
+            soundsOfKindCoversProvider.overrideWith(
+              (_, _) async => const <String, SoundCover?>{},
+            ),
             // Only a later page of a search reads it.
             if (soundsRepository != null)
               soundsRepositoryProvider.overrideWithValue(soundsRepository),
@@ -1098,21 +1111,25 @@ void main() {
         expect(find.byType(AudioListTile), findsNWidgets(5));
       });
 
-      testWidgets('Effects keeps only sounds tagged or bundled as effects', (
-        tester,
-      ) async {
+      testWidgets('Effects lists the followed effects Funnelcake classified, '
+          'beside the bundled ones, though no tag names them', (tester) async {
         await tester.pumpWidget(
           buildWidget(
             trendingSoundsAsync: const AsyncValue.data([]),
             forYouSounds: forYouSounds,
             bundledSounds: bundledSounds,
+            kindLists: {
+              (SoundKind.effect, SoundListOfKind.followed): [
+                _createTestAudioEvent(id: 'classified', title: 'Followed boom'),
+              ],
+            },
           ),
         );
         await tester.pumpAndSettle();
 
         await pickKind(tester, l10n.videoEditorAudioFilterEffects);
 
-        expect(find.text('Tagged boom'), findsOneWidget);
+        expect(find.text('Followed boom'), findsOneWidget);
         expect(find.text('Wednesday My Dudes'), findsOneWidget);
         expect(find.text('Tagged song'), findsNothing);
         expect(find.text('Divine theme'), findsNothing);
@@ -1127,13 +1144,21 @@ void main() {
             trendingSoundsAsync: const AsyncValue.data([]),
             forYouSounds: forYouSounds,
             bundledSounds: bundledSounds,
+            kindLists: {
+              (SoundKind.music, SoundListOfKind.followed): [
+                _createTestAudioEvent(
+                  id: 'classified',
+                  title: 'Classified song',
+                ),
+              ],
+            },
           ),
         );
         await tester.pumpAndSettle();
 
         await pickKind(tester, l10n.categoryMusic);
 
-        expect(find.text('Tagged song'), findsOneWidget);
+        expect(find.text('Classified song'), findsOneWidget);
         expect(find.text('Divine theme'), findsOneWidget);
         expect(find.byType(AudioListTile), findsNWidgets(2));
 
@@ -1170,17 +1195,24 @@ void main() {
         expect(find.text('Saved song'), findsNothing);
       });
 
-      testWidgets('narrows New as well', (tester) async {
+      testWidgets('New lists the newest music Funnelcake classified', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           buildWidget(
             trendingSoundsAsync: AsyncValue.data([
               _createTestAudioEvent(
                 id: 'new-song',
-                title: 'New song',
+                title: 'Tagged new song',
                 publicTags: const ['music'],
               ),
               _createTestAudioEvent(id: 'new-clip', title: 'New clip'),
             ]),
+            kindLists: {
+              (SoundKind.music, SoundListOfKind.newest): [
+                _createTestAudioEvent(id: 'classified', title: 'Newest beat'),
+              ],
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -1189,8 +1221,45 @@ void main() {
         await tester.tap(find.text(l10n.exploreTabNew));
         await tester.pumpAndSettle();
 
-        expect(find.text('New song'), findsOneWidget);
+        expect(find.text('Newest beat'), findsOneWidget);
+        expect(find.text('Tagged new song'), findsNothing);
         expect(find.text('New clip'), findsNothing);
+      });
+
+      testWidgets('Popular lists the popular effects Funnelcake classified', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            popularSounds: (
+              sounds: [
+                _createTestAudioEvent(
+                  id: 'popular-boom',
+                  title: 'Tagged popular boom',
+                  publicTags: const ['sfx'],
+                ),
+              ],
+              usageCounts: const <String, int>{},
+            ),
+            kindLists: {
+              (SoundKind.effect, SoundListOfKind.popular): [
+                _createTestAudioEvent(
+                  id: 'classified',
+                  title: 'Trending laugh',
+                ),
+              ],
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await pickKind(tester, l10n.videoEditorAudioFilterEffects);
+        await tester.tap(find.text(l10n.exploreTabPopular));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Trending laugh'), findsOneWidget);
+        expect(find.text('Tagged popular boom'), findsNothing);
       });
 
       testWidgets('says nothing matched, without a search hint, when a kind '
@@ -1363,7 +1432,9 @@ void main() {
         expect(loadedPages, ['Late arrival']);
       });
 
-      testWidgets('waits while a kind narrows the list', (tester) async {
+      testWidgets('leaves the unnarrowed list unpaged while a kind is picked', (
+        tester,
+      ) async {
         final loadedPages = <String>[];
         await tester.pumpWidget(
           buildWidget(

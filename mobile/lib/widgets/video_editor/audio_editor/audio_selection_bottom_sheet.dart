@@ -363,11 +363,16 @@ class _AudioSelectionBottomSheetState
     });
   }
 
+  /// The community [sounds] of a list that match the search.
+  ///
+  /// Not narrowed by kind here: with a kind chosen, every community list
+  /// comes from Funnelcake's sound index narrowed to it already
+  /// ([soundsOfKindProvider]), by the sounds' audio rather than by tags
+  /// almost no sound carries.
   List<AudioEvent> _filterAudioEvents(List<AudioEvent> sounds) {
-    if (_searchQuery.isEmpty && _kind == null) return sounds;
+    if (_searchQuery.isEmpty) return sounds;
     return sounds
         .where((sound) => sound.matchesSearch(_searchQuery))
-        .where(_isOfKind)
         .toList(growable: false);
   }
 
@@ -906,35 +911,50 @@ class _AudioSelectionBottomSheetState
     // The open list loads first and the others once its covers are in, so
     // their relay queries do not hold it up: with all three loading at once,
     // For you's covers took 0.71-0.87 s against 0.43-0.57 s alone.
+    // With a kind chosen, the community lists come from Funnelcake's sound
+    // index narrowed to it, as the tags that would tell are almost never set.
+    final kind = _kind;
+    final forYouList = kind == null
+        ? forYouSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.followed);
+    final popularList = kind == null
+        ? popularSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.popular);
+    final newestList = kind == null
+        ? trendingSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.newest);
+    final forYouCoverList = kind == null
+        ? forYouSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.followed);
+    final popularCoverList = kind == null
+        ? popularSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.popular);
+    final newestCoverList = kind == null
+        ? trendingSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.newest);
     final openCovers = switch (_category) {
-      AudioCategory.forYou => settled(ref.watch(forYouSoundCoversProvider)),
-      AudioCategory.popular => settled(ref.watch(popularSoundCoversProvider)),
-      AudioCategory.newest => settled(ref.watch(trendingSoundCoversProvider)),
+      AudioCategory.forYou => settled(ref.watch(forYouCoverList)),
+      AudioCategory.popular => settled(ref.watch(popularCoverList)),
+      AudioCategory.newest => settled(ref.watch(newestCoverList)),
       AudioCategory.mySounds => const <String, SoundCover?>{},
     };
     bool loads(AudioCategory category) =>
         category == _category || openCovers != null;
     final forYouAsync = loads(.forYou)
-        ? ref.watch(forYouSoundsProvider)
+        ? ref.watch(forYouList)
         : const AsyncLoading<PagedSounds>();
     final divineSoundsAsync = loads(.forYou)
         ? ref.watch(divineSoundsProvider)
         : null;
     final popularAsync = loads(.popular)
-        ? ref.watch(popularSoundsProvider)
+        ? ref.watch(popularList)
         : const AsyncLoading<PagedSounds>();
     final nostrSoundsAsync = loads(.newest)
-        ? ref.watch(trendingSoundsProvider)
+        ? ref.watch(newestList)
         : const AsyncLoading<PagedSounds>();
-    final forYouLookup = loads(.forYou)
-        ? ref.watch(forYouSoundCoversProvider)
-        : null;
-    final popularLookup = loads(.popular)
-        ? ref.watch(popularSoundCoversProvider)
-        : null;
-    final trendingLookup = loads(.newest)
-        ? ref.watch(trendingSoundCoversProvider)
-        : null;
+    final forYouLookup = loads(.forYou) ? ref.watch(forYouCoverList) : null;
+    final popularLookup = loads(.popular) ? ref.watch(popularCoverList) : null;
+    final trendingLookup = loads(.newest) ? ref.watch(newestCoverList) : null;
     final forYouCovers = forYouLookup == null ? null : settled(forYouLookup);
     final popularCovers = popularLookup == null ? null : settled(popularLookup);
     final trendingCovers = trendingLookup == null
@@ -943,9 +963,12 @@ class _AudioSelectionBottomSheetState
     // One batched query for the whole newest list rather than a count
     // provider per row. Absent while it resolves, and absent for good if it
     // fails: the counts are supplementary, so the list never waits on them.
-    final usageCounts = loads(.newest)
+    // A list of a kind comes with Funnelcake's counts.
+    final usageCounts = !loads(.newest)
+        ? null
+        : kind == null
         ? ref.watch(trendingSoundUsageCountsProvider).value
-        : null;
+        : nostrSoundsAsync.value?.usageCounts;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
     final savedSourcesLookup = loads(.mySounds)
         ? ref.watch(
@@ -1050,12 +1073,12 @@ class _AudioSelectionBottomSheetState
     final emptyState = isNarrowed ? searchEmptyState : const _EmptyState();
     const loadingState = Center(child: BrandedLoadingIndicator());
     // A list loads its next page when scrolled to its end, but not while a
-    // search or a kind narrows it. A search orders it by fit, which changes
-    // with every page. A kind may match nothing a page brings, so the end
-    // would stay in reach and ask on through the whole list: Popular's 1070
-    // sounds held not one effect. Funnelcake's search pages on its own, as
-    // the server ranks it and narrows it to the kind.
-    final loadsMoreOnScroll = !isNarrowed;
+    // search narrows it: a search orders it by fit, which changes with every
+    // page, and may match nothing a page brings, so the end would stay in
+    // reach and ask on through the whole list. A kind no longer stops it,
+    // since the lists of a kind come narrowed to it by the server; neither
+    // does Funnelcake's search, which the server ranks and pages itself.
+    final loadsMoreOnScroll = _searchQuery.isEmpty;
     final followedPages = [
       for (final page in forYouAsync.value?.pages ?? const <List<AudioEvent>>[])
         _filterAudioEvents(
@@ -1087,7 +1110,16 @@ class _AudioSelectionBottomSheetState
               onSelect: _selectSound,
               coversBySourceVideo: forYouCovers,
               paging: loadsMoreOnScroll ? forYouAsync.value : null,
-              onLoadMore: ref.read(forYouSoundsProvider.notifier).loadMore,
+              onLoadMore: kind == null
+                  ? ref.read(forYouSoundsProvider.notifier).loadMore
+                  : ref
+                        .read(
+                          soundsOfKindProvider(
+                            kind,
+                            SoundListOfKind.followed,
+                          ).notifier,
+                        )
+                        .loadMore,
               emptyState: emptyState,
             )
           else
@@ -1107,13 +1139,22 @@ class _AudioSelectionBottomSheetState
               usageCounts: popular.usageCounts,
               coversBySourceVideo: popularCovers,
               paging: loadsMoreOnScroll ? popular : null,
-              onLoadMore: ref.read(popularSoundsProvider.notifier).loadMore,
+              onLoadMore: kind == null
+                  ? ref.read(popularSoundsProvider.notifier).loadMore
+                  : ref
+                        .read(
+                          soundsOfKindProvider(
+                            kind,
+                            SoundListOfKind.popular,
+                          ).notifier,
+                        )
+                        .loadMore,
               emptyState: emptyState,
             ),
             loading: () => loadingState,
             error: (error, stack) => _ErrorState(
               error: error,
-              onRetry: () => ref.invalidate(popularSoundsProvider),
+              onRetry: () => ref.invalidate(popularList),
             ),
           ),
           nostrSoundsAsync.when(
@@ -1158,14 +1199,23 @@ class _AudioSelectionBottomSheetState
                             ).notifier,
                           )
                           .loadMore
-                    : ref.read(trendingSoundsProvider.notifier).loadMore,
+                    : kind == null
+                    ? ref.read(trendingSoundsProvider.notifier).loadMore
+                    : ref
+                          .read(
+                            soundsOfKindProvider(
+                              kind,
+                              SoundListOfKind.newest,
+                            ).notifier,
+                          )
+                          .loadMore,
                 emptyState: emptyState,
               );
             },
             loading: () => loadingState,
             error: (error, stack) => _ErrorState(
               error: error,
-              onRetry: () => ref.invalidate(trendingSoundsProvider),
+              onRetry: () => ref.invalidate(newestList),
             ),
           ),
           // My sounds is where the user's own files live, so importing one

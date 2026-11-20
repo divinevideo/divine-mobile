@@ -512,7 +512,7 @@ final class SoundSearchPagesProvider
   }
 }
 
-String _$soundSearchPagesHash() => r'9ea725572a44bc01cffbd5ac1b04af8cc407d21d';
+String _$soundSearchPagesHash() => r'91e250b16e43f0834d9d4f410b42d0da64bf6832';
 
 /// Every page a search for [query], of [kind] when one is given, has loaded,
 /// starting with [soundSearchResults]'s, and loading the next as the list is
@@ -600,6 +600,184 @@ abstract class _$SoundSearchPages extends $AsyncNotifier<PagedSounds> {
               Object?
             >;
     return element.handleCreate(ref, () => build(_$args.$1, kind: _$args.kind));
+  }
+}
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+@ProviderFor(SoundsOfKind)
+final soundsOfKindProvider = SoundsOfKindFamily._();
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+final class SoundsOfKindProvider
+    extends $AsyncNotifierProvider<SoundsOfKind, PagedSounds> {
+  /// The sounds of [kind] in one of the picker's lists ([list]), loading the
+  /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio, so the picker lists these when a kind is chosen
+  /// instead of narrowing its lists by tags almost no sound carries. A single
+  /// empty page when no Funnelcake client is available.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final effects = ref.watch(
+  ///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+  /// );
+  /// ```
+  SoundsOfKindProvider._({
+    required SoundsOfKindFamily super.from,
+    required (SoundKind, SoundListOfKind) super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundsOfKindProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundsOfKindHash();
+
+  @override
+  String toString() {
+    return r'soundsOfKindProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  SoundsOfKind create() => SoundsOfKind();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundsOfKindProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundsOfKindHash() => r'66e29036b906bbeacc2410739e80bc24cced7aa3';
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+final class SoundsOfKindFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SoundsOfKind,
+          AsyncValue<PagedSounds>,
+          PagedSounds,
+          FutureOr<PagedSounds>,
+          (SoundKind, SoundListOfKind)
+        > {
+  SoundsOfKindFamily._()
+    : super(
+        retry: null,
+        name: r'soundsOfKindProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The sounds of [kind] in one of the picker's lists ([list]), loading the
+  /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio, so the picker lists these when a kind is chosen
+  /// instead of narrowing its lists by tags almost no sound carries. A single
+  /// empty page when no Funnelcake client is available.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final effects = ref.watch(
+  ///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+  /// );
+  /// ```
+
+  SoundsOfKindProvider call(SoundKind kind, SoundListOfKind list) =>
+      SoundsOfKindProvider._(argument: (kind, list), from: this);
+
+  @override
+  String toString() => r'soundsOfKindProvider';
+}
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+abstract class _$SoundsOfKind extends $AsyncNotifier<PagedSounds> {
+  late final _$args = ref.$arg as (SoundKind, SoundListOfKind);
+  SoundKind get kind => _$args.$1;
+  SoundListOfKind get list => _$args.$2;
+
+  FutureOr<PagedSounds> build(SoundKind kind, SoundListOfKind list);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
   }
 }
 
@@ -1653,6 +1831,102 @@ final class SoundSearchCoversFamily extends $Family
 
   @override
   String toString() => r'soundSearchCoversProvider';
+}
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+@ProviderFor(soundsOfKindCovers)
+final soundsOfKindCoversProvider = SoundsOfKindCoversFamily._();
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+final class SoundsOfKindCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for the sounds of [kind] in [list], on every page it has loaded,
+  /// keyed like [trendingSoundCovers].
+  SoundsOfKindCoversProvider._({
+    required SoundsOfKindCoversFamily super.from,
+    required (SoundKind, SoundListOfKind) super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundsOfKindCoversProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundsOfKindCoversHash();
+
+  @override
+  String toString() {
+    return r'soundsOfKindCoversProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    final argument = this.argument as (SoundKind, SoundListOfKind);
+    return soundsOfKindCovers(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundsOfKindCoversProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundsOfKindCoversHash() =>
+    r'1b594dbda06018b2aa347d5026fa0c55da7185c1';
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+final class SoundsOfKindCoversFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          (SoundKind, SoundListOfKind)
+        > {
+  SoundsOfKindCoversFamily._()
+    : super(
+        retry: null,
+        name: r'soundsOfKindCoversProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Covers for the sounds of [kind] in [list], on every page it has loaded,
+  /// keyed like [trendingSoundCovers].
+
+  SoundsOfKindCoversProvider call(SoundKind kind, SoundListOfKind list) =>
+      SoundsOfKindCoversProvider._(argument: (kind, list), from: this);
+
+  @override
+  String toString() => r'soundsOfKindCoversProvider';
 }
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and

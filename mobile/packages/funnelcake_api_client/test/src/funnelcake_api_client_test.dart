@@ -5281,6 +5281,142 @@ void main() {
       });
     });
 
+    group('listSounds', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      void answer(String body, [int status = 200]) {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(body, status));
+      }
+
+      test('lists the newest sounds of a kind, a page at a time', () async {
+        answer(
+          '{"data": [{"id": "boom", "usage_count": 2}], '
+          '"pagination": {"next_cursor": "o:50", "has_more": true}}',
+        );
+
+        final page = await client.listSounds(
+          kind: SoundKind.effect,
+          limit: 25,
+          cursor: 'o:25',
+        );
+
+        expect(page.sounds.single.id, 'boom');
+        expect(page.nextCursor, 'o:50');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/search/sounds');
+        expect(uri.queryParameters, {
+          'sort': 'recent',
+          'kind': 'sfx',
+          'limit': '25',
+          'cursor': 'o:25',
+        });
+      });
+
+      test('ranks by trend and narrows to creators', () async {
+        answer('{"data": []}');
+
+        await client.listSounds(
+          sort: SoundListSort.trending,
+          authors: const ['a', 'b'],
+          kind: SoundKind.music,
+        );
+
+        expect(requestedUri().queryParameters, {
+          'sort': 'trending',
+          'authors': 'a,b',
+          'kind': 'music',
+          'limit': '50',
+        });
+      });
+
+      test('lists every kind without one', () async {
+        answer('{"data": []}');
+
+        await client.listSounds(cursor: '');
+
+        expect(requestedUri().queryParameters, {
+          'sort': 'recent',
+          'limit': '50',
+        });
+      });
+
+      test('refuses more creators than the server takes', () {
+        expect(
+          () => client.listSounds(
+            authors: List.filled(
+              FunnelcakeApiClient.maxSoundListAuthors + 1,
+              'a',
+            ),
+          ),
+          throwsArgumentError,
+        );
+        verifyNever(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          emptyClient.listSounds,
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws FunnelcakeApiException when the index is down', () {
+        answer('{"error": "unavailable"}', 503);
+
+        expect(
+          client.listSounds,
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              503,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenThrow(TimeoutException('slow'));
+
+        expect(
+          client.listSounds,
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('wraps a malformed body in a FunnelcakeException', () async {
+        for (final body in const ['[]', 'not json', '{"data": "nope"}']) {
+          answer(body);
+
+          await expectLater(
+            client.listSounds,
+            throwsA(isA<FunnelcakeException>()),
+            reason: body,
+          );
+        }
+      });
+    });
+
     group('getTrendingSounds', () {
       test('requests trending sounds and parses their usage counts', () async {
         when(
