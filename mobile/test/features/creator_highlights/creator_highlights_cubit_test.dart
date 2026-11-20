@@ -26,6 +26,7 @@ class _Repository implements CreatorHighlightsRepository {
   Object? presentationError;
   final invites = <(String, String)>[];
   Object? inviteError;
+  Completer<void>? presentationGate;
 
   @override
   Future<CreatorHighlight?> load(String owner) {
@@ -39,6 +40,7 @@ class _Repository implements CreatorHighlightsRepository {
     String localDate, {
     required int nextRotation,
   }) async {
+    if (presentationGate case final gate?) await gate.future;
     if (presentationError case final error?) throw error;
     presented.add((owner, localDate, nextRotation));
   }
@@ -405,6 +407,18 @@ void main() {
         expect(repository.presented, hasLength(1));
         expect(repository.invites, isEmpty);
         await cubit.close();
+      });
+
+      test('closing the Inbox mid-write still counts the day', () async {
+        final repository = _Repository()..presentationGate = Completer();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(offered);
+        await cubit.refresh();
+        final presenting = cubit.presented(offered);
+        await cubit.close();
+        repository.presentationGate!.complete();
+        await presenting;
+        expect(repository.invites, [(_owner, '2026-10-30')]);
       });
 
       test('an invite storage failure keeps the card and reports', () async {

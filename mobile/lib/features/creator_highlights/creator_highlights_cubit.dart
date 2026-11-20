@@ -138,10 +138,19 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         ),
       );
     }
+    // Both writes run together, so neither waits on, or is skipped by, the
+    // other or a close while the first is still pending.
+    await Future.wait([
+      _markPresented(card.localDate, nextRotation),
+      if (card.showInvite) _inviteShown(card.localDate),
+    ]);
+  }
+
+  Future<void> _markPresented(String localDate, int nextRotation) async {
     try {
       await _repository.markPresented(
         owner,
-        card.localDate,
+        localDate,
         nextRotation: nextRotation,
       );
     } on Object catch (error, stackTrace) {
@@ -154,7 +163,6 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
       // The in-memory claim still prevents a replay in this account session.
       // A storage failure cannot interrupt the notification feed.
     }
-    if (card.showInvite && !isClosed) await _inviteShown(card.localDate);
   }
 
   Future<void> _inviteShown(String localDate) async {

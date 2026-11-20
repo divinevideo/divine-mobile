@@ -430,6 +430,23 @@ void main() {
       await repo.markInviteShown(owner, '2026-10-30');
       expect(prefs.getString(key), '2026-10-26|2026-10-30');
     });
+    test("a later day joins the week's record", () async {
+      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27');
+      await repository([]).markInviteShown(owner, '2026-10-28');
+      expect(
+        prefs.getString(key),
+        '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
+      );
+    });
+    test('three shown days withhold the invite on the fourth', () async {
+      final repo = repository([video()]);
+      for (final day in ['2026-10-26', '2026-10-27', '2026-10-28']) {
+        await repo.markInviteShown(owner, day);
+      }
+      final card = await repo.load(owner);
+      expect(card?.createdToday, 1);
+      expect(card?.showInvite, isFalse);
+    });
     test('a new week replaces the previous record', () async {
       await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
       await repository([]).markInviteShown(owner, '2026-10-27');

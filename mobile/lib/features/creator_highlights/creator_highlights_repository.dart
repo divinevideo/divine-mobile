@@ -29,7 +29,7 @@ abstract interface class CreatorHighlightsRepository {
   Future<void> markInviteShown(String owner, String localDate);
 }
 
-/// The device could not persist a daily presentation marker.
+/// The device could not persist a highlight record (presentation or invite).
 class CreatorHighlightPresentationException implements Exception {
   const CreatorHighlightPresentationException();
 

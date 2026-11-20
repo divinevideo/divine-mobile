@@ -32,6 +32,19 @@ final _card = CreatorHighlight(
 
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
 
+final _invitingCard = CreatorHighlight(
+  owner: _card.owner,
+  localDate: _card.localDate,
+  createdToday: _card.createdToday,
+  creationDaysThisWeek: _card.creationDaysThisWeek,
+  views: _card.views,
+  topVideo: _card.topVideo,
+  topVideoViews: _card.topVideoViews,
+  likes: _card.likes,
+  celebrate: _card.celebrate,
+  showInvite: true,
+);
+
 CreatorHighlight _inviteCard({required bool showInvite}) => CreatorHighlight(
   owner: _owner,
   localDate: '2026-10-30',
@@ -224,6 +237,19 @@ void main() {
       },
     );
 
+    testWidgets('the card does not announce the invite a second time', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(tester, showInvite: true);
+      final card = tester.getSemantics(
+        find.text(l10n.creatorHighlightAnalytics),
+      );
+      expect(card.label, contains(l10n.creatorHighlightAnalytics));
+      expect(card.label, isNot(contains(l10n.creatorHighlightInvite)));
+      handle.dispose();
+    });
+
     testWidgets('the invite row is its own button for screen readers', (
       tester,
     ) async {
@@ -363,7 +389,7 @@ void main() {
                     child: Scaffold(
                       body: SingleChildScrollView(
                         child: CreatorHighlightCard(
-                          highlight: _card,
+                          highlight: _invitingCard,
                           isVisible: true,
                           onPresented: () {},
                           onAnalytics: () {},
@@ -391,6 +417,9 @@ void main() {
             await tester.ensureVisible(
               find.text(l10n.creatorHighlightAnalytics),
             );
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            await tester.ensureVisible(find.text(l10n.creatorHighlightInvite));
             await tester.pumpAndSettle();
             expect(tester.takeException(), isNull);
           },
