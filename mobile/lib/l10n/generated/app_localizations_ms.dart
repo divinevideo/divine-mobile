@@ -449,22 +449,6 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Peranti Input Audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (disyorkan)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Memilih mikrofon terbaik secara automatik';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pilih Input Audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Diketahui';
-
-  @override
   String get contentFiltersAdultContent => 'KANDUNGAN DEWASA';
 
   @override

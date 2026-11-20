@@ -5,8 +5,6 @@ package co.openvine.divine_camera
 
 import android.app.Activity
 import android.content.Context
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -247,10 +245,6 @@ class DivineCameraPlugin :
             "setVolumeKeysEnabled" -> {
                 val enabled = call.argument<Boolean>("enabled") ?: true
                 setVolumeKeysEnabled(enabled, oneShotResult)
-            }
-
-            "listAudioDevices" -> {
-                listAudioDevices(result)
             }
 
             else -> {
@@ -574,23 +568,6 @@ class DivineCameraPlugin :
         } catch (e: Exception) {
             result.error("VOLUME_KEYS_ERROR", e.message, null)
         }
-    }
-
-    private fun listAudioDevices(result: Result) {
-        val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        if (audioManager == null) {
-            result.success(emptyList<Map<String, String>>())
-            return
-        }
-        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
-            .filter { it.type != AudioDeviceInfo.TYPE_TELEPHONY }
-            .map { device ->
-                mapOf(
-                    "id" to device.id.toString(),
-                    "name" to (device.productName?.toString() ?: "Audio Device ${device.id}")
-                )
-            }
-        result.success(devices)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {

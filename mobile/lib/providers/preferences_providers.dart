@@ -7,7 +7,6 @@ import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/services/audio_device_preference_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/front_camera_mirror_preference_service.dart';
@@ -105,19 +104,6 @@ final nostrSignatureVerificationPolicyProvider =
       );
       return service.currentPolicy;
     });
-
-/// Audio device preference service for managing the preferred input device
-/// for recording on macOS. keepAlive ensures preference persists.
-@Riverpod(keepAlive: true)
-AudioDevicePreferenceService audioDevicePreferenceService(Ref ref) {
-  final service = AudioDevicePreferenceService();
-  runProviderDetached(
-    service.initialize(),
-    'initialize audio-device preferences',
-    logName: 'AudioDevicePreferenceService',
-  );
-  return service;
-}
 
 /// Language preference service for managing the user's preferred content
 /// language. Used for NIP-32 self-labeling on published video events.

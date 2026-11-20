@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Dispositivo de entrada de audio",
-  "contentPreferencesAutoRecommended": "Automático (recomendado)",
-  "contentPreferencesAutoSelectsBest": "Elige automáticamente el mejor micrófono",
-  "contentPreferencesSelectAudioInput": "Elegí la entrada de audio",
-  "contentPreferencesUnknownMicrophone": "Micrófono desconocido",
   "profileBlockedAccountNotAvailable": "Esta cuenta no está disponible",
   "profileInvalidId": "ID de perfil inválido",
   "profileShareText": "¡Mirá a {displayName} en Divine!\n\n{url}",

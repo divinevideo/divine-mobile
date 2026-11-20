@@ -482,22 +482,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'آڈیو ان پٹ ڈیوائس';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'خودکار (تجویز کردہ)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'خودبخود بہترین مائکروفون منتخب کرتا ہے';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'آڈیو ان پٹ منتخب کریں';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'نامعلوم مائکروفون';
-
-  @override
   String get contentFiltersAdultContent => 'بالغ مواد';
 
   @override

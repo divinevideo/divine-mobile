@@ -52,7 +52,6 @@ nostr_key_version
 nostr_keypair # signing material; owned by nostr_key_manager, not this sweep
 nostr_signature_verification_policy
 pending_unblocks
-preferred_audio_device_id
 protected_minor_override
 push_preferences # swept by NotificationPreferencesStore.clearPreferences; method-based cleanup is outside this detector
 screenshot_initial_route
