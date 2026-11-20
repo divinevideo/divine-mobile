@@ -20,6 +20,19 @@ class _MockVideoCrosspostCubit extends MockCubit<VideoCrosspostState>
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
 
+/// Copies [jobs] into new instances, like each decoded poll response.
+List<CrosspostJob> _decoded(List<CrosspostJob> jobs) => [
+  for (final job in jobs)
+    CrosspostJob(
+      id: job.id,
+      platform: job.platform,
+      status: job.status,
+      externalPostUrl: job.externalPostUrl,
+      errorCode: job.errorCode,
+      errorMessage: job.errorMessage,
+    ),
+];
+
 void main() {
   group('showCrosspostSheetForEvent', () {
     const eventId =
@@ -156,8 +169,10 @@ void main() {
           status: CrosspostJobStatus.processing,
         ),
       ];
+      // Each poll decodes new job objects, as the API client does, so every
+      // poll emits a state and only the notified-job set prevents a repeat.
       when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
-        (_) async => jobs,
+        (_) async => _decoded(jobs),
       );
       response.complete(jobs);
       await tester.pumpAndSettle();
@@ -172,16 +187,73 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       // The same failed job must not produce another notification each poll.
       await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
       expect(find.byType(SnackBar), findsNothing);
       when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
-        (_) async => [
+        (_) async => _decoded([
+          jobs.first,
+          const CrosspostJob(
+            id: 'job-2',
+            platform: 'tiktok',
+            status: CrosspostJobStatus.failed,
+            errorCode: 'not_owner',
+          ),
+        ]),
+      );
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      expect(
+        find.text('TikTok: ${l10n.crosspostErrorNotOwner}'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('prompts to reconnect a needs-reauth job once', (
+      tester,
+    ) async {
+      await openSheet(tester);
+      await tester.tap(find.text(l10n.crosspostSubmit));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      const jobs = [
+        CrosspostJob(
+          id: 'job-1',
+          platform: 'instagram',
+          status: CrosspostJobStatus.needsReauth,
+        ),
+        CrosspostJob(
+          id: 'job-2',
+          platform: 'tiktok',
+          status: CrosspostJobStatus.processing,
+        ),
+      ];
+      when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
+        (_) async => _decoded(jobs),
+      );
+      response.complete(jobs);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.crosspostReconnectPrompt('Instagram')),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(SnackBar), findsNothing);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      verify(
+        () => client.getCrossposts(eventId: eventId),
+      ).called(greaterThan(1));
+      expect(find.byType(SnackBar), findsNothing);
+      when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
+        (_) async => _decoded([
           jobs.first,
           const CrosspostJob(
             id: 'job-2',
             platform: 'tiktok',
             status: CrosspostJobStatus.posted,
           ),
-        ],
+        ]),
       );
       await tester.pump(const Duration(seconds: 3));
       await tester.pump();
