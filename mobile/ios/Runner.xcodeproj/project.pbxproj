@@ -19,6 +19,7 @@
 		48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
 		381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
 		60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
+		A17C0002000000000000AA01 /* PostActivityContentStateCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */; };
 		06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		A17C0001000000000000AA01 /* PostLiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0001000000000000BB01 /* PostLiveActivityPlugin.swift */; };
@@ -170,6 +171,7 @@
 		992F75580C42A8A09950DC34 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
 		59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplay.swift; sourceTree = "<group>"; };
 		9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityAttributes.swift; sourceTree = "<group>"; };
+		A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityContentStateCodingTests.swift; sourceTree = "<group>"; };
 		792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplayTests.swift; sourceTree = "<group>"; };
 		029BDD854485FA62BC5A9C26 /* Pods-RunnerTests.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		037A7FC0D83198C29E787FD1 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -357,6 +359,7 @@
 			children = (
 				1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */,
 				792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */,
+				A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */,
 				A17C0001000000000000BB03 /* PostLiveActivityPluginTests.swift */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
@@ -893,6 +896,7 @@
 			files = (
 				9426502F7C5BD1F17FB38100 /* PostActivityViewsTests.swift in Sources */,
 				06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */,
+				A17C0002000000000000AA01 /* PostActivityContentStateCodingTests.swift in Sources */,
 				A17C0001000000000000AA03 /* PostLiveActivityPluginTests.swift in Sources */,
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 			);

@@ -28,6 +28,66 @@ struct PostActivityContentState: Codable, Hashable {
     /// arrive with a later update. Nil decodes from pushes that omit them.
     var postCoordinate: String?
     var postEventId: String?
+
+    init(
+        phase: PostActivityPhase,
+        views: Int?,
+        likes: Int?,
+        comments: Int?,
+        updatedAt: Date,
+        showFirstRunNote: Bool,
+        postCoordinate: String? = nil,
+        postEventId: String? = nil
+    ) {
+        self.phase = phase
+        self.views = views
+        self.likes = likes
+        self.comments = comments
+        self.updatedAt = updatedAt
+        self.showFirstRunNote = showFirstRunNote
+        self.postCoordinate = postCoordinate
+        self.postEventId = postEventId
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case phase, views, likes, comments, updatedAt, showFirstRunNote
+        case postCoordinate, postEventId
+    }
+
+    /// ActivityKit decodes pushed state with a default `JSONDecoder`, whose
+    /// Date strategy counts seconds from 2001. The push service sends
+    /// standard Unix seconds (since 1970), so `updatedAt` is read and written
+    /// as `timeIntervalSince1970` regardless of the coder's strategy.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        phase = try container.decode(PostActivityPhase.self, forKey: .phase)
+        views = try container.decodeIfPresent(Int.self, forKey: .views)
+        likes = try container.decodeIfPresent(Int.self, forKey: .likes)
+        comments = try container.decodeIfPresent(Int.self, forKey: .comments)
+        updatedAt = Date(
+            timeIntervalSince1970:
+                try container.decode(Double.self, forKey: .updatedAt)
+        )
+        showFirstRunNote = try container.decode(Bool.self, forKey: .showFirstRunNote)
+        postCoordinate = try container.decodeIfPresent(
+            String.self, forKey: .postCoordinate
+        )
+        postEventId = try container.decodeIfPresent(
+            String.self, forKey: .postEventId
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(phase, forKey: .phase)
+        try container.encodeIfPresent(views, forKey: .views)
+        try container.encodeIfPresent(likes, forKey: .likes)
+        try container.encodeIfPresent(comments, forKey: .comments)
+        try container.encode(updatedAt.timeIntervalSince1970, forKey: .updatedAt)
+        try container.encode(showFirstRunNote, forKey: .showFirstRunNote)
+        try container.encodeIfPresent(postCoordinate, forKey: .postCoordinate)
+        try container.encodeIfPresent(postEventId, forKey: .postEventId)
+    }
 }
 
 /// The fixed part of a post's Live Activity: whose, and when it started.
