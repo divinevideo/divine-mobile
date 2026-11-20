@@ -19,10 +19,11 @@ part 'post_analytics_detail_state.dart';
 
 /// Loads one post's stats for the post stats screen.
 ///
-/// Before the settle point (`postedAt` + [settleDelay]) Funnelcake may not
-/// have caught up, so a missing post or a zero count reads as unknown, and a
-/// single reload is scheduled for the settle point. "Nothing yet" is a
-/// first-hour state: past [windowLength] confirmed zeros show as zeros.
+/// Before the settle point (`postedAt` + [LiveActivityRegistration.settle])
+/// Funnelcake may not have caught up, so a missing post or a zero count reads
+/// as unknown, and a single reload is scheduled for the settle point.
+/// "Nothing yet" is a first-hour state: past [LiveActivityRegistration.window]
+/// confirmed zeros show as zeros.
 class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     with CloseGuardedEmit<PostAnalyticsDetailState> {
   /// Creates the cubit. With [initialPerformance] it starts resolved from
@@ -57,14 +58,6 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
                  now: (now ?? DateTime.now)(),
                ),
        );
-
-  /// How long after publishing Funnelcake's counts are trusted, past the
-  /// relay's worst-case write delay.
-  static const settleDelay = Duration(minutes: 10);
-
-  /// How long after publishing "nothing yet" applies: the Live Activity's
-  /// window. Later, a post's confirmed zeros are just its stats.
-  static const windowLength = Duration(minutes: 60);
 
   static const _logName = 'PostAnalyticsDetailCubit';
 
@@ -228,7 +221,9 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     if (emitted &&
         postedAt != null &&
         next.status == PostAnalyticsDetailStatus.onTheirWay) {
-      _scheduleSettleReload(postedAt.add(settleDelay).difference(now));
+      _scheduleSettleReload(
+        postedAt.add(LiveActivityRegistration.settle).difference(now),
+      );
     }
   }
 
@@ -242,9 +237,11 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
   }) {
     final video = performance?.video;
     final beforeSettle =
-        postedAt != null && now.isBefore(postedAt.add(settleDelay));
+        postedAt != null &&
+        now.isBefore(postedAt.add(LiveActivityRegistration.settle));
     final inWindow =
-        postedAt != null && now.isBefore(postedAt.add(windowLength));
+        postedAt != null &&
+        now.isBefore(postedAt.add(LiveActivityRegistration.window));
     final counts = video == null
         ? const PostCounts()
         : _countsOf(

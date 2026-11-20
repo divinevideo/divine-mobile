@@ -45,6 +45,10 @@ class LiveActivityRegistration extends Equatable {
     state: LiveActivityRegistrationState.active,
   );
 
+  /// How long after posting Funnelcake's counts are trusted, past the
+  /// relay's worst-case write delay.
+  static const settle = Duration(minutes: 10);
+
   /// How long after posting the activity keeps being updated.
   static const window = Duration(minutes: 60);
 

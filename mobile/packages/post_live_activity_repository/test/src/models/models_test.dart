@@ -28,6 +28,11 @@ void main() {
   );
 
   group(LiveActivityRegistration, () {
+    test('settles after ten minutes and the window is an hour', () {
+      expect(LiveActivityRegistration.settle, const Duration(minutes: 10));
+      expect(LiveActivityRegistration.window, const Duration(minutes: 60));
+    });
+
     test('forPost ends the window 60 minutes after posting', () {
       final r = LiveActivityRegistration.forPost(
         activityId: 'a1',
