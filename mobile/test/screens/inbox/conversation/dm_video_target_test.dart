@@ -106,6 +106,31 @@ void main() {
       );
     });
 
+    test(
+      'keeps a hex d-tag URL a d-tag lookup when a regular citation names '
+      'another event',
+      () {
+        // An earlier app linked a regular video by its d tag and cited it by
+        // its event id; the d tag here is hex, so it reads like an event id.
+        final dTag = 'b' * 64;
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$dTag?author=$author',
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: eventId,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+
+        expect(target!.routeId, dTag);
+        expect(target.routeAuthor, author);
+        expect(
+          target.canonicalUrl,
+          'https://divine.video/video/$dTag?author=$author',
+        );
+      },
+    );
+
     test('resolves an addressable structured reference', () {
       final target = resolveDmVideoTarget(
         content: 'watch this',
