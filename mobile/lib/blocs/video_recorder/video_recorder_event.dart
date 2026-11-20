@@ -475,6 +475,20 @@ final class VideoRecorderChromaKeySettingsChanged extends VideoRecorderEvent {
   List<Object?> get props => [color, similarity, smoothness, spill];
 }
 
+/// Keys on the camera picture around a tap: [rgba] is the patch of the live
+/// preview under the finger, as straight RGBA pixels.
+///
+/// The key's color and amount both come from the patch, the way a measurement
+/// takes them from the wall behind the subject.
+final class VideoRecorderChromaKeyPatchPicked extends VideoRecorderEvent {
+  const VideoRecorderChromaKeyPatchPicked(this.rgba);
+
+  final Uint8List rgba;
+
+  @override
+  List<Object?> get props => [rgba];
+}
+
 /// Replaces what the chroma-key key puts behind the subject.
 final class VideoRecorderChromaKeyBackdropSet extends VideoRecorderEvent {
   /// Leaves the keyed area unfilled.

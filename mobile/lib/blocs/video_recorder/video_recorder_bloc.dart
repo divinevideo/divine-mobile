@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:collection/collection.dart';
@@ -347,6 +348,7 @@ class VideoRecorderBloc
     on<VideoRecorderChromaKeySettingsChanged>(
       _onChromaKeySettingsChanged,
     );
+    on<VideoRecorderChromaKeyPatchPicked>(_onChromaKeyPatchPicked);
     on<VideoRecorderChromaKeyBackdropSet>(_onChromaKeyBackdropSet);
     on<_VideoRecorderCameraStateChanged>(_onCameraStateChanged);
     on<_VideoRecorderRemoteRecordTriggered>(_onRemoteRecordTriggered);
@@ -2658,6 +2660,24 @@ class VideoRecorderBloc
     emit(
       state.copyWith(
         chromaKey: state.chromaKey.withPreset(event.preset),
+        chromaKeyMeasurementStatus: state.chromaKeyMeasurementWrittenOff,
+      ),
+    );
+  }
+
+  /// Keys on the tapped patch of the camera picture, writing off a
+  /// measurement in flight like any setting changed by hand.
+  void _onChromaKeyPatchPicked(
+    VideoRecorderChromaKeyPatchPicked event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    final detection = ChromaKeyDetector.fromPatch(event.rgba);
+    emit(
+      state.copyWith(
+        chromaKey: state.chromaKey.withKeySettings(
+          color: detection.color,
+          similarity: detection.similarity,
+        ),
         chromaKeyMeasurementStatus: state.chromaKeyMeasurementWrittenOff,
       ),
     );

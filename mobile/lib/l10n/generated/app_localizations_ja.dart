@@ -10235,16 +10235,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'マスクする色をどれだけ消すか';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'エッジ';
+  String get videoEditorChromaKeyEdgeLabel => 'エッジをぼかす';
 
   @override
   String get videoEditorChromaKeyEdgeHint => '切り抜きをなめらかにして髪のギザつきを防ぎます';
 
   @override
-  String get videoEditorChromaKeySpillLabel => '色かぶり';
+  String get videoEditorChromaKeySpillLabel => '色かぶりを除去';
 
   @override
   String get videoEditorChromaKeySpillHint => 'マスクする色の色かぶりを被写体から取り除きます';
+
+  @override
+  String get videoEditorChromaKeyFineTune => '微調整';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '置き換える';
@@ -10253,17 +10256,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'なし';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => '黒';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => '色';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => '画像';
+  String get videoEditorChromaKeyBackgroundImage => '写真';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'クリップ';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      '動画は透明を保持できないため、書き出すと黒くなります。';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10280,6 +10282,12 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'クリップの読み込みに時間がかかりすぎました。もう一度「自動検出」を試すか、手動で色を選んでください。';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => '消したい色をタップしてください';
+
+  @override
+  String get videoEditorChromaKeyDetecting => '消す色を探しています…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'クリップを選ぶ';

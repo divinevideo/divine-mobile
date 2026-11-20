@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -454,6 +455,57 @@ void main() {
           expect(key.color, const Color(0xFF334455));
           expect(key.similarity, const ChromaKey.greenScreen().similarity);
         },
+      );
+    });
+
+    group('VideoRecorderChromaKeyPatchPicked', () {
+      /// A 13×13 RGBA patch of [color], every third pixel darkened by [shadow].
+      Uint8List patchOf(Color color, {double shadow = 0}) {
+        const count = 13 * 13;
+        final bytes = Uint8List(count * 4);
+        for (var i = 0; i < count; i++) {
+          final scale = i % 3 == 0 ? 1 - shadow : 1.0;
+          bytes[i * 4] = (color.r * 255 * scale).round();
+          bytes[i * 4 + 1] = (color.g * 255 * scale).round();
+          bytes[i * 4 + 2] = (color.b * 255 * scale).round();
+          bytes[i * 4 + 3] = 255;
+        }
+        return bytes;
+      }
+
+      const wall = Color(0xFF1F4FC8);
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keys on the tapped color and reaches as far as the patch needs',
+        build: () => buildBloc()..emit(chromaKeyState),
+        act: (bloc) => bloc.add(
+          VideoRecorderChromaKeyPatchPicked(patchOf(wall, shadow: 0.3)),
+        ),
+        verify: (bloc) {
+          final key = bloc.state.chromaKey.key;
+          expect(key.color, wall);
+          // Wider than a flat patch's floor: the shadow had to fit inside.
+          expect(
+            key.similarity,
+            greaterThan(ChromaKeyDetector.fromPatch(patchOf(wall)).similarity),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'answers a wall the measurement could not find',
+        build: () => buildBloc()
+          ..emit(
+            chromaKeyState.copyWith(
+              chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.failed,
+            ),
+          ),
+        act: (bloc) =>
+            bloc.add(VideoRecorderChromaKeyPatchPicked(patchOf(wall))),
+        verify: (bloc) => expect(
+          bloc.state.chromaKeyMeasurementStatus,
+          ChromaKeyMeasurementStatus.idle,
+        ),
       );
     });
 

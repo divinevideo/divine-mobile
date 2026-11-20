@@ -10252,16 +10252,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => '마스크할 색이 얼마나 지워질지';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => '가장자리';
+  String get videoEditorChromaKeyEdgeLabel => '부드러운 가장자리';
 
   @override
   String get videoEditorChromaKeyEdgeHint => '잘린 부분을 부드럽게 해 머리카락이 거칠어지지 않게 합니다';
 
   @override
-  String get videoEditorChromaKeySpillLabel => '색 번짐';
+  String get videoEditorChromaKeySpillLabel => '색 번짐 제거';
 
   @override
   String get videoEditorChromaKeySpillHint => '마스크할 색이 피사체에 남긴 색감을 걷어내요';
+
+  @override
+  String get videoEditorChromaKeyFineTune => '세부 조정';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '이걸로 바꾸기';
@@ -10270,17 +10273,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => '없음';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => '검정';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => '색';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => '이미지';
+  String get videoEditorChromaKeyBackgroundImage => '사진';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => '클립';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      '영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10297,6 +10299,12 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       '클립을 읽는 데 시간이 너무 오래 걸렸어요. 자동 감지를 다시 시도하거나, 색을 직접 골라 보세요.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => '지우고 싶은 색을 탭해 주세요';
+
+  @override
+  String get videoEditorChromaKeyDetecting => '지울 색을 찾는 중…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '클립 고르기';

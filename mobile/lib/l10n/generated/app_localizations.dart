@@ -18245,10 +18245,10 @@ abstract class AppLocalizations {
   /// **'How much of the masked color disappears'**
   String get videoEditorChromaKeyAmountHint;
 
-  /// No description provided for @videoEditorChromaKeyEdgeLabel.
+  /// Label of the colour-mask slider that softens the edge of the cutout. Describe the effect, not the parameter: the slider sits under Fine-tune with its hint, videoEditorChromaKeyEdgeHint, shown right under it.
   ///
   /// In en, this message translates to:
-  /// **'Edge'**
+  /// **'Soft edge'**
   String get videoEditorChromaKeyEdgeLabel;
 
   /// No description provided for @videoEditorChromaKeyEdgeHint.
@@ -18257,10 +18257,10 @@ abstract class AppLocalizations {
   /// **'Softens the cutout so hair doesn\'t turn jagged'**
   String get videoEditorChromaKeyEdgeHint;
 
-  /// No description provided for @videoEditorChromaKeySpillLabel.
+  /// Label of the colour-mask slider that removes the masked colour's tint where it reflects onto the subject — compositors call it spill suppression. Describe what it does in plain words rather than using the jargon; its hint, videoEditorChromaKeySpillHint, is shown right under it.
   ///
   /// In en, this message translates to:
-  /// **'Spill'**
+  /// **'Remove tint'**
   String get videoEditorChromaKeySpillLabel;
 
   /// No description provided for @videoEditorChromaKeySpillHint.
@@ -18268,6 +18268,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pulls the masked color\'s tint back off your subject'**
   String get videoEditorChromaKeySpillHint;
+
+  /// Row on the colour-mask screen that opens and closes the key's own settings: Auto-detect, the green and blue presets, the colour swatch, the soft-edge slider and the tint slider. Short, sentence case, no punctuation; it sits on one line beside a caret.
+  ///
+  /// In en, this message translates to:
+  /// **'Fine-tune'**
+  String get videoEditorChromaKeyFineTune;
 
   /// No description provided for @videoEditorChromaKeyBackgroundLabel.
   ///
@@ -18281,16 +18287,22 @@ abstract class AppLocalizations {
   /// **'Nothing'**
   String get videoEditorChromaKeyBackgroundNone;
 
+  /// Background chip on the colour-mask screen of a timeline clip that leaves the masked area empty. A video file cannot hold transparency, so empty exports as black, and the preview shows it black; name the colour, not "nothing". Keep it to one short word: it sits beside videoEditorChromaKeyBackgroundColor, videoEditorChromaKeyBackgroundImage and videoEditorChromaKeyBackgroundVideo in a row of chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get videoEditorChromaKeyBackgroundBlack;
+
   /// No description provided for @videoEditorChromaKeyBackgroundColor.
   ///
   /// In en, this message translates to:
   /// **'Color'**
   String get videoEditorChromaKeyBackgroundColor;
 
-  /// No description provided for @videoEditorChromaKeyBackgroundImage.
+  /// Background tile on the colour-mask screen that opens the camera to shoot a photo for behind the subject (the gallery is deliberately not offered). Name it a photo, not an image or a file. One short word: it sits under an icon in a quarter of a phone's width, beside videoEditorChromaKeyBackgroundColor and videoEditorChromaKeyBackgroundVideo.
   ///
   /// In en, this message translates to:
-  /// **'Image'**
+  /// **'Photo'**
   String get videoEditorChromaKeyBackgroundImage;
 
   /// No description provided for @videoEditorChromaKeyBackgroundVideo.
@@ -18299,19 +18311,13 @@ abstract class AppLocalizations {
   /// **'Clip'**
   String get videoEditorChromaKeyBackgroundVideo;
 
-  /// No description provided for @videoEditorChromaKeyTransparentHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Video can\'t hold transparency, so this exports as black.'**
-  String get videoEditorChromaKeyTransparentHint;
-
-  /// Shown under the background chips of the colour-mask screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
+  /// Shown under the background chips of the colour-mask screen when "Nothing" is selected for a clip that was detached onto the editor canvas. A reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. A timeline clip offers videoEditorChromaKeyBackgroundBlack instead, because its empty area exports as black. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
   ///
   /// In en, this message translates to:
   /// **'Whatever\'s behind the clip shows through.'**
   String get videoEditorChromaKeyCanvasTransparentHint;
 
-  /// Standing tip in the colour-mask controls, directly above the Auto-detect button. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject.
+  /// Tip at the top of the colour-mask controls, shown under videoEditorChromaKeyDetectFailed when auto-detect found no colour to mask. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject.
   ///
   /// In en, this message translates to:
   /// **'Replacing your background? A bold color or an evenly lit white wall works, as long as it fills the frame and you\'re not wearing it.'**
@@ -18328,6 +18334,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Took too long to read the clip. Try Auto-detect again, or pick the color by hand.'**
   String get videoEditorChromaKeyDetectTimedOut;
+
+  /// Shown over the top of the colour-mask preview until the user taps it once. Tapping the video picks the colour under the finger as the colour to remove. Keep it a short instruction that fits one or two lines over a phone-width video, no full stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the color you want to remove'**
+  String get videoEditorChromaKeyTapToPick;
+
+  /// Shown over the top of the colour-mask preview while the screen measures which colour to remove from the footage, which takes a second or two after it opens. Ends in an ellipsis because it is still running.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the color to remove…'**
+  String get videoEditorChromaKeyDetecting;
 
   /// No description provided for @videoEditorChromaKeyPickClipTitle.
   ///

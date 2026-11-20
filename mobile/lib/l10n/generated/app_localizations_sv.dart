@@ -10732,18 +10732,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Hur mycket av den maskerade färgen som försvinner';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Kant';
+  String get videoEditorChromaKeyEdgeLabel => 'Mjuk kant';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Mjukar upp urklippet så att hår inte blir taggigt';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Färgspill';
+  String get videoEditorChromaKeySpillLabel => 'Ta bort färgstick';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Tar bort den maskerade färgens färgstick från ditt motiv';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Finjustering';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ersätt med';
@@ -10752,17 +10755,16 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Inget';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Svart';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Färg';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Bild';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klipp';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video kan inte spara transparens, så det här exporteras som svart.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10779,6 +10781,12 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Det tog för lång tid att läsa klippet. Prova Hitta automatiskt igen, eller välj färgen för hand.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Tryck på färgen du vill ta bort';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Letar efter färgen att ta bort…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Välj ett klipp';

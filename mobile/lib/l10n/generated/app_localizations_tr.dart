@@ -10649,18 +10649,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Maskelenen rengin ne kadarı kaybolacak';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Kenar';
+  String get videoEditorChromaKeyEdgeLabel => 'Yumuşak kenar';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Kesiti yumuşatır, saçlar tırtıklı çıkmaz';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Renk taşması';
+  String get videoEditorChromaKeySpillLabel => 'Tonu kaldır';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Maskelenen rengin tonunu öznenin üzerinden çeker';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'İnce ayar';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Şununla değiştir';
@@ -10669,17 +10672,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Hiçbir şey';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Siyah';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Renk';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Görsel';
+  String get videoEditorChromaKeyBackgroundImage => 'Fotoğraf';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10696,6 +10698,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Klibi okumak çok uzun sürdü. Otomatik algıla\'yı yeniden dene ya da rengi elle seç.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Kaldırmak istediğin renge dokun';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Kaldırılacak renk aranıyor…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';

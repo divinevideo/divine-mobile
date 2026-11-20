@@ -10826,18 +10826,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Колко от маскирания цвят изчезва';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Ръб';
+  String get videoEditorChromaKeyEdgeLabel => 'Мек ръб';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Омекотява изрязването, за да не назъбва косата';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Отблясък';
+  String get videoEditorChromaKeySpillLabel => 'Махни оттенъка';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Издърпва оттенъка на маскирания цвят от обекта ти';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Фина настройка';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Замени с';
@@ -10846,17 +10849,16 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Нищо';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Черно';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Цвят';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Изображение';
+  String get videoEditorChromaKeyBackgroundImage => 'Снимка';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Клип';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10873,6 +10875,13 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Прочитането на клипа отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Докосни цвета, който искаш да махнеш';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Търсим цвета за махане…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';

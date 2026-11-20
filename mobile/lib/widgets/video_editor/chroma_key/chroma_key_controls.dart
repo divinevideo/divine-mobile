@@ -1,5 +1,5 @@
-// ABOUTME: Control panel of the chroma-key screen: auto-detect, screen colour,
-// ABOUTME: the three tolerance sliders, and the background choice.
+// ABOUTME: Control panel of the chroma-key screen: what replaces the colour and
+// ABOUTME: how strongly, with presets, colour and edge tuning folded away.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,14 +14,16 @@ import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.da
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
 
-/// What the clip being keyed sits on, which decides what "Nothing" behind the
-/// subject means and which backdrops can be offered.
+/// What the clip being keyed sits on, which decides what an empty backdrop
+/// means and which backdrops can be offered.
 enum ChromaKeySurface {
   /// The clip is the timeline track, and the key is baked into its file.
   ///
   /// Nothing lies below the track, so a transparent key flattens to black in
-  /// the H.264 file — which the panel warns about — and a library clip can be
-  /// put behind the subject by baking a second track under it.
+  /// the H.264 file. The panel offers that choice as "Black" and the preview
+  /// paints it black, so neither promises a see-through cutout the export
+  /// cannot keep. A library clip can be put behind the subject by baking a
+  /// second track under it.
   track,
 
   /// The clip is a layer over the editor canvas, and the key is applied live.
@@ -35,6 +37,9 @@ enum ChromaKeySurface {
 
 /// Everything below the preview on the chroma-key screen, driven by the
 /// [ChromaKeyEditorCubit] above it.
+///
+/// The screen picks the colour from a tap on its preview, so Auto-detect sits
+/// with the presets under Fine-tune: it already ran when the screen opened.
 class ChromaKeyControls extends StatelessWidget {
   const ChromaKeyControls({
     required this.onPickBackground,
@@ -52,14 +57,24 @@ class ChromaKeyControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (chromaKey, isDetecting) = context.select(
-      (ChromaKeyEditorCubit c) => (c.state.chromaKey, c.state.isDetecting),
+    final (chromaKey, detectionStatus) = context.select(
+      (ChromaKeyEditorCubit c) => (c.state.chromaKey, c.state.detectionStatus),
     );
     final cubit = context.read<ChromaKeyEditorCubit>();
+    final l10n = context.l10n;
 
     return ChromaKeyControlsPanel(
       chromaKey: chromaKey,
-      isDetecting: isDetecting,
+      isDetecting: detectionStatus == ChromaKeyDetectionStatus.detecting,
+      detectionNotice: switch (detectionStatus) {
+        ChromaKeyDetectionStatus.failure =>
+          l10n.videoEditorChromaKeyDetectFailed,
+        ChromaKeyDetectionStatus.timedOut =>
+          l10n.videoEditorChromaKeyDetectTimedOut,
+        ChromaKeyDetectionStatus.idle ||
+        ChromaKeyDetectionStatus.detecting => null,
+      },
+      showSurfaceHint: detectionStatus == ChromaKeyDetectionStatus.failure,
       onDetect: cubit.detectFromFootage,
       onGreenPreset: cubit.useGreenScreenPreset,
       onBluePreset: cubit.useBlueScreenPreset,
@@ -78,6 +93,11 @@ class ChromaKeyControls extends StatelessWidget {
 /// Shared by the editor's chroma key screen, where [ChromaKeyControls] binds
 /// it to [ChromaKeyEditorCubit], and the recorder's color mask, which binds
 /// it to the recorder so the key can be tuned against the live camera.
+///
+/// Up front it asks only what most people came for: what replaces the colour,
+/// and how strongly. Everything that tunes the key itself — Auto-detect, the
+/// presets, the colour swatch, the edge and the tint — waits under Fine-tune,
+/// in the editor and the recorder alike.
 class ChromaKeyControlsPanel extends StatelessWidget {
   const ChromaKeyControlsPanel({
     required this.chromaKey,
@@ -92,6 +112,7 @@ class ChromaKeyControlsPanel extends StatelessWidget {
     required this.onPickBackground,
     this.surface = ChromaKeySurface.track,
     this.detectionNotice,
+    this.showSurfaceHint = false,
     this.scrollController,
     super.key,
   });
@@ -123,12 +144,16 @@ class ChromaKeyControlsPanel extends StatelessWidget {
   /// What the keyed clip sits on. See [ChromaKeySurface].
   final ChromaKeySurface surface;
 
-  /// Why the last measurement came back empty, shown inline above
-  /// Auto-detect, or `null` for nothing to report.
-  ///
-  /// The editor reports it as a snackbar instead; the recorder's settings
-  /// sheet shows it here.
+  /// Why the last measurement came back empty, shown inline at the top of the
+  /// panel, or `null` for nothing to report.
   final String? detectionNotice;
+
+  /// Whether to say what a background swap needs from the footage.
+  ///
+  /// Only after a measurement found no screen: that is when the tip explains
+  /// something the user just saw go wrong (#8547), rather than standing in
+  /// the way of every footage that keys fine.
+  final bool showSurfaceHint;
 
   /// Drives the panel's scroll view, for a host that has to own it — a
   /// draggable sheet resizes off the same controller its content scrolls.
@@ -144,47 +169,56 @@ class ChromaKeyControlsPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: _sectionSpacing,
         children: [
-          // One slot for both. The notice is usually absent, and an absent
-          // child in a `spacing` column still costs a full gap — which left
-          // the panel's first line floating away from whatever sits above it.
-          const _Gutter(
+          // One slot for every notice. They are usually all absent, and an
+          // absent child in a `spacing` column still costs a full gap — which
+          // left the panel's first line floating away from what sits above it.
+          _Gutter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _PreviewUnavailableNotice(),
-                _SurfaceRequirementHint(),
+                const _PreviewUnavailableNotice(),
+                if (notice != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: _sectionSpacing),
+                    child: _InfoRow(text: notice),
+                  ),
+                if (showSurfaceHint)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: _sectionSpacing),
+                    child: _InfoRow(
+                      text: context.l10n.videoEditorChromaKeySurfaceHint,
+                    ),
+                  ),
               ],
             ),
           ),
-          if (notice != null) _Gutter(child: _InfoRow(text: notice)),
           _Gutter(
-            child: ChromaKeyDetectRow(
+            child: _BackgroundSection(
+              type: chromaKey.backgroundType,
+              onPickBackground: onPickBackground,
+              surface: surface,
+            ),
+          ),
+          _Gutter(
+            child: _LabeledSlider(
+              label: context.l10n.videoEditorChromaKeyAmountLabel,
+              hint: context.l10n.videoEditorChromaKeyAmountHint,
+              value: chromaKey.key.similarity,
+              min: ChromaKeyEditorCubit.minSimilarity,
+              onChanged: onSimilarityChanged,
+            ),
+          ),
+          _Gutter(
+            child: _FineTuneSection(
+              chromaKey: chromaKey.key,
               isDetecting: isDetecting,
               onDetect: onDetect,
               onGreenPreset: onGreenPreset,
               onBluePreset: onBluePreset,
-            ),
-          ),
-          _Gutter(
-            child: _ScreenColorRow(
-              color: chromaKey.key.color,
-              onColorChanged: onKeyColorChanged,
-            ),
-          ),
-          _Gutter(
-            child: _ToleranceSliders(
-              chromaKey: chromaKey.key,
-              onSimilarityChanged: onSimilarityChanged,
+              onKeyColorChanged: onKeyColorChanged,
               onSmoothnessChanged: onSmoothnessChanged,
               onSpillChanged: onSpillChanged,
             ),
-          ),
-          // Unpadded: the section insets its own text but lets the chips
-          // scroll past the gutter to the screen edge.
-          _BackgroundSection(
-            type: chromaKey.backgroundType,
-            onPickBackground: onPickBackground,
-            surface: surface,
           ),
         ],
       ),
@@ -213,21 +247,6 @@ class _Gutter extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: _gutter),
       child: child,
     );
-  }
-}
-
-/// Tells a first-time user what a background swap needs, on entry to the
-/// controls.
-///
-/// That used to surface only as a failed detect, after the clip was already
-/// shot (#8547). It is a tip for the classic use, not a definition of the
-/// tool: the mask removes a colour wherever it appears (#8544).
-class _SurfaceRequirementHint extends StatelessWidget {
-  const _SurfaceRequirementHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return _InfoRow(text: context.l10n.videoEditorChromaKeySurfaceHint);
   }
 }
 
@@ -269,7 +288,7 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
       return const SizedBox.shrink();
     }
 
-    // Carries the section gap itself: it shares a slot with the surface hint
+    // Carries the section gap itself: it shares a slot with the other notices
     // so that it costs no space at all when it is not shown.
     return Padding(
       padding: const EdgeInsets.only(bottom: _sectionSpacing),
@@ -283,8 +302,8 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
 /// The panel's shared info treatment: an info glyph beside one line of
 /// secondary copy.
 ///
-/// Carries both the standing surface prerequisite and the conditional
-/// preview-unavailable notice.
+/// Carries the preview-unavailable notice, a failed measurement, and what a
+/// background swap needs from the footage.
 class _InfoRow extends StatelessWidget {
   const _InfoRow({required this.text});
 
@@ -331,6 +350,142 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+/// The key's own settings, folded away behind one row until asked for.
+///
+/// Open or closed is the panel's own business: nothing outside it reads the
+/// state, and it starts closed every time the panel opens.
+class _FineTuneSection extends StatefulWidget {
+  const _FineTuneSection({
+    required this.chromaKey,
+    required this.isDetecting,
+    required this.onDetect,
+    required this.onGreenPreset,
+    required this.onBluePreset,
+    required this.onKeyColorChanged,
+    required this.onSmoothnessChanged,
+    required this.onSpillChanged,
+  });
+
+  final ChromaKey chromaKey;
+  final bool isDetecting;
+
+  final VoidCallback onDetect;
+  final VoidCallback onGreenPreset;
+  final VoidCallback onBluePreset;
+  final ValueChanged<Color> onKeyColorChanged;
+  final ValueChanged<double> onSmoothnessChanged;
+  final ValueChanged<double> onSpillChanged;
+
+  @override
+  State<_FineTuneSection> createState() => _FineTuneSectionState();
+}
+
+class _FineTuneSectionState extends State<_FineTuneSection> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final key = widget.chromaKey;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FineTuneHeader(
+          isExpanded: _isExpanded,
+          onPressed: () => setState(() => _isExpanded = !_isExpanded),
+        ),
+        AnimatedReveal(
+          child: _isExpanded
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 16,
+                    children: [
+                      ChromaKeyDetectRow(
+                        isDetecting: widget.isDetecting,
+                        onDetect: widget.onDetect,
+                        onGreenPreset: widget.onGreenPreset,
+                        onBluePreset: widget.onBluePreset,
+                      ),
+                      _ScreenColorRow(
+                        color: key.color,
+                        onColorChanged: widget.onKeyColorChanged,
+                      ),
+                      _LabeledSlider(
+                        label: l10n.videoEditorChromaKeyEdgeLabel,
+                        hint: l10n.videoEditorChromaKeyEdgeHint,
+                        showHint: true,
+                        value: key.smoothness,
+                        onChanged: widget.onSmoothnessChanged,
+                      ),
+                      _LabeledSlider(
+                        label: l10n.videoEditorChromaKeySpillLabel,
+                        hint: l10n.videoEditorChromaKeySpillHint,
+                        showHint: true,
+                        value: key.spill,
+                        onChanged: widget.onSpillChanged,
+                      ),
+                    ],
+                  ),
+                )
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
+/// The row that opens and closes Fine-tune.
+class _FineTuneHeader extends StatelessWidget {
+  const _FineTuneHeader({required this.isExpanded, required this.onPressed});
+
+  final bool isExpanded;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.videoEditorChromaKeyFineTune;
+    return Semantics(
+      button: true,
+      expanded: isExpanded,
+      label: label,
+      excludeSemantics: true,
+      child: _TileSurface(
+        onTap: onPressed,
+        decoration: BoxDecoration(
+          borderRadius: _tileRadius,
+          border: Border.all(color: context.vineColors.outlineMuted),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              spacing: 8,
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurface,
+                    ),
+                  ),
+                ),
+                DivineIcon(
+                  icon: isExpanded ? .caretUp : .caretDown,
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The colour being removed, with a swatch that opens the picker.
 class _ScreenColorRow extends StatelessWidget {
   const _ScreenColorRow({required this.color, required this.onColorChanged});
@@ -345,7 +500,7 @@ class _ScreenColorRow extends StatelessWidget {
         Expanded(
           child: Text(
             context.l10n.videoEditorChromaKeyScreenColorLabel,
-            style: VineTheme.titleSmallFont(
+            style: VineTheme.bodyMediumFont(
               color: context.vineColors.onSurface,
             ),
           ),
@@ -405,63 +560,26 @@ class _ColorSwatchButton extends StatelessWidget {
   }
 }
 
-/// The three tolerance sliders.
-class _ToleranceSliders extends StatelessWidget {
-  const _ToleranceSliders({
-    required this.chromaKey,
-    required this.onSimilarityChanged,
-    required this.onSmoothnessChanged,
-    required this.onSpillChanged,
-  });
-
-  final ChromaKey chromaKey;
-  final ValueChanged<double> onSimilarityChanged;
-  final ValueChanged<double> onSmoothnessChanged;
-  final ValueChanged<double> onSpillChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final key = chromaKey;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 12,
-      children: [
-        _LabeledSlider(
-          label: context.l10n.videoEditorChromaKeyAmountLabel,
-          hint: context.l10n.videoEditorChromaKeyAmountHint,
-          value: key.similarity,
-          min: ChromaKeyEditorCubit.minSimilarity,
-          onChanged: onSimilarityChanged,
-        ),
-        _LabeledSlider(
-          label: context.l10n.videoEditorChromaKeyEdgeLabel,
-          hint: context.l10n.videoEditorChromaKeyEdgeHint,
-          value: key.smoothness,
-          onChanged: onSmoothnessChanged,
-        ),
-        _LabeledSlider(
-          label: context.l10n.videoEditorChromaKeySpillLabel,
-          hint: context.l10n.videoEditorChromaKeySpillHint,
-          value: key.spill,
-          onChanged: onSpillChanged,
-        ),
-      ],
-    );
-  }
-}
-
 class _LabeledSlider extends StatelessWidget {
   const _LabeledSlider({
     required this.label,
     required this.hint,
     required this.value,
     required this.onChanged,
+    this.showHint = false,
     this.min = 0,
   });
 
   final String label;
+
+  /// What the slider does. Always part of its semantic label; drawn under
+  /// the label only when [showHint] is set.
   final String hint;
+
+  /// Whether [hint] is drawn, for a slider whose label alone would not say
+  /// what it does.
+  final bool showHint;
+
   final double value;
   final double min;
   final ValueChanged<double> onChanged;
@@ -471,24 +589,20 @@ class _LabeledSlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.onSurface,
-                ),
-              ),
-            ),
-            Text(
-              '${(value * 100).round()}',
-              style: VineTheme.bodyMediumFont(
+        Text(
+          label,
+          style: VineTheme.bodyMediumFont(color: context.vineColors.onSurface),
+        ),
+        if (showHint)
+          // The slider's semantic label already carries the hint.
+          ExcludeSemantics(
+            child: Text(
+              hint,
+              style: VineTheme.bodySmallFont(
                 color: context.vineColors.onSurfaceVariant,
               ),
             ),
-          ],
-        ),
+          ),
         DivineSlider(
           value: value.clamp(min, 1),
           min: min,
@@ -528,52 +642,37 @@ class _BackgroundSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
       children: [
-        _Gutter(
-          child: Text(
-            context.l10n.videoEditorChromaKeyBackgroundLabel,
-            style: VineTheme.titleSmallFont(
-              color: context.vineColors.onSurface,
-            ),
-          ),
+        Text(
+          context.l10n.videoEditorChromaKeyBackgroundLabel,
+          style: VineTheme.titleSmallFont(color: context.vineColors.onSurface),
         ),
-        // Each chip takes the width its label needs rather than an equal
-        // quarter, which is what kept the longest one from being ellipsised.
-        // Scrolling is the fallback for narrow screens and for locales whose
-        // labels run longer than English; the gutter sits inside the viewport
-        // so the row starts at the same inset as the rest of the panel but
-        // still scrolls all the way to the screen edge.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: _gutter),
-          child: Row(
-            spacing: 8,
-            children: [
-              for (final option in _options)
-                _BackgroundChip(
+        // Equal tiles rather than chips sized to their labels: four short
+        // choices read as one decision, and none of them scrolls out of view.
+        Row(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final option in _options)
+              Expanded(
+                child: _BackgroundTile(
                   option: option,
+                  surface: surface,
                   isSelected: option == type,
                   onPressed: () => onPickBackground(option),
                 ),
-            ],
-          ),
-        ),
-        if (type == ClipChromaKeyBackgroundType.transparent)
-          _Gutter(
-            child: Text(
-              // A warning on the track, where the removed area exports as
-              // black; a reassurance on the canvas, where it really is
-              // see-through.
-              switch (surface) {
-                ChromaKeySurface.track =>
-                  context.l10n.videoEditorChromaKeyTransparentHint,
-                ChromaKeySurface.canvas =>
-                  context.l10n.videoEditorChromaKeyCanvasTransparentHint,
-              },
-              // `onSurfaceMuted` is only 3.05:1 on the light canvas, so this
-              // hint takes the variant token instead of the muted one.
-              style: VineTheme.bodySmallFont(
-                color: context.vineColors.onSurfaceVariant,
               ),
+          ],
+        ),
+        // On the canvas the cutout really is see-through, which is worth
+        // saying: the preview's checkerboard alone reads as a placeholder.
+        if (surface == ChromaKeySurface.canvas &&
+            type == ClipChromaKeyBackgroundType.transparent)
+          Text(
+            context.l10n.videoEditorChromaKeyCanvasTransparentHint,
+            // `onSurfaceMuted` is only 3.05:1 on the light canvas, so this
+            // hint takes the variant token instead of the muted one.
+            style: VineTheme.bodySmallFont(
+              color: context.vineColors.onSurfaceVariant,
             ),
           ),
       ],
@@ -581,45 +680,128 @@ class _BackgroundSection extends StatelessWidget {
   }
 }
 
-class _BackgroundChip extends StatelessWidget {
-  const _BackgroundChip({
+/// Corner rounding of the background tiles and the Fine-tune row.
+const BorderRadius _tileRadius = BorderRadius.all(Radius.circular(12));
+
+/// One background choice: its icon over its name.
+class _BackgroundTile extends StatelessWidget {
+  const _BackgroundTile({
     required this.option,
+    required this.surface,
     required this.isSelected,
     required this.onPressed,
   });
 
   final ClipChromaKeyBackgroundType option;
+  final ChromaKeySurface surface;
   final bool isSelected;
   final VoidCallback onPressed;
+
+  /// Border width of the selected tile. Unselected tiles pad by the
+  /// difference, so selecting one does not nudge its content.
+  static const double _selectedBorderWidth = 2;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.vineColors;
     final (label, icon) = switch (option) {
+      // Named for what the export shows: on the track an empty backdrop is
+      // black, and only on the canvas does something else show through.
       ClipChromaKeyBackgroundType.transparent => (
-        l10n.videoEditorChromaKeyBackgroundNone,
+        switch (surface) {
+          ChromaKeySurface.track => l10n.videoEditorChromaKeyBackgroundBlack,
+          ChromaKeySurface.canvas => l10n.videoEditorChromaKeyBackgroundNone,
+        },
         DivineIconName.squareDuo,
       ),
       ClipChromaKeyBackgroundType.color => (
         l10n.videoEditorChromaKeyBackgroundColor,
         DivineIconName.paintBucket,
       ),
+      // The photo is shot with the camera — see
+      // `captureChromaKeyBackdropImage` — so the tile shows one.
       ClipChromaKeyBackgroundType.image => (
         l10n.videoEditorChromaKeyBackgroundImage,
-        DivineIconName.image,
+        DivineIconName.camera,
       ),
       ClipChromaKeyBackgroundType.video => (
         l10n.videoEditorChromaKeyBackgroundVideo,
         DivineIconName.filmSlate,
       ),
     };
+    final foreground = isSelected ? colors.accentBrand : colors.onSurface;
+    final borderWidth = isSelected ? _selectedBorderWidth : 1.0;
 
-    return DivineButton(
+    return Semantics(
+      button: true,
+      selected: isSelected,
       label: label,
-      leadingIcon: icon,
-      size: .small,
-      type: isSelected ? .primary : .secondary,
-      onPressed: onPressed,
+      excludeSemantics: true,
+      child: _TileSurface(
+        onTap: onPressed,
+        decoration: BoxDecoration(
+          color: isSelected ? colors.controlSelectedFill : colors.controlFill,
+          borderRadius: _tileRadius,
+          border: Border.all(
+            color: isSelected ? colors.accentBrand : colors.outlineMuted,
+            width: borderWidth,
+          ),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 4 + _selectedBorderWidth - borderWidth,
+              vertical: 8 + _selectedBorderWidth - borderWidth,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 4,
+              children: [
+                DivineIcon(icon: icon, color: foreground),
+                DivineWordFitText(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: VineTheme.labelLargeFont(color: foreground),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A rounded, decorated tap target with its ripple drawn over [decoration].
+///
+/// `Ink` would paint the decoration onto the nearest `Material`, which in a
+/// bottom sheet lies under the sheet's own background and never shows. So the
+/// decoration is a plain box, and a transparent `Material` on top of it
+/// carries the ripple.
+class _TileSurface extends StatelessWidget {
+  const _TileSurface({
+    required this.decoration,
+    required this.onTap,
+    required this.child,
+  });
+
+  final BoxDecoration decoration;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: decoration,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const RoundedRectangleBorder(borderRadius: _tileRadius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(onTap: onTap, child: child),
+      ),
     );
   }
 }

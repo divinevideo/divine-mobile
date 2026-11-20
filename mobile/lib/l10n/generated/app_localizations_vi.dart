@@ -10683,24 +10683,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'Ẩn bao nhiêu phần màu đó';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Viền';
+  String get videoEditorChromaKeyEdgeLabel => 'Viền mềm';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Làm mềm phần cắt để tóc không bị răng cưa';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Ám màu';
+  String get videoEditorChromaKeySpillLabel => 'Khử ám màu';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Kéo sắc màu đó ra khỏi chủ thể của bạn';
 
   @override
+  String get videoEditorChromaKeyFineTune => 'Tinh chỉnh';
+
+  @override
   String get videoEditorChromaKeyBackgroundLabel => 'Thay bằng';
 
   @override
   String get videoEditorChromaKeyBackgroundNone => 'Không gì cả';
+
+  @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Đen';
 
   @override
   String get videoEditorChromaKeyBackgroundColor => 'Màu';
@@ -10710,10 +10716,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10730,6 +10732,12 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Đọc clip mất quá lâu. Thử Tự động nhận diện lại, hoặc tự chọn màu.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Chạm vào màu bạn muốn xóa';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Đang tìm màu cần xóa…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Chọn một clip';

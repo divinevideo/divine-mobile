@@ -10821,18 +10821,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'How much of the masked color disappears';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Edge';
+  String get videoEditorChromaKeyEdgeLabel => 'Soft edge';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Softens the cutout so hair doesn\'t turn jagged';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Spill';
+  String get videoEditorChromaKeySpillLabel => 'Remove tint';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Pulls the masked color\'s tint back off your subject';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Fine-tune';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Replace with';
@@ -10841,17 +10844,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nothing';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Black';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Color';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Image';
+  String get videoEditorChromaKeyBackgroundImage => 'Photo';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video can\'t hold transparency, so this exports as black.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10868,6 +10870,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Took too long to read the clip. Try Auto-detect again, or pick the color by hand.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Tap the color you want to remove';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Finding the color to remove…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pick a clip';

@@ -10776,18 +10776,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hoeveel van de gemaskeerde kleur verdwijnt';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Rand';
+  String get videoEditorChromaKeyEdgeLabel => 'Zachte rand';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Maakt de uitsnede zachter zodat haar niet rafelt';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Kleurzweem';
+  String get videoEditorChromaKeySpillLabel => 'Kleurzweem weghalen';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Haalt de zweem van de gemaskeerde kleur van je onderwerp af';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Fijnafstelling';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Vervangen door';
@@ -10796,17 +10799,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Niets';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Zwart';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Kleur';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Afbeelding';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10823,6 +10825,12 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Het lezen van de clip duurde te lang. Probeer Automatisch detecteren opnieuw, of kies de kleur zelf.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Tik op de kleur die weg moet';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Kleur wordt gezocht…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';

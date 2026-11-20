@@ -10637,18 +10637,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Seberapa banyak warna itu yang hilang';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Tepi';
+  String get videoEditorChromaKeyEdgeLabel => 'Tepi halus';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Melembutkan potongan agar rambut tidak bergerigi';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Rembesan';
+  String get videoEditorChromaKeySpillLabel => 'Hapus rona';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Menarik rona warna itu dari subjekmu';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Penyesuaian halus';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ganti dengan';
@@ -10657,17 +10660,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Tidak ada';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Hitam';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Warna';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Gambar';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10684,6 +10686,12 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Membaca klip terlalu lama. Coba Deteksi otomatis lagi, atau pilih warnanya sendiri.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Ketuk warna yang mau kamu hapus';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Mencari warna yang mau dihapus…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';

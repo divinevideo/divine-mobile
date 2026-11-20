@@ -10860,18 +10860,21 @@ class AppLocalizationsIt extends AppLocalizations {
       'Quanto del colore mascherato sparisce';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Bordo';
+  String get videoEditorChromaKeyEdgeLabel => 'Bordo morbido';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Ammorbidisce il ritaglio così i capelli non si frastagliano';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Alone';
+  String get videoEditorChromaKeySpillLabel => 'Togli la tinta';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Toglie la tinta del colore mascherato dal soggetto';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Regolazione fine';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Sostituisci con';
@@ -10880,17 +10883,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Niente';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Nero';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Colore';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Immagine';
+  String get videoEditorChromaKeyBackgroundImage => 'Foto';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Il video non supporta la trasparenza, quindi in esportazione diventa nero.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10907,6 +10909,12 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Leggere la clip ha richiesto troppo tempo. Riprova con «Rilevamento automatico» oppure scegli il colore a mano.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Tocca il colore da togliere';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Cerco il colore da togliere…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Scegli una clip';
