@@ -45,6 +45,7 @@ void main() {
       Size box = frame,
       model.AspectRatio aspectRatio = model.AspectRatio.vertical,
       Stream<VideoRecorderBlocState>? states,
+      Key? windowKey,
     }) async {
       if (states != null) when(() => bloc.stream).thenAnswer((_) => states);
       when(() => bloc.state).thenReturn(
@@ -70,7 +71,7 @@ void main() {
               alignment: Alignment.topLeft,
               child: SizedBox.fromSize(
                 size: box,
-                child: const VideoRecorderDualCameraWindow(),
+                child: VideoRecorderDualCameraWindow(key: windowKey),
               ),
             ),
           ),
@@ -280,6 +281,87 @@ void main() {
           () => bloc.add(const VideoRecorderDualCameraPipShapeToggled()),
         ).called(1);
         verifyNever(() => bloc.add(const VideoRecorderCameraSwitched()));
+      });
+
+      testWidgets('two fingers that rest before spreading still pinch', (
+        tester,
+      ) async {
+        await pump(tester, center: const Offset(0.5, 0.5));
+        final center = tester.getCenter(window());
+
+        final top = await tester.startGesture(center - const Offset(0, 40));
+        await tester.pump(const Duration(milliseconds: 50));
+        final bottom = await tester.startGesture(center + const Offset(0, 40));
+        // Longer than a long press.
+        await tester.pump(const Duration(milliseconds: 700));
+        await top.moveBy(const Offset(0, -20));
+        await tester.pump();
+        await bottom.moveBy(const Offset(0, 20));
+        await tester.pump();
+        await top.up();
+        await bottom.up();
+        await tester.pump();
+
+        final changed =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipChanged;
+        expect(changed.scale, closeTo(1.5, 0.01));
+      });
+
+      testWidgets('a finger held through a long press still pinches with a '
+          'second one', (tester) async {
+        await pump(tester, center: const Offset(0.5, 0.3));
+        final center = tester.getCenter(window());
+
+        final held = await tester.startGesture(center);
+        await tester.pump(const Duration(milliseconds: 700));
+        final beside = await tester.startGesture(
+          center + const Offset(0, 120),
+        );
+        await tester.pump();
+        await beside.moveBy(const Offset(0, 60));
+        await tester.pump();
+        await held.up();
+        await beside.up();
+        await tester.pump();
+
+        final events = verify(() => bloc.add(captureAny())).captured;
+        expect(events.first, isA<VideoRecorderDualCameraPipShapeToggled>());
+        final changed = events.last as VideoRecorderDualCameraPipChanged;
+        expect(changed.scale, closeTo(1.5, 0.01));
+        // The fingers' midpoint moved 30 down; the window follows it.
+        expect(changed.center.dy, closeTo(0.3 + 30 / frame.height, 0.01));
+        verifyNever(() => bloc.add(const VideoRecorderCameraSwitched()));
+      });
+
+      testWidgets('a drag the camera rebuild cuts off still puts the window '
+          'down', (tester) async {
+        await pump(
+          tester,
+          center: const Offset(0.5, 0.5),
+          windowKey: const ValueKey(1),
+        );
+        final finger = await tester.startGesture(tester.getCenter(window()));
+        await tester.pump();
+        await finger.moveBy(const Offset(30, 0));
+        await tester.pump();
+        await finger.moveBy(const Offset(10, 0));
+        await tester.pump();
+
+        // The camera stack re-keys its children after a camera switch.
+        await pump(
+          tester,
+          center: const Offset(0.5, 0.5),
+          windowKey: const ValueKey(2),
+        );
+        await finger.up();
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final changed =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipChanged;
+        expect(changed.center.dx, closeTo(0.5 + 40 / frame.width, 0.01));
       });
 
       testWidgets('two fingers that barely move do not swap the cameras', (

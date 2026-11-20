@@ -83,6 +83,20 @@ class _VideoRecorderDualCameraWindowState
   /// touch is a pinch, even one too small to be recognized, and never a tap.
   bool _isMultiTouch = false;
 
+  /// Switches the shape once one still finger has rested for a long press.
+  ///
+  /// A timer rather than a long-press recognizer: in the gesture arena that
+  /// recognizer wins the first finger after half a second and takes it from
+  /// the pinch, so two fingers that rested before spreading did nothing.
+  Timer? _longPressTimer;
+
+  /// Where the first finger touched down, to tell a still finger from a drag.
+  Offset _longPressOrigin = Offset.zero;
+
+  /// Whether this touch already switched the shape, so lifting the finger
+  /// does not swap the cameras as well.
+  bool _didLongPress = false;
+
   /// The geometry of the latest layout, for the gesture callbacks.
   _Layout? _layout;
 
@@ -91,7 +105,17 @@ class _VideoRecorderDualCameraWindowState
   bool _isPlacementCheckQueued = false;
 
   @override
+  void deactivate() {
+    // The camera stack re-keys its children after a camera switch, which
+    // takes the window away under a finger. Put it down where the finger
+    // left it; the finger's later events reach a window that is gone.
+    _putDown();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _longPressTimer?.cancel();
     _scale.dispose();
     super.dispose();
   }
@@ -180,19 +204,19 @@ class _VideoRecorderDualCameraWindowState
                     button: true,
                     enabled: state.canSwap,
                     label: context.l10n.videoRecorderDualCameraSwapLabel,
+                    onLongPress: _switchShape,
                     onLongPressHint:
                         context.l10n.videoRecorderDualCameraShapeHint,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: state.canSwap
                           ? () {
-                              if (_isMultiTouch) return;
+                              if (_isMultiTouch || _didLongPress) return;
                               context.read<VideoRecorderBloc>().add(
                                 const VideoRecorderCameraSwitched(),
                               );
                             }
                           : null,
-                      onLongPress: _toggleShape,
                       child: _WindowFrame(textureId: state.textureId),
                     ),
                   ),
@@ -209,18 +233,32 @@ class _VideoRecorderDualCameraWindowState
     _scale.addPointer(event);
     // The first finger starts a fresh touch; any later one makes it a pinch.
     _isMultiTouch = _pointers.isNotEmpty;
+    if (_isMultiTouch) {
+      _cancelLongPress();
+    } else {
+      _didLongPress = false;
+      _longPressOrigin = event.position;
+      _longPressTimer?.cancel();
+      _longPressTimer = Timer(kLongPressTimeout, _onLongPress);
+    }
     _pointers[event.pointer] = event.position;
     _restartGesture();
     setState(() {});
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-    if (_pointers.containsKey(event.pointer)) {
-      _pointers[event.pointer] = event.position;
+    if (!_pointers.containsKey(event.pointer)) return;
+    _pointers[event.pointer] = event.position;
+    if ((event.position - _longPressOrigin).distance > kTouchSlop) {
+      _cancelLongPress();
     }
   }
 
   void _onPointerGone(PointerEvent event) {
+    // A finger that was down when the camera stack rebuilt lifts here after
+    // this window is gone; see [deactivate].
+    if (!mounted) return;
+    _cancelLongPress();
     _pointers.remove(event.pointer);
     // The last finger leaving puts the window down. The recognizer's own end
     // cannot tell: a finger lifted mid-pinch ends its gesture too, and the
@@ -279,10 +317,20 @@ class _VideoRecorderDualCameraWindowState
     });
   }
 
-  /// Switches the window between portrait and square, for a long press of one
-  /// finger.
-  void _toggleShape() {
-    if (_isMultiTouch) return;
+  void _onLongPress() {
+    _longPressTimer = null;
+    if (!mounted || _isMultiTouch || _live != null) return;
+    _didLongPress = true;
+    _switchShape();
+  }
+
+  void _cancelLongPress() {
+    _longPressTimer?.cancel();
+    _longPressTimer = null;
+  }
+
+  /// Switches the window between portrait and square.
+  void _switchShape() {
     unawaited(HapticFeedback.mediumImpact());
     context.read<VideoRecorderBloc>().add(
       const VideoRecorderDualCameraPipShapeToggled(),
