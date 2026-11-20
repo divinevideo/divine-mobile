@@ -280,6 +280,7 @@ void main() {
       List<Override> additionalOverrides = const [],
       String viewedUserHex = userIdHex,
       bool coveredByOpaqueRoute = false,
+      bool useNestedNavigator = false,
     }) {
       final profileGrid = MultiBlocProvider(
         providers: [
@@ -297,11 +298,12 @@ void main() {
         ),
       );
       // An opaque route above keeps the grid built but never laid out.
-      final grid = coveredByOpaqueRoute
+      final grid = coveredByOpaqueRoute || useNestedNavigator
           ? Navigator(
               pages: [
                 MaterialPage<void>(child: profileGrid),
-                const MaterialPage<void>(child: SizedBox.shrink()),
+                if (coveredByOpaqueRoute)
+                  const MaterialPage<void>(child: SizedBox.shrink()),
               ],
               onDidRemovePage: (_) {},
             )
@@ -1329,6 +1331,72 @@ void main() {
         ),
       );
     });
+
+    for (final isOwnProfile in [false, true]) {
+      testWidgets(
+        'finishes an empty load behind an opaque route (own: $isOwnProfile)',
+        (tester) async {
+          final controller = ScrollController();
+          addTearDown(controller.dispose);
+          await tester.pumpWidget(
+            buildSubject(
+              isOwnProfile: isOwnProfile,
+              scrollController: controller,
+              useNestedNavigator: true,
+              isLoadingVideos: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 200));
+          await tester.pump();
+          expect(find.byType(ProfileVideosGridSkeleton), findsOneWidget);
+          await tester.fling(
+            find.byType(NestedScrollView),
+            const Offset(0, -60),
+            2500,
+          );
+          expect(controller.position.isScrollingNotifier.value, isTrue);
+          final navigator = tester.state<NavigatorState>(
+            find.byType(Navigator).last,
+          );
+          navigator.push<void>(
+            PageRouteBuilder<void>(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const SizedBox.shrink(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(NestedScrollView), findsNothing);
+          expect(controller.position.isScrollingNotifier.value, isFalse);
+          await tester.pumpWidget(
+            buildSubject(
+              isOwnProfile: isOwnProfile,
+              scrollController: controller,
+              useNestedNavigator: true,
+            ),
+          );
+          expect(tester.takeException(), isNull);
+          navigator.pop();
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              lookupAppLocalizations(const Locale('en')).profileNoVideosTitle,
+            ),
+            findsOneWidget,
+          );
+          await tester.drag(
+            find.byType(NestedScrollView),
+            const Offset(0, 200),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
 
     testWidgets('starts at the top when the profile changes in place', (
       tester,
