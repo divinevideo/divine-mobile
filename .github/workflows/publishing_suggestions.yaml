@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Java
         uses: actions/setup-java@v6
         with:
@@ -55,7 +55,7 @@ jobs:
     name: Apple Native Tests
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Select Xcode 26
         run: |
           xcode="$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"

@@ -35,7 +35,7 @@ jobs:
       # ran steps added on main against a tree that predates them: every open
       # PR behind #9268 failed on a scripts/ file its head did not carry yet.
       - name: Checkout PR merge commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
