@@ -90,7 +90,7 @@
 		<string>_openvine._tcp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Divine needs access to your camera to record short videos.</string>
+	<string>Divine uses your camera to record short videos, such as a comedy sketch, that you can edit and share.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Divine uses Face ID to verify it's you before copying your private key.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
