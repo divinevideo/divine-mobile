@@ -1499,6 +1499,7 @@
   "crosspostErrorUnauthorized": "Hesabını yeniden bağla, sonra tekrar dene.",
   "crosspostErrorNetwork": "Çapraz paylaşım servisine ulaşılamadı. Birazdan tekrar dene.",
   "crosspostFailedGeneric": "Çapraz paylaşım başarısız oldu.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Hâlâ çalışıyoruz. Bunu kapatabilirsin — paylaşım arka planda devam edecek.",
   "crosspostDone": "Bitti",
   "watermarkDownloadSavedToCameraRoll": "Kamera Rulosuna Kaydedildi",

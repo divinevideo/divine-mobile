@@ -125,8 +125,10 @@ Future<void> _submitInBackground({
       for (final job in state.jobs)
         if (job.status == CrosspostJobStatus.failed &&
             notifiedFailures.add(job.id))
-          '${crosspostPlatformDisplayName(job.platform)}: '
-              '${_jobFailureText(l10n, job.errorCode)}'
+          l10n.crosspostPlatformFailure(
+            crosspostPlatformDisplayName(job.platform),
+            _jobFailureText(l10n, job.errorCode),
+          )
         else if (job.status == CrosspostJobStatus.needsReauth &&
             notifiedFailures.add(job.id))
           l10n.crosspostReconnectPrompt(

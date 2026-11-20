@@ -7057,6 +7057,12 @@ abstract class AppLocalizations {
   /// **'Crosspost failed.'**
   String get crosspostFailedGeneric;
 
+  /// Background crosspost notification for one platform's failed job. {reason} is an already-localized failure sentence.
+  ///
+  /// In en, this message translates to:
+  /// **'{platform}: {reason}'**
+  String crosspostPlatformFailure(String platform, String reason);
+
   /// No description provided for @crosspostStillWorking.
   ///
   /// In en, this message translates to:

@@ -1506,6 +1506,7 @@
   "crosspostErrorUnauthorized": "Reconectá tu cuenta y probá de nuevo.",
   "crosspostErrorNetwork": "No pudimos conectar con el crossposter. Probá de nuevo en un momento.",
   "crosspostFailedGeneric": "Falló el crosspost.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Todavía está en proceso. Podés cerrar esto — la publicación sigue en segundo plano.",
   "crosspostDone": "Listo",
   "watermarkDownloadSavedToCameraRoll": "Guardado en el carrete",

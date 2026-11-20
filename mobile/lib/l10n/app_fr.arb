@@ -1502,6 +1502,7 @@
   "crosspostErrorUnauthorized": "Reconnecte ton compte, puis réessaie.",
   "crosspostErrorNetwork": "Impossible de joindre le crossposter. Réessaie dans un instant.",
   "crosspostFailedGeneric": "Échec du crosspost.",
+  "crosspostPlatformFailure": "{platform} : {reason}",
   "crosspostStillWorking": "C'est encore en cours. Tu peux fermer ça — la publication continue en arrière-plan.",
   "crosspostDone": "Terminé",
   "watermarkDownloadSavedToCameraRoll": "Enregistré dans la pellicule",

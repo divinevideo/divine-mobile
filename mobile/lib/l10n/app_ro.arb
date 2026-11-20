@@ -1502,6 +1502,7 @@
   "crosspostErrorUnauthorized": "Reconectează-ți contul, apoi încearcă din nou.",
   "crosspostErrorNetwork": "Nu am putut contacta serviciul de crosspost. Încearcă din nou într-o clipă.",
   "crosspostFailedGeneric": "Crosspostarea a eșuat.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Încă lucrăm. Poți închide fereastra asta — postarea continuă în fundal.",
   "crosspostDone": "Gata",
   "watermarkDownloadSavedToCameraRoll": "Salvat în galerie",

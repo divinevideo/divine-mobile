@@ -2011,6 +2011,7 @@
   "crosspostErrorUnauthorized": "Sambung semula akaun anda, kemudian cuba lagi.",
   "crosspostErrorNetwork": "Tidak dapat mencapai penyiar silang. Cuba lagi sebentar nanti.",
   "crosspostFailedGeneric": "Siaran silang gagal.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Masih bekerja. Anda boleh menutup ini — penyiaran berterusan di latar belakang.",
   "crosspostDone": "Siap",
   "watermarkDownloadSavedToCameraRoll": "Disimpan ke Rol Kamera",

@@ -1499,6 +1499,7 @@
   "crosspostErrorUnauthorized": "Hubungkan ulang akunmu, lalu coba lagi.",
   "crosspostErrorNetwork": "Tidak dapat menjangkau crossposter. Coba lagi sebentar lagi.",
   "crosspostFailedGeneric": "Crosspost gagal.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Masih diproses. Kamu bisa menutup ini — posting berlanjut di latar belakang.",
   "crosspostDone": "Selesai",
   "watermarkDownloadSavedToCameraRoll": "Disimpan ke Camera Roll",

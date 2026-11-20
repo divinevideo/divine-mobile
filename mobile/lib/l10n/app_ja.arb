@@ -1492,6 +1492,7 @@
   "crosspostErrorUnauthorized": "アカウントを接続し直して、もう一回試してね。",
   "crosspostErrorNetwork": "クロス投稿サービスに接続できなかったよ。少し待ってからもう一回試してみて。",
   "crosspostFailedGeneric": "クロス投稿に失敗したよ。",
+  "crosspostPlatformFailure": "{platform}：{reason}",
   "crosspostStillWorking": "まだ処理中だよ。これは閉じても大丈夫 — 投稿はバックグラウンドで続くよ。",
   "crosspostDone": "完了",
   "watermarkDownloadSavedToCameraRoll": "カメラロールに保存したよ",

@@ -4317,6 +4317,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get crosspostFailedGeneric => 'Crosspostarea a eșuat.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Încă lucrăm. Poți închide fereastra asta — postarea continuă în fundal.';
 

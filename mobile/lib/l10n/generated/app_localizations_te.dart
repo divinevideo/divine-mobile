@@ -4337,6 +4337,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get crosspostFailedGeneric => 'క్రాస్‌పోస్ట్ విఫలమైంది.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'ఇంకా పని చేస్తోంది. మీరు దీన్ని మూసివేయవచ్చు - నేపథ్యంలో పోస్టింగ్ కొనసాగుతుంది.';
 

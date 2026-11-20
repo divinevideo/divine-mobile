@@ -3947,6 +3947,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get crosspostFailedGeneric => '크로스 포스팅에 실패했어요.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       '아직 작업 중이에요. 닫아도 괜찮아요 — 게시는 백그라운드에서 계속돼요.';
 

@@ -2011,6 +2011,7 @@
   "crosspostErrorUnauthorized": "请重新连接你的账号，然后再试。",
   "crosspostErrorNetwork": "连不上跨平台发布服务，请稍后再试。",
   "crosspostFailedGeneric": "跨平台发布失败。",
+  "crosspostPlatformFailure": "{platform}：{reason}",
   "crosspostStillWorking": "仍在处理中。你可以关掉这个页面——发布会在后台继续。",
   "crosspostDone": "完成",
   "watermarkDownloadSavedToCameraRoll": "已保存到相册",

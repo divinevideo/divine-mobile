@@ -2011,6 +2011,7 @@
   "crosspostErrorUnauthorized": "اپنا اکاؤنٹ دوبارہ منسلک کریں، پھر دوبارہ کوشش کریں۔",
   "crosspostErrorNetwork": "کراس پوسٹر تک رسائی نہیں ہو سکی۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
   "crosspostFailedGeneric": "کراس پوسٹ ناکام۔",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "کام جاری ہے۔ آپ یہ بند کر سکتے ہیں — پوسٹنگ پس منظر میں جاری رہے گی۔",
   "crosspostDone": "ہو گیا",
   "watermarkDownloadSavedToCameraRoll": "کیمرہ رول میں محفوظ ہو گئی",

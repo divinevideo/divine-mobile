@@ -4257,6 +4257,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crosspostFailedGeneric => 'Crosspost failed.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Still working. You can close this — posting continues in the background.';
 

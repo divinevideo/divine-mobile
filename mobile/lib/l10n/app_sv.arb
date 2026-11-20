@@ -1502,6 +1502,7 @@
   "crosspostErrorUnauthorized": "Återanslut ditt konto och försök sedan igen.",
   "crosspostErrorNetwork": "Kunde inte nå korspostningstjänsten. Försök igen om en stund.",
   "crosspostFailedGeneric": "Korspostningen misslyckades.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Jobbar fortfarande. Du kan stänga det här – publiceringen fortsätter i bakgrunden.",
   "crosspostDone": "Klar",
   "watermarkDownloadSavedToCameraRoll": "Sparad i kamerarullen",

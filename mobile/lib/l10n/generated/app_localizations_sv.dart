@@ -4188,6 +4188,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get crosspostFailedGeneric => 'Korspostningen misslyckades.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Jobbar fortfarande. Du kan stänga det här – publiceringen fortsätter i bakgrunden.';
 

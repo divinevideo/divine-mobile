@@ -3921,6 +3921,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get crosspostFailedGeneric => '跨平台发布失败。';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform：$reason';
+  }
+
+  @override
   String get crosspostStillWorking => '仍在处理中。你可以关掉这个页面——发布会在后台继续。';
 
   @override

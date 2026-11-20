@@ -1127,6 +1127,7 @@
   "crosspostErrorUnauthorized": "I-reconnect ang account mo, tapos subukan ulit.",
   "crosspostErrorNetwork": "Hindi maabot ang crossposter. Pakisubukan ulit mamaya.",
   "crosspostFailedGeneric": "Nabigo ang crosspost.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Pinoproseso pa. Puwede mo nang isara ito — tuloy ang pag-post sa background.",
   "crosspostDone": "Tapos na",
   "watermarkDownloadSavedToCameraRoll": "Na-save sa Camera Roll",

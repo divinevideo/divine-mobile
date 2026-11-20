@@ -4159,6 +4159,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get crosspostFailedGeneric => 'Đăng chéo thất bại.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Vẫn đang xử lý. Bạn có thể đóng cái này — việc đăng tiếp tục chạy ngầm.';
 

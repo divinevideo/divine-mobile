@@ -4193,6 +4193,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get crosspostFailedGeneric => 'فشل النشر المتقاطع.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'ما زال العمل جاريًا. يمكنك إغلاق هذا — سيستمر النشر في الخلفية.';
 

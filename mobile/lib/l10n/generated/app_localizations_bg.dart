@@ -4249,6 +4249,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get crosspostFailedGeneric => 'Кръстосаното публикуване не успя.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Още се работи. Можеш да затвориш това — публикуването продължава във фонов режим.';
 

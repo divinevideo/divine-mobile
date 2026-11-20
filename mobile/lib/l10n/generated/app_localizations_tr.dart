@@ -4136,6 +4136,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get crosspostFailedGeneric => 'Çapraz paylaşım başarısız oldu.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Hâlâ çalışıyoruz. Bunu kapatabilirsin — paylaşım arka planda devam edecek.';
 

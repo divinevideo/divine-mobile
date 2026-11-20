@@ -1502,6 +1502,7 @@
   "crosspostErrorUnauthorized": "Verbind je account opnieuw en probeer het nog eens.",
   "crosspostErrorNetwork": "Kan de crossposter niet bereiken. Probeer het zo opnieuw.",
   "crosspostFailedGeneric": "Crossposten mislukt.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Nog bezig. Je kunt dit sluiten — het posten gaat op de achtergrond door.",
   "crosspostDone": "Klaar",
   "watermarkDownloadSavedToCameraRoll": "Opgeslagen in camerarol",

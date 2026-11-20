@@ -2011,6 +2011,7 @@
   "crosspostErrorUnauthorized": "Hãy kết nối lại tài khoản của bạn rồi thử lại.",
   "crosspostErrorNetwork": "Không kết nối được với dịch vụ đăng chéo. Thử lại sau ít phút.",
   "crosspostFailedGeneric": "Đăng chéo thất bại.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Vẫn đang xử lý. Bạn có thể đóng cái này — việc đăng tiếp tục chạy ngầm.",
   "crosspostDone": "Xong",
   "watermarkDownloadSavedToCameraRoll": "Đã lưu vào thư viện ảnh",

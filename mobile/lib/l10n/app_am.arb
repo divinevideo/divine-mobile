@@ -1858,6 +1858,7 @@
   "crosspostErrorUnauthorized": "መለያዎን እንደገና ይገናኙ፣ ከዚያ እንደገና ይሞክሩ።",
   "crosspostErrorNetwork": "ተሻግሮ ማተሚያው ላይ መድረስ አልተቻለም። ከአፍታ በኋላ እንደገና ይሞክሩ።",
   "crosspostFailedGeneric": "ተሻግሮ ማተም አልተሳካም።",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "አሁንም በሥራ ላይ ነው። ይህንን መዝጋት ይችላሉ — ማተሙ በጀርባ ይቀጥላል።",
   "crosspostDone": "ተከናውኗል",
   "watermarkDownloadSavedToCameraRoll": "ወደ ካሜራ ጥቅል ተቀምጧል",

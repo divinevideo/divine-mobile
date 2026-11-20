@@ -1502,6 +1502,7 @@
   "crosspostErrorUnauthorized": "Verbinde dein Konto neu und versuch es dann erneut.",
   "crosspostErrorNetwork": "Der Crossposter ist nicht erreichbar. Versuch es gleich noch mal.",
   "crosspostFailedGeneric": "Crosspost fehlgeschlagen.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Läuft noch. Du kannst das hier schließen – das Posten geht im Hintergrund weiter.",
   "crosspostDone": "Fertig",
   "watermarkDownloadSavedToCameraRoll": "In Aufnahmen gespeichert",

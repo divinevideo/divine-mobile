@@ -182,7 +182,12 @@ void main() {
       response.complete(jobs);
       await tester.pumpAndSettle();
       expect(
-        find.text('Instagram: ${l10n.crosspostErrorNotEligible}'),
+        find.text(
+          l10n.crosspostPlatformFailure(
+            'Instagram',
+            l10n.crosspostErrorNotEligible,
+          ),
+        ),
         findsOneWidget,
       );
       await tester.tap(find.text('Keep browsing'));
@@ -208,7 +213,9 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       await tester.pump();
       expect(
-        find.text('TikTok: ${l10n.crosspostErrorNotOwner}'),
+        find.text(
+          l10n.crosspostPlatformFailure('TikTok', l10n.crosspostErrorNotOwner),
+        ),
         findsOneWidget,
       );
     });

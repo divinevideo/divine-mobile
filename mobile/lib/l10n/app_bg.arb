@@ -1592,6 +1592,7 @@
   "crosspostErrorUnauthorized": "Свържи отново акаунта си и опитай пак.",
   "crosspostErrorNetwork": "Не успяхме да достигнем услугата за кръстосано публикуване. Опитай пак след малко.",
   "crosspostFailedGeneric": "Кръстосаното публикуване не успя.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "Още се работи. Можеш да затвориш това — публикуването продължава във фонов режим.",
   "crosspostDone": "Готово",
   "watermarkDownloadSavedToCameraRoll": "Запазено в галерията",

@@ -4100,6 +4100,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get crosspostFailedGeneric => 'ተሻግሮ ማተም አልተሳካም።';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'አሁንም በሥራ ላይ ነው። ይህንን መዝጋት ይችላሉ — ማተሙ በጀርባ ይቀጥላል።';
 

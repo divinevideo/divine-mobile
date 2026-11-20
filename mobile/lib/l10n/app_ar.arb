@@ -1492,6 +1492,7 @@
   "crosspostErrorUnauthorized": "أعد ربط حسابك، ثم حاول مرّة أخرى.",
   "crosspostErrorNetwork": "تعذّر الوصول إلى خدمة النشر المتقاطع. حاول مرّة أخرى بعد قليل.",
   "crosspostFailedGeneric": "فشل النشر المتقاطع.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "ما زال العمل جاريًا. يمكنك إغلاق هذا — سيستمر النشر في الخلفية.",
   "crosspostDone": "تم",
   "watermarkDownloadSavedToCameraRoll": "تم الحفظ في ألبوم الكاميرا",

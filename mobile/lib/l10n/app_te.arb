@@ -2356,6 +2356,7 @@
   "crosspostErrorUnauthorized": "మీ ఖాతాను మళ్లీ కనెక్ట్ చేసి, ఆపై మళ్లీ ప్రయత్నించండి.",
   "crosspostErrorNetwork": "క్రాస్‌పోస్టర్‌ని చేరుకోలేకపోయింది. క్షణంలో మళ్లీ ప్రయత్నించండి.",
   "crosspostFailedGeneric": "క్రాస్‌పోస్ట్ విఫలమైంది.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
   "crosspostStillWorking": "ఇంకా పని చేస్తోంది. మీరు దీన్ని మూసివేయవచ్చు - నేపథ్యంలో పోస్టింగ్ కొనసాగుతుంది.",
   "crosspostDone": "పూర్తయింది",
   "watermarkDownloadSavedToCameraRoll": "కెమెరా రోల్‌కి సేవ్ చేయబడింది",

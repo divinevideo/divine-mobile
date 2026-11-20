@@ -4313,6 +4313,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get crosspostFailedGeneric => 'Crossposting nie powiódł się.';
 
   @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
+
+  @override
   String get crosspostStillWorking =>
       'Wciąż pracujemy. Możesz to zamknąć — publikowanie będzie kontynuowane w tle.';
 
