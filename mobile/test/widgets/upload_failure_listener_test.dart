@@ -567,7 +567,7 @@ void main() {
         );
       });
       addTearDown(transport.close);
-      final shortener = ShortLinkClient(client: transport, enabled: true);
+      final shortener = ShortLinkClient(client: transport);
       addTearDown(shortener.close);
 
       stubPublishBloc(const BackgroundPublishState());
