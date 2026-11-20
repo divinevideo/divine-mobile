@@ -19,6 +19,8 @@ class _MockHttpClient extends Mock implements http.Client {}
 
 class _MockKeycastIdentity extends Mock implements KeycastNostrIdentity {}
 
+class _MockAmberIdentity extends Mock implements AmberNostrIdentity {}
+
 class _MockAuthService extends Mock implements AuthService {}
 
 const _ownerPubkey =
@@ -1412,6 +1414,37 @@ void main() {
           );
         });
         test(
+          'does not retry a silent signature after the account changed',
+          () async {
+            final identity = _MockKeycastIdentity();
+            when(() => identity.signsRemotelyNonInteractive).thenReturn(true);
+            when(() => authService.currentIdentity).thenReturn(identity);
+            when(() => authService.currentPublicKeyHex).thenReturn(
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            );
+            when(
+              () => authService.createAndSignEvent(
+                kind: 27235,
+                content: '',
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+                allowUserInteraction: false,
+              ),
+            ).thenAnswer((_) async => null);
+
+            await expectLater(
+              client.getCrossposts(eventId: eventId),
+              throwsA(
+                isA<CrosspostingPassiveSigningUnavailable>().having(
+                  (e) => e.retryable,
+                  'retryable',
+                  isFalse,
+                ),
+              ),
+            );
+          },
+        );
+        test(
           'uses the passive transport for polls and silent submits',
           () async {
             final passive = _MockHttpClient();
@@ -1446,6 +1479,10 @@ void main() {
         test(
           'does not fall back to interactive signing or send unsigned',
           () async {
+            // A signer that needs approval will not answer on a later tick.
+            final identity = _MockAmberIdentity();
+            when(() => identity.signsRemotelyNonInteractive).thenReturn(false);
+            when(() => authService.currentIdentity).thenReturn(identity);
             when(
               () => authService.createAndSignEvent(
                 kind: 27235,
@@ -1458,7 +1495,13 @@ void main() {
 
             await expectLater(
               client.getCrossposts(eventId: eventId),
-              throwsA(isA<CrosspostingPassiveSigningUnavailable>()),
+              throwsA(
+                isA<CrosspostingPassiveSigningUnavailable>().having(
+                  (e) => e.retryable,
+                  'retryable',
+                  isFalse,
+                ),
+              ),
             );
             verifyNever(
               () => httpClient.get(any(), headers: any(named: 'headers')),
