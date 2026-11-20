@@ -248,5 +248,12 @@ void main() {
     test('keeps a bare hex id ambiguous for older links', () {
       expect(VideoRouteRef.parse(hexId)!.matchesEvent(event(d: hexId)), isTrue);
     });
+
+    test('refuses an naddr form without a coordinate', () {
+      expect(
+        () => VideoRouteRef(stableId: dTag, isNaddr: true),
+        throwsA(isA<AssertionError>()),
+      );
+    });
   });
 }
