@@ -4359,16 +4359,33 @@ class VideosRepository {
       );
     }
 
-    candidates.removeWhere(
-      (event) =>
-          !candidate.matchesEvent(event) ||
-          (author != null && event.pubkey != author),
-    );
+    candidates.removeWhere((event) {
+      if (author != null && event.pubkey != author) return true;
+      if (candidate.matchesEvent(event)) return false;
+      _logRouteIdentityMismatch('cached', event, candidate);
+      return true;
+    });
 
     if (candidates.isEmpty) return null;
     return _parseAndHydrateFirstRouteVideo(
       candidates,
       onContentFiltered: onContentFiltered,
+    );
+  }
+
+  /// Logs a result [VideoRouteRef.matchesEvent] rejected, so a kind alias or
+  /// an impostor `d` tag does not read as a route that found nothing.
+  void _logRouteIdentityMismatch(
+    String source,
+    Event event,
+    VideoRouteRef route,
+  ) {
+    Log.info(
+      'Route lookup rejected the $source event ${event.id} (kind '
+      '${event.kind}, author ${pubkeyForLogs(event.pubkey)}): it does not '
+      'match ${route.addressableId ?? route.eventId}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
     );
   }
 
@@ -4487,6 +4504,7 @@ class VideosRepository {
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
     if (expectedRoute != null && !expectedRoute.matchesEvent(event)) {
+      _logRouteIdentityMismatch('REST', event, expectedRoute);
       return null;
     }
 
