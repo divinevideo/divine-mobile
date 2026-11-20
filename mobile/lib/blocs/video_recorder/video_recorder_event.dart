@@ -343,7 +343,7 @@ final class VideoRecorderDualCameraToggled extends VideoRecorderEvent {
 }
 
 /// Places the second camera's window in the viewfinder where a drag or a
-/// pinch left it.
+/// pinch left it, or where the viewfinder had to move it to show it whole.
 final class VideoRecorderDualCameraPipChanged extends VideoRecorderEvent {
   const VideoRecorderDualCameraPipChanged({
     required this.center,

@@ -41,8 +41,9 @@ class SecondaryCameraTake {
   final Offset pipCenter;
 
   /// How much the creator pinched the window larger or smaller: its width is
-  /// [pipWidthFraction] of the kept picture times this, between
-  /// [pipMinScale] and [pipMaxScale].
+  /// [pipWidthFraction] of the kept picture times this. A pinch keeps it
+  /// between [pipMinScale] and [pipMaxScale]; [fittingPipScale] can take it
+  /// below the smallest to keep a turned window whole.
   final double pipScale;
 
   /// How far the creator turned the window, in radians clockwise around its
