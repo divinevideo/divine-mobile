@@ -98,7 +98,14 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
         if (_cameraOwner?._retainedCapture case final capture?) {
           return identical(_cameraOwner, this) ? null : capture;
         }
-        _cameraOwner?._isInitialized = false;
+        // The recorder that held the camera — say the Together tab under a
+        // part's recorder — has to hear that it lost it, or it shows a dead
+        // preview when it comes back instead of opening the camera again.
+        final displaced = _cameraOwner;
+        if (displaced != null && !identical(displaced, this)) {
+          displaced._isInitialized = false;
+          displaced.onUpdateState();
+        }
         _cameraOwner = this;
         await _initializeCamera(
           videoQuality: videoQuality,

@@ -190,6 +190,24 @@ void main() {
     );
 
     group('camera handoff', () {
+      test('tells the recorder it took the camera from', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+        rebuildRequests.clear();
+        final replacement = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+        );
+
+        await replacement.initialize();
+
+        // The displaced recorder learns it lost the camera, so it opens it
+        // again when it comes back instead of showing a dead preview.
+        expect(service.isInitialized, isFalse);
+        expect(rebuildRequests, hasLength(1));
+        await replacement.dispose();
+      });
+
       test('outgoing disposal leaves the replacement running', () async {
         platform.shouldFail = false;
         await service.initialize();
