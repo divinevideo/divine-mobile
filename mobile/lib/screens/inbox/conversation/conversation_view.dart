@@ -14,7 +14,8 @@ import 'package:dm_repository/dm_repository.dart'
         parseSoundRequestMessage;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart'
@@ -1874,8 +1875,12 @@ class _MessageList extends StatelessWidget {
         ).read(shortLinkClientProvider);
         final url =
             await (shortener?.shorten(canonical) ?? Future.value(canonical));
-        if (!context.mounted) return;
-        await ClipboardUtils.copy(context, url);
+        if (context.mounted) {
+          await ClipboardUtils.copy(context, url);
+        } else {
+          // The chat closed while the link was shortening; still copy it.
+          await Clipboard.setData(ClipboardData(text: url));
+        }
       case MessageAction.playVideo:
         await DmVideoPlayPage.open(
           context,

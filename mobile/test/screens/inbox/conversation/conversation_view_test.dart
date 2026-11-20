@@ -6128,6 +6128,21 @@ void main() {
 
           expect(copied, videoUrl);
         });
+
+        testWidgets('still copies when the chat closes while shortening', (
+          tester,
+        ) async {
+          final response = Completer<http.Response>();
+          final client = shortener((request) => response.future);
+
+          await copyVideoUrl(tester, client: client);
+          await tester.pump();
+          await tester.pumpWidget(const SizedBox.shrink());
+          response.complete(created(videoUrl));
+          await tester.pumpAndSettle();
+
+          expect(copied, shortUrl);
+        });
       });
 
       testWidgets('saves a legacy Divine URL share', (tester) async {
