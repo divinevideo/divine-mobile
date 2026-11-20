@@ -597,6 +597,46 @@ void main() {
       expect(sharedText, 'https://divine.video/l/Abc12345');
     });
 
+    testWidgets('a failing OS share is logged rather than left unhandled', (
+      tester,
+    ) async {
+      var shareCalls = 0;
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            shareCalls++;
+            throw PlatformException(code: 'share-unavailable');
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      stubPublishBloc(const BackgroundPublishState());
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
+      final experiment = await _treatmentExperiment('draft-treatment');
+
+      await tester.pumpWidget(
+        _buildHarness(
+          publishBloc: publishBloc,
+          authService: authService,
+          experiment: experiment,
+          router: _routerAt(_ownProfileLocation),
+        ),
+      );
+
+      publishStream.add(_succeededState('draft-treatment'));
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.postPublishConfirmationShare));
+      await tester.pumpAndSettle();
+
+      expect(shareCalls, 1);
+      expect(tester.takeException(), isNull);
+    });
+
     group('crosspost prompt', () {
       late _MockCrosspostingRepository repository;
       late _MockCrosspostingApiClient apiClient;
