@@ -9,6 +9,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -281,6 +282,7 @@ void main() {
       String viewedUserHex = userIdHex,
       bool coveredByOpaqueRoute = false,
       bool useNestedNavigator = false,
+      ValueListenable<bool>? tickersEnabled,
     }) {
       final profileGrid = MultiBlocProvider(
         providers: [
@@ -308,6 +310,15 @@ void main() {
               onDidRemovePage: (_) {},
             )
           : profileGrid;
+      // An inactive app-shell branch mutes its tickers without a route change.
+      final shelled = tickersEnabled == null
+          ? grid
+          : ValueListenableBuilder<bool>(
+              valueListenable: tickersEnabled,
+              builder: (context, enabled, child) =>
+                  TickerMode(enabled: enabled, child: child!),
+              child: grid,
+            );
 
       return testMaterialApp(
         theme: VineTheme.theme,
@@ -315,12 +326,12 @@ void main() {
           // testMaterialApp takes no locale, so override it here rather than
           // widen a helper every other profile test shares.
           body: locale == null
-              ? grid
+              ? shelled
               : Builder(
                   builder: (context) => Localizations.override(
                     context: context,
                     locale: locale,
-                    child: grid,
+                    child: shelled,
                   ),
                 ),
         ),
@@ -1446,6 +1457,43 @@ void main() {
       navigator.pop();
       await tester.pumpAndSettle();
       expect(inner.pixels, equals(hiddenPixels));
+    });
+
+    testWidgets('keeps a profile flung in a muted tab where it stopped', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      final tickersEnabled = ValueNotifier<bool>(true);
+      addTearDown(tickersEnabled.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          isLoadingVideos: true,
+          tickersEnabled: tickersEnabled,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -60),
+        2500,
+      );
+      expect(controller.position.isScrollingNotifier.value, isTrue);
+
+      tickersEnabled.value = false;
+      await tester.pump();
+      final mutedOffset = controller.offset;
+      expect(mutedOffset, greaterThan(0));
+      await tester.pump(const Duration(seconds: 2));
+
+      tickersEnabled.value = true;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(tester.takeException(), isNull);
+      expect(controller.offset, equals(mutedOffset));
     });
 
     testWidgets('keeps a visible fling going when the view padding changes', (
