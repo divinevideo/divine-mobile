@@ -46,7 +46,10 @@ void main() {
             videoKind: DmSharedVideoKind.addressableShortVideo,
           ),
         );
-        expect(target!.routeId, Uri.parse(url).pathSegments.last);
+        expect(target!.authorPubkey, author);
+        expect(target.stableId, 'clip');
+        expect(target.videoKind, 34236);
+        expect(target.routeId, Uri.parse(url).pathSegments.last);
       },
     );
 
