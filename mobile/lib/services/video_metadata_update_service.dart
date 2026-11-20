@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:characters/characters.dart';
 import 'package:collection/collection.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
@@ -674,6 +675,25 @@ VideoEditorProviderState _rebaseEdits(
       const DeepCollectionEquality().equals(field(edited), field(opened))
       ? field(latest)
       : field(edited);
+  // Any metadata change makes the editor store the title and caption trimmed,
+  // and the caption cut to the description limit. When another device changed
+  // the text, a value that differs from the seed only by that was not edited
+  // here, so the newer text wins.
+  String pickText(
+    String Function(VideoEditorProviderState state) field, {
+    int? limit,
+  }) {
+    final seeded = field(opened);
+    final value = field(edited);
+    if (value == seeded) return field(latest);
+    if (field(latest) == seeded) return value;
+    final trimmed = seeded.trim();
+    final normalized = limit == null
+        ? trimmed
+        : trimmed.characters.take(limit).toString();
+    return value == normalized ? field(latest) : value;
+  }
+
   Set<T> applySetEdits<T>(
     Set<T> Function(VideoEditorProviderState state) field,
   ) {
@@ -685,8 +705,11 @@ VideoEditorProviderState _rebaseEdits(
 
   final inspiredByVideo = pick((state) => state.inspiredByVideo);
   return edited.copyWith(
-    title: pick((state) => state.title),
-    description: pick((state) => state.description),
+    title: pickText((state) => state.title),
+    description: pickText(
+      (state) => state.description,
+      limit: VideoEditorConstants.descriptionLimit,
+    ),
     tags: applySetEdits((state) => state.tags),
     contentWarnings: applySetEdits((state) => state.contentWarnings),
     collaboratorPubkeys: applySetEdits((state) => state.collaboratorPubkeys),
