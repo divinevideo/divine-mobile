@@ -865,6 +865,40 @@ void main() {
       );
     }
 
+    test(
+      'a video with no kind or d tag cites its exact event as kind 22',
+      () async {
+        final video = VideoEvent(
+          id: _testVideoId,
+          pubkey: _testPubkey,
+          createdAt: 1,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+          content: '',
+        );
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        stubSharesSucceed();
+
+        await service.shareVideoWithUser(
+          video: video,
+          recipientPubkey: _recipientPubkey,
+        );
+
+        verify(
+          () => mockDmRepository.sendSharedVideo(
+            backgroundDelivery: true,
+            recipientPubkey: _recipientPubkey,
+            baseContent: any(named: 'baseContent'),
+            videoKind: 22,
+            videoAuthorPubkey: _testPubkey,
+            videoEventId: _testVideoId,
+            relayHint: any(named: 'relayHint'),
+            skipNip04Fallback: true,
+          ),
+        ).called(1);
+      },
+    );
+
     test('a legacy vine_id without a real d tag shares the exact event', () {
       final video = VideoEvent(
         id: _testVideoId,
@@ -968,6 +1002,17 @@ void main() {
         httpClient.close();
       },
     );
+
+    test('external shares keep the full URL without a shortener', () async {
+      final canonical = divineVideoShareUrl(
+        'synthetic-video',
+        authorPubkey: _testPubkey,
+        kind: 34236,
+      );
+
+      expect(await service.shortenExternalUrl(canonical), canonical);
+    });
+
     test('generateShareUrl includes the complete NIP-19 address', () {
       final now = DateTime.now();
       final video = VideoEvent(
