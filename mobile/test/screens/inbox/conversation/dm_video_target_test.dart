@@ -1,9 +1,14 @@
 // ABOUTME: Unit tests for resolveDmVideoTarget and DmVideoTarget.
 // ABOUTME: Covers legacy Divine URL and structured NIP-18 q-reference resolution.
 
+import 'dart:convert';
+
+import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/tlv_util.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 
 void main() {
@@ -40,6 +45,54 @@ void main() {
         expect(target!.routeId, Uri.parse(url).pathSegments.last);
       },
     );
+
+    group('a reference that repeats a field', () {
+      // Decoders disagree on a repeated entry: this one keeps the last,
+      // nostr-tools (divine.video) the first. Copying the sender's raw string
+      // would open another video in a browser than the card previews.
+      String crafted(String hrp, void Function(List<int> buf) write) {
+        final buf = <int>[];
+        write(buf);
+        return Bech32Encoder().convert(
+          Bech32(hrp, Nip19.convertBits(buf, 8, 5, true)),
+          2000,
+        );
+      }
+
+      test('copies and routes the naddr it previews', () {
+        final reference = crafted('naddr', (buf) {
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, utf8.encode('clip'));
+          TLVUtil.writeTLVEntry(buf, TLVType.author, List.filled(32, 0xaa));
+          TLVUtil.writeTLVEntry(buf, TLVType.author, List.filled(32, 0xbb));
+          TLVUtil.writeTLVEntry(buf, TLVType.kind, [0, 0, 0x85, 0xbc]);
+        });
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$reference',
+        );
+
+        final previewed = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'clip', author: 'bb' * 32, kind: 34236),
+        );
+        expect(target!.authorPubkey, 'bb' * 32);
+        expect(target.routeId, previewed);
+        expect(target.canonicalUrl, 'https://divine.video/video/$previewed');
+      });
+
+      test('copies and routes the nevent it previews', () {
+        final reference = crafted('nevent', (buf) {
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, List.filled(32, 1));
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, List.filled(32, 2));
+        });
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$reference',
+        );
+
+        final previewed = NIP19Tlv.encodeNevent(Nevent(id: '02' * 32));
+        expect(target!.stableId, '02' * 32);
+        expect(target.routeId, previewed);
+        expect(target.canonicalUrl, 'https://divine.video/video/$previewed');
+      });
+    });
 
     test('opens an nevent as an exact event rather than a d tag', () {
       final url = divineVideoShareUrl(eventId, kind: 22);
