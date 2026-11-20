@@ -29,28 +29,24 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _FakeEvent extends Fake implements Event {}
 
-const _testPubkey =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+// A throwaway key, so the fixtures carry real ids and signatures.
+final String _testKey = '1'.padLeft(64, '0');
+final String _testPubkey = getPublicKey(_testKey);
 const _blossomBaseUrl = 'https://media.divine.video';
 const _testSha256 =
     '9783bc5788da2fc2bab7600521ea923d873ef3379d18da1b865f513f76e1bf6f';
 
 Event _createVideoEvent({
-  required String id,
   required List<List<String>> tags,
   String content = '',
   int createdAt = 1000000,
-}) {
-  final event = Event(
-    _testPubkey,
-    EventKind.videoVertical,
-    tags,
-    content,
-    createdAt: createdAt,
-  );
-  event.id = id;
-  return event;
-}
+}) => Event(
+  _testPubkey,
+  EventKind.videoVertical,
+  tags,
+  content,
+  createdAt: createdAt,
+)..sign(_testKey);
 
 void main() {
   late _MockNostrClient mockNostrClient;
@@ -133,7 +129,6 @@ void main() {
 
       test('repairs event with corrupted iOS local file path', () async {
         final corruptedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_123'],
             [
@@ -200,14 +195,12 @@ void main() {
         test('leaves the video alone when only an older revision is '
             'corrupted', () async {
           final olderCorrupted = _createVideoEvent(
-            id: 'older',
             tags: [
               ['d', 'video_123'],
               corruptImeta(),
             ],
           );
           final newerClean = _createVideoEvent(
-            id: 'newer',
             createdAt: 2000000,
             tags: [
               ['d', 'video_123'],
@@ -234,14 +227,12 @@ void main() {
 
         test('repairs only the newest revision', () async {
           final olderCorrupted = _createVideoEvent(
-            id: 'older',
             tags: [
               ['d', 'video_123'],
               corruptImeta(),
             ],
           );
           final newerCorrupted = _createVideoEvent(
-            id: 'newer',
             createdAt: 2000000,
             tags: [
               ['d', 'video_123'],
@@ -273,9 +264,39 @@ void main() {
         });
       });
 
+      test('skips an event whose signature does not verify', () async {
+        // The scan republishes under the user's key, so it only trusts what
+        // the account actually signed.
+        final forged = _createVideoEvent(
+          tags: [
+            ['d', 'video_123'],
+            [
+              'imeta',
+              'url /var/mobile/Containers/Data/Application/xxx/video.mp4',
+              'm video/mp4',
+              'x $_testSha256',
+            ],
+          ],
+        )..sig = 'b' * 128;
+
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async => _answeredScan([forged]));
+
+        stubSignAndPublishSuccess();
+
+        final result = await repairService.repairIfNeeded();
+
+        expect(result, equals(0));
+        expect(publishedEvents, isEmpty);
+      });
+
       test('skips events with valid HTTP URLs', () async {
         final validEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_123'],
             [
@@ -304,7 +325,6 @@ void main() {
 
       test('skips corrupted event without x hash', () async {
         final corruptedNoHash = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_123'],
             [
@@ -332,7 +352,6 @@ void main() {
 
       test('repairs Android local file paths', () async {
         final corruptedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_456'],
             [
@@ -448,7 +467,6 @@ void main() {
       test('an unanswered scan leaves the repair armed for the next launch '
           '(#8213)', () async {
         final corruptedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_123'],
             [
@@ -519,7 +537,6 @@ void main() {
 
       test('handles signing failure gracefully', () async {
         final corruptedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_789'],
             [
@@ -557,7 +574,6 @@ void main() {
 
       test('handles publish failure gracefully', () async {
         final corruptedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_789'],
             [
@@ -602,7 +618,6 @@ void main() {
 
       test('only repairs corrupted URLs, preserves valid ones', () async {
         final mixedEvent = _createVideoEvent(
-          id: 'event1',
           tags: [
             ['d', 'video_mixed'],
             [
