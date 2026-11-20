@@ -154,5 +154,23 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
       // The in-memory claim still prevents a replay in this account session.
       // A storage failure cannot interrupt the notification feed.
     }
+    if (card.showInvite && !isClosed) await _inviteShown(card.localDate);
+  }
+
+  Future<void> _inviteShown(String localDate) async {
+    try {
+      await _repository.markInviteShown(owner, localDate);
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(
+        asReportableError(
+              error,
+              context: 'CreatorHighlightsCubit.inviteShown',
+            ) ??
+            error,
+        stackTrace,
+      );
+      // An uncounted day only lets the invite appear once more this week.
+    }
   }
 }

@@ -366,6 +366,61 @@ void main() {
       expect(cubit.errors.single, isNot(isA<ReportableError>()));
       await cubit.close();
     });
+    group('invite', () {
+      const offered = CreatorHighlight(
+        owner: _owner,
+        localDate: '2026-10-30',
+        createdToday: 1,
+        creationDaysThisWeek: 2,
+        views: null,
+        topVideo: null,
+        celebrate: false,
+        showInvite: true,
+      );
+
+      test('records the invite with each showing that offers it', () async {
+        final repository = _Repository();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(offered);
+        await cubit.refresh();
+        await cubit.presented(cubit.state.card!);
+        final load = cubit.refresh();
+        repository.next.complete(offered);
+        await load;
+        expect(cubit.state.card?.rotation, 1);
+        await cubit.presented(cubit.state.card!);
+        expect(repository.invites, [
+          (_owner, '2026-10-30'),
+          (_owner, '2026-10-30'),
+        ]);
+        await cubit.close();
+      });
+
+      test('does not record an invite the card did not offer', () async {
+        final repository = _Repository();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(_card);
+        await cubit.refresh();
+        await cubit.presented(_card);
+        expect(repository.presented, hasLength(1));
+        expect(repository.invites, isEmpty);
+        await cubit.close();
+      });
+
+      test('an invite storage failure keeps the card and reports', () async {
+        final repository = _Repository()
+          ..inviteError = const CreatorHighlightPresentationException();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(offered);
+        await cubit.refresh();
+        await cubit.presented(offered);
+        expect(cubit.state.card, same(offered));
+        expect(repository.presented, [(_owner, '2026-10-30', 1)]);
+        expect(cubit.errors.single, same(repository.inviteError));
+        await cubit.close();
+      });
+    });
+
     test(
       'presentation acknowledges only the loaded owner and date once',
       () async {
