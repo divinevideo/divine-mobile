@@ -16,6 +16,7 @@ class CreatorHighlightCard extends StatefulWidget {
     required this.onAnalytics,
     required this.onWatch,
     required this.onInvite,
+    required this.onInviteSeen,
     super.key,
   });
 
@@ -28,12 +29,16 @@ class CreatorHighlightCard extends StatefulWidget {
   /// Opens the invite page; only reachable when the highlight offers it.
   final VoidCallback onInvite;
 
+  /// Called once per account and day, after the invite has painted on screen.
+  final VoidCallback onInviteSeen;
+
   @override
   State<CreatorHighlightCard> createState() => _CreatorHighlightCardState();
 }
 
 class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
   String? _presented;
+  String? _inviteSeen;
   String? _animationIdentity;
   bool _animate = false;
   bool _inViewport = false;
@@ -79,6 +84,24 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
         }
         _presented = identity;
         widget.onPresented();
+      });
+    }
+    // Counted apart from the spotlight: a refresh can turn the invite on for
+    // a spotlight already presented, and only a visible frame counts.
+    final inviteIdentity = '${card.owner}:${card.localDate}';
+    if (visible && card.showInvite && _inviteSeen != inviteIdentity) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final current = widget.highlight;
+        if (!mounted ||
+            !widget.isVisible ||
+            !_inViewport ||
+            !current.showInvite ||
+            _inviteSeen == inviteIdentity ||
+            inviteIdentity != '${current.owner}:${current.localDate}') {
+          return;
+        }
+        _inviteSeen = inviteIdentity;
+        widget.onInviteSeen();
       });
     }
     final colors = context.vineColors;

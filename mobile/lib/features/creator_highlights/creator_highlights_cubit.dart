@@ -103,14 +103,6 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
             ? owned.copyWith(celebrate: false)
             : owned;
         emitIfOpen(CreatorHighlightsState(card: current));
-        // The day's first post can turn the invite on for a card already seen
-        // today. Its spotlight is not presented again, so count the invite
-        // here; the repository counts each day once.
-        if (current != null &&
-            current.showInvite &&
-            current.localDate == _presentedDate) {
-          await _inviteShown(current.localDate);
-        }
         return;
       }
     } on Object catch (error, stackTrace) {
@@ -146,12 +138,22 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         ),
       );
     }
-    // Both writes run together, so neither waits on, or is skipped by, the
-    // other or a close while the first is still pending.
-    await Future.wait([
-      _markPresented(card.localDate, nextRotation),
-      if (card.showInvite) _inviteShown(card.localDate),
-    ]);
+    await _markPresented(card.localDate, nextRotation);
+  }
+
+  /// Counts today toward the weekly invite limit once the card has painted
+  /// its invite on screen.
+  ///
+  /// Separate from spotlight presentation: a refresh can turn the invite on
+  /// for a spotlight already presented, and only a visible frame counts.
+  Future<void> inviteSeen(CreatorHighlight card) async {
+    if (isClosed ||
+        !card.showInvite ||
+        card.owner != owner ||
+        card.localDate != _today()) {
+      return;
+    }
+    await _inviteShown(card.localDate);
   }
 
   Future<void> _markPresented(String localDate, int nextRotation) async {

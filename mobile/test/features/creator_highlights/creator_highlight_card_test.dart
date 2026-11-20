@@ -83,6 +83,7 @@ void main() {
                     onAnalytics: () {},
                     onWatch: () {},
                     onInvite: () {},
+                    onInviteSeen: () {},
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 3000)),
@@ -133,6 +134,7 @@ void main() {
               onAnalytics: () => analytics++,
               onWatch: () => watched++,
               onInvite: () {},
+              onInviteSeen: () {},
             ),
           ),
         ),
@@ -191,6 +193,7 @@ void main() {
                 onAnalytics: () => analyticsTaps++,
                 onWatch: () {},
                 onInvite: () => inviteTaps++,
+                onInviteSeen: () {},
               ),
             ),
           ),
@@ -217,6 +220,101 @@ void main() {
       await tester.pumpAndSettle();
       expect(inviteTaps, 1);
       expect(analyticsTaps, 0);
+    });
+
+    group('counting', () {
+      late int seen;
+      late int presented;
+      late ScrollController scroll;
+
+      setUp(() {
+        seen = 0;
+        presented = 0;
+        scroll = ScrollController();
+      });
+      tearDown(() => scroll.dispose());
+
+      Future<void> pumpCounted(
+        WidgetTester tester, {
+        required bool showInvite,
+        bool isVisible = true,
+        double offset = 0,
+      }) async {
+        if (scroll.hasClients) scroll.jumpTo(offset);
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CustomScrollView(
+                controller: scroll,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: CreatorHighlightCard(
+                      highlight: _inviteCard(showInvite: showInvite),
+                      isVisible: isVisible,
+                      onPresented: () => presented++,
+                      onAnalytics: () {},
+                      onWatch: () {},
+                      onInvite: () {},
+                      onInviteSeen: () => seen++,
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 3000)),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      testWidgets('reports a visible invite once', (tester) async {
+        await pumpCounted(tester, showInvite: true);
+        await pumpCounted(tester, showInvite: true);
+        expect(seen, 1);
+      });
+
+      testWidgets('does not report a card that offers no invite', (
+        tester,
+      ) async {
+        await pumpCounted(tester, showInvite: false);
+        expect(presented, 1);
+        expect(seen, 0);
+      });
+
+      testWidgets('does not report while the Inbox is hidden', (tester) async {
+        await pumpCounted(tester, showInvite: true, isVisible: false);
+        expect(seen, 0);
+        await pumpCounted(tester, showInvite: true);
+        expect(seen, 1);
+      });
+
+      testWidgets('reports an invite that turns on while the card is shown', (
+        tester,
+      ) async {
+        await pumpCounted(tester, showInvite: false);
+        expect(presented, 1);
+        await pumpCounted(tester, showInvite: true);
+        expect(seen, 1);
+        expect(presented, 1);
+      });
+
+      // visibility_detector only re-measures on paint, so an invite is
+      // reported once it paints in view, not while it is still off screen.
+      testWidgets('does not report an invite that is still off screen', (
+        tester,
+      ) async {
+        scroll.dispose();
+        scroll = ScrollController(initialScrollOffset: 1000);
+        await pumpCounted(tester, showInvite: true);
+        expect(seen, 0);
+        scroll.jumpTo(0);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(seen, 1);
+      });
     });
 
     testWidgets('both links share a line when they fit', (tester) async {
@@ -276,6 +374,7 @@ void main() {
             onAnalytics: () {},
             onWatch: () {},
             onInvite: () {},
+            onInviteSeen: () {},
           ),
         ),
       ),
@@ -348,6 +447,7 @@ void main() {
             onAnalytics: () {},
             onWatch: () {},
             onInvite: () {},
+            onInviteSeen: () {},
           ),
         ),
       );
@@ -393,6 +493,7 @@ void main() {
                           onAnalytics: () {},
                           onWatch: () {},
                           onInvite: () {},
+                          onInviteSeen: () {},
                         ),
                       ),
                     ),

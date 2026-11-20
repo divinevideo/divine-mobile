@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/features/creator_highlights/invite_friends_cubit.dart';
 import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -15,22 +16,6 @@ const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
-
-  group('inviteShareText', () {
-    test('puts the link on its own line after the message', () {
-      expect(
-        inviteShareText('  Hi there  ', 'https://example.com'),
-        'Hi there\nhttps://example.com',
-      );
-    });
-
-    test('shares only the link when the message is blank', () {
-      expect(
-        inviteShareText(' \n ', 'https://example.com'),
-        'https://example.com',
-      );
-    });
-  });
 
   group(InviteFriendsScreen, () {
     late List<Map<Object?, Object?>> shareCalls;

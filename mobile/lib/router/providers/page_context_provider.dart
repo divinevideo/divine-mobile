@@ -53,6 +53,7 @@ enum RouteType {
   peopleListRoster, // Full member roster of a people list
   peopleListAddPeople, // Full-screen picker for adding people to a list
   creatorAnalytics, // Creator analytics dashboard (profile owner)
+  inviteFriends, // Editable invite to Divine, opened from the daily highlight
   sound, // Sound detail screen for audio reuse
   originalSound, // Original sound detail screen (creator's own audio)
   contentPreferences, // Content preferences (language, audio, filters)
@@ -400,6 +401,9 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
 
     case 'creator-analytics':
       return const RouteContext(type: RouteType.creatorAnalytics);
+
+    case 'invite-friends':
+      return const RouteContext(type: RouteType.inviteFriends);
 
     case 'relay-settings':
       return const RouteContext(type: RouteType.relaySettings);
@@ -832,6 +836,9 @@ String buildRoute(RouteContext context) {
 
     case RouteType.creatorAnalytics:
       return RoutePaths.creatorAnalytics;
+
+    case RouteType.inviteFriends:
+      return RoutePaths.inviteFriends;
 
     case RouteType.sound:
       return RoutePaths.soundDetailForId(context.soundId ?? '');

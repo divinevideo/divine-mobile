@@ -26,7 +26,6 @@ class _Repository implements CreatorHighlightsRepository {
   Object? presentationError;
   final invites = <(String, String)>[];
   Object? inviteError;
-  Completer<void>? presentationGate;
   Completer<void>? inviteGate;
 
   @override
@@ -41,7 +40,6 @@ class _Repository implements CreatorHighlightsRepository {
     String localDate, {
     required int nextRotation,
   }) async {
-    if (presentationGate case final gate?) await gate.future;
     if (presentationError case final error?) throw error;
     presented.add((owner, localDate, nextRotation));
   }
@@ -382,24 +380,30 @@ void main() {
         showInvite: true,
       );
 
-      test('records the invite with each showing that offers it', () async {
+      test('records an invite the card reports as seen', () async {
         final repository = _Repository();
         final cubit = _ObservedCubit(repository: repository);
         repository.pending.complete(offered);
         await cubit.refresh();
-        await cubit.presented(cubit.state.card!);
+        await cubit.inviteSeen(offered);
+        expect(repository.invites, [(_owner, '2026-10-30')]);
+        await cubit.close();
+      });
+
+      test('presenting or refreshing alone does not count an invite', () async {
+        final repository = _Repository();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(_card);
+        await cubit.refresh();
+        await cubit.presented(_card);
         final load = cubit.refresh();
+        // The day's first post turns the invite on while the card is shown;
+        // it counts only once the card reports it on screen.
         repository.next.complete(offered);
         await load;
-        expect(cubit.state.card?.rotation, 1);
-        await cubit.presented(cubit.state.card!);
-        // First showing, the refresh of a card seen today, and the next
-        // showing; the repository counts the day once.
-        expect(repository.invites, [
-          (_owner, '2026-10-30'),
-          (_owner, '2026-10-30'),
-          (_owner, '2026-10-30'),
-        ]);
+        expect(cubit.state.card?.showInvite, isTrue);
+        expect(repository.presented, hasLength(1));
+        expect(repository.invites, isEmpty);
         await cubit.close();
       });
 
@@ -408,42 +412,55 @@ void main() {
         final cubit = _ObservedCubit(repository: repository);
         repository.pending.complete(_card);
         await cubit.refresh();
-        await cubit.presented(_card);
-        expect(repository.presented, hasLength(1));
+        await cubit.inviteSeen(_card);
+        expect(repository.invites, isEmpty);
+        await cubit.close();
+      });
+
+      test('does not record another account or day', () async {
+        final repository = _Repository();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(offered);
+        await cubit.refresh();
+        await cubit.inviteSeen(
+          CreatorHighlight(
+            owner: _owner.replaceAll('a', 'b'),
+            localDate: '2026-10-30',
+            createdToday: 1,
+            creationDaysThisWeek: 2,
+            views: null,
+            topVideo: null,
+            celebrate: false,
+            showInvite: true,
+          ),
+        );
+        await cubit.inviteSeen(
+          const CreatorHighlight(
+            owner: _owner,
+            localDate: '2026-10-29',
+            createdToday: 1,
+            creationDaysThisWeek: 2,
+            views: null,
+            topVideo: null,
+            celebrate: false,
+            showInvite: true,
+          ),
+        );
         expect(repository.invites, isEmpty);
         await cubit.close();
       });
 
       test('closing the Inbox mid-write still counts the day', () async {
-        final repository = _Repository()..presentationGate = Completer();
+        final repository = _Repository()..inviteGate = Completer();
         final cubit = _ObservedCubit(repository: repository);
         repository.pending.complete(offered);
         await cubit.refresh();
-        final presenting = cubit.presented(offered);
+        final seeing = cubit.inviteSeen(offered);
         await cubit.close();
-        repository.presentationGate!.complete();
-        await presenting;
+        repository.inviteGate!.complete();
+        await seeing;
         expect(repository.invites, [(_owner, '2026-10-30')]);
       });
-
-      test(
-        'an invite that appears after the card was seen still counts',
-        () async {
-          final repository = _Repository();
-          final cubit = _ObservedCubit(repository: repository);
-          repository.pending.complete(_card);
-          await cubit.refresh();
-          await cubit.presented(_card);
-          expect(repository.invites, isEmpty);
-          final load = cubit.refresh();
-          // The day's first post lands while the card is already on screen.
-          repository.next.complete(offered);
-          await load;
-          expect(cubit.state.card?.showInvite, isTrue);
-          expect(repository.invites, [(_owner, '2026-10-30')]);
-          await cubit.close();
-        },
-      );
 
       test('an invite write failing after close is still reported', () async {
         final repository = _Repository()
@@ -452,10 +469,10 @@ void main() {
         final cubit = _ObservedCubit(repository: repository);
         repository.pending.complete(offered);
         await cubit.refresh();
-        final presenting = cubit.presented(offered);
+        final seeing = cubit.inviteSeen(offered);
         await cubit.close();
         repository.inviteGate!.complete();
-        await presenting;
+        await seeing;
         expect(cubit.errors, [same(repository.inviteError)]);
       });
 
@@ -465,9 +482,8 @@ void main() {
         final cubit = _ObservedCubit(repository: repository);
         repository.pending.complete(offered);
         await cubit.refresh();
-        await cubit.presented(offered);
+        await cubit.inviteSeen(offered);
         expect(cubit.state.card, same(offered));
-        expect(repository.presented, [(_owner, '2026-10-30', 1)]);
         expect(cubit.errors.single, same(repository.inviteError));
         await cubit.close();
       });

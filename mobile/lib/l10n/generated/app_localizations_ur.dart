@@ -16435,7 +16435,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'میرے لوپس Divine پر ہیں۔ آپ ان پر ری ایکٹ کر سکتے ہیں اور میرے ساتھ کولیب کر سکتے ہیں!';
+      'میرے لوپس Divine پر ہیں۔ ان پر ری ایکٹ کریں اور میرے ساتھ کولیب کریں!';
 
   @override
   String inviteFriendsLinkNote(String url) {
