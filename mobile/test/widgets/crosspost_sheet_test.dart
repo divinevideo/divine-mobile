@@ -123,7 +123,13 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
 
-      expect(response.isCompleted, isFalse);
+      // The request is still in flight while the sheet is already gone.
+      verify(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+        ),
+      ).called(1);
       expect(sheetClosed, isTrue);
       expect(find.byType(CrosspostSheetView), findsNothing);
       expect(find.text(l10n.crosspostStarted), findsOneWidget);
@@ -257,6 +263,7 @@ void main() {
         () => client.getCrossposts(eventId: eventId),
       ).called(greaterThan(1));
       expect(find.byType(SnackBar), findsNothing);
+      // Settle the pending job so polling stops before the test ends.
       when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
         (_) async => _decoded([
           jobs.first,
