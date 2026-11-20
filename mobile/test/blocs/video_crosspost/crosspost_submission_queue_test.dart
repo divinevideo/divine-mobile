@@ -7,6 +7,7 @@ import 'package:openvine/blocs/video_crosspost/crosspost_submission_queue.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
@@ -158,6 +159,78 @@ void main() {
 
         expect(result?.status, VideoCrosspostStatus.submitFailed);
         expect(result?.submitError, VideoCrosspostSubmitError.notConnected);
+      });
+    });
+
+    group('logging', () {
+      List<String> warnings() => [
+        for (final entry in LogCaptureService().getRecentLogs(
+          minLevel: LogLevel.warning,
+        ))
+          entry.message,
+      ];
+
+      setUp(() => LogCaptureService().clearAllLogs());
+
+      test('records a failed job with its event, platform and error', () async {
+        when(
+          () => client.createCrossposts(
+            eventId: eventId,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer(
+          (_) async => const [
+            CrosspostJob(
+              id: 'job-1',
+              platform: 'instagram',
+              status: CrosspostJobStatus.failed,
+              errorCode: 'not_eligible',
+            ),
+          ],
+        );
+
+        await queue.submit(eventId: eventId, connections: [connection]);
+
+        expect(
+          warnings(),
+          contains(
+            allOf(
+              contains(eventId),
+              contains('instagram failed (not_eligible) job job-1'),
+            ),
+          ),
+        );
+      });
+
+      test('records a submission the account change cancelled', () {
+        fakeAsync((clock) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenAnswer(
+            (_) async => throw const CrosspostingApiException(
+              'Not indexed',
+              statusCode: 404,
+              code: 'not_found',
+            ),
+          );
+          unawaited(queue.submit(eventId: eventId, connections: [connection]));
+          clock.flushMicrotasks();
+          unawaited(queue.close());
+          clock.flushMicrotasks();
+
+          expect(
+            LogCaptureService().getRecentLogs().map((entry) => entry.message),
+            contains(
+              allOf(
+                contains(eventId),
+                contains('cancelled before it finished'),
+              ),
+            ),
+          );
+        });
       });
     });
 

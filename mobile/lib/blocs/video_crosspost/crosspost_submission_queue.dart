@@ -3,7 +3,9 @@
 
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
+import 'package:openvine/models/crosspost_models.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Account-scoped owner for submissions that outlive the crosspost sheet.
 class CrosspostSubmissionQueue {
@@ -21,7 +23,14 @@ class CrosspostSubmissionQueue {
     required List<CrosspostingConnection> connections,
     void Function(VideoCrosspostState)? onUpdate,
   }) async {
-    if (_closed) return null;
+    if (_closed) {
+      _log(eventId, 'not started: the account changed');
+      return null;
+    }
+    _log(
+      eventId,
+      'started for ${[for (final c in connections) c.platform.wireName]}',
+    );
     final cubit = VideoCrosspostCubit(
       repository: _repository,
       eventId: eventId,
@@ -41,7 +50,9 @@ class CrosspostSubmissionQueue {
           orElse: () => cubit.state,
         );
       }
-      return cubit.isClosed ? null : cubit.state;
+      final result = cubit.isClosed ? null : cubit.state;
+      _logOutcome(eventId, result);
+      return result;
     } finally {
       _pending.remove(cubit);
       // Release timers when jobs finish, polling times out, or the owning
@@ -52,6 +63,46 @@ class CrosspostSubmissionQueue {
       await updates?.cancel();
     }
   }
+
+  // The user may not be looking when a background job ends, so its
+  // outcome must reach the logs that support exports.
+  void _logOutcome(String eventId, VideoCrosspostState? result) {
+    if (result == null) {
+      _log(eventId, 'cancelled before it finished: the account changed');
+      return;
+    }
+    if (result.status == VideoCrosspostStatus.submitFailed) {
+      _log(eventId, 'rejected: ${result.submitError?.name}', warning: true);
+      return;
+    }
+    final jobs = result.jobs.map(_describeJob).join(', ');
+    if (result.pollTimedOut) {
+      _log(eventId, 'stopped polling with jobs pending: $jobs', warning: true);
+      return;
+    }
+    final unsuccessful = result.jobs.any(
+      (job) =>
+          job.status == CrosspostJobStatus.failed ||
+          job.status == CrosspostJobStatus.needsReauth,
+    );
+    _log(eventId, 'finished: $jobs', warning: unsuccessful);
+  }
+
+  static String _describeJob(CrosspostJob job) {
+    final error = job.errorCode == null ? '' : ' (${job.errorCode})';
+    return '${job.platform} ${job.status.name}$error job ${job.id}';
+  }
+
+  void _log(String eventId, String message, {bool warning = false}) {
+    final line = 'Crosspost of event $eventId $message';
+    if (warning) {
+      Log.warning(line, name: _logName, category: LogCategory.system);
+    } else {
+      Log.info(line, name: _logName, category: LogCategory.system);
+    }
+  }
+
+  static const _logName = 'CrosspostSubmissionQueue';
 
   Future<void> close() async {
     _closed = true;
