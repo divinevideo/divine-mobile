@@ -88,6 +88,7 @@ void main() {
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
+          allowUserInteraction: any(named: 'allowUserInteraction'),
         ),
       ).thenAnswer((invocation) async {
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -1380,6 +1381,28 @@ void main() {
       });
 
       group('getCrossposts', () {
+        test(
+          'does not fall back to interactive signing or send unsigned',
+          () async {
+            when(
+              () => authService.createAndSignEvent(
+                kind: 27235,
+                content: '',
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+                allowUserInteraction: false,
+              ),
+            ).thenAnswer((_) async => null);
+
+            await expectLater(
+              client.getCrossposts(eventId: eventId),
+              throwsA(isA<CrosspostingPassiveSigningUnavailable>()),
+            );
+            verifyNever(
+              () => httpClient.get(any(), headers: any(named: 'headers')),
+            );
+          },
+        );
         // A cast error here escapes the cubit's `on CrosspostingApiException`
         // poll handler, so the timer keeps firing it every tick with the
         // sheet stuck mid-progress.

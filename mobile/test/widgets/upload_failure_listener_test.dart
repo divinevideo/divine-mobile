@@ -805,6 +805,22 @@ void main() {
             ),
           ];
         });
+        when(
+          () => apiClient.createCrossposts(
+            eventId: _publishedEventId,
+            platforms: ['instagram'],
+            allowUserInteraction: false,
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          return const [
+            CrosspostJob(
+              id: 'job-instagram',
+              platform: 'instagram',
+              status: CrosspostJobStatus.posted,
+            ),
+          ];
+        });
         await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
 
         await tester.tap(find.text(_l10nEn.crosspostSubmit));

@@ -167,6 +167,7 @@ void main() {
             () => client.createCrossposts(
               eventId: eventId,
               platforms: ['instagram'],
+              allowUserInteraction: any(named: 'allowUserInteraction'),
             ),
           ).thenAnswer((_) async {
             if (attempts++ == 0) {
@@ -236,6 +237,7 @@ void main() {
             () => client.createCrossposts(
               eventId: eventId,
               platforms: ['instagram'],
+              allowUserInteraction: any(named: 'allowUserInteraction'),
             ),
           ).thenThrow(
             const CrosspostingApiException(
@@ -402,6 +404,29 @@ void main() {
           expect(cubit.state.pollTimedOut, isTrue);
           expect(cubit.state.hasPendingJobs, isTrue);
 
+          unawaited(cubit.close());
+          fake.flushMicrotasks();
+        });
+      });
+
+      test('stops polling without dropping accepted jobs if signing is unavailable', () {
+        when(
+          () => client.createCrossposts(
+            eventId: eventId,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer((_) async => [queuedJob]);
+        when(() => client.getCrossposts(eventId: eventId))
+            .thenThrow(const CrosspostingPassiveSigningUnavailable());
+        fakeAsync((fake) {
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 40));
+          expect(cubit.state.status, VideoCrosspostStatus.finished);
+          expect(cubit.state.jobs, [queuedJob]);
+          expect(cubit.state.pollTimedOut, isFalse);
+          verify(() => client.getCrossposts(eventId: eventId)).called(1);
           unawaited(cubit.close());
           fake.flushMicrotasks();
         });

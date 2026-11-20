@@ -168,6 +168,11 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
         _onJobsUpdated([
           for (final job in state.jobs) byId[job.id] ?? job,
         ]);
+      } on CrosspostingPassiveSigningUnavailable {
+        if (isClosed || _pollTimer == null) return;
+        // Jobs already accepted by the server continue without monitoring.
+        _stopPolling();
+        emit(state.copyWith(status: VideoCrosspostStatus.finished));
       } on CrosspostingApiException catch (e, stackTrace) {
         // Transient poll failure — keep the timer running and retry on
         // the next tick.

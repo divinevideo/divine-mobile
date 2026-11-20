@@ -122,6 +122,13 @@ final crosspostingApiClientFactoryProvider =
               trustedOrigin: Uri.parse(CrosspostingApiClient.defaultBaseUrl),
               retryBudget: CrosspostingApiClient.requestTimeout,
             ),
+            passiveHttpClient: Nip98HttpClient(
+              inner: newHttpClient(),
+              authService: nip98AuthService,
+              trustedOrigin: Uri.parse(CrosspostingApiClient.defaultBaseUrl),
+              retryBudget: CrosspostingApiClient.requestTimeout,
+              allowUserInteraction: false,
+            ),
           );
     });
 

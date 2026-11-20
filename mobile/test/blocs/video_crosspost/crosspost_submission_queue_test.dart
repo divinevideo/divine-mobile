@@ -60,6 +60,16 @@ void main() {
               }
               return [queuedJob];
             });
+            when(
+              () => client.createCrossposts(
+                eventId: eventId,
+                platforms: ['instagram'],
+                allowUserInteraction: false,
+              ),
+            ).thenAnswer((_) async {
+              attempts++;
+              return [queuedJob];
+            });
             when(() => client.getCrossposts(eventId: eventId)).thenAnswer(
               (_) async => const [
                 CrosspostJob(

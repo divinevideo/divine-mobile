@@ -85,6 +85,7 @@ class CrosspostingRepository {
         return await _apiClient.createCrossposts(
           eventId: eventId,
           platforms: destinations,
+          allowUserInteraction: attempt == 0,
         );
       } on CrosspostingApiException catch (error) {
         if (isCancelled) return null;

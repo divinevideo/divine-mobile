@@ -79,6 +79,10 @@ class CrosspostSubmissionQueue {
       _log(eventId, 'stopped polling with jobs pending: $jobs', warning: true);
       return;
     }
+    if (result.hasPendingJobs) {
+      _log(eventId, 'stopped polling: background signature unavailable');
+      return;
+    }
     final unsuccessful = result.jobs.any(
       (job) =>
           job.status == CrosspostJobStatus.failed ||
