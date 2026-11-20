@@ -2015,6 +2015,29 @@ void main() {
         expect(find.textContaining('1.2K'), findsOneWidget);
       });
 
+      testWidgets('resolves an naddr link by that naddr, not its d tag', (
+        tester,
+      ) async {
+        final reference = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'abc123', author: _testHexPubkey, kind: 34235),
+        );
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            reference,
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/$reference',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('My Cool Video'), findsOneWidget);
+      });
+
       testWidgets('renders from structured q-tag ref without a legacy URL', (
         tester,
       ) async {
