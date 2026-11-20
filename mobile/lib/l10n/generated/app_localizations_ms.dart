@@ -16516,7 +16516,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mulakan selepas ada yang menyertai. Sesiapa yang belum menyertai pada masa itu tidak terlibat kali ini.';
 
   @override
-  String get collabRoomWaitingForHost => 'Menunggu bilik mula merakam.';
+  String get collabRoomWaitingForHost => 'Menunggu hos mula merakam.';
 
   @override
   String get collabRoomJoinButton => 'Sertai';
@@ -16591,7 +16591,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Bahagian anda dah masuk. Bilik akan gabungkan semuanya.';
+      'Bahagian anda dah masuk. Hos akan gabungkan semuanya.';
 
   @override
   String get collabRoomPartTitle => 'Bahagian anda';
@@ -16660,7 +16660,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get collabRoomPhaseReady => 'Sedia untuk mula merakam';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'Menunggu bilik mula merakam';
+  String get collabRoomPhaseWaitingForHost => 'Menunggu hos mula merakam';
 
   @override
   String get collabRoomPhaseInvited => 'Anda dijemput. Ketik untuk menyertai.';

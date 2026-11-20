@@ -16443,7 +16443,8 @@ class AppLocalizationsTr extends AppLocalizations {
       'Biri katılır katılmaz başla. O zamana kadar katılmayanlar bu seferlik dışarıda kalır.';
 
   @override
-  String get collabRoomWaitingForHost => 'Odanın çekime başlaması bekleniyor.';
+  String get collabRoomWaitingForHost =>
+      'Ev sahibinin çekime başlaması bekleniyor.';
 
   @override
   String get collabRoomJoinButton => 'Katıl';
@@ -16516,7 +16517,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get collabRoomDeclinedYou => 'Bunu reddettin.';
 
   @override
-  String get collabRoomPartSent => 'Bölümün geldi. Oda her şeyi birleştirir.';
+  String get collabRoomPartSent =>
+      'Bölümün geldi. Ev sahibi her şeyi birleştirecek.';
 
   @override
   String get collabRoomPartTitle => 'Senin bölümün';
@@ -16584,7 +16586,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Odanın çekime başlaması bekleniyor';
+      'Ev sahibinin çekime başlaması bekleniyor';
 
   @override
   String get collabRoomPhaseInvited => 'Davet edildin. Katılmak için dokun.';

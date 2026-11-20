@@ -16737,7 +16737,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'In attesa che la stanza inizi a girare.';
+      'In attesa che l\'host inizi a girare.';
 
   @override
   String get collabRoomJoinButton => 'Entra';
@@ -16812,7 +16812,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'La tua parte è arrivata. La stanza monta tutto.';
+      'La tua parte è arrivata. L\'host monta tutto.';
 
   @override
   String get collabRoomPartTitle => 'La tua parte';
@@ -16882,7 +16882,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'In attesa che la stanza inizi a girare';
+      'In attesa che l\'host inizi a girare';
 
   @override
   String get collabRoomPhaseInvited => 'Hai un invito. Tocca per entrare.';

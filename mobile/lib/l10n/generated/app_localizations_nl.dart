@@ -16603,7 +16603,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Wachten tot de ruimte begint met filmen.';
+      'Wachten tot de host begint met filmen.';
 
   @override
   String get collabRoomJoinButton => 'Meedoen';
@@ -16680,7 +16680,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Je deel is binnen. De ruimte voegt alles samen.';
+      'Je deel is binnen. De host voegt alles samen.';
 
   @override
   String get collabRoomPartTitle => 'Jouw deel';
@@ -16750,7 +16750,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Wachten tot de ruimte begint met filmen';
+      'Wachten tot de host begint met filmen';
 
   @override
   String get collabRoomPhaseInvited =>

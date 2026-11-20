@@ -16894,7 +16894,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'రూమ్‌లో చిత్రీకరణ మొదలవడం కోసం వేచి ఉంది.';
+      'హోస్ట్ చిత్రీకరణ మొదలుపెట్టడం కోసం వేచి ఉంది.';
 
   @override
   String get collabRoomJoinButton => 'చేరండి';
@@ -17039,7 +17039,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'రూమ్‌లో చిత్రీకరణ మొదలవడం కోసం వేచి ఉంది';
+      'హోస్ట్ చిత్రీకరణ మొదలుపెట్టడం కోసం వేచి ఉంది';
 
   @override
   String get collabRoomPhaseInvited =>

@@ -15558,7 +15558,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomStartHint => '有人加入后就能开始。到那时还没加入的人这次就不参加了。';
 
   @override
-  String get collabRoomWaitingForHost => '正在等待房间开始拍摄。';
+  String get collabRoomWaitingForHost => '正在等待房主开始拍摄。';
 
   @override
   String get collabRoomJoinButton => '加入';
@@ -15692,7 +15692,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collabRoomPhaseReady => '可以开始拍摄了';
 
   @override
-  String get collabRoomPhaseWaitingForHost => '正在等待房间开始拍摄';
+  String get collabRoomPhaseWaitingForHost => '正在等待房主开始拍摄';
 
   @override
   String get collabRoomPhaseInvited => '你收到了邀请，点按即可加入';

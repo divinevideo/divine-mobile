@@ -16566,7 +16566,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن البدء بعد انضمام أحدهم. من لم ينضم حتى ذلك الحين لن يشارك هذه المرة.';
 
   @override
-  String get collabRoomWaitingForHost => 'بانتظار بدء التصوير في الغرفة.';
+  String get collabRoomWaitingForHost => 'بانتظار بدء التصوير من المضيف.';
 
   @override
   String get collabRoomJoinButton => 'انضمام';
@@ -16639,7 +16639,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collabRoomDeclinedYou => 'تم رفض هذه الدعوة.';
 
   @override
-  String get collabRoomPartSent => 'وصل جزؤك. ستدمج الغرفة كل الأجزاء.';
+  String get collabRoomPartSent => 'وصل جزؤك. دمج كل الأجزاء الآن لدى المضيف.';
 
   @override
   String get collabRoomPartTitle => 'جزؤك';
@@ -16706,7 +16706,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collabRoomPhaseReady => 'كل شيء جاهز للتصوير';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'بانتظار بدء التصوير في الغرفة';
+  String get collabRoomPhaseWaitingForHost => 'بانتظار بدء التصوير من المضيف';
 
   @override
   String get collabRoomPhaseInvited => 'لديك دعوة للانضمام';

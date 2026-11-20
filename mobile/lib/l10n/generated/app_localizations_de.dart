@@ -16680,7 +16680,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get collabRoomYou => 'Du';
 
   @override
-  String get collabRoomHost => 'Gastgeber:in';
+  String get collabRoomHost => 'Host';
 
   @override
   String get collabRoomStatusInvited => 'Eingeladen';
@@ -16712,7 +16712,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Warte, bis der Raum mit dem Dreh startet.';
+      'Warte, bis der Host den Dreh startet.';
 
   @override
   String get collabRoomJoinButton => 'Beitreten';
@@ -16789,7 +16789,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Dein Teil ist da. Der Raum setzt alles zusammen.';
+      'Dein Teil ist da. Der Host setzt alles zusammen.';
 
   @override
   String get collabRoomPartTitle => 'Dein Teil';
@@ -16831,10 +16831,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collabRoomLobbyBody =>
-      'Lade bis zu 3 Freund:innen ein. Alle filmen ihren eigenen Teil, und daraus wird ein Split-Screen-Video.';
+      'Lade bis zu 3 Leute ein. Alle filmen ihren eigenen Teil, und daraus wird ein Split-Screen-Video.';
 
   @override
-  String get collabRoomLobbyInvite => 'Freund:innen einladen';
+  String get collabRoomLobbyInvite => 'Leute einladen';
 
   @override
   String get collabRoomInvitePickerTitle => 'Wer ist dabei?';
@@ -16859,7 +16859,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Warte, bis der Raum mit dem Dreh startet';
+      'Warte, bis der Host den Dreh startet';
 
   @override
   String get collabRoomPhaseInvited =>

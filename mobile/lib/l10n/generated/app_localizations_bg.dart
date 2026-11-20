@@ -16669,7 +16669,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Започни, щом някой влезе. Който не е влязъл дотогава, този път пропуска.';
 
   @override
-  String get collabRoomWaitingForHost => 'Чакаме стаята да започне снимките.';
+  String get collabRoomWaitingForHost => 'Чакаме домакина да започне снимките.';
 
   @override
   String get collabRoomJoinButton => 'Влез';
@@ -16743,7 +16743,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get collabRoomDeclinedYou => 'Отказа този път.';
 
   @override
-  String get collabRoomPartSent => 'Частта ти е тук. Стаята сглобява всичко.';
+  String get collabRoomPartSent =>
+      'Частта ти е тук. Домакинът сглобява всичко.';
 
   @override
   String get collabRoomPartTitle => 'Твоята част';
@@ -16812,7 +16813,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Чакаме стаята да започне снимките';
+      'Чакаме домакина да започне снимките';
 
   @override
   String get collabRoomPhaseInvited => 'Имаш покана. Докосни, за да влезеш.';

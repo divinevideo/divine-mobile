@@ -16404,7 +16404,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Mulai setelah ada yang gabung. Yang belum gabung saat itu absen dulu kali ini.';
 
   @override
-  String get collabRoomWaitingForHost => 'Menunggu ruangan mulai syuting.';
+  String get collabRoomWaitingForHost => 'Menunggu host mulai syuting.';
 
   @override
   String get collabRoomJoinButton => 'Gabung';
@@ -16481,7 +16481,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Bagianmu sudah masuk. Ruangan akan menyatukan semuanya.';
+      'Bagianmu sudah masuk. Host akan menyatukan semuanya.';
 
   @override
   String get collabRoomPartTitle => 'Bagianmu';
@@ -16549,7 +16549,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get collabRoomPhaseReady => 'Siap mulai syuting';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'Menunggu ruangan mulai syuting';
+  String get collabRoomPhaseWaitingForHost => 'Menunggu host mulai syuting';
 
   @override
   String get collabRoomPhaseInvited => 'Kamu diundang. Ketuk untuk bergabung.';

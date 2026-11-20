@@ -16463,7 +16463,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Bắt đầu khi có người tham gia. Ai chưa tham gia lúc đó sẽ không có mặt lần này.';
 
   @override
-  String get collabRoomWaitingForHost => 'Đang chờ phòng bắt đầu quay.';
+  String get collabRoomWaitingForHost => 'Đang chờ chủ phòng bắt đầu quay.';
 
   @override
   String get collabRoomJoinButton => 'Tham gia';
@@ -16608,7 +16608,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get collabRoomPhaseReady => 'Sẵn sàng quay';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'Đang chờ phòng bắt đầu quay';
+  String get collabRoomPhaseWaitingForHost => 'Đang chờ chủ phòng bắt đầu quay';
 
   @override
   String get collabRoomPhaseInvited => 'Bạn có lời mời. Chạm để tham gia.';

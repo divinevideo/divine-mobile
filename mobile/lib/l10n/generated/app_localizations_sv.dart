@@ -16535,7 +16535,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Väntar på att rummet ska börja filma.';
+      'Väntar på att värden ska börja filma.';
 
   @override
   String get collabRoomJoinButton => 'Gå med';
@@ -16610,7 +16610,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get collabRoomDeclinedYou => 'Du tackade nej till den här.';
 
   @override
-  String get collabRoomPartSent => 'Din del är klar. Rummet sätter ihop allt.';
+  String get collabRoomPartSent => 'Din del är klar. Värden sätter ihop allt.';
 
   @override
   String get collabRoomPartTitle => 'Din del';
@@ -16679,7 +16679,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Väntar på att rummet ska börja filma';
+      'Väntar på att värden ska börja filma';
 
   @override
   String get collabRoomPhaseInvited => 'Du är inbjuden. Tryck för att gå med.';

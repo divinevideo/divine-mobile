@@ -16865,7 +16865,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zacznij, gdy ktoś dołączy. Kto do tego czasu nie dołączy, tym razem odpada.';
 
   @override
-  String get collabRoomWaitingForHost => 'Czekamy, aż pokój zacznie nagrywać.';
+  String get collabRoomWaitingForHost => 'Czekamy na rozpoczęcie nagrywania.';
 
   @override
   String get collabRoomJoinButton => 'Dołącz';
@@ -16941,7 +16941,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Twoja część dotarła. Pokój złoży wszystko w całość.';
+      'Twoja część dotarła. Teraz wszystko zostanie złożone w całość.';
 
   @override
   String get collabRoomPartTitle => 'Twoja część';
@@ -17011,7 +17011,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Czekamy, aż pokój zacznie nagrywać';
+      'Czekamy na rozpoczęcie nagrywania';
 
   @override
   String get collabRoomPhaseInvited =>

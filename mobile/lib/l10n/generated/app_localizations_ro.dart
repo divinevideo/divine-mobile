@@ -16849,7 +16849,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Așteptăm să înceapă filmarea în cameră.';
+      'Așteptăm ca gazda să înceapă filmarea.';
 
   @override
   String get collabRoomJoinButton => 'Intră';
@@ -16925,7 +16925,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Partea ta a ajuns. Camera le pune pe toate cap la cap.';
+      'Partea ta a ajuns. Gazda le pune pe toate cap la cap.';
 
   @override
   String get collabRoomPartTitle => 'Partea ta';
@@ -16993,7 +16993,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Așteptăm să înceapă filmarea în cameră';
+      'Așteptăm ca gazda să înceapă filmarea';
 
   @override
   String get collabRoomPhaseInvited => 'Ai o invitație. Atinge ca să intri.';

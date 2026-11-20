@@ -16717,7 +16717,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Esperando que la sala empiece a filmar.';
+      'Esperando a que quien organiza empiece a filmar.';
 
   @override
   String get collabRoomJoinButton => 'Sumarme';
@@ -16792,7 +16792,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get collabRoomDeclinedYou => 'Dijiste que no a esta.';
 
   @override
-  String get collabRoomPartSent => 'Tu parte ya está. La sala arma todo.';
+  String get collabRoomPartSent =>
+      'Tu parte ya está. Quien organiza arma todo.';
 
   @override
   String get collabRoomPartTitle => 'Tu parte';
@@ -16861,7 +16862,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Esperando que la sala empiece a filmar';
+      'Esperando a que quien organiza empiece a filmar';
 
   @override
   String get collabRoomPhaseInvited => 'Te invitaron. Tocá para sumarte.';

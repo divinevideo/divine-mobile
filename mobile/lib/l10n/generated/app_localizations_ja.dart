@@ -15698,7 +15698,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomStartedDmBody => '撮影開始です！Divine を開いてあなたのパートを撮ってください。';
 
   @override
-  String get collabRoomPostedDmBody => '動画を公開しました！参加してくれてありがとう。';
+  String get collabRoomPostedDmBody => '動画を公開しました！参加してくれてありがとうございます。';
 
   @override
   String get collabRoomCancelledDmBody => '動画ルームを中止しました。';
@@ -15749,7 +15749,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomStartHint => '誰かが参加したら始められます。その時点で参加していない人は今回は不参加になります。';
 
   @override
-  String get collabRoomWaitingForHost => 'ルームの撮影開始を待っています。';
+  String get collabRoomWaitingForHost => 'ホストの撮影開始を待っています。';
 
   @override
   String get collabRoomJoinButton => '参加する';
@@ -15818,7 +15818,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomDeclinedYou => '今回は辞退しました。';
 
   @override
-  String get collabRoomPartSent => 'パートを提出しました。ルームで全部をつなげます。';
+  String get collabRoomPartSent => 'パートを提出しました。ホストが全部をつなげます。';
 
   @override
   String get collabRoomPartTitle => 'あなたのパート';
@@ -15884,7 +15884,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collabRoomPhaseReady => '撮影を始められます';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'ルームの撮影開始を待っています';
+  String get collabRoomPhaseWaitingForHost => 'ホストの撮影開始を待っています';
 
   @override
   String get collabRoomPhaseInvited => '招待が届いています。タップして参加';

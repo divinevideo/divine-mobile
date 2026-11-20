@@ -16123,7 +16123,7 @@ class AppLocalizationsAm extends AppLocalizations {
       'አንድ ሰው እንደተቀላቀለ ይጀምሩ። እስከዚያ ያልተቀላቀለ በዚህኛው አይሳተፍም።';
 
   @override
-  String get collabRoomWaitingForHost => 'ክፍሉ መቅረጽ እስኪጀምር በመጠበቅ ላይ።';
+  String get collabRoomWaitingForHost => 'አስተናጋጁ መቅረጽ እስኪጀምር በመጠበቅ ላይ።';
 
   @override
   String get collabRoomJoinButton => 'ይቀላቀሉ';
@@ -16260,7 +16260,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get collabRoomPhaseReady => 'ለመቅረጽ ዝግጁ';
 
   @override
-  String get collabRoomPhaseWaitingForHost => 'ክፍሉ መቅረጽ እስኪጀምር በመጠበቅ ላይ';
+  String get collabRoomPhaseWaitingForHost => 'አስተናጋጁ መቅረጽ እስኪጀምር በመጠበቅ ላይ';
 
   @override
   String get collabRoomPhaseInvited => 'ተጋብዘዋል። ለመቀላቀል ይንኩ።';

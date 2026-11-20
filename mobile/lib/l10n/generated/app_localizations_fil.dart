@@ -16661,7 +16661,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'Hinihintay na magsimula ang pag-film sa room.';
+      'Hinihintay na simulan ng host ang pag-film.';
 
   @override
   String get collabRoomJoinButton => 'Sumali';
@@ -16738,7 +16738,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get collabRoomPartSent =>
-      'Nandito na ang part mo. Pagsasamahin ng room ang lahat.';
+      'Nandito na ang part mo. Pagsasamahin ng host ang lahat.';
 
   @override
   String get collabRoomPartTitle => 'Ang part mo';
@@ -16807,7 +16807,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'Hinihintay na magsimula ang pag-film sa room';
+      'Hinihintay na simulan ng host ang pag-film';
 
   @override
   String get collabRoomPhaseInvited => 'Inimbitahan ka. I-tap para sumali.';

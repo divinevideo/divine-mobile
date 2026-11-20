@@ -15767,7 +15767,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '누군가 들어오면 시작할 수 있어요. 그때까지 들어오지 않은 사람은 이번엔 빠져요.';
 
   @override
-  String get collabRoomWaitingForHost => '방에서 촬영을 시작하길 기다리고 있어요.';
+  String get collabRoomWaitingForHost => '호스트가 촬영을 시작하길 기다리고 있어요.';
 
   @override
   String get collabRoomJoinButton => '참여하기';
@@ -15836,7 +15836,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomDeclinedYou => '이번 초대는 거절했어요.';
 
   @override
-  String get collabRoomPartSent => '파트를 보냈어요. 방에서 모두 합쳐요.';
+  String get collabRoomPartSent => '파트를 보냈어요. 호스트가 모두 합쳐요.';
 
   @override
   String get collabRoomPartTitle => '내 파트';
@@ -15902,7 +15902,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get collabRoomPhaseReady => '촬영 시작 준비 완료';
 
   @override
-  String get collabRoomPhaseWaitingForHost => '촬영 시작을 기다리는 중';
+  String get collabRoomPhaseWaitingForHost => '호스트가 촬영을 시작하길 기다리고 있어요';
 
   @override
   String get collabRoomPhaseInvited => '초대를 받았어요. 탭해서 참여하세요';

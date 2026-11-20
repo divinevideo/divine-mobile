@@ -16516,7 +16516,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get collabRoomWaitingForHost =>
-      'روم میں فلم بندی شروع ہونے کا انتظار ہے۔';
+      'میزبان کے فلم بندی شروع کرنے کا انتظار ہے۔';
 
   @override
   String get collabRoomJoinButton => 'شامل ہوں';
@@ -16591,7 +16591,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get collabRoomDeclinedYou => 'آپ نے اس بار انکار کیا۔';
 
   @override
-  String get collabRoomPartSent => 'آپ کا حصہ پہنچ گیا۔ روم سب کچھ جوڑ دے گا۔';
+  String get collabRoomPartSent =>
+      'آپ کا حصہ پہنچ گیا۔ میزبان سب کچھ جوڑیں گے۔';
 
   @override
   String get collabRoomPartTitle => 'آپ کا حصہ';
@@ -16660,7 +16661,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get collabRoomPhaseWaitingForHost =>
-      'روم میں فلم بندی شروع ہونے کا انتظار';
+      'میزبان کے فلم بندی شروع کرنے کا انتظار';
 
   @override
   String get collabRoomPhaseInvited =>
