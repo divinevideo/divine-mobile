@@ -16580,10 +16580,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Виж статистиката си';
 
   @override
-  String get creatorHighlightInvite => 'Доведи приятелите си';
+  String get creatorHighlightInvite => 'Доведи компанията си';
 
   @override
-  String get inviteFriendsTitle => 'Доведи приятелите си';
+  String get inviteFriendsTitle => 'Доведи компанията си';
 
   @override
   String get inviteFriendsMessageLabel => 'Твоето съобщение';
@@ -16599,6 +16599,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get inviteFriendsShare => 'Сподели';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Споделянето не се отвори. Опитай пак.';
 
   @override
   String get messagesPublicRoomsDisclosure =>

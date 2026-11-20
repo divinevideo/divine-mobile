@@ -9375,6 +9375,7 @@
   "inviteFriendsDefaultMessage": "నేను Divineలో లూప్‌లు తయారు చేస్తున్నాను. మీరు స్పందించవచ్చు, నాతో కలిసి పని చేయవచ్చు!",
   "inviteFriendsLinkNote": "మీ లింక్ చివర్లో జోడించబడుతుంది: {url}",
   "inviteFriendsShare": "భాగస్వామ్యం చేయండి",
+  "inviteFriendsShareFailed": "షేరింగ్‌ను తెరవలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

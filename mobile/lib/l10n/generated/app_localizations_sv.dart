@@ -16465,6 +16465,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inviteFriendsShare => 'Dela';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Det gick inte att öppna delning. Försök igen.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

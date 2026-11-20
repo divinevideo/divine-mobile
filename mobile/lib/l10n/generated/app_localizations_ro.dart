@@ -16758,10 +16758,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Vezi statisticile tale';
 
   @override
-  String get creatorHighlightInvite => 'Adu-ți prietenii';
+  String get creatorHighlightInvite => 'Adu-ți gașca';
 
   @override
-  String get inviteFriendsTitle => 'Adu-ți prietenii';
+  String get inviteFriendsTitle => 'Adu-ți gașca';
 
   @override
   String get inviteFriendsMessageLabel => 'Mesajul tău';
@@ -16777,6 +16777,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get inviteFriendsShare => 'Partajează';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Nu s-a putut deschide partajarea. Încearcă din nou.';
 
   @override
   String get messagesPublicRoomsDisclosure =>

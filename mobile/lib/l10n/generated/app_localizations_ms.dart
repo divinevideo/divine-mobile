@@ -16447,6 +16447,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inviteFriendsShare => 'Kongsi';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Tidak dapat membuka perkongsian. Cuba lagi.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

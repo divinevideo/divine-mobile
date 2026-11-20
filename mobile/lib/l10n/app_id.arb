@@ -6447,6 +6447,7 @@
   "inviteFriendsDefaultMessage": "Aku lagi bikin loop di Divine. Kamu bisa kasih reaksi dan kolaborasi bareng aku!",
   "inviteFriendsLinkNote": "Tautanmu ditambahkan di akhir: {url}",
   "inviteFriendsShare": "Bagikan",
+  "inviteFriendsShareFailed": "Gagal membuka menu bagikan. Coba lagi.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

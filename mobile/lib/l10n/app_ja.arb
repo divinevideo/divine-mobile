@@ -6447,6 +6447,7 @@
   "inviteFriendsDefaultMessage": "Divineでループを作っています。リアクションしたり、一緒にコラボしたりできます！",
   "inviteFriendsLinkNote": "最後にリンクが追加されます：{url}",
   "inviteFriendsShare": "シェア",
+  "inviteFriendsShareFailed": "共有を開けませんでした。もう一度お試しください。",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

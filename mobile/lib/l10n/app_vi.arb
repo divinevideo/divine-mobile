@@ -7752,6 +7752,7 @@
   "inviteFriendsDefaultMessage": "Mình đang làm loop trên Divine. Bạn có thể thả cảm xúc và cùng hợp tác với mình!",
   "inviteFriendsLinkNote": "Liên kết của bạn được thêm vào cuối: {url}",
   "inviteFriendsShare": "Chia sẻ",
+  "inviteFriendsShareFailed": "Không mở được chia sẻ. Thử lại nhé.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

@@ -15702,6 +15702,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inviteFriendsShare => '공유';
 
   @override
+  String get inviteFriendsShareFailed => '공유를 열 수 없어요. 다시 시도해 주세요.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

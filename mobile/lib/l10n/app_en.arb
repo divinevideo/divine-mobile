@@ -13691,6 +13691,10 @@
   "@inviteFriendsShare": {
     "description": "Button on the invite page that opens the system share sheet with the message and link."
   },
+  "inviteFriendsShareFailed": "Couldn't open sharing. Try again.",
+  "@inviteFriendsShareFailed": {
+    "description": "Error shown on the invite page when the system share sheet fails to open. Nothing was sent."
+  },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
   "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
   "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",

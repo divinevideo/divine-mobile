@@ -6447,6 +6447,7 @@
   "inviteFriendsDefaultMessage": "Robię pętle w Divine. Możesz reagować i współpracować ze mną!",
   "inviteFriendsLinkNote": "Twój link zostanie dodany na końcu: {url}",
   "inviteFriendsShare": "Udostępnij",
+  "inviteFriendsShareFailed": "Nie udało się otworzyć udostępniania. Spróbuj ponownie.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

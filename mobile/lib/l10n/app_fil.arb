@@ -5477,6 +5477,7 @@
   "inviteFriendsDefaultMessage": "Gumagawa ako ng loops sa Divine. Puwede kang mag-react at makipag-collab sa akin!",
   "inviteFriendsLinkNote": "Idadagdag ang link mo sa dulo: {url}",
   "inviteFriendsShare": "I-share",
+  "inviteFriendsShareFailed": "Hindi ma-open ang share. Subukan ulit.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

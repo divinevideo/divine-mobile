@@ -4,10 +4,12 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
 
@@ -56,29 +58,53 @@ void main() {
           .setMockMethodCallHandler(_shareChannel, null);
     });
 
-    /// Pumps a home page and pushes the invite page over it.
-    Future<void> pumpPushed(WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Builder(
-            builder: (context) => Scaffold(
+    Future<void> pumpRouter(
+      WidgetTester tester, {
+      required String initialLocation,
+    }) async {
+      final router = GoRouter(
+        initialLocation: initialLocation,
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => Scaffold(
               body: TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const InviteFriendsScreen(),
-                  ),
-                ),
+                onPressed: () => context.push(RoutePaths.inviteFriends),
                 child: const Text('open'),
               ),
             ),
           ),
+          GoRoute(
+            path: RoutePaths.inviteFriends,
+            builder: (_, _) => const InviteFriendsScreen(),
+          ),
+          GoRoute(
+            path: RoutePaths.inbox,
+            builder: (_, _) => const Scaffold(body: Text('Inbox destination')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
         ),
       );
+      await tester.pumpAndSettle();
+    }
+
+    /// Opens the invite page over a home page, as Inbox does.
+    Future<void> pumpPushed(WidgetTester tester) async {
+      await pumpRouter(tester, initialLocation: '/');
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
     }
+
+    /// Opens the invite page with nothing below it, as a link or reload does.
+    Future<void> pumpDirect(WidgetTester tester) =>
+        pumpRouter(tester, initialLocation: RoutePaths.inviteFriends);
 
     Future<void> share(WidgetTester tester) async {
       await tester.tap(find.byType(DivineButton));
@@ -171,11 +197,25 @@ void main() {
         expect(call['originWidth'], greaterThan(0));
       });
 
-      testWidgets('a share failure keeps the page open', (tester) async {
+      testWidgets('a double tap within one frame shares once', (tester) async {
+        openSheet = Completer();
+        await pumpPushed(tester);
+        await tester.tap(find.byType(DivineButton));
+        await tester.tap(find.byType(DivineButton));
+        await tester.pump();
+        expect(shareCalls, hasLength(1));
+        openSheet!.complete('');
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('a share failure keeps the page open and says so', (
+        tester,
+      ) async {
         shareError = PlatformException(code: 'Share failed');
         await pumpPushed(tester);
         await share(tester);
         expect(tester.takeException(), isNull);
+        expect(find.text(l10n.inviteFriendsShareFailed), findsOneWidget);
         expect(find.byType(InviteFriendsScreen), findsOneWidget);
         expect(
           tester.widget<DivineButton>(find.byType(DivineButton)).onPressed,
@@ -223,6 +263,23 @@ void main() {
         openSheet!.complete('com.apple.UIKit.activity.Message');
         await tester.pumpAndSettle();
         expect(find.text('over'), findsOneWidget);
+      });
+
+      testWidgets('back with nothing below goes to Inbox', (tester) async {
+        await pumpDirect(tester);
+        await tester.tap(find.bySemanticsLabel(l10n.commonBack));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Inbox destination'), findsOneWidget);
+      });
+
+      testWidgets('a completed share with nothing below goes to Inbox', (
+        tester,
+      ) async {
+        await pumpDirect(tester);
+        await share(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Inbox destination'), findsOneWidget);
       });
 
       testWidgets('a dismissed share stays', (tester) async {

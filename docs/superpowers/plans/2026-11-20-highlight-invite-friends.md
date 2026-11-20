@@ -6,7 +6,9 @@
 
 > **Revision (after the first simulator review):** Tasks 1-3 are done. Tasks 6 and 7 replace Task 3's in-card share with an invite page, and run before Tasks 4 and 5.
 
-**Architecture:** The repository decides eligibility (posted today, weekly limit) and exposes it as `CreatorHighlight.showInvite`; it also persists the weekly record. The cubit records the invite as seen when the card is presented. The card renders the row and opens the share sheet itself, anchored to the row.
+**Architecture:** The repository decides eligibility (posted today, weekly limit) and exposes it as `CreatorHighlight.showInvite`; it also persists the weekly record. The cubit records the invite as seen when the card is presented, or when a refresh turns the invite on for a card already seen that day. The card renders the link and hands the tap to Inbox, which pushes the invite page; the page shares through `showShareSheetAtOrigin`, anchored to its Share button.
+
+> **As built (after review):** the page leaves (back to the previous screen, or to Inbox when opened directly by a link or reload) unless the share sheet was dismissed, so an unknown outcome is treated as shared. One share runs at a time. A failed share shows an error snackbar and keeps the page open. The field caps at 6 lines, and the link note is its own text under the field so it never truncates. Strings are translated in all locales, with ungendered wording where the first pass used a masculine plural.
 
 **Tech Stack:** Flutter, flutter_bloc, SharedPreferences, share_plus via `showShareSheet`, ARB l10n.
 
@@ -180,7 +182,7 @@ git commit -m "feat(creator-highlights): invite friends from the daily highlight
   - `'a cleared message shares only the link'`.
   - `'a completed share returns'` / `'a dismissed share stays'`: channel returns a success activity vs `''` (share_plus's dismissed result); assert the page pops or stays (pump it under a `MaterialApp` with a home that pushes it).
 - [ ] **Step 2: Run and confirm failure.**
-- [ ] **Step 3: Implement.** A `StatefulWidget` owning a `TextEditingController` seeded from `inviteFriendsDefaultMessage` (no bloc: no business logic or repository). App-bar title from `inviteFriendsTitle`. Multiline field per `ui_theming.md` (`.multiline`, `newline`, `.sentences`, `maxLines: null`, `minLines: 3`), the link as secondary text below, a `DivineButton` labelled `inviteFriendsShare`. On tap: capture `shareAnchorForContext` of the button before awaiting, `showShareSheetAtOrigin`, then pop only when `result.status == ShareResultStatus.success` and `context.mounted`. Add the route and run `dart run build_runner build --delete-conflicting-outputs`.
+- [ ] **Step 3: Implement.** A `StatefulWidget` owning a `TextEditingController` seeded from `inviteFriendsDefaultMessage` (no bloc: no business logic or repository). App-bar title from `inviteFriendsTitle`. Multiline field per `ui_theming.md` (`.multiline`, `newline`, `.sentences`, `maxLines: 6` as built, `minLines: 3`), the link as secondary text below, a `DivineButton` labelled `inviteFriendsShare`. On tap: capture `shareAnchorForContext` of the button before awaiting, `showShareSheetAtOrigin`, then leave unless the result is `dismissed` (see "As built" above). Add the route and run `dart run build_runner build --delete-conflicting-outputs`.
 - [ ] **Step 4: Run** the new test, highlight tests, `test/l10n/`, routing guards (`check_literal_navigation_paths.sh`, `check_hand_written_route_ceiling.sh`, `check_layer_direction.sh`), analyze, format. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(creator-highlights): let people edit the invite before sharing`.
 
@@ -189,7 +191,7 @@ git commit -m "feat(creator-highlights): invite friends from the daily highlight
 No code. Nothing is pushed or opened as a PR before the product owner has seen it.
 
 - [ ] **Step 1-2 (revised):** the simulator cannot post, so build with the throwaway demo patch (highlight always reports a post today; scratchpad `apply_demo.py`) against `DEFAULT_ENV=PRODUCTION`, then revert the patch before any commit. Simulator UI is in Xcode's DeviceHub app.
-- [ ] **Step 3: Walk the path with the product owner.** Sign in to a local account, post a loop, open Inbox: the card shows "Bring your friends in →"; tapping it opens the share sheet with the message and link; tapping the card body still opens stats.
+- [ ] **Step 3: Walk the path with the product owner.** Sign in, open Inbox: the card shows "See your stats →" and "Bring your friends →" on one line; tapping the invite opens the invite page; editing the message and sharing hands the share sheet the message and link; tapping the card body still opens stats.
 - [ ] **Step 4: Show the hidden cases.** An account with no post today shows no row. Seed `creator_highlight_invite_<pubkey>` with three other dates this week (developer tooling or a debug prefs write, reverted afterward) and confirm the row is hidden.
 - [ ] **Step 5: Capture screenshots** (light and dark) for the PR, and note any copy or timing changes requested; apply them as a follow-up commit through Task 3's tests.
 

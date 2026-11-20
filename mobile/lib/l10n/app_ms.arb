@@ -7752,6 +7752,7 @@
   "inviteFriendsDefaultMessage": "Saya sedang buat loop di Divine. Anda boleh beri reaksi dan berkolaborasi dengan saya!",
   "inviteFriendsLinkNote": "Pautan anda ditambah di hujung: {url}",
   "inviteFriendsShare": "Kongsi",
+  "inviteFriendsShareFailed": "Tidak dapat membuka perkongsian. Cuba lagi.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

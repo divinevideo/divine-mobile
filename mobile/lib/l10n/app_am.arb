@@ -6500,6 +6500,7 @@
   "inviteFriendsDefaultMessage": "በDivine ላይ ሉፖችን እየሠራሁ ነው። ምላሽ መስጠት እና ከእኔ ጋር መተባበር ይችላሉ!",
   "inviteFriendsLinkNote": "አገናኝዎ መጨረሻ ላይ ይጨመራል፦ {url}",
   "inviteFriendsShare": "ያጋሩ",
+  "inviteFriendsShareFailed": "ማጋራት አልተቻለም። እንደገና ይሞክሩ።",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

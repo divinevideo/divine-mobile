@@ -16645,10 +16645,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Guarda le tue statistiche';
 
   @override
-  String get creatorHighlightInvite => 'Porta i tuoi amici';
+  String get creatorHighlightInvite => 'Invita chi conosci';
 
   @override
-  String get inviteFriendsTitle => 'Porta i tuoi amici';
+  String get inviteFriendsTitle => 'Invita chi conosci';
 
   @override
   String get inviteFriendsMessageLabel => 'Il tuo messaggio';
@@ -16664,6 +16664,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get inviteFriendsShare => 'Condividi';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Impossibile aprire la condivisione. Riprova.';
 
   @override
   String get messagesPublicRoomsDisclosure =>

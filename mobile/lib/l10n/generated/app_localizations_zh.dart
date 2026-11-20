@@ -15494,6 +15494,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inviteFriendsShare => '分享';
 
   @override
+  String get inviteFriendsShareFailed => '无法打开分享。请再试一次。';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

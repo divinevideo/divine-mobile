@@ -6441,12 +6441,13 @@
   "creatorHighlightWeeklyLikes": "Me gusta hasta ahora en los videos que publicaste esta semana: {count}.",
   "creatorHighlightWeeklyComments": "Comentarios hasta ahora en los videos que publicaste esta semana: {count}.",
   "creatorHighlightAnalytics": "Mirá tus estadísticas",
-  "creatorHighlightInvite": "Traé a tus amigos",
-  "inviteFriendsTitle": "Traé a tus amigos",
+  "creatorHighlightInvite": "Traé a tu gente",
+  "inviteFriendsTitle": "Traé a tu gente",
   "inviteFriendsMessageLabel": "Tu mensaje",
   "inviteFriendsDefaultMessage": "Estoy haciendo loops en Divine. ¡Podés reaccionar y colaborar conmigo!",
   "inviteFriendsLinkNote": "Tu enlace se agrega al final: {url}",
   "inviteFriendsShare": "Compartir",
+  "inviteFriendsShareFailed": "No se pudo abrir el menú para compartir. Probá de nuevo.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

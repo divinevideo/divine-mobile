@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/share_position_origin.dart';
@@ -51,6 +52,8 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
   }
 
   Future<void> _share(BuildContext buttonContext) async {
+    // Two taps can land before the disabled button is rebuilt.
+    if (_sharing) return;
     // Resolve the iPad anchor before awaiting, while the button is mounted.
     final origin = shareAnchorForContext(buttonContext);
     setState(() => _sharing = true);
@@ -71,7 +74,14 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
         error: error,
         stackTrace: stackTrace,
       );
-      if (mounted) setState(() => _sharing = false);
+      if (!mounted) return;
+      setState(() => _sharing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.inviteFriendsShareFailed,
+          error: true,
+        ),
+      );
       return;
     }
     if (!mounted) return;
@@ -83,8 +93,11 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
         ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
-    Navigator.of(context).pop();
+    _leave();
   }
+
+  // A link or reload can open this page with nothing below it to go back to.
+  void _leave() => context.safePop(fallback: RoutePaths.inbox);
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +108,7 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
       appBar: DiVineAppBar(
         title: l10n.inviteFriendsTitle,
         showBackButton: true,
+        onBackPressed: _leave,
         backButtonSemanticLabel: l10n.commonBack,
       ),
       body: SafeArea(

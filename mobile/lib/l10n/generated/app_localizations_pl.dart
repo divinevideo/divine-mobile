@@ -16796,6 +16796,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get inviteFriendsShare => 'Udostępnij';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Nie udało się otworzyć udostępniania. Spróbuj ponownie.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

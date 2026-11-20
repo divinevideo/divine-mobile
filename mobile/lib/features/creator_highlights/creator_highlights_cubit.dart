@@ -103,6 +103,14 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
             ? owned.copyWith(celebrate: false)
             : owned;
         emitIfOpen(CreatorHighlightsState(card: current));
+        // The day's first post can turn the invite on for a card already seen
+        // today. Its spotlight is not presented again, so count the invite
+        // here; the repository counts each day once.
+        if (current != null &&
+            current.showInvite &&
+            current.localDate == _presentedDate) {
+          await _inviteShown(current.localDate);
+        }
         return;
       }
     } on Object catch (error, stackTrace) {
@@ -154,7 +162,7 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         nextRotation: nextRotation,
       );
     } on Object catch (error, stackTrace) {
-      if (isClosed) return;
+      // Reported even after close; only state emission needs the close guard.
       addError(
         asReportableError(error, context: 'CreatorHighlightsCubit.presented') ??
             error,
@@ -169,7 +177,7 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
     try {
       await _repository.markInviteShown(owner, localDate);
     } on Object catch (error, stackTrace) {
-      if (isClosed) return;
+      // Reported even after close; only state emission needs the close guard.
       addError(
         asReportableError(
               error,

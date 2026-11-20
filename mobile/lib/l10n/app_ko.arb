@@ -5993,6 +5993,7 @@
   "inviteFriendsDefaultMessage": "Divine에서 루프를 만들고 있어요. 반응하고 저와 함께 콜라보할 수 있어요!",
   "inviteFriendsLinkNote": "링크는 끝에 추가돼요: {url}",
   "inviteFriendsShare": "공유",
+  "inviteFriendsShareFailed": "공유를 열 수 없어요. 다시 시도해 주세요.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

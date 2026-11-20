@@ -27477,6 +27477,12 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get inviteFriendsShare;
 
+  /// Error shown on the invite page when the system share sheet fails to open. Nothing was sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open sharing. Try again.'**
+  String get inviteFriendsShareFailed;
+
   /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
   ///
   /// In en, this message translates to:

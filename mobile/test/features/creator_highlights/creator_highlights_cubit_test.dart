@@ -27,6 +27,7 @@ class _Repository implements CreatorHighlightsRepository {
   final invites = <(String, String)>[];
   Object? inviteError;
   Completer<void>? presentationGate;
+  Completer<void>? inviteGate;
 
   @override
   Future<CreatorHighlight?> load(String owner) {
@@ -47,6 +48,7 @@ class _Repository implements CreatorHighlightsRepository {
 
   @override
   Future<void> markInviteShown(String owner, String localDate) async {
+    if (inviteGate case final gate?) await gate.future;
     if (inviteError case final error?) throw error;
     invites.add((owner, localDate));
   }
@@ -391,7 +393,10 @@ void main() {
         await load;
         expect(cubit.state.card?.rotation, 1);
         await cubit.presented(cubit.state.card!);
+        // First showing, the refresh of a card seen today, and the next
+        // showing; the repository counts the day once.
         expect(repository.invites, [
+          (_owner, '2026-10-30'),
           (_owner, '2026-10-30'),
           (_owner, '2026-10-30'),
         ]);
@@ -419,6 +424,39 @@ void main() {
         repository.presentationGate!.complete();
         await presenting;
         expect(repository.invites, [(_owner, '2026-10-30')]);
+      });
+
+      test(
+        'an invite that appears after the card was seen still counts',
+        () async {
+          final repository = _Repository();
+          final cubit = _ObservedCubit(repository: repository);
+          repository.pending.complete(_card);
+          await cubit.refresh();
+          await cubit.presented(_card);
+          expect(repository.invites, isEmpty);
+          final load = cubit.refresh();
+          // The day's first post lands while the card is already on screen.
+          repository.next.complete(offered);
+          await load;
+          expect(cubit.state.card?.showInvite, isTrue);
+          expect(repository.invites, [(_owner, '2026-10-30')]);
+          await cubit.close();
+        },
+      );
+
+      test('an invite write failing after close is still reported', () async {
+        final repository = _Repository()
+          ..inviteGate = Completer()
+          ..inviteError = const CreatorHighlightPresentationException();
+        final cubit = _ObservedCubit(repository: repository);
+        repository.pending.complete(offered);
+        await cubit.refresh();
+        final presenting = cubit.presented(offered);
+        await cubit.close();
+        repository.inviteGate!.complete();
+        await presenting;
+        expect(cubit.errors, [same(repository.inviteError)]);
       });
 
       test('an invite storage failure keeps the card and reports', () async {

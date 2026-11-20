@@ -16500,6 +16500,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inviteFriendsShare => 'مشاركة';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'تعذّر فتح المشاركة. يُرجى المحاولة مرة أخرى.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

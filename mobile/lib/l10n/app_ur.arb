@@ -7752,6 +7752,7 @@
   "inviteFriendsDefaultMessage": "میرے لوپس Divine پر ہیں۔ آپ ان پر ری ایکٹ کر سکتے ہیں اور میرے ساتھ کولیب کر سکتے ہیں!",
   "inviteFriendsLinkNote": "آپ کا لنک آخر میں شامل کر دیا جاتا ہے: {url}",
   "inviteFriendsShare": "شیئر",
+  "inviteFriendsShareFailed": "شیئرنگ نہیں کھل سکی۔ دوبارہ کوشش کریں۔",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

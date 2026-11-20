@@ -16446,6 +16446,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inviteFriendsShare => 'شیئر';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'شیئرنگ نہیں کھل سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

@@ -7752,6 +7752,7 @@
   "inviteFriendsDefaultMessage": "我在 Divine 上做循环。你可以来互动，也可以和我一起合作！",
   "inviteFriendsLinkNote": "你的链接会附在末尾：{url}",
   "inviteFriendsShare": "分享",
+  "inviteFriendsShareFailed": "无法打开分享。请再试一次。",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

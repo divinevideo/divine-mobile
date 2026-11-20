@@ -6447,6 +6447,7 @@
   "inviteFriendsDefaultMessage": "Ik maak loops op Divine. Je kunt reageren en met me samenwerken!",
   "inviteFriendsLinkNote": "Je link wordt aan het eind toegevoegd: {url}",
   "inviteFriendsShare": "Delen",
+  "inviteFriendsShareFailed": "Delen kon niet worden geopend. Probeer het opnieuw.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

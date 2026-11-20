@@ -16591,6 +16591,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get inviteFriendsShare => 'I-share';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Hindi ma-open ang share. Subukan ulit.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

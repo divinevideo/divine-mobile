@@ -16826,6 +16826,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inviteFriendsShare => 'భాగస్వామ్యం చేయండి';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'షేరింగ్‌ను తెరవలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

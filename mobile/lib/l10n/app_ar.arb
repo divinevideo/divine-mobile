@@ -6447,6 +6447,7 @@
   "inviteFriendsDefaultMessage": "أصنع مقاطع على Divine. يمكنك التفاعل والتعاون معي!",
   "inviteFriendsLinkNote": "ستتم إضافة رابطك في النهاية: {url}",
   "inviteFriendsShare": "مشاركة",
+  "inviteFriendsShareFailed": "تعذّر فتح المشاركة. يُرجى المحاولة مرة أخرى.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

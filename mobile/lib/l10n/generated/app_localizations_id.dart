@@ -16335,6 +16335,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get inviteFriendsShare => 'Bagikan';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Gagal membuka menu bagikan. Coba lagi.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

@@ -16533,6 +16533,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get inviteFriendsShare => 'Delen';
 
   @override
+  String get inviteFriendsShareFailed =>
+      'Delen kon niet worden geopend. Probeer het opnieuw.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

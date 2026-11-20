@@ -15685,6 +15685,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inviteFriendsShare => 'シェア';
 
   @override
+  String get inviteFriendsShareFailed => '共有を開けませんでした。もう一度お試しください。';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 
