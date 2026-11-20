@@ -277,9 +277,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     if (!TickerMode.valuesOf(context).enabled) _stopHiddenScrollActivities();
   }
 
-  /// Muting tickers does not end a nested ballistic activity: it can still
-  /// recalculate during layout while a completed load replaces the inner
-  /// scrollable. End that momentum before a hidden tab loses its dimensions.
+  /// Muting tickers freezes a nested fling rather than ending it: on return it
+  /// jumps to its end, and if the outer scroll range changes meanwhile, it
+  /// re-plans from an inner scrollable a finished load just swapped in, which
+  /// has no extents yet. End that momentum as soon as the profile is hidden.
   void _stopHiddenScrollActivities() {
     final nested = _nestedScrollKey.currentState;
     if (nested == null) return;
