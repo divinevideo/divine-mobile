@@ -84,6 +84,10 @@ enum DivineIconName {
   cropSquare('crop_square'),
   cropPortrait('crop_portrait'),
 
+  /// Crop marks with a turning arrow: the Transform tool, which crops,
+  /// rotates, and flips a clip or a frame.
+  cropRotate('crop_rotate'),
+
   /// An outline crosshair: following a point, as the video editor's Track
   /// action pins a layer to a moving object.
   crosshair('crosshair'),

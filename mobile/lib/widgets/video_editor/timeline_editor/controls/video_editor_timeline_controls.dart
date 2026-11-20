@@ -458,7 +458,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
           ),
         if (onTransform != null)
           TimelineActionButton(
-            icon: .cropSquare,
+            icon: .cropRotate,
             label: context.l10n.videoEditorTransformLabel,
             semanticLabel:
                 transformSemanticLabel ??
