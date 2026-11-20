@@ -114,6 +114,16 @@ struct PostActivityCompactLeadingView: View {
     }
 }
 
+/// How far a count fades when the server has stopped checking in, shared by
+/// the compact island, the Lock Screen and the expanded island.
+enum PostActivityOpacity {
+    static let stale: Double = 0.5
+
+    static func counts(for display: PostActivityDisplay) -> Double {
+        display.showsUpdatedAt ? stale : 1
+    }
+}
+
 /// The compact island's single count. Dimmed, and said to be old, when the
 /// server has stopped checking in, so a frozen number never reads as current.
 struct PostActivityCompactTrailingView: View {
@@ -126,7 +136,7 @@ struct PostActivityCompactTrailingView: View {
             PostActivityCountLabel(count: count)
                 .font(PostActivityFonts.compactCount)
                 .foregroundStyle(PostActivityColors.green)
-                .opacity(display.showsUpdatedAt ? 0.5 : 1)
+                .opacity(PostActivityOpacity.counts(for: display))
                 .frame(maxWidth: 52)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(
@@ -248,6 +258,7 @@ struct PostActivityDetailLine: View {
                 }
             }
             .font(PostActivityFonts.detail)
+            .opacity(PostActivityOpacity.counts(for: display))
         } else if display.showsFirstRunNote {
             Text(LocalizedStringKey(PostActivityStrings.firstRunNote), bundle: bundle)
                 .font(PostActivityFonts.caption)

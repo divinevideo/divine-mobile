@@ -65,6 +65,20 @@ final class PostActivityViewsTests: XCTestCase {
         return renderer.uiImage
     }
 
+    // SwiftUI opacity is not inspectable from a rendered ImageRenderer view, so
+    // these pin the shared helper the count views apply.
+    func testLockScreenCountsDimWhenStale() {
+        let stale = PostActivityDisplay.make(state: state(.live, views: 48, likes: 9, comments: 2), isStale: true)
+        XCTAssertTrue(stale.showsUpdatedAt)
+        XCTAssertEqual(PostActivityOpacity.counts(for: stale), PostActivityOpacity.stale)
+        XCTAssertLessThan(PostActivityOpacity.counts(for: stale), 1)
+    }
+
+    func testLockScreenCountsFullWhenFresh() {
+        let fresh = PostActivityDisplay.make(state: state(.live, views: 48, likes: 9, comments: 2), isStale: false)
+        XCTAssertEqual(PostActivityOpacity.counts(for: fresh), 1)
+    }
+
     func testLockScreenRendersEveryHeadlineInDarkAndLight() throws {
         for (headline, state) in statesByHeadline {
             XCTAssertEqual(PostActivityDisplay.make(state: state, isStale: false).headline, headline)
