@@ -1380,7 +1380,6 @@ void main() {
           await tester.pump();
           await tester.pump();
           expect(find.byType(NestedScrollView), findsNothing);
-          expect(controller.position.isScrollingNotifier.value, isFalse);
           await tester.pumpWidget(
             buildSubject(
               isOwnProfile: isOwnProfile,
@@ -1389,6 +1388,7 @@ void main() {
             ),
           );
           expect(tester.takeException(), isNull);
+          expect(controller.position.isScrollingNotifier.value, isFalse);
           navigator.pop();
           await tester.pump();
           expect(tester.takeException(), isNull);
