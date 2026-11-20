@@ -346,14 +346,15 @@ class VideoSharingService {
     return results;
   }
 
-  /// Generate external share URL from a [VideoEvent.stableId].
+  /// External share URL for a video known only by its real `d` tag.
   ///
-  /// Callers that hold a hydrated event should use [generateShareUrl]. This
-  /// exists for the post-publish confirmation, which knows the freshly
-  /// published video only by its `d` tag — seconds after publish the event
-  /// is often not yet resolvable from Funnelcake or any relay.
-  ///
-  /// The NIP-19 address includes [authorPubkey], [kind] and the real `d` tag.
+  /// Callers that hold a hydrated event should use [generateShareUrl]: a
+  /// [VideoEvent.stableId] can be the event-id fallback, which this would
+  /// encode as a `d` tag. This exists for the post-publish confirmation, which
+  /// knows the freshly published video only by its `d` tag — seconds after
+  /// publish the event is often not yet resolvable from Funnelcake or any
+  /// relay. Without a hex [authorPubkey] the link falls back to the legacy
+  /// `/video/<d tag>` shape; see [divineVideoShareUrl].
   static String shareUrlForStableId(
     String stableId, {
     required int kind,
@@ -363,11 +364,12 @@ class VideoSharingService {
   /// Generate external share URL for the video.
   ///
   /// Addressable videos use `naddr`; regular events and videos without a
-  /// real `d` tag use `nevent`. Both stay clickable in ordinary browsers.
+  /// real `d` tag use `nevent`.
   String generateShareUrl(VideoEvent video) =>
       divineVideoShareUrlForEvent(video);
 
-  /// Shorten only explicit external shares; protocol and DM builders stay canonical.
+  /// Shortens [url] for a link that leaves the app; message bodies and
+  /// protocol payloads stay canonical.
   Future<String> shortenExternalUrl(String url) =>
       _shortLinkClient?.shorten(url) ?? Future.value(url);
 
