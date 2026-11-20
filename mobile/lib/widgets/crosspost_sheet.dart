@@ -64,14 +64,10 @@ Future<void> showCrosspostSheetForEvent({
             onSubmit: () {
               if (submitted) return;
               submitted = true;
-              final state = sheetContext.read<VideoCrosspostCubit>().state;
-              final selected = [
-                for (final connection in state.connectedConnections)
-                  if (state.selectedPlatforms.contains(
-                    connection.platform.wireName,
-                  ))
-                    connection,
-              ];
+              final selected = sheetContext
+                  .read<VideoCrosspostCubit>()
+                  .state
+                  .selectedConnections;
               navigator.pop();
               messenger.showSnackBar(
                 SnackBar(content: Text(l10n.crosspostStarted)),
