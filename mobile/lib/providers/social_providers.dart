@@ -959,7 +959,8 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => DmVideoStore.deleteOwner(userPubkey),
           );
           // The decrypted parts of Together rooms, other people's videos
-          // included, go with the account as its video DMs do.
+          // included, go with the account too. Unlike the video DMs, no
+          // launch sweep follows up: a delete that fails is not retried.
           await safeCleanup(
             'keptCollabRoomParts',
             () => CollabRoomService.deleteOwnerFiles(
