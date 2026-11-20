@@ -97,7 +97,7 @@ class CollabRoomService {
   ///
   /// Throws an [ArgumentError] when [invitees] is empty, too long, repeats
   /// someone or includes the account itself, and a [CollabRoomException]
-  /// when no invite could be sent or queued for retry.
+  /// when no invite reached a relay.
   Future<String> createRoom(List<String> invitees) async {
     final owner = ownerPubkey;
     final unique = invitees.toSet();
@@ -122,14 +122,15 @@ class CollabRoomService {
           ),
       ],
     );
-    final delivered = await _sendToEach(
+    final sent = await _sendToEach(
       recipients: invitees,
       roomId: roomId,
       type: CollabRoomMessageType.invite,
       snapshot: snapshot,
       content: _l10n.collabRoomInviteDmBody,
     );
-    if (delivered == 0) {
+    if (sent.confirmed == 0) {
+      await _withdraw(sent.queued);
       throw const CollabRoomException('No invite could be delivered');
     }
     return roomId;
@@ -139,8 +140,7 @@ class CollabRoomService {
   /// [snapshot], which lists them as invited again: they get a fresh invite,
   /// everyone else still in the room the update.
   ///
-  /// Throws a [CollabRoomException] when the invite could not be sent or
-  /// queued for retry.
+  /// Throws a [CollabRoomException] when the invite reached no relay.
   Future<void> reinvite(
     CollabRoom room,
     String pubkey,
@@ -154,7 +154,8 @@ class CollabRoomService {
       snapshot: snapshot,
       content: _l10n.collabRoomInviteDmBody,
     );
-    if (invited == 0) {
+    if (invited.confirmed == 0) {
+      await _withdraw(invited.queued);
       throw const CollabRoomException('The invite could not be delivered');
     }
     sent();
@@ -196,14 +197,15 @@ class CollabRoomService {
     String content,
   ) async {
     if (room.isAuthor) throw StateError('The author does not answer a room');
-    final delivered = await _sendToEach(
+    final sent = await _sendToEach(
       recipients: [room.authorPubkey],
       roomId: room.id,
       type: type,
       content: content,
       inviteRevision: room.me?.inviteRevision,
     );
-    if (delivered == 0) {
+    if (sent.confirmed == 0) {
+      await _withdraw(sent.queued);
       throw CollabRoomException('The ${type.name} could not be delivered');
     }
   }
@@ -212,8 +214,8 @@ class CollabRoomService {
   /// the room, and anyone the snapshot takes out of it, once — or, with
   /// nobody left in the room, everyone it ever had.
   ///
-  /// Throws a [CollabRoomException] if a recipient's update could not be
-  /// sent or queued for retry.
+  /// Throws a [CollabRoomException] if the update reached no relay, or a
+  /// recipient's update could not be sent or queued for retry.
   Future<void> publish(
     CollabRoom room,
     CollabRoomSnapshot snapshot,
@@ -247,15 +249,23 @@ class CollabRoomService {
         .where((person) => !alreadyNotified.contains(person))
         .toList();
     if (recipients.isEmpty) return;
-    final delivered = await _sendToEach(
+    final result = await _sendToEach(
       recipients: recipients,
       roomId: room.id,
       type: CollabRoomMessageType.state,
       snapshot: snapshot,
       content: _stateText(room.snapshot, snapshot),
     );
-    if (delivered > 0) sent();
-    if (delivered != recipients.length) {
+    // A posted room's update may wait in the queue: the post went out, and
+    // nothing builds on the update. Any other update the author's device
+    // cannot read back until it is out, so one that reached no relay at all
+    // is taken back rather than left to arrive after a newer one.
+    if (result.confirmed == 0 && snapshot.phase != CollabRoomPhase.posted) {
+      await _withdraw(result.queued);
+      throw const CollabRoomException('No room update could be sent');
+    }
+    if (result.confirmed > 0) sent();
+    if (result.confirmed + result.queued.length != recipients.length) {
       throw const CollabRoomException('Some room updates could not be sent');
     }
   });
@@ -511,14 +521,12 @@ class CollabRoomService {
     return Directory(p.join(root.path, 'collab_rooms', owner, roomId));
   }
 
-  /// Sends the room message to each of [recipients] and returns how many
-  /// took it.
+  /// Sends the room message to each of [recipients]: returns how many a
+  /// relay confirmed, and the rumors of those only queued for a retry.
   ///
-  /// A message queued for retry counts as taken: the device keeps it, reads
-  /// the room back from it at once, and sends it once the relays are back.
-  /// Reporting it as failed would let someone try again and make a second
-  /// room, or a second answer, that the queue then delivers as well.
-  Future<int> _sendToEach({
+  /// The device reads a room back only from confirmed messages; a queued one
+  /// goes out, and shows, once the relays are back.
+  Future<({int confirmed, List<String> queued})> _sendToEach({
     required List<String> recipients,
     required String roomId,
     required CollabRoomMessageType type,
@@ -531,7 +539,8 @@ class CollabRoomService {
     }
     final owner = ownerPubkey;
     final backgroundDelivery = snapshot?.phase == CollabRoomPhase.posted;
-    var delivered = 0;
+    var confirmed = 0;
+    final queued = <String>[];
     for (final recipient in recipients) {
       if (ownerPubkey != owner) {
         throw const CollabRoomException('The account changed while sending');
@@ -549,8 +558,21 @@ class CollabRoomService {
         skipNip04Fallback: true,
         backgroundDelivery: backgroundDelivery,
       );
-      if (result.success || result.queuedRumorId != null) delivered++;
+      if (result.success) {
+        confirmed++;
+      } else if (result.queuedRumorId case final rumorId?) {
+        queued.add(rumorId);
+      }
     }
-    return delivered;
+    return (confirmed: confirmed, queued: queued);
+  }
+
+  /// Takes back [queued] messages of a send none of whose messages reached a
+  /// relay. The user is told it failed, so the retry queue must not deliver
+  /// them later, beside the ones a second try sends.
+  Future<void> _withdraw(List<String> queued) async {
+    for (final rumorId in queued) {
+      await _dm.cancelOutgoingSend(rumorId: rumorId);
+    }
   }
 }

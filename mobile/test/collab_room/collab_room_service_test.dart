@@ -105,6 +105,9 @@ void main() {
       when(() => dm.userPubkey).thenAnswer((_) => owner);
       when(dm.watchCollabRoomMessages).thenAnswer((_) => history.stream);
       when(
+        () => dm.cancelOutgoingSend(rumorId: any(named: 'rumorId')),
+      ).thenAnswer((_) async => true);
+      when(
         () => dm.sendMessage(
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
@@ -243,9 +246,10 @@ void main() {
         );
       });
 
-      test('creates the room when the invite is queued for retry', () async {
-        // Offline, the invite waits in the queue and goes out later: the
-        // room exists, and a second try would make a second one.
+      test('takes back an invite that only waits in the queue', () async {
+        // The device reads the room back only from a message a relay took,
+        // and the user is told it failed: the queue must not deliver it
+        // later, beside the invite a second try sends.
         when(
           () => dm.sendMessage(
             recipientPubkey: any(named: 'recipientPubkey'),
@@ -262,10 +266,36 @@ void main() {
           ),
         );
 
-        final roomId = await service().createRoom([_sam]);
+        await expectLater(
+          service().createRoom([_sam]),
+          throwsA(isA<CollabRoomException>()),
+        );
+        verify(() => dm.cancelOutgoingSend(rumorId: 'queued')).called(1);
+      });
+
+      test('keeps a room that reached someone, queue and all', () async {
+        when(
+          () => dm.sendMessage(
+            recipientPubkey: _kai,
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            backgroundDelivery: any(named: 'backgroundDelivery'),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult.failure(
+            'offline',
+            retryablePending: true,
+            queuedRumorId: 'queued',
+          ),
+        );
+
+        final roomId = await service().createRoom([_sam, _kai]);
 
         expect(roomId, isNotEmpty);
-        expect(sentMessages(), hasLength(1));
+        verifyNever(
+          () => dm.cancelOutgoingSend(rumorId: any(named: 'rumorId')),
+        );
       });
     });
 
@@ -321,7 +351,7 @@ void main() {
         );
       });
 
-      test('counts an answer queued for retry as sent', () async {
+      test('takes back an answer that only waits in the queue', () async {
         when(
           () => dm.sendMessage(
             recipientPubkey: any(named: 'recipientPubkey'),
@@ -338,7 +368,11 @@ void main() {
           ),
         );
 
-        await expectLater(service().join(room), completes);
+        await expectLater(
+          service().join(room),
+          throwsA(isA<CollabRoomException>()),
+        );
+        verify(() => dm.cancelOutgoingSend(rumorId: 'queued')).called(1);
       });
 
       test('refuses an answer from the author', () async {
@@ -461,6 +495,52 @@ void main() {
         );
       });
 
+      test(
+        'takes back an update that only waits in the queue, so the next one '
+        'still goes out',
+        () async {
+          final roomService = service();
+          when(
+            () => dm.sendMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+              backgroundDelivery: any(named: 'backgroundDelivery'),
+            ),
+          ).thenAnswer(
+            (_) async => const NIP17SendResult.failure(
+              'offline',
+              retryablePending: true,
+              queuedRumorId: 'queued',
+            ),
+          );
+
+          await expectLater(
+            roomService.publish(room, room.toSnapshot(revision: 1)),
+            throwsA(isA<CollabRoomException>()),
+          );
+          verify(() => dm.cancelOutgoingSend(rumorId: 'queued')).called(1);
+
+          when(
+            () => dm.sendMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+              backgroundDelivery: any(named: 'backgroundDelivery'),
+            ),
+          ).thenAnswer(
+            (invocation) async =>
+                _sent(invocation.namedArguments[#recipientPubkey] as String),
+          );
+          await expectLater(
+            roomService.publish(room, room.toSnapshot(revision: 1)),
+            completes,
+          );
+        },
+      );
+
       test('rejects a concurrent update built on an older snapshot', () async {
         final roomService = service();
         final sending = Completer<void>();
@@ -575,6 +655,7 @@ void main() {
               samStatus: CollabRoomMemberStatus.joined,
             ),
           ),
+          _message(from: _sam, to: _author, type: CollabRoomMessageType.join),
         ]))!;
         stubUpload();
         when(
