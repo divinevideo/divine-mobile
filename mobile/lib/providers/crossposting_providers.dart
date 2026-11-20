@@ -1,5 +1,5 @@
 // ABOUTME: Riverpod dependency wiring for crossposting settings
-// ABOUTME: Owns the API client lifecycle and repository construction
+// ABOUTME: Owns the API client, repository and background crosspost queue
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/video_crosspost/crosspost_submission_queue.dart';
@@ -139,8 +139,12 @@ final crosspostingRepositoryProvider = Provider<CrosspostingRepository>((ref) {
   return CrosspostingRepository(ref.watch(crosspostingApiClientProvider));
 });
 
-/// Owns work independently of modal routes. The repository changes with the
-/// signing account, cancelling the previous account's pending retries.
+/// Holds crosspost submissions after the sheet closes, one per account.
+///
+/// Signing out rebuilds this provider and an account switch disposes its
+/// container; either closes the old queue, cancelling its retries and
+/// polling. A rebuild happens only while the provider is listened to, so
+/// callers listen for the length of a submission.
 final crosspostSubmissionQueueProvider = Provider<CrosspostSubmissionQueue>((
   ref,
 ) {

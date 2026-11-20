@@ -1,5 +1,5 @@
 // ABOUTME: Owns crosspost submissions after their platform picker closes.
-// ABOUTME: Tracks jobs without holding a modal and cancels on account changes.
+// ABOUTME: Polls jobs without a modal; close() cancels retries and polling.
 
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
@@ -16,8 +16,9 @@ class CrosspostSubmissionQueue {
   final _pending = <VideoCrosspostCubit>{};
   bool _closed = false;
 
-  /// Captures the selected connections and submits without retaining a widget.
-  /// A null result means the owning account or provider scope was disposed.
+  /// Submits to the connected [connections] without retaining a widget.
+  ///
+  /// Returns the last state, or null when [close] ran first.
   Future<VideoCrosspostState?> submit({
     required String eventId,
     required List<CrosspostingConnection> connections,
@@ -55,10 +56,8 @@ class CrosspostSubmissionQueue {
       return result;
     } finally {
       _pending.remove(cubit);
-      // Release timers when jobs finish, polling times out, or the owning
-      // account goes away. Server-side jobs survive client cancellation.
-      // Closing drains queued state events before cancelling the listener,
-      // including an immediately rejected submission's final failure.
+      // Awaiting close delivers the last states, such as an immediate submit
+      // failure, to onUpdate before the listener is cancelled.
       await cubit.close();
       await updates?.cancel();
     }
@@ -104,6 +103,7 @@ class CrosspostSubmissionQueue {
 
   static const _logName = 'CrosspostSubmissionQueue';
 
+  /// Cancels pending retries and polling; server-side jobs keep running.
   Future<void> close() async {
     _closed = true;
     await Future.wait([for (final cubit in _pending) cubit.close()]);

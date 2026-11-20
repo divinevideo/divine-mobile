@@ -97,7 +97,7 @@ class CrosspostingRepository {
 
       final retryReady = Completer<void>();
       // Poll the explicit source-not-found condition rather than delaying all
-      // posts. The sheet owns cancellation, including its time between retries.
+      // posts. [cancelled] also ends the wait between retries.
       final timer = Timer(const Duration(seconds: 2), retryReady.complete);
       try {
         await Future.any([retryReady.future, cancelled]);

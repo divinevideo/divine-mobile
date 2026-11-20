@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for manually crossposting an own video
-// ABOUTME: Confirms selected platforms and hands submissions to an account owner
+// ABOUTME: Picks platforms, then hands off to CrosspostSubmissionQueue
 
 import 'dart:async';
 
@@ -36,6 +36,9 @@ Future<void> showCrosspostSheet({
 ///
 /// For callers that hold the event id but no [VideoEvent] yet, such as the
 /// post-publish confirmation while the event is still propagating.
+///
+/// Completes when the picker closes; the submission continues in
+/// [crosspostSubmissionQueueProvider].
 Future<void> showCrosspostSheetForEvent({
   required BuildContext context,
   required ProviderContainer container,
@@ -43,10 +46,10 @@ Future<void> showCrosspostSheetForEvent({
   required List<CrosspostingConnection> connections,
 }) {
   final repository = container.read(crosspostingRepositoryProvider);
+  // Captured while the opener is mounted: it may be gone when Crosspost is
+  // tapped. The sheet opens on the root navigator, so pop that one.
   final messenger = ScaffoldMessenger.of(context);
   final l10n = context.l10n;
-  // Resolved while the opener is mounted: it may be gone by the time the
-  // reconnect button is tapped, and Navigator.of on a defunct element throws.
   final navigator = Navigator.of(context, rootNavigator: true);
   return VineBottomSheet.show<void>(
     context: context,
@@ -134,7 +137,7 @@ Future<void> _submitInBackground({
     if (failures.isNotEmpty) showFailure(failures.join('\n'));
   }
 
-  // Keep account-change dependencies active after the modal is gone.
+  // Listen for the whole submission so an account change still cancels it.
   final subscription = container.listen(
     crosspostSubmissionQueueProvider,
     (_, _) {},
@@ -190,6 +193,7 @@ class CrosspostSheetView extends StatelessWidget {
   @visibleForTesting
   const CrosspostSheetView({this.onReconnect, this.onSubmit, super.key});
 
+  /// Replaces the sheet's own submit; the job view renders only when null.
   final VoidCallback? onSubmit;
 
   final VoidCallback? onReconnect;

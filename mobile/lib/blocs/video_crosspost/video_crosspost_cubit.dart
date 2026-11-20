@@ -80,8 +80,8 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
     emit(state.copyWith(selectedPlatforms: selected));
   }
 
-  /// Fire the crosspost request, then poll until every job reaches a
-  /// terminal state. Safe to call again after a failure.
+  /// Fires the crosspost request and starts polling; returns before polling
+  /// ends. Safe to call again after a failure.
   Future<void> submit() async {
     if (isClosed ||
         (state.status != VideoCrosspostStatus.ready &&
