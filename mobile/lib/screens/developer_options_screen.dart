@@ -1,5 +1,5 @@
 // ABOUTME: Developer options screen for switching between environments
-// ABOUTME: Allows switching relay URLs (POC, Staging, Test, Production)
+// ABOUTME: Offers Production plus the build's own DEFAULT_ENV environment
 // ABOUTME: Shows page load performance timing data for debugging
 // ABOUTME: Includes video format selector for A/B testing server-side formats
 
@@ -143,12 +143,9 @@ class _DeveloperOptionsScreenState
       currentMinorAccountReviewStatusProvider,
     );
 
-    // All available environment configurations
-    const environments = [
-      EnvironmentConfig.production,
-      EnvironmentConfig(environment: AppEnvironment.staging),
-      EnvironmentConfig(environment: AppEnvironment.poc),
-    ];
+    final environments = selectableEnvironments(
+      current: currentConfig.environment,
+    );
 
     final pageLoadHistory = ref.read(pageLoadHistoryProvider);
     final recentRecords = pageLoadHistory.getRecent(10);

@@ -70,6 +70,26 @@ AppEnvironment get buildTimeDefaultEnvironment {
 /// Available app environments
 enum AppEnvironment { poc, staging, production, local }
 
+/// Environments the developer options offer to switch between.
+///
+/// Staging and POC no longer run, so Production is the only fixed entry. A
+/// build that defaults to another environment (`DEFAULT_ENV`) offers that one
+/// too, and the active environment stays listed so it shows as selected.
+List<EnvironmentConfig> selectableEnvironments({
+  required AppEnvironment current,
+  AppEnvironment? buildDefault,
+}) {
+  final offered = {
+    AppEnvironment.production,
+    buildDefault ?? buildTimeDefaultEnvironment,
+    current,
+  };
+  return [
+    for (final environment in offered)
+      EnvironmentConfig(environment: environment),
+  ];
+}
+
 /// Configuration for the current app environment
 @immutable
 class EnvironmentConfig {
