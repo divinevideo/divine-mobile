@@ -264,6 +264,52 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('closes the sheet, not the page under it, from a tab', (
+      tester,
+    ) async {
+      response = Completer<List<CrosspostJob>>();
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              // A tab keeps its own navigator; the sheet opens above it on
+              // the root navigator.
+              body: Navigator(
+                onGenerateInitialRoutes: (_, _) => [
+                  MaterialPageRoute<void>(
+                    builder: (_) => const Text('Tab root'),
+                  ),
+                  MaterialPageRoute<void>(
+                    builder: (context) => TextButton(
+                      onPressed: () => showCrosspostSheetForEvent(
+                        context: context,
+                        container: container,
+                        eventId: eventId,
+                        connections: [connection],
+                      ),
+                      child: const Text('Open crosspost'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open crosspost'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.crosspostSubmit));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CrosspostSheetView), findsNothing);
+      expect(find.text('Open crosspost'), findsOneWidget);
+      response.complete(const []);
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('reports a background submission failure after dismissal', (
       tester,
     ) async {
