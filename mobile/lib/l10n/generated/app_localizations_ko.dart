@@ -15681,12 +15681,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get creatorHighlightAnalytics => '내 통계 보기';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends in';
+  String get creatorHighlightInvite => 'Bring your friends';
 
   @override
-  String creatorHighlightInviteMessage(String url) {
-    return 'Come make loops with me on Divine. React, comment, and collab with me in the app: $url';
+  String get inviteFriendsTitle => 'Bring your friends';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Your message';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'I\'m making loops on Divine. You can react and collaborate with me!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Your link is added at the end: $url';
   }
+
+  @override
+  String get inviteFriendsShare => 'Share';
 
   @override
   String get messagesPublicRoomsDisclosure =>

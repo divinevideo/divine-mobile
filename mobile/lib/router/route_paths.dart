@@ -58,6 +58,7 @@ abstract final class RoutePaths {
   static const generalSettings = '/general-settings';
   static const hashtagBase = '/hashtag';
   static const inbox = '/inbox';
+  static const inviteFriends = '/invite-friends';
   static const keyImport = '/import-key';
   static const keyManagement = '/key-management';
   static const legal = '/legal';

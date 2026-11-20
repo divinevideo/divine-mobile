@@ -27441,17 +27441,41 @@ abstract class AppLocalizations {
   /// **'See your stats'**
   String get creatorHighlightAnalytics;
 
-  /// Action on the daily creator highlight in Inbox, shown on days the creator posted. Opens the system share sheet to invite friends to download Divine.
+  /// Action on the daily creator highlight in Inbox, shown on days the creator posted. Opens a page where the creator edits an invite message and shares it with the Divine download link.
   ///
   /// In en, this message translates to:
-  /// **'Bring your friends in'**
+  /// **'Bring your friends'**
   String get creatorHighlightInvite;
 
-  /// Message the creator sends a friend from the highlight's invite action. {url} is the Divine download link; keep it at the end and unchanged.
+  /// Title of the page, opened from the daily creator highlight, where the creator edits an invite message before sharing it.
   ///
   /// In en, this message translates to:
-  /// **'Come make loops with me on Divine. React, comment, and collab with me in the app: {url}'**
-  String creatorHighlightInviteMessage(String url);
+  /// **'Bring your friends'**
+  String get inviteFriendsTitle;
+
+  /// Label of the editable invite message field on the invite page.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message'**
+  String get inviteFriendsMessageLabel;
+
+  /// Default, editable invite message a creator sends a friend. The download link is added after it on its own line.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m making loops on Divine. You can react and collaborate with me!'**
+  String get inviteFriendsDefaultMessage;
+
+  /// Note under the invite message explaining that the Divine download link is always appended. {url} is the link; keep it unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your link is added at the end: {url}'**
+  String inviteFriendsLinkNote(String url);
+
+  /// Button on the invite page that opens the system share sheet with the message and link.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get inviteFriendsShare;
 
   /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
   ///

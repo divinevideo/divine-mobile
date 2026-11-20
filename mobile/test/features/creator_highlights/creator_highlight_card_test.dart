@@ -1,8 +1,6 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight_card.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -29,8 +27,6 @@ final _card = CreatorHighlight(
     title: 'A tiny dance',
   ),
 );
-
-const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
 
 final _invitingCard = CreatorHighlight(
   owner: _card.owner,
@@ -86,6 +82,7 @@ void main() {
                     onPresented: () => presented++,
                     onAnalytics: () {},
                     onWatch: () {},
+                    onInvite: () {},
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 3000)),
@@ -135,6 +132,7 @@ void main() {
               onPresented: () => presented++,
               onAnalytics: () => analytics++,
               onWatch: () => watched++,
+              onInvite: () {},
             ),
           ),
         ),
@@ -171,25 +169,13 @@ void main() {
   });
 
   group('invite', () {
-    late List<Map<Object?, Object?>> shareCalls;
     late int analyticsTaps;
+    late int inviteTaps;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
-      shareCalls = [];
       analyticsTaps = 0;
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(_shareChannel, (call) async {
-            if (call.method == 'share') {
-              shareCalls.add(call.arguments as Map<Object?, Object?>);
-            }
-            return 'com.apple.UIKit.activity.CopyToPasteboard';
-          });
-    });
-
-    tearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(_shareChannel, null);
+      inviteTaps = 0;
     });
 
     Future<void> pumpCard(WidgetTester tester, {required bool showInvite}) =>
@@ -204,6 +190,7 @@ void main() {
                 onPresented: () {},
                 onAnalytics: () => analyticsTaps++,
                 onWatch: () {},
+                onInvite: () => inviteTaps++,
               ),
             ),
           ),
@@ -222,20 +209,29 @@ void main() {
       expect(find.text(l10n.creatorHighlightInvite), findsNothing);
     });
 
-    testWidgets(
-      'tapping the invite row shares the download link and does not open stats',
-      (tester) async {
-        await pumpCard(tester, showInvite: true);
-        await tester.tap(find.text(l10n.creatorHighlightInvite));
-        await tester.pumpAndSettle();
-        expect(shareCalls, hasLength(1));
-        expect(
-          shareCalls.single['text'],
-          l10n.creatorHighlightInviteMessage(AppConstants.downloadUrl),
-        );
-        expect(analyticsTaps, 0);
-      },
-    );
+    testWidgets('tapping the invite row invites and does not open stats', (
+      tester,
+    ) async {
+      await pumpCard(tester, showInvite: true);
+      await tester.tap(find.text(l10n.creatorHighlightInvite));
+      await tester.pumpAndSettle();
+      expect(inviteTaps, 1);
+      expect(analyticsTaps, 0);
+    });
+
+    testWidgets('both links share a line when they fit', (tester) async {
+      await pumpCard(tester, showInvite: true);
+      expect(
+        tester.getCenter(find.text(l10n.creatorHighlightInvite)).dy,
+        tester.getCenter(find.text(l10n.creatorHighlightAnalytics)).dy,
+      );
+      expect(
+        tester.getTopLeft(find.text(l10n.creatorHighlightInvite)).dx,
+        greaterThan(
+          tester.getTopRight(find.text(l10n.creatorHighlightAnalytics)).dx,
+        ),
+      );
+    });
 
     testWidgets('the card does not announce the invite a second time', (
       tester,
@@ -279,6 +275,7 @@ void main() {
             onPresented: () {},
             onAnalytics: () {},
             onWatch: () {},
+            onInvite: () {},
           ),
         ),
       ),
@@ -350,6 +347,7 @@ void main() {
             onPresented: () => presented++,
             onAnalytics: () {},
             onWatch: () {},
+            onInvite: () {},
           ),
         ),
       );
@@ -394,6 +392,7 @@ void main() {
                           onPresented: () {},
                           onAnalytics: () {},
                           onWatch: () {},
+                          onInvite: () {},
                         ),
                       ),
                     ),

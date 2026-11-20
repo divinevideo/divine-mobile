@@ -3,13 +3,9 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/share_sheet.dart';
-import 'package:unified_logger/unified_logger.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class CreatorHighlightCard extends StatefulWidget {
@@ -19,6 +15,7 @@ class CreatorHighlightCard extends StatefulWidget {
     required this.onPresented,
     required this.onAnalytics,
     required this.onWatch,
+    required this.onInvite,
     super.key,
   });
 
@@ -27,6 +24,9 @@ class CreatorHighlightCard extends StatefulWidget {
   final VoidCallback onPresented;
   final VoidCallback onAnalytics;
   final VoidCallback onWatch;
+
+  /// Opens the invite page; only reachable when the highlight offers it.
+  final VoidCallback onInvite;
 
   @override
   State<CreatorHighlightCard> createState() => _CreatorHighlightCardState();
@@ -144,26 +144,34 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                           ],
                       ],
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 4,
+                    // Both links share a line, wrapping only when they don't fit.
+                    Wrap(
+                      spacing: 20,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Flexible(
-                          child: Text(
-                            l10n.creatorHighlightAnalytics,
-                            style: VineTheme.labelLargeFont(
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 4,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                l10n.creatorHighlightAnalytics,
+                                style: VineTheme.labelLargeFont(
+                                  color: colors.accentPositive,
+                                ),
+                              ),
+                            ),
+                            DivineIcon(
+                              icon: DivineIconName.arrowRight,
+                              size: 16,
                               color: colors.accentPositive,
                             ),
-                          ),
+                          ],
                         ),
-                        DivineIcon(
-                          icon: DivineIconName.arrowRight,
-                          size: 16,
-                          color: colors.accentPositive,
-                        ),
+                        if (card.showInvite)
+                          _InviteAction(onTap: widget.onInvite),
                       ],
                     ),
-                    if (card.showInvite) const _InviteAction(),
                   ],
                 ),
               ),
@@ -175,26 +183,13 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
   }
 }
 
-/// Invites friends to Divine through the share sheet.
+/// Opens the invite page.
 ///
-/// Its own tap target, so inviting never also opens stats, and it anchors the
-/// share sheet to itself on iPad.
+/// Its own tap target, so inviting never also opens stats.
 class _InviteAction extends StatelessWidget {
-  const _InviteAction();
+  const _InviteAction({required this.onTap});
 
-  void _share(BuildContext context) => runDetached(
-    showShareSheet(
-      context,
-      ShareParams(
-        text: context.l10n.creatorHighlightInviteMessage(
-          AppConstants.downloadUrl,
-        ),
-      ),
-    ),
-    'share creator highlight invite',
-    logName: 'CreatorHighlights',
-    category: LogCategory.ui,
-  );
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -204,10 +199,10 @@ class _InviteAction extends StatelessWidget {
       container: true,
       button: true,
       label: label,
-      onTap: () => _share(context),
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
-        onTap: () => _share(context),
+        onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Row(

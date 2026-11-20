@@ -615,7 +615,11 @@ void main() {
 const _knownUntranslatedDebt = <String>{
   // Highlight invite: English while the copy is tuned in the simulator.
   'creatorHighlightInvite',
-  'creatorHighlightInviteMessage',
+  'inviteFriendsDefaultMessage',
+  'inviteFriendsLinkNote',
+  'inviteFriendsMessageLabel',
+  'inviteFriendsShare',
+  'inviteFriendsTitle',
   // Library reaction shortcut; uses English until translated.
   'libraryRecordReaction',
   // Verify: renewing a sign-in link in place; translation debt.

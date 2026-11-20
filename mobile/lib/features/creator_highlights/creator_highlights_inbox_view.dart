@@ -180,6 +180,7 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
                     category: LogCategory.ui,
                   ),
                   onAnalytics: () => _open(const CreatorAnalyticsRouteData()),
+                  onInvite: () => _open(const InviteFriendsRouteData()),
                   onWatch: () {
                     final video = state.card?.topVideo;
                     if (video != null) {
