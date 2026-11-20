@@ -1,6 +1,6 @@
 // ABOUTME: Owns the edit-subtitles orchestration: generate VTT → upload to
-// ABOUTME: Blossom → publish 39307 subtitle event → republish the video with
-// ABOUTME: both the Blossom URL and the addressable event reference.
+// ABOUTME: Blossom → republish the video with the Blossom URL and the 39307
+// ABOUTME: address → publish the 39307 subtitle event at that address.
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -14,6 +14,7 @@ import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/utils/newest_video_revision.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 /// Thrown when an edited-subtitle publish cannot complete. Carries no PII.
@@ -30,8 +31,8 @@ class SubtitleEditException implements Exception {
 ///
 /// Responsibilities:
 /// - Loading existing cues from the shared fallback chain.
-/// - Generating VTT, uploading it to Blossom, publishing a 39307 subtitle
-///   event, and republishing the video event with both refs attached.
+/// - Generating VTT, uploading it to Blossom, republishing the video event
+///   with both refs attached, and publishing the 39307 subtitle event.
 ///
 /// Throws [SubtitleEditException] when any step fails.
 class SubtitleRepository {
@@ -81,15 +82,18 @@ class SubtitleRepository {
     );
   }
 
-  /// Generates VTT from [cues], uploads it to Blossom, publishes a 39307
-  /// subtitle event, then republishes the video referencing both.
+  /// Generates VTT from [cues], uploads it to Blossom, republishes the video
+  /// referencing the upload and its 39307 address, then publishes the 39307
+  /// subtitle event there.
   ///
   /// [lang] defaults to the language the subtitles are already tagged with,
   /// so an edit keeps it; untagged subtitles are published as English.
   ///
-  /// The newest revision of [video] is read before anything is uploaded: the
-  /// subtitle event replaces the captions the video serves from its fixed
-  /// address, so a save the video republish would refuse must stop first.
+  /// The 39307 address serves the captions of every revision of [video], so
+  /// it is replaced only after the video republish succeeds: a save that
+  /// fails leaves the published captions alone. If only that last publish
+  /// fails, the republished video is still returned; its Blossom track plays
+  /// the edit and the relay fallback keeps the previous captions.
   ///
   /// Throws:
   ///
@@ -99,7 +103,6 @@ class SubtitleRepository {
   /// * [SubtitleEditException] when the newest revision of [video] cannot be
   ///   read.
   /// * [SubtitleEditException] when the Blossom upload fails.
-  /// * [SubtitleEditException] when the subtitle event publish fails.
   /// * [SubtitleEditException] when the video republish fails.
   Future<VideoEvent> publishEditedSubtitles({
     required VideoEvent video,
@@ -136,24 +139,34 @@ class SubtitleRepository {
       throw SubtitleEditException('Subtitle upload to Blossom failed');
     }
 
-    final coordsRef = await _publisher.publishSubtitleEvent(
-      video: video,
-      vttContent: vtt,
-      blossomUrl: blossomUrl,
-      lang: trackLang,
-    );
-    if (coordsRef == null) {
-      throw SubtitleEditException('Subtitle event publish failed');
-    }
-
     final updatedVideo = await _publisher.republishWithSubtitles(
       existingEvent: video,
       textTrackRef: blossomUrl,
-      extraTextTrackRefs: [coordsRef],
+      extraTextTrackRefs: [
+        VideoEventPublisher.subtitleEventAddress(
+          pubkey: signedIn,
+          vineId: vineId,
+        ),
+      ],
       textTrackLang: trackLang,
     );
     if (updatedVideo == null) {
       throw SubtitleEditException('Video republish failed');
+    }
+
+    final published = await _publisher.publishSubtitleEvent(
+      video: updatedVideo,
+      vttContent: vtt,
+      blossomUrl: blossomUrl,
+      lang: trackLang,
+    );
+    if (published == null) {
+      Log.warning(
+        'Republished video ${updatedVideo.id} with edited subtitles, but '
+        'its 39307 subtitle event was not published',
+        name: 'SubtitleRepository',
+        category: LogCategory.video,
+      );
     }
     return updatedVideo;
   }

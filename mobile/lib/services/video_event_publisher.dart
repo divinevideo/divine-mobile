@@ -1284,7 +1284,7 @@ class VideoEventPublisher {
     final pubkey = _authService?.currentPublicKeyHex;
     if (pubkey == null || vineId.isEmpty) return null;
 
-    final dTag = 'subtitles:$vineId';
+    final dTag = _subtitleEventDTag(vineId);
     final parentKind =
         videoKind ?? NIP71VideoKinds.getPreferredAddressableKind();
 
@@ -1319,8 +1319,19 @@ class VideoEventPublisher {
       );
       return null;
     }
-    return '${NIP71VideoKinds.subtitleEventKind}:$pubkey:$dTag';
+    return subtitleEventAddress(pubkey: pubkey, vineId: vineId);
   }
+
+  /// The address of the Kind 39307 subtitle event [pubkey] publishes for the
+  /// video with [vineId], `39307:<pubkey>:subtitles:<vineId>`. One address
+  /// serves every language, so a video can name it before it is replaced.
+  static String subtitleEventAddress({
+    required String pubkey,
+    required String vineId,
+  }) =>
+      '${NIP71VideoKinds.subtitleEventKind}:$pubkey:${_subtitleEventDTag(vineId)}';
+
+  static String _subtitleEventDTag(String vineId) => 'subtitles:$vineId';
 
   void dispose() {
     Log.debug(
