@@ -8,6 +8,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 
@@ -526,6 +527,66 @@ void main() {
 
       expect(result.success, isFalse);
       expect(result.error, 'relay unavailable');
+    });
+  });
+
+  group('sendInvite video link', () {
+    Future<String> sentBody(
+      CollaboratorInviteService service,
+      String address,
+    ) async {
+      when(
+        () => dmRepository.sendMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          content: any(named: 'content'),
+          replyToId: any(named: 'replyToId'),
+          additionalTags: any(named: 'additionalTags'),
+          skipNip04Fallback: any(named: 'skipNip04Fallback'),
+        ),
+      ).thenAnswer(
+        (_) async => NIP17SendResult.success(
+          rumorEventId: 'rumor-id',
+          messageEventId: 'message-id',
+          recipientPubkey: collaboratorPubkey,
+        ),
+      );
+      await service.sendInvite(
+        collaboratorPubkey: collaboratorPubkey,
+        creatorPubkey: creatorPubkey,
+        videoAddress: address,
+        title: 'Wide shot',
+      );
+      return verify(
+            () => dmRepository.sendMessage(
+              recipientPubkey: collaboratorPubkey,
+              content: captureAny(named: 'content'),
+              replyToId: any(named: 'replyToId'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            ),
+          ).captured.single
+          as String;
+    }
+
+    test('names a kind 34235 video under its own kind', () async {
+      final body = await sentBody(service, '34235:$creatorPubkey:video-id');
+
+      final url = divineVideoUrlRegex.firstMatch(body)!.group(0)!;
+      final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;
+      expect(address.kind, 34235);
+      expect(address.id, 'video-id');
+    });
+
+    test('builds the link on a configured base', () async {
+      final staging = CollaboratorInviteService(
+        dmRepository: dmRepository,
+        videoLinkBase: 'https://staging.divine.video/video',
+      );
+
+      final body = await sentBody(staging, videoAddress);
+
+      expect(body, contains('https://staging.divine.video/video/naddr1'));
+      expect(body, isNot(contains('https://divine.video/video/')));
     });
   });
 
