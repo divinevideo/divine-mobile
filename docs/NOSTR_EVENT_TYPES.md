@@ -250,6 +250,12 @@ their own part of one split-screen video
 - Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
   Blossom sent to the author as a NIP-17 file message. The author forwards each
   part's URL and key to joined members while the room is open
+- The author is whoever sent the account its invite. Room ids are random, so
+  an honest room has one inviter; a room the account was invited to by two
+  people is dropped, since rumor timestamps are the senders' own to choose.
+  On a member's device the member counts as joined only once its own `join`
+  for the current invite revision is in its history, whatever the author's
+  snapshot says
 - Every device folds its own DM history into its rooms
   (`foldCollabRooms` in `dm_repository`); the author's device publishes a new
   snapshot whenever it knows more than its last one shows. With nobody left in
@@ -264,7 +270,8 @@ their own part of one split-screen video
   collaborator `p` tag, so the collaborator invite and kind 34238 acceptance
   run as for any other collaboration
 - The snapshot also carries the room's call key, a private key the author
-  generates. Joined members can opt into a peer-to-peer WebRTC call. Each
+  generates. Joined members are in a peer-to-peer WebRTC call while the room
+  is open on their screen; it joins on its own with the microphone on. Each
   signal is NIP-44 encrypted between the sender and recipient's accounts
   and bound to the room key's public key. A short-lived kind 1059 event wraps
   the encrypted signal and routing information using the room key, with

@@ -16,6 +16,8 @@ import 'package:openvine/collab_room/collab_room_service.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 
+import '../view/collab_room_test_fixtures.dart' show joinMessage;
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockBlocklist extends Mock implements ContentBlocklistRepository {}
@@ -62,6 +64,7 @@ final CollabRoom _room = foldCollabRooms([
       ),
     ),
   ),
+  joinMessage(from: _sam, to: _author, room: _roomId),
 ], ownerPubkey: _sam).single;
 
 void main() {

@@ -330,9 +330,30 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
     );
   }
 
-  /// Picks whose sound the video plays, as the author.
-  void soundPicked(String pubkey) {
+  /// Picks whose sound the video plays, as the author, and puts it in the
+  /// room, so the others see it and it survives the screen closing.
+  Future<void> soundPicked(String pubkey) async {
+    final room = state.room;
+    if (room == null ||
+        !room.isAuthor ||
+        room.phase != CollabRoomPhase.recording) {
+      return;
+    }
     emitIfOpen(state.copyWith(soundPubkey: pubkey));
+    // Another update going out would turn this one away: wait for it.
+    if (state.actionStatus == .busy) {
+      await stream.firstWhere(
+        (state) => state.actionStatus != .busy,
+        orElse: () => state,
+      );
+    }
+    final current = state.room;
+    if (isClosed || current == null || state.soundPubkey != pubkey) return;
+    await _publishNext(
+      .update,
+      current,
+      (revision) => current.toSnapshot(revision: revision, soundPubkey: pubkey),
+    );
   }
 
   /// Starts filming, as the author: fixes the layout and who fills which

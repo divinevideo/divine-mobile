@@ -328,9 +328,14 @@ class _LayoutPreview extends StatelessWidget {
                                       room.parts.containsKey(
                                         occupant(index)?.pubkey,
                                       )
-                                ? () => context
-                                      .read<CollabRoomCubit>()
-                                      .soundPicked(occupant(index)!.pubkey)
+                                ? () => runDetached(
+                                    context.read<CollabRoomCubit>().soundPicked(
+                                      occupant(index)!.pubkey,
+                                    ),
+                                    'pick the collab room sound',
+                                    logName: 'CollabRoomView',
+                                    category: LogCategory.video,
+                                  )
                                 : null,
                           ),
                         ),

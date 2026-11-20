@@ -638,8 +638,15 @@ class CollabRoom extends Equatable {
   /// `vertical` or `square`.
   String get aspectRatio => snapshot.aspectRatio;
 
-  /// Whose sound the posted video plays; the author's until they pick.
-  String get soundPubkey => snapshot.soundPubkey ?? authorPubkey;
+  /// Whose sound the posted video plays: the author's until they pick, and
+  /// again once the person picked is no longer in the room, whose part would
+  /// leave the video silent.
+  String get soundPubkey {
+    final picked = snapshot.soundPubkey;
+    return picked != null && participants.any((m) => m.pubkey == picked)
+        ? picked
+        : authorPubkey;
+  }
 
   /// The key the room's call runs on, or `null` for a room without a call.
   String? get callKey => snapshot.callKey;
@@ -754,16 +761,24 @@ CollabRoom? foldCollabRoom(
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   if (ordered.isEmpty) return null;
 
-  // An invite the account sent makes it the author. Otherwise the first
-  // person to invite it is: a later invite for the same id from someone else
-  // is ignored, so nobody can take over a room they did not create.
-  final invites = ordered
-      .where((m) => m.type == CollabRoomMessageType.invite)
-      .toList();
-  if (invites.isEmpty) return null;
-  final author = invites.any((m) => m.senderPubkey == ownerPubkey)
-      ? ownerPubkey
-      : invites.first.senderPubkey;
+  // An invite the account sent makes it the author. Otherwise exactly one
+  // person may have invited it: room ids are random, so an honest room never
+  // has a second inviter, and the timestamps that would pick between two are
+  // the senders' own to choose. A second inviter forged an invite for this
+  // id, and the room is not shown rather than handed to either of them.
+  final inviters = {
+    for (final m in ordered)
+      if (m.type == CollabRoomMessageType.invite) m.senderPubkey,
+  };
+  if (inviters.isEmpty) return null;
+  final String author;
+  if (inviters.contains(ownerPubkey)) {
+    author = ownerPubkey;
+  } else if (inviters.length == 1) {
+    author = inviters.single;
+  } else {
+    return null;
+  }
   final isAuthor = author == ownerPubkey;
 
   final fromAuthor = ordered.where(
@@ -815,19 +830,9 @@ CollabRoom? foldCollabRoom(
   // about the others through the author's snapshots.
   for (final message in ordered) {
     final sender = message.senderPubkey;
-    // Inviting someone again — say they left by mistake — wipes what they
-    // said before: from here on only their answers to the new invite count.
-    if (sender == author &&
-        message.type == CollabRoomMessageType.invite &&
-        members.containsKey(message.recipientPubkey)) {
-      final member = members[message.recipientPubkey]!;
-      if (member.inviteRevision != 0) continue;
-      statuses[message.recipientPubkey] = member.status;
-      // The published snapshot may already contain a take from the new
-      // invite. Only the older takes being replayed here should be reset.
-      memberParts.remove(message.recipientPubkey);
-      continue;
-    }
+    // Answers to an earlier invite carry an older revision and are skipped
+    // below, so inviting someone again needs no reset here. A reset at the
+    // invite would also wipe a Join sent by a phone whose clock runs behind.
     final member = members[sender];
     if (sender == author ||
         member == null ||
@@ -854,6 +859,21 @@ CollabRoom? foldCollabRoom(
       case CollabRoomMessageType.state:
         break;
     }
+  }
+
+  // A member's device takes the author's word for everyone but the member:
+  // they are in only once they said so for this invite. An invite listing
+  // them as joined would otherwise put them in the room's call unasked.
+  if (!isAuthor && statuses[ownerPubkey] == CollabRoomMemberStatus.joined) {
+    final revision = members[ownerPubkey]!.inviteRevision;
+    final saidYes = ordered.any(
+      (m) =>
+          m.senderPubkey == ownerPubkey &&
+          m.recipientPubkey == author &&
+          m.type == CollabRoomMessageType.join &&
+          m.inviteRevision == revision,
+    );
+    if (!saidYes) statuses[ownerPubkey] = CollabRoomMemberStatus.invited;
   }
 
   final folded = [

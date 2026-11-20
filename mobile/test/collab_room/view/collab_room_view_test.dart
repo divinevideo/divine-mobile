@@ -21,6 +21,7 @@ import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_l
 import '../../helpers/go_router.dart';
 import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
+import 'collab_room_test_fixtures.dart' show joinMessage;
 
 class _MockCollabRoomCubit extends MockCubit<CollabRoomState>
     implements CollabRoomCubit {}
@@ -68,6 +69,8 @@ CollabRoom _room({
       ),
     ),
   ),
+  if (samStatus == CollabRoomMemberStatus.joined)
+    joinMessage(from: _sam, to: _author, room: '0' * 32),
 ], ownerPubkey: owner).single;
 
 void main() {

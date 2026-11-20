@@ -78,6 +78,16 @@ CollabRoom _room(
     type: CollabRoomMessageType.invite,
     snapshot: snapshot,
   ),
+  // A member's device counts them in only once they said so.
+  if (owner != _author &&
+      snapshot.members.any(
+        (m) => m.pubkey == owner && m.status == CollabRoomMemberStatus.joined,
+      ))
+    _message(
+      from: owner,
+      to: _author,
+      type: CollabRoomMessageType.join,
+    ),
   ...messages,
 ], ownerPubkey: owner).single;
 
@@ -929,10 +939,12 @@ void main() {
         act: (cubit) async {
           rooms.add(_room(_recording));
           await pumpEventQueue();
-          cubit.soundPicked(_sam);
+          await cubit.soundPicked(_sam);
           await cubit.compose();
         },
         verify: (cubit) {
+          // The pick goes out, so guests see it and it outlives the screen.
+          expect(published.single.soundPubkey, _sam);
           expect(cubit.state.composeStatus, CollabRoomComposeStatus.done);
           expect(cubit.state.composedClip?.id, 'composed');
           final cells = composed.single;
@@ -944,6 +956,34 @@ void main() {
           expect(cells.first.rect.left, lessThan(cells.last.rect.left));
           expect(cells.first.rect, isA<Rect>());
         },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        "gives the host's part the sound once the person picked left",
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_recording));
+          await pumpEventQueue();
+          await cubit.soundPicked(_sam);
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 3,
+                phase: CollabRoomPhase.recording,
+                layout: _recording.layout,
+                members: [
+                  _member(_author, .joined, 0),
+                  _member(_sam, .left),
+                ],
+                parts: _recording.parts
+                    .where((part) => part.pubkey == _author)
+                    .toList(),
+              ),
+            ),
+          );
+          await pumpEventQueue();
+        },
+        verify: (cubit) => expect(cubit.state.effectiveSoundPubkey, _author),
       );
 
       blocTest<CollabRoomCubit, CollabRoomState>(

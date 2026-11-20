@@ -158,8 +158,17 @@ class CollabRoomState extends Equatable {
   int get nextRevision =>
       math.max(room?.snapshot.revision ?? 0, lobbyRevision ?? 0) + 1;
 
-  /// Whose sound the video plays.
-  String? get effectiveSoundPubkey => soundPubkey ?? room?.soundPubkey;
+  /// Whose sound the video plays: the pick, while the person picked is still
+  /// in the room; the room's otherwise.
+  String? get effectiveSoundPubkey {
+    final picked = soundPubkey;
+    final room = this.room;
+    if (picked != null &&
+        (room == null || room.participants.any((m) => m.pubkey == picked))) {
+      return picked;
+    }
+    return room?.soundPubkey;
+  }
 
   /// The layouts the room's current number of people fits.
   List<SplitScreenLayoutPreset> get layoutChoices =>

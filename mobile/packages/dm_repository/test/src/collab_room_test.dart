@@ -241,21 +241,21 @@ void main() {
         '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
             '"aspect":"vertical","parts":[{"p":"$sam","url":"https://m/x",'
             '"type":"video/mp4","alg":"aes-gcm","key":"k","nonce":"n",'
-            '"x":"h"}]}',
+            '"x":"${'a' * 64}"}]}',
       ),
       (
         'a part served over http',
         '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
             '"aspect":"vertical","parts":[{"p":"$author","url":"http://m/x",'
             '"type":"video/mp4","alg":"aes-gcm","key":"k","nonce":"n",'
-            '"x":"h"}]}',
+            '"x":"${'a' * 64}"}]}',
       ),
       (
         'a part that is not a video',
         '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
             '"aspect":"vertical","parts":[{"p":"$author","url":"https://m/x",'
             '"type":"image/png","alg":"aes-gcm","key":"k","nonce":"n",'
-            '"x":"h"}]}',
+            '"x":"${'a' * 64}"}]}',
       ),
       (
         'a part that is not an object',
@@ -738,7 +738,20 @@ void main() {
       });
 
       test('asks back someone who left: only their newer answers count', () {
-        final askedBack = snapshot(revision: 2);
+        final askedBack = snapshot(
+          revision: 2,
+          members: const [
+            CollabRoomMember(
+              pubkey: author,
+              status: CollabRoomMemberStatus.joined,
+            ),
+            CollabRoomMember(
+              pubkey: sam,
+              status: CollabRoomMemberStatus.invited,
+              inviteRevision: 1,
+            ),
+          ],
+        );
         List<DmMessage> history({bool rejoined = false}) => [
           ...invites(),
           roomMessage(
@@ -766,6 +779,12 @@ void main() {
               to: author,
               type: CollabRoomMessageType.join,
               createdAt: 5,
+              tags: collabRoomTags(
+                roomId: roomId,
+                type: CollabRoomMessageType.join,
+                recipientPubkey: author,
+                inviteRevision: 1,
+              ),
             ),
         ];
         CollabRoomMemberStatus? samIn(List<DmMessage> messages, String owner) =>
@@ -781,6 +800,40 @@ void main() {
           samIn(history(rejoined: true), author),
           CollabRoomMemberStatus.joined,
         );
+        expect(
+          samIn(history(rejoined: true), sam),
+          CollabRoomMemberStatus.joined,
+        );
+      });
+
+      test('keeps a Join sent from a phone whose clock runs behind', () {
+        // Sam's clock runs late, so Sam's Join sorts before the invite.
+        final joinedBeforeInvite = [
+          roomMessage(
+            from: sam,
+            to: author,
+            type: CollabRoomMessageType.join,
+            createdAt: 0,
+          ),
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: snapshot(),
+            createdAt: 5,
+          ),
+        ];
+        for (final owner in [author, sam]) {
+          final room = foldCollabRooms(
+            joinedBeforeInvite,
+            ownerPubkey: owner,
+          ).single;
+          expect(
+            room.members.firstWhere((m) => m.pubkey == sam).status,
+            CollabRoomMemberStatus.joined,
+            reason: owner,
+          );
+        }
       });
 
       test('keeps someone it removed out, whatever they send', () {
@@ -946,6 +999,37 @@ void main() {
         expect(room.memberInCell(2), isNull);
       });
 
+      test("plays the author's sound once the person picked left", () {
+        // The picked part would otherwise be missing from the video, and
+        // every other cell is silent.
+        final room = foldCollabRooms([
+          ...invites(),
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.state,
+            state: snapshot(
+              revision: 2,
+              phase: CollabRoomPhase.recording,
+              soundPubkey: sam,
+              members: const [
+                CollabRoomMember(
+                  pubkey: author,
+                  status: CollabRoomMemberStatus.joined,
+                  cell: 0,
+                ),
+                CollabRoomMember(
+                  pubkey: sam,
+                  status: CollabRoomMemberStatus.left,
+                ),
+              ],
+            ),
+            createdAt: 3,
+          ),
+        ], ownerPubkey: author).single;
+        expect(room.soundPubkey, author);
+      });
+
       test('a closed room never asks for a broadcast', () {
         final room = foldCollabRooms([
           roomMessage(
@@ -1001,8 +1085,11 @@ void main() {
         expect(room.parts.keys, [sam]);
       });
 
-      test('ignores snapshots from anyone but the author', () {
-        final room = foldCollabRooms([
+      test('drops a room a second person invited the account to', () {
+        // Room ids are random, so a second inviter forged an invite for this
+        // one: the room is shown to neither, rather than to whoever chose
+        // the earlier timestamp.
+        final rooms = foldCollabRooms([
           roomMessage(
             from: author,
             to: sam,
@@ -1016,9 +1103,86 @@ void main() {
             state: snapshot(revision: 9, phase: CollabRoomPhase.cancelled),
             createdAt: 2,
           ),
-        ], ownerPubkey: sam).single;
+        ], ownerPubkey: sam);
+        expect(rooms, isEmpty);
+      });
+
+      test('does not hand the room to a back-dated invite', () {
+        final rooms = foldCollabRooms([
+          roomMessage(
+            from: kai,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: snapshot(revision: 9),
+            createdAt: 0,
+          ),
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: snapshot(),
+          ),
+        ], ownerPubkey: sam);
+        expect(rooms.where((room) => room.authorPubkey == kai), isEmpty);
+        expect(rooms, isEmpty);
+      });
+
+      test("keeps the room on its author's device whoever else invites", () {
+        final room = foldCollabRooms([
+          roomMessage(
+            from: author,
+            to: sam,
+            type: CollabRoomMessageType.invite,
+            state: snapshot(),
+          ),
+          roomMessage(
+            from: kai,
+            to: author,
+            type: CollabRoomMessageType.invite,
+            state: snapshot(revision: 9, phase: CollabRoomPhase.cancelled),
+            createdAt: 0,
+          ),
+        ], ownerPubkey: author).single;
         expect(room.authorPubkey, author);
         expect(room.phase, CollabRoomPhase.lobby);
+      });
+
+      test('reads the account as in only once it said yes', () {
+        // An invite listing sam as joined must not put sam in the room, or
+        // in its call, without sam's own Join.
+        final joinedSnapshot = snapshot(
+          members: const [
+            CollabRoomMember(
+              pubkey: author,
+              status: CollabRoomMemberStatus.joined,
+            ),
+            CollabRoomMember(
+              pubkey: sam,
+              status: CollabRoomMemberStatus.joined,
+            ),
+          ],
+        );
+        final invite = roomMessage(
+          from: author,
+          to: sam,
+          type: CollabRoomMessageType.invite,
+          state: joinedSnapshot,
+        );
+
+        final unasked = foldCollabRooms([invite], ownerPubkey: sam).single;
+        expect(unasked.me?.status, CollabRoomMemberStatus.invited);
+        expect(unasked.participants.map((m) => m.pubkey), [author]);
+
+        final answered = foldCollabRooms([
+          invite,
+          roomMessage(
+            from: sam,
+            to: author,
+            type: CollabRoomMessageType.join,
+            createdAt: 2,
+          ),
+        ], ownerPubkey: sam).single;
+        expect(answered.me?.status, CollabRoomMemberStatus.joined);
       });
 
       test('drops a room whose snapshot no longer lists it', () {
@@ -1070,7 +1234,7 @@ void main() {
           from: author,
           to: sam,
           type: CollabRoomMessageType.invite,
-          state: snapshot(),
+          state: snapshot(callKey: '1' * 64),
         ),
         roomMessage(
           from: sam,
@@ -1094,7 +1258,8 @@ void main() {
       expect(next.aspectRatio, 'square');
       expect(next.soundPubkey, sam);
       expect(next.videoAddress, '34236:$author:d');
-      expect(next.callKey, room.callKey);
+      // The call key never changes with the room.
+      expect(next.callKey, '1' * 64);
       expect(next.members, room.members);
       expect(next.parts.map((p) => p.pubkey), [sam]);
     });

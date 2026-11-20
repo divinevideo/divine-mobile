@@ -6,6 +6,27 @@ const author =
 const sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const roomId = '0123456789abcdef0123456789abcdef';
 
+/// [from]'s own Join of [room], sent to [to]: a member's device counts the
+/// member in only once they said so.
+DmMessage joinMessage({
+  required String from,
+  required String to,
+  required String room,
+  int createdAt = 2,
+}) => DmMessage(
+  id: '3' * 64,
+  conversationId: DmRepository.computeConversationId([from, to]),
+  senderPubkey: from,
+  content: 'text',
+  createdAt: createdAt,
+  giftWrapId: '4' * 64,
+  tags: collabRoomTags(
+    roomId: room,
+    type: CollabRoomMessageType.join,
+    recipientPubkey: to,
+  ),
+);
+
 /// [owner]'s view of a two-person room [author] invited [sam] into.
 CollabRoom twoPersonRoom({
   required String owner,
@@ -36,4 +57,6 @@ CollabRoom twoPersonRoom({
       ),
     ),
   ),
+  if (samStatus == CollabRoomMemberStatus.joined)
+    joinMessage(from: sam, to: author, room: roomId),
 ], ownerPubkey: owner).single;

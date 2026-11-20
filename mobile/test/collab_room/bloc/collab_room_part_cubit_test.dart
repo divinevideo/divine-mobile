@@ -9,6 +9,8 @@ import 'package:models/models.dart' show DmFileMetadata, DmMessage;
 import 'package:openvine/collab_room/bloc/collab_room_part_cubit.dart';
 import 'package:openvine/collab_room/collab_room_service.dart';
 
+import '../view/collab_room_test_fixtures.dart' show joinMessage;
+
 class _MockCollabRoomService extends Mock implements CollabRoomService {}
 
 const _author =
@@ -59,6 +61,8 @@ CollabRoom _room(
       ),
     ),
   ),
+  if (memberStatus == CollabRoomMemberStatus.joined)
+    joinMessage(from: _sam, to: _author, room: _roomId),
 ], ownerPubkey: _sam).single;
 
 void main() {
