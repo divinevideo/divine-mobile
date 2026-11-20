@@ -1401,6 +1401,36 @@ void main() {
       );
     }
 
+    testWidgets('keeps a visible fling going when the view padding changes', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          isLoadingVideos: true,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -60),
+        2500,
+      );
+      expect(controller.position.isScrollingNotifier.value, isTrue);
+
+      tester.view.padding = FakeViewPadding(
+        top: 24 * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetPadding);
+      await tester.pump();
+
+      expect(controller.position.isScrollingNotifier.value, isTrue);
+    });
+
     testWidgets('starts at the top when the profile changes in place', (
       tester,
     ) async {
