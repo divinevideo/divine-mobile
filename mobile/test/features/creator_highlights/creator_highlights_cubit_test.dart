@@ -24,6 +24,8 @@ class _Repository implements CreatorHighlightsRepository {
   int loads = 0;
   final presented = <(String, String, int)>[];
   Object? presentationError;
+  final invites = <(String, String)>[];
+  Object? inviteError;
 
   @override
   Future<CreatorHighlight?> load(String owner) {
@@ -39,6 +41,12 @@ class _Repository implements CreatorHighlightsRepository {
   }) async {
     if (presentationError case final error?) throw error;
     presented.add((owner, localDate, nextRotation));
+  }
+
+  @override
+  Future<void> markInviteShown(String owner, String localDate) async {
+    if (inviteError case final error?) throw error;
+    invites.add((owner, localDate));
   }
 }
 

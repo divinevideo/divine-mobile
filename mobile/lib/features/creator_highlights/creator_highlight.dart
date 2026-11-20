@@ -42,6 +42,7 @@ class CreatorHighlight extends Equatable {
     this.comments,
     this.rotation = 0,
     this.selectedSpotlight,
+    this.showInvite = false,
   });
 
   final String owner;
@@ -66,6 +67,9 @@ class CreatorHighlight extends Equatable {
 
   /// The fact held stable for this showing while refreshed metrics arrive.
   final CreatorSpotlight? selectedSpotlight;
+
+  /// Whether this showing invites the creator to bring friends to Divine.
+  final bool showInvite;
 
   /// Every spotlight backed by a known, non-zero fact, in rotation order.
   List<CreatorSpotlight> get spotlights => [
@@ -106,6 +110,7 @@ class CreatorHighlight extends Equatable {
     selectedSpotlight: clearSelection
         ? null
         : selectedSpotlight ?? this.selectedSpotlight,
+    showInvite: showInvite,
   );
 
   @override
@@ -122,5 +127,6 @@ class CreatorHighlight extends Equatable {
     celebrate,
     rotation,
     selectedSpotlight,
+    showInvite,
   ];
 }

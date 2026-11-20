@@ -387,6 +387,68 @@ void main() {
     });
   });
 
+  group('invite', () {
+    // `now` is Friday 2026-10-30, so its week starts Monday 2026-10-26.
+    final key = FunnelcakeCreatorHighlightsRepository.inviteKey(owner);
+    final earlier = now.subtract(const Duration(days: 2));
+
+    test('offers the invite on a day with a publication today', () async {
+      final card = await repository([video()]).load(owner);
+      expect(card?.showInvite, isTrue);
+    });
+    test('withholds the invite when nothing was published today', () async {
+      final card = await repository([video(published: earlier)]).load(owner);
+      expect(card, isNotNull);
+      expect(card!.showInvite, isFalse);
+    });
+    test('withholds the invite after three posting days this week', () async {
+      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-28');
+      final card = await repository([video()]).load(owner);
+      expect(card?.showInvite, isFalse);
+    });
+    test('keeps the invite on a day already counted', () async {
+      await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-30');
+      final card = await repository([video()]).load(owner);
+      expect(card?.showInvite, isTrue);
+    });
+    test('a new week resets the limit', () async {
+      await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
+      final card = await repository([video()]).load(owner);
+      expect(card?.showInvite, isTrue);
+    });
+    test("another account's record does not apply", () async {
+      await prefs.setString(
+        FunnelcakeCreatorHighlightsRepository.inviteKey(other),
+        '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
+      );
+      final card = await repository([video()]).load(owner);
+      expect(card?.showInvite, isTrue);
+    });
+    test('the same day is recorded once', () async {
+      final repo = repository([]);
+      await repo.markInviteShown(owner, '2026-10-30');
+      await repo.markInviteShown(owner, '2026-10-30');
+      expect(prefs.getString(key), '2026-10-26|2026-10-30');
+    });
+    test('a new week replaces the previous record', () async {
+      await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
+      await repository([]).markInviteShown(owner, '2026-10-27');
+      expect(prefs.getString(key), '2026-10-26|2026-10-27');
+    });
+    test('a rejected invite write throws an operational exception', () async {
+      final storage = _Preferences();
+      prefs = storage;
+      when(() => storage.getString(any())).thenReturn(null);
+      when(
+        () => storage.setString(any(), any()),
+      ).thenAnswer((_) async => false);
+      await expectLater(
+        repository([]).markInviteShown(owner, '2026-10-30'),
+        throwsA(isA<CreatorHighlightPresentationException>()),
+      );
+    });
+  });
+
   group('markPresented', () {
     test('the next showing resumes the spotlight rotation', () async {
       final repo = repository([video()]);

@@ -20,6 +20,13 @@ abstract interface class CreatorHighlightsRepository {
     String localDate, {
     required int nextRotation,
   });
+
+  /// Records that the invite to bring friends was seen on [localDate].
+  ///
+  /// A day counts once toward the weekly limit, however often it is shown.
+  ///
+  /// Throws [CreatorHighlightPresentationException] when storage rejects it.
+  Future<void> markInviteShown(String owner, String localDate);
 }
 
 /// The device could not persist a daily presentation marker.
@@ -47,6 +54,15 @@ class FunnelcakeCreatorHighlightsRepository
   static const presentationPrefix = 'creator_highlight_presented_';
   static String presentationKey(String owner) => '$presentationPrefix$owner';
 
+  static const invitePrefix = 'creator_highlight_invite_';
+  static String inviteKey(String owner) => '$invitePrefix$owner';
+
+  /// Posting days per week on which the invite may appear.
+  static const maxInviteDaysPerWeek = 3;
+
+  /// Stored as `<weekStart>|<date>,<date>`; another week's record is empty.
+  static const _inviteDateSeparator = ',';
+
   /// Stored as `<localDate>|<nextRotation>`; a bare date predates rotation.
   static const _markerSeparator = '|';
   static const pageSize = 100;
@@ -64,13 +80,8 @@ class FunnelcakeCreatorHighlightsRepository
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(owner)) return null;
     final now = _now().toLocal();
     final today = DateTime(now.year, now.month, now.day);
-    final weekStart = DateTime(
-      today.year,
-      today.month,
-      today.day - today.weekday + 1,
-    );
-    final date =
-        '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final weekStart = _weekStart(today);
+    final date = _dateKey(today);
     final collected = <VideoEvent>[];
     int? offset;
     var complete = false;
@@ -251,12 +262,14 @@ class FunnelcakeCreatorHighlightsRepository
         ? int.tryParse(marker[1])
         : null;
     final topVideo = known ? ranked.first : null;
+    final createdToday = videos
+        .where((video) => !video.timestamp.isBefore(today))
+        .length;
+    final invitedDays = _invitedDays(owner, weekStart);
     return CreatorHighlight(
       owner: owner,
       localDate: date,
-      createdToday: videos
-          .where((video) => !video.timestamp.isBefore(today))
-          .length,
+      createdToday: createdToday,
       creationDaysThisWeek: days.length,
       views: known
           ? counts.fold<int>(0, (total, count) => total + count!)
@@ -267,7 +280,35 @@ class FunnelcakeCreatorHighlightsRepository
       comments: totalOf(commentsByWork),
       celebrate: marker?.first != date,
       rotation: rotation != null && rotation >= 0 ? rotation : 0,
+      showInvite:
+          createdToday > 0 &&
+          (invitedDays.contains(date) ||
+              invitedDays.length < maxInviteDaysPerWeek),
     );
+  }
+
+  static String _dateKey(DateTime day) =>
+      '${day.year.toString().padLeft(4, '0')}-'
+      '${day.month.toString().padLeft(2, '0')}-'
+      '${day.day.toString().padLeft(2, '0')}';
+
+  static DateTime _weekStart(DateTime day) =>
+      DateTime(day.year, day.month, day.day - day.weekday + 1);
+
+  /// Days this week the invite was already shown to [owner].
+  Set<String> _invitedDays(String owner, DateTime weekStart) {
+    final record = _preferences
+        .getString(inviteKey(owner))
+        ?.split(
+          _markerSeparator,
+        );
+    if (record == null ||
+        record.length != 2 ||
+        record.first != _dateKey(weekStart) ||
+        record.last.isEmpty) {
+      return const {};
+    }
+    return record.last.split(_inviteDateSeparator).toSet();
   }
 
   @override
@@ -279,6 +320,20 @@ class FunnelcakeCreatorHighlightsRepository
     final saved = await _preferences.setString(
       presentationKey(owner),
       '$localDate$_markerSeparator$nextRotation',
+    );
+    if (!saved) throw const CreatorHighlightPresentationException();
+  }
+
+  @override
+  Future<void> markInviteShown(String owner, String localDate) async {
+    final day = DateTime.parse(localDate);
+    final weekStart = _weekStart(day);
+    final days = _invitedDays(owner, weekStart);
+    if (days.contains(localDate)) return;
+    final saved = await _preferences.setString(
+      inviteKey(owner),
+      '${_dateKey(weekStart)}$_markerSeparator'
+      '${[...days, localDate].join(_inviteDateSeparator)}',
     );
     if (!saved) throw const CreatorHighlightPresentationException();
   }

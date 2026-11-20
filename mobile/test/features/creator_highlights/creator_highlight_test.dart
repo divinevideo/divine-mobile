@@ -75,5 +75,29 @@ void main() {
         ]);
       });
     });
+
+    group('showInvite', () {
+      CreatorHighlight build({required bool showInvite}) => CreatorHighlight(
+        owner: _owner,
+        localDate: '2026-10-30',
+        createdToday: 1,
+        creationDaysThisWeek: 3,
+        views: null,
+        topVideo: null,
+        celebrate: false,
+        showInvite: showInvite,
+      );
+
+      test('survives a rotation change', () {
+        expect(
+          build(showInvite: true).copyWith(rotation: 1).showInvite,
+          isTrue,
+        );
+      });
+
+      test('distinguishes otherwise equal highlights', () {
+        expect(build(showInvite: true), isNot(build(showInvite: false)));
+      });
+    });
   });
 }

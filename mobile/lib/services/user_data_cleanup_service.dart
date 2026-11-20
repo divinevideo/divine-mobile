@@ -314,6 +314,7 @@ class UserDataCleanupService {
   static const List<String> identityChangePrefixes = [
     SharedPreferencesAnnouncementStore.storagePrefix,
     FunnelcakeCreatorHighlightsRepository.presentationPrefix,
+    FunnelcakeCreatorHighlightsRepository.invitePrefix,
     CuratedListRecoveryJournal.storagePrefix,
     CuratedListRecoveryStorage.quarantinePrefix,
     CuratedListRelayEvidence.storagePrefix,
@@ -518,6 +519,7 @@ class UserDataCleanupService {
     await remove(
       FunnelcakeCreatorHighlightsRepository.presentationKey(userPubkey),
     );
+    await remove(FunnelcakeCreatorHighlightsRepository.inviteKey(userPubkey));
     for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
       await remove(key);
     }
@@ -851,6 +853,9 @@ class UserDataCleanupService {
       }
       await remove(
         FunnelcakeCreatorHighlightsRepository.presentationKey(userPubkey),
+      );
+      await remove(
+        FunnelcakeCreatorHighlightsRepository.inviteKey(userPubkey),
       );
       for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);
