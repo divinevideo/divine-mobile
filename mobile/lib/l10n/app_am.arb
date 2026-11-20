@@ -6494,6 +6494,12 @@
   "creatorHighlightWeeklyLikes": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ መውደዶች፦ {count}።",
   "creatorHighlightWeeklyComments": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ አስተያየቶች፦ {count}።",
   "creatorHighlightAnalytics": "ስታቲስቲክስዎን ይመልከቱ",
+  "creatorHighlightInvite": "ጓደኞችዎን ይጋብዙ",
+  "inviteFriendsTitle": "ጓደኞችዎን ይጋብዙ",
+  "inviteFriendsMessageLabel": "መልዕክትዎ",
+  "inviteFriendsDefaultMessage": "በDivine ላይ ሉፖችን እየሠራሁ ነው። ምላሽ መስጠት እና ከእኔ ጋር መተባበር ይችላሉ!",
+  "inviteFriendsLinkNote": "አገናኝዎ መጨረሻ ላይ ይጨመራል፦ {url}",
+  "inviteFriendsShare": "ያጋሩ",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

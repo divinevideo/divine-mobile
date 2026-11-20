@@ -15474,25 +15474,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatorHighlightAnalytics => '查看你的数据';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => '叫上你的朋友';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => '叫上你的朋友';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => '你的消息';
 
   @override
-  String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+  String get inviteFriendsDefaultMessage => '我在 Divine 上做循环。你可以来互动，也可以和我一起合作！';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return '你的链接会附在末尾：$url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => '分享';
 
   @override
   String get messagesPublicRoomsDisclosure =>

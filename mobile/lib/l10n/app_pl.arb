@@ -6441,6 +6441,12 @@
   "creatorHighlightWeeklyLikes": "Łączna liczba polubień do tej pory filmów opublikowanych przez ciebie w tym tygodniu: {count}.",
   "creatorHighlightWeeklyComments": "Łączna liczba komentarzy do tej pory pod filmami opublikowanymi przez ciebie w tym tygodniu: {count}.",
   "creatorHighlightAnalytics": "Zobacz swoje statystyki",
+  "creatorHighlightInvite": "Zaproś znajomych",
+  "inviteFriendsTitle": "Zaproś znajomych",
+  "inviteFriendsMessageLabel": "Twoja wiadomość",
+  "inviteFriendsDefaultMessage": "Robię pętle w Divine. Możesz reagować i współpracować ze mną!",
+  "inviteFriendsLinkNote": "Twój link zostanie dodany na końcu: {url}",
+  "inviteFriendsShare": "Udostępnij",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

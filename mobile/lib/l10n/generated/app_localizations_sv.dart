@@ -16444,25 +16444,25 @@ class AppLocalizationsSv extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Se din statistik';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Ta med dina vänner';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Ta med dina vänner';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Ditt meddelande';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Jag gör loopar på Divine. Du kan reagera och samarbeta med mig!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Din länk läggs till i slutet: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Dela';
 
   @override
   String get messagesPublicRoomsDisclosure =>

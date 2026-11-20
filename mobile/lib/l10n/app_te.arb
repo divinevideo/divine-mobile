@@ -9369,6 +9369,12 @@
   "creatorHighlightWeeklyLikes": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం ఇష్టాలు: {count}.",
   "creatorHighlightWeeklyComments": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వ్యాఖ్యలు: {count}.",
   "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
+  "creatorHighlightInvite": "మీ స్నేహితులను ఆహ్వానించండి",
+  "inviteFriendsTitle": "మీ స్నేహితులను ఆహ్వానించండి",
+  "inviteFriendsMessageLabel": "మీ సందేశం",
+  "inviteFriendsDefaultMessage": "నేను Divineలో లూప్‌లు తయారు చేస్తున్నాను. మీరు స్పందించవచ్చు, నాతో కలిసి పని చేయవచ్చు!",
+  "inviteFriendsLinkNote": "మీ లింక్ చివర్లో జోడించబడుతుంది: {url}",
+  "inviteFriendsShare": "భాగస్వామ్యం చేయండి",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

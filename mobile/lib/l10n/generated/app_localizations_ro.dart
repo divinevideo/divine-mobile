@@ -16758,25 +16758,25 @@ class AppLocalizationsRo extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Vezi statisticile tale';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Adu-ți prietenii';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Adu-ți prietenii';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Mesajul tău';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Fac bucle pe Divine. Poți reacționa și colabora cu mine!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Linkul tău e adăugat la final: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Partajează';
 
   @override
   String get messagesPublicRoomsDisclosure =>

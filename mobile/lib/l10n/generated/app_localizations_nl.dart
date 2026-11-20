@@ -16512,25 +16512,25 @@ class AppLocalizationsNl extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Bekijk je statistieken';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Neem je vrienden mee';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Neem je vrienden mee';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Je bericht';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Ik maak loops op Divine. Je kunt reageren en met me samenwerken!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Je link wordt aan het eind toegevoegd: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Delen';
 
   @override
   String get messagesPublicRoomsDisclosure =>

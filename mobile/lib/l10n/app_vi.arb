@@ -7746,6 +7746,12 @@
   "creatorHighlightWeeklyLikes": "Tổng lượt thích tính đến hiện tại của các video bạn đăng trong tuần này: {count}.",
   "creatorHighlightWeeklyComments": "Tổng bình luận tính đến hiện tại của các video bạn đăng trong tuần này: {count}.",
   "creatorHighlightAnalytics": "Xem số liệu của bạn",
+  "creatorHighlightInvite": "Rủ bạn bè cùng tham gia",
+  "inviteFriendsTitle": "Rủ bạn bè cùng tham gia",
+  "inviteFriendsMessageLabel": "Tin nhắn của bạn",
+  "inviteFriendsDefaultMessage": "Mình đang làm loop trên Divine. Bạn có thể thả cảm xúc và cùng hợp tác với mình!",
+  "inviteFriendsLinkNote": "Liên kết của bạn được thêm vào cuối: {url}",
+  "inviteFriendsShare": "Chia sẻ",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

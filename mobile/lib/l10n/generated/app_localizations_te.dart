@@ -16805,25 +16805,25 @@ class AppLocalizationsTe extends AppLocalizations {
   String get creatorHighlightAnalytics => 'మీ గణాంకాలను చూడండి';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'మీ స్నేహితులను ఆహ్వానించండి';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'మీ స్నేహితులను ఆహ్వానించండి';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'మీ సందేశం';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'నేను Divineలో లూప్‌లు తయారు చేస్తున్నాను. మీరు స్పందించవచ్చు, నాతో కలిసి పని చేయవచ్చు!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'మీ లింక్ చివర్లో జోడించబడుతుంది: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'భాగస్వామ్యం చేయండి';
 
   @override
   String get messagesPublicRoomsDisclosure =>

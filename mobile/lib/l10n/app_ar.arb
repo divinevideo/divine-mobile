@@ -6441,6 +6441,12 @@
   "creatorHighlightWeeklyLikes": "إجمالي الإعجابات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
   "creatorHighlightWeeklyComments": "إجمالي التعليقات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
   "creatorHighlightAnalytics": "عرض إحصاءاتك",
+  "creatorHighlightInvite": "دعوة أصدقائك",
+  "inviteFriendsTitle": "دعوة أصدقائك",
+  "inviteFriendsMessageLabel": "رسالتك",
+  "inviteFriendsDefaultMessage": "أصنع مقاطع على Divine. يمكنك التفاعل والتعاون معي!",
+  "inviteFriendsLinkNote": "ستتم إضافة رابطك في النهاية: {url}",
+  "inviteFriendsShare": "مشاركة",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

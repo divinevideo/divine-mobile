@@ -16370,25 +16370,25 @@ class AppLocalizationsVi extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Rủ bạn bè cùng tham gia';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Rủ bạn bè cùng tham gia';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Tin nhắn của bạn';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Mình đang làm loop trên Divine. Bạn có thể thả cảm xúc và cùng hợp tác với mình!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Liên kết của bạn được thêm vào cuối: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Chia sẻ';
 
   @override
   String get messagesPublicRoomsDisclosure =>

@@ -15664,25 +15664,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get creatorHighlightAnalytics => '自分の統計を見る';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => '友だちを招待';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => '友だちを招待';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'メッセージ';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Divineでループを作っています。リアクションしたり、一緒にコラボしたりできます！';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return '最後にリンクが追加されます：$url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'シェア';
 
   @override
   String get messagesPublicRoomsDisclosure =>

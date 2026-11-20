@@ -16479,25 +16479,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get creatorHighlightAnalytics => 'عرض إحصاءاتك';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'دعوة أصدقائك';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'دعوة أصدقائك';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'رسالتك';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'أصنع مقاطع على Divine. يمكنك التفاعل والتعاون معي!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'ستتم إضافة رابطك في النهاية: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'مشاركة';
 
   @override
   String get messagesPublicRoomsDisclosure =>

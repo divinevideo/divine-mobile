@@ -5471,6 +5471,12 @@
   "creatorHighlightWeeklyLikes": "Kabuuang like sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
   "creatorHighlightWeeklyComments": "Kabuuang komento sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
   "creatorHighlightAnalytics": "Tingnan ang stats mo",
+  "creatorHighlightInvite": "Isama ang mga kaibigan mo",
+  "inviteFriendsTitle": "Isama ang mga kaibigan mo",
+  "inviteFriendsMessageLabel": "Ang message mo",
+  "inviteFriendsDefaultMessage": "Gumagawa ako ng loops sa Divine. Puwede kang mag-react at makipag-collab sa akin!",
+  "inviteFriendsLinkNote": "Idadagdag ang link mo sa dulo: {url}",
+  "inviteFriendsShare": "I-share",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

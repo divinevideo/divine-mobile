@@ -15681,25 +15681,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get creatorHighlightAnalytics => '내 통계 보기';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => '친구 초대하기';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => '친구 초대하기';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => '내 메시지';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Divine에서 루프를 만들고 있어요. 반응하고 저와 함께 콜라보할 수 있어요!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return '링크는 끝에 추가돼요: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => '공유';
 
   @override
   String get messagesPublicRoomsDisclosure =>

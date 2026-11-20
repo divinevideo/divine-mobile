@@ -16580,25 +16580,25 @@ class AppLocalizationsBg extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Виж статистиката си';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Доведи приятелите си';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Доведи приятелите си';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Твоето съобщение';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Правя лупове в Divine. Можеш да реагираш и да си сътрудничиш с мен!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Връзката ти се добавя накрая: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Сподели';
 
   @override
   String get messagesPublicRoomsDisclosure =>

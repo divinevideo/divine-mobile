@@ -16036,25 +16036,25 @@ class AppLocalizationsAm extends AppLocalizations {
   String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'ጓደኞችዎን ይጋብዙ';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'ጓደኞችዎን ይጋብዙ';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'መልዕክትዎ';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'በDivine ላይ ሉፖችን እየሠራሁ ነው። ምላሽ መስጠት እና ከእኔ ጋር መተባበር ይችላሉ!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'አገናኝዎ መጨረሻ ላይ ይጨመራል፦ $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'ያጋሩ';
 
   @override
   String get messagesPublicRoomsDisclosure =>

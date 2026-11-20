@@ -16314,25 +16314,25 @@ class AppLocalizationsId extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Lihat statistikmu';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Ajak teman-temanmu';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Ajak teman-temanmu';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Pesanmu';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Aku lagi bikin loop di Divine. Kamu bisa kasih reaksi dan kolaborasi bareng aku!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Tautanmu ditambahkan di akhir: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'Bagikan';
 
   @override
   String get messagesPublicRoomsDisclosure =>

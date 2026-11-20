@@ -6441,6 +6441,12 @@
   "creatorHighlightWeeklyLikes": "Gilla-markeringar hittills på videorna du publicerade den här veckan: {count}.",
   "creatorHighlightWeeklyComments": "Kommentarer hittills på videorna du publicerade den här veckan: {count}.",
   "creatorHighlightAnalytics": "Se din statistik",
+  "creatorHighlightInvite": "Ta med dina vänner",
+  "inviteFriendsTitle": "Ta med dina vänner",
+  "inviteFriendsMessageLabel": "Ditt meddelande",
+  "inviteFriendsDefaultMessage": "Jag gör loopar på Divine. Du kan reagera och samarbeta med mig!",
+  "inviteFriendsLinkNote": "Din länk läggs till i slutet: {url}",
+  "inviteFriendsShare": "Dela",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

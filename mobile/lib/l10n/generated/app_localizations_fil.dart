@@ -16570,25 +16570,25 @@ class AppLocalizationsFil extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Tingnan ang stats mo';
 
   @override
-  String get creatorHighlightInvite => 'Bring your friends';
+  String get creatorHighlightInvite => 'Isama ang mga kaibigan mo';
 
   @override
-  String get inviteFriendsTitle => 'Bring your friends';
+  String get inviteFriendsTitle => 'Isama ang mga kaibigan mo';
 
   @override
-  String get inviteFriendsMessageLabel => 'Your message';
+  String get inviteFriendsMessageLabel => 'Ang message mo';
 
   @override
   String get inviteFriendsDefaultMessage =>
-      'I\'m making loops on Divine. You can react and collaborate with me!';
+      'Gumagawa ako ng loops sa Divine. Puwede kang mag-react at makipag-collab sa akin!';
 
   @override
   String inviteFriendsLinkNote(String url) {
-    return 'Your link is added at the end: $url';
+    return 'Idadagdag ang link mo sa dulo: $url';
   }
 
   @override
-  String get inviteFriendsShare => 'Share';
+  String get inviteFriendsShare => 'I-share';
 
   @override
   String get messagesPublicRoomsDisclosure =>

@@ -6441,6 +6441,12 @@
   "creatorHighlightWeeklyLikes": "Aprecieri până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
   "creatorHighlightWeeklyComments": "Comentarii până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
   "creatorHighlightAnalytics": "Vezi statisticile tale",
+  "creatorHighlightInvite": "Adu-ți prietenii",
+  "inviteFriendsTitle": "Adu-ți prietenii",
+  "inviteFriendsMessageLabel": "Mesajul tău",
+  "inviteFriendsDefaultMessage": "Fac bucle pe Divine. Poți reacționa și colabora cu mine!",
+  "inviteFriendsLinkNote": "Linkul tău e adăugat la final: {url}",
+  "inviteFriendsShare": "Partajează",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
