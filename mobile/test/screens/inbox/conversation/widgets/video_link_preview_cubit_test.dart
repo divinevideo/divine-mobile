@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -58,7 +59,9 @@ void main() {
 
     VideoLinkPreviewCubit createCubit({String stableId = 'test-id'}) =>
         VideoLinkPreviewCubit(
-          videoStableId: stableId,
+          target: DmVideoTarget(
+            stableId: stableId,
+          ),
           videosRepository: mockVideosRepository,
         );
 
@@ -86,10 +89,12 @@ void main() {
           Naddr(id: 'clip', author: testVideo.pubkey, kind: 34235),
         );
         final cubit = VideoLinkPreviewCubit(
-          videoStableId: 'clip',
-          authorPubkey: testVideo.pubkey,
-          videoKind: 34235,
-          videoRouteId: reference,
+          target: DmVideoTarget(
+            stableId: 'clip',
+            authorPubkey: testVideo.pubkey,
+            videoKind: 34235,
+            routeReference: reference,
+          ),
           videosRepository: mockVideosRepository,
         );
         await cubit.stream.first;
@@ -105,9 +110,11 @@ void main() {
       blocTest<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         'resolves an author-named addressable share by its coordinate alone',
         build: () => VideoLinkPreviewCubit(
-          videoStableId: 'skate-loop',
-          authorPubkey: testVideo.pubkey,
-          videoKind: 34235,
+          target: DmVideoTarget(
+            stableId: 'skate-loop',
+            authorPubkey: testVideo.pubkey,
+            videoKind: 34235,
+          ),
           videosRepository: mockVideosRepository,
         ),
         expect: () => [isA<VideoLinkPreviewNotFound>()],
@@ -176,9 +183,11 @@ void main() {
         expect(bare?.id, equals(otherEventId));
 
         final cubit = VideoLinkPreviewCubit(
-          videoStableId: dTag,
-          authorPubkey: author,
-          videoKind: 34236,
+          target: const DmVideoTarget(
+            stableId: dTag,
+            authorPubkey: author,
+            videoKind: 34236,
+          ),
           videosRepository: repository,
         );
         addTearDown(cubit.close);
@@ -220,9 +229,11 @@ void main() {
         expect(bare?.id, equals(otherEventId));
 
         final cubit = VideoLinkPreviewCubit(
-          videoStableId: citedEventId,
-          authorPubkey: author,
-          videoKind: 22,
+          target: const DmVideoTarget(
+            stableId: citedEventId,
+            authorPubkey: author,
+            videoKind: 22,
+          ),
           videosRepository: repository,
         );
         addTearDown(cubit.close);
