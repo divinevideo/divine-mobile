@@ -304,7 +304,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 PublicRoomNotice(isTest: state.isTestCommunity),
                 if (state.loading) const DivineLinearProgressIndicator(),
                 if (state.loadFailed) ...[
-                  Text(context.l10n.dmConversationLoadError),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      state.loadFailure == ChatLoadFailure.connection
+                          ? context.l10n.messagesRoomConnectionError
+                          : context.l10n.dmConversationLoadError,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                   DivineButton(
                     onPressed: state.loading ? null : cubit.start,
                     label: context.l10n.commonRetry,

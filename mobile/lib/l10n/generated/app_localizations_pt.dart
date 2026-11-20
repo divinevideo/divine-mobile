@@ -15973,6 +15973,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get messagesNoRooms => 'Ainda não há salas';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Não foi possível acessar esta sala. Verifique sua conexão e tente novamente.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtags que você segue';
 
   @override

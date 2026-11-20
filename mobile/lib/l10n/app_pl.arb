@@ -6266,6 +6266,7 @@
   "messagesPublicTestRooms": "Publiczne pokoje testowe",
   "messagesPublicTestDisclosure": "Te pokoje testowe są publiczne. Każdy, kto ma dostęp, może czytać Twoje wiadomości.",
   "messagesNoRooms": "Nie ma jeszcze pokoi",
+  "messagesRoomConnectionError": "Nie można połączyć się z tym pokojem. Sprawdź połączenie i spróbuj ponownie.",
   "followedHashtagsTitle": "Obserwowane hashtagi",
   "manageHashtags": "Zarządzaj hashtagami",
   "followedHashtagsEmpty": "Obserwuj hashtag na jego stronie, aby znaleźć go tutaj.",

@@ -16003,6 +16003,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get messagesNoRooms => 'Todavía no hay salas';
 
   @override
+  String get messagesRoomConnectionError =>
+      'No se pudo conectar con esta sala. Verificá tu conexión e intentá de nuevo.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtags que sigues';
 
   @override

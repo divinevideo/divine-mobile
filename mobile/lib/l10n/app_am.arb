@@ -6319,6 +6319,7 @@
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
   "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
   "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",
+  "messagesRoomConnectionError": "ይህን ክፍል መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።",
   "followedHashtagsTitle": "የተከተሏቸው ሃሽታጎች",
   "manageHashtags": "ሃሽታጎችን ያስተዳድሩ",
   "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።",

@@ -15808,6 +15808,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get messagesNoRooms => 'ابھی کوئی کمرہ نہیں';
 
   @override
+  String get messagesRoomConnectionError =>
+      'اس کمرے تک رسائی نہیں ہو سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+
+  @override
   String get followedHashtagsTitle => 'فالو کیے گئے ہیش ٹیگز';
 
   @override

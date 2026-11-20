@@ -15891,6 +15891,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get messagesNoRooms => 'Nog geen kamers';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Kan deze kamer niet bereiken. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
   String get followedHashtagsTitle => 'Gevolgde hashtags';
 
   @override

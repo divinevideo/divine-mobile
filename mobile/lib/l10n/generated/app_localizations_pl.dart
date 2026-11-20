@@ -16151,6 +16151,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get messagesNoRooms => 'Nie ma jeszcze pokoi';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Nie można połączyć się z tym pokojem. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
   String get followedHashtagsTitle => 'Obserwowane hashtagi';
 
   @override

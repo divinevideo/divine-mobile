@@ -15695,6 +15695,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get messagesNoRooms => 'Belum ada ruang';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Ruang ini tidak dapat dijangkau. Periksa koneksimu dan coba lagi.';
+
+  @override
   String get followedHashtagsTitle => 'Tagar yang diikuti';
 
   @override

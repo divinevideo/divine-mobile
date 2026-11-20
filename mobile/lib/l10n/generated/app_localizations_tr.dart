@@ -15733,6 +15733,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get messagesNoRooms => 'Henüz oda yok';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Bu odaya ulaşılamadı. Bağlantını kontrol et ve tekrar dene.';
+
+  @override
   String get followedHashtagsTitle => 'Takip edilen etiketler';
 
   @override

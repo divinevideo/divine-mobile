@@ -15947,6 +15947,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get messagesNoRooms => 'Wala pang mga silid';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Hindi makonekta sa silid na ito. Tingnan ang koneksyon mo at subukan ulit.';
+
+  @override
   String get followedHashtagsTitle => 'Mga sinusundang hashtag';
 
   @override

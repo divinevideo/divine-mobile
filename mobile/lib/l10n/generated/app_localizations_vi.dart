@@ -15745,6 +15745,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get messagesNoRooms => 'Chưa có phòng nào';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Không kết nối được với phòng này. Kiểm tra kết nối của bạn rồi thử lại nhé.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtag đang theo dõi';
 
   @override

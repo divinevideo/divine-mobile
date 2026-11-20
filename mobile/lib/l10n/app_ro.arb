@@ -6266,6 +6266,7 @@
   "messagesPublicTestRooms": "Camere publice de test",
   "messagesPublicTestDisclosure": "Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.",
   "messagesNoRooms": "Încă nu există camere",
+  "messagesRoomConnectionError": "Camera aceasta nu poate fi accesată. Verifică conexiunea și încearcă din nou.",
   "followedHashtagsTitle": "Hashtaguri urmărite",
   "manageHashtags": "Gestionează hashtagurile",
   "followedHashtagsEmpty": "Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.",

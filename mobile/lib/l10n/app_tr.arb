@@ -6266,6 +6266,7 @@
   "messagesPublicTestRooms": "Herkese açık test odaları",
   "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
   "messagesNoRooms": "Henüz oda yok",
+  "messagesRoomConnectionError": "Bu odaya ulaşılamadı. Bağlantını kontrol et ve tekrar dene.",
   "followedHashtagsTitle": "Takip edilen etiketler",
   "manageHashtags": "Etiketleri yönet",
   "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et.",

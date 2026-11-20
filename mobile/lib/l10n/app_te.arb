@@ -9199,6 +9199,7 @@
   "messagesPublicTestRooms": "బహిరంగ పరీక్ష గదులు",
   "messagesPublicTestDisclosure": "ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.",
   "messagesNoRooms": "ఇంకా గదులు లేవు",
+  "messagesRoomConnectionError": "ఈ గదిని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
   "followedHashtagsTitle": "అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు",
   "manageHashtags": "హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి",
   "followedHashtagsEmpty": "హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.",

@@ -6266,6 +6266,7 @@
   "messagesPublicTestRooms": "公開テストルーム",
   "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
   "messagesNoRooms": "まだルームはありません",
+  "messagesRoomConnectionError": "このルームに接続できませんでした。接続を確認して、もう一度お試しください。",
   "followedHashtagsTitle": "フォロー中のハッシュタグ",
   "manageHashtags": "ハッシュタグを管理",
   "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。",

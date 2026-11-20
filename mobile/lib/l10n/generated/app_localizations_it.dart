@@ -16021,6 +16021,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get messagesNoRooms => 'Ancora nessuna stanza';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Impossibile raggiungere questa stanza. Controlla la connessione e riprova.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtag seguiti';
 
   @override

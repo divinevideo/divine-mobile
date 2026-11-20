@@ -15431,6 +15431,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get messagesNoRooms => 'ገና ምንም ክፍሎች የሉም';
 
   @override
+  String get messagesRoomConnectionError =>
+      'ይህን ክፍል መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።';
+
+  @override
   String get followedHashtagsTitle => 'የተከተሏቸው ሃሽታጎች';
 
   @override

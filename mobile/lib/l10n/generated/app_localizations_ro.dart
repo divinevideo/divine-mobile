@@ -16132,6 +16132,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get messagesNoRooms => 'Încă nu există camere';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Camera aceasta nu poate fi accesată. Verifică conexiunea și încearcă din nou.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtaguri urmărite';
 
   @override

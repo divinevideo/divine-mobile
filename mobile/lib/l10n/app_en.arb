@@ -12874,6 +12874,10 @@
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",
+  "messagesRoomConnectionError": "Can't reach this room. Check your connection and try again.",
+  "@messagesRoomConnectionError": {
+    "description": "Shown inside a community room when the chat relay cannot be reached, or the connection dropped and reconnecting gave up. A Retry button sits below it and reconnects."
+  },
   "@messagesDirect": {
     "description": "Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip."
   },

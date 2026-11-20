@@ -16068,6 +16068,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get messagesNoRooms => 'Aucun salon pour le moment';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Impossible d\'accéder à ce salon. Vérifie ta connexion et réessaie.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtags suivis';
 
   @override

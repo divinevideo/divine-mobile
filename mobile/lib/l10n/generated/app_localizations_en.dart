@@ -15900,6 +15900,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesNoRooms => 'No rooms yet';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Can\'t reach this room. Check your connection and try again.';
+
+  @override
   String get followedHashtagsTitle => 'Followed hashtags';
 
   @override

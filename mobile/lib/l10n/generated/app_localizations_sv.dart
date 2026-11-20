@@ -15824,6 +15824,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get messagesNoRooms => 'Inga rum ännu';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Det går inte att nå det här rummet. Kontrollera din anslutning och försök igen.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtaggar du följer';
 
   @override
