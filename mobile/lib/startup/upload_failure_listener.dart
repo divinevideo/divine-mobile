@@ -24,6 +24,7 @@ import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
@@ -247,7 +248,7 @@ bool _showPublishSuccess(
         thumbnailBytes: video.thumbnailBytes,
         onView: () =>
             _onConfirmationView(container, offer, stableId, authorPubkey),
-        onShare: () => unawaited(
+        onShare: () => runDetached(
           _onConfirmationShare(
             navContext,
             container,
@@ -255,6 +256,9 @@ bool _showPublishSuccess(
             stableId,
             authorPubkey,
           ),
+          'share the published video',
+          logName: 'UploadFailureListener',
+          category: LogCategory.system,
         ),
         crosspostSection: eventId != null
             ? _postPublishCrosspost(navContext, container, eventId)
