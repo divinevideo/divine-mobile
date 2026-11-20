@@ -24,36 +24,46 @@ void main() {
       });
 
   group('resolve', () {
-    test('round-trips standard video references through create, resolve and routing', () async {
+    /// Shortens [url], resolves the short link and parses its video route.
+    ///
+    /// The posted body is checked after the call: ShortLinkClient swallows a
+    /// throw from its transport, so an expect inside the mock would only
+    /// surface as a missing short link.
+    Future<VideoRouteRef> roundTrip(String url) async {
+      Object? posted;
+      final transport = MockClient((request) async {
+        if (request.method == 'POST') posted = jsonDecode(request.body);
+        return http.Response(responseBody(url: url), 200);
+      });
+      addTearDown(transport.close);
+      final client = ShortLinkClient(client: transport);
+      addTearDown(client.close);
+
+      final short = await client.shorten(url);
+      expect(posted, {'url': url});
+      expect(short, 'https://divine.video/l/Abc12345');
+      final link = await ShortLinkResolver(
+        client: transport,
+      ).resolve(Uri.parse(short));
+      expect(link.type, DeepLinkType.video);
+      return VideoRouteRef.parse(link.videoRef!)!;
+    }
+
+    test('round-trips an naddr through create, resolve and routing', () async {
       final author = 'a' * 64;
-      final urls = [
+      final route = await roundTrip(
         divineVideoShareUrl('folder/clip:1', authorPubkey: author, kind: 34235),
-        divineVideoShareUrl('b' * 64, kind: 22),
-      ];
-      for (final url in urls) {
-        final transport = MockClient((request) async {
-          if (request.method == 'POST') {
-            expect(jsonDecode(request.body), {'url': url});
-          }
-          return http.Response(responseBody(url: url), 200);
-        });
-        addTearDown(transport.close);
-        final client = ShortLinkClient(client: transport);
-        addTearDown(client.close);
-        final short = await client.shorten(url);
-        expect(short, 'https://divine.video/l/Abc12345');
-        final link = await ShortLinkResolver(client: transport)
-            .resolve(Uri.parse(short));
-        expect(link.type, DeepLinkType.video);
-        final route = VideoRouteRef.parse(link.videoRef!)!;
-        if (url.contains('/naddr1')) {
-          expect(route.addressableId, '34235:$author:folder/clip:1');
-          expect(route.addressablePubkey, author);
-        } else {
-          expect(route.eventId, 'b' * 64);
-          expect(route.stableId, isNull);
-        }
-      }
+      );
+
+      expect(route.addressableId, '34235:$author:folder/clip:1');
+      expect(route.addressablePubkey, author);
+    });
+
+    test('round-trips an nevent through create, resolve and routing', () async {
+      final route = await roundTrip(divineVideoShareUrl('b' * 64, kind: 22));
+
+      expect(route.eventId, 'b' * 64);
+      expect(route.stableId, isNull);
     });
 
     test(
