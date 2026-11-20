@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:divine_camera/divine_camera.dart'
     show SecondaryCameraPreviewWidget;
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -164,12 +165,14 @@ class _VideoRecorderDualCameraWindowState
         return Stack(
           children: [
             // While a finger is on the window, a finger anywhere else on the
-            // viewfinder joins the pinch instead of zooming the camera. Always
-            // in the tree and only let through otherwise: inserting it would
-            // rebuild the window under the finger and drop its tap.
+            // viewfinder joins the pinch instead of zooming the camera. Asked
+            // when each finger lands rather than at the last build, so a
+            // second finger in the same frame joins too; and always in the
+            // tree, since inserting it would rebuild the window under the
+            // finger and drop its tap.
             Positioned.fill(
-              child: IgnorePointer(
-                ignoring: _pointers.isEmpty,
+              child: _CatchesPointersWhile(
+                isActive: () => _pointers.isNotEmpty,
                 child: Listener(
                   behavior: HitTestBehavior.opaque,
                   onPointerDown: _onPointerDown,
@@ -494,6 +497,34 @@ Rect keptPicture({
     frame.size,
     keptAspectRatio,
   ).shift(frame.topLeft);
+}
+
+/// Lets [child] take pointers only while [isActive] says so, asked at the
+/// moment a pointer lands rather than when the widget last built.
+class _CatchesPointersWhile extends SingleChildRenderObjectWidget {
+  const _CatchesPointersWhile({required this.isActive, super.child});
+
+  final bool Function() isActive;
+
+  @override
+  _RenderCatchesPointersWhile createRenderObject(BuildContext context) =>
+      _RenderCatchesPointersWhile(isActive);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderCatchesPointersWhile renderObject,
+  ) => renderObject.isActive = isActive;
+}
+
+class _RenderCatchesPointersWhile extends RenderProxyBox {
+  _RenderCatchesPointersWhile(this.isActive);
+
+  bool Function() isActive;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) =>
+      isActive() && super.hitTest(result, position: position);
 }
 
 class _WindowFrame extends StatelessWidget {

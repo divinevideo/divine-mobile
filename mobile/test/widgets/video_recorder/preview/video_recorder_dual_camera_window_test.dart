@@ -521,6 +521,37 @@ void main() {
         },
       );
 
+      testWidgets('a second finger beside the window in the same frame joins '
+          'the pinch', (tester) async {
+        var viewfinderScales = 0;
+        await pump(
+          tester,
+          center: const Offset(0.5, 0.3),
+          beneath: GestureDetector(
+            onScaleUpdate: (_) => viewfinderScales++,
+          ),
+        );
+        final center = tester.getCenter(window());
+
+        // No frame between the fingers, as when a pinch touches down.
+        final onWindow = await tester.startGesture(center);
+        final beside = await tester.startGesture(
+          center + const Offset(0, 120),
+        );
+        await tester.pump();
+        await beside.moveBy(const Offset(0, 60));
+        await tester.pump();
+        await onWindow.up();
+        await beside.up();
+        await tester.pump();
+
+        final changed =
+            verify(() => bloc.add(captureAny())).captured.single
+                as VideoRecorderDualCameraPipChanged;
+        expect(changed.scale, closeTo(1.5, 0.01));
+        expect(viewfinderScales, 0);
+      });
+
       testWidgets('turning the window settles it at a quarter turn when '
           'close', (tester) async {
         await pump(tester, center: const Offset(0.5, 0.5));

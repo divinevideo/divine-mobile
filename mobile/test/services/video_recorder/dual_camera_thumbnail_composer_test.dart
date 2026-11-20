@@ -113,16 +113,43 @@ void main() {
       },
     );
 
-    test('draws a square window as tall as it is wide', () async {
-      final composite = await compose(
-        const Offset(0.5, 0.5),
-        shape: model.AspectRatio.square,
-      );
+    test(
+      'draws a square window from the middle of the second picture',
+      () async {
+        // Green above and below the middle square of the 90 by 160 picture.
+        final banded = img.Image(width: 90, height: 160)
+          ..clear(img.ColorRgb8(255, 0, 0));
+        img.fillRect(
+          banded,
+          x1: 0,
+          y1: 0,
+          x2: 89,
+          y2: 34,
+          color: img.ColorRgb8(0, 255, 0),
+        );
+        img.fillRect(
+          banded,
+          x1: 0,
+          y1: 125,
+          x2: 89,
+          y2: 159,
+          color: img.ColorRgb8(0, 255, 0),
+        );
+        File(secondPath).writeAsBytesSync(img.encodeJpg(banded));
 
-      // 120 wide, so 60 above and below the centre instead of 107.
-      expect(isRed(composite.getPixel(200, 400 + 50)), isTrue);
-      expect(isBlue(composite.getPixel(200, 400 + 75)), isTrue);
-    });
+        final composite = await compose(
+          const Offset(0.5, 0.5),
+          shape: model.AspectRatio.square,
+        );
+
+        // 120 wide, so 60 above and below the centre instead of 107.
+        expect(isRed(composite.getPixel(200, 400 + 50)), isTrue);
+        expect(isBlue(composite.getPixel(200, 400 + 75)), isTrue);
+        // Cut from the middle, not squeezed: no green at its top and bottom.
+        expect(isRed(composite.getPixel(200, 400 - 52)), isTrue);
+        expect(isRed(composite.getPixel(200, 400 + 52)), isTrue);
+      },
+    );
 
     test('rounds the corners like the viewfinder window', () async {
       final composite = await compose(const Offset(0.5, 0.5));
