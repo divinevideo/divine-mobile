@@ -467,6 +467,36 @@ void main() {
         });
       });
 
+      test('resumes polling after a silent remote signature fails', () {
+        when(
+          () => client.createCrossposts(
+            eventId: eventId,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer((_) async => [queuedJob]);
+        var polls = 0;
+        when(() => client.getCrossposts(eventId: eventId)).thenAnswer((
+          _,
+        ) async {
+          if (polls++ == 0) {
+            throw const CrosspostingPassiveSigningUnavailable(retryable: true);
+          }
+          return [postedJob];
+        });
+        fakeAsync((fake) {
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 10));
+          expect(cubit.state.status, VideoCrosspostStatus.polling);
+          fake.elapse(const Duration(milliseconds: 10));
+          expect(cubit.state.status, VideoCrosspostStatus.finished);
+          expect(cubit.state.jobs, [postedJob]);
+          unawaited(cubit.close());
+          fake.flushMicrotasks();
+        });
+      });
+
       for (final (code, expected) in [
         ('not_owner', VideoCrosspostSubmitError.notOwner),
         ('not_eligible', VideoCrosspostSubmitError.notEligible),

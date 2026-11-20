@@ -168,8 +168,10 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
         _onJobsUpdated([
           for (final job in state.jobs) byId[job.id] ?? job,
         ]);
-      } on CrosspostingPassiveSigningUnavailable {
+      } on CrosspostingPassiveSigningUnavailable catch (error) {
         if (isClosed || _pollTimer == null) return;
+        // A remote signer can recover on the next tick without opening UI.
+        if (error.retryable) return;
         // Jobs already accepted by the server continue without monitoring.
         _stopPolling();
         emit(state.copyWith(status: VideoCrosspostStatus.finished));

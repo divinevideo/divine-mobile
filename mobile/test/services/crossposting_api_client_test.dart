@@ -10,11 +10,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _MockKeycastIdentity extends Mock implements KeycastNostrIdentity {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -1381,6 +1384,33 @@ void main() {
       });
 
       group('getCrossposts', () {
+        test('marks a missing silent remote signature retryable', () async {
+          final identity = _MockKeycastIdentity();
+          when(() => identity.signsRemotelyNonInteractive).thenReturn(true);
+          when(() => authService.currentIdentity).thenReturn(identity);
+          when(
+            () => authService.createAndSignEvent(
+              kind: 27235,
+              content: '',
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+              allowUserInteraction: false,
+            ),
+          ).thenAnswer((_) async => null);
+          await expectLater(
+            client.getCrossposts(eventId: eventId),
+            throwsA(
+              isA<CrosspostingPassiveSigningUnavailable>().having(
+                (e) => e.retryable,
+                'retryable',
+                true,
+              ),
+            ),
+          );
+          verifyNever(
+            () => httpClient.get(any(), headers: any(named: 'headers')),
+          );
+        });
         test(
           'uses the passive transport for polls and silent submits',
           () async {

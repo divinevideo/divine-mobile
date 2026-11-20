@@ -63,7 +63,9 @@ class CrosspostingRepository {
   ///
   /// Relay acceptance can precede the crossposter's source lookup. Only an
   /// explicit video-not-found response is retried: that response creates no
-  /// jobs. Transport failures and other rejections are never replayed here.
+  /// jobs. If a silent remote signature is temporarily unavailable during
+  /// those retries, try signing again within the same attempt limit. A failed
+  /// signature never sends a request; transport failures are not replayed.
   /// Waits at most 30 seconds between 16 attempts. Each attempt uses a fresh
   /// account-bound signature. Stops retries when [cancelled] completes and
   /// returns null after cancelling any pending retry timer.
@@ -89,9 +91,13 @@ class CrosspostingRepository {
         );
       } on CrosspostingApiException catch (error) {
         if (isCancelled) return null;
-        if (error.statusCode != 404 ||
-            error.code != 'not_found' ||
-            attempt >= 15) {
+        final missingSource =
+            error.statusCode == 404 && error.code == 'not_found';
+        final missingRemoteSignature =
+            attempt > 0 &&
+            error is CrosspostingPassiveSigningUnavailable &&
+            error.retryable;
+        if (attempt >= 15 || !(missingSource || missingRemoteSignature)) {
           rethrow;
         }
       }

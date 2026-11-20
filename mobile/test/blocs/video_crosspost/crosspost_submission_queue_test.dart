@@ -155,6 +155,60 @@ void main() {
         });
       });
 
+      test('recovers a source retry after a silent remote signature fails', () {
+        fakeAsync((clock) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenThrow(
+            const CrosspostingApiException(
+              'Not indexed',
+              statusCode: 404,
+              code: 'not_found',
+            ),
+          );
+          var retries = 0;
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+              allowUserInteraction: false,
+            ),
+          ).thenAnswer((_) async {
+            if (retries++ == 0) {
+              throw const CrosspostingPassiveSigningUnavailable(
+                retryable: true,
+              );
+            }
+            return const [
+              CrosspostJob(
+                id: 'posted',
+                platform: 'instagram',
+                status: CrosspostJobStatus.posted,
+              ),
+            ];
+          });
+          final updates = <VideoCrosspostState>[];
+          unawaited(
+            queue.submit(
+              eventId: eventId,
+              connections: [connection],
+              onUpdate: updates.add,
+            ),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(const Duration(seconds: 4));
+          expect(retries, 2);
+          expect(updates.last.jobs.single.status, CrosspostJobStatus.posted);
+          expect(
+            updates.map((state) => state.status),
+            isNot(contains(VideoCrosspostStatus.submitFailed)),
+          );
+        });
+      });
+
       test('returns mapped failure for the background notification', () async {
         when(
           () => client.createCrossposts(

@@ -250,8 +250,12 @@ class CrosspostingApiException implements Exception {
 
 /// A background request cannot obtain a signature without user interaction.
 class CrosspostingPassiveSigningUnavailable extends CrosspostingApiException {
-  const CrosspostingPassiveSigningUnavailable()
+  const CrosspostingPassiveSigningUnavailable({this.retryable = false})
     : super('Background signature unavailable');
+
+  /// The current account uses silent remote signing, so a null token may
+  /// reflect a temporary transport failure rather than missing permission.
+  final bool retryable;
 }
 
 /// Client for the Divine crossposter service
@@ -325,7 +329,9 @@ class CrosspostingApiClient {
       allowUserInteraction: allowUserInteraction,
     );
     if (token == null && !allowUserInteraction) {
-      throw const CrosspostingPassiveSigningUnavailable();
+      throw CrosspostingPassiveSigningUnavailable(
+        retryable: _nip98AuthService.usesRemoteSilentSigner(owner),
+      );
     }
     if (token == null || token.signedEvent.pubkey != owner) {
       throw _unauthorized;
