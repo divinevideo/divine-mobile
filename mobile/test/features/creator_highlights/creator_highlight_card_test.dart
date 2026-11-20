@@ -315,6 +315,24 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         expect(seen, 1);
       });
+
+      testWidgets('does not report while only the top of the card shows', (
+        tester,
+      ) async {
+        // A short viewport (or large text) can show the spotlight while the
+        // invite link sits below the edge.
+        tester.view.physicalSize = const Size(800, 90);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpCounted(tester, showInvite: true);
+        expect(presented, 1);
+        expect(seen, 0);
+        tester.view.physicalSize = const Size(800, 600);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(seen, 1);
+      });
     });
 
     testWidgets('both links share a line when they fit', (tester) async {

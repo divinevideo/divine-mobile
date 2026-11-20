@@ -388,32 +388,36 @@ void main() {
   });
 
   group('invite', () {
-    // `now` is Friday 2026-10-30, so its week starts Monday 2026-10-26.
+    // Local noon on Friday 2026-10-30, so "today" and its Monday-start week
+    // (2026-10-26) are the same in every timezone the tests run in.
+    final localNow = DateTime(2026, 10, 30, 12);
     final key = FunnelcakeCreatorHighlightsRepository.inviteKey(owner);
-    final earlier = now.subtract(const Duration(days: 2));
+    final earlier = localNow.subtract(const Duration(days: 2));
+    CreatorHighlightsRepository local(List<Map<String, Object?>> videos) =>
+        repository(videos, clock: () => localNow);
 
     test('offers the invite on a day with a publication today', () async {
-      final card = await repository([video()]).load(owner);
+      final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test('withholds the invite when nothing was published today', () async {
-      final card = await repository([video(published: earlier)]).load(owner);
+      final card = await local([video(published: earlier)]).load(owner);
       expect(card, isNotNull);
       expect(card!.showInvite, isFalse);
     });
     test('withholds the invite after three posting days this week', () async {
       await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-28');
-      final card = await repository([video()]).load(owner);
+      final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isFalse);
     });
     test('keeps the invite on a day already counted', () async {
       await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27,2026-10-30');
-      final card = await repository([video()]).load(owner);
+      final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test('a new week resets the limit', () async {
       await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
-      final card = await repository([video()]).load(owner);
+      final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test("another account's record does not apply", () async {
@@ -421,25 +425,25 @@ void main() {
         FunnelcakeCreatorHighlightsRepository.inviteKey(other),
         '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
       );
-      final card = await repository([video()]).load(owner);
+      final card = await local([video(published: localNow)]).load(owner);
       expect(card?.showInvite, isTrue);
     });
     test('the same day is recorded once', () async {
-      final repo = repository([]);
+      final repo = local([]);
       await repo.markInviteShown(owner, '2026-10-30');
       await repo.markInviteShown(owner, '2026-10-30');
       expect(prefs.getString(key), '2026-10-26|2026-10-30');
     });
     test("a later day joins the week's record", () async {
       await prefs.setString(key, '2026-10-26|2026-10-26,2026-10-27');
-      await repository([]).markInviteShown(owner, '2026-10-28');
+      await local([]).markInviteShown(owner, '2026-10-28');
       expect(
         prefs.getString(key),
         '2026-10-26|2026-10-26,2026-10-27,2026-10-28',
       );
     });
     test('three shown days withhold the invite on the fourth', () async {
-      final repo = repository([video()]);
+      final repo = local([video(published: localNow)]);
       for (final day in ['2026-10-26', '2026-10-27', '2026-10-28']) {
         await repo.markInviteShown(owner, day);
       }
@@ -449,7 +453,7 @@ void main() {
     });
     test('a new week replaces the previous record', () async {
       await prefs.setString(key, '2026-10-19|2026-10-19,2026-10-20,2026-10-21');
-      await repository([]).markInviteShown(owner, '2026-10-27');
+      await local([]).markInviteShown(owner, '2026-10-27');
       expect(prefs.getString(key), '2026-10-26|2026-10-27');
     });
     test('a rejected invite write throws an operational exception', () async {
@@ -460,7 +464,7 @@ void main() {
         () => storage.setString(any(), any()),
       ).thenAnswer((_) async => false);
       await expectLater(
-        repository([]).markInviteShown(owner, '2026-10-30'),
+        local([]).markInviteShown(owner, '2026-10-30'),
         throwsA(isA<CreatorHighlightPresentationException>()),
       );
     });

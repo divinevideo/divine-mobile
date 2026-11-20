@@ -43,6 +43,10 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
   bool _animate = false;
   bool _inViewport = false;
   Key _visibilityKey = UniqueKey();
+  // The invite link is measured on its own: the card can show while the link
+  // sits below the edge of a short screen or under large text.
+  bool _inviteInViewport = false;
+  Key _inviteVisibilityKey = UniqueKey();
 
   @override
   void didUpdateWidget(CreatorHighlightCard oldWidget) {
@@ -54,6 +58,8 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
       _inViewport = false;
       _animate = false;
       _visibilityKey = UniqueKey();
+      _inviteInViewport = false;
+      _inviteVisibilityKey = UniqueKey();
     }
   }
 
@@ -62,6 +68,14 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
     final inViewport = info.visibleFraction > 0;
     if (_inViewport != inViewport) {
       setState(() => _inViewport = inViewport);
+    }
+  }
+
+  void _onInviteVisibilityChanged(VisibilityInfo info) {
+    if (!mounted || info.key != _inviteVisibilityKey) return;
+    final inViewport = info.visibleFraction > 0;
+    if (_inviteInViewport != inViewport) {
+      setState(() => _inviteInViewport = inViewport);
     }
   }
 
@@ -89,12 +103,15 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
     // Counted apart from the spotlight: a refresh can turn the invite on for
     // a spotlight already presented, and only a visible frame counts.
     final inviteIdentity = '${card.owner}:${card.localDate}';
-    if (visible && card.showInvite && _inviteSeen != inviteIdentity) {
+    if (widget.isVisible &&
+        _inviteInViewport &&
+        card.showInvite &&
+        _inviteSeen != inviteIdentity) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final current = widget.highlight;
         if (!mounted ||
             !widget.isVisible ||
-            !_inViewport ||
+            !_inviteInViewport ||
             !current.showInvite ||
             _inviteSeen == inviteIdentity ||
             inviteIdentity != '${current.owner}:${current.localDate}') {
@@ -192,7 +209,11 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                           ],
                         ),
                         if (card.showInvite)
-                          _InviteAction(onTap: widget.onInvite),
+                          VisibilityDetector(
+                            key: _inviteVisibilityKey,
+                            onVisibilityChanged: _onInviteVisibilityChanged,
+                            child: _InviteAction(onTap: widget.onInvite),
+                          ),
                       ],
                     ),
                   ],
