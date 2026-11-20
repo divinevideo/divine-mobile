@@ -556,10 +556,11 @@ void main() {
         final activity = _activity([room]);
         final starting = activity.ensureStarted(room.channelId);
         await pumpEventQueue();
-        relay.events.addError(StateError('connection lost'));
+        const error = RelayConnectionException('connection lost');
+        relay.events.addError(error);
         await pumpEventQueue();
         relay.history.complete();
-        await expectLater(starting, throwsStateError);
+        await expectLater(starting, throwsA(same(error)));
         expect(activity.summaries[room.channelId]!.loadFailed, isTrue);
         await activity.ensureStarted(room.channelId);
         expect(activity.summaries[room.channelId]!.loadFailed, isFalse);
