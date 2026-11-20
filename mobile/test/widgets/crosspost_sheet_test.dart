@@ -3,15 +3,18 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 
 class _MockVideoCrosspostCubit extends MockCubit<VideoCrosspostState>
@@ -19,6 +22,8 @@ class _MockVideoCrosspostCubit extends MockCubit<VideoCrosspostState>
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
+
+class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 
 /// Copies [jobs] into new instances, like each decoded poll response.
 List<CrosspostJob> _decoded(List<CrosspostJob> jobs) => [
@@ -279,6 +284,139 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(l10n.crosspostErrorNotEligible), findsOneWidget);
       expect(find.byType(CrosspostSheetView), findsNothing);
+    });
+  });
+
+  group('showCrosspostSheetForEvent after sign-out', () {
+    const eventId =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const ownerPubkey =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const connection = CrosspostingConnection(
+      id: 'connection-1',
+      platform: CrosspostingPlatform.instagram,
+      status: CrosspostingConnectionStatus.connected,
+    );
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    late _MockCrosspostingApiClient client;
+    late StateProvider<String?> owner;
+    late ProviderContainer container;
+
+    setUp(() {
+      client = _MockCrosspostingApiClient();
+      final signedOutClient = _MockCrosspostingApiClient();
+      owner = StateProvider<String?>((_) => ownerPubkey);
+      container = ProviderContainer(
+        overrides: [
+          nip98AuthServiceProvider.overrideWithValue(_MockNip98AuthService()),
+          crosspostingOwnerPubkeyProvider.overrideWith(
+            (ref) => ref.watch(owner),
+          ),
+          crosspostingApiClientFactoryProvider.overrideWithValue(
+            ({required nip98AuthService, required ownerPubkey}) =>
+                ownerPubkey == null ? signedOutClient : client,
+          ),
+        ],
+      );
+    });
+
+    tearDown(() => container.dispose());
+
+    Future<void> submitFromSheet(WidgetTester tester) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showCrosspostSheetForEvent(
+                    context: context,
+                    container: container,
+                    eventId: eventId,
+                    connections: [connection],
+                  ),
+                  child: const Text('Open crosspost'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open crosspost'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.crosspostSubmit));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('stops retrying a source that is not indexed yet', (
+      tester,
+    ) async {
+      var attempts = 0;
+      when(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+        ),
+      ).thenAnswer((_) async {
+        attempts++;
+        throw const CrosspostingApiException(
+          'Not indexed',
+          statusCode: 404,
+          code: 'not_found',
+        );
+      });
+      await submitFromSheet(tester);
+      expect(attempts, 1);
+
+      container.read(owner.notifier).state = null;
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+
+      expect(attempts, 1);
+      expect(find.text(l10n.crosspostErrorNetwork), findsNothing);
+    });
+
+    testWidgets('stops polling the submitted jobs', (tester) async {
+      var polls = 0;
+      when(
+        () => client.createCrossposts(
+          eventId: eventId,
+          platforms: ['instagram'],
+        ),
+      ).thenAnswer(
+        (_) async => const [
+          CrosspostJob(
+            id: 'job-1',
+            platform: 'instagram',
+            status: CrosspostJobStatus.queued,
+          ),
+        ],
+      );
+      when(() => client.getCrossposts(eventId: eventId)).thenAnswer((_) async {
+        polls++;
+        return _decoded(const [
+          CrosspostJob(
+            id: 'job-1',
+            platform: 'instagram',
+            status: CrosspostJobStatus.processing,
+          ),
+        ]);
+      });
+      await submitFromSheet(tester);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      expect(polls, 1);
+
+      container.read(owner.notifier).state = null;
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(seconds: 3));
+      }
+
+      expect(polls, 1);
     });
   });
 
