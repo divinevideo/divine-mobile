@@ -999,6 +999,68 @@ void main() {
         },
       );
 
+      test('keeps a hashtag removal made only on the other device', () async {
+        final opened = _testVideo(
+          extraTags: const [
+            ['t', 'kept'],
+            ['t', 'removedelsewhere'],
+          ],
+        );
+        relaysHold(
+          newerRevision(
+            extraTags: const [
+              ['t', 'kept'],
+            ],
+          ),
+        );
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(title: 'Edited title'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags.where((tag) => tag.first == 't').map((tag) => tag[1]),
+          ['kept'],
+        );
+      });
+
+      test('still edits a video over the collaborator limit when this edit '
+          'adds no one', () async {
+        final collaborators = [
+          for (final digit in ['1', '2', '3', '4', '5', '6']) digit * 64,
+        ];
+        relaysHold(
+          newerRevision(
+            extraTags: [
+              for (final pubkey in collaborators)
+                ['p', pubkey, '', 'collaborator'],
+            ],
+          ),
+        );
+        final opened = _testVideo();
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(title: 'Edited title'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags
+              .where((tag) => tag.first == 'p' && tag.last == 'collaborator')
+              .map((tag) => tag[1]),
+          unorderedEquals(collaborators),
+        );
+      });
+
       test('keeps a newer title when saving details after subtitles', () async {
         final opened = _testVideo();
         final subtitleRevision = newerRevision(
