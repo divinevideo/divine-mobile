@@ -22,7 +22,10 @@ class VideoRouteRef {
     this.addressablePubkey,
     this.stableId,
     this.isNaddr = false,
-  });
+  }) : assert(
+         !isNaddr || addressableId != null,
+         'an naddr reference names a coordinate',
+       );
 
   /// The 64-character hex event id, when the reference names a concrete event.
   ///
@@ -43,8 +46,9 @@ class VideoRouteRef {
   /// an `naddr1` addressable without a prior coordinate lookup.
   final String? stableId;
 
-  /// Standard addresses retain their exact kind; historical raw coordinates
-  /// may carry the 34236 alias Divine once used for Kind 34235 videos.
+  /// Whether [addressableId] came from an `naddr1`, whose kind must match
+  /// exactly. A raw coordinate may carry the 34236 alias Divine once used for
+  /// kind 34235 videos, so [matchesEvent] accepts any kind for it.
   final bool isNaddr;
 
   /// Decodes a raw `/video/:id` path segment, or null when it is empty.
