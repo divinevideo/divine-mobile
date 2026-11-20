@@ -1097,6 +1097,7 @@ void main() {
       when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
       when(() => cubit.retry()).thenAnswer((_) async {});
       when(() => cubit.stop()).thenAnswer((_) async {});
+      when(() => cubit.refreshLiveActivity()).thenAnswer((_) async {});
     });
 
     Future<void> pumpView(
@@ -1328,6 +1329,27 @@ void main() {
         await tester.pump();
 
         verify(() => cubit.stop()).called(1);
+      });
+
+      testWidgets('returning to the app re-checks the Lock Screen activity', (
+        tester,
+      ) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.onTheirWay,
+            coordinate: coordinate,
+            liveActivityRunning: true,
+          ),
+        );
+        verifyNever(() => cubit.refreshLiveActivity());
+
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+
+        verify(() => cubit.refreshLiveActivity()).called(1);
       });
     });
   });

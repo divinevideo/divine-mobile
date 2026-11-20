@@ -115,6 +115,17 @@ class PostAnalyticsDetailCubit extends Cubit<PostAnalyticsDetailState>
     emitIfOpen(state.copyWith(liveActivityRunning: false));
   }
 
+  /// Hides Stop once the activity has ended away from this screen, such as
+  /// from the Lock Screen or by the server.
+  ///
+  /// Only checks while Stop shows; hiding a stale Stop is all it is for.
+  Future<void> refreshLiveActivity() async {
+    final coordinate = state.coordinate;
+    if (!state.liveActivityRunning || coordinate == null) return;
+    if (await _activityRunning(coordinate)) return;
+    emitIfOpen(state.copyWith(liveActivityRunning: false));
+  }
+
   @override
   Future<void> close() {
     _settleReload?.cancel();

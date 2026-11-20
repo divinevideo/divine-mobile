@@ -708,5 +708,78 @@ void main() {
         errors: () => [isA<Exception>()],
       );
     });
+
+    group('refreshLiveActivity', () {
+      blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
+        'hides Stop once the activity ended away from the screen',
+        setUp: () {
+          stubActivity(postedAt: _postedAt, running: true);
+          stubFetch(const []);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          when(
+            () => liveActivity.isRunningFor(any()),
+          ).thenAnswer((_) async => false);
+          await cubit.refreshLiveActivity();
+        },
+        expect: () => [
+          _state(
+            status: PostAnalyticsDetailStatus.cantFind,
+            liveActivityRunning: isTrue,
+          ),
+          _state(
+            status: PostAnalyticsDetailStatus.cantFind,
+            liveActivityRunning: isFalse,
+          ),
+        ],
+      );
+
+      blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
+        'keeps Stop while the activity still runs',
+        setUp: () {
+          stubActivity(postedAt: _postedAt, running: true);
+          stubFetch(const []);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.refreshLiveActivity();
+        },
+        expect: () => [
+          _state(
+            status: PostAnalyticsDetailStatus.cantFind,
+            liveActivityRunning: isTrue,
+          ),
+        ],
+        verify: (_) {
+          // Once on load, once on refresh: the refresh did ask.
+          verify(() => liveActivity.isRunningFor(_coordinate)).called(2);
+        },
+      );
+
+      blocTest<PostAnalyticsDetailCubit, PostAnalyticsDetailState>(
+        'does not ask again once Stop is hidden',
+        setUp: () {
+          stubActivity(postedAt: _postedAt);
+          stubFetch(const []);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.refreshLiveActivity();
+        },
+        expect: () => [
+          _state(
+            status: PostAnalyticsDetailStatus.cantFind,
+            liveActivityRunning: isFalse,
+          ),
+        ],
+        verify: (_) {
+          verify(() => liveActivity.isRunningFor(_coordinate)).called(1);
+        },
+      );
+    });
   });
 }

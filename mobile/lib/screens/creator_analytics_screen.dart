@@ -1093,21 +1093,64 @@ class PostAnalyticsDetailView extends StatelessWidget {
     final status = context.select(
       (PostAnalyticsDetailCubit cubit) => cubit.state.status,
     );
-    return switch (status) {
-      PostAnalyticsDetailStatus.loading =>
-        const _PostAnalyticsDetailPlaceholder(
-          child: BrandedLoadingIndicator(),
+    return _RefreshLiveActivityOnResume(
+      child: switch (status) {
+        PostAnalyticsDetailStatus.loading =>
+          const _PostAnalyticsDetailPlaceholder(
+            child: BrandedLoadingIndicator(),
+          ),
+        PostAnalyticsDetailStatus.ready => const _PostAnalyticsDetailReady(),
+        PostAnalyticsDetailStatus.couldNotLoad =>
+          const _PostAnalyticsDetailPlaceholder(
+            child: _PostStatsCouldNotLoad(),
+          ),
+        PostAnalyticsDetailStatus.onTheirWay ||
+        PostAnalyticsDetailStatus.nothingYet ||
+        PostAnalyticsDetailStatus.cantFind => _PostAnalyticsDetailPlaceholder(
+          child: _PostStatsMessage(videoId: videoId),
         ),
-      PostAnalyticsDetailStatus.ready => const _PostAnalyticsDetailReady(),
-      PostAnalyticsDetailStatus.couldNotLoad =>
-        const _PostAnalyticsDetailPlaceholder(child: _PostStatsCouldNotLoad()),
-      PostAnalyticsDetailStatus.onTheirWay ||
-      PostAnalyticsDetailStatus.nothingYet ||
-      PostAnalyticsDetailStatus.cantFind => _PostAnalyticsDetailPlaceholder(
-        child: _PostStatsMessage(videoId: videoId),
-      ),
-    };
+      },
+    );
   }
+}
+
+/// Re-checks the Live Activity when the app returns to the foreground, the
+/// usual way back after it was dismissed from the Lock Screen.
+class _RefreshLiveActivityOnResume extends StatefulWidget {
+  const _RefreshLiveActivityOnResume({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_RefreshLiveActivityOnResume> createState() =>
+      _RefreshLiveActivityOnResumeState();
+}
+
+class _RefreshLiveActivityOnResumeState
+    extends State<_RefreshLiveActivityOnResume> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onResume: () => runDetached(
+        context.read<PostAnalyticsDetailCubit>().refreshLiveActivity(),
+        'refresh post Live Activity',
+        logName: 'CreatorAnalyticsScreen',
+        category: LogCategory.ui,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Chrome shared by the states that have no stats to show, so the back button
