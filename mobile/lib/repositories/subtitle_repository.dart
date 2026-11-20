@@ -9,12 +9,13 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/exceptions/video_exceptions.dart'
+    show AccountRestrictedPublishException;
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/utils/newest_video_revision.dart';
-import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 /// Thrown when an edited-subtitle publish cannot complete. Carries no PII.
@@ -90,10 +91,10 @@ class SubtitleRepository {
   /// so an edit keeps it; untagged subtitles are published as English.
   ///
   /// The 39307 address serves the captions of every revision of [video], so
-  /// it is replaced only after the video republish succeeds: a save that
-  /// fails leaves the published captions alone. If only that last publish
-  /// fails, the republished video is still returned; its Blossom track plays
-  /// the edit and the relay fallback keeps the previous captions.
+  /// it is replaced only after the video republish succeeds: a republish that
+  /// fails leaves the published captions alone. If that last publish fails,
+  /// the save fails too, because playback prefers the captions served from
+  /// it; saving again rebuilds both from the newest revision.
   ///
   /// Throws:
   ///
@@ -104,6 +105,10 @@ class SubtitleRepository {
   ///   read.
   /// * [SubtitleEditException] when the Blossom upload fails.
   /// * [SubtitleEditException] when the video republish fails.
+  /// * [SubtitleEditException] when the subtitle event publish fails after
+  ///   the video republish.
+  /// * [AccountRestrictedPublishException] when the configured Divine relay
+  ///   reports that the account is suspended or banned.
   Future<VideoEvent> publishEditedSubtitles({
     required VideoEvent video,
     required List<SubtitleCue> cues,
@@ -161,11 +166,9 @@ class SubtitleRepository {
       lang: trackLang,
     );
     if (published == null) {
-      Log.warning(
-        'Republished video ${updatedVideo.id} with edited subtitles, but '
-        'its 39307 subtitle event was not published',
-        name: 'SubtitleRepository',
-        category: LogCategory.video,
+      throw SubtitleEditException(
+        'Republished video ${updatedVideo.id}, but its subtitle event was not '
+        'published',
       );
     }
     return updatedVideo;

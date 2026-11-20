@@ -371,31 +371,52 @@ void main() {
         );
       });
 
-      test('returns the republished video when only the subtitle event '
-          'publish fails', () async {
-        when(
-          () => publisher.republishWithSubtitles(
-            existingEvent: any(named: 'existingEvent'),
-            textTrackRef: any(named: 'textTrackRef'),
-            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
-            textTrackLang: any(named: 'textTrackLang'),
-          ),
-        ).thenAnswer((_) async => _updatedVideo);
-        when(
-          () => publisher.publishSubtitleEvent(
-            video: any(named: 'video'),
-            vttContent: any(named: 'vttContent'),
-            blossomUrl: any(named: 'blossomUrl'),
-            lang: any(named: 'lang'),
-          ),
-        ).thenAnswer((_) async => null);
+      group('fails the save when the subtitle event', () {
+        // Playback prefers the captions served from the subtitle event, so a
+        // republish whose subtitle event did not land still shows the old
+        // text. Saving again rebuilds both from the newest revision.
+        setUp(() {
+          when(
+            () => publisher.republishWithSubtitles(
+              existingEvent: any(named: 'existingEvent'),
+              textTrackRef: any(named: 'textTrackRef'),
+              extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+            ),
+          ).thenAnswer((_) async => _updatedVideo);
+        });
 
-        final updated = await repo.publishEditedSubtitles(
-          video: _video,
-          cues: _cues,
-        );
+        test('is not published after the video republish', () async {
+          when(
+            () => publisher.publishSubtitleEvent(
+              video: any(named: 'video'),
+              vttContent: any(named: 'vttContent'),
+              blossomUrl: any(named: 'blossomUrl'),
+              lang: any(named: 'lang'),
+            ),
+          ).thenAnswer((_) async => null);
 
-        expect(updated, _updatedVideo);
+          await expectLater(
+            repo.publishEditedSubtitles(video: _video, cues: _cues),
+            throwsA(isA<SubtitleEditException>()),
+          );
+        });
+
+        test('publish throws after the video republish', () async {
+          when(
+            () => publisher.publishSubtitleEvent(
+              video: any(named: 'video'),
+              vttContent: any(named: 'vttContent'),
+              blossomUrl: any(named: 'blossomUrl'),
+              lang: any(named: 'lang'),
+            ),
+          ).thenThrow(StateError('signer unavailable'));
+
+          await expectLater(
+            repo.publishEditedSubtitles(video: _video, cues: _cues),
+            throwsA(isA<StateError>()),
+          );
+        });
       });
     });
 
