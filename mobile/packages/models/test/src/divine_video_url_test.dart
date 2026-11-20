@@ -250,6 +250,7 @@ void main() {
       final url = divineVideoShareUrl(
         'folder/clip:1',
         authorPubkey: author.toUpperCase(),
+        kind: 34236,
       );
       final reference = Uri.parse(url).pathSegments.last;
       final address = NIP19Tlv.decodeNaddr(reference)!;
@@ -264,17 +265,25 @@ void main() {
 
     test('omits the query when no usable author is known', () {
       expect(
-        divineVideoShareUrl('abc123'),
+        divineVideoShareUrl('abc123', kind: 34236),
         equals('https://divine.video/video/abc123'),
       );
       expect(
-        divineVideoShareUrl('abc123', authorPubkey: 'npub1notahexkey'),
+        divineVideoShareUrl(
+          'abc123',
+          authorPubkey: 'npub1notahexkey',
+          kind: 34236,
+        ),
         equals('https://divine.video/video/abc123'),
       );
     });
 
     test('round-trips through divineVideoUrlRegex', () {
-      final url = divineVideoShareUrl('abc123', authorPubkey: author);
+      final url = divineVideoShareUrl(
+        'abc123',
+        authorPubkey: author,
+        kind: 34236,
+      );
       final match = divineVideoUrlRegex.firstMatch(url);
 
       expect(NIP19Tlv.decodeNaddr(match!.group(1)!)!.id, 'abc123');

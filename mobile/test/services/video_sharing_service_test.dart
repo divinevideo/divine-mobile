@@ -924,6 +924,7 @@ void main() {
         final canonical = divineVideoShareUrl(
           'synthetic-video',
           authorPubkey: _testPubkey,
+          kind: 34236,
         );
         const shortened = 'https://divine.video/l/Abc12345';
         final httpClient = MockClient(
@@ -984,7 +985,13 @@ void main() {
       // The d tag alone can name another account's video (#10929).
       expect(
         url,
-        equals(divineVideoShareUrl('my-vine-id', authorPubkey: _testPubkey)),
+        equals(
+          divineVideoShareUrl(
+            'my-vine-id',
+            authorPubkey: _testPubkey,
+            kind: 34236,
+          ),
+        ),
       );
     });
 
@@ -1031,6 +1038,7 @@ void main() {
         VideoSharingService.shareUrlForStableId(
           'my-vine-id',
           authorPubkey: _testPubkey,
+          kind: 34236,
         ),
         equals(service.generateShareUrl(video)),
       );

@@ -34,7 +34,11 @@ void main() {
     test(
       'the embedded naddr author wins over a conflicting query and citation',
       () {
-        final url = divineVideoShareUrl('clip', authorPubkey: author);
+        final url = divineVideoShareUrl(
+          'clip',
+          authorPubkey: author,
+          kind: 34236,
+        );
         final target = resolveDmVideoTarget(
           content: '$url?author=${'b' * 64}',
           sharedVideoRef: DmSharedVideoRef(
@@ -111,7 +115,11 @@ void main() {
           ),
           isNull,
         );
-        final url = divineVideoShareUrl('clip', authorPubkey: author);
+        final url = divineVideoShareUrl(
+          'clip',
+          authorPubkey: author,
+          kind: 34236,
+        );
         expect(
           resolveDmVideoTarget(content: url, contentIsTruncated: true),
           isNull,

@@ -45,8 +45,8 @@ final divineVideoUrlLineRegex = RegExp(
 /// is unknown; these retain their author query rather than inventing a kind.
 String divineVideoShareUrl(
   String stableId, {
+  required int? kind,
   String? authorPubkey,
-  int? kind = NIP71VideoKinds.addressableShortVideo,
 }) {
   final author = NostrHexUtils.isValidPubkey(authorPubkey)
       ? authorPubkey!.toLowerCase()
