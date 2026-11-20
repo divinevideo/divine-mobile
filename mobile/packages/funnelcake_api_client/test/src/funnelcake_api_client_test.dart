@@ -5116,6 +5116,154 @@ void main() {
       });
     });
 
+    group('searchSounds', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      test('asks the v2 sound search and keeps its ranking', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"data": ['
+            '{"id": "coolness", "pubkey": "$testPubkey", '
+            '"title": "Coolness lol", "created_at": 1780000000, '
+            '"usage_count": 3, "tags": ["funny"]}, '
+            '{"id": "cool-beat", "pubkey": "$testPubkey", '
+            '"title": "Cool beat", "created_at": 1790000000, '
+            '"usage_count": 40}'
+            '], "pagination": {"next_cursor": "25", "has_more": true}}',
+            200,
+          ),
+        );
+
+        final page = await client.searchSounds(query: 'coalness', limit: 25);
+
+        expect(page.sounds.map((sound) => sound.id), ['coolness', 'cool-beat']);
+        expect(page.sounds.first.usageCount, 3);
+        expect(page.nextCursor, '25');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/search/sounds');
+        expect(uri.queryParameters, {'q': 'coalness', 'limit': '25'});
+      });
+
+      test('asks for the page after cursor', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"data": [], "pagination": {"has_more": false}}',
+            200,
+          ),
+        );
+
+        final page = await client.searchSounds(
+          query: '  piano  ',
+          cursor: '50',
+        );
+
+        expect(page.hasMore, isFalse);
+        expect(requestedUri().queryParameters, {
+          'q': 'piano',
+          'limit': '50',
+          'cursor': '50',
+        });
+      });
+
+      test('treats an empty cursor as the first page', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"data": []}', 200));
+
+        await client.searchSounds(query: 'piano', cursor: '');
+
+        expect(requestedUri().queryParameters, isNot(contains('cursor')));
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.searchSounds(query: 'piano'),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws a FunnelcakeException for a blank query', () {
+        expect(
+          () => client.searchSounds(query: '   '),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              'Search query cannot be empty',
+            ),
+          ),
+        );
+        verifyNever(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('throws FunnelcakeApiException when search is unavailable', () {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"error": "Sound search is temporarily unavailable"}',
+            503,
+          ),
+        );
+
+        expect(
+          () => client.searchSounds(query: 'piano'),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              503,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenThrow(TimeoutException('slow'));
+
+        expect(
+          () => client.searchSounds(query: 'piano'),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('wraps a malformed body in a FunnelcakeException', () async {
+        for (final body in const ['[]', 'not json', '{"data": "nope"}']) {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer((_) async => http.Response(body, 200));
+
+          await expectLater(
+            () => client.searchSounds(query: 'piano'),
+            throwsA(isA<FunnelcakeException>()),
+            reason: body,
+          );
+        }
+      });
+    });
+
     group('getTrendingSounds', () {
       test('requests trending sounds and parses their usage counts', () async {
         when(

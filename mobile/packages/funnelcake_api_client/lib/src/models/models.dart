@@ -7,6 +7,7 @@ export 'notification_response.dart';
 export 'poll_vote_tally.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';
+export 'sound_search_response.dart';
 export 'sound_stats.dart';
 export 'v2_popular_videos_response.dart';
 export 'video_comment.dart';

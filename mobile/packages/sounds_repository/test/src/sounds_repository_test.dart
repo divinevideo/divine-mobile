@@ -358,10 +358,10 @@ void main() {
       }
 
       test('returns nothing and does not query for a blank query', () async {
-        final (:sounds, :relays) = await repository.searchSounds('  #  ');
+        final results = await repository.searchSounds('  #  ');
 
-        expect(sounds, isEmpty);
-        expect(relays, SoundSearchRelays.notAsked);
+        expect(results.sounds, isEmpty);
+        expect(results.relays, SoundSearchRelays.notAsked);
         verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
       });
 
@@ -435,10 +435,10 @@ void main() {
           ),
         ]);
 
-        final (:sounds, :relays) = await repository.searchSounds('hooves');
+        final results = await repository.searchSounds('hooves');
 
-        expect(sounds.map((sound) => sound.id), equals([testEventId1]));
-        expect(relays, SoundSearchRelays.answered);
+        expect(results.sounds.map((sound) => sound.id), equals([testEventId1]));
+        expect(results.relays, SoundSearchRelays.answered);
         expect(repository.getSoundFromCache(testEventId1), isNotNull);
       });
 
@@ -590,11 +590,11 @@ void main() {
           () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
         ).thenThrow(Exception('relay down'));
 
-        final (:sounds, :relays) = await repository.searchSounds('wind');
+        final results = await repository.searchSounds('wind');
 
-        expect(sounds.map((sound) => sound.id), equals([testEventId1]));
+        expect(results.sounds.map((sound) => sound.id), equals([testEventId1]));
         expect(
-          relays,
+          results.relays,
           SoundSearchRelays.failed,
           reason: 'the cached matches stand in for the relays, and say so',
         );
@@ -620,13 +620,13 @@ void main() {
         Future<void> expectUnnamedLastWithoutLookup(
           SoundSearchRelays expectedRelays,
         ) async {
-          final (:sounds, :relays) = await repository.searchSounds('wind');
+          final results = await repository.searchSounds('wind');
 
           expect(
-            sounds.map((sound) => sound.id),
+            results.sounds.map((sound) => sound.id),
             equals([testEventId1, testEventId3]),
           );
-          expect(relays, expectedRelays);
+          expect(results.relays, expectedRelays);
           verifyNever(
             () => mockNostrClient.queryEventsDetailed(
               any(that: isNot(isTagQuery)),
@@ -678,10 +678,13 @@ void main() {
             ),
           ], timedOut: true);
 
-          final (:sounds, :relays) = await repository.searchSounds('wind');
+          final results = await repository.searchSounds('wind');
 
-          expect(sounds.map((sound) => sound.id), equals([testEventId2]));
-          expect(relays, SoundSearchRelays.timedOut);
+          expect(
+            results.sounds.map((sound) => sound.id),
+            equals([testEventId2]),
+          );
+          expect(results.relays, SoundSearchRelays.timedOut);
         });
       });
 
@@ -696,6 +699,264 @@ void main() {
                 ).captured.single
                 as List<Filter>;
         expect(filters.every((filter) => filter.limit == 7), isTrue);
+      });
+
+      group('through Funnelcake', () {
+        late _MockFunnelcakeApiClient funnelcake;
+        late SoundsRepository searching;
+
+        setUp(() {
+          funnelcake = _MockFunnelcakeApiClient();
+          when(() => funnelcake.isAvailable).thenReturn(true);
+          searching = SoundsRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: funnelcake,
+          );
+          addTearDown(searching.dispose);
+        });
+
+        SoundStats found(String id, int usageCount) => SoundStats(
+          id: id,
+          pubkey: testPubkey1,
+          title: 'Sound',
+          createdAt: DateTime.utc(2026),
+          usageCount: usageCount,
+        );
+
+        void answerSearch(
+          List<SoundStats> sounds, {
+          String? nextCursor,
+        }) {
+          when(
+            () => funnelcake.searchSounds(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                SoundSearchResponse(sounds: sounds, nextCursor: nextCursor),
+          );
+        }
+
+        void failSearch(Exception error) {
+          when(
+            () => funnelcake.searchSounds(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenThrow(error);
+        }
+
+        test(
+          'keeps the Funnelcake ranking and loads the events from relays',
+          () async {
+            answerSearch([
+              found(testEventId2, 28),
+              found(testEventId1, 60),
+              found(testEventId3, 5),
+            ], nextCursor: '50');
+            // Returned newest first and missing the third sound found.
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                createAudioEvent(
+                  id: testEventId1,
+                  pubkey: testPubkey1,
+                  title: 'Older but second',
+                  createdAt: 100,
+                ),
+                createAudioEvent(
+                  id: testEventId2,
+                  pubkey: testPubkey2,
+                  title: 'Newer but first',
+                  createdAt: 200,
+                ),
+              ],
+            );
+
+            final results = await searching.searchSounds('wind', limit: 20);
+
+            expect(results.sounds.map((sound) => sound.id), [
+              testEventId2,
+              testEventId1,
+            ]);
+            expect(results.source, SoundSearchSource.funnelcake);
+            expect(results.relays, SoundSearchRelays.notAsked);
+            expect(results.usageCounts, {
+              testEventId2: 28,
+              testEventId1: 60,
+              testEventId3: 5,
+            });
+            expect(results.nextCursor, '50');
+            verify(
+              () => funnelcake.searchSounds(query: 'wind', limit: 20),
+            ).called(1);
+            final filter =
+                (verify(
+                          () => mockNostrClient.queryEvents(captureAny()),
+                        ).captured.single
+                        as List<Filter>)
+                    .single;
+            expect(filter.ids, [testEventId2, testEventId1, testEventId3]);
+            verifyNever(
+              () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
+            );
+          },
+        );
+
+        test('keeps a sound only a typo-tolerant search finds', () async {
+          answerSearch([found(testEventId1, 1)]);
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              createAudioEvent(
+                id: testEventId1,
+                pubkey: testPubkey1,
+                title: 'Coolness lol',
+              ),
+            ],
+          );
+
+          final results = await searching.searchSounds('coalness');
+
+          expect(results.sounds.single.title, 'Coolness lol');
+          expect(results.sounds.single.matchesSearch('coalness'), isFalse);
+          expect(results.nextCursor, isNull);
+        });
+
+        test('sends the search terms, not the raw query', () async {
+          answerSearch(const []);
+
+          await searching.searchSounds('  Horses #Hooves horses ');
+
+          verify(
+            () => funnelcake.searchSounds(query: 'horses hooves'),
+          ).called(1);
+        });
+
+        test('asks Funnelcake for the page after cursor', () async {
+          answerSearch(const []);
+
+          final results = await searching.searchSounds('wind', cursor: '50');
+
+          expect(results.source, SoundSearchSource.funnelcake);
+          verify(
+            () => funnelcake.searchSounds(query: 'wind', cursor: '50'),
+          ).called(1);
+        });
+
+        test('throws what a later page throws, without the relays', () async {
+          failSearch(
+            const FunnelcakeApiException(
+              message: 'unavailable',
+              statusCode: 503,
+              url: 'https://example.com',
+            ),
+          );
+
+          await expectLater(
+            searching.searchSounds('wind', cursor: '50'),
+            throwsA(isA<FunnelcakeApiException>()),
+          );
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        });
+
+        test('throws for a later page without a Funnelcake client', () async {
+          await expectLater(
+            repository.searchSounds('wind', cursor: '50'),
+            throwsA(isA<FunnelcakeNotConfiguredException>()),
+          );
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        });
+
+        for (final (name, failure) in <(String, Exception)>[
+          (
+            'unavailable',
+            const FunnelcakeApiException(
+              message: 'unavailable',
+              statusCode: 503,
+              url: 'https://example.com',
+            ),
+          ),
+          (
+            'refusing the query',
+            const FunnelcakeApiException(
+              message: 'bad request',
+              statusCode: 400,
+              url: 'https://example.com',
+            ),
+          ),
+          ('timing out', const FunnelcakeTimeoutException()),
+          ('answering nonsense', const FunnelcakeException('malformed')),
+        ]) {
+          test('searches the relays when Funnelcake is $name', () async {
+            failSearch(failure);
+            answerTagQuery([
+              createAudioEvent(
+                id: testEventId1,
+                pubkey: testPubkey1,
+                title: 'Wind chimes',
+              ),
+            ]);
+
+            final results = await searching.searchSounds('wind');
+
+            expect(results.sounds.map((sound) => sound.id), [testEventId1]);
+            expect(results.source, SoundSearchSource.relays);
+            expect(results.relays, SoundSearchRelays.answered);
+            expect(results.usageCounts, isEmpty);
+            expect(results.nextCursor, isNull);
+          });
+        }
+
+        test(
+          'searches the relays when they cannot load what Funnelcake found',
+          () async {
+            answerSearch([found(testEventId1, 1)]);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenThrow(Exception('relay down'));
+
+            final results = await searching.searchSounds('wind');
+
+            expect(results.source, SoundSearchSource.relays);
+            verify(
+              () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
+            ).called(1);
+          },
+        );
+
+        test(
+          'searches only the relays while Funnelcake is not configured',
+          () async {
+            when(() => funnelcake.isAvailable).thenReturn(false);
+
+            final results = await searching.searchSounds('wind');
+
+            expect(results.source, SoundSearchSource.relays);
+            verifyNever(
+              () => funnelcake.searchSounds(
+                query: any(named: 'query'),
+                limit: any(named: 'limit'),
+                cursor: any(named: 'cursor'),
+              ),
+            );
+          },
+        );
+
+        test('answers a blank query without asking Funnelcake', () async {
+          final results = await searching.searchSounds('  #  ');
+
+          expect(results.sounds, isEmpty);
+          expect(results.relays, SoundSearchRelays.notAsked);
+          verifyNever(
+            () => funnelcake.searchSounds(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+        });
       });
     });
 
@@ -1196,7 +1457,36 @@ void main() {
         );
       });
 
-      test('leaves them out of searches', () async {
+      test('leaves them out of Funnelcake searches', () async {
+        when(
+          () => funnelcake.searchSounds(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => SoundSearchResponse(
+            sounds: [
+              for (final id in [testEventId2, testEventId1])
+                SoundStats(
+                  id: id,
+                  pubkey: testPubkey1,
+                  title: 'Sound',
+                  createdAt: DateTime.utc(2026),
+                  usageCount: 3,
+                ),
+            ],
+          ),
+        );
+
+        final results = await blocking.searchSounds('beat');
+
+        expect(ids(results.sounds), [testEventId1]);
+        expect(results.usageCounts.keys, [testEventId2, testEventId1]);
+      });
+
+      test('leaves them out of relay searches', () async {
+        when(() => funnelcake.isAvailable).thenReturn(false);
         when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
           (_) async => (
             events: [

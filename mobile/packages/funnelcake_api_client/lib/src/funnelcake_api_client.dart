@@ -2725,6 +2725,73 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Searches published sounds for [query], best match first, each with its
+  /// [SoundStats.usageCount].
+  ///
+  /// The server matches titles, tags, creators and descriptions despite
+  /// typos and partial words, and ranks by how well a sound matches, then by
+  /// its use, trend, age and creator, with Divine's own sounds first among
+  /// equal matches.
+  ///
+  /// [limit] is the most sounds a page holds; the server takes 1 to 100.
+  /// [cursor] is the [SoundSearchResponse.nextCursor] of the page before.
+  /// A page can hold fewer sounds than [limit], none even, and still not be
+  /// the last; follow [SoundSearchResponse.nextCursor] until it is `null`.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [query] is blank, since the endpoint lists
+  ///   sounds instead of searching without one.
+  /// - [FunnelcakeApiException] if the request fails; status 503 when the
+  ///   server's sound search is unavailable.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<SoundSearchResponse> searchSounds({
+    required String query,
+    int limit = 50,
+    String? cursor,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      throw const FunnelcakeException('Search query cannot be empty');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/search/sounds').replace(
+      queryParameters: {
+        'q': trimmed,
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to search sounds',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw const FormatException('Malformed sound search response');
+      }
+      return SoundSearchResponse.fromJson(data);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to search sounds: $e', cause: e);
+    }
+  }
+
   /// Fetches the sounds being adopted right now, the most trending first,
   /// each with its [SoundStats.usageCount].
   ///
