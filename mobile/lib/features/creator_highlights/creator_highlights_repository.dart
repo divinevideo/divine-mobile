@@ -298,7 +298,7 @@ class FunnelcakeCreatorHighlightsRepository
   static DateTime _weekStart(DateTime day) =>
       DateTime(day.year, day.month, day.day - day.weekday + 1);
 
-  /// Days this week the invite was already shown to [owner].
+  /// Every retained date (about two weeks) the invite was shown to [owner].
   Set<String> _inviteRecord(String owner) {
     final raw = _preferences.getString(inviteKey(owner));
     if (raw == null || raw.isEmpty) return {};

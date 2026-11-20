@@ -53,11 +53,11 @@
 - [ ] **Step 1: Write failing tests** in the repository test, new `group('invite')`, using the file's existing fakes and a fixed `now`:
   - `'offers the invite on a day with a publication today'`: today's video → `card!.showInvite` is `true`.
   - `'withholds the invite when nothing was published today'`: only an earlier-this-week video → `showInvite` is `false`.
-  - `'withholds the invite after three posting days this week'`: prefs `inviteKey(owner)` = `'<monday>|<mon>,<tue>,<wed>'`, now Thursday with a video today → `false`.
+  - `'withholds the invite after three posting days this week'`: prefs `inviteKey(owner)` = `'<mon>,<tue>,<wed>'` (as built: sorted dates, no week prefix), now Thursday with a video today → `false`.
   - `'keeps the invite on a day already counted'`: same three dates, now Wednesday → `true`.
-  - `'a new week resets the limit'`: marker for last week's Monday with three dates, now the following Monday → `true`.
+  - `'a new week resets the limit'`: three dates from last week, now the following Monday → `true`.
   - `'another account's record does not apply'`: limit-reached marker under a different owner's key → `true` for `owner`.
-  - `markInviteShown`: two calls with the same `localDate` store one date (`'<monday>|<date>'`); a call in a new week replaces the old record; a rejected write throws `CreatorHighlightPresentationException`.
+  - `markInviteShown`: two calls with the same `localDate` store one date (`'<date>'`); dates older than about two weeks are dropped while last week's stay, so a local date stepping back across a Monday still counts them; a rejected write throws `CreatorHighlightPresentationException`.
   - In `creator_highlight_test.dart`: `copyWith(rotation: 1)` keeps `showInvite: true`, and two highlights differing only in `showInvite` are not equal.
 
 - [ ] **Step 2: Run them and confirm they fail**

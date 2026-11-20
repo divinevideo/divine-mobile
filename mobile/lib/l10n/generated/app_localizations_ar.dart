@@ -16479,10 +16479,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get creatorHighlightAnalytics => 'عرض إحصاءاتك';
 
   @override
-  String get creatorHighlightInvite => 'دعوة أصدقائك';
+  String get creatorHighlightInvite => 'دعوة الأحبة';
 
   @override
-  String get inviteFriendsTitle => 'دعوة أصدقائك';
+  String get inviteFriendsTitle => 'دعوة الأحبة';
 
   @override
   String get inviteFriendsMessageLabel => 'رسالتك';

@@ -16775,10 +16775,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Zobacz swoje statystyki';
 
   @override
-  String get creatorHighlightInvite => 'Zaproś znajomych';
+  String get creatorHighlightInvite => 'Zaproś bliskie ci osoby';
 
   @override
-  String get inviteFriendsTitle => 'Zaproś znajomych';
+  String get inviteFriendsTitle => 'Zaproś bliskie ci osoby';
 
   @override
   String get inviteFriendsMessageLabel => 'Twoja wiadomość';
