@@ -249,6 +249,8 @@ void main() {
         AuthenticationSource.nip07,
       ]) {
         test('a $prompting account never starts an activity', () async {
+          // Seeded on, so isFalse below proves the sync turned it off.
+          repository.featureEnabled = true;
           signIn(_ownerA, as: prompting);
           build(ready(_ownerA));
           await pumpEventQueue();
@@ -297,6 +299,8 @@ void main() {
       });
 
       test('off from the start never binds', () async {
+        // Seeded on, so isFalse below proves the sync turned it off.
+        repository.featureEnabled = true;
         signIn(_ownerA);
         session = _TestNostrSession(ready(_ownerA));
         final container = ProviderContainer(
