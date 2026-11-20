@@ -5,7 +5,8 @@ import 'dart:async';
 import 'dart:math' show min;
 
 import 'package:meta/meta.dart';
-import 'package:models/models.dart' show AudioEvent, VideoEvent, searchTermsOf;
+import 'package:models/models.dart'
+    show AudioEvent, SoundKind, VideoEvent, searchTermsOf;
 import 'package:nostr_sdk/nostr_sdk.dart' show AId;
 import 'package:openvine/config/official_accounts.dart'
     show kDivineSoundPublisherPubkeys, kSoundLibraryPublisherPubkeys;
@@ -134,8 +135,8 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// The first page of the community sounds matching a free-text [query], who
-/// answered it and how the relays answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given, who answered it and how the relays answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
 /// typo-tolerant search, ranked best match first, and when that cannot
@@ -154,7 +155,11 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
 /// ```
 @riverpod
-Future<SoundSearchResults> soundSearchResults(Ref ref, String query) async {
+Future<SoundSearchResults> soundSearchResults(
+  Ref ref,
+  String query, {
+  SoundKind? kind,
+}) async {
   // Answered before the repository is read, so a search field that is merely
   // open does not construct one — and with it a Nostr client — for a query
   // nobody has typed yet.
@@ -169,12 +174,12 @@ Future<SoundSearchResults> soundSearchResults(Ref ref, String query) async {
   }
 
   final repository = ref.watch(soundsRepositoryProvider);
-  return repository.searchSounds(query);
+  return repository.searchSounds(query, kind: kind);
 }
 
-/// Every page a search for [query] has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] when one is given, has loaded,
+/// starting with [soundSearchResults]'s, and loading the next as the list is
+/// scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -190,15 +195,17 @@ class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
   late _SearchPager _pager;
 
   @override
-  Future<PagedSounds> build(String query) async {
-    final first = await ref.watch(soundSearchResultsProvider(query).future);
+  Future<PagedSounds> build(String query, {SoundKind? kind}) async {
+    final first = await ref.watch(
+      soundSearchResultsProvider(query, kind: kind).future,
+    );
     // Made anew with each build, so a page still loading for the list this
     // build replaced cannot move the new one's cursor. The repository is
     // read only for a later page, which only a search that asked it has.
     _pager = _SearchPager(
       (cursor) => ref
           .read(soundsRepositoryProvider)
-          .searchSounds(query, cursor: cursor),
+          .searchSounds(query, kind: kind, cursor: cursor),
     );
     return PagedSounds.first(_pager.take(first));
   }
@@ -684,10 +691,14 @@ Future<Map<String, SoundCover?>> forYouSoundCovers(Ref ref) async {
 @riverpod
 Future<Map<String, SoundCover?>> soundSearchCovers(
   Ref ref,
-  String query,
-) async {
+  String query, {
+  SoundKind? kind,
+}) async {
   final pages = await ref.watch(
-    soundSearchPagesProvider(query).selectAsync((list) => list.pages),
+    soundSearchPagesProvider(
+      query,
+      kind: kind,
+    ).selectAsync((list) => list.pages),
   );
   return _coversFor(ref, pages);
 }

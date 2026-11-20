@@ -250,8 +250,8 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
   }
 }
 
-/// The first page of the community sounds matching a free-text [query], who
-/// answered it and how the relays answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given, who answered it and how the relays answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
 /// typo-tolerant search, ranked best match first, and when that cannot
@@ -273,8 +273,8 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 @ProviderFor(soundSearchResults)
 final soundSearchResultsProvider = SoundSearchResultsFamily._();
 
-/// The first page of the community sounds matching a free-text [query], who
-/// answered it and how the relays answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given, who answered it and how the relays answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
 /// typo-tolerant search, ranked best match first, and when that cannot
@@ -303,8 +303,8 @@ final class SoundSearchResultsProvider
     with
         $FutureModifier<SoundSearchResults>,
         $FutureProvider<SoundSearchResults> {
-  /// The first page of the community sounds matching a free-text [query], who
-  /// answered it and how the relays answered it.
+  /// The first page of the community sounds matching a free-text [query], of
+  /// [kind] when one is given, who answered it and how the relays answered it.
   ///
   /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
   /// typo-tolerant search, ranked best match first, and when that cannot
@@ -324,7 +324,7 @@ final class SoundSearchResultsProvider
   /// ```
   SoundSearchResultsProvider._({
     required SoundSearchResultsFamily super.from,
-    required String super.argument,
+    required (String, {SoundKind? kind}) super.argument,
   }) : super(
          retry: null,
          name: r'soundSearchResultsProvider',
@@ -340,7 +340,7 @@ final class SoundSearchResultsProvider
   String toString() {
     return r'soundSearchResultsProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -351,8 +351,8 @@ final class SoundSearchResultsProvider
 
   @override
   FutureOr<SoundSearchResults> create(Ref ref) {
-    final argument = this.argument as String;
-    return soundSearchResults(ref, argument);
+    final argument = this.argument as (String, {SoundKind? kind});
+    return soundSearchResults(ref, argument.$1, kind: argument.kind);
   }
 
   @override
@@ -367,10 +367,10 @@ final class SoundSearchResultsProvider
 }
 
 String _$soundSearchResultsHash() =>
-    r'b1eb964d928af106c265ff3debfa21d4286b21fa';
+    r'7edcbddd0bce6659843124ca6c0176e2220b32ae';
 
-/// The first page of the community sounds matching a free-text [query], who
-/// answered it and how the relays answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given, who answered it and how the relays answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
 /// typo-tolerant search, ranked best match first, and when that cannot
@@ -390,7 +390,11 @@ String _$soundSearchResultsHash() =>
 /// ```
 
 final class SoundSearchResultsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<SoundSearchResults>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<SoundSearchResults>,
+          (String, {SoundKind? kind})
+        > {
   SoundSearchResultsFamily._()
     : super(
         retry: null,
@@ -400,8 +404,8 @@ final class SoundSearchResultsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// The first page of the community sounds matching a free-text [query], who
-  /// answered it and how the relays answered it.
+  /// The first page of the community sounds matching a free-text [query], of
+  /// [kind] when one is given, who answered it and how the relays answered it.
   ///
   /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
   /// typo-tolerant search, ranked best match first, and when that cannot
@@ -420,16 +424,16 @@ final class SoundSearchResultsFamily extends $Family
   /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
   /// ```
 
-  SoundSearchResultsProvider call(String query) =>
-      SoundSearchResultsProvider._(argument: query, from: this);
+  SoundSearchResultsProvider call(String query, {SoundKind? kind}) =>
+      SoundSearchResultsProvider._(argument: (query, kind: kind), from: this);
 
   @override
   String toString() => r'soundSearchResultsProvider';
 }
 
-/// Every page a search for [query] has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] when one is given, has loaded,
+/// starting with [soundSearchResults]'s, and loading the next as the list is
+/// scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -444,9 +448,9 @@ final class SoundSearchResultsFamily extends $Family
 @ProviderFor(SoundSearchPages)
 final soundSearchPagesProvider = SoundSearchPagesFamily._();
 
-/// Every page a search for [query] has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] when one is given, has loaded,
+/// starting with [soundSearchResults]'s, and loading the next as the list is
+/// scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -459,9 +463,9 @@ final soundSearchPagesProvider = SoundSearchPagesFamily._();
 /// ```
 final class SoundSearchPagesProvider
     extends $AsyncNotifierProvider<SoundSearchPages, PagedSounds> {
-  /// Every page a search for [query] has loaded, starting with
-  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
-  /// its end ([SoundSearchPages.loadMore]).
+  /// Every page a search for [query], of [kind] when one is given, has loaded,
+  /// starting with [soundSearchResults]'s, and loading the next as the list is
+  /// scrolled to its end ([SoundSearchPages.loadMore]).
   ///
   /// Only Funnelcake's answers have more than one page. Its pages can hold
   /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -474,7 +478,7 @@ final class SoundSearchPagesProvider
   /// ```
   SoundSearchPagesProvider._({
     required SoundSearchPagesFamily super.from,
-    required String super.argument,
+    required (String, {SoundKind? kind}) super.argument,
   }) : super(
          retry: null,
          name: r'soundSearchPagesProvider',
@@ -490,7 +494,7 @@ final class SoundSearchPagesProvider
   String toString() {
     return r'soundSearchPagesProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -508,11 +512,11 @@ final class SoundSearchPagesProvider
   }
 }
 
-String _$soundSearchPagesHash() => r'88517b009b1c4ad93f98171baafd058f7c79df55';
+String _$soundSearchPagesHash() => r'9ea725572a44bc01cffbd5ac1b04af8cc407d21d';
 
-/// Every page a search for [query] has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] when one is given, has loaded,
+/// starting with [soundSearchResults]'s, and loading the next as the list is
+/// scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -531,7 +535,7 @@ final class SoundSearchPagesFamily extends $Family
           AsyncValue<PagedSounds>,
           PagedSounds,
           FutureOr<PagedSounds>,
-          String
+          (String, {SoundKind? kind})
         > {
   SoundSearchPagesFamily._()
     : super(
@@ -542,9 +546,9 @@ final class SoundSearchPagesFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Every page a search for [query] has loaded, starting with
-  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
-  /// its end ([SoundSearchPages.loadMore]).
+  /// Every page a search for [query], of [kind] when one is given, has loaded,
+  /// starting with [soundSearchResults]'s, and loading the next as the list is
+  /// scrolled to its end ([SoundSearchPages.loadMore]).
   ///
   /// Only Funnelcake's answers have more than one page. Its pages can hold
   /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -556,16 +560,16 @@ final class SoundSearchPagesFamily extends $Family
   /// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
   /// ```
 
-  SoundSearchPagesProvider call(String query) =>
-      SoundSearchPagesProvider._(argument: query, from: this);
+  SoundSearchPagesProvider call(String query, {SoundKind? kind}) =>
+      SoundSearchPagesProvider._(argument: (query, kind: kind), from: this);
 
   @override
   String toString() => r'soundSearchPagesProvider';
 }
 
-/// Every page a search for [query] has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] when one is given, has loaded,
+/// starting with [soundSearchResults]'s, and loading the next as the list is
+/// scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -578,10 +582,11 @@ final class SoundSearchPagesFamily extends $Family
 /// ```
 
 abstract class _$SoundSearchPages extends $AsyncNotifier<PagedSounds> {
-  late final _$args = ref.$arg as String;
-  String get query => _$args;
+  late final _$args = ref.$arg as (String, {SoundKind? kind});
+  String get query => _$args.$1;
+  SoundKind? get kind => _$args.kind;
 
-  FutureOr<PagedSounds> build(String query);
+  FutureOr<PagedSounds> build(String query, {SoundKind? kind});
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
@@ -594,7 +599,7 @@ abstract class _$SoundSearchPages extends $AsyncNotifier<PagedSounds> {
               Object?,
               Object?
             >;
-    return element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args.$1, kind: _$args.kind));
   }
 }
 
@@ -1578,7 +1583,7 @@ final class SoundSearchCoversProvider
   /// loaded, keyed like [trendingSoundCovers].
   SoundSearchCoversProvider._({
     required SoundSearchCoversFamily super.from,
-    required String super.argument,
+    required (String, {SoundKind? kind}) super.argument,
   }) : super(
          retry: null,
          name: r'soundSearchCoversProvider',
@@ -1594,7 +1599,7 @@ final class SoundSearchCoversProvider
   String toString() {
     return r'soundSearchCoversProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -1605,8 +1610,8 @@ final class SoundSearchCoversProvider
 
   @override
   FutureOr<Map<String, SoundCover?>> create(Ref ref) {
-    final argument = this.argument as String;
-    return soundSearchCovers(ref, argument);
+    final argument = this.argument as (String, {SoundKind? kind});
+    return soundSearchCovers(ref, argument.$1, kind: argument.kind);
   }
 
   @override
@@ -1620,13 +1625,17 @@ final class SoundSearchCoversProvider
   }
 }
 
-String _$soundSearchCoversHash() => r'b46b96e0cd15ca6d0fab0c5d31efe4fa2caff336';
+String _$soundSearchCoversHash() => r'c19e3f49e4a37d834aadf9f5ec96e3974755c6ab';
 
 /// Covers for the sounds a community search reached, on every page it has
 /// loaded, keyed like [trendingSoundCovers].
 
 final class SoundSearchCoversFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<String, SoundCover?>>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          (String, {SoundKind? kind})
+        > {
   SoundSearchCoversFamily._()
     : super(
         retry: null,
@@ -1639,8 +1648,8 @@ final class SoundSearchCoversFamily extends $Family
   /// Covers for the sounds a community search reached, on every page it has
   /// loaded, keyed like [trendingSoundCovers].
 
-  SoundSearchCoversProvider call(String query) =>
-      SoundSearchCoversProvider._(argument: query, from: this);
+  SoundSearchCoversProvider call(String query, {SoundKind? kind}) =>
+      SoundSearchCoversProvider._(argument: (query, kind: kind), from: this);
 
   @override
   String toString() => r'soundSearchCoversProvider';

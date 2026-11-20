@@ -5131,13 +5131,13 @@ void main() {
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer(
           (_) async => http.Response(
-            '{"data": ['
+            '{"data": [ '
             '{"id": "coolness", "pubkey": "$testPubkey", '
             '"title": "Coolness lol", "created_at": 1780000000, '
             '"usage_count": 3, "tags": ["funny"]}, '
             '{"id": "cool-beat", "pubkey": "$testPubkey", '
             '"title": "Cool beat", "created_at": 1790000000, '
-            '"usage_count": 40}'
+            '"usage_count": 40} '
             '], "pagination": {"next_cursor": "25", "has_more": true}}',
             200,
           ),
@@ -5175,6 +5175,23 @@ void main() {
           'cursor': '50',
         });
       });
+
+      test(
+        'narrows the search to a kind as the server classified it',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer((_) async => http.Response('{"data": []}', 200));
+
+          await client.searchSounds(query: 'rain', kind: SoundKind.effect);
+          final effects = requestedUri().queryParameters;
+          await client.searchSounds(query: 'rain', kind: SoundKind.music);
+          final music = requestedUri().queryParameters;
+
+          expect(effects['kind'], 'sfx');
+          expect(music['kind'], 'music');
+        },
+      );
 
       test('treats an empty cursor as the first page', () async {
         when(

@@ -37,6 +37,7 @@ void main() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(const Duration(seconds: 10));
       registerFallbackValue(<int>[]);
+      registerFallbackValue(SoundKind.music);
     });
 
     setUp(() {
@@ -124,6 +125,46 @@ void main() {
                   entry.message.contains('is not a Kind')),
         )
         .length;
+
+    /// The lookup, by id, of the sounds a ranking or a search named.
+    final isIdLookup = predicate<List<Filter>>(
+      (filters) => filters.any((filter) => filter.ids != null),
+      'the lookup by id',
+    );
+
+    /// Answers the lookup by id on the shared connections with [events],
+    /// ended as [timedOut] says.
+    void answerIdLookup(List<Event> events, {bool timedOut = false}) {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(that: isIdLookup),
+          timeout: any(named: 'timeout'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: false),
+      );
+    }
+
+    /// The ids each lookup on the shared connections asked for.
+    List<List<String>?> idLookups() => [
+      for (final filters in verify(
+        () => mockNostrClient.queryEventsDetailed(
+          captureAny(that: isIdLookup),
+          timeout: any(named: 'timeout'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).captured)
+        (filters as List<Filter>).single.ids,
+    ];
+
+    void verifyNoIdLookup() => verifyNever(
+      () => mockNostrClient.queryEventsDetailed(
+        any(that: isIdLookup),
+        timeout: any(named: 'timeout'),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      ),
+    );
 
     group('initialization', () {
       test('initializes with empty cache', () async {
@@ -318,7 +359,9 @@ void main() {
       /// follows it; both go through `queryEventsDetailed`.
       final isTagQuery = predicate<List<Filter>>(
         (filters) => filters.any(
-          (filter) => filter.kinds?.contains(audioEventKind) ?? false,
+          (filter) =>
+              (filter.kinds?.contains(audioEventKind) ?? false) &&
+              filter.ids == null,
         ),
         'the tag query',
       );
@@ -688,6 +731,37 @@ void main() {
         });
       });
 
+      test('narrows the relay results to a kind by their tags', () async {
+        answerTagQuery([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Rain boom',
+            publicTags: const ['sfx'],
+          ),
+          createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey1,
+            title: 'Rain song',
+            publicTags: const ['music'],
+          ),
+          createAudioEvent(
+            id: testEventId3,
+            pubkey: testPubkey1,
+            title: 'Rain on a roof',
+          ),
+        ]);
+
+        final effects = await repository.searchSounds(
+          'rain',
+          kind: SoundKind.effect,
+        );
+        final every = await repository.searchSounds('rain');
+
+        expect(effects.sounds.map((sound) => sound.id), [testEventId1]);
+        expect(every.sounds, hasLength(3));
+      });
+
       test('honours an explicit result limit', () async {
         await repository.searchSounds('wind', limit: 7);
 
@@ -730,6 +804,7 @@ void main() {
           when(
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
+              kind: any(named: 'kind'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -743,6 +818,7 @@ void main() {
           when(
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
+              kind: any(named: 'kind'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -758,22 +834,20 @@ void main() {
               found(testEventId3, 5),
             ], nextCursor: '50');
             // Returned newest first and missing the third sound found.
-            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-              (_) async => [
-                createAudioEvent(
-                  id: testEventId1,
-                  pubkey: testPubkey1,
-                  title: 'Older but second',
-                  createdAt: 100,
-                ),
-                createAudioEvent(
-                  id: testEventId2,
-                  pubkey: testPubkey2,
-                  title: 'Newer but first',
-                  createdAt: 200,
-                ),
-              ],
-            );
+            answerIdLookup([
+              createAudioEvent(
+                id: testEventId1,
+                pubkey: testPubkey1,
+                title: 'Older but second',
+                createdAt: 100,
+              ),
+              createAudioEvent(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                title: 'Newer but first',
+                createdAt: 200,
+              ),
+            ]);
 
             final results = await searching.searchSounds('wind', limit: 20);
 
@@ -792,13 +866,9 @@ void main() {
             verify(
               () => funnelcake.searchSounds(query: 'wind', limit: 20),
             ).called(1);
-            final filter =
-                (verify(
-                          () => mockNostrClient.queryEvents(captureAny()),
-                        ).captured.single
-                        as List<Filter>)
-                    .single;
-            expect(filter.ids, [testEventId2, testEventId1, testEventId3]);
+            expect(idLookups(), [
+              [testEventId2, testEventId1, testEventId3],
+            ]);
             verifyNever(
               () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
             );
@@ -807,15 +877,13 @@ void main() {
 
         test('keeps a sound only a typo-tolerant search finds', () async {
           answerSearch([found(testEventId1, 1)]);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createAudioEvent(
-                id: testEventId1,
-                pubkey: testPubkey1,
-                title: 'Coolness lol',
-              ),
-            ],
-          );
+          answerIdLookup([
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Coolness lol',
+            ),
+          ]);
 
           final results = await searching.searchSounds('coalness');
 
@@ -831,6 +899,19 @@ void main() {
 
           verify(
             () => funnelcake.searchSounds(query: 'horses hooves'),
+          ).called(1);
+        });
+
+        test('asks Funnelcake for the kind picked', () async {
+          answerSearch(const []);
+
+          await searching.searchSounds('rain', kind: SoundKind.effect);
+
+          verify(
+            () => funnelcake.searchSounds(
+              query: 'rain',
+              kind: SoundKind.effect,
+            ),
           ).called(1);
         });
 
@@ -914,7 +995,11 @@ void main() {
           () async {
             answerSearch([found(testEventId1, 1)]);
             when(
-              () => mockNostrClient.queryEvents(any()),
+              () => mockNostrClient.queryEventsDetailed(
+                any(that: isIdLookup),
+                timeout: any(named: 'timeout'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
             ).thenThrow(Exception('relay down'));
 
             final results = await searching.searchSounds('wind');
@@ -937,6 +1022,7 @@ void main() {
             verifyNever(
               () => funnelcake.searchSounds(
                 query: any(named: 'query'),
+                kind: any(named: 'kind'),
                 limit: any(named: 'limit'),
                 cursor: any(named: 'cursor'),
               ),
@@ -952,6 +1038,7 @@ void main() {
           verifyNever(
             () => funnelcake.searchSounds(
               query: any(named: 'query'),
+              kind: any(named: 'kind'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -1106,7 +1193,7 @@ void main() {
 
         expect(popular.sounds, isEmpty);
         expect(popular.usageCounts, isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNoIdLookup();
       });
 
       test('returns nothing while Funnelcake is unavailable', () async {
@@ -1144,22 +1231,20 @@ void main() {
             ],
           );
           // Returned newest first and missing the third ranked sound.
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createAudioEvent(
-                id: testEventId1,
-                pubkey: testPubkey1,
-                title: 'Older but second',
-                createdAt: 100,
-              ),
-              createAudioEvent(
-                id: testEventId2,
-                pubkey: testPubkey2,
-                title: 'Newer but first',
-                createdAt: 200,
-              ),
-            ],
-          );
+          answerIdLookup([
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Older but second',
+              createdAt: 100,
+            ),
+            createAudioEvent(
+              id: testEventId2,
+              pubkey: testPubkey2,
+              title: 'Newer but first',
+              createdAt: 200,
+            ),
+          ]);
           final popularRepository = SoundsRepository(
             nostrClient: mockNostrClient,
             funnelcakeApiClient: funnelcake,
@@ -1185,14 +1270,9 @@ void main() {
               offset: any(named: 'offset'),
             ),
           ).called(1);
-          final filter =
-              (verify(
-                        () => mockNostrClient.queryEvents(captureAny()),
-                      ).captured.single
-                      as List<Filter>)
-                  .single;
-          expect(filter.ids, [testEventId2, testEventId1, testVideoEventId]);
-          expect(filter.kinds, [audioEventKind]);
+          expect(idLookups(), [
+            [testEventId2, testEventId1, testVideoEventId],
+          ]);
         },
       );
 
@@ -1236,7 +1316,134 @@ void main() {
 
         expect(popular.sounds, isEmpty);
         expect(popular.usageCounts, isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNoIdLookup();
+      });
+    });
+
+    group('the sounds a ranking names', () {
+      late _MockFunnelcakeApiClient funnelcake;
+      late SoundsRepository ranking;
+      final first = createAudioEvent(
+        id: testEventId1,
+        pubkey: testPubkey1,
+        title: 'First',
+      );
+      final second = createAudioEvent(
+        id: testEventId2,
+        pubkey: testPubkey1,
+        title: 'Second',
+      );
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        when(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            for (final id in [testEventId1, testEventId2])
+              SoundStats(
+                id: id,
+                pubkey: testPubkey1,
+                title: 'Sound',
+                createdAt: DateTime.utc(2026),
+                usageCount: 1,
+              ),
+          ],
+        );
+        ranking = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+        );
+        addTearDown(ranking.dispose);
+      });
+
+      void answerFreshLookup(List<Event> events) {
+        when(
+          () => mockNostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: false, noRelays: false),
+        );
+      }
+
+      test('waits for every relay to answer, within its timeout', () async {
+        answerIdLookup([first, second]);
+
+        final popular = await ranking.fetchPopularSounds();
+
+        expect(popular.sounds.map((sound) => sound.id), [
+          testEventId1,
+          testEventId2,
+        ]);
+        verify(
+          () => mockNostrClient.queryEventsDetailed(
+            any(that: isIdLookup),
+            timeout: SoundsRepository.soundLookupTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).called(1);
+      });
+
+      test('does not ask again for the sounds it holds', () async {
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [first]);
+        await ranking.fetchTrendingSounds();
+        answerIdLookup([second]);
+
+        final popular = await ranking.fetchPopularSounds();
+
+        expect(popular.sounds.map((sound) => sound.id), [
+          testEventId1,
+          testEventId2,
+        ]);
+        expect(idLookups(), [
+          [testEventId2],
+        ]);
+      });
+
+      test('asks for what a busy relay left out on connections of its '
+          'own', () async {
+        // The relay was still busy with requests queued ahead of this one,
+        // so the read ran out of time holding only the cached sound.
+        answerIdLookup([first], timedOut: true);
+        answerFreshLookup([second]);
+
+        final popular = await ranking.fetchPopularSounds();
+
+        expect(popular.sounds.map((sound) => sound.id), [
+          testEventId1,
+          testEventId2,
+        ]);
+        final retried =
+            verify(
+                  () => mockNostrClient.queryEventsOnFreshConnections(
+                    captureAny(),
+                    timeout: SoundsRepository.freshSoundLookupTimeout,
+                  ),
+                ).captured.single
+                as List<Filter>;
+        expect(retried.single.ids, [testEventId2]);
+      });
+
+      test('does not ask again when every relay answered', () async {
+        answerIdLookup([first]);
+
+        final popular = await ranking.fetchPopularSounds();
+
+        expect(popular.sounds.map((sound) => sound.id), [testEventId1]);
+        verifyNever(
+          () => mockNostrClient.queryEventsOnFreshConnections(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        );
       });
     });
 
@@ -1396,6 +1603,20 @@ void main() {
             ),
           ],
         );
+        answerIdLookup([
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Kept beat',
+            publicTags: const ['beat'],
+          ),
+          createAudioEvent(
+            id: testEventId2,
+            pubkey: testPubkey2,
+            title: 'Blocked beat',
+            publicTags: const ['beat'],
+          ),
+        ]);
       });
 
       List<String> ids(List<AudioEvent> sounds) => [
@@ -1461,6 +1682,7 @@ void main() {
         when(
           () => funnelcake.searchSounds(
             query: any(named: 'query'),
+            kind: any(named: 'kind'),
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),

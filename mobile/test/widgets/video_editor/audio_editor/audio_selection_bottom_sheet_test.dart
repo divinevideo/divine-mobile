@@ -164,6 +164,7 @@ void main() {
       Map<String, String> searchCursors = const {},
       SoundsRepository? soundsRepository,
       List<String>? relaySearches,
+      List<SoundKind?>? searchedKinds,
       AudioEvent? consentSound,
       bool? consentResult,
       Completer<bool>? pendingConsent,
@@ -297,8 +298,12 @@ void main() {
             ),
             // Always overridden: without it a keystroke would build the real
             // repository, and with it a Nostr client, inside a widget test.
-            soundSearchResultsProvider.overrideWith((ref, query) async {
-              if (query.isNotEmpty) relaySearches?.add(query);
+            soundSearchResultsProvider.overrideWith((ref, search) async {
+              final (query, :kind) = search;
+              if (query.isNotEmpty) {
+                relaySearches?.add(query);
+                searchedKinds?.add(kind);
+              }
               final sounds = pendingSearch != null && query.isNotEmpty
                   ? await pendingSearch.future
                   : searchResults[query] ?? const <AudioEvent>[];
@@ -1691,6 +1696,39 @@ void main() {
             tester.getTopLeft(find.text('Coolness lol')).dy,
             lessThan(tester.getTopLeft(find.text('Coalness')).dy),
           );
+        });
+
+        testWidgets('asks for the kind picked and keeps what it found, '
+            'though no tag names the kind', (tester) async {
+          final searchedKinds = <SoundKind?>[];
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'rain': [
+                  // Funnelcake classified it by its audio; it has no tags.
+                  _createTestAudioEvent(id: 'thunder', title: 'Rain thunder'),
+                ],
+              },
+              searchedKinds: searchedKinds,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'rain');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byKey(const Key('audio_kind_filter')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorAudioFilterEffects).last);
+          await tester.pumpAndSettle();
+
+          expect(searchedKinds, [null, SoundKind.effect]);
+          expect(find.text('Rain thunder'), findsOneWidget);
         });
 
         testWidgets('loads the next page of what it found', (tester) async {

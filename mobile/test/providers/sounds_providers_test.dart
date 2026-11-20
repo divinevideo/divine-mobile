@@ -127,6 +127,7 @@ void main() {
     setUp(() {
       registerFallbackValue(const <String>[]);
       registerFallbackValue(const <AudioEvent>[]);
+      registerFallbackValue(SoundKind.music);
       mockNostrClient = MockNostrClient();
       mockRepository = MockSoundsRepository();
 
@@ -974,7 +975,11 @@ void main() {
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
         when(
-          () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
+          () => mockRepository.searchSounds(
+            any(),
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer(
           (_) async => searchPage(
             [createTestAudioEvent(id: 'found')],
@@ -1002,6 +1007,23 @@ void main() {
           SoundSearchRelays.timedOut,
           reason: 'the search telemetry tells a relay answer from a fallback',
         );
+      });
+
+      test('narrows the search to the kind it is given', () async {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(
+          soundSearchResultsProvider('rain', kind: SoundKind.effect).future,
+        );
+
+        verify(
+          () => mockRepository.searchSounds('rain', kind: SoundKind.effect),
+        ).called(1);
       });
 
       test('does not search for a query holding a private key', () async {

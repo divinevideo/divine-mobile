@@ -2733,10 +2733,12 @@ class FunnelcakeApiClient {
   /// its use, trend, age and creator, with Divine's own sounds first among
   /// equal matches.
   ///
-  /// [limit] is the most sounds a page holds; the server takes 1 to 100.
-  /// [cursor] is the [SoundSearchResponse.nextCursor] of the page before.
-  /// A page can hold fewer sounds than [limit], none even, and still not be
-  /// the last; follow [SoundSearchResponse.nextCursor] until it is `null`.
+  /// [kind] narrows the search to music or to effects as the server's audio
+  /// analysis classified them; `null` searches every sound. [limit] is the
+  /// most sounds a page holds; the server takes 1 to 100. [cursor] is the
+  /// [SoundSearchResponse.nextCursor] of the page before. A page can hold
+  /// fewer sounds than [limit], none even, and still not be the last; follow
+  /// [SoundSearchResponse.nextCursor] until it is `null`.
   ///
   /// Throws:
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
@@ -2748,6 +2750,7 @@ class FunnelcakeApiClient {
   /// - [FunnelcakeException] for other errors, a malformed answer included.
   Future<SoundSearchResponse> searchSounds({
     required String query,
+    SoundKind? kind,
     int limit = 50,
     String? cursor,
   }) async {
@@ -2763,6 +2766,11 @@ class FunnelcakeApiClient {
     final uri = Uri.parse('$_baseUrl/api/v2/search/sounds').replace(
       queryParameters: {
         'q': trimmed,
+        if (kind != null)
+          'kind': switch (kind) {
+            SoundKind.music => 'music',
+            SoundKind.effect => 'sfx',
+          },
         'limit': limit.toString(),
         if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },
