@@ -430,6 +430,9 @@ class VideoClipImportService {
   /// rather than copied again.
   ///
   /// [source] is copied, never moved; the caller still owns it.
+  ///
+  /// Throws when the library cannot be read to look for that clip, rather
+  /// than importing a copy it may already hold.
   Future<VideoClipImportResult> importGalleryClip({
     required File source,
     required String c2paManifestId,

@@ -1130,6 +1130,12 @@ void main() {
         final clips = await service.getAllClips();
         expect(clips.map((c) => c.id), ['valid_clip']);
       });
+
+      test('throws when the library cannot be read', () async {
+        await database.customStatement('DROP TABLE clips');
+
+        await expectLater(service.getAllClips(), throwsA(isA<Exception>()));
+      });
     });
 
     group('findImportedClipOf', () {
@@ -2120,6 +2126,12 @@ void main() {
       test('createCategory rejects a blank name', () async {
         expect(await service.createCategory('   '), isNull);
         expect(await service.getCategories(), isEmpty);
+      });
+
+      test('getCategories throws when they cannot be read', () async {
+        await database.customStatement('DROP TABLE clip_categories');
+
+        await expectLater(service.getCategories(), throwsA(isA<Exception>()));
       });
 
       test('renameCategory rejects a blank name', () async {

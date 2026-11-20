@@ -23,15 +23,19 @@ class _MockGallerySaveService extends Mock implements GallerySaveService {}
 /// status the service writes is what its next read sees.
 class _FakeClipLibrary extends Fake implements ClipLibraryService {
   final clips = <String, DivineVideoClip>{};
+  bool isReadable = true;
 
   @override
   Future<DivineVideoClip?> getClipById(String id) async => clips[id];
 
   @override
-  Future<List<DivineVideoClip>> getAllClips() async => [
-    for (final clip in clips.values)
-      if (clip.deletedAt == null) clip,
-  ];
+  Future<List<DivineVideoClip>> getAllClips() async {
+    if (!isReadable) throw StateError('Database is closed');
+    return [
+      for (final clip in clips.values)
+        if (clip.deletedAt == null) clip,
+    ];
+  }
 
   @override
   Future<bool> setGalleryBackup({
@@ -298,6 +302,37 @@ void main() {
           await pumpEventQueue();
 
           expect(signAttempts.map((source) => source.path), [earlier]);
+          verifyCopied(earlier);
+          expect(statusOf('clip_0'), ClipGalleryBackupStatus.saved);
+        },
+      );
+      test(
+        'keeps older backups pending when the background scan fails',
+        () async {
+          final earlier = recordingFile('VID_0.mp4');
+          libraryClip(
+            'clip_0',
+            earlier,
+            backupStatus: ClipGalleryBackupStatus.pending,
+          );
+          final path = recordingFile('VID_1.mp4');
+          libraryClip('clip_1', path);
+          final service = buildService();
+          library.isReadable = false;
+
+          await service.backUpRecording(
+            clipId: 'clip_1',
+            recordingPath: path,
+            proof: _signedProof,
+          );
+          await pumpEventQueue();
+
+          expect(statusOf('clip_1'), ClipGalleryBackupStatus.saved);
+          expect(statusOf('clip_0'), ClipGalleryBackupStatus.pending);
+
+          library.isReadable = true;
+          await service.finishPendingBackups();
+
           verifyCopied(earlier);
           expect(statusOf('clip_0'), ClipGalleryBackupStatus.saved);
         },
