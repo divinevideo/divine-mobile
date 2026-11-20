@@ -316,6 +316,22 @@ void main() {
         expect(seen, 1);
       });
 
+      testWidgets('an invite that turns on while scrolled away waits', (
+        tester,
+      ) async {
+        await pumpCounted(tester, showInvite: false);
+        expect(presented, 1);
+        scroll.jumpTo(1000);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await pumpCounted(tester, showInvite: true, offset: 1000);
+        expect(seen, 0);
+        scroll.jumpTo(0);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(seen, 1);
+      });
+
       testWidgets('does not report while only the top of the card shows', (
         tester,
       ) async {
