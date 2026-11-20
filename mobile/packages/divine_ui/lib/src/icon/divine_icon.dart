@@ -162,6 +162,9 @@ enum DivineIconName {
   logo('logo'),
   menu('menu'),
   microphone('microphone'),
+
+  /// A microphone struck through: the microphone is muted.
+  microphoneSlash('microphone_slash'),
   minus('minus'),
   moreHoriz('more_horiz'),
   musicNote('music_note'),

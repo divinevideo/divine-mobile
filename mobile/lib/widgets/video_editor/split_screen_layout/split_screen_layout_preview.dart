@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
+import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_cell_shape_widgets.dart';
 
 /// The frame the layout splits, with every cell where the export will put it.
 ///
@@ -36,7 +37,7 @@ class SplitScreenLayoutPreview extends StatelessWidget {
         gap: cubit.state.gap,
       ),
     );
-    final rects = preset.cellRects(aspectRatio: frameAspectRatio, gap: gap);
+    final cells = preset.cells(aspectRatio: frameAspectRatio, gap: gap);
 
     return Center(
       child: AspectRatio(
@@ -50,21 +51,14 @@ class SplitScreenLayoutPreview extends StatelessWidget {
                 final size = constraints.biggest;
                 return Stack(
                   children: [
-                    for (final (index, rect) in rects.indexed)
+                    for (final (index, cell) in cells.indexed)
                       _PositionedCell(
                         index: index,
-                        rect: rect,
+                        cell: cell,
                         frame: size,
-                        // A window over the left of a cell, the
-                        // bottom-left picture-in-picture one, would hide
-                        // the badge there.
-                        badgeOnRight: rects
-                            .skip(index + 1)
-                            .any(
-                              (above) =>
-                                  above.overlaps(rect) &&
-                                  above.center.dx < rect.center.dx,
-                            ),
+                        // A window over a cell, such as a
+                        // picture-in-picture one, would hide its badge.
+                        coveredBy: cells.skip(index + 1).toList(),
                       ),
                   ],
                 );
@@ -77,7 +71,7 @@ class SplitScreenLayoutPreview extends StatelessWidget {
   }
 }
 
-/// A cell placed in a [frame] of the preview, from its [rect] in fractions.
+/// A cell placed in a [frame] of the preview, from its rect in fractions.
 ///
 /// Where the cell reaches a rounded corner of the frame it is rounded to
 /// match, so its selection border follows the corner instead of being cut off
@@ -85,24 +79,32 @@ class SplitScreenLayoutPreview extends StatelessWidget {
 class _PositionedCell extends StatelessWidget {
   const _PositionedCell({
     required this.index,
-    required this.rect,
+    required this.cell,
     required this.frame,
-    required this.badgeOnRight,
+    required this.coveredBy,
   });
 
   final int index;
-  final Rect rect;
+  final SplitScreenCellGeometry cell;
   final Size frame;
-  final bool badgeOnRight;
+
+  /// The cells stacked on top of this one.
+  final List<SplitScreenCellGeometry> coveredBy;
 
   @override
   Widget build(BuildContext context) {
-    final cell = Rect.fromLTWH(
+    Rect inFrame(Rect rect) => Rect.fromLTWH(
       rect.left * frame.width,
       rect.top * frame.height,
       rect.width * frame.width,
       rect.height * frame.height,
     );
+    final cell = inFrame(this.cell.rect);
+    final covered = [
+      for (final above in coveredBy)
+        if (inFrame(above.rect) case final rect when rect.overlaps(cell))
+          above.shape.pathIn(rect.shift(-cell.topLeft)),
+    ];
 
     // A cell inset from a corner by the gap needs that much less rounding to
     // stay inside it — the same rule as concentric rounded rects.
@@ -116,7 +118,8 @@ class _PositionedCell extends StatelessWidget {
       rect: cell,
       child: _LayoutCell(
         index: index,
-        badgeOnRight: badgeOnRight,
+        shape: this.cell.shape,
+        covered: covered,
         borderRadius: BorderRadius.only(
           topLeft: corner(cell.left, cell.top),
           topRight: corner(frame.width - cell.right, cell.top),
@@ -134,16 +137,18 @@ class _PositionedCell extends StatelessWidget {
 class _LayoutCell extends StatefulWidget {
   const _LayoutCell({
     required this.index,
+    required this.shape,
     required this.borderRadius,
-    required this.badgeOnRight,
+    required this.covered,
   });
 
   final int index;
+  final SplitScreenCellShape shape;
   final BorderRadius borderRadius;
 
-  /// Whether the duration badge sits in the bottom-right corner rather than
-  /// the bottom-left one, which another cell covers.
-  final bool badgeOnRight;
+  /// The outlines of the cells on top of this one, in its own coordinates:
+  /// the duration badge keeps clear of them.
+  final List<Path> covered;
 
   @override
   State<_LayoutCell> createState() => _LayoutCellState();
@@ -174,39 +179,44 @@ class _LayoutCellState extends State<_LayoutCell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Semantics(
-          button: true,
-          selected: isSelected,
-          label: cell == null
-              ? context.l10n.videoEditorLayoutCellEmptySemanticLabel(number)
-              : context.l10n.videoEditorLayoutCellSemanticLabel(number),
-          // The badge says it on screen; a screen reader hears it here.
-          value: cell == null
-              ? null
-              : context.l10n.libraryClipDuration(
-                  cell.playbackDuration.toFormattedSeconds(),
-                ),
-          child: GestureDetector(
-            behavior: .opaque,
-            onTap: () => cubit.cellSelected(index),
-            onScaleStart: cell == null
+        final badge = _badgePlacement(constraints.biggest);
+        // Cut outside the gesture detector, which would otherwise take every
+        // touch in the cell's rect: a tap off a round or slanted cell's shape
+        // belongs to the cell underneath.
+        return SplitScreenCellClip(
+          shape: widget.shape,
+          borderRadius: widget.borderRadius,
+          child: Semantics(
+            button: true,
+            selected: isSelected,
+            label: cell == null
+                ? context.l10n.videoEditorLayoutCellEmptySemanticLabel(number)
+                : context.l10n.videoEditorLayoutCellSemanticLabel(number),
+            // The badge says it on screen; a screen reader hears it here.
+            value: cell == null
                 ? null
-                : (_) {
-                    cubit.cellSelected(index);
-                    _gestureStartZoom = cell.zoom;
-                  },
-            onScaleUpdate: cell == null
-                ? null
-                : (details) => cubit.cellReframed(
-                    index,
-                    focalPoint:
-                        details.localFocalPoint - details.focalPointDelta,
-                    delta: details.focalPointDelta,
-                    zoom: _gestureStartZoom * details.scale,
-                    cellSize: constraints.biggest,
+                : context.l10n.libraryClipDuration(
+                    cell.playbackDuration.toFormattedSeconds(),
                   ),
-            child: ClipRRect(
-              borderRadius: widget.borderRadius,
+            child: GestureDetector(
+              behavior: .opaque,
+              onTap: () => cubit.cellSelected(index),
+              onScaleStart: cell == null
+                  ? null
+                  : (_) {
+                      cubit.cellSelected(index);
+                      _gestureStartZoom = cell.zoom;
+                    },
+              onScaleUpdate: cell == null
+                  ? null
+                  : (details) => cubit.cellReframed(
+                      index,
+                      focalPoint:
+                          details.localFocalPoint - details.focalPointDelta,
+                      delta: details.focalPointDelta,
+                      zoom: _gestureStartZoom * details.scale,
+                      cellSize: constraints.biggest,
+                    ),
               child: Stack(
                 fit: .expand,
                 children: [
@@ -221,31 +231,67 @@ class _LayoutCellState extends State<_LayoutCell> {
                     ),
                   if (cell != null)
                     Positioned(
-                      left: widget.badgeOnRight ? null : 6,
-                      right: widget.badgeOnRight ? 6 : null,
-                      bottom: 6,
+                      left: badge.left,
+                      right: badge.right,
+                      top: badge.top,
+                      bottom: badge.bottom,
                       child: _DurationBadge(duration: cell.playbackDuration),
                     ),
-                  IgnorePointer(
-                    child: AnimatedContainer(
-                      duration: MediaQuery.disableAnimationsOf(context)
-                          ? Duration.zero
-                          : const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        borderRadius: widget.borderRadius,
-                        border: Border.all(
-                          width: 2,
-                          color: isSelected ? ring : VineTheme.transparent,
+                  if (!widget.shape.isRectangle)
+                    SplitScreenCellOutline(
+                      shape: widget.shape,
+                      borderRadius: widget.borderRadius,
+                      width: 2,
+                      color: isSelected ? ring : VineTheme.transparent,
+                    )
+                  else
+                    IgnorePointer(
+                      child: AnimatedContainer(
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          borderRadius: widget.borderRadius,
+                          border: Border.all(
+                            width: 2,
+                            color: isSelected ? ring : VineTheme.transparent,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Where the duration badge goes in a cell of [size]: its bottom-left
+  /// corner, or the bottom-right one when that needs less moving — another
+  /// cell covers the left, or the cell's shape cuts it away.
+  ({double? left, double? right, double? top, double? bottom}) _badgePlacement(
+    Size size,
+  ) {
+    ({Offset offset, double moved}) at(Alignment corner) =>
+        splitScreenBadgeOffset(
+          shape: widget.shape,
+          cell: size,
+          badge: _DurationBadge.typicalSize,
+          corner: corner,
+          covered: widget.covered,
+        );
+    final left = at(Alignment.bottomLeft);
+    if (left.moved == 0) return (left: 6, right: null, top: null, bottom: 6);
+    final right = at(Alignment.bottomRight);
+    if (right.moved == 0) return (left: null, right: 6, top: null, bottom: 6);
+    final best = right.moved < left.moved ? right : left;
+    return (
+      left: best.offset.dx,
+      right: null,
+      top: best.offset.dy,
+      bottom: null,
     );
   }
 }
@@ -319,6 +365,9 @@ class _CellFootage extends StatelessWidget {
 /// How long the cell's clip plays.
 class _DurationBadge extends StatelessWidget {
   const _DurationBadge({required this.duration});
+
+  /// About how much room the badge takes, for finding a place it fits.
+  static const typicalSize = Size(44, 20);
 
   final Duration duration;
 

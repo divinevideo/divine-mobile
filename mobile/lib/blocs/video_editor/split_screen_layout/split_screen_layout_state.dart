@@ -116,6 +116,10 @@ class SplitScreenLayoutState extends Equatable {
   List<Rect> get cellRects =>
       preset.cellRects(aspectRatio: frameAspectRatio, gap: gap);
 
+  /// The shape of each of [activeCells] in its rect of [cellRects].
+  List<SplitScreenCellShape> get cellShapes =>
+      preset.cellShapes(aspectRatio: frameAspectRatio, gap: gap);
+
   /// The cell [selectedCellIndex] points at, or `null` when it is empty.
   SplitScreenLayoutCell? get selectedCell => cells[selectedCellIndex];
 

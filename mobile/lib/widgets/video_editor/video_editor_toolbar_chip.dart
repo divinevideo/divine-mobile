@@ -17,7 +17,9 @@ class VideoEditorToolbarChip extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.semanticValue,
+    this.semanticHint,
     this.liveRegion = false,
+    this.loading = false,
     super.key,
   });
 
@@ -33,15 +35,24 @@ class VideoEditorToolbarChip extends StatelessWidget {
   /// Extra state a screen reader announces after [label].
   final String? semanticValue;
 
+  /// What a tap does, for a screen reader, when [label] says something else:
+  /// a state such as "Connecting…" rather than the action.
+  final String? semanticHint;
+
   /// Whether a screen reader announces the chip when it appears or its
   /// [label] changes, for a chip that comes and goes on its own.
   final bool liveRegion;
+
+  /// Whether a spinner stands in for [icon], while the chip's action is
+  /// still under way.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
       value: semanticValue,
+      hint: semanticHint,
       liveRegion: liveRegion,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -70,11 +81,20 @@ class VideoEditorToolbarChip extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   spacing: 6,
                   children: [
-                    DivineIcon(
-                      icon: icon,
-                      color: context.vineColors.mutedText,
-                      size: 16,
-                    ),
+                    if (loading)
+                      SizedBox.square(
+                        dimension: 16,
+                        child: DivineCircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.vineColors.mutedText,
+                        ),
+                      )
+                    else
+                      DivineIcon(
+                        icon: icon,
+                        color: context.vineColors.mutedText,
+                        size: 16,
+                      ),
                     Flexible(
                       // Capped like the editor's other chips, so a large
                       // system font does not push the toolbar buttons out.

@@ -25,22 +25,31 @@ DivineVideoClip _clip(String id) => DivineVideoClip(
 void main() {
   group(VideoEditorSplitScreenLayoutView, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
-    late List<({double cellAspectRatio, int maxClips})> picks;
+    late List<
+      ({double cellAspectRatio, SplitScreenCellShape cellShape, int maxClips})
+    >
+    picks;
 
     setUp(() => picks = []);
 
     Future<List<DivineVideoClip>?> pickFromLibrary(
       BuildContext context, {
       required double cellAspectRatio,
+      required SplitScreenCellShape cellShape,
       required int maxClips,
     }) async {
-      picks.add((cellAspectRatio: cellAspectRatio, maxClips: maxClips));
+      picks.add((
+        cellAspectRatio: cellAspectRatio,
+        cellShape: cellShape,
+        maxClips: maxClips,
+      ));
       return [_clip('picked')];
     }
 
     Future<List<DivineVideoClip>?> recordNothing(
       BuildContext context, {
       required double cellAspectRatio,
+      required SplitScreenCellShape cellShape,
       required int maxClips,
     }) async => null;
 
@@ -148,6 +157,32 @@ void main() {
           l10n.videoEditorLayoutCellEmptySemanticLabel('2'),
         ),
         findsOneWidget,
+      );
+    });
+
+    testWidgets('hands a round cell its shape for the crop guide', (
+      tester,
+    ) async {
+      await pump(tester);
+      tester
+          .element(find.byType(VideoEditorSplitScreenLayoutView))
+          .read<SplitScreenLayoutCubit>()
+        ..presetSelected(SplitScreenLayoutPreset.circleBottomRight)
+        ..cellSelected(1);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.videoEditorLibraryLabel));
+      await tester.pumpAndSettle();
+
+      // The picker's guide shows the circle the export cuts, not its square.
+      final shape = picks.single.cellShape;
+      expect(shape.isRectangle, isFalse);
+      expect(
+        shape,
+        SplitScreenLayoutPreset.circleBottomRight.cellShapes(
+          aspectRatio: 9 / 16,
+          gap: 0,
+        )[1],
       );
     });
 

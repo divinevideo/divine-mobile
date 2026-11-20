@@ -15896,6 +15896,54 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hình trong hình, góc dưới bên phải';
 
   @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Cạnh nhau, chéo';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Trên dưới, chéo';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Ba hàng chéo';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Bốn cạnh nhau';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Bốn hàng';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Ba trên, một dưới';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree =>
+      'Một bên trái, ba bên phải';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne =>
+      'Ba bên trái, một bên phải';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Cửa sổ tròn, góc trên bên trái';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Cửa sổ tròn, góc trên bên phải';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Cửa sổ tròn, góc dưới bên trái';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Cửa sổ tròn, góc dưới bên phải';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Hai cửa sổ tròn';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Ba cửa sổ tròn';
+
+  @override
   String videoEditorLayoutCellSemanticLabel(String number) {
     return 'Ô $number';
   }
@@ -16342,4 +16390,281 @@ class AppLocalizationsVi extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Cùng làm video nhé! Mở Divine, vào phòng của mình và quay phần của bạn.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Mình tham gia! Nóng lòng quay phần của mình rồi.';
+
+  @override
+  String get collabRoomDeclineDmBody =>
+      'Lần này mình không tham gia được. Chơi vui nhé!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Mình đã rời phòng video của chúng ta.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Bắt đầu quay rồi! Mở Divine và quay phần của bạn.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Video của chúng ta đã lên sóng! Cảm ơn bạn đã tham gia.';
+
+  @override
+  String get collabRoomCancelledDmBody =>
+      'Mình đã hủy phòng video của chúng ta.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Phòng video của chúng ta có thay đổi. Mở Divine để xem nhé.';
+
+  @override
+  String get collabRoomCameraMode => 'Cùng nhau';
+
+  @override
+  String get collabRoomTitle => 'Cùng nhau làm';
+
+  @override
+  String get collabRoomMissing => 'Phòng này không còn nữa.';
+
+  @override
+  String get collabRoomYou => 'Bạn';
+
+  @override
+  String get collabRoomHost => 'Chủ phòng';
+
+  @override
+  String get collabRoomStatusInvited => 'Đã mời';
+
+  @override
+  String get collabRoomStatusJoined => 'Đã vào';
+
+  @override
+  String get collabRoomStatusPartIn => 'Đã nộp phần';
+
+  @override
+  String get collabRoomStatusDeclined => 'Không tham gia được';
+
+  @override
+  String get collabRoomStatusLeft => 'Đã rời';
+
+  @override
+  String get collabRoomStatusRemoved => 'Không tham gia lần này';
+
+  @override
+  String get collabRoomPickLayout => 'Chọn bố cục';
+
+  @override
+  String get collabRoomStartButton => 'Bắt đầu quay';
+
+  @override
+  String get collabRoomStartHint =>
+      'Bắt đầu khi có người tham gia. Ai chưa tham gia lúc đó sẽ không có mặt lần này.';
+
+  @override
+  String get collabRoomWaitingForHost => 'Đang chờ chủ phòng bắt đầu quay.';
+
+  @override
+  String get collabRoomJoinButton => 'Tham gia';
+
+  @override
+  String get collabRoomLeaveButton => 'Rời phòng';
+
+  @override
+  String get collabRoomFilmPartButton => 'Quay phần của mình';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Quay lại';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Mỗi người quay phần của mình. Phần đó được cắt theo hình ô của bạn.';
+
+  @override
+  String get collabRoomComposeButton => 'Ghép lại';
+
+  @override
+  String get collabRoomComposeWaiting => 'Đang chờ phần của mọi người.';
+
+  @override
+  String get collabRoomSoundHint =>
+      'Chạm vào một phần để dùng âm thanh của phần đó.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Dùng âm thanh của phần này';
+
+  @override
+  String get collabRoomRemoveMember => 'Xóa';
+
+  @override
+  String get collabRoomCancelButton => 'Hủy';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Hủy video này?';
+
+  @override
+  String get collabRoomCancelConfirmBody =>
+      'Phòng sẽ đóng với tất cả mọi người.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Có người đã rời. Chọn bố cục cho những người còn lại.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'Có người mới tham gia. Chọn bố cục cho mọi người.';
+
+  @override
+  String get collabRoomComposing => 'Đang ghép…';
+
+  @override
+  String get collabRoomComposeFailed => 'Không ghép được video. Hãy thử lại.';
+
+  @override
+  String get collabRoomPosted =>
+      'Video này đã lên sóng. Mọi người làm tốt lắm!';
+
+  @override
+  String get collabRoomCancelled => 'Phòng này đã bị hủy.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Không gửi được. Kiểm tra kết nối và thử lại.';
+
+  @override
+  String get collabRoomRemovedYou => 'Lần này bạn không tham gia.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Bạn đã từ chối lần này.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Đã nhận phần của bạn. Chủ phòng sẽ ghép tất cả lại.';
+
+  @override
+  String get collabRoomPartTitle => 'Phần của bạn';
+
+  @override
+  String get collabRoomPartRendering => 'Đang chuẩn bị phần của bạn…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Không chuẩn bị được phần của bạn.';
+
+  @override
+  String get collabRoomPartSendButton => 'Gửi phần của mình';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Đang tải phần của bạn lên… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Đã tải lên. Sẵn sàng gửi.';
+
+  @override
+  String get collabRoomInviteAgain => 'Mời lại';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Rời phòng này?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Chỉ chủ phòng mới mời bạn quay lại được.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Không gửi được phần của bạn. Hãy thử lại.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Cùng làm video';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Mời tối đa 3 người bạn. Mỗi người quay phần của mình, rồi tất cả ghép thành một video chia màn hình.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Mời bạn bè';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Ai tham gia?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Phòng của bạn';
+
+  @override
+  String get collabRoomTileHosting => 'Phòng bạn tạo';
+
+  @override
+  String get collabRoomTileGuest => 'Phòng của bạn bè';
+
+  @override
+  String get collabRoomPhaseLobby => 'Đang chờ mọi người tham gia';
+
+  @override
+  String get collabRoomPhaseRecording => 'Đang quay các phần';
+
+  @override
+  String get collabRoomPhaseReady => 'Sẵn sàng quay';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => 'Đang chờ chủ phòng bắt đầu quay';
+
+  @override
+  String get collabRoomPhaseInvited => 'Bạn có lời mời. Chạm để tham gia.';
+
+  @override
+  String get collabRoomCreateFailed => 'Không gửi được lời mời. Hãy thử lại.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Cùng làm video nhé';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Vào phòng, rồi mỗi người quay phần của mình.';
+
+  @override
+  String get collabRoomOpenButton => 'Mở phòng';
+
+  @override
+  String get collabRoomCallMute => 'Tắt tiếng';
+
+  @override
+  String get collabRoomCallUnmute => 'Bật tiếng';
+
+  @override
+  String get collabRoomCallCameraOn => 'Bật camera';
+
+  @override
+  String get collabRoomCallCameraOff => 'Tắt camera';
+
+  @override
+  String get collabRoomCallConnecting => 'Đang kết nối cuộc gọi…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Không bắt đầu được cuộc gọi. Hãy kiểm tra Divine có được dùng micro của bạn không.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Không kết nối được với mọi người. Kiểm tra kết nối và thử lại.';
+
+  @override
+  String get collabRoomCallJoin => 'Tham gia cuộc gọi';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Không bật được camera của bạn.';
+
+  @override
+  String get collabRoomCallMuted => 'Đã tắt tiếng';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Chạm vào hai vị trí trong bố cục để đổi chỗ.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Đổi vị trí này';
 }

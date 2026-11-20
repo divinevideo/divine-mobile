@@ -19,6 +19,7 @@ import 'package:models/models.dart'
         VideoEvent,
         stripInspiredByAttribution,
         stripSoundCredit;
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -802,6 +803,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       audioShareAttribution: state.audioShareAttribution,
       expireTime: state.expiration.value,
       scheduledAt: state.scheduledAt,
+      collabRoomId: ref.read(collabRoomPostProvider),
       selectedApproach: 'video',
       editorStateHistory: state.editorStateHistory,
       editorEditingParameters: state.editorEditingParameters?.toMap(),
@@ -981,12 +983,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return npubs;
   }
 
+  /// Together uses the existing room or publish draft for recovery. Keep the
+  /// single editor autosave available for the user's own unfinished work.
+  bool get _isCollabRoomSession =>
+      (ref.read(collabRoomPartProvider)?.isActive ?? false) ||
+      ref.read(collabRoomPostProvider) != null;
+
   /// Trigger autosave with debounce to prevent excessive saves.
   ///
   /// Can be called from other providers (e.g., ClipManager) to trigger
   /// autosave after changes. Uses debouncing to batch rapid changes.
   void triggerAutosave() {
-    if (_suppressAutosave) return;
+    if (_suppressAutosave || _isCollabRoomSession) return;
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(_autosaveDebounce, () {
       if (!ref.mounted) return;
@@ -1097,6 +1105,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   Future<bool> _performAutosave() async {
+    if (_isCollabRoomSession) return false;
     final session = _autosaveSession;
 
     try {
@@ -1242,6 +1251,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }) async {
     if (state.isSavingDraft) return DraftSaveOutcome.alreadyInProgress;
 
+    final keepAutosave = _isCollabRoomSession;
     state = state.copyWith(isSavingDraft: true);
 
     final draftId = enforceCreateNewDraft
@@ -1267,7 +1277,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       // wipe the recovery point of whatever editor session is active by then,
       // corrupting that session. Blocking here (the button stays disabled until
       // it lands) is the safe trade-off; only the write above needs a timeout.
-      await removeAutosavedDraft();
+      if (!keepAutosave) await removeAutosavedDraft();
 
       Log.info(
         '✅ Draft saved successfully: $draftId',
@@ -1347,6 +1357,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
 
     _challengeContext = draft.challengeContext;
+    ref.read(collabRoomPostProvider.notifier).set(draft.collabRoomId);
     // The draft's own reply target wins over whatever the provider holds, so a
     // reopened reply still publishes into its thread and an unrelated draft
     // never picks up the context of a reply the user abandoned.

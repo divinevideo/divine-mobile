@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +24,15 @@ class VideoRecorderModeSelectorWheel extends StatefulWidget {
   const VideoRecorderModeSelectorWheel({
     required this.selectedMode,
     required this.onModeChanged,
+    this.modes = VideoRecorderMode.values,
     super.key,
   });
 
   final VideoRecorderMode selectedMode;
   final ValueChanged<VideoRecorderMode> onModeChanged;
+
+  /// The modes offered, in wheel order.
+  final List<VideoRecorderMode> modes;
 
   @override
   State<VideoRecorderModeSelectorWheel> createState() =>
@@ -63,7 +68,12 @@ class _VideoRecorderModeSelectorWheelState
   void initState() {
     super.initState();
     _selectedIndex = _indexOf(widget.selectedMode);
-    _snapOffsets = _snapOffsetsFor(_itemWidths(TextScaler.noScaling));
+    _snapOffsets = _snapOffsetsFor(
+      _itemWidths(
+        [for (final mode in widget.modes) mode.label],
+        TextScaler.noScaling,
+      ),
+    );
     _scrollController = ScrollController(
       initialScrollOffset: _snapOffsets[_selectedIndex],
     );
@@ -83,7 +93,8 @@ class _VideoRecorderModeSelectorWheelState
   @override
   void didUpdateWidget(VideoRecorderModeSelectorWheel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedMode != widget.selectedMode) {
+    if (oldWidget.selectedMode != widget.selectedMode ||
+        oldWidget.modes.length != widget.modes.length) {
       final index = _indexOf(widget.selectedMode);
       // Self-originated changes (tap/snap) already animated to this index.
       if (index == _selectedIndex) return;
@@ -101,9 +112,10 @@ class _VideoRecorderModeSelectorWheelState
     super.dispose();
   }
 
-  /// Wheel position of [mode].
+  /// Wheel position of [mode], or the first one's while [mode] is not
+  /// offered and the recorder is about to leave it.
   int _indexOf(VideoRecorderMode mode) =>
-      VideoRecorderMode.values.indexOf(mode);
+      math.max(0, widget.modes.indexOf(mode));
 
   void _jumpTo(int index) {
     if (!_scrollController.hasClients) return;
@@ -181,7 +193,7 @@ class _VideoRecorderModeSelectorWheelState
       logName: 'VideoRecorderModeSelectorWheel',
       category: LogCategory.ui,
     );
-    widget.onModeChanged(VideoRecorderMode.values[index]);
+    widget.onModeChanged(widget.modes[index]);
   }
 
   /// Rendered width of [label] at [textScaler].
@@ -204,9 +216,8 @@ class _VideoRecorderModeSelectorWheelState
 
   /// Width of each item — its label plus a constant [_labelGap] — so the
   /// spacing between adjacent labels stays uniform regardless of text width.
-  List<double> _itemWidths(TextScaler textScaler) => [
-    for (final mode in VideoRecorderMode.values)
-      _textWidth(mode.label, textScaler) + _labelGap,
+  List<double> _itemWidths(List<String> labels, TextScaler textScaler) => [
+    for (final label in labels) _textWidth(label, textScaler) + _labelGap,
   ];
 
   /// Scroll offset that centers each item, derived from [itemWidths]. The
@@ -229,10 +240,17 @@ class _VideoRecorderModeSelectorWheelState
 
   @override
   Widget build(BuildContext context) {
-    const modes = VideoRecorderMode.values;
+    final modes = widget.modes;
     final l10n = context.l10n;
+    final labels = [
+      for (final mode in modes)
+        if (mode == VideoRecorderMode.together)
+          l10n.collabRoomCameraMode
+        else
+          mode.label,
+    ];
     final textScaler = context.textScaler.clamp(maxScaleFactor: 1.3);
-    final itemWidths = _itemWidths(textScaler);
+    final itemWidths = _itemWidths(labels, textScaler);
     _snapOffsets = _snapOffsetsFor(itemWidths);
     final pendingJumpIndex = _pendingJumpIndex;
     if (pendingJumpIndex != null) {
@@ -259,7 +277,7 @@ class _VideoRecorderModeSelectorWheelState
                   duration: _animationDuration.autoReduceMotion(context),
                   curve: Curves.easeInOut,
                   height: _pillHeight,
-                  width: _pillWidth(modes[_selectedIndex].label, textScaler),
+                  width: _pillWidth(labels[_selectedIndex], textScaler),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainer,
                     borderRadius: .circular(_pillHeight / 2),
@@ -298,7 +316,7 @@ class _VideoRecorderModeSelectorWheelState
                   itemCount: modes.length,
                   itemBuilder: (context, i) {
                     final isSelected = i == _selectedIndex;
-                    final label = modes[i].label;
+                    final label = labels[i];
                     return SizedBox(
                       width: itemWidths[i],
                       child: Semantics(

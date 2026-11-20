@@ -72,6 +72,7 @@ class DivineVideoDraft {
     this.audioShareAttribution,
     this.contentWarning,
     this.videoReplyContext,
+    this.collabRoomId,
     this.shareReplyToFeed = false,
     this.thumbnailTimestamp,
     this.customThumbnailPath,
@@ -102,6 +103,7 @@ class DivineVideoDraft {
     AudioShareAttribution? audioShareAttribution,
     String? contentWarning,
     VideoReplyContext? videoReplyContext,
+    String? collabRoomId,
     bool shareReplyToFeed = false,
     Duration? thumbnailTimestamp,
     String? customThumbnailPath,
@@ -137,6 +139,7 @@ class DivineVideoDraft {
       audioShareAttribution: audioShareAttribution,
       contentWarning: contentWarning,
       videoReplyContext: videoReplyContext,
+      collabRoomId: collabRoomId,
       challengeContext: challengeContext,
       shareReplyToFeed: shareReplyToFeed,
       thumbnailTimestamp: thumbnailTimestamp,
@@ -287,6 +290,7 @@ class DivineVideoDraft {
               json['videoReplyContext'] as Map<String, dynamic>,
             )
           : null,
+      collabRoomId: json['collabRoomId'] as String?,
       shareReplyToFeed: json['shareReplyToFeed'] as bool? ?? false,
       thumbnailTimestamp: json['thumbnailTimestamp'] != null
           ? Duration(milliseconds: json['thumbnailTimestamp'] as int)
@@ -455,6 +459,9 @@ class DivineVideoDraft {
   /// Optional NIP-22/NIP-71 reply target for publishing this video into a
   /// comment thread.
   final VideoReplyContext? videoReplyContext;
+
+  /// The Together room to notify after this video is published.
+  final String? collabRoomId;
   final bool shareReplyToFeed;
 
   /// Position in the video used to generate the thumbnail.
@@ -594,6 +601,7 @@ class DivineVideoDraft {
     videoReplyContext: videoReplyContext == _sentinel
         ? this.videoReplyContext
         : videoReplyContext as VideoReplyContext?,
+    collabRoomId: collabRoomId,
     shareReplyToFeed: shareReplyToFeed ?? this.shareReplyToFeed,
     thumbnailTimestamp: clearThumbnailTimestamp
         ? null
@@ -721,6 +729,7 @@ class DivineVideoDraft {
     if (contentWarning != null) 'contentWarning': contentWarning,
     if (videoReplyContext != null)
       'videoReplyContext': videoReplyContext!.toJson(),
+    if (collabRoomId != null) 'collabRoomId': collabRoomId,
     if (shareReplyToFeed) 'shareReplyToFeed': shareReplyToFeed,
     if (thumbnailTimestamp != null)
       'thumbnailTimestamp': thumbnailTimestamp!.inMilliseconds,

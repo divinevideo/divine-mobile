@@ -6,7 +6,12 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart'
-    show DmRepository, SoundRequestMessageKind, parseSoundRequestMessage;
+    show
+        CollabRoomMessageType,
+        DmRepository,
+        SoundRequestMessageKind,
+        parseCollabRoomMessage,
+        parseSoundRequestMessage;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart' show HapticFeedback;
@@ -28,6 +33,7 @@ import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
+import 'package:openvine/collab_room/view/collab_room_invite_card.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -2168,6 +2174,24 @@ class _MessageList extends StatelessWidget {
         Widget keyedRow(WidgetBuilder builder) => isCollapsed
             ? _HiddenMessageGate(key: messageKey, builder: builder)
             : KeyedSubtree(key: messageKey, child: builder(context));
+
+        // A collaborative room's invite shows as a card; the rest of its
+        // traffic (answers, snapshots, parts) is room bookkeeping and stays
+        // out of the chat.
+        final roomMessage = isGroup
+            ? null
+            : parseCollabRoomMessage(message, ownerPubkey: currentPubkey);
+        if (roomMessage != null) {
+          if (roomMessage.type != CollabRoomMessageType.invite) {
+            return SizedBox.shrink(key: messageKey);
+          }
+          return keyedRow(
+            (_) => CollabRoomInviteCard(
+              roomId: roomMessage.roomId,
+              isSent: isSent,
+            ),
+          );
+        }
 
         final invite = CollaboratorInviteParser.parse(message);
         if (invite != null) {

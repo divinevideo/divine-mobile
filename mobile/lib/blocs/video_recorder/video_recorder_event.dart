@@ -16,6 +16,7 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
     this.fromEditor = false,
     this.recorderMode,
     this.autoStartRecording = false,
+    this.collabPart = false,
   });
 
   final DivineVideoQuality videoQuality;
@@ -43,12 +44,18 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
   /// starts recording. Used by the bottom-nav hold-to-record shortcut.
   final bool autoStartRecording;
 
+  /// Films someone's part of a collaborative room: opens in capture mode
+  /// without touching the persisted last-used mode, and caps the part at the
+  /// post length.
+  final bool collabPart;
+
   @override
   List<Object?> get props => [
     videoQuality,
     fromEditor,
     recorderMode,
     autoStartRecording,
+    collabPart,
   ];
 }
 

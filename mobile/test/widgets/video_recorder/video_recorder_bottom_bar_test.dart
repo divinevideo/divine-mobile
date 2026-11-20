@@ -11,6 +11,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
@@ -36,10 +37,11 @@ void main() {
       when(() => recorderBloc.state).thenReturn(const VideoRecorderBlocState());
     });
 
-    Widget buildTestWidget() {
+    Widget buildTestWidget({bool dmRestricted = false}) {
       return ProviderScope(
         overrides: [
           clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+          isDmRestrictedProvider.overrideWithValue(dmRestricted),
         ],
         child: BlocProvider<VideoRecorderBloc>.value(
           value: recorderBloc,
@@ -69,6 +71,54 @@ void main() {
         await tester.pumpWidget(buildTestWidget());
 
         expect(find.byType(VideoRecorderLibraryButton), findsOneWidget);
+      });
+    });
+
+    group('Together', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      testWidgets('is offered to an account that may send messages', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget());
+
+        expect(find.text(l10n.collabRoomCameraMode), findsOneWidget);
+      });
+
+      testWidgets('is left out for an account that may not send messages', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget(dmRestricted: true));
+
+        expect(find.text(l10n.collabRoomCameraMode), findsNothing);
+        expect(
+          tester
+              .widget<VideoRecorderModeSelectorWheel>(
+                find.byType(VideoRecorderModeSelectorWheel),
+              )
+              .modes,
+          isNot(contains(VideoRecorderMode.together)),
+        );
+      });
+
+      testWidgets('moves a restricted account off it to Capture', (
+        tester,
+      ) async {
+        when(() => recorderBloc.state).thenReturn(
+          const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.together,
+          ),
+        );
+        when(() => recorderBloc.isClosed).thenReturn(false);
+
+        await tester.pumpWidget(buildTestWidget(dmRestricted: true));
+        await tester.pump();
+
+        verify(
+          () => recorderBloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          ),
+        ).called(1);
       });
     });
 

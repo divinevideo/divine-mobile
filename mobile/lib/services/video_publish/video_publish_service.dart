@@ -37,6 +37,7 @@ import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/draft_upload_materializer.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/publish_timeline.dart';
+import 'package:openvine/services/video_publish/published_room_notification.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -66,10 +67,17 @@ class VideoPublishService {
     this.mentionResolutionService,
     this.rerenderDraft,
     this.scheduledPostsRepository,
+    Future<void> Function(String roomId, String videoAddress)?
+    onCollabVideoPublished,
     PerformanceTraceMonitor? performanceMonitor,
     DraftUploadMaterializer draftMaterializer = const DraftUploadMaterializer(),
     Duration subtitlePublishTimeout = _defaultSubtitlePublishTimeout,
-  }) : _draftMaterializer = draftMaterializer,
+  }) : _roomNotification = PublishedRoomNotification(
+         storage: draftService,
+         currentPubkey: () => authService.currentPublicKeyHex,
+         send: onCollabVideoPublished,
+       ),
+       _draftMaterializer = draftMaterializer,
        _performanceMonitor =
            performanceMonitor ?? const NoOpPerformanceTraceMonitor(),
        _subtitlePublishTimeout = subtitlePublishTimeout;
@@ -96,6 +104,8 @@ class VideoPublishService {
   /// draft with a `scheduledAt` fails as [PublishErrorKind.scheduleRejected]
   /// rather than posting now.
   final ScheduledPostsRepository? scheduledPostsRepository;
+
+  final PublishedRoomNotification _roomNotification;
 
   /// Callback when upload progress changes.
   final OnProgressChanged onProgressChanged;
@@ -176,12 +186,7 @@ class VideoPublishService {
   /// source draft this publish copy came from, which this service never saw.
   Future<PublishResult> publishVideo({required DivineVideoDraft draft}) async {
     if (draft.publishStatus == PublishStatus.published) {
-      // Entry recovery cannot re-upload or re-sign an already-successful video.
-      final body = draft.publishedVideoEvent;
-      final event = body == null
-          ? null
-          : Event.fromJson(jsonDecode(body) as Map<String, dynamic>);
-      return PublishSuccess(eventId: event?.id, signedEventBody: body);
+      return _roomNotification.recover(draft);
     }
     final timeline = PublishTimeline(
       draft.id,
@@ -211,6 +216,9 @@ class VideoPublishService {
     required PublishTimeline timeline,
   }) async {
     var draft = originalDraft;
+    if (draft.collabRoomId != null && draft.scheduledAt != null) {
+      return const PublishError(PublishErrorKind.scheduleRejected);
+    }
     // An account switch while the upload was in flight leaves the previous
     // account's draft reachable from this session. Publishing it would sign the
     // video with the wrong identity, and the `publishing` save below would
@@ -484,6 +492,14 @@ class VideoPublishService {
         return result;
       }
 
+      final signedBody = publishedEvent == null
+          ? null
+          : jsonEncode(publishedEvent!.toJson());
+      final recorded = await _roomNotification.record(
+        draft,
+        signedBody,
+        pubkey,
+      );
       final inviteWarnings = await timeline.measure(
         PublishPhases.invites,
         () => _sendCollaboratorInvites(
@@ -501,6 +517,14 @@ class VideoPublishService {
       // `divine.video/video/`. Same guard _sendCollaboratorInvites applies to
       // this field.
       final videoId = pendingUpload.videoId;
+      final notified = await _roomNotification.notify(
+        draft,
+        pubkey: publishedEvent?.pubkey ?? pubkey,
+        kind:
+            publishedEvent?.kind ??
+            NIP71VideoKinds.getPreferredAddressableKind(),
+        stableId: publishedEvent?.dTagValue ?? videoId,
+      );
       return PublishSuccess(
         stableId: (videoId == null || videoId.isEmpty) ? null : videoId,
         // The publisher records the signed event's id on the upload once the
@@ -508,11 +532,12 @@ class VideoPublishService {
         eventId:
             publishedEvent?.id ??
             uploadManager.getUpload(pendingUpload.id)?.nostrEventId,
-        signedEventBody: publishedEvent == null
-            ? null
-            : jsonEncode(publishedEvent!.toJson()),
+        signedEventBody: signedBody,
         inviteWarnings: inviteWarnings,
         audioReuseDegraded: audioReuseDegraded,
+        // Only a kept copy can retry the room's update; an unkept one is
+        // still saved as publishing and must go with the source draft.
+        collabRoomNotificationPending: recorded && !notified,
       );
     } catch (e, stackTrace) {
       return _handleUploadError(e, stackTrace, draft);

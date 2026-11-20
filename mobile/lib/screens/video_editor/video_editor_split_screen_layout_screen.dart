@@ -17,12 +17,14 @@ import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ProVideoEditor, ProgressModel;
 
-/// Fetches clips for a cell of [cellAspectRatio], opened from the layout
-/// screen's [context], or `null` when the user backs out. [maxClips] is how
-/// many the layout has room for, the selected cell included.
+/// Fetches clips for a cell of [cellAspectRatio] and [cellShape], opened
+/// from the layout screen's [context], or `null` when the user backs out.
+/// [maxClips] is how many the layout has room for, the selected cell
+/// included.
 typedef SplitScreenCellPicker = Future<List<DivineVideoClip>?> Function(
   BuildContext context, {
   required double cellAspectRatio,
+  required SplitScreenCellShape cellShape,
   required int maxClips,
 });
 
@@ -250,6 +252,7 @@ class VideoEditorSplitScreenLayoutView extends StatelessWidget {
         state.cellRects[state.selectedCellIndex],
         state.frameAspectRatio,
       ),
+      cellShape: state.cellShapes[state.selectedCellIndex],
       maxClips: state.pickableClipCount,
     );
     if (clips == null || clips.isEmpty || cubit.isClosed) return;

@@ -223,10 +223,14 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
   Future<void> apply() async {
     if (!state.canApply) return;
 
-    final rects = state.cellRects;
+    final geometry = state.preset.cells(
+      aspectRatio: state.frameAspectRatio,
+      gap: state.gap,
+    );
     final picked = [
-      for (var i = 0; i < rects.length; i++)
-        if (state.cells[i] case final cell?) (cell: cell, rect: rects[i]),
+      for (final (i, (:rect, :shape)) in geometry.indexed)
+        if (state.cells[i] case final cell?)
+          (cell: cell, rect: rect, shape: shape),
     ];
     final stepCount =
         picked.where((entry) => entry.cell.clip.isStopMotion).length + 1;
@@ -267,7 +271,7 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
 
     try {
       final ready = <SplitScreenRenderCell>[];
-      for (final (:cell, :rect) in picked) {
+      for (final (:cell, :rect, :shape) in picked) {
         final clip = await _clipForCell(
           cell.clip,
           startStep: startStep,
@@ -280,6 +284,7 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
         ready.add((
           clip: clip,
           rect: rect,
+          shape: shape,
           alignment: cell.alignment,
           zoom: cell.zoom,
         ));

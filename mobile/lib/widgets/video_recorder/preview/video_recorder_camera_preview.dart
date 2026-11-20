@@ -12,6 +12,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/platform_helpers.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
@@ -121,7 +122,7 @@ class _StackItems extends StatelessWidget {
           ),
         const VideoRecorderGhostFrame(),
         if (ClipCropGuide.maybeOf(context) case final guide?)
-          _CropGuide(aspectRatio: guide.aspectRatio),
+          _CropGuide(aspectRatio: guide.aspectRatio, shape: guide.shape),
         const _OverlayGrid(),
         if (enableTapToFocus) const VideoRecorderFocusPoint(),
         if (state.isCameraInitialized && state.isDualCameraEnabled)
@@ -137,9 +138,10 @@ class _StackItems extends StatelessWidget {
 /// with — so the crop is cut from the sensor's shape, not the box's, and can
 /// reach past a square preview on one side.
 class _CropGuide extends StatelessWidget {
-  const _CropGuide({required this.aspectRatio});
+  const _CropGuide({required this.aspectRatio, required this.shape});
 
   final double aspectRatio;
+  final SplitScreenCellShape shape;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +152,7 @@ class _CropGuide extends StatelessWidget {
     return ClipCropGuideOverlay(
       aspectRatio: aspectRatio,
       contentAspectRatio: sensorAspectRatio,
+      shape: shape,
     );
   }
 }

@@ -12,6 +12,8 @@ import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/collab_room/view/collab_room_flow_scopes.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -19,6 +21,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -42,6 +45,7 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart'
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/modes/classic/video_recorder_classic_stack.dart';
+import 'package:openvine/widgets/video_recorder/modes/together/video_recorder_together_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_upload_stack.dart';
 import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
@@ -61,6 +65,7 @@ abstract final class CreationEntryPoint {
   static const quickAction = 'quick_action';
   static const postPublish = 'post_publish';
   static const editor = 'editor';
+  static const collabRoom = 'collab_room';
 
   static String fromName(String? value) => switch (value) {
     direct ||
@@ -71,7 +76,8 @@ abstract final class CreationEntryPoint {
     addYours ||
     quickAction ||
     postPublish ||
-    editor => value!,
+    editor ||
+    collabRoom => value!,
     _ => direct,
   };
 }
@@ -89,7 +95,9 @@ class VideoRecorderRoute extends ConsumerWidget {
     this.challengeRecordingId,
     this.fromEditor = false,
     this.cropGuideAspectRatio,
+    this.cropGuideShape = SplitScreenCellShape.rectangle,
     this.analyticsSession,
+    this.collabRoomId,
   });
 
   final String entryPoint;
@@ -100,21 +108,46 @@ class VideoRecorderRoute extends ConsumerWidget {
   /// Uses the return-to-caller controls for a library reaction capture.
   final bool fromEditor;
   final double? cropGuideAspectRatio;
+
+  /// The shape inside [cropGuideAspectRatio] the take is cut to.
+  final SplitScreenCellShape cropGuideShape;
   final CreationAnalyticsSession? analyticsSession;
+
+  /// The collaborative room whose part this recorder films, or `null`.
+  ///
+  /// The part's cell comes from [collabRoomPartProvider], which the room sets
+  /// before it opens the camera. Without it — a restored or hand-typed
+  /// location — the recorder opens as usual.
+  final String? collabRoomId;
 
   /// See [VideoRecorderView.autoRecord].
   final bool autoRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final part = ref.watch(collabRoomPartProvider);
+    final collabPart = part != null && part.roomId == collabRoomId
+        ? part
+        : null;
     Widget view = VideoRecorderView(
       entryPoint: entryPoint,
       autoRecord: autoRecord,
       fromEditor: fromEditor,
       analyticsSession: analyticsSession,
+      collabPart: collabPart != null,
     );
-    if (cropGuideAspectRatio case final ratio?) {
-      view = ClipCropGuide(aspectRatio: ratio, child: view);
+    if (collabPart != null) {
+      view = ClipCropGuide(
+        aspectRatio: collabPart.cellAspectRatio,
+        shape: collabPart.cellShape,
+        child: view,
+      );
+    } else if (cropGuideAspectRatio case final ratio?) {
+      view = ClipCropGuide(
+        aspectRatio: ratio,
+        shape: cropGuideShape,
+        child: view,
+      );
     }
     Widget recorder = _VideoRecorderBlocScope(
       analyticsSession: analyticsSession,
@@ -122,6 +155,11 @@ class VideoRecorderRoute extends ConsumerWidget {
           analyticsSession != null && entryPoint == CreationEntryPoint.library,
       child: CameraPermissionGate(child: view),
     );
+    // Wrapped as long as the part has its cell, finished or not, so ending
+    // the flow does not rebuild the recorder that is still animating out.
+    if (collabPart != null) {
+      recorder = CollabRoomPartFlowScope(part: collabPart, child: recorder);
+    }
     final recordingId = challengeRecordingId;
     {
       recorder = ChallengeRecordingGate(
@@ -177,6 +215,7 @@ class VideoRecorderScreen extends ConsumerWidget {
     this.fromEditor = false,
     this.entryPoint = CreationEntryPoint.direct,
     this.cropGuideAspectRatio,
+    this.cropGuideShape = SplitScreenCellShape.rectangle,
   });
 
   /// Whether the screen is opened from the video editor.
@@ -191,6 +230,10 @@ class VideoRecorderScreen extends ConsumerWidget {
   /// split-screen cell's, when the editor records straight into one. `null`
   /// shows the whole frame.
   final double? cropGuideAspectRatio;
+
+  /// The shape inside [cropGuideAspectRatio] the take is cut to, such as the
+  /// circle of a round window.
+  final SplitScreenCellShape cropGuideShape;
 
   /// Route name for this screen.
   static const routeName = 'video-recorder';
@@ -210,6 +253,10 @@ class VideoRecorderScreen extends ConsumerWidget {
   /// Query parameter carrying the id of the challenge a take is recorded for.
   static const challengeRecordingQueryParameter = 'challenge_recording';
 
+  /// Query parameter carrying the id of the collaborative room whose part is
+  /// filmed.
+  static const collabRoomQueryParameter = 'collab_room';
+
   static String pathForEntryPoint(
     String entryPoint, {
     bool autoRecord = false,
@@ -228,14 +275,23 @@ class VideoRecorderScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final part = fromEditor ? ref.watch(collabRoomPartProvider) : null;
+    final collabPart = part?.isActive ?? false;
     final view = VideoRecorderView(
       fromEditor: fromEditor,
       entryPoint: entryPoint,
+      collabPart: collabPart,
     );
     return _VideoRecorderBlocScope(
       child: switch (cropGuideAspectRatio) {
         final aspectRatio? => ClipCropGuide(
           aspectRatio: aspectRatio,
+          shape: cropGuideShape,
+          child: view,
+        ),
+        null when collabPart => ClipCropGuide(
+          aspectRatio: part!.cellAspectRatio,
+          shape: part.cellShape,
           child: view,
         ),
         null => view,
@@ -350,6 +406,7 @@ class VideoRecorderView extends ConsumerStatefulWidget {
     this.entryPoint = CreationEntryPoint.direct,
     this.autoRecord = false,
     this.analyticsSession,
+    this.collabPart = false,
   });
 
   /// Whether the screen is opened from the video editor.
@@ -357,6 +414,11 @@ class VideoRecorderView extends ConsumerStatefulWidget {
 
   final String entryPoint;
   final CreationAnalyticsSession? analyticsSession;
+
+  /// Whether the recorder films someone's part of a collaborative room: no
+  /// mode wheel, no autosaved session offered back, and the part capped at
+  /// the post length.
+  final bool collabPart;
 
   /// Opens in capture mode and starts recording as soon as the camera is
   /// ready — the bottom-nav hold-to-record shortcut.
@@ -392,7 +454,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
 
   void _onRecorderPop(bool didPop, Object? result) {
     if (didPop) {
-      if (!widget.fromEditor) discardRecorderSession(ref);
+      // A room part never autosaves, so the autosave slot holds the user's
+      // own unfinished work, whatever the editor's flag says: keep it.
+      if (!widget.fromEditor) {
+        discardRecorderSession(ref, keepAutosavedDraft: widget.collabPart);
+      }
       return;
     }
     if (!_isLibraryReaction || _reactionExitResult != null) return;
@@ -470,16 +536,22 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     // next.
     AudioSelectionBottomSheet.preload(ref);
     await _maybeShowWhySixSeconds();
-    // An auto-recording open already found nothing to offer.
-    // A Library reaction has already retained the previous session.
-    if (!mounted || autoStartRecording || _isLibraryReaction) return;
+    // An auto-recording open already found nothing to offer, a Library
+    // reaction has already retained the previous session, and a room part is
+    // a session of its own.
+    if (!mounted ||
+        autoStartRecording ||
+        _isLibraryReaction ||
+        widget.collabPart) {
+      return;
+    }
     await offerAutosavedSession(context, ref, openEditorOnRestore: true);
   }
 
   /// The mode the open asks the bloc for, or `null` to restore the
   /// last-used one. The hold-to-record shortcut always opens in capture mode.
   VideoRecorderMode? get _requestedRecorderMode =>
-      widget.autoRecord ? VideoRecorderMode.capture : null;
+      widget.autoRecord || widget.collabPart ? VideoRecorderMode.capture : null;
 
   /// The persisted last-used mode, which a plain open restores.
   VideoRecorderMode get _lastUsedRecorderMode => VideoRecorderMode.fromName(
@@ -562,6 +634,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         fromEditor: widget.fromEditor,
         recorderMode: recorderMode,
         autoStartRecording: autoStartRecording,
+        collabPart: widget.collabPart,
       ),
     );
   }
@@ -656,7 +729,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     // The Upload tab keeps the camera paused; coming back to the app must not
     // restart it behind the static explainer.
     if (state == AppLifecycleState.resumed &&
-        bloc.state.recorderMode == VideoRecorderMode.upload) {
+        !bloc.state.recorderMode.recordsVideo) {
       return;
     }
     bloc.add(VideoRecorderAppLifecycleChanged(state));
@@ -716,11 +789,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
             state.recorderMode,
             session: widget.analyticsSession,
           );
-          if (state.recorderMode == VideoRecorderMode.upload) {
+          if (!state.recorderMode.recordsVideo) {
             context.read<VideoRecorderBloc>().add(
               const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
             );
-          } else if (previous == VideoRecorderMode.upload) {
+          } else if (previous != null && !previous.recordsVideo) {
             if (state.isCameraInitialized) {
               context.read<VideoRecorderBloc>().add(
                 const VideoRecorderAppLifecycleChanged(
@@ -741,7 +814,10 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
             canPop: !reactionTakeInFlight,
             onPopInvokedWithResult: _onRecorderPop,
             child: _ScreenFlashTheme(
-              child: _VideoRecorderScaffold(fromEditor: widget.fromEditor),
+              child: _VideoRecorderScaffold(
+                fromEditor: widget.fromEditor,
+                lockedMode: widget.fromEditor || widget.collabPart,
+              ),
             ),
           ),
         ),
@@ -785,9 +861,16 @@ class _ScreenFlashTheme extends StatelessWidget {
 }
 
 class _VideoRecorderScaffold extends StatelessWidget {
-  const _VideoRecorderScaffold({required this.fromEditor});
+  const _VideoRecorderScaffold({
+    required this.fromEditor,
+    required this.lockedMode,
+  });
 
   final bool fromEditor;
+
+  /// Whether the mode wheel is hidden: the editor's camera and a room part
+  /// record in one mode only.
+  final bool lockedMode;
 
   @override
   Widget build(BuildContext context) {
@@ -818,11 +901,12 @@ class _VideoRecorderScaffold extends StatelessWidget {
                     topBarCenter: const VideoRecorderStopMotionBudget(),
                   ),
                   .classic => const VideoRecorderClassicStack(),
+                  .together => const VideoRecorderTogetherStack(),
                 },
               ),
             ),
 
-            if (!fromEditor)
+            if (!lockedMode)
               const Padding(
                 padding: .symmetric(vertical: 22),
                 child: VideoRecorderBottomBar(),

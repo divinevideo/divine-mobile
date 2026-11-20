@@ -4201,6 +4201,29 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'a peek at together and back preserves clips and editor',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.together),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.modeBeforeUpload, VideoRecorderMode.capture);
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          verifyNever(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'upload → another recording mode clears clips and editor',
         build: buildBloc,
         act: (bloc) async {
@@ -4801,6 +4824,71 @@ void main() {
 
           expect(bloc.state.isCameraInitialized, isTrue);
           verifyNever(() => cameraService.handleAppLifecycleState(any()));
+        });
+      });
+
+      group('filming a collaborative room part', () {
+        setUp(stubRecorderDefaults);
+
+        test('opens in capture with the post-length cap and leaves the '
+            'last-used mode alone', () async {
+          when(
+            () => prefs.getString(VideoRecorderMode.persistenceKey),
+          ).thenReturn(VideoRecorderMode.classic.name);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested(collabPart: true));
+          await pumpEventQueue();
+
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          expect(bloc.state.isCollabPart, isTrue);
+          expect(bloc.state.hasRecordingLimit, isTrue);
+          verifyNever(
+            () => prefs.setString(VideoRecorderMode.persistenceKey, any()),
+          );
+        });
+
+        test('stays a part when the editor hands the camera back', () async {
+          when(
+            () => prefs.getString(VideoRecorderMode.persistenceKey),
+          ).thenReturn(VideoRecorderMode.together.name);
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested(collabPart: true));
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          expect(bloc.state.isCollabPart, isTrue);
+          verifyNever(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+        });
+      });
+
+      group('opening into the Together tab', () {
+        setUp(stubRecorderDefaults);
+
+        test('pauses the camera, as Upload does', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.together,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(bloc.state.recorderMode, VideoRecorderMode.together);
+          expect(bloc.state.isCollabPart, isFalse);
+          verify(
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.paused,
+            ),
+          ).called(1);
         });
       });
 
