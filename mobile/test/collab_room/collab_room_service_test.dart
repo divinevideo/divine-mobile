@@ -833,6 +833,39 @@ void main() {
       });
     });
 
+    group('deleteOwnerFiles', () {
+      test('deletes the parts kept for the account, and only those', () async {
+        final mine = Directory('${storage.path}/collab_rooms/$_author/room')
+          ..createSync(recursive: true);
+        File('${mine.path}/part.mp4').writeAsBytesSync([1]);
+        final theirs = Directory('${storage.path}/collab_rooms/$_sam/room')
+          ..createSync(recursive: true);
+
+        await CollabRoomService.deleteOwnerFiles(
+          _author,
+          storageDirectory: () async => storage,
+        );
+
+        expect(
+          Directory('${storage.path}/collab_rooms/$_author').existsSync(),
+          isFalse,
+        );
+        expect(theirs.existsSync(), isTrue);
+      });
+
+      test('touches nothing for a name that is not a pubkey', () async {
+        final rooms = Directory('${storage.path}/collab_rooms')
+          ..createSync(recursive: true);
+
+        await CollabRoomService.deleteOwnerFiles(
+          '..',
+          storageDirectory: () async => storage,
+        );
+
+        expect(rooms.existsSync(), isTrue);
+      });
+    });
+
     group('markPosted', () {
       test(
         'retries the posted snapshot for a recipient without a copy',

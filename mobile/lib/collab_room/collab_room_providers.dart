@@ -15,6 +15,10 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/utils/path_resolver.dart';
 
+/// Where the room parts this device keeps live.
+Future<Directory> collabRoomStorageDirectory() async =>
+    Directory(await getDocumentsPath());
+
 /// The signed-in account's collaborative rooms.
 final collabRoomServiceProvider = Provider<CollabRoomService>((ref) {
   return CollabRoomService(
@@ -24,7 +28,7 @@ final collabRoomServiceProvider = Provider<CollabRoomService>((ref) {
       ref.watch(dmVideoDecryptorProvider),
     ),
     l10n: currentAppL10n(ref.watch(sharedPreferencesProvider)),
-    storageDirectory: () async => Directory(await getDocumentsPath()),
+    storageDirectory: collabRoomStorageDirectory,
     isDmRestricted: ref.watch(isDmRestrictedProvider),
   );
 });

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +24,15 @@ class VideoRecorderModeSelectorWheel extends StatefulWidget {
   const VideoRecorderModeSelectorWheel({
     required this.selectedMode,
     required this.onModeChanged,
+    this.modes = VideoRecorderMode.values,
     super.key,
   });
 
   final VideoRecorderMode selectedMode;
   final ValueChanged<VideoRecorderMode> onModeChanged;
+
+  /// The modes offered, in wheel order.
+  final List<VideoRecorderMode> modes;
 
   @override
   State<VideoRecorderModeSelectorWheel> createState() =>
@@ -65,7 +70,7 @@ class _VideoRecorderModeSelectorWheelState
     _selectedIndex = _indexOf(widget.selectedMode);
     _snapOffsets = _snapOffsetsFor(
       _itemWidths(
-        [for (final mode in VideoRecorderMode.values) mode.label],
+        [for (final mode in widget.modes) mode.label],
         TextScaler.noScaling,
       ),
     );
@@ -88,7 +93,8 @@ class _VideoRecorderModeSelectorWheelState
   @override
   void didUpdateWidget(VideoRecorderModeSelectorWheel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedMode != widget.selectedMode) {
+    if (oldWidget.selectedMode != widget.selectedMode ||
+        oldWidget.modes.length != widget.modes.length) {
       final index = _indexOf(widget.selectedMode);
       // Self-originated changes (tap/snap) already animated to this index.
       if (index == _selectedIndex) return;
@@ -106,9 +112,10 @@ class _VideoRecorderModeSelectorWheelState
     super.dispose();
   }
 
-  /// Wheel position of [mode].
+  /// Wheel position of [mode], or the first one's while [mode] is not
+  /// offered and the recorder is about to leave it.
   int _indexOf(VideoRecorderMode mode) =>
-      VideoRecorderMode.values.indexOf(mode);
+      math.max(0, widget.modes.indexOf(mode));
 
   void _jumpTo(int index) {
     if (!_scrollController.hasClients) return;
@@ -186,7 +193,7 @@ class _VideoRecorderModeSelectorWheelState
       logName: 'VideoRecorderModeSelectorWheel',
       category: LogCategory.ui,
     );
-    widget.onModeChanged(VideoRecorderMode.values[index]);
+    widget.onModeChanged(widget.modes[index]);
   }
 
   /// Rendered width of [label] at [textScaler].
@@ -233,7 +240,7 @@ class _VideoRecorderModeSelectorWheelState
 
   @override
   Widget build(BuildContext context) {
-    const modes = VideoRecorderMode.values;
+    final modes = widget.modes;
     final l10n = context.l10n;
     final labels = [
       for (final mode in modes)

@@ -12,6 +12,8 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/collab_room/collab_room_service.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
@@ -955,6 +957,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           await safeCleanup(
             'keptDmVideos',
             () => DmVideoStore.deleteOwner(userPubkey),
+          );
+          // The decrypted parts of Together rooms, other people's videos
+          // included, go with the account as its video DMs do.
+          await safeCleanup(
+            'keptCollabRoomParts',
+            () => CollabRoomService.deleteOwnerFiles(
+              userPubkey,
+              storageDirectory: collabRoomStorageDirectory,
+            ),
           );
         }
         // Reaction rows keep decrypted rumor payloads (rumor_event_json). Most

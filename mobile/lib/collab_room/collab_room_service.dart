@@ -513,6 +513,19 @@ class CollabRoomService {
     if (directory.existsSync()) await directory.delete(recursive: true);
   }
 
+  /// Deletes every room part kept on this device for [ownerPubkey], as the
+  /// account leaves the device or is deleted. Parts of other people's videos
+  /// must not outlive the account they were shared with.
+  static Future<void> deleteOwnerFiles(
+    String ownerPubkey, {
+    required Future<Directory> Function() storageDirectory,
+  }) async {
+    if (!NostrHexUtils.isValidPubkey(ownerPubkey)) return;
+    final root = await storageDirectory();
+    final directory = Directory(p.join(root.path, 'collab_rooms', ownerPubkey));
+    if (directory.existsSync()) await directory.delete(recursive: true);
+  }
+
   Future<Directory> _roomDirectory(String roomId, String owner) async {
     if (!isValidCollabRoomId(roomId)) {
       throw ArgumentError.value(roomId, 'roomId');
