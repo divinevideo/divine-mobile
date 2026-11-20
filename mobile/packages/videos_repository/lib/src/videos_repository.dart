@@ -3631,6 +3631,10 @@ class VideosRepository {
   /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
   /// Any other [expectedAuthor] value is ignored. A candidate that names a
   /// different author is skipped (#10384).
+  ///
+  /// An `naddr1` or `nevent1` is held to its exact identity — kind, author and
+  /// `d` tag, or event id — by [VideoRouteRef.matchesEvent], and an `naddr1`
+  /// skips the any-kind `d`-tag relay lookup.
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
