@@ -1388,12 +1388,15 @@ void main() {
             ),
             findsOneWidget,
           );
+          final offsetBeforeDrag = controller.offset;
+          expect(offsetBeforeDrag, greaterThan(0));
           await tester.drag(
             find.byType(NestedScrollView),
             const Offset(0, 200),
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          expect(controller.offset, lessThan(offsetBeforeDrag));
         },
       );
     }
