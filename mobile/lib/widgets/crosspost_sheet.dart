@@ -70,7 +70,7 @@ Future<void> showCrosspostSheetForEvent({
                   .selectedConnections;
               navigator.pop();
               messenger.showSnackBar(
-                SnackBar(content: Text(l10n.crosspostStarted)),
+                DivineSnackbarContainer.snackBar(l10n.crosspostStarted),
               );
               runDetached(
                 _submitInBackground(
@@ -107,7 +107,7 @@ Future<void> _submitInBackground({
     if (!messenger.mounted) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: true));
   }
 
   final notifiedFailures = <String>{};
