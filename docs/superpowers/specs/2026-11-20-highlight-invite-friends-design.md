@@ -79,8 +79,11 @@ often it becomes wallpaper.
   - a Share button that opens the system share sheet through
     `showShareSheet`, anchored to the button, with the edited message and
     the link. If the box is cleared, only the link is shared.
-- **After sharing (my call):** a completed share returns to Inbox; a
-  dismissed share sheet leaves the person on the page to try again.
+- **After sharing (my call):** a dismissed share sheet leaves the person
+  on the page to try again. Any other outcome (including one the platform
+  cannot report) leaves the page: back to the previous screen, or to Inbox
+  when the page was opened directly by a link or reload. If another screen
+  opened on top while the sheet was up, the page stays underneath it.
 - **No new dependencies, permissions, or backend changes.** The page is a
   typed route like the rest of the app.
 
