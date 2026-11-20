@@ -106,13 +106,26 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
             DivineTextField(
               controller: _message,
               labelText: l10n.inviteFriendsMessageLabel,
-              helperText: l10n.inviteFriendsLinkNote(AppConstants.downloadUrl),
               filled: true,
               fillColor: colors.surfaceContainer,
               keyboardType: TextInputType.multiline,
               textInputAction: .newline,
               minLines: 3,
               maxLines: 6,
+            ),
+            // Its own text rather than the field's helper, which a field
+            // limits to one line and would cut the link off.
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                DivineTextField.defaultContentPadding.left,
+                8,
+                DivineTextField.defaultContentPadding.right,
+                0,
+              ),
+              child: Text(
+                l10n.inviteFriendsLinkNote(AppConstants.downloadUrl),
+                style: VineTheme.bodySmallFont(color: colors.secondaryText),
+              ),
             ),
             const SizedBox(height: 24),
             Builder(

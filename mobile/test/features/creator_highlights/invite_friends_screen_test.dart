@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -96,6 +97,36 @@ void main() {
           findsOneWidget,
         );
       });
+
+      for (final scale in [1.0, 2.0]) {
+        testWidgets('the link note is never cut off at ${scale}x text', (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(320, 640);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MediaQuery(
+                data: MediaQueryData(
+                  size: const Size(320, 640),
+                  textScaler: TextScaler.linear(scale),
+                ),
+                child: const InviteFriendsScreen(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final note = tester.renderObject<RenderParagraph>(
+            find.text(l10n.inviteFriendsLinkNote(AppConstants.downloadUrl)),
+          );
+          expect(note.didExceedMaxLines, isFalse);
+          expect(tester.takeException(), isNull);
+        });
+      }
     });
 
     group('interactions', () {
