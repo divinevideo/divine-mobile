@@ -1,6 +1,5 @@
-// ABOUTME: Regex + helpers for building and extracting divine.video URLs.
-// ABOUTME: Shared by the share builders, the conversation bubble, the
-// ABOUTME: long-press handler, and the DM shared-video citation parser.
+// ABOUTME: Builds divine.video video links (NIP-19 naddr/nevent, or the
+// ABOUTME: legacy ?author= form) and extracts them from text.
 
 import 'dart:convert';
 
@@ -14,17 +13,18 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 /// A video's `d` tag is not unique across accounts (a Divine upload's is the
 /// file's sha256), so a link that names only the `d` tag can open another
 /// account's video. Clients that read this parameter hold the lookup to that
-/// author; older clients ignore it and resolve the `d` tag as before.
+/// author; older clients ignore it and resolve the `d` tag as before. Only
+/// legacy links carry it; an `naddr` embeds the author.
 const divineVideoAuthorQueryParameter = 'author';
 
-/// Detects the canonical share-link shape
-/// (`https://divine.video/video/<id>`, optionally `?author=<hex pubkey>`).
+/// Detects a divine.video video link (`https://divine.video/video/<id>`,
+/// optionally `?author=<hex pubkey>` on a legacy link).
 ///
-/// Group 1 is the id: hex event IDs (64 chars) and d-tags (UUIDs,
-/// alphanumeric strings). Only word characters and hyphens are matched so
-/// trailing punctuation (`.`, `,`, `)`) is excluded. Group 2 is the author's
-/// hex pubkey when the link carries one; any other query string is excluded
-/// from the match.
+/// Group 1 is the id: an `naddr1`/`nevent1` reference, a 64-char hex event
+/// ID, or a legacy d tag (UUIDs, alphanumeric strings). Only word characters
+/// and hyphens are matched so trailing punctuation (`.`, `,`, `)`) is
+/// excluded. Group 2 is the author's hex pubkey when the link carries one;
+/// any other query string is excluded from the match.
 final divineVideoUrlRegex = RegExp(
   r'https?://(?:www\.)?divine\.video/video/([\w-]+)'
   r'(?:\?author=([0-9a-fA-F]{64})(?![0-9a-zA-Z]))?',
@@ -38,11 +38,13 @@ final divineVideoUrlLineRegex = RegExp(
   caseSensitive: false,
 );
 
-/// Builds a web link containing a standard NIP-19 video reference.
+/// The divine.video link for a video, as an `naddr` or `nevent` reference.
 ///
 /// [stableId] is the real `d` tag for an addressable [kind], or the event ID
-/// for a regular video. Pass a null [kind] for legacy links whose event kind
-/// is unknown; these retain their author query rather than inventing a kind.
+/// for a regular one. A null [kind] (the event kind is unknown), a non-hex
+/// [authorPubkey] for an addressable kind, or a `d` tag over NIP-19's
+/// 255-byte entry limit falls back to the legacy `/video/<id>?author=<hex>`
+/// link. That path encodes [stableId] itself, so pass it unencoded.
 String divineVideoShareUrl(
   String stableId, {
   required int? kind,
@@ -93,8 +95,11 @@ String divineVideoShareUrlForEvent(VideoEvent video) {
   );
 }
 
-/// The actual protocol identity shared by URL and DM citation builders.
-/// A missing or unencodable d tag falls back to an exact event reference.
+/// The protocol identity the URL and DM citation builders share.
+///
+/// A null `dTag` means the `d` tag is missing, empty or too long to encode, so
+/// callers cite the event id; `kind` stays the event's kind even then (see
+/// [divineVideoShareUrlForEvent]).
 ({int kind, String? dTag}) divineVideoShareIdentity(VideoEvent video) {
   final dTag = video.addressableDTag ?? video.rawTags['d'];
   final kind =
