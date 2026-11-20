@@ -48,6 +48,28 @@ Event _createVideoEvent({
   createdAt: createdAt,
 )..sign(_testKey);
 
+/// A signed video event that counts its signature checks.
+class _CountingEvent extends Event {
+  _CountingEvent({required List<List<String>> tags})
+    : super(
+        _testPubkey,
+        EventKind.videoVertical,
+        tags,
+        '',
+        createdAt: 1000000,
+      ) {
+    sign(_testKey);
+  }
+
+  int verifications = 0;
+
+  @override
+  bool get isSigned {
+    verifications++;
+    return super.isSigned;
+  }
+}
+
 void main() {
   late _MockNostrClient mockNostrClient;
   late _MockAuthService mockAuthService;
@@ -262,6 +284,112 @@ void main() {
             contains(equals(['title', 'Retitled elsewhere'])),
           );
         });
+
+        test(
+          'repairs the lower id when two revisions share a timestamp',
+          () async {
+            // NIP-01 keeps the lower id when created_at ties.
+            final first = _createVideoEvent(
+              tags: [
+                ['d', 'video_123'],
+                corruptImeta(),
+                ['title', 'First'],
+              ],
+            );
+            final second = _createVideoEvent(
+              tags: [
+                ['d', 'video_123'],
+                corruptImeta(),
+                ['title', 'Second'],
+              ],
+            );
+            final kept = first.id.compareTo(second.id) < 0 ? first : second;
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) async => _answeredScan([first, second]));
+            stubSignAndPublishSuccess();
+
+            final result = await repairService.repairIfNeeded();
+
+            expect(result, equals(1));
+            expect(
+              publishedEvents.single.tags,
+              contains(equals(kept.tags.last)),
+            );
+          },
+        );
+
+        test('passes over an unsigned newer revision for the signed one '
+            'behind it', () async {
+          final signedCorrupted = _createVideoEvent(
+            tags: [
+              ['d', 'video_123'],
+              corruptImeta(),
+            ],
+          );
+          final unsignedNewer = _createVideoEvent(
+            createdAt: 2000000,
+            tags: [
+              ['d', 'video_123'],
+              ['imeta', 'url $_blossomBaseUrl/$_testSha256', 'm video/mp4'],
+            ],
+          )..sig = 'b' * 128;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => _answeredScan([unsignedNewer, signedCorrupted]),
+          );
+          stubSignAndPublishSuccess();
+
+          final result = await repairService.repairIfNeeded();
+
+          expect(result, equals(1));
+          expect(publishedEvents.single.createdAt, equals(1000001));
+        });
+      });
+
+      test('checks signatures only on the revisions it re-signs', () async {
+        // Each check is a Schnorr verification on the UI isolate, and the scan
+        // reads every video the account published.
+        final healthy = _CountingEvent(
+          tags: [
+            ['d', 'healthy'],
+            ['imeta', 'url $_blossomBaseUrl/$_testSha256', 'm video/mp4'],
+          ],
+        );
+        final corrupted = _CountingEvent(
+          tags: [
+            ['d', 'corrupted'],
+            [
+              'imeta',
+              'url /var/mobile/Containers/Data/Application/xxx/video.mp4',
+              'm video/mp4',
+              'x $_testSha256',
+            ],
+          ],
+        );
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async => _answeredScan([healthy, corrupted]));
+        stubSignAndPublishSuccess();
+
+        final result = await repairService.repairIfNeeded();
+
+        expect(result, equals(1));
+        expect(healthy.verifications, equals(0));
+        expect(corrupted.verifications, equals(1));
       });
 
       test('skips an event whose signature does not verify', () async {
