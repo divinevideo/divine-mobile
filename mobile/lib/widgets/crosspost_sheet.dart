@@ -107,18 +107,18 @@ Future<void> _submitInBackground({
   required ScaffoldMessengerState messenger,
   required AppLocalizations l10n,
 }) async {
-  void showFailure(VideoCrosspostSubmitError? error) {
+  void showFailure(String message) {
     if (!messenger.mounted) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(_submitErrorText(l10n, error))));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   final notifiedFailures = <String>{};
   void onUpdate(VideoCrosspostState state) {
     if (!messenger.mounted) return;
     if (state.status == VideoCrosspostStatus.submitFailed) {
-      showFailure(state.submitError);
+      showFailure(_submitErrorText(l10n, state.submitError));
       return;
     }
     final failures = [
@@ -133,11 +133,7 @@ Future<void> _submitInBackground({
             crosspostPlatformDisplayName(job.platform),
           ),
     ];
-    if (failures.isNotEmpty) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failures.join('\n'))));
-    }
+    if (failures.isNotEmpty) showFailure(failures.join('\n'));
   }
 
   // Keep account-change dependencies active after the modal is gone.
@@ -152,8 +148,10 @@ Future<void> _submitInBackground({
       onUpdate: onUpdate,
     );
   } catch (_) {
-    showFailure(VideoCrosspostSubmitError.network);
-    rethrow; // runDetached logs unexpected failures.
+    // Not a crossposter response, so retrying later would not help.
+    showFailure(l10n.crosspostFailedGeneric);
+    // runDetached logs it, and reports invariant violations.
+    rethrow;
   } finally {
     subscription.close();
   }

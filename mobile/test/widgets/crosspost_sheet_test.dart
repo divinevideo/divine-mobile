@@ -264,6 +264,26 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('reports an unexpected failure without blaming the network', (
+      tester,
+    ) async {
+      await openSheet(tester);
+      await tester.tap(find.text(l10n.crosspostSubmit));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(sheetClosed, isTrue);
+
+      response.completeError(const FormatException('unexpected job shape'));
+      await tester.pump();
+      // The queue's subscription cancel completes in the root zone, which
+      // the fake clock does not drive.
+      await tester.runAsync(() async {});
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostFailedGeneric), findsOneWidget);
+      expect(find.text(l10n.crosspostErrorNetwork), findsNothing);
+    });
+
     testWidgets('closes the sheet, not the page under it, from a tab', (
       tester,
     ) async {
