@@ -19,30 +19,29 @@ void main() {
       });
 
   group('shorten', () {
-    test('disabled and unsupported destinations make no requests', () async {
+    test('unsupported destinations make no requests', () async {
       var requests = 0;
       final transport = MockClient((_) async {
         requests++;
         return http.Response('{}', 200);
       });
-      final disabled = ShortLinkClient(client: transport);
-      final enabled = ShortLinkClient(client: transport, enabled: true);
-      expect(await disabled.shorten(target), target);
+      final client = ShortLinkClient(client: transport);
       for (final url in [
         'https://evil.example/video/a',
         'https://divine.video/video/a?q=1',
         'https://divine.video/l/Abc12345',
         'https://divine.video/profile/short',
+        // A verified username's profile URL stays readable.
+        'https://alice.divine.video',
         // Only a video link may name an author, only as lowercase hex.
         'https://divine.video/profile/${'a' * 64}?author=${'b' * 64}',
         'https://divine.video/video/a?author=${'B' * 64}',
         'https://divine.video/video/a?author=${'b' * 64}&q=1',
       ]) {
-        expect(await enabled.shorten(url), url);
+        expect(await client.shorten(url), url);
       }
       expect(requests, 0);
-      disabled.close();
-      enabled.close();
+      client.close();
       transport.close();
     });
 
@@ -62,7 +61,7 @@ void main() {
           expect(request.body, jsonEncode({'url': target}));
           return http.Response(mapping(), 201);
         });
-        final client = ShortLinkClient(client: transport, enabled: true);
+        final client = ShortLinkClient(client: transport);
         expect(
           await Future.wait([client.shorten(target), client.shorten(target)]),
           [short, short],
@@ -83,7 +82,7 @@ void main() {
         expect(request.body, jsonEncode({'url': authored}));
         return http.Response(mapping(url: authored), 201);
       });
-      final client = ShortLinkClient(client: transport, enabled: true);
+      final client = ShortLinkClient(client: transport);
 
       expect(await client.shorten(authored), short);
       client.close();
@@ -106,7 +105,7 @@ void main() {
           final transport = MockClient(
             (_) async => ++requests == 1 ? bad : http.Response(mapping(), 200),
           );
-          final client = ShortLinkClient(client: transport, enabled: true);
+          final client = ShortLinkClient(client: transport);
           expect(await client.shorten(target), target);
           expect(await client.shorten(target), short);
           client.close();
@@ -121,7 +120,7 @@ void main() {
         fakeAsync((async) {
           final response = Completer<http.Response>();
           final transport = MockClient((_) => response.future);
-          final client = ShortLinkClient(client: transport, enabled: true);
+          final client = ShortLinkClient(client: transport);
           String? result;
           unawaited(client.shorten(target).then((value) => result = value));
           async.flushMicrotasks();
@@ -139,7 +138,7 @@ void main() {
     test('closing drops pending responses and cached results', () async {
       final response = Completer<http.Response>();
       final transport = MockClient((_) => response.future);
-      final client = ShortLinkClient(client: transport, enabled: true);
+      final client = ShortLinkClient(client: transport);
       final pending = client.shorten(target);
       client.close();
       response.complete(http.Response(mapping(), 200));

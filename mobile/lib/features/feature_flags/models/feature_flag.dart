@@ -4,13 +4,6 @@
 enum FeatureFlagAudience { user, internal }
 
 enum FeatureFlag {
-  shortLinksSharing(
-    'Short Links',
-    'Use permanent short URLs for external video and profile sharing. '
-        'On by default in native builds; off preserves full URLs. '
-        'Overrides are internal only.',
-    audience: FeatureFlagAudience.internal,
-  ),
   publishingIdeas(
     'Publishing Ideas',
     'Inline title, description, and hashtag ideas.',

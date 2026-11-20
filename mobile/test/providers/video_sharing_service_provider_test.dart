@@ -4,10 +4,11 @@
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -37,13 +38,15 @@ void main() {
 
     test('is available once the identity is known, before relays connect', () {
       // Gating the service on the relay-ready client left Share a silent dead
-      // tap during cold start (#6423). Shortening is independently disabled.
-      // Publishing readiness is enforced on the send path instead, via
-      // AuthService.canPublishNostrWritesNow.
+      // tap during cold start (#6423). Publishing readiness is enforced on the
+      // send path instead, via AuthService.canPublishNostrWritesNow.
       final container = ProviderContainer(
         overrides: [
-          isFeatureEnabledProvider(FeatureFlag.shortLinksSharing)
-              .overrideWithValue(false),
+          // Builds the real native short-link provider, so a dependency it
+          // gains that cannot build at cold start fails here.
+          instrumentedHttpClientFactoryProvider.overrideWithValue(
+            () => MockClient((_) async => http.Response('', 503)),
+          ),
           authServiceProvider.overrideWithValue(_MockAuthService()),
           profileRepositoryProvider.overrideWithValue(null),
           profileReadRepositoryProvider.overrideWithValue(

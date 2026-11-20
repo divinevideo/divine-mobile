@@ -161,6 +161,28 @@ void main() {
       expect(find.text(FeatureFlag.groupMessages.displayName), findsOneWidget);
     });
 
+    testWidgets('does not list Short Links as an experiment', (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(buildSubject(isDeveloperMode: true));
+      await initializeFeatureFlags(tester);
+
+      // Devices may still hold an ff_shortLinksSharing override, which a
+      // re-added flag of that name would bring back.
+      expect(
+        FeatureFlag.values.map((flag) => flag.name),
+        isNot(contains('shortLinksSharing')),
+      );
+      expect(
+        find.text(FeatureFlag.enhancedAnalytics.displayName),
+        findsOneWidget,
+      );
+      expect(find.text('Short Links'), findsNothing);
+    });
+
     testWidgets('should show app bar with title', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
