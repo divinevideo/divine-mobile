@@ -144,8 +144,15 @@ class SubtitleRepository {
       throw SubtitleEditException('Subtitle upload to Blossom failed');
     }
 
+    // The republish reads the relays again after the upload. Make the
+    // revision read here its floor, so that read cannot go back past it.
+    final readBeforeUpload =
+        (newest.id == video.id
+                ? video
+                : VideoEvent.fromNostrEvent(newest, permissive: true))
+            .copyWith(eventCreatedAt: newest.createdAt);
     final updatedVideo = await _publisher.republishWithSubtitles(
-      existingEvent: video,
+      existingEvent: readBeforeUpload,
       textTrackRef: blossomUrl,
       extraTextTrackRefs: [
         VideoEventPublisher.subtitleEventAddress(

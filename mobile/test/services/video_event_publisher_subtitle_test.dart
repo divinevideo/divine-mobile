@@ -892,6 +892,28 @@ void main() {
         });
       }
 
+      test('returns null without publishing when the relays answer with a '
+          'revision older than the one passed in', () async {
+        relaysAnswer(
+          LatestVideoRevisionFound(newest(createdAt: rawEventCreatedAt - 1)),
+        );
+
+        final result = await publisher.republishWithSubtitles(
+          existingEvent: existingEvent,
+          textTrackRef: textTrackRef,
+        );
+
+        expect(result, isNull);
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+      });
+
       test('returns null for a video the account does not own', () async {
         when(() => mockAuthService.currentPublicKeyHex).thenReturn('f' * 64);
         relaysAnswer(LatestVideoRevisionFound(newest()));
