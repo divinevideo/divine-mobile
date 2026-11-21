@@ -3865,6 +3865,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get crosspostSheetSubtitle => '发送到你已连接的平台。发布可能需要几分钟。';
 
   @override
+  String get crosspostStarted => '正在后台发布到其他平台。';
+
+  @override
   String get crosspostSubmit => '跨平台发布';
 
   @override
@@ -3916,6 +3919,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => '跨平台发布失败。';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform：$reason';
+  }
 
   @override
   String get crosspostStillWorking => '仍在处理中。你可以关掉这个页面——发布会在后台继续。';

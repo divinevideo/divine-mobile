@@ -80,8 +80,8 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
     emit(state.copyWith(selectedPlatforms: selected));
   }
 
-  /// Fire the crosspost request, then poll until every job reaches a
-  /// terminal state. Safe to call again after a failure.
+  /// Fires the crosspost request and starts polling; returns before polling
+  /// ends. Safe to call again after a failure.
   Future<void> submit() async {
     if (isClosed ||
         (state.status != VideoCrosspostStatus.ready &&
@@ -161,18 +161,20 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
       if (_pollInFlight) return;
       _pollInFlight = true;
       try {
-        final jobs = await _repository.getCrossposts(eventId: _eventId);
+        final videoJobs = await _repository.getCrossposts(eventId: _eventId);
         if (isClosed || _pollTimer == null) return;
-        final pending = jobs.any((j) => j.status.isPending);
-        emit(
-          state.copyWith(
-            status: pending
-                ? VideoCrosspostStatus.polling
-                : VideoCrosspostStatus.finished,
-            jobs: jobs,
-          ),
-        );
-        if (!pending) _stopPolling();
+        // The GET lists jobs for the entire video, not just this submission.
+        final byId = {for (final job in videoJobs) job.id: job};
+        _onJobsUpdated([
+          for (final job in state.jobs) byId[job.id] ?? job,
+        ]);
+      } on CrosspostingPassiveSigningUnavailable catch (error) {
+        if (isClosed || _pollTimer == null) return;
+        // A remote signer can recover on the next tick without opening UI.
+        if (error.retryable) return;
+        // Jobs already accepted by the server continue without monitoring.
+        _stopPolling();
+        emit(state.copyWith(status: VideoCrosspostStatus.finished));
       } on CrosspostingApiException catch (e, stackTrace) {
         // Transient poll failure — keep the timer running and retry on
         // the next tick.
@@ -193,13 +195,19 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   }
 
   VideoCrosspostSubmitError _submitErrorFor(CrosspostingApiException e) =>
-      switch (e.code) {
-        'not_owner' => VideoCrosspostSubmitError.notOwner,
-        'not_eligible' => VideoCrosspostSubmitError.notEligible,
-        'not_connected' => VideoCrosspostSubmitError.notConnected,
-        'unauthorized' => VideoCrosspostSubmitError.unauthorized,
-        _ => VideoCrosspostSubmitError.network,
+      switch (e) {
+        CrosspostingPassiveSigningUnavailable() =>
+          VideoCrosspostSubmitError.signingUnavailable,
+        _ => _submitErrorForCode(e.code),
       };
+
+  VideoCrosspostSubmitError _submitErrorForCode(String? code) => switch (code) {
+    'not_owner' => VideoCrosspostSubmitError.notOwner,
+    'not_eligible' => VideoCrosspostSubmitError.notEligible,
+    'not_connected' => VideoCrosspostSubmitError.notConnected,
+    'unauthorized' => VideoCrosspostSubmitError.unauthorized,
+    _ => VideoCrosspostSubmitError.network,
+  };
 
   @override
   Future<void> close() {

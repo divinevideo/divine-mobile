@@ -3874,6 +3874,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get crosspostSheetSubtitle => '連携中のプラットフォームに送るよ。投稿には数分かかることがあるよ。';
 
   @override
+  String get crosspostStarted => 'バックグラウンドで他のプラットフォームに投稿しています。';
+
+  @override
   String get crosspostSubmit => 'クロス投稿';
 
   @override
@@ -3925,6 +3928,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'クロス投稿に失敗したよ。';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform：$reason';
+  }
 
   @override
   String get crosspostStillWorking => 'まだ処理中だよ。これは閉じても大丈夫 — 投稿はバックグラウンドで続くよ。';

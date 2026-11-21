@@ -51,6 +51,9 @@ class _RecordingNip98AuthService implements Nip98AuthService {
   bool? capturedReuseCached;
 
   @override
+  bool usesRemoteSilentSigner(String pubkey) => false;
+
+  @override
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,

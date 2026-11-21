@@ -2905,6 +2905,10 @@
   "shareSheetCrosspost": "Crosspost",
   "crosspostSheetTitle": "Crosspost this video",
   "crosspostSheetSubtitle": "Send it to your connected platforms. Posting can take a few minutes.",
+  "crosspostStarted": "Crossposting in the background.",
+  "@crosspostStarted": {
+    "description": "Confirmation shown after the crosspost picker closes while submission continues in the background."
+  },
   "crosspostSubmit": "Crosspost",
   "crosspostStatusQueued": "Queued",
   "crosspostStatusUploading": "Uploading",
@@ -2929,6 +2933,18 @@
   "crosspostErrorUnauthorized": "Reconnect your account, then try again.",
   "crosspostErrorNetwork": "Couldn't reach the crossposter. Try again in a moment.",
   "crosspostFailedGeneric": "Crosspost failed.",
+  "crosspostPlatformFailure": "{platform}: {reason}",
+  "@crosspostPlatformFailure": {
+    "description": "Background crosspost notification for one platform's failed job. {reason} is an already-localized failure sentence.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostStillWorking": "Still working. You can close this — posting continues in the background.",
   "crosspostDone": "Done",
   "watermarkDownloadSavedToCameraRoll": "Saved to Camera Roll",

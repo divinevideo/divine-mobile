@@ -4075,6 +4075,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bağlı platformlarına gönder. Paylaşım birkaç dakika sürebilir.';
 
   @override
+  String get crosspostStarted =>
+      'Diğer platformlarda arka planda paylaşılıyor.';
+
+  @override
   String get crosspostSubmit => 'Çapraz Paylaş';
 
   @override
@@ -4130,6 +4134,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Çapraz paylaşım başarısız oldu.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

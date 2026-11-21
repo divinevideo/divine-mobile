@@ -4188,6 +4188,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изпрати го до свързаните си платформи. Публикуването може да отнеме няколко минути.';
 
   @override
+  String get crosspostStarted =>
+      'Публикуване в другите платформи във фонов режим.';
+
+  @override
   String get crosspostSubmit => 'Публикувай кръстосано';
 
   @override
@@ -4243,6 +4247,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Кръстосаното публикуване не успя.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

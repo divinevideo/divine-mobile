@@ -4253,6 +4253,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wyślij go na połączone platformy. Publikacja może potrwać kilka minut.';
 
   @override
+  String get crosspostStarted => 'Publikowanie na innych platformach w tle.';
+
+  @override
   String get crosspostSubmit => 'Crosspostuj';
 
   @override
@@ -4308,6 +4311,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Crossposting nie powiódł się.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

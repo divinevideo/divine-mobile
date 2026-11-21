@@ -6949,6 +6949,12 @@ abstract class AppLocalizations {
   /// **'Send it to your connected platforms. Posting can take a few minutes.'**
   String get crosspostSheetSubtitle;
 
+  /// Confirmation shown after the crosspost picker closes while submission continues in the background.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossposting in the background.'**
+  String get crosspostStarted;
+
   /// No description provided for @crosspostSubmit.
   ///
   /// In en, this message translates to:
@@ -7050,6 +7056,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Crosspost failed.'**
   String get crosspostFailedGeneric;
+
+  /// Background crosspost notification for one platform's failed job. {reason} is an already-localized failure sentence.
+  ///
+  /// In en, this message translates to:
+  /// **'{platform}: {reason}'**
+  String crosspostPlatformFailure(String platform, String reason);
 
   /// No description provided for @crosspostStillWorking.
   ///

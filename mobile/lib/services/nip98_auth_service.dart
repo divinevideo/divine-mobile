@@ -522,6 +522,11 @@ class Nip98AuthService {
       _authService.isAuthenticated &&
       _authService.currentPublicKeyHex == pubkey;
 
+  /// Whether this account's silent signing depends on a remote service.
+  bool usesRemoteSilentSigner(String pubkey) =>
+      isCurrentOwner(pubkey) &&
+      (_authService.currentIdentity?.signsRemotelyNonInteractive ?? false);
+
   /// Check if we can create auth tokens (user is authenticated)
   bool get canCreateTokens => _authService.isAuthenticated;
 

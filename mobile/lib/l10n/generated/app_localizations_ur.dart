@@ -4136,6 +4136,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اسے اپنے منسلک پلیٹ فارمز پر بھیجیں۔ پوسٹنگ میں چند منٹ لگ سکتے ہیں۔';
 
   @override
+  String get crosspostStarted =>
+      'پس منظر میں دوسرے پلیٹ فارمز پر پوسٹ کیا جا رہا ہے۔';
+
+  @override
   String get crosspostSubmit => 'کراس پوسٹ';
 
   @override
@@ -4191,6 +4195,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'کراس پوسٹ ناکام۔';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

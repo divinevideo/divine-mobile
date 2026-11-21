@@ -3891,6 +3891,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get crosspostSheetSubtitle => '연결된 플랫폼으로 보내요. 게시까지 몇 분 걸릴 수 있어요.';
 
   @override
+  String get crosspostStarted => '백그라운드에서 다른 플랫폼에 게시 중입니다.';
+
+  @override
   String get crosspostSubmit => '크로스 포스팅';
 
   @override
@@ -3942,6 +3945,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => '크로스 포스팅에 실패했어요.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

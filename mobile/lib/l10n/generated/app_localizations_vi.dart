@@ -4099,6 +4099,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Gửi nó tới các nền tảng bạn đã kết nối. Việc đăng có thể mất vài phút.';
 
   @override
+  String get crosspostStarted => 'Đang đăng lên các nền tảng khác trong nền.';
+
+  @override
   String get crosspostSubmit => 'Đăng chéo';
 
   @override
@@ -4154,6 +4157,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Đăng chéo thất bại.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

@@ -4257,6 +4257,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Trimite-l pe platformele tale conectate. Postarea poate dura câteva minute.';
 
   @override
+  String get crosspostStarted => 'Se publică pe celelalte platforme în fundal.';
+
+  @override
   String get crosspostSubmit => 'Crosspostează';
 
   @override
@@ -4312,6 +4315,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Crosspostarea a eșuat.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

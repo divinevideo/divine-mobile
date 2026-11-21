@@ -4197,6 +4197,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Send it to your connected platforms. Posting can take a few minutes.';
 
   @override
+  String get crosspostStarted => 'Crossposting in the background.';
+
+  @override
   String get crosspostSubmit => 'Crosspost';
 
   @override
@@ -4252,6 +4255,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Crosspost failed.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>

@@ -4186,6 +4186,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Schick es an deine verbundenen Plattformen. Das Posten kann ein paar Minuten dauern.';
 
   @override
+  String get crosspostStarted =>
+      'Dein Video wird im Hintergrund auf den anderen Plattformen veröffentlicht.';
+
+  @override
   String get crosspostSubmit => 'Crossposten';
 
   @override
@@ -4242,6 +4246,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Crosspost fehlgeschlagen.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>
