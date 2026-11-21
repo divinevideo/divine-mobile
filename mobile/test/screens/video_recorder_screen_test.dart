@@ -1265,6 +1265,7 @@ void main() {
         Object? autosaveLookupError,
         bool failAutosaveLookupOnce = false,
       }) async {
+        when(() => recorderBloc.isClosed).thenReturn(false);
         final mockDraftStorage = _MockDraftStorageService();
         var autosaveReads = 0;
         when(mockDraftStorage.getAutosaveDraft).thenAnswer((_) {
@@ -1530,7 +1531,7 @@ void main() {
         expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsOneWidget);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
-        ).called(1);
+        ).called(2);
         verifyNever(
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
         );
@@ -1542,7 +1543,7 @@ void main() {
         expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsNothing);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
-        ).called(1);
+        ).called(2);
       });
     });
 
@@ -1589,12 +1590,13 @@ void main() {
         verifyNever(drafts.getAutosaveDraft);
       });
 
-      testWidgets('shows bottom sheet when autosaved draft has been edited', (
+      testWidgets('holds remote input during autosave lookup and offer', (
         tester,
       ) async {
         // Skip the "why six seconds" prompt
         SharedPreferences.setMockInitialValues({'why_six_seconds_shown': true});
         final prefs = await SharedPreferences.getInstance();
+        when(() => recorderBloc.isClosed).thenReturn(false);
 
         final mockDraftStorage = _MockDraftStorageService();
         final editedDraft = DivineVideoDraft(
@@ -1618,9 +1620,9 @@ void main() {
           publishStatus: PublishStatus.draft,
           publishAttempts: 0,
         );
-        when(
-          mockDraftStorage.getAutosaveDraft,
-        ).thenAnswer((_) async => editedDraft);
+        final lookup = Completer<DivineVideoDraft?>();
+        when(mockDraftStorage.getAutosaveDraft)
+            .thenAnswer((_) => lookup.future);
 
         final mockClipLibrary = _MockClipLibraryService();
         when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
@@ -1651,7 +1653,13 @@ void main() {
 
         // Trigger post-frame callback
         await tester.pump();
-        // Wait for async draft check
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+        lookup.complete(editedDraft);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
 
@@ -1666,6 +1674,18 @@ void main() {
           find.text(l10n.videoRecorderAutosaveDiscardButton),
           findsOneWidget,
         );
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoRecorderAutosaveFoundTitle), findsNothing);
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        ).called(2);
       });
 
       testWidgets('shows bottom sheet when autosaved draft only has clips', (
