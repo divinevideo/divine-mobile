@@ -3934,25 +3934,32 @@ void main() {
     });
 
     group('VideoRecorderAppLifecycleChanged', () {
-      test('does not resume the camera when foregrounded on Upload', () async {
-        final bloc = buildBloc()
-          ..emit(
-            const VideoRecorderBlocState(
-              recorderMode: VideoRecorderMode.upload,
-            ),
-          );
-        addTearDown(bloc.close);
+      for (final mode in [
+        VideoRecorderMode.upload,
+        VideoRecorderMode.together,
+      ]) {
+        test(
+          'does not resume the camera when foregrounded on ${mode.name}',
+          () async {
+            final bloc = buildBloc()
+              ..emit(
+                VideoRecorderBlocState(recorderMode: mode),
+              );
+            addTearDown(bloc.close);
 
-        bloc.add(
-          const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
-        );
-        await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+            await pumpEventQueue();
 
-        verifyNever(
-          () =>
-              cameraService.handleAppLifecycleState(AppLifecycleState.resumed),
+            verifyNever(
+              () => cameraService.handleAppLifecycleState(
+                AppLifecycleState.resumed,
+              ),
+            );
+          },
         );
-      });
+      }
 
       setUp(stubRecorderDefaults);
       const initialized = VideoRecorderBlocState(
