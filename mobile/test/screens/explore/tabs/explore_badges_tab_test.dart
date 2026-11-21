@@ -913,6 +913,62 @@ void main() {
         }
       });
 
+      testWidgets('requests member faces when every indexed clip is hidden', (
+        tester,
+      ) async {
+        final repository = VideosRepository(
+          nostrClient: createMockNostrService(),
+          contentFilter: (video) => video.moderationLabels.contains('violence'),
+        );
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            videoPreviews: {
+              _definition.coordinate: [
+                (
+                  id: 'a' * 64,
+                  pubkey: 'b' * 64,
+                  title: 'Hidden by resolved label',
+                  thumbnail: '',
+                  createdAt: 1700000000,
+                  kind: 34236,
+                  moderationLabels: const ['violence'],
+                  verifiedArchive: false,
+                  archiveProvenanceAvailable: true,
+                  tags: const [
+                    ['d', 'clip'],
+                    ['url', 'https://media.divine.video/clip.mp4'],
+                  ],
+                ),
+              ],
+            },
+          ),
+        );
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            mockVideoEventService: _PreviewVideoService(),
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(repository),
+            ],
+            home: Scaffold(
+              body: BlocProvider<ExploreBadgesCubit>.value(
+                value: cubit,
+                child: const ExploreBadgesView(),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // The card has indexed clips, but none the viewer may see, so it
+        // falls back to member faces.
+        verify(
+          () => cubit.loadPreview(_definition.coordinate),
+        ).called(greaterThanOrEqualTo(1));
+      });
+
       testWidgets('refresh failure reset shows no duplicate snackbar', (
         tester,
       ) async {
