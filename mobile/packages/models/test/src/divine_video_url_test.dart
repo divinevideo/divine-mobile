@@ -3,6 +3,7 @@
 // ABOUTME: the author query parameter (#10929).
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -245,31 +246,91 @@ void main() {
     const author =
         'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
 
-    test('names a hex author in the query, lower-cased', () {
-      expect(
-        divineVideoShareUrl('abc123', authorPubkey: author.toUpperCase()),
-        equals('https://divine.video/video/abc123?author=$author'),
+    test('encodes the complete address using standard NIP-19', () {
+      final url = divineVideoShareUrl(
+        'folder/clip:1',
+        authorPubkey: author.toUpperCase(),
+        kind: 34236,
       );
+      final reference = Uri.parse(url).pathSegments.last;
+      final address = NIP19Tlv.decodeNaddr(reference)!;
+      expect(
+        address.id,
+        'folder/clip:1',
+      );
+      expect(address.author, author);
+      expect(address.kind, 34236);
+      expect(Uri.parse(url).hasQuery, isFalse);
     });
 
     test('omits the query when no usable author is known', () {
       expect(
-        divineVideoShareUrl('abc123'),
+        divineVideoShareUrl('abc123', kind: 34236),
         equals('https://divine.video/video/abc123'),
       );
       expect(
-        divineVideoShareUrl('abc123', authorPubkey: 'npub1notahexkey'),
+        divineVideoShareUrl(
+          'abc123',
+          authorPubkey: 'npub1notahexkey',
+          kind: 34236,
+        ),
         equals('https://divine.video/video/abc123'),
       );
     });
 
     test('round-trips through divineVideoUrlRegex', () {
-      final url = divineVideoShareUrl('abc123', authorPubkey: author);
+      final url = divineVideoShareUrl(
+        'abc123',
+        authorPubkey: author,
+        kind: 34236,
+      );
       final match = divineVideoUrlRegex.firstMatch(url);
 
-      expect(match?.group(1), equals('abc123'));
-      expect(match?.group(2), equals(author));
+      expect(NIP19Tlv.decodeNaddr(match!.group(1)!)!.id, 'abc123');
+      expect(match.group(2), isNull);
       expect(divineVideoUrlLineRegex.hasMatch(url), isTrue);
+    });
+
+    test('preserves the actual addressable video kind', () {
+      final url = divineVideoShareUrl(
+        'clip',
+        authorPubkey: author,
+        kind: 34235,
+      );
+      expect(
+        NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!.kind,
+        34235,
+      );
+    });
+
+    test('uses an nevent for a regular kind and names no author', () {
+      final id = 'a' * 64;
+      final url = divineVideoShareUrl(id, authorPubkey: author, kind: 22);
+      expect(NIP19Tlv.decodeNevent(Uri.parse(url).pathSegments.last)!.id, id);
+      expect(Uri.parse(url).hasQuery, isFalse);
+    });
+
+    test('keeps legacy output when the kind is unknown', () {
+      expect(
+        divineVideoShareUrl('old-tag', authorPubkey: author, kind: null),
+        'https://divine.video/video/old-tag?author=$author',
+      );
+    });
+
+    test('encodes a legacy id itself, so callers pass it unencoded', () {
+      expect(
+        divineVideoShareUrl('folder/clip:1', authorPubkey: author, kind: null),
+        'https://divine.video/video/folder%2Fclip%3A1?author=$author',
+      );
+    });
+
+    test('falls back to the legacy link for a d tag over 255 bytes', () {
+      // 256 UTF-8 bytes: one too many for a NIP-19 TLV entry.
+      final dTag = '🙂' * 64;
+      expect(
+        divineVideoShareUrl(dTag, authorPubkey: author, kind: 34236),
+        'https://divine.video/video/${'%F0%9F%99%82' * 64}?author=$author',
+      );
     });
   });
 

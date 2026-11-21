@@ -103,8 +103,9 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
   String link(String address) {
     final parts = address.split(':');
     return VideoSharingService.shareUrlForStableId(
-      Uri.encodeComponent(parts.sublist(2).join(':')),
+      parts.sublist(2).join(':'),
       authorPubkey: parts[1],
+      kind: int.parse(parts.first),
     );
   }
 

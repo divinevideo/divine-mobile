@@ -6,9 +6,12 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/short_link_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 void main() {
   const target = 'https://divine.video/video/CaseSensitive_Stable-ID';
@@ -21,6 +24,48 @@ void main() {
       });
 
   group('resolve', () {
+    /// Shortens [url], resolves the short link and parses its video route.
+    ///
+    /// The posted body is checked after the call: ShortLinkClient swallows a
+    /// throw from its transport, so an expect inside the mock would only
+    /// surface as a missing short link.
+    Future<VideoRouteRef> roundTrip(String url) async {
+      Object? posted;
+      final transport = MockClient((request) async {
+        if (request.method == 'POST') posted = jsonDecode(request.body);
+        return http.Response(responseBody(url: url), 200);
+      });
+      addTearDown(transport.close);
+      final client = ShortLinkClient(client: transport);
+      addTearDown(client.close);
+
+      final short = await client.shorten(url);
+      expect(posted, {'url': url});
+      expect(short, 'https://divine.video/l/Abc12345');
+      final link = await ShortLinkResolver(
+        client: transport,
+      ).resolve(Uri.parse(short));
+      expect(link.type, DeepLinkType.video);
+      return VideoRouteRef.parse(link.videoRef!)!;
+    }
+
+    test('round-trips an naddr through create, resolve and routing', () async {
+      final author = 'a' * 64;
+      final route = await roundTrip(
+        divineVideoShareUrl('folder/clip:1', authorPubkey: author, kind: 34235),
+      );
+
+      expect(route.addressableId, '34235:$author:folder/clip:1');
+      expect(route.addressablePubkey, author);
+    });
+
+    test('round-trips an nevent through create, resolve and routing', () async {
+      final route = await roundTrip(divineVideoShareUrl('b' * 64, kind: 22));
+
+      expect(route.eventId, 'b' * 64);
+      expect(route.stableId, isNull);
+    });
+
     test(
       'resolves complete hex and checksum-valid npub profile destinations',
       () async {

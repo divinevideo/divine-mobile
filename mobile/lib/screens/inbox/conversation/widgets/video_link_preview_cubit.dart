@@ -1,4 +1,4 @@
-// ABOUTME: Cubit that resolves a video from a divine.video stableId.
+// ABOUTME: Cubit that resolves the video a DM links to or cites.
 // ABOUTME: Delegates to VideosRepository so the resolved event carries the
 // ABOUTME: REST-hydrated loop/view counts, not a bare relay event.
 
@@ -35,7 +35,8 @@ class VideoLinkPreviewNotFound extends VideoLinkPreviewState {
   const VideoLinkPreviewNotFound();
 }
 
-/// Resolves a [VideoEvent] from a `divine.video/video/{stableId}` reference.
+/// Resolves the [VideoEvent] a [DmVideoTarget] names, by its
+/// [DmVideoTarget.routeId] and held to its [DmVideoTarget.routeAuthor].
 ///
 /// Resolution is delegated to [VideosRepository.fetchVideoWithStatsForRouteId],
 /// the same canonical resolver the video-detail screen and deep-link paths use.
@@ -46,13 +47,9 @@ class VideoLinkPreviewNotFound extends VideoLinkPreviewState {
 /// video's card and detail screen showed `0 loops` (see #5844).
 class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
   VideoLinkPreviewCubit({
-    required String videoStableId,
+    required DmVideoTarget target,
     required VideosRepository videosRepository,
-    String? authorPubkey,
-    int? videoKind,
-  }) : _videoStableId = videoStableId,
-       _authorPubkey = authorPubkey,
-       _videoKind = videoKind,
+  }) : _target = target,
        _videosRepository = videosRepository,
        super(const VideoLinkPreviewLoading()) {
     // Schedule as microtask so the first emit happens after callers
@@ -65,21 +62,14 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
     );
   }
 
-  final String _videoStableId;
-  final String? _authorPubkey;
-  final int? _videoKind;
+  final DmVideoTarget _target;
   final VideosRepository _videosRepository;
 
   Future<void> _resolve() async {
     try {
-      final target = DmVideoTarget(
-        stableId: _videoStableId,
-        authorPubkey: _authorPubkey,
-        videoKind: _videoKind,
-      );
       final video = await _videosRepository.fetchVideoWithStatsForRouteId(
-        target.routeId,
-        expectedAuthor: target.routeAuthor,
+        _target.routeId,
+        expectedAuthor: _target.routeAuthor,
       );
       if (isClosed) return;
       if (video != null) {
@@ -88,7 +78,7 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
       }
     } catch (e) {
       Log.warning(
-        'Video link preview resolve failed for $_videoStableId: $e',
+        'Video link preview resolve failed for ${_target.routeId}: $e',
         name: 'VideoLinkPreviewCubit',
         category: LogCategory.ui,
       );
