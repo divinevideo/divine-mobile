@@ -277,33 +277,37 @@ def _production_data(platform, env, ledger):
                           for n in r["numbers"]})
         return {"production": [_identity(ledger, "android", n) for n in numbers]}
     apple = _apple(env)
-    versions = []
-    builds = []
-    for item in apple.pages(
-        "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
-    ):
-        attrs = item["attributes"]
-        state = attrs.get("appVersionState") or attrs.get("appStoreState")
-        if state not in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}:
-            continue
-        build = apple.call("GET", "/appStoreVersions/" + item["id"] + "/build").get(
-            "data"
+    released = [
+        item
+        for item in apple.pages(
+            "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
         )
-        if not build:
-            raise ReleaseNotesError("Live App Store version has no build")
-        identity = _identity(
-            ledger, "ios", int(build["attributes"]["version"]), attrs["versionString"]
-        )
-        builds.append(identity | {"id": build["id"]})
-        versions.append(
-            {
-                "id": item["id"],
-                "version": attrs["versionString"],
-                "state": state,
-                "build_id": build["id"],
-            }
-        )
-    return {"versions": versions, "builds": builds}
+        if (
+            item["attributes"].get("appVersionState")
+            or item["attributes"].get("appStoreState")
+        ) in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
+    ]
+    if not released:
+        return {"versions": [], "builds": []}
+    # Historical released versions can predate the ledger. Verify the current
+    # production baseline, rather than requiring provenance for all history.
+    item = max(released, key=lambda v: parse_version(v["attributes"]["versionString"]))
+    attrs = item["attributes"]
+    build = apple.call("GET", "/appStoreVersions/" + item["id"] + "/build").get("data")
+    if not build:
+        raise ReleaseNotesError("Live App Store version has no build")
+    identity = _identity(
+        ledger, "ios", int(build["attributes"]["version"]), attrs["versionString"]
+    )
+    return {
+        "versions": [{
+            "id": item["id"],
+            "version": attrs["versionString"],
+            "state": attrs.get("appVersionState") or attrs.get("appStoreState"),
+            "build_id": build["id"],
+        }],
+        "builds": [identity | {"id": build["id"]}],
+    }
 
 
 def _apple_locales(env, data):
