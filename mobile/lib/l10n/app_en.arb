@@ -3101,6 +3101,10 @@
   "videoUpdateErrorNoPlayableVideo": "This video has no playable source, so it can't be updated.",
   "videoUpdateErrorCouldNotSign": "Couldn't sign the update. Try again.",
   "videoUpdateErrorPublishRejected": "The relay wouldn't accept the update. Try again in a moment.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "This video changed on another device and now has too many tags or collaborators. Open it again and remove some.",
+  "@videoUpdateErrorConcurrentEditsOverLimit": {
+    "description": "Shown when saving video details fails because this device's edit and another device's edit together go over the hashtag or collaborator limit. Saving the same edit again fails the same way; reopening the video loads the other device's changes."
+  },
   "videoUpdateErrorGeneric": "Couldn't update this video. Try again.",
   "shareMenuOriginalVideoUnavailable": "Couldn't load the original video. Try again in a moment.",
   "@shareMenuOriginalVideoUnavailable": {

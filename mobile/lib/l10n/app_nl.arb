@@ -1550,6 +1550,7 @@
   "videoUpdateErrorNoPlayableVideo": "Deze video heeft geen afspeelbare bron en kan niet worden bewerkt.",
   "videoUpdateErrorCouldNotSign": "De wijziging kon niet ondertekend worden. Probeer het opnieuw.",
   "videoUpdateErrorPublishRejected": "De relay accepteerde de wijziging niet. Probeer het zo nog eens.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Deze video is op een ander apparaat gewijzigd en heeft nu te veel tags of samenwerkers. Open hem opnieuw en verwijder er een paar.",
   "videoUpdateErrorGeneric": "Deze video kon niet bijgewerkt worden. Probeer het opnieuw.",
   "shareMenuDeleteVideoQuestion": "Video verwijderen?",
   "shareMenuDeleteCleanupInProgress": "Video verwijderen…",

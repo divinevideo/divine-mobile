@@ -4427,6 +4427,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Relay değişikliği kabul etmedi. Birazdan tekrar dene.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Bu video başka bir cihazda değişti ve artık çok fazla etiketi ya da işbirlikçisi var. Tekrar aç ve birkaçını kaldır.';
+
+  @override
   String get videoUpdateErrorGeneric => 'Bu video güncellenemedi. Tekrar dene.';
 
   @override

@@ -2156,6 +2156,7 @@
   "videoUpdateErrorNoPlayableVideo": "Video ini tiada sumber yang boleh dimainkan, jadi ia tidak boleh diedit.",
   "videoUpdateErrorCouldNotSign": "Gagal menandatangani kemas kini. Cuba lagi.",
   "videoUpdateErrorPublishRejected": "Relay tidak menerima kemas kini. Cuba lagi sebentar lagi.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Video ini telah diubah pada peranti lain dan kini mempunyai terlalu banyak tag atau kolaborator. Buka semula dan buang beberapa.",
   "videoUpdateErrorGeneric": "Gagal mengemas kini video ini. Cuba lagi.",
   "shareMenuDeleteVideoQuestion": "Padam Video?",
   "shareMenuDeleteCleanupInProgress": "Mengalih keluar video…",

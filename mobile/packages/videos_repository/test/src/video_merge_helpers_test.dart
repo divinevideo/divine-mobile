@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for shared profile/enrichment tag merge (#3384).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show VideoEvent;
 import 'package:videos_repository/videos_repository.dart';
 
 void main() {
@@ -81,6 +82,111 @@ void main() {
     test('non-null with null picks present value', () {
       expect(mergeNullableEngagementMax(null, 7), equals(7));
       expect(mergeNullableEngagementMax(7, null), equals(7));
+    });
+  });
+
+  group('mergeRepublishedVideo', () {
+    VideoEvent video({
+      required String id,
+      required int createdAt,
+      String? publishedAt,
+      int? nostrLikeCount,
+    }) => VideoEvent(
+      id: id,
+      pubkey: 'a' * 64,
+      createdAt: createdAt,
+      content: id,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
+      publishedAt: publishedAt,
+      nostrLikeCount: nostrLikeCount,
+    );
+
+    test('keeps the original date when neither revision has published_at', () {
+      final merged = mergeRepublishedVideo(
+        video(id: 'old', createdAt: 1000),
+        video(id: 'new', createdAt: 2000),
+      );
+
+      expect(merged.id, equals('new'));
+      expect(merged.createdAt, equals(1000));
+      expect(
+        merged.timestamp,
+        equals(DateTime.fromMillisecondsSinceEpoch(1000 * 1000)),
+      );
+    });
+
+    test('takes the republished date when it carries published_at', () {
+      final merged = mergeRepublishedVideo(
+        video(id: 'old', createdAt: 1000),
+        video(id: 'new', createdAt: 2000, publishedAt: '1500'),
+      );
+
+      expect(merged.createdAt, equals(2000));
+    });
+
+    test('carries the like count the republished copy has not loaded', () {
+      final merged = mergeRepublishedVideo(
+        video(id: 'old', createdAt: 1000, nostrLikeCount: 7),
+        video(id: 'new', createdAt: 2000),
+      );
+
+      expect(merged.nostrLikeCount, equals(7));
+    });
+
+    test('retains archive verification for the same media digest', () {
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        sha256: 'a' * 64,
+        isVerifiedArchive: true,
+        archiveAudioReuseEnabled: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        sha256: existing.sha256,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isTrue);
+      expect(merged.archiveAudioReuseEnabled, isTrue);
+    });
+
+    test('retains archive verification for the same legacy media URL', () {
+      const videoUrl = 'https://example.com/archive.mp4';
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        videoUrl: videoUrl,
+        isVerifiedArchive: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        videoUrl: videoUrl,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isTrue);
+    });
+
+    test('does not carry archive verification to a different digest', () {
+      final existing = video(id: 'old', createdAt: 1000).copyWith(
+        sha256: 'a' * 64,
+        isVerifiedArchive: true,
+        archiveAudioReuseEnabled: true,
+      );
+      final republished = video(id: 'new', createdAt: 2000).copyWith(
+        sha256: 'b' * 64,
+      );
+
+      final merged = mergeRepublishedVideo(existing, republished);
+
+      expect(merged.countsAsArchiveVine, isFalse);
+      expect(merged.archiveAudioReuseEnabled, isFalse);
+    });
+
+    test('keeps a like count the republished copy already has', () {
+      final merged = mergeRepublishedVideo(
+        video(id: 'old', createdAt: 1000, nostrLikeCount: 7),
+        video(id: 'new', createdAt: 2000, nostrLikeCount: 9),
+      );
+
+      expect(merged.nostrLikeCount, equals(9));
     });
   });
 }

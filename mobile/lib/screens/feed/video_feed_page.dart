@@ -133,6 +133,7 @@ class VideoFeedPage extends ConsumerWidget {
                 VideoFeedBloc(
                   videosRepository: videosRepository,
                   removedIdsStream: videosRepository.removedVideoIds,
+                  replacedVideosStream: videosRepository.replacedVideos,
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),

@@ -8,6 +8,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:models/models.dart' show VideoEvent;
+
 /// Merges raw video tags with primary-wins semantics on duplicate keys
 /// (`{...secondary, ...primary}`), except `views` and distinct viewers: the
 /// higher parsed non-negative count wins (#3384). Distinct viewers are read
@@ -69,4 +71,63 @@ int? _parseNonNegativeIntTag(String? raw) {
 int? mergeNullableEngagementMax(int? primary, int? secondary) {
   if (primary == null && secondary == null) return null;
   return math.max(primary ?? 0, secondary ?? 0);
+}
+
+/// Whether [candidate] wins over [previous] at their shared address per NIP-01.
+bool isNewerVideoRevision(VideoEvent candidate, VideoEvent previous) =>
+    candidate.nostrCreatedAt > previous.nostrCreatedAt ||
+    (candidate.nostrCreatedAt == previous.nostrCreatedAt &&
+        candidate.id.compareTo(previous.id) < 0);
+
+/// [republished] as it should replace [existing] in a feed or cache after
+/// its owner republished the video (an edit, new subtitles, a sound).
+///
+/// **Timestamp preservation** — when neither version has a `published_at`
+/// tag (common for classic Vine imports), the original `createdAt` /
+/// `timestamp` values are kept so the video retains its chronological
+/// position in feeds.
+///
+/// Keep server-derived feed metadata when swapping in the signed revision.
+/// Proof and archive status describe the media, so carry them only when its
+/// digest (or its URL on legacy events without a digest) is unchanged.
+VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
+  final preserveTimestamp =
+      existing.publishedAt == null && republished.publishedAt == null;
+  final sameMedia = republished.sha256 != null
+      ? republished.sha256 == existing.sha256
+      : republished.videoUrl != null &&
+            republished.videoUrl == existing.videoUrl;
+  return republished.copyWith(
+    createdAt: preserveTimestamp ? existing.createdAt : null,
+    timestamp: preserveTimestamp ? existing.timestamp : null,
+    nostrLikeCount: republished.nostrLikeCount ?? existing.nostrLikeCount,
+    nostrCommentCount:
+        republished.nostrCommentCount ?? existing.nostrCommentCount,
+    nostrRepostCount: republished.nostrRepostCount ?? existing.nostrRepostCount,
+    authorName: republished.authorName ?? existing.authorName,
+    authorAvatar: republished.authorAvatar ?? existing.authorAvatar,
+    rawTags: mergeVideoRawTagsPrimaryWins(republished.rawTags, {
+      for (final key in const ['views', 'unique_views', 'unique_viewers'])
+        key: ?existing.rawTags[key],
+    }),
+    categories: republished.categories.isEmpty ? existing.categories : null,
+    moderationLabels: {
+      ...existing.moderationLabels,
+      ...republished.moderationLabels,
+    }.toList(),
+    proofSummary: sameMedia
+        ? republished.proofSummary ?? existing.proofSummary
+        : null,
+    isVerifiedArchive: sameMedia
+        ? republished.isVerifiedArchive || existing.isVerifiedArchive
+        : null,
+    isArchiveVerificationUnknown: sameMedia
+        ? republished.isArchiveVerificationUnknown ||
+              existing.isArchiveVerificationUnknown
+        : null,
+    archiveAudioReuseEnabled: sameMedia
+        ? republished.archiveAudioReuseEnabled ||
+              existing.archiveAudioReuseEnabled
+        : null,
+  );
 }

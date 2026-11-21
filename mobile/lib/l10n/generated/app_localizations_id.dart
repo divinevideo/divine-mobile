@@ -4408,6 +4408,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Relay tidak menerima pembaruan. Coba lagi sebentar lagi.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video ini diubah di perangkat lain dan sekarang punya terlalu banyak tag atau kolaborator. Buka lagi dan hapus beberapa.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Gagal memperbarui video ini. Coba lagi.';
 

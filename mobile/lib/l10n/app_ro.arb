@@ -1550,6 +1550,7 @@
   "videoUpdateErrorNoPlayableVideo": "Acest videoclip nu are o sursă redabilă, așa că nu poate fi editat.",
   "videoUpdateErrorCouldNotSign": "N-am putut semna modificarea. Încearcă din nou.",
   "videoUpdateErrorPublishRejected": "Releul nu a acceptat modificarea. Încearcă din nou în scurt timp.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Acest videoclip s-a schimbat pe alt dispozitiv și acum are prea multe etichete sau prea multe persoane care colaborează. Deschide-l din nou și elimină câteva.",
   "videoUpdateErrorGeneric": "N-am putut actualiza acest videoclip. Încearcă din nou.",
   "shareMenuDeleteVideoQuestion": "Ștergi videoclipul?",
   "shareMenuDeleteCleanupInProgress": "Se elimină videoclipul…",

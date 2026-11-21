@@ -4487,6 +4487,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم يقبل الريلاي التحديث. حاول مرّة أخرى بعد قليل.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'تغيّر هذا الفيديو على جهاز آخر وأصبح فيه عدد كبير جدًا من الوسوم أو المتعاونين. يُرجى فتحه مجددًا وحذف بعضها.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'تعذّر تحديث هذا الفيديو. حاول مرّة أخرى.';
 

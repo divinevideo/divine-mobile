@@ -16,6 +16,7 @@ import 'package:videos_repository/src/author_feed_result.dart';
 import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
+import 'package:videos_repository/src/latest_video_revision.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
 import 'package:videos_repository/src/profile_video_merge.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
@@ -225,6 +226,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -259,6 +261,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
@@ -2102,6 +2108,71 @@ class VideosRepository {
       ],
       complete: reads.every((read) => read.isComplete),
     );
+  }
+
+  /// The newest revision the relays hold at the video [addressableId]
+  /// (`kind:pubkey:d-tag`), for a caller about to replace it.
+  ///
+  /// Every relay must settle and the local cache is skipped: a republish
+  /// built from an older revision outranks the newer one and deletes what
+  /// only it held (#11250). A read that did not finish is
+  /// [LatestVideoRevisionUnknown], never an empty answer. A relay's terminal
+  /// `CLOSED` refusal counts as settled once another relay has sent `EOSE`,
+  /// so one relay that always refuses reads cannot block every edit; a newer
+  /// revision held only by a relay that refused is then missed. Silence, a
+  /// dropped socket, and `rate-limited`, `auth-required`, `error:` or
+  /// unclassified refusals still leave the read unfinished. Only events at
+  /// exactly that address whose id and signature verify count, and no viewer
+  /// preference filters them out.
+  ///
+  /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
+  /// 34236 address.
+  Future<LatestVideoRevision> fetchLatestVideoRevision(
+    String addressableId,
+  ) async {
+    final address = AId.fromString(addressableId);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+      throw ArgumentError.value(
+        addressableId,
+        'addressableId',
+        'is not a video address',
+      );
+    }
+    final read = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(
+          kinds: [address.kind],
+          authors: [address.pubkey],
+          d: [address.dTag],
+        ),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+      acceptRelayClosedWhenOthersAnswered: true,
+    );
+    if (read.timedOut || read.noRelays) {
+      return const LatestVideoRevisionUnknown();
+    }
+    Event? newest;
+    for (final event in read.events) {
+      if (event.kind != address.kind ||
+          event.pubkey != address.pubkey ||
+          event.dTagValue != address.dTag ||
+          !event.isValid ||
+          !event.isSigned) {
+        continue;
+      }
+      if (newest == null ||
+          event.createdAt > newest.createdAt ||
+          (event.createdAt == newest.createdAt &&
+              event.id.compareTo(newest.id) < 0)) {
+        newest = event;
+      }
+    }
+    return newest == null
+        ? const LatestVideoRevisionAbsent()
+        : LatestVideoRevisionFound(newest);
   }
 
   /// The video addresses among [addressableIds], in their order: Kind 34236
