@@ -56,7 +56,11 @@ void main() {
       act: (cubit) => cubit.refresh(),
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: _tab),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
     );
 
@@ -67,7 +71,10 @@ void main() {
       act: (cubit) => cubit.refresh(),
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
     );
 
@@ -82,10 +89,79 @@ void main() {
       },
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: _tab),
-        FeaturedTabsState(status: FeaturedTabsStatus.loading, tab: _tab),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.loading,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
+    );
+
+    for (final audience in [
+      FeaturedTabAudience.loading,
+      FeaturedTabAudience.failed,
+    ]) {
+      test(
+        'confirmed withdrawal stays resolved for ${audience.name}',
+        () async {
+          when(
+            () => repository.refresh(
+              gateAgeRestrictedContent: true,
+              requiredFeaturedFeedId: _tab.id,
+            ),
+          ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+          final cubit = FeaturedTabsCubit(
+            repository: repository,
+            audience: () => audience,
+            requiredFeaturedFeedId: _tab.id,
+          );
+          addTearDown(cubit.close);
+
+          await cubit.refresh();
+          expect(cubit.state.status, FeaturedTabsStatus.resolved);
+          await cubit.refresh();
+          expect(cubit.state.status, FeaturedTabsStatus.resolved);
+        },
+      );
+    }
+
+    test(
+      'resolved states preserve which audience confirmed the absence',
+      () async {
+        stubSnapshot(const FeaturedTabsSnapshot());
+        final adult = buildCubit();
+        final unverified = buildCubit(gateAgeRestrictedContent: true);
+        addTearDown(adult.close);
+        addTearDown(unverified.close);
+        await adult.refresh();
+        await unverified.refresh();
+        expect(adult.state.status, FeaturedTabsStatus.resolved);
+        expect(unverified.state.status, FeaturedTabsStatus.resolved);
+        expect(adult.state, isNot(unverified.state));
+      },
+    );
+
+    blocTest<FeaturedTabsCubit, FeaturedTabsState>(
+      'a seeded confirmed absence survives an offline refresh without loading',
+      setUp: () => stubSnapshot(
+        const FeaturedTabsSnapshot(hasResolvedCatalog: false),
+      ),
+      build: buildCubit,
+      seed: () => const FeaturedTabsState(
+        status: FeaturedTabsStatus.resolved,
+        resolvedFor: FeaturedTabAudience.adult,
+      ),
+      act: (cubit) => cubit.refresh(),
+      expect: () => <FeaturedTabsState>[],
     );
 
     test('passes the current viewer age gate to the repository', () async {
@@ -106,7 +182,9 @@ void main() {
           gateAgeRestrictedContent: true,
           requiredFeaturedFeedId: _tab.id,
         ),
-      ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+      ).thenAnswer(
+        (_) async => const FeaturedTabsSnapshot(hiddenByAudience: true),
+      );
       final cubit = FeaturedTabsCubit(
         repository: repository,
         audience: () => FeaturedTabAudience.failed,
@@ -360,7 +438,10 @@ void main() {
       await cubit.refresh();
       expect(
         cubit.state,
-        const FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        const FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.unverified,
+        ),
       );
 
       audience = FeaturedTabAudience.adult;

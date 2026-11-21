@@ -63,7 +63,6 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
 
   Timer? _pollTimer;
   Timer? _expiryTimer;
-  FeaturedTabAudience? _resolvedAudience;
 
   /// Sequence number of the newest started refresh.
   ///
@@ -88,14 +87,17 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
     final hadConfirmedAbsence =
         state.status == FeaturedTabsStatus.resolved &&
         state.tab == null &&
-        _resolvedAudience == audience;
+        state.resolvedFor == audience;
     if (!hadConfirmedAbsence) {
       emit(
         state.copyWith(
           status: FeaturedTabsStatus.loading,
           clearTab:
-              (audience.gatesAdultContent &&
-                  previousTab?.visibleToMinors == false) ||
+              (previousTab != null &&
+                  !featuredTabPassesAudience(
+                    previousTab,
+                    gateAgeRestrictedContent: audience.gatesAdultContent,
+                  )) ||
               previousTab?.endsAt?.isAfter(_now()) == false,
         ),
       );
@@ -112,20 +114,34 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
     }
 
     final tab = snapshot.tab;
-    final status = switch ((tab, snapshot.hasResolvedCatalog, audience)) {
-      (FeaturedTabConfig(), _, _) => FeaturedTabsStatus.resolved,
-      (null, false, _) when hadConfirmedAbsence => FeaturedTabsStatus.resolved,
-      (null, false, _) => FeaturedTabsStatus.failed,
-      (null, true, FeaturedTabAudience.loading) => FeaturedTabsStatus.loading,
-      (null, true, FeaturedTabAudience.failed) => FeaturedTabsStatus.failed,
-      _ => FeaturedTabsStatus.resolved,
+    final status = switch ((
+      tab,
+      snapshot.hasResolvedCatalog,
+      snapshot.hiddenByAudience,
+      audience,
+    )) {
+      (FeaturedTabConfig(), _, _, _) => FeaturedTabsStatus.resolved,
+      (null, false, _, _) when hadConfirmedAbsence =>
+        FeaturedTabsStatus.resolved,
+      (null, false, _, _) => FeaturedTabsStatus.failed,
+      (null, true, false, _) => FeaturedTabsStatus.resolved,
+      (null, true, true, FeaturedTabAudience.loading) =>
+        FeaturedTabsStatus.loading,
+      (null, true, true, FeaturedTabAudience.failed) =>
+        FeaturedTabsStatus.failed,
+      (null, true, true, FeaturedTabAudience.unverified) =>
+        FeaturedTabsStatus.resolved,
+      (null, true, true, FeaturedTabAudience.adult) =>
+        FeaturedTabsStatus.resolved,
     };
-    if (status == FeaturedTabsStatus.resolved) _resolvedAudience = audience;
     emit(
       FeaturedTabsState(
         status: status,
         tab: tab,
         pollInterval: snapshot.pollInterval,
+        resolvedFor: status == FeaturedTabsStatus.resolved
+            ? audience
+            : state.resolvedFor,
       ),
     );
     _schedulePoll(snapshot.pollInterval);
@@ -149,11 +165,11 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
           _scheduleExpiry(tab);
           return;
         }
-        _resolvedAudience = _audience();
         emit(
           state.copyWith(
             status: FeaturedTabsStatus.resolved,
             clearTab: true,
+            resolvedFor: _audience(),
           ),
         );
         runDetached(

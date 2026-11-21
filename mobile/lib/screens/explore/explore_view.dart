@@ -290,17 +290,12 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         nostrAppsSandboxSupported &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.integratedApps));
 
-    final audience = ref.watch(featuredTabAgeGateProvider);
-    final currentFeaturedTab = context.select(
+    // The audience listener clears the cubit's tab synchronously. Rebuild in
+    // that same frame rather than waiting for its asynchronous stream event.
+    ref.watch(featuredTabAgeGateProvider);
+    final featuredTab = context.select(
       (FeaturedTabsCubit cubit) => cubit.state.tab,
     );
-    // Fail closed on the frame where verification changes, even if the
-    // featured cubit's stream has not delivered its refresh state yet.
-    final featuredTab =
-        audience.gatesAdultContent &&
-            currentFeaturedTab?.visibleToMinors == false
-        ? null
-        : currentFeaturedTab;
 
     final previousState = _tabsState;
     _tabs.updateAvailability(

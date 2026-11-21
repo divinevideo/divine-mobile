@@ -25,6 +25,7 @@ class FeaturedTabsState extends Equatable {
   const FeaturedTabsState({
     this.status = FeaturedTabsStatus.initial,
     this.tab,
+    this.resolvedFor,
     this.pollInterval = FeaturedTabsResponse.defaultPollInterval,
   });
 
@@ -34,6 +35,9 @@ class FeaturedTabsState extends Equatable {
   /// The eligible tab, or `null` when nothing should render.
   final FeaturedTabConfig? tab;
 
+  /// Audience whose catalog lookup established the last resolved answer.
+  final FeaturedTabAudience? resolvedFor;
+
   /// Server-supplied refresh cadence.
   final Duration pollInterval;
 
@@ -42,15 +46,17 @@ class FeaturedTabsState extends Equatable {
     FeaturedTabsStatus? status,
     FeaturedTabConfig? tab,
     bool clearTab = false,
+    FeaturedTabAudience? resolvedFor,
     Duration? pollInterval,
   }) {
     return FeaturedTabsState(
       status: status ?? this.status,
       tab: clearTab ? null : tab ?? this.tab,
       pollInterval: pollInterval ?? this.pollInterval,
+      resolvedFor: resolvedFor ?? this.resolvedFor,
     );
   }
 
   @override
-  List<Object?> get props => [status, tab, pollInterval];
+  List<Object?> get props => [status, tab, pollInterval, resolvedFor];
 }

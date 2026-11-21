@@ -357,7 +357,9 @@ void main() {
       expect(repository.requests.single.gated, isTrue);
       expect(repository.requests.single.feedId, _adultConfig.id);
 
-      repository.requests.single.result.complete(const FeaturedTabsSnapshot());
+      repository.requests.single.result.complete(
+        const FeaturedTabsSnapshot(hiddenByAudience: true),
+      );
       await tester.pump();
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.text(_l10n.commonSomethingWentWrong), findsNothing);

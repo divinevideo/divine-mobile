@@ -18,8 +18,10 @@ letters or digits).
 Announcements resolve through the trusted catalog. Featured feeds preserve the
 requested identity through repository selection and caching. A campaign's
 featured tab shows an unavailable state when the feed is ineligible or
-withdrawn, and an error state when the catalog or the viewer's 18+ check cannot
-be loaded, retried on the next poll or foreground. Announcement details show
+withdrawn, even when the viewer's 18+ check is unsettled. An otherwise eligible
+feed hidden by the audience rule waits while verification loads and shows an
+error if that check fails. A catalog lookup with no usable answer also shows
+an error, retried on the next poll or foreground. Announcement details show
 unavailable only once the endpoint has answered without the announcement, or it
 expired while shown; a lookup the endpoint did not answer shows an error with a
 retry.

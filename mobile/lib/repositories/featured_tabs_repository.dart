@@ -11,6 +11,7 @@ class FeaturedTabsSnapshot {
   const FeaturedTabsSnapshot({
     this.tab,
     this.hasResolvedCatalog = true,
+    this.hiddenByAudience = false,
     this.pollInterval = FeaturedTabsResponse.defaultPollInterval,
   });
 
@@ -20,6 +21,10 @@ class FeaturedTabsSnapshot {
 
   /// Whether this answer came from a successful fetch or a usable cache.
   final bool hasResolvedCatalog;
+
+  /// An otherwise eligible matching tab exists but the viewer cannot see it.
+  /// False distinguishes withdrawal or expiry from pending audience checks.
+  final bool hiddenByAudience;
 
   /// Cadence at which the caller should refresh.
   final Duration pollInterval;
@@ -228,21 +233,24 @@ class FeaturedTabsRepository {
   }) {
     final now = _now();
     FeaturedTabConfig? eligible;
+    var hiddenByAudience = false;
     for (final tab in response.tabs) {
       if (requiredFeaturedFeedId != null && tab.id != requiredFeaturedFeedId) {
         continue;
       }
-      if (_isEligible(
+      if (!_isEligible(tab, now: now)) continue;
+      if (featuredTabPassesAudience(
         tab,
-        now: now,
         gateAgeRestrictedContent: gateAgeRestrictedContent,
       )) {
         eligible = tab;
         break;
       }
+      hiddenByAudience = true;
     }
     return FeaturedTabsSnapshot(
       tab: eligible,
+      hiddenByAudience: eligible == null && hiddenByAudience,
       pollInterval: response.pollInterval,
     );
   }
@@ -250,14 +258,20 @@ class FeaturedTabsRepository {
   bool _isEligible(
     FeaturedTabConfig tab, {
     required DateTime now,
-    required bool gateAgeRestrictedContent,
   }) {
     if (!tab.enabled) return false;
     if (!tab.hasContent) return false;
     if (!tab.isWithinWindow(now)) return false;
-    if (gateAgeRestrictedContent && !tab.visibleToMinors) return false;
     // The tab bar's label is compiled client-side, so the renderability floor
     // is an id to fetch and attribute the tab with.
     return tab.id.isNotEmpty;
   }
 }
+
+/// Whether a tab's audience rule permits the current viewer.
+///
+/// Shared by catalog selection and immediate removal of a previously shown tab.
+bool featuredTabPassesAudience(
+  FeaturedTabConfig tab, {
+  required bool gateAgeRestrictedContent,
+}) => !gateAgeRestrictedContent || tab.visibleToMinors;

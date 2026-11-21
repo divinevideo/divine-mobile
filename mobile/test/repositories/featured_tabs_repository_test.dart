@@ -133,6 +133,33 @@ void main() {
       );
     });
 
+    test(
+      'distinguishes audience-hidden tabs from withdrawal and expiry',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab()]);
+        final hidden = await repository.refresh(gateAgeRestrictedContent: true);
+        expect(hidden.tab, isNull);
+        expect(hidden.hiddenByAudience, isTrue);
+        final adult = await repository.refresh(gateAgeRestrictedContent: false);
+        expect(adult.tab, isNotNull);
+        expect(adult.hiddenByAudience, isFalse);
+
+        stubTabs([_tab(endsAt: clock)]);
+        final expired = await repository.refresh(
+          gateAgeRestrictedContent: true,
+        );
+        expect(expired.tab, isNull);
+        expect(expired.hiddenByAudience, isFalse);
+        stubTabs([]);
+        final withdrawn = await repository.refresh(
+          gateAgeRestrictedContent: true,
+        );
+        expect(withdrawn.tab, isNull);
+        expect(withdrawn.hiddenByAudience, isFalse);
+      },
+    );
+
     group('eligibility', () {
       test('returns the tab when every gate passes', () async {
         stubTabs([_tab()]);
