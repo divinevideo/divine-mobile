@@ -12,9 +12,10 @@ import 'package:videos_repository/videos_repository.dart'
         LatestVideoRevisionUnknown,
         VideosRepository;
 
-/// The newest revision [repository] reads at [video]'s address, or null when
-/// there is no repository to ask, a relay did not answer in full, or none
-/// holds a revision there. The reason is logged under [logName].
+/// The newest signed revision [repository] reads at [video]'s address.
+/// Returns null when the repository is unavailable, the read does not settle
+/// with a revision, or the opened revision wins under NIP-01 ordering when
+/// its Nostr timestamp is known. The reason is logged under [logName].
 ///
 /// A video's copy in hand can be older than the relays' newest revision, and
 /// a replacement built from it deletes whatever only the newer one carried.
