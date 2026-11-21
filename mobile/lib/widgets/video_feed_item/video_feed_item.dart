@@ -46,6 +46,7 @@ import 'package:openvine/widgets/video_feed_item/list_attribution_chip.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Size of the author avatar on the feed player, as designed. Its own box is
@@ -68,6 +69,25 @@ const double _authorRowBottomGap = _followTargetOffset;
 /// Gap between a [VideoOverlayActions.subtitleLayer] caption pill and the
 /// author row below it.
 const double videoOverlaySubtitleGap = 24;
+
+/// The scrims [VideoOverlayActions] lays under its controls, so a grid
+/// tile's flying picture can grow its own into them.
+abstract final class VideoOverlayScrims {
+  /// The color both scrims darken towards.
+  static const Color color = VineTheme.backgroundColor;
+
+  /// The top scrim's height, as a share of the screen's.
+  static const double topHeightFactor = 0.2;
+
+  /// How dark the top scrim is at its top edge, fading out downwards.
+  static const double topOpacity = 0.35;
+
+  /// The bottom scrim's height, as a share of the screen's.
+  static const double bottomHeightFactor = 0.25;
+
+  /// How dark the bottom scrim is at its bottom edge, fading out upwards.
+  static const double bottomOpacity = 0.5;
+}
 
 class VideoOverlayPreviewData {
   const VideoOverlayPreviewData({
@@ -367,6 +387,9 @@ class VideoOverlayActions extends ConsumerWidget {
       ],
     ];
 
+    // A grid tile's flying picture draws the scrims under its copy of the
+    // controls, growing them out of the tile's own.
+    final inFlight = VideoTileFlightCopy.isIn(context);
     return Stack(
       children: [
         // Top gradient overlay — sits behind the (transparent) app
@@ -377,7 +400,7 @@ class VideoOverlayActions extends ConsumerWidget {
         // [IgnorePointer] so tapping the gradient region falls
         // through to the video (or, in the top strip, to the
         // already-z-above app bar's controls).
-        if (showTopGradient)
+        if (showTopGradient && !inFlight)
           Positioned(
             left: 0,
             right: 0,
@@ -386,15 +409,19 @@ class VideoOverlayActions extends ConsumerWidget {
               child: FractionallySizedBox(
                 widthFactor: 1.0,
                 child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.2,
+                  height:
+                      MediaQuery.of(context).size.height *
+                      VideoOverlayScrims.topHeightFactor,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          VineTheme.backgroundColor.withValues(alpha: 0.35),
-                          VineTheme.backgroundColor.withValues(alpha: 0.0),
+                          VideoOverlayScrims.color.withValues(
+                            alpha: VideoOverlayScrims.topOpacity,
+                          ),
+                          VideoOverlayScrims.color.withValues(alpha: 0.0),
                         ],
                       ),
                     ),
@@ -404,7 +431,7 @@ class VideoOverlayActions extends ConsumerWidget {
             ),
           ),
         // Bottom gradient overlay (sits below UI elements, only overlays video)
-        if (showBottomGradient)
+        if (showBottomGradient && !inFlight)
           Positioned(
             left: 0,
             right: 0,
@@ -413,15 +440,19 @@ class VideoOverlayActions extends ConsumerWidget {
               child: FractionallySizedBox(
                 widthFactor: 1.0,
                 child: SizedBox(
-                  height: MediaQuery.of(context).size.height / 4,
+                  height:
+                      MediaQuery.of(context).size.height *
+                      VideoOverlayScrims.bottomHeightFactor,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          VineTheme.backgroundColor.withValues(alpha: 0.0),
-                          VineTheme.backgroundColor.withValues(alpha: 0.5),
+                          VideoOverlayScrims.color.withValues(alpha: 0.0),
+                          VideoOverlayScrims.color.withValues(
+                            alpha: VideoOverlayScrims.bottomOpacity,
+                          ),
                         ],
                       ),
                     ),

@@ -324,7 +324,7 @@ class _PopularVideosTrendingContentState
                 bottom: 4,
                 top: headerHeight > 0 ? headerHeight + 4 : 4,
               ),
-              onVideoTap: (videoList, index) {
+              onVideoTap: (videoList, index, captureOrigin) {
                 Log.info(
                   '🎯 PopularVideosTab TAP: gridIndex=$index, '
                   'videoId=${videoList[index].id}',
@@ -339,6 +339,7 @@ class _PopularVideosTrendingContentState
                       initialIndex: index,
                       initialVideoId: videoList[index].id,
                       contextTitle: context.l10n.popularVideosContextTitle,
+                      tileOrigin: captureOrigin(),
                       trafficSource: ViewTrafficSource.discoveryPopular,
                     ),
                   ).push<void>(context),

@@ -23,7 +23,9 @@ import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/user_name.dart';
+import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 /// Extra off-screen distance the grid keeps built, expressed as a multiple of
 /// the viewport height applied on each side of the visible area.
@@ -33,6 +35,18 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 /// moment they scroll back in during fast scrolling. Keeping a couple of
 /// screens built on either side avoids that churn while still bounding memory.
 const double _gridCacheExtentScreens = 2;
+
+/// Called with the videos a grid shows and the tapped one's [index].
+///
+/// [captureOrigin] reads the tapped tile, for a player that grows out of it.
+/// Call it during the callback, before navigating, and only to open such a
+/// player: reading the tile copies its picture. It returns `null` in
+/// selection mode, where a tap toggles the tile instead.
+typedef VideoGridTapCallback = void Function(
+  List<VideoEvent> videos,
+  int index,
+  ValueGetter<VideoTileOrigin?> captureOrigin,
+);
 
 /// Composable video grid that automatically filters broken videos
 /// and provides consistent styling across Explore, Hashtag, and Search screens.
@@ -60,7 +74,7 @@ class ComposableVideoGrid extends ConsumerStatefulWidget {
   });
 
   final List<VideoEvent> videos;
-  final Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
   final int crossAxisCount;
   final double thumbnailAspectRatio;
 
@@ -405,7 +419,7 @@ class _VideoItem extends StatelessWidget {
 
   final VideoEvent video;
   final double aspectRatio;
-  final Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
 
   /// The signed-in viewer, resolved once per grid build.
   final String? viewerPubkey;
@@ -429,7 +443,19 @@ class _VideoItem extends StatelessWidget {
       video: video,
       viewerPubkey: viewerPubkey,
       index: index,
-      onTap: () => onVideoTap(displayedVideos, index),
+      onTap: () => onVideoTap(displayedVideos, index, () {
+        // In selection mode a tap toggles the tile rather than opening it.
+        if (isSelected != null) return null;
+        return VideoTileOrigin.capture(
+          context,
+          videoId: video.id,
+          borderRadius: borderRadius,
+          letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
+            video.width,
+            video.height,
+          ),
+        );
+      }),
       onOwnerLongPress: onOwnerLongPress,
       // In selection mode a long-press menu would fight the toggle gesture.
       ownerActionsEnabled: isSelected == null,
@@ -449,12 +475,17 @@ class _VideoItem extends StatelessWidget {
                 ),
               )
             else
-              _VideoThumbnail(video: video),
+              VideoTileThumbnailBoundary(
+                child: _VideoThumbnail(video: video),
+              ),
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: _VideoInfoSection(video: video, index: index),
+              child: VideoTileScrimBoundary(
+                opacity: VineTheme.scrim50.a,
+                child: _VideoInfoSection(video: video, index: index),
+              ),
             ),
             if (isSelected case final isSelected?)
               PositionedDirectional(

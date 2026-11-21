@@ -169,13 +169,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final grid = tester.widget<ComposableVideoGrid>(
-        find.byType(ComposableVideoGrid),
-      );
-      grid.onVideoTap([_video('route-video')], 0);
+      // The grid stays empty here, so the tap comes from the grid's callback.
+      var originRead = false;
+      tester
+          .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+          .onVideoTap([_video('route-video')], 0, () {
+            originRead = true;
+            return null;
+          });
       await tester.pumpAndSettle();
 
       expect(find.text('opened video route-video'), findsOneWidget);
+      // The player is asked to grow out of the tapped tile.
+      expect(originRead, isTrue);
       router.dispose();
     });
 

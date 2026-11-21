@@ -705,7 +705,7 @@ class _MemberVideos extends ConsumerWidget {
             ),
           ),
         ],
-        onVideoTap: (videoList, index) {
+        onVideoTap: (videoList, index, _) {
           Log.info(
             'Tapped video in user list: ${videoList[index].id}',
             category: LogCategory.ui,
