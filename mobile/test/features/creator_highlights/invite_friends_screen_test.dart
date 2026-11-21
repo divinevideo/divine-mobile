@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/features/creator_highlights/invite_friends_cubit.dart';
 import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -148,7 +147,7 @@ void main() {
         expect(shareCalls, hasLength(1));
         expect(
           shareCalls.single['text'],
-          inviteShareText('Join me!', AppConstants.downloadUrl),
+          'Join me!\n${AppConstants.downloadUrl}',
         );
       });
 
@@ -169,17 +168,13 @@ void main() {
 
       testWidgets('anchors the share sheet for iPad', (tester) async {
         await pumpPushed(tester);
+        final button = tester.getRect(find.byType(DivineButton));
         await share(tester);
         final call = shareCalls.single;
-        for (final key in [
-          'originX',
-          'originY',
-          'originWidth',
-          'originHeight',
-        ]) {
-          expect(call[key], isNotNull, reason: key);
-        }
-        expect(call['originWidth'], greaterThan(0));
+        expect(call['originX'], button.left);
+        expect(call['originY'], button.top);
+        expect(call['originWidth'], button.width);
+        expect(call['originHeight'], button.height);
       });
 
       testWidgets('a double tap within one frame shares once', (tester) async {
