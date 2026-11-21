@@ -166,9 +166,14 @@ void main() {
 
           // The server skips a push when the views lookup fails; the app has
           // no skip, so it shows what it knows: views unknown, the rest as
-          // the bulk stats gave them.
+          // the bulk stats gave them (the case is past the settle point, so
+          // a zero stays a zero).
           final expected = fallback == 'failed'
-              ? {'views': null, 'likes': 3, 'comments': 1}
+              ? {
+                  'views': null,
+                  'likes': version['reactions'],
+                  'comments': version['comments'],
+                }
               : c['expected'] as Map<String, dynamic>;
           expect(cubit.state.counts.views, expected['views']);
           expect(cubit.state.counts.likes, expected['likes']);
