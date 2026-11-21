@@ -512,5 +512,74 @@ class ReleaseNotesTests(unittest.TestCase):
             )
 
 
+class AppleProductionReaderTests(unittest.TestCase):
+    def setUp(self):
+        from release_train import release_notes
+        from release_train_fakes import MemoryLedgerStore
+
+        self.notes = release_notes
+        self.ledger = MemoryLedgerStore({
+            "releases/ios/1.0.10+102.json": {
+                "platform": "ios", "release_version": "1.0.10+102",
+                "build_source_commit": "a" * 40, "record_hmac": "synthetic-hmac",
+            },
+        })
+        self.versions = [
+            {"id": "older", "attributes": {"versionString": "1.0.9", "appStoreState": "READY_FOR_SALE"}},
+            {"id": "current", "attributes": {"versionString": "1.0.10", "appVersionState": "READY_FOR_DISTRIBUTION"}},
+            {"id": "beta", "attributes": {"versionString": "1.0.11", "appStoreState": "PREPARE_FOR_SUBMISSION"}},
+        ]
+        self.builds = {
+            "older": {"id": "old-build", "attributes": {"version": "101"}},
+            "current": {"id": "live-build", "attributes": {"version": "102"}},
+        }
+
+    def read(self):
+        owner = self
+
+        class AppleReader:
+            def pages(self, path):
+                return owner.versions
+
+            def call(self, method, path):
+                return {"data": owner.builds[path.split("/")[2]]}
+
+        with patch.object(self.notes, "_apple", return_value=AppleReader()):
+            return self.notes._production_data("ios", {}, self.ledger)
+
+    def test_historical_release_without_provenance_does_not_block_current_baseline(self):
+        data = self.read()
+        self.assertEqual(
+            self.notes.production_baseline("ios", data),
+            {"version": "1.0.10", "sha": "a" * 40},
+        )
+        self.assertEqual([b["id"] for b in data["builds"]], ["live-build"])
+        self.assertEqual(self.ledger.creates, [])
+
+    def test_missing_current_provenance_cannot_fall_back_to_an_older_release(self):
+        self.ledger.files.clear()
+        self.ledger.files["releases/ios/1.0.9+101.json"] = {
+            "platform": "ios", "release_version": "1.0.9+101",
+            "build_source_commit": "b" * 40, "record_hmac": "synthetic-hmac",
+        }
+        with self.assertRaisesRegex(ValueError, "missing unique source provenance"):
+            self.read()
+
+    def test_ambiguous_current_provenance_still_stops_release_notes(self):
+        self.ledger.files["releases/ios/1.0.11+102.json"] = {}
+        with self.assertRaisesRegex(ValueError, "missing unique source provenance"):
+            self.read()
+
+    def test_current_version_without_a_build_still_stops_release_notes(self):
+        self.builds["current"] = None
+        with self.assertRaisesRegex(ValueError, "Live App Store version has no build"):
+            self.read()
+
+    def test_beta_only_inventory_cannot_supply_a_production_baseline(self):
+        self.versions = self.versions[2:]
+        with self.assertRaisesRegex(ValueError, "No numbered production App Store release"):
+            self.notes.production_baseline("ios", self.read())
+
+
 if __name__ == "__main__":
     unittest.main()
