@@ -503,23 +503,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice =>
-      'Dispozitiv de intrare audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Automat (recomandat)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Alege automat cel mai bun microfon';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Alege intrarea audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Microfon necunoscut';
-
-  @override
   String get contentFiltersAdultContent => 'CONȚINUT PENTRU ADULȚI';
 
   @override

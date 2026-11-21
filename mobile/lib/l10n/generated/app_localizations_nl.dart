@@ -480,22 +480,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Audio-invoerapparaat';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Automatisch (aanbevolen)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Kiest automatisch de beste microfoon';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Kies audio-invoer';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Onbekende microfoon';
-
-  @override
   String get contentFiltersAdultContent => 'INHOUD VOOR VOLWASSENEN';
 
   @override

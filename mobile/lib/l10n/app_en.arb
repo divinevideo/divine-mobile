@@ -337,11 +337,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Audio Input Device",
-  "contentPreferencesAutoRecommended": "Auto (recommended)",
-  "contentPreferencesAutoSelectsBest": "Automatically selects the best microphone",
-  "contentPreferencesSelectAudioInput": "Select Audio Input",
-  "contentPreferencesUnknownMicrophone": "Unknown Microphone",
   "contentFiltersAdultContent": "ADULT CONTENT",
   "contentFiltersViolenceGore": "VIOLENCE & GORE",
   "contentFiltersSubstances": "SUBSTANCES",

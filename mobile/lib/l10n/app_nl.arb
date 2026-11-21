@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Audio-invoerapparaat",
-  "contentPreferencesAutoRecommended": "Automatisch (aanbevolen)",
-  "contentPreferencesAutoSelectsBest": "Kiest automatisch de beste microfoon",
-  "contentPreferencesSelectAudioInput": "Kies audio-invoer",
-  "contentPreferencesUnknownMicrophone": "Onbekende microfoon",
   "profileBlockedAccountNotAvailable": "Dit account is niet beschikbaar",
   "profileInvalidId": "Ongeldige profiel-ID",
   "profileShareText": "Bekijk {displayName} op Divine!\n\n{url}",

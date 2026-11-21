@@ -2,7 +2,6 @@
 // ABOUTME: Defines abstract methods for camera operations across platforms
 
 import 'package:divine_camera/divine_camera_method_channel.dart';
-import 'package:divine_camera/src/models/audio_device.dart';
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_state.dart';
 import 'package:divine_camera/src/models/camera_zoom_state.dart';
@@ -279,13 +278,5 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     throw UnimplementedError(
       'setVolumeKeysEnabled() has not been implemented.',
     );
-  }
-
-  /// Lists available audio input devices (microphones).
-  ///
-  /// Returns an empty list on platforms that do not support device
-  /// enumeration.
-  Future<List<AudioDevice>> listAudioDevices() {
-    throw UnimplementedError('listAudioDevices() has not been implemented.');
   }
 }

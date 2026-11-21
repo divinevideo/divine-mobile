@@ -249,11 +249,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "音频输入设备",
-  "contentPreferencesAutoRecommended": "自动（推荐）",
-  "contentPreferencesAutoSelectsBest": "自动选择最佳麦克风",
-  "contentPreferencesSelectAudioInput": "选择音频输入",
-  "contentPreferencesUnknownMicrophone": "未知麦克风",
   "contentFiltersAdultContent": "成人内容",
   "contentFiltersViolenceGore": "暴力与血腥",
   "contentFiltersSubstances": "酒精与药物",

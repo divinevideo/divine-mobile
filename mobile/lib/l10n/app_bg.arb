@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Аудио вход",
-  "contentPreferencesAutoRecommended": "Автоматично (препоръчано)",
-  "contentPreferencesAutoSelectsBest": "Автоматично избира най-добрия микрофон",
-  "contentPreferencesSelectAudioInput": "Избери аудио вход",
-  "contentPreferencesUnknownMicrophone": "Неизвестен микрофон",
   "profileBlockedAccountNotAvailable": "Този акаунт не е наличен",
   "profileInvalidId": "Невалиден ID на профил",
   "profileShareText": "Виж {displayName} в Divine!\n\n{url}",
