@@ -12614,13 +12614,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'اشترك في الشارة';
+  String get badgeSubscribeAction => 'متابعة المجتمع';
 
   @override
-  String get badgeSubscribedAction => 'مشترك';
+  String get badgeSubscribedAction => 'تتم متابعة المجتمع';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'حاملو الشارة الذين قبلوها';
+  String get badgeAcceptedHoldersTitle => 'أشخاص في هذا المجتمع';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16832,4 +16832,49 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'وصلت كل الأجزاء. حان وقت الدمج!';
+
+  @override
+  String get badgeDiscoveryTitle => 'الشارات تجمع الناس';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'يمكن لأي شخص إنشاء شارات ومنحها. اختيار الشارات التي تظهر في الملف الشخصي متروك لك. استكشاف شارة يتيح التعرّف على مجتمعها ومتابعة أفراده.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'شاراتي';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'لم يتم العثور على مجتمعات بعد. السحب للأسفل للمحاولة مجددًا.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'تُضاف فيديوهات المجتمع إلى موجز المتابَعين. متابعة الأشخاص تتم بشكل منفصل.';
+
+  @override
+  String get badgeOfficialLabel => 'رسمي';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName، $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName، $issuerName، $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'تعرّف على المزيد على $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'فيديوهات $badgeName';
+  }
 }

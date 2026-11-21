@@ -95,7 +95,7 @@ class BadgeCommunityCard extends ConsumerWidget {
                     fadeOutDuration: Duration.zero,
                   ),
                 ),
-              if (members.isNotEmpty)
+              if (!compactArtwork && members.isNotEmpty)
                 PositionedDirectional(
                   end: 8,
                   bottom: 8,
@@ -186,6 +186,16 @@ class BadgeCommunityCard extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (compactArtwork && members.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    spacing: 4,
+                    children: [
+                      for (final pubkey in members) _MemberFace(pubkey: pubkey),
+                    ],
+                  ),
+                ),
               if (isOfficial)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),

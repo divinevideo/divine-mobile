@@ -12920,13 +12920,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి';
+  String get badgeSubscribeAction => 'కమ్యూనిటీని ఫాలో అవ్వండి';
 
   @override
-  String get badgeSubscribedAction => 'సబ్‌స్క్రైబ్ చేశారు';
+  String get badgeSubscribedAction => 'కమ్యూనిటీని ఫాలో అవుతున్నారు';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'బ్యాడ్జ్‌ను అంగీకరించినవారు';
+  String get badgeAcceptedHoldersTitle => 'ఈ కమ్యూనిటీలోని వ్యక్తులు';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -17171,4 +17171,49 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'అన్ని భాగాలు వచ్చాయి. వాటిని కలపండి!';
+
+  @override
+  String get badgeDiscoveryTitle => 'బ్యాడ్జ్‌లు ప్రజలను కలుపుతాయి';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'ఎవరైనా బ్యాడ్జ్‌లను సృష్టించి అందించవచ్చు. మీ ప్రొఫైల్‌లో ఏవి కనిపించాలో మీరే ఎంచుకుంటారు. ఒక బ్యాడ్జ్‌ను అన్వేషించి, దాని కమ్యూనిటీని తెలుసుకుని, అందులోని వ్యక్తులను ఫాలో అవ్వండి.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'నా బ్యాడ్జ్‌లు';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'ఇంకా కమ్యూనిటీలు కనుగొనబడలేదు. మళ్లీ ప్రయత్నించడానికి కిందికి లాగండి.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'కమ్యూనిటీ వీడియోలను మీ ఫాలోయింగ్ ఫీడ్‌కు జోడిస్తుంది. వ్యక్తులను విడివిడిగా ఫాలో అవ్వండి.';
+
+  @override
+  String get badgeOfficialLabel => 'అధికారికం';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$websiteలో మరింత తెలుసుకోండి';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName వీడియోలు';
+  }
 }

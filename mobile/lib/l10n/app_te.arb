@@ -9491,5 +9491,14 @@
   "badgeOfficialLabel": "అధికారికం",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "{website}లో మరింత తెలుసుకోండి"
+  "badgeDiscoveryWebsiteLabel": "{website}లో మరింత తెలుసుకోండి",
+  "badgeDiscoveryVideosLabel": "{badgeName} వీడియోలు",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

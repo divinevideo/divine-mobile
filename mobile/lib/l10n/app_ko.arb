@@ -6113,5 +6113,14 @@
   "badgeOfficialLabel": "공식",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "{website}에서 자세히 알아보기"
+  "badgeDiscoveryWebsiteLabel": "{website}에서 자세히 알아보기",
+  "badgeDiscoveryVideosLabel": "{badgeName}의 동영상",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

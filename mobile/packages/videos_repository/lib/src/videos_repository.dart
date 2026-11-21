@@ -294,16 +294,6 @@ class VideosRepository {
   bool isVideoKnownDeleted(VideoEvent video) =>
       _deletedFilter?.call(video) ?? false;
 
-  /// Whether a discovery surface can show [video]'s artwork without a gate.
-  bool canShowUnblurredPreview(VideoEvent video) {
-    if ((_blockFilter?.call(video.pubkey) ?? false) ||
-        isVideoKnownDeleted(video)) {
-      return false;
-    }
-    final visible = _applyContentPreferences(video, includeFeedShape: false);
-    return visible != null && visible.warnLabels.isEmpty;
-  }
-
   /// Refreshes the authoritative takedown decision for [video].
   Future<AudioReusePolicy> refreshAudioReusePolicy(VideoEvent video) {
     final client = _funnelcakeApiClient;

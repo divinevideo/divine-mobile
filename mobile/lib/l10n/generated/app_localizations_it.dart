@@ -12766,14 +12766,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Iscriviti al badge';
+  String get badgeSubscribeAction => 'Segui la comunità';
 
   @override
-  String get badgeSubscribedAction => 'Iscritto';
+  String get badgeSubscribedAction => 'Segui questa comunità';
 
   @override
-  String get badgeAcceptedHoldersTitle =>
-      'Persone che hanno accettato il badge';
+  String get badgeAcceptedHoldersTitle => 'Persone in questa comunità';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -17012,4 +17011,49 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Ci sono tutte le parti. Monta il video!';
+
+  @override
+  String get badgeDiscoveryTitle => 'I badge uniscono le persone';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Chiunque può creare e assegnare badge. Scegli tu quali mostrare sul tuo profilo. Esplora un badge per conoscere la sua comunità e seguirne le persone.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'I miei badge';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nessuna comunità trovata per ora. Trascina verso il basso per riprovare.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Aggiunge i video della comunità al feed Seguiti. Segui le persone singolarmente.';
+
+  @override
+  String get badgeOfficialLabel => 'Ufficiale';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Scopri di più su $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Video di $badgeName';
+  }
 }

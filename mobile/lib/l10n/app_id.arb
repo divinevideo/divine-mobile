@@ -6567,5 +6567,14 @@
   "badgeOfficialLabel": "Resmi",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Pelajari selengkapnya di {website}"
+  "badgeDiscoveryWebsiteLabel": "Pelajari selengkapnya di {website}",
+  "badgeDiscoveryVideosLabel": "Video dari {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

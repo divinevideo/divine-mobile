@@ -6567,5 +6567,14 @@
   "badgeOfficialLabel": "Officieel",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Meer informatie op {website}"
+  "badgeDiscoveryWebsiteLabel": "Meer informatie op {website}",
+  "badgeDiscoveryVideosLabel": "Video’s van {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

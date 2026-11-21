@@ -12006,13 +12006,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'バッジを購読';
+  String get badgeSubscribeAction => 'コミュニティをフォロー';
 
   @override
-  String get badgeSubscribedAction => '購読中';
+  String get badgeSubscribedAction => 'コミュニティをフォロー中';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'バッジを承認した人';
+  String get badgeAcceptedHoldersTitle => 'このコミュニティの人たち';
 
   @override
   String get badgeSubscriptionLoadError => 'バッジの購読を読み込めませんでした。もう一度お試しください。';
@@ -16004,4 +16004,48 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '全員のパートがそろいました。つなげましょう！';
+
+  @override
+  String get badgeDiscoveryTitle => 'バッジで人とつながる';
+
+  @override
+  String get badgeDiscoveryBody =>
+      '誰でもバッジを作成し、贈ることができます。プロフィールに表示するバッジは自分で選べます。バッジを開いてコミュニティを知り、気になる人をフォローしましょう。';
+
+  @override
+  String get badgeDiscoveryMyBadges => '自分のバッジ';
+
+  @override
+  String get badgeDiscoveryEmpty => 'コミュニティがまだ見つかりません。下に引っ張って再試行してください。';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'コミュニティの動画をフォロー中のフィードに追加します。人のフォローは個別に行います。';
+
+  @override
+  String get badgeOfficialLabel => '公式';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName、$issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName、$issuerName、$officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '詳しくは$websiteへ';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeNameの動画';
+  }
 }

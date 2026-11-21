@@ -12506,13 +12506,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Ikuti lencana';
+  String get badgeSubscribeAction => 'Ikuti komunitas';
 
   @override
-  String get badgeSubscribedAction => 'Diikuti';
+  String get badgeSubscribedAction => 'Mengikuti komunitas';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+  String get badgeAcceptedHoldersTitle => 'Orang di komunitas ini';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16678,4 +16678,49 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Semua bagian sudah masuk. Satukan sekarang!';
+
+  @override
+  String get badgeDiscoveryTitle => 'Lencana mempertemukan orang';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Siapa pun bisa membuat dan memberikan lencana. Kamu memilih mana yang tampil di profilmu. Jelajahi lencana untuk mengenal komunitasnya dan mengikuti orang-orang di dalamnya.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Lencanaku';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Belum ada komunitas ditemukan. Tarik ke bawah untuk mencoba lagi.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Menambahkan video komunitas ke feed Mengikuti. Ikuti orang satu per satu.';
+
+  @override
+  String get badgeOfficialLabel => 'Resmi';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Pelajari selengkapnya di $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Video dari $badgeName';
+  }
 }

@@ -6567,5 +6567,14 @@
   "badgeOfficialLabel": "رسمي",
   "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "تعرّف على المزيد على {website}"
+  "badgeDiscoveryWebsiteLabel": "تعرّف على المزيد على {website}",
+  "badgeDiscoveryVideosLabel": "فيديوهات {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

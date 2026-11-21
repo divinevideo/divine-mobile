@@ -6567,5 +6567,14 @@
   "badgeOfficialLabel": "Oficială",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Află mai multe pe {website}"
+  "badgeDiscoveryWebsiteLabel": "Află mai multe pe {website}",
+  "badgeDiscoveryVideosLabel": "Videoclipuri de la {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

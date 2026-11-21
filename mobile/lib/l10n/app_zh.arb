@@ -7868,5 +7868,14 @@
   "badgeOfficialLabel": "官方",
   "badgeDiscoveryCardLabel": "{badgeName}，{issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}，{issuerName}，{officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "前往{website}了解更多"
+  "badgeDiscoveryWebsiteLabel": "前往{website}了解更多",
+  "badgeDiscoveryVideosLabel": "{badgeName}的视频",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }
