@@ -666,7 +666,10 @@ void main() {
     group('refuses before uploading anything', () {
       for (final (reason, revision) in [
         ('no relay answered in full', const LatestVideoRevisionUnknown()),
-        ('no relay holds a revision', const LatestVideoRevisionAbsent()),
+        (
+          'the relays return no signed revision',
+          const LatestVideoRevisionAbsent(),
+        ),
       ]) {
         test('when $reason', () async {
           when(
