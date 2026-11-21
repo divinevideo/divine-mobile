@@ -226,6 +226,30 @@ void main() {
     });
 
     group('auth guard', () {
+      test(
+        'does not send a replacement signed under a different account',
+        () async {
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer(
+            (_) async => Event('f' * 64, 34236, [], 'Different author'),
+          );
+
+          final result = await updateFromRelay(
+            originalVideo: _testVideo(),
+            editorState: VideoEditorProviderState(),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateFailure>());
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+        },
+      );
       test('returns VideoUpdateFailure when not authenticated', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(

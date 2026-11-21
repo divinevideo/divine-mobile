@@ -577,10 +577,21 @@ class VideoMetadataUpdateService {
         event,
         permissive: true,
       );
+      final previousCollaborators = {
+        ...initialCollaboratorPubkeys,
+        ...video.collaboratorPubkeys,
+      };
       if (!ownsEdit()) {
         return VideoUpdateSuccess(
           updatedEvent: updatedVideoEvent,
-          inviteFailureCount: 0,
+          inviteFailureCount: collaboratorPubkeys
+              .difference(
+                canonicalCollaboratorPubkeys(
+                  identifiers: previousCollaborators,
+                  creatorIdentifier: owner,
+                ),
+              )
+              .length,
         );
       }
       _personalEventCache.cacheUserEvent(event);
@@ -590,10 +601,7 @@ class VideoMetadataUpdateService {
         video: updatedVideoEvent,
         // Collaborators the newest revision already credits were invited when
         // it was published.
-        initialCollaboratorPubkeys: {
-          ...initialCollaboratorPubkeys,
-          ...video.collaboratorPubkeys,
-        },
+        initialCollaboratorPubkeys: previousCollaborators,
         updatedCollaboratorPubkeys: collaboratorPubkeys,
       );
 
