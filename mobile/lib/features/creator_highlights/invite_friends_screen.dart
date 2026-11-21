@@ -24,7 +24,8 @@ class InviteFriendsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
     create: (_) => InviteFriendsCubit(),
-    child: const _InviteFriendsView(),
+    // A share can fail after another route has covered this page.
+    child: const ScaffoldMessenger(child: _InviteFriendsView()),
   );
 }
 

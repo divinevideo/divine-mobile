@@ -208,6 +208,29 @@ void main() {
         );
       });
 
+      testWidgets('a share failure stays on the invite page', (tester) async {
+        openSheet = Completer();
+        await pumpPushed(tester);
+        await tester.tap(find.byType(DivineButton));
+        await tester.pump();
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('over')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        openSheet!.completeError(PlatformException(code: 'Share failed'));
+        await tester.pumpAndSettle();
+        expect(find.text('over'), findsOneWidget);
+        expect(find.text(l10n.inviteFriendsShareFailed), findsNothing);
+
+        navigator.pop();
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.inviteFriendsShareFailed), findsOneWidget);
+      });
+
       testWidgets('a cleared message shares only the link', (tester) async {
         await pumpPushed(tester);
         await tester.enterText(find.byType(TextField), '');
