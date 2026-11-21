@@ -5053,8 +5053,6 @@ final class CameraPurposeLocalizationTests: XCTestCase {
     }
   }
 }
-||||||| parent of e986da5 (feat(watch): surface the Watch remote with a Live Activity)
-
 
 /// What the camera's Live Activity shows comes from the map the recorder
 /// publishes for remote controls. A misread key leaves the Activity at

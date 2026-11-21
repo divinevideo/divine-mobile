@@ -532,6 +532,15 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   /// then show the one-time prompt and offer an autosaved session back.
   Future<void> _openRecorder() async {
     _pauseBackgroundPlayback();
+    // Hold remote input across startup, including the gaps before the
+    // education and recovery sheets have taken their own pause.
+    await showWithRemoteRecordPaused(
+      context.read<VideoRecorderBloc>(),
+      _initializeAndOfferRecovery,
+    );
+  }
+
+  Future<void> _initializeAndOfferRecovery() async {
     final autoStartRecording =
         widget.autoRecord && await _opensStraightToPreview();
     if (!mounted) return;
