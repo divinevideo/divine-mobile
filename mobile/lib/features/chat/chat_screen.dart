@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -303,14 +304,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               children: [
                 PublicRoomNotice(isTest: state.isTestCommunity),
                 if (state.loading) const DivineLinearProgressIndicator(),
-                if (state.loadFailed) ...[
-                  Text(context.l10n.dmConversationLoadError),
-                  DivineButton(
-                    onPressed: state.loading ? null : cubit.start,
-                    label: context.l10n.commonRetry,
-                    type: DivineButtonType.link,
+                if (state.loadFailed)
+                  _LoadFailureNotice(
+                    failure: state.loadFailure,
+                    onRetry: state.loading ? null : cubit.start,
                   ),
-                ],
                 BlocSelector<ChatComposerCubit, ChatComposerState, bool>(
                   bloc: _composer,
                   selector: (composer) => composer.sendFailed,
@@ -425,6 +423,70 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         ),
       );
     },
+  );
+}
+
+/// Says why the room stopped loading and offers Retry. The notice appears
+/// without moving focus, so it is also announced to screen readers.
+class _LoadFailureNotice extends StatefulWidget {
+  const _LoadFailureNotice({required this.failure, required this.onRetry});
+
+  final ChatLoadFailure failure;
+  final VoidCallback? onRetry;
+
+  @override
+  State<_LoadFailureNotice> createState() => _LoadFailureNoticeState();
+}
+
+class _LoadFailureNoticeState extends State<_LoadFailureNotice> {
+  @override
+  void initState() {
+    super.initState();
+    _announceAfterFrame();
+  }
+
+  @override
+  void didUpdateWidget(_LoadFailureNotice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.failure != widget.failure) _announceAfterFrame();
+  }
+
+  String get _message => switch (widget.failure) {
+    ChatLoadFailure.connection => context.l10n.messagesRoomConnectionError,
+    ChatLoadFailure.other ||
+    ChatLoadFailure.none => context.l10n.dmConversationLoadError,
+  };
+
+  void _announceAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          _message,
+          Directionality.of(context),
+        ),
+        'announce room load failure',
+        logName: 'ChatScreen',
+        category: LogCategory.ui,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Text(_message, textAlign: TextAlign.center),
+      ),
+      DivineButton(
+        onPressed: widget.onRetry,
+        label: context.l10n.commonRetry,
+        type: DivineButtonType.link,
+      ),
+    ],
   );
 }
 

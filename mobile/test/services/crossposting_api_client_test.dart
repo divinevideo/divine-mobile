@@ -10,11 +10,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _MockKeycastIdentity extends Mock implements KeycastNostrIdentity {}
+
+class _MockAmberIdentity extends Mock implements AmberNostrIdentity {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -88,6 +93,7 @@ void main() {
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
+          allowUserInteraction: any(named: 'allowUserInteraction'),
         ),
       ).thenAnswer((invocation) async {
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -1380,6 +1386,128 @@ void main() {
       });
 
       group('getCrossposts', () {
+        test('marks a missing silent remote signature retryable', () async {
+          final identity = _MockKeycastIdentity();
+          when(() => identity.signsRemotelyNonInteractive).thenReturn(true);
+          when(() => authService.currentIdentity).thenReturn(identity);
+          when(
+            () => authService.createAndSignEvent(
+              kind: 27235,
+              content: '',
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+              allowUserInteraction: false,
+            ),
+          ).thenAnswer((_) async => null);
+          await expectLater(
+            client.getCrossposts(eventId: eventId),
+            throwsA(
+              isA<CrosspostingPassiveSigningUnavailable>().having(
+                (e) => e.retryable,
+                'retryable',
+                true,
+              ),
+            ),
+          );
+          verifyNever(
+            () => httpClient.get(any(), headers: any(named: 'headers')),
+          );
+        });
+        test(
+          'does not retry a silent signature after the account changed',
+          () async {
+            final identity = _MockKeycastIdentity();
+            when(() => identity.signsRemotelyNonInteractive).thenReturn(true);
+            when(() => authService.currentIdentity).thenReturn(identity);
+            when(() => authService.currentPublicKeyHex).thenReturn(
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            );
+            when(
+              () => authService.createAndSignEvent(
+                kind: 27235,
+                content: '',
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+                allowUserInteraction: false,
+              ),
+            ).thenAnswer((_) async => null);
+
+            await expectLater(
+              client.getCrossposts(eventId: eventId),
+              throwsA(
+                isA<CrosspostingPassiveSigningUnavailable>().having(
+                  (e) => e.retryable,
+                  'retryable',
+                  isFalse,
+                ),
+              ),
+            );
+          },
+        );
+        test(
+          'uses the passive transport for polls and silent submits',
+          () async {
+            final passive = _MockHttpClient();
+            when(() => passive.get(any(), headers: any(named: 'headers')))
+                .thenAnswer((_) async => http.Response('{"jobs":[]}', 200));
+            when(
+              () => passive.post(
+                any(),
+                headers: any(named: 'headers'),
+                body: any(named: 'body'),
+              ),
+            ).thenAnswer((_) async => http.Response('{"jobs":[]}', 200));
+            final api = CrosspostingApiClient(
+              nip98AuthService: nip98AuthService,
+              ownerPubkey: _ownerPubkey,
+              httpClient: httpClient,
+              passiveHttpClient: passive,
+            );
+            addTearDown(api.close);
+            expect(await api.getCrossposts(eventId: eventId), isEmpty);
+            expect(
+              await api.createCrossposts(
+                eventId: eventId,
+                platforms: ['instagram'],
+                allowUserInteraction: false,
+              ),
+              isEmpty,
+            );
+            verifyZeroInteractions(httpClient);
+          },
+        );
+        test(
+          'does not fall back to interactive signing or send unsigned',
+          () async {
+            // A signer that needs approval will not answer on a later tick.
+            final identity = _MockAmberIdentity();
+            when(() => identity.signsRemotelyNonInteractive).thenReturn(false);
+            when(() => authService.currentIdentity).thenReturn(identity);
+            when(
+              () => authService.createAndSignEvent(
+                kind: 27235,
+                content: '',
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+                allowUserInteraction: false,
+              ),
+            ).thenAnswer((_) async => null);
+
+            await expectLater(
+              client.getCrossposts(eventId: eventId),
+              throwsA(
+                isA<CrosspostingPassiveSigningUnavailable>().having(
+                  (e) => e.retryable,
+                  'retryable',
+                  isFalse,
+                ),
+              ),
+            );
+            verifyNever(
+              () => httpClient.get(any(), headers: any(named: 'headers')),
+            );
+          },
+        );
         // A cast error here escapes the cubit's `on CrosspostingApiException`
         // poll handler, so the timer keeps firing it every tick with the
         // sheet stuck mid-progress.

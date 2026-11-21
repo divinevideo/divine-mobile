@@ -4276,6 +4276,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'దీన్ని మీ కనెక్ట్ చేయబడిన ప్లాట్‌ఫారమ్‌లకు పంపండి. పోస్ట్ చేయడానికి కొన్ని నిమిషాలు పట్టవచ్చు.';
 
   @override
+  String get crosspostStarted =>
+      'బ్యాక్‌గ్రౌండ్‌లో ఇతర ప్లాట్‌ఫారమ్‌లకు పోస్ట్ చేస్తోంది.';
+
+  @override
   String get crosspostSubmit => 'క్రాస్‌పోస్ట్';
 
   @override
@@ -4331,6 +4335,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'క్రాస్‌పోస్ట్ విఫలమైంది.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>
@@ -9319,6 +9328,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'కెమెరాలను మార్చుకోండి';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'నిలువు మరియు చతురస్రం మధ్య మార్చండి';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'దీనికి జూమ్ చేయండి $zoom×';
   }
@@ -11020,18 +11033,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మాస్క్ చేసిన రంగులో ఎంత భాగం అదృశ్యమవుతుంది';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'ఎడ్జ్';
+  String get videoEditorChromaKeyEdgeLabel => 'మృదువైన అంచు';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'కటౌట్‌ను మృదువుగా చేస్తుంది కాబట్టి జుట్టు బెల్లం రంగులోకి మారదు';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'స్పిల్';
+  String get videoEditorChromaKeySpillLabel => 'రంగు ఛాయను తొలగించండి';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'మాస్క్ చేసిన రంగు ఛాయను మీ సబ్జెక్ట్ నుండి తొలగిస్తుంది';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'సూక్ష్మ సర్దుబాటు';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'దీనితో భర్తీ చేయండి';
@@ -11040,17 +11056,16 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'ఏమీ లేదు';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'నలుపు';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'రంగు';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'చిత్రం';
+  String get videoEditorChromaKeyBackgroundImage => 'ఫోటో';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'క్లిప్';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -11067,6 +11082,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'క్లిప్‌ను చదవడానికి చాలా సమయం పట్టింది. ఆటో-డిటెక్ట్‌ను మళ్లీ ప్రయత్నించండి, లేదా రంగును మీరే ఎంచుకోండి.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'మీరు తొలగించాలనుకునే రంగుపై నొక్కండి';
+
+  @override
+  String get videoEditorChromaKeyDetecting =>
+      'తొలగించాల్సిన రంగును వెతుకుతోంది…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';
@@ -16196,6 +16219,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get messagesNoRooms => 'ఇంకా గదులు లేవు';
 
   @override
+  String get messagesRoomConnectionError =>
+      'ఈ గదిని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get followedHashtagsTitle => 'అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు';
 
   @override
@@ -16342,6 +16369,51 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'పిక్చర్ ఇన్ పిక్చర్, కుడి కింద';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'వాలుగా పక్కపక్కనే';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'వాలుగా ఒకదానిపై ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'మూడు వాలు వరుసలు';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'నాలుగు పక్కపక్కనే';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'నాలుగు వరుసలు';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'పైన మూడు, కింద ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'ఎడమ ఒకటి, కుడి మూడు';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'ఎడమ మూడు, కుడి ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => 'గుండ్రని విండో, ఎడమ పైన';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'గుండ్రని విండో, కుడి పైన';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'గుండ్రని విండో, ఎడమ కింద';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'గుండ్రని విండో, కుడి కింద';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'రెండు గుండ్రని విండోలు';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'మూడు గుండ్రని విండోలు';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16792,4 +16864,282 @@ class AppLocalizationsTe extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'కలిసి వీడియో చేద్దాం! Divine తెరిచి, నా రూమ్‌లో చేరి, మీ భాగాన్ని చిత్రీకరించండి.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'నేను ఉన్నాను! నా భాగాన్ని చిత్రీకరించడానికి ఎదురుచూస్తున్నాను.';
+
+  @override
+  String get collabRoomDeclineDmBody => 'ఈసారి రాలేను. ఆనందించండి!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'మన వీడియో రూమ్ నుండి బయటకు వచ్చాను.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'చిత్రీకరణ మొదలైంది! Divine తెరిచి మీ భాగాన్ని చిత్రీకరించండి.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'మన వీడియో ప్రచురితమైంది! భాగమైనందుకు ధన్యవాదాలు.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'మన వీడియో రూమ్‌ను రద్దు చేశాను.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'మన వీడియో రూమ్‌లో మార్పు వచ్చింది. చూడటానికి Divine తెరవండి.';
+
+  @override
+  String get collabRoomCameraMode => 'కలిసి';
+
+  @override
+  String get collabRoomTitle => 'కలిసి చేయండి';
+
+  @override
+  String get collabRoomMissing => 'ఈ రూమ్ ఇక లేదు.';
+
+  @override
+  String get collabRoomYou => 'మీరు';
+
+  @override
+  String get collabRoomHost => 'హోస్ట్';
+
+  @override
+  String get collabRoomStatusInvited => 'ఆహ్వానించబడ్డారు';
+
+  @override
+  String get collabRoomStatusJoined => 'చేరారు';
+
+  @override
+  String get collabRoomStatusPartIn => 'భాగం వచ్చింది';
+
+  @override
+  String get collabRoomStatusDeclined => 'రాలేరు';
+
+  @override
+  String get collabRoomStatusLeft => 'వెళ్లిపోయారు';
+
+  @override
+  String get collabRoomStatusRemoved => 'ఈసారి లేరు';
+
+  @override
+  String get collabRoomPickLayout => 'లేఅవుట్ ఎంచుకోండి';
+
+  @override
+  String get collabRoomStartButton => 'చిత్రీకరణ ప్రారంభించండి';
+
+  @override
+  String get collabRoomStartHint =>
+      'ఎవరైనా చేరగానే ప్రారంభించండి. అప్పటికి చేరనివారు ఈసారి పాల్గొనరు.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'హోస్ట్ చిత్రీకరణ మొదలుపెట్టడం కోసం వేచి ఉంది.';
+
+  @override
+  String get collabRoomJoinButton => 'చేరండి';
+
+  @override
+  String get collabRoomLeaveButton => 'రూమ్ నుండి బయటకు వెళ్లండి';
+
+  @override
+  String get collabRoomFilmPartButton => 'నా భాగాన్ని చిత్రీకరించండి';
+
+  @override
+  String get collabRoomRefilmPartButton => 'మళ్లీ చిత్రీకరించండి';
+
+  @override
+  String get collabRoomFilmHint =>
+      'ప్రతి ఒక్కరూ తమ భాగాన్ని తామే చిత్రీకరిస్తారు. అది మీ గడి ఆకారానికి కత్తిరించబడుతుంది.';
+
+  @override
+  String get collabRoomComposeButton => 'కలపండి';
+
+  @override
+  String get collabRoomComposeWaiting => 'అందరి భాగాల కోసం వేచి ఉంది.';
+
+  @override
+  String get collabRoomSoundHint =>
+      'ఒక భాగం శబ్దాన్ని వాడటానికి దాన్ని తాకండి.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'ఈ భాగం శబ్దాన్ని వాడండి';
+
+  @override
+  String get collabRoomRemoveMember => 'తీసివేయండి';
+
+  @override
+  String get collabRoomCancelButton => 'రద్దు చేయండి';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'ఈ వీడియోను రద్దు చేయాలా?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'రూమ్ అందరికీ మూసివేయబడుతుంది.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'ఎవరో వెళ్లిపోయారు. మిగిలినవారికి సరిపోయే లేఅవుట్ ఎంచుకోండి.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'ఎవరో చేరారు. అందరికీ సరిపోయే లేఅవుట్ ఎంచుకోండి.';
+
+  @override
+  String get collabRoomComposing => 'కలుపుతోంది…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'వీడియోను కలపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get collabRoomPosted => 'ఈ వీడియో ప్రచురితమైంది. అందరూ బాగా చేశారు!';
+
+  @override
+  String get collabRoomCancelled => 'ఈ రూమ్ రద్దు చేయబడింది.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'అది పంపబడలేదు. మీ కనెక్షన్ చూసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get collabRoomRemovedYou => 'ఈసారి మీరు ఇందులో లేరు.';
+
+  @override
+  String get collabRoomDeclinedYou => 'మీరు ఈసారి నిరాకరించారు.';
+
+  @override
+  String get collabRoomPartSent =>
+      'మీ భాగం చేరింది. హోస్ట్ అన్నింటినీ కలుపుతారు.';
+
+  @override
+  String get collabRoomPartTitle => 'మీ భాగం';
+
+  @override
+  String get collabRoomPartRendering => 'మీ భాగాన్ని సిద్ధం చేస్తోంది…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'మీ భాగాన్ని సిద్ధం చేయలేకపోయాం.';
+
+  @override
+  String get collabRoomPartSendButton => 'నా భాగాన్ని పంపండి';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'మీ భాగాన్ని అప్‌లోడ్ చేస్తోంది… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'అప్‌లోడ్ అయింది. పంపడానికి సిద్ధం.';
+
+  @override
+  String get collabRoomInviteAgain => 'మళ్లీ ఆహ్వానించండి';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'ఈ రూమ్ నుండి వెళ్లాలా?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'హోస్ట్ మాత్రమే మిమ్మల్ని మళ్లీ ఆహ్వానించగలరు.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'మీ భాగాన్ని పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get collabRoomLobbyTitle => 'కలిసి వీడియో చేయండి';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'గరిష్టంగా 3 మంది స్నేహితులను ఆహ్వానించండి. ప్రతి ఒక్కరూ తమ భాగాన్ని చిత్రీకరిస్తారు, అన్నీ ఒక స్ప్లిట్-స్క్రీన్ వీడియోగా కలుస్తాయి.';
+
+  @override
+  String get collabRoomLobbyInvite => 'స్నేహితులను ఆహ్వానించండి';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'ఎవరు ఉన్నారు?';
+
+  @override
+  String get collabRoomLobbyRooms => 'మీ రూమ్‌లు';
+
+  @override
+  String get collabRoomTileHosting => 'మీ రూమ్';
+
+  @override
+  String get collabRoomTileGuest => 'స్నేహితుని రూమ్';
+
+  @override
+  String get collabRoomPhaseLobby => 'ఇతరులు చేరడం కోసం వేచి ఉంది';
+
+  @override
+  String get collabRoomPhaseRecording => 'భాగాలు చిత్రీకరించబడుతున్నాయి';
+
+  @override
+  String get collabRoomPhaseReady => 'చిత్రీకరణకు సిద్ధం';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'హోస్ట్ చిత్రీకరణ మొదలుపెట్టడం కోసం వేచి ఉంది';
+
+  @override
+  String get collabRoomPhaseInvited =>
+      'మీకు ఆహ్వానం వచ్చింది. చేరడానికి నొక్కండి.';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'ఆహ్వానాలను పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'కలిసి వీడియో చేద్దాం';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'రూమ్‌లో చేరండి, ప్రతి ఒక్కరూ తమ భాగాన్ని చిత్రీకరిస్తారు.';
+
+  @override
+  String get collabRoomOpenButton => 'రూమ్ తెరవండి';
+
+  @override
+  String get collabRoomCallMute => 'మ్యూట్ చేయండి';
+
+  @override
+  String get collabRoomCallUnmute => 'అన్‌మ్యూట్ చేయండి';
+
+  @override
+  String get collabRoomCallCameraOn => 'కెమెరా ఆన్ చేయండి';
+
+  @override
+  String get collabRoomCallCameraOff => 'కెమెరా ఆఫ్ చేయండి';
+
+  @override
+  String get collabRoomCallConnecting => 'మీ కాల్ కనెక్ట్ అవుతోంది…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'కాల్ ప్రారంభించలేకపోయాం. Divine మీ మైక్రోఫోన్ వాడగలదో చూడండి.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'ఇతరులను చేరుకోలేకపోయాం. మీ కనెక్షన్ చూసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get collabRoomCallJoin => 'కాల్‌లో చేరండి';
+
+  @override
+  String get collabRoomCallCameraFailed => 'మీ కెమెరా ఆన్ చేయలేకపోయాం.';
+
+  @override
+  String get collabRoomCallMuted => 'మ్యూట్ అయింది';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'స్థానాలు మార్చుకోవడానికి లేఅవుట్‌లో రెండు చోట్ల తాకండి.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'ఈ స్థానాన్ని మార్చండి';
 }

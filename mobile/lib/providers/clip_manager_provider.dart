@@ -352,6 +352,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     ClipChromaKey? captureChromaKey,
     VideoRecordingResult? secondaryRecording,
     Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
+    double secondaryPipScale = 1,
+    double secondaryPipRotation = 0,
+    model.AspectRatio secondaryPipAspectRatio = model.AspectRatio.vertical,
   }) {
     final generation = _sessionGeneration;
     // A new recording supersedes any pending undo from a previous tap.
@@ -383,6 +386,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       captureChromaKey: captureChromaKey,
       secondaryRecording: secondaryRecording,
       secondaryPipCenter: secondaryPipCenter,
+      secondaryPipScale: secondaryPipScale,
+      secondaryPipRotation: secondaryPipRotation,
+      secondaryPipAspectRatio: secondaryPipAspectRatio,
     );
 
     // Asynchronously trim the clip if it exceeds remaining duration
@@ -461,6 +467,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     ClipChromaKey? captureChromaKey,
     VideoRecordingResult? secondaryRecording,
     Offset secondaryPipCenter = SecondaryCameraTake.defaultPipCenter,
+    double secondaryPipScale = 1,
+    double secondaryPipRotation = 0,
+    model.AspectRatio secondaryPipAspectRatio = model.AspectRatio.vertical,
   }) {
     var clip = DivineVideoClip(
       id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
@@ -484,6 +493,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
             targetAspectRatio: targetAspectRatio,
           ),
           pipCenter: secondaryPipCenter,
+          pipScale: secondaryPipScale,
+          pipRotation: secondaryPipRotation,
+          pipAspectRatio: secondaryPipAspectRatio,
         ),
       );
     }

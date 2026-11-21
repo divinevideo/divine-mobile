@@ -1,4 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
+import 'package:divine_ui/src/text_field/spell_check_suggestions_toolbar.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -175,6 +176,7 @@ class DivineTextField extends StatelessWidget {
   static final SpellCheckConfiguration defaultSpellCheckConfiguration =
       SpellCheckConfiguration(
         spellCheckService: RegionAwareSpellCheckService(),
+        spellCheckSuggestionsToolbarBuilder: buildSpellCheckSuggestionsToolbar,
       );
 
   /// {@macro flutter.widgets.editableText.autofocus}

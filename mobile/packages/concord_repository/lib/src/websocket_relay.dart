@@ -3,10 +3,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:concord_repository/src/concord_repository.dart';
+import 'package:concord_repository/src/relay_exceptions.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Web and native Nostr transport for the explicitly configured Concord relay.
 /// A publication succeeds only after the relay accepts its event ID.
+///
+/// Relay failures can surface as [RelayConnectionException],
+/// [RelayRejectedException] or [TimeoutException]. [connect] and [publish]
+/// can also surface the socket's own error. Pending work interrupted by
+/// [close] fails with a [StateError].
 class WebSocketRelayGateway
     implements
         RelayGateway,
@@ -70,6 +76,14 @@ class WebSocketRelayGateway
         subscription.historyLimited,
   );
 
+  /// Opens the relay connection, sharing an attempt already in progress.
+  ///
+  /// Throws:
+  ///
+  /// * [RelayConnectionException] if the connection drops while opening.
+  /// * [TimeoutException] if the handshake exceeds [connectionTimeout].
+  /// * the socket's own error if the relay cannot be reached.
+  /// * [StateError] if the gateway is closed before or while connecting.
   Future<void> connect() {
     if (_closed) return Future.error(StateError('Relay gateway is closed'));
     if (_connected) return Future.value();
@@ -91,7 +105,9 @@ class WebSocketRelayGateway
       onError: (Object error) => _disconnected(channel, error),
       onDone: () => _disconnected(
         channel,
-        StateError('Relay disconnected before acknowledgement'),
+        const RelayConnectionException(
+          'Relay disconnected before acknowledgement',
+        ),
       ),
       cancelOnError: true,
     );
@@ -102,8 +118,11 @@ class WebSocketRelayGateway
           (_) => throw StateError('Relay gateway is closed'),
         ),
       ]).timeout(connectionTimeout);
-      if (_closed || !identical(_channel, channel)) {
-        throw StateError('Relay disconnected while connecting');
+      if (_closed) throw StateError('Relay gateway is closed');
+      if (!identical(_channel, channel)) {
+        throw const RelayConnectionException(
+          'Relay disconnected while connecting',
+        );
       }
       _connected = true;
       for (final entry in _subs.entries) {
@@ -121,7 +140,7 @@ class WebSocketRelayGateway
   void _send(List<dynamic> frame) {
     final channel = _channel;
     if (!_connected || channel == null) {
-      throw StateError('Relay is disconnected');
+      throw const RelayConnectionException('Relay is disconnected');
     }
     channel.sink.add(jsonEncode(frame));
   }
@@ -160,11 +179,10 @@ class WebSocketRelayGateway
     if (_reconnectAttempts >= maxReconnectAttempts) {
       final subscriptions = _subs.values.toList();
       _subs.clear();
+      const error = RelayConnectionException('Relay reconnect exhausted');
       for (final subscription in subscriptions) {
-        subscription.failHistory(StateError('Relay reconnect exhausted'));
-        subscription.controller.addError(
-          StateError('Relay reconnect exhausted'),
-        );
+        subscription.failHistory(error);
+        subscription.controller.addError(error);
         unawaited(subscription.controller.close());
       }
       return;
@@ -181,6 +199,13 @@ class WebSocketRelayGateway
     unawaited(connect().catchError((Object _) {}));
   }
 
+  /// Streams events matching [filter], reconnecting and replaying the filter
+  /// after a disconnect.
+  ///
+  /// The stream ends with a [RelayConnectionException] once reconnecting gives
+  /// up, or a [RelayRejectedException] if the relay closes the subscription.
+  /// [close] ends it without an error. Subscribing after [close] fails with a
+  /// [StateError].
   @override
   Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) {
     if (_closed) return Stream.error(StateError('Relay gateway is closed'));
@@ -224,6 +249,16 @@ class WebSocketRelayGateway
     return controller.stream;
   }
 
+  /// Sends [event] and completes once the relay accepts it.
+  ///
+  /// Throws:
+  ///
+  /// * [RelayRejectedException] if the relay refuses the event or sends a
+  ///   notice while it is pending.
+  /// * [RelayConnectionException] if the connection drops first.
+  /// * [TimeoutException] if no acknowledgement arrives in [publishTimeout].
+  /// * anything [connect] throws.
+  /// * [ArgumentError] if [event] has no `id`.
   @override
   Future<void> publish(Map<String, dynamic> event) async {
     final id = event['id'];
@@ -281,19 +316,18 @@ class WebSocketRelayGateway
         if (accepted) {
           pending.succeed();
         } else {
-          pending.fail(StateError('Relay rejected event: $reason'));
+          pending.fail(RelayRejectedException('Relay rejected event: $reason'));
         }
       case ['NOTICE', final String reason]:
-        _failPublishes(StateError('Relay notice: $reason'));
+        _failPublishes(RelayRejectedException('Relay notice: $reason'));
       case ['CLOSED', final String id, final String reason]:
         _subscriptionRejected = true;
         final subscription = _subs.remove(id);
-        subscription?.failHistory(
-          StateError('Relay closed subscription: $reason'),
+        final error = RelayRejectedException(
+          'Relay closed subscription: $reason',
         );
-        subscription?.controller.addError(
-          StateError('Relay closed subscription: $reason'),
-        );
+        subscription?.failHistory(error);
+        subscription?.controller.addError(error);
         if (subscription != null) unawaited(subscription.controller.close());
       default:
         // Unknown, malformed and binary frames cannot affect transport state.

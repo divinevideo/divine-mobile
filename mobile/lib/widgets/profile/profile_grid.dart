@@ -274,6 +274,25 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   void didChangeDependencies() {
     super.didChangeDependencies();
     syncTabController();
+    if (!TickerMode.valuesOf(context).enabled) _stopHiddenScrollActivities();
+  }
+
+  /// Muting tickers freezes a nested fling rather than ending it: on return it
+  /// jumps to its end, and if the outer scroll range changes meanwhile, it
+  /// re-plans from an inner scrollable a finished load just swapped in, which
+  /// has no extents yet. End that momentum as soon as the profile is hidden.
+  void _stopHiddenScrollActivities() {
+    final nested = _nestedScrollKey.currentState;
+    if (nested == null) return;
+    for (final position in [
+      ...nested.outerController.positions,
+      ...nested.innerController.positions,
+    ]) {
+      if (position.isScrollingNotifier.value &&
+          position is ScrollActivityDelegate) {
+        (position as ScrollActivityDelegate).goIdle();
+      }
+    }
   }
 
   @override

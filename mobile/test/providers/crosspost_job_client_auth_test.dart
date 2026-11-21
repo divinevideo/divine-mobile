@@ -2,6 +2,7 @@
 // ABOUTME: Guards provider wiring against leaking the Keycast token off-host
 
 import 'dart:convert';
+import 'dart:io' show HttpDate;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,6 +55,7 @@ void main() {
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
+          allowUserInteraction: false,
         ),
       ).thenAnswer((invocation) async {
         if (!signerAvailable) return null;
@@ -91,6 +93,15 @@ void main() {
         final client = buildContainer().read(crosspostingApiClientProvider);
         await client.getCrossposts(eventId: eventId);
 
+        verify(
+          () => auth.createAndSignEvent(
+            kind: 27235,
+            content: '',
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+            allowUserInteraction: false,
+          ),
+        ).called(1);
         verifyNever(auth.getBoundDivineAccessToken);
         final headers = requests.single.headers;
         final authorization = headers['Authorization']!;
@@ -112,13 +123,44 @@ void main() {
 
       await expectLater(
         client.getCrossposts(eventId: eventId),
-        throwsA(
-          isA<CrosspostingApiException>()
-              .having((e) => e.statusCode, 'statusCode', 401)
-              .having((e) => e.code, 'code', 'unauthorized'),
-        ),
+        throwsA(isA<CrosspostingPassiveSigningUnavailable>()),
       );
       expect(requests, isEmpty);
+    });
+
+    // A poll re-signs after a timestamp rejection through the passive
+    // transport, so the clock correction cannot open a signer prompt either.
+    test('re-signs a clock-skew retry without user interaction', () async {
+      httpClient = MockClient((request) async {
+        requests.add(request);
+        if (requests.length == 1) {
+          return http.Response(
+            jsonEncode({
+              'error': {
+                'code': 'unauthorized',
+                'message': 'nostr auth event is expired or from the future',
+              },
+            }),
+            401,
+            headers: {'date': HttpDate.format(DateTime.now().toUtc())},
+          );
+        }
+        return http.Response(jsonEncode({'jobs': []}), 200);
+      });
+
+      final client = buildContainer().read(crosspostingApiClientProvider);
+
+      expect(await client.getCrossposts(eventId: eventId), isEmpty);
+      expect(requests, hasLength(2));
+      verify(
+        () => auth.createAndSignEvent(
+          kind: 27235,
+          content: '',
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+          allowUserInteraction: false,
+        ),
+      ).called(2);
     });
   });
 

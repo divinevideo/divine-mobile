@@ -466,6 +466,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.14"
+  dart_webrtc:
+    dependency: transitive
+    description:
+      name: dart_webrtc
+      sha256: "078e3c431500147e5cc52b3c6ea41ed538f30c7720cc2467d2186c9251e62716"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.8.2"
   daylight:
     dependency: "direct main"
     description:
@@ -995,6 +1003,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_webrtc:
+    dependency: "direct main"
+    description:
+      name: flutter_webrtc
+      sha256: b98ef03376401e54ff87fc78907b38e562b15ca8424aba589c263eddc3c1ecf9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.3"
   freezed_annotation:
     dependency: transitive
     description:
@@ -1477,6 +1493,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.1"
+  logger:
+    dependency: transitive
+    description:
+      name: logger
+      sha256: "2a0dc097e7b01d942475bdd552356db2d0f768b05540bd4b2b53f1840f2239a7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.8.0"
   logging:
     dependency: "direct main"
     description:
@@ -1889,10 +1913,10 @@ packages:
     dependency: "direct main"
     description:
       name: pro_video_editor
-      sha256: "69503b271dcc74f0008d53f79acd267919e6ea15b239bfc4bd3eed82ba693c87"
+      sha256: "57db0f602e4b3e747c0a166f42fed843c6fd19dcdc01f49721ae9cb56ee24abc"
       url: "https://pub.dev"
     source: hosted
-    version: "2.53.2"
+    version: "2.54.0"
   process:
     dependency: transitive
     description:
@@ -2730,6 +2754,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.1"
+  webrtc_interface:
+    dependency: transitive
+    description:
+      name: webrtc_interface
+      sha256: c6f100eac5057d9a817a60473126f9828c796d42884d498af4f339c97b21014f
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.5.1"
   webview_flutter:
     dependency: "direct main"
     description:

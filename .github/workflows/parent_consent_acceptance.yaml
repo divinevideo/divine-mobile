@@ -38,9 +38,9 @@ jobs:
       DISPLAY: ":99"
       E2E_PREBUILT_APK: ${{ github.workspace }}/mobile/build/app/outputs/flutter-apk/app-debug.apk
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Check out the matching backend candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: divinevideo/divine-relay-manager
           ref: d96a1229ee94acf88e6b2321eeb6e36ca346fefc

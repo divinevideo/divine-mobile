@@ -159,6 +159,32 @@ void main() {
       expect(stacked.width, greaterThan(withGap.width));
     });
 
+    testWidgets('hands a tap off a round window to the clip under it', (
+      tester,
+    ) async {
+      final cubit = await pump(tester, []);
+      cubit.presetSelected(SplitScreenLayoutPreset.circleBottomRight);
+      await tester.pump();
+      final window = tester.getRect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  l10n.videoEditorLayoutCellEmptySemanticLabel('2'),
+        ),
+      );
+
+      // The window first, so the corner tap below has a selection to move.
+      await tester.tapAt(window.center);
+      await tester.pump();
+      expect(cubit.state.selectedCellIndex, 1);
+
+      // The corner of the window's square lies outside its circle.
+      await tester.tapAt(window.bottomRight - const Offset(3, 3));
+      await tester.pump();
+      expect(cubit.state.selectedCellIndex, 0);
+    });
+
     testWidgets('labels a filled cell with how long its clip plays', (
       tester,
     ) async {

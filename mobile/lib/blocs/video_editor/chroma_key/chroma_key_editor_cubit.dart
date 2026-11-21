@@ -2,6 +2,7 @@
 // ABOUTME: choice, and the auto-detect measurement.
 
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
@@ -116,9 +117,8 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     // which is both wrong and unfalsifiable from a test.
     final ChromaKeyDetection detection;
     try {
-      detection = await _detect(
-        _video,
-      ).timeout(VideoEditorConstants.chromaKeyDetectTimeout);
+      detection = await _detect(_video)
+          .timeout(VideoEditorConstants.chromaKeyDetectTimeout);
     } on ChromaKeyDetectionException catch (error, stackTrace) {
       // Expected: plenty of footage has no screen reaching the frame border.
       // The UI says so and the user sets the key by hand — not a crash report.
@@ -201,10 +201,23 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     emitIfOpen(state.copyWith(detectionStatus: status));
   }
 
-  /// Clears a failed or timed-out measurement so the UI stops reporting it.
-  void acknowledgeDetectionFailure() {
-    if (!state.detectionFailed) return;
-    emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.idle));
+  /// Keys on the footage around a tap: [rgba] is the patch under the finger.
+  ///
+  /// Colour and amount both come from the patch, the way auto-detect takes
+  /// them from the frame border, so a tap on a shadowed corner reaches as far
+  /// as that corner needs. Writes off a measurement in flight and answers a
+  /// failed one, like any colour set by hand.
+  ///
+  /// Throws a [ChromaKeyDetectionException] for a patch with no whole pixel.
+  void useTappedPatch(Uint8List rgba) {
+    final detection = ChromaKeyDetector.fromPatch(rgba);
+    _updateKey(
+      state.chromaKey.withKeySettings(
+        color: detection.color,
+        similarity: detection.similarity,
+      ),
+      detectionStatus: _statusAfterManualKeyEdit,
+    );
   }
 
   /// Sets the screen colour to remove, writing off a measurement in flight.
@@ -252,10 +265,14 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   ///
   /// A measurement writes exactly those two fields, so an edit to either while
   /// one is in flight is the user overtaking it: the panel goes back to idle
-  /// now, and [detectFromFootage] drops the result when it lands. Anything
-  /// else — a failure not yet acknowledged, or nothing running — is kept.
+  /// now, and [detectFromFootage] drops the result when it lands. An edit
+  /// after a failed or timed-out measurement answers it the same way — the
+  /// panel stops reporting a problem the user has just worked around. With
+  /// nothing running and nothing reported, the status is kept.
   ChromaKeyDetectionStatus? get _statusAfterManualKeyEdit =>
-      state.isDetecting ? ChromaKeyDetectionStatus.idle : null;
+      state.isDetecting || state.detectionFailed
+      ? ChromaKeyDetectionStatus.idle
+      : null;
 
   /// Leaves the keyed area unfilled.
   void useTransparentBackground() =>

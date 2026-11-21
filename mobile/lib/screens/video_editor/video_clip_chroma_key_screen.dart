@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
@@ -20,11 +21,11 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_screen_layout.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_tap_to_pick.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
-import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
-import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
@@ -361,125 +362,45 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
         // A half-written clip file is not something to hand back, so the
         // system back gesture waits with everything else.
         canPop: !isBaking,
-        child: Scaffold(
-          backgroundColor: context.vineColors.surfaceContainerHigh,
-          body: SafeArea(
-            child: MultiBlocListener(
-              listeners: [
-                BlocListener<ChromaKeyEditorCubit, ChromaKeyEditorState>(
-                  listenWhen: (previous, current) =>
-                      previous.detectionStatus != current.detectionStatus,
-                  listener: (context, state) {
-                    final message = switch (state.detectionStatus) {
-                      ChromaKeyDetectionStatus.failure =>
-                        context.l10n.videoEditorChromaKeyDetectFailed,
-                      ChromaKeyDetectionStatus.timedOut =>
-                        context.l10n.videoEditorChromaKeyDetectTimedOut,
-                      ChromaKeyDetectionStatus.idle ||
-                      ChromaKeyDetectionStatus.detecting => null,
-                    };
-                    if (message == null) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      DivineSnackbarContainer.snackBar(message),
-                    );
-                    context
-                        .read<ChromaKeyEditorCubit>()
-                        .acknowledgeDetectionFailure();
-                  },
-                ),
-                if (!_isDetached)
-                  BlocListener<ClipEditorBloc, ClipEditorState>(
-                    listenWhen: (previous, current) =>
-                        !identical(
-                          previous.lastChromaKeyResult,
-                          current.lastChromaKeyResult,
-                        ) &&
-                        current.lastChromaKeyResult != null,
-                    listener: _onBakeResult,
-                  ),
-              ],
-              child: Stack(
-                children: [
-                  Column(
-                    children: [
-                      // Done commits whatever key is on screen, and while a
-                      // measurement is wanted that key is still the guess it
-                      // is about to replace — so Done waits (#8904). Any
-                      // hand edit lifts the wait by writing the measurement
-                      // off, and Close stays live throughout.
-                      BlocSelector<
-                        ChromaKeyEditorCubit,
-                        ChromaKeyEditorState,
-                        bool
-                      >(
-                        selector: (state) => state.isDetecting,
-                        builder: (context, isDetecting) => VideoEditorToolbar(
-                          onClose: () {
-                            if (!isBaking) Navigator.of(context).pop();
-                          },
-                          onDone: isBaking || isDetecting
-                              ? null
-                              : () => _confirm(context),
-                          closeSemanticLabel: context
-                              .l10n
-                              .videoEditorChromaKeyCloseSemanticLabel,
-                          doneSemanticLabel: context
-                              .l10n
-                              .videoEditorChromaKeyDoneSemanticLabel,
-                          // Flexible, so a large text size wraps the title
-                          // instead of pushing Done off the screen.
-                          center: Flexible(
-                            child: DivineWordFitText(
-                              context.l10n.videoEditorChromaKeyTitle,
-                              textAlign: TextAlign.center,
-                              style: VineTheme.titleMediumFont(
-                                color: context.vineColors.onSurface,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: _Preview(
-                          // A detached clip is a free-floating box in its
-                          // own shape; a timeline clip fills the
-                          // composition's frame.
-                          aspectRatio: _isDetached
-                              ? widget.clip.originalAspectRatio
-                              : widget.clip.targetAspectRatio.value,
-                          player: _player,
-                          backdropSync: _player == null ? null : _backdropSync,
-                        ),
-                      ),
-                      if (_canRemove)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: WholeWordButtonTextScale(
-                            label: context.l10n.videoEditorChromaKeyRemove,
-                            child: DivineButton(
-                              label: context.l10n.videoEditorChromaKeyRemove,
-                              type: .ghost,
-                              size: .small,
-                              expanded: true,
-                              maxLines: 2,
-                              onPressed: isBaking
-                                  ? null
-                                  : () => _remove(context),
-                            ),
-                          ),
-                        ),
-                      Flexible(
-                        child: ChromaKeyControls(
-                          onPickBackground: _pickBackground,
-                          surface: widget.surface,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (bakingRenderId != null)
-                    _BakingOverlay(renderId: bakingRenderId),
-                ],
+        child: _BakeResultListener(
+          // A detached clip never bakes, and its route carries no clip bloc
+          // to listen to.
+          enabled: !_isDetached,
+          onResult: _onBakeResult,
+          // Done commits whatever key is on screen, and while a measurement
+          // is wanted that key is still the guess it is about to replace — so
+          // Done waits (#8904). Any hand edit lifts the wait by writing the
+          // measurement off, and Close stays live throughout.
+          child: BlocSelector<ChromaKeyEditorCubit, ChromaKeyEditorState, bool>(
+            selector: (state) => state.isDetecting,
+            builder: (context, isDetecting) => ChromaKeyScreenLayout(
+              onClose: () {
+                if (!isBaking) Navigator.of(context).pop();
+              },
+              onDone: isBaking || isDetecting ? null : () => _confirm(context),
+              closeSemanticLabel:
+                  context.l10n.videoEditorChromaKeyCloseSemanticLabel,
+              doneSemanticLabel:
+                  context.l10n.videoEditorChromaKeyDoneSemanticLabel,
+              preview: _Preview(
+                // A detached clip is a free-floating box in its own shape; a
+                // timeline clip fills the composition's frame.
+                aspectRatio: _isDetached
+                    ? widget.clip.originalAspectRatio
+                    : widget.clip.targetAspectRatio.value,
+                surface: widget.surface,
+                player: _player,
+                backdropSync: _player == null ? null : _backdropSync,
               ),
+              showRemove: _canRemove,
+              onRemove: isBaking ? null : () => _remove(context),
+              controls: ChromaKeyControls(
+                onPickBackground: _pickBackground,
+                surface: widget.surface,
+              ),
+              overlay: bakingRenderId == null
+                  ? null
+                  : _BakingOverlay(renderId: bakingRenderId),
             ),
           ),
         ),
@@ -544,9 +465,37 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
   }
 
   void _showResult(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(DivineSnackbarContainer.snackBar(message));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(DivineSnackbarContainer.snackBar(message));
+  }
+}
+
+/// Hands each new bake result of [ClipEditorBloc] to [onResult], or just
+/// shows [child] when [enabled] is off.
+class _BakeResultListener extends StatelessWidget {
+  const _BakeResultListener({
+    required this.enabled,
+    required this.onResult,
+    required this.child,
+  });
+
+  final bool enabled;
+  final BlocWidgetListener<ClipEditorState> onResult;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (previous, current) =>
+          !identical(
+            previous.lastChromaKeyResult,
+            current.lastChromaKeyResult,
+          ) &&
+          current.lastChromaKeyResult != null,
+      listener: onResult,
+      child: child,
+    );
   }
 }
 
@@ -609,15 +558,20 @@ class _BakingOverlay extends StatelessWidget {
   }
 }
 
-/// The looping clip with the key applied live.
-class _Preview extends StatelessWidget {
+/// The looping clip with the key applied live, tapped to choose the color.
+class _Preview extends StatefulWidget {
   const _Preview({
     required this.aspectRatio,
+    required this.surface,
     required this.player,
     required this.backdropSync,
   });
 
   final double aspectRatio;
+
+  /// What the keyed clip sits on, which decides what an empty backdrop shows.
+  final ChromaKeySurface surface;
+
   final DivineVideoPlayerController? player;
 
   /// Keeps a video backdrop aligned with the clip. See [ChromaKeyBackdropSync].
@@ -626,33 +580,69 @@ class _Preview extends StatelessWidget {
   static const _borderRadius = BorderRadius.all(Radius.circular(16));
 
   @override
+  State<_Preview> createState() => _PreviewState();
+}
+
+class _PreviewState extends State<_Preview> {
+  /// Whether a tap has picked a color yet. Until one has, the preview says it
+  /// can be tapped: nothing else on screen gives that away.
+  bool _hasPicked = false;
+
+  void _onPatchPicked(Uint8List patch) {
+    setState(() => _hasPicked = true);
+    context.read<ChromaKeyEditorCubit>().useTappedPatch(patch);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = player;
+    final controller = widget.player;
     if (controller == null) {
       return const Center(child: BrandedLoadingIndicator());
     }
 
-    final chromaKey = context.select(
-      (ChromaKeyEditorCubit c) => c.state.chromaKey,
+    final (chromaKey, isDetecting) = context.select(
+      (ChromaKeyEditorCubit c) => (c.state.chromaKey, c.state.isDetecting),
+    );
+    // On the track an empty backdrop exports as black, so it previews as
+    // black too. A detached clip's preview has nothing real behind it, so the
+    // checkerboard stands in for whatever the canvas will show through.
+    final isTrack = widget.surface == ChromaKeySurface.track;
+    final hint = chromaKeyPreviewHintText(
+      context,
+      isDetecting: isDetecting,
+      hasPicked: _hasPicked,
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: aspectRatio,
-          child: ClipRRect(
-            borderRadius: _borderRadius,
-            child: ChromaKeyedVideo(
-              chromaKey: chromaKey,
-              backdropSync: backdropSync,
-              // Below the key's filter, so the eyedropper picks the footage
-              // — the screen color included — rather than what the key left.
-              child: EyedropperSourceRegion(
-                borderRadius: _borderRadius,
-                child: DivineVideoPlayer(controller: controller),
+    return Center(
+      child: AspectRatio(
+        aspectRatio: widget.aspectRatio,
+        child: ClipRRect(
+          borderRadius: _Preview._borderRadius,
+          child: Stack(
+            fit: StackFit.passthrough,
+            children: [
+              ColoredBox(
+                color: isTrack
+                    ? VineTheme.backgroundColor
+                    : VineTheme.transparent,
+                child: ChromaKeyedVideo(
+                  chromaKey: chromaKey,
+                  backdropSync: widget.backdropSync,
+                  previewTransparency: !isTrack,
+                  // Below the key's filter, so a tap and the eyedropper both
+                  // pick the footage — the screen color included — rather
+                  // than what the key left.
+                  child: EyedropperSourceRegion(
+                    borderRadius: _Preview._borderRadius,
+                    child: ChromaKeyTapToPick(
+                      onPatchPicked: _onPatchPicked,
+                      child: DivineVideoPlayer(controller: controller),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              if (hint != null) ChromaKeyPreviewHint(text: hint),
+            ],
           ),
         ),
       ),

@@ -4188,6 +4188,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изпрати го до свързаните си платформи. Публикуването може да отнеме няколко минути.';
 
   @override
+  String get crosspostStarted =>
+      'Публикуване в другите платформи във фонов режим.';
+
+  @override
   String get crosspostSubmit => 'Публикувай кръстосано';
 
   @override
@@ -4243,6 +4247,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'Кръстосаното публикуване не успя.';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>
@@ -9143,6 +9152,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Размени камерите';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Превключи между вертикален и квадратен формат';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Мащабиране до $zoom×';
   }
@@ -10840,18 +10853,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Колко от маскирания цвят изчезва';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Ръб';
+  String get videoEditorChromaKeyEdgeLabel => 'Мек ръб';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Омекотява изрязването, за да не назъбва косата';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Отблясък';
+  String get videoEditorChromaKeySpillLabel => 'Махни оттенъка';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Издърпва оттенъка на маскирания цвят от обекта ти';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Фина настройка';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Замени с';
@@ -10860,17 +10876,16 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Нищо';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Черно';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Цвят';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Изображение';
+  String get videoEditorChromaKeyBackgroundImage => 'Снимка';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Клип';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10887,6 +10902,13 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Прочитането на клипа отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Докосни цвета, който искаш да махнеш';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Търсим цвета за махане…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';
@@ -15973,6 +15995,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get messagesNoRooms => 'Все още няма стаи';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Не успяхме да се свържем с тази стая. Провери връзката си и опитай пак.';
+
+  @override
   String get followedHashtagsTitle => 'Следвани хаштагове';
 
   @override
@@ -16115,6 +16141,54 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'Картина в картината, долу вдясно';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide =>
+      'Един до друг, наклонено';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked =>
+      'Един над друг, наклонено';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Три наклонени реда';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Четири един до друг';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Четири реда';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Три над един';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Един до три';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Три до един';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Кръгъл прозорец, горе вляво';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Кръгъл прозорец, горе вдясно';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Кръгъл прозорец, долу вляво';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Кръгъл прозорец, долу вдясно';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Два кръгли прозореца';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Три кръгли прозореца';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16565,4 +16639,279 @@ class AppLocalizationsBg extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Хайде да направим видео заедно! Отвори Divine, влез в стаята ми и заснеми твоята част.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Вътре съм! Нямам търпение да заснема моята част.';
+
+  @override
+  String get collabRoomDeclineDmBody => 'Този път не мога. Забавлявайте се!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Излязох от нашата видео стая.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Снимаме! Отвори Divine и заснеми твоята част.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Видеото ни е публикувано! Благодаря, че беше част от него.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Отмених нашата видео стая.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Нещо се промени в нашата видео стая. Отвори Divine и виж.';
+
+  @override
+  String get collabRoomCameraMode => 'Заедно';
+
+  @override
+  String get collabRoomTitle => 'Направете го заедно';
+
+  @override
+  String get collabRoomMissing => 'Тази стая вече я няма.';
+
+  @override
+  String get collabRoomYou => 'Ти';
+
+  @override
+  String get collabRoomHost => 'Домакин';
+
+  @override
+  String get collabRoomStatusInvited => 'Поканен';
+
+  @override
+  String get collabRoomStatusJoined => 'Вътре';
+
+  @override
+  String get collabRoomStatusPartIn => 'Частта е тук';
+
+  @override
+  String get collabRoomStatusDeclined => 'Не може';
+
+  @override
+  String get collabRoomStatusLeft => 'Излезе';
+
+  @override
+  String get collabRoomStatusRemoved => 'Не и този път';
+
+  @override
+  String get collabRoomPickLayout => 'Избери оформление';
+
+  @override
+  String get collabRoomStartButton => 'Започни снимките';
+
+  @override
+  String get collabRoomStartHint =>
+      'Започни, щом някой влезе. Който не е влязъл дотогава, този път пропуска.';
+
+  @override
+  String get collabRoomWaitingForHost => 'Чакаме домакина да започне снимките.';
+
+  @override
+  String get collabRoomJoinButton => 'Влез';
+
+  @override
+  String get collabRoomLeaveButton => 'Излез от стаята';
+
+  @override
+  String get collabRoomFilmPartButton => 'Заснеми моята част';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Заснеми отново';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Всеки заснема своята част. Тя се изрязва по формата на твоята клетка.';
+
+  @override
+  String get collabRoomComposeButton => 'Сглоби';
+
+  @override
+  String get collabRoomComposeWaiting => 'Чакаме частите на всички.';
+
+  @override
+  String get collabRoomSoundHint => 'Докосни част, за да ползваш нейния звук.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Използвай звука на тази част';
+
+  @override
+  String get collabRoomRemoveMember => 'Премахни';
+
+  @override
+  String get collabRoomCancelButton => 'Отмени';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Да отменим ли това видео?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'Стаята се затваря за всички.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Някой излезе. Избери оформление за останалите.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'Някой се присъедини. Избери оформление за всички.';
+
+  @override
+  String get collabRoomComposing => 'Сглобяване…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Видеото не можа да се сглоби. Опитай пак.';
+
+  @override
+  String get collabRoomPosted => 'Видеото е публикувано. Браво на всички!';
+
+  @override
+  String get collabRoomCancelled => 'Тази стая беше отменена.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Не мина. Провери връзката си и опитай пак.';
+
+  @override
+  String get collabRoomRemovedYou => 'Този път не участваш.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Отказа този път.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Частта ти е тук. Домакинът сглобява всичко.';
+
+  @override
+  String get collabRoomPartTitle => 'Твоята част';
+
+  @override
+  String get collabRoomPartRendering => 'Подготвяме частта ти…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Частта ти не можа да се подготви.';
+
+  @override
+  String get collabRoomPartSendButton => 'Изпрати моята част';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Качваме частта ти… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Качено. Готово за изпращане.';
+
+  @override
+  String get collabRoomInviteAgain => 'Покани отново';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Да напуснеш ли стаята?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Само домакинът може да те покани обратно.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Частта ти не можа да се изпрати. Опитай пак.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Направете видео заедно';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Покани до 3 приятели. Всеки заснема своята част и всичко се събира в едно видео с разделен екран.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Покани приятели';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Кой влиза?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Твоите стаи';
+
+  @override
+  String get collabRoomTileHosting => 'Твоята стая';
+
+  @override
+  String get collabRoomTileGuest => 'Стая на приятел';
+
+  @override
+  String get collabRoomPhaseLobby => 'Чакаме хора да влязат';
+
+  @override
+  String get collabRoomPhaseRecording => 'Снимат се частите';
+
+  @override
+  String get collabRoomPhaseReady => 'Готово за снимки';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Чакаме домакина да започне снимките';
+
+  @override
+  String get collabRoomPhaseInvited => 'Имаш покана. Докосни, за да влезеш.';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Поканите не можаха да се изпратят. Опитай пак.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Хайде да направим видео заедно';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Влез в стаята и всеки заснема своята част.';
+
+  @override
+  String get collabRoomOpenButton => 'Отвори стаята';
+
+  @override
+  String get collabRoomCallMute => 'Заглуши';
+
+  @override
+  String get collabRoomCallUnmute => 'Включи звука';
+
+  @override
+  String get collabRoomCallCameraOn => 'Включи камерата';
+
+  @override
+  String get collabRoomCallCameraOff => 'Изключи камерата';
+
+  @override
+  String get collabRoomCallConnecting => 'Свързване на разговора…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Разговорът не можа да започне. Провери дали Divine може да ползва микрофона ти.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Не успяхме да се свържем с останалите. Провери връзката си и опитай пак.';
+
+  @override
+  String get collabRoomCallJoin => 'Влез в разговора';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Камерата не можа да се включи.';
+
+  @override
+  String get collabRoomCallMuted => 'Заглушен';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Докосни две места в оформлението, за да ги размениш.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Размени това място';
 }

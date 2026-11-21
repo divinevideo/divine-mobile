@@ -1,6 +1,7 @@
 // ABOUTME: A still capture of what a repaint boundary shows, and the color
 // ABOUTME: under any point of it, for the editor's eyedropper.
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -94,6 +95,27 @@ class EyedropperSnapshot {
     return colorFromArgb32(
       0xFF000000 | channel(red) << 16 | channel(green) << 8 | channel(blue),
     );
+  }
+
+  /// The straight RGBA pixels of the square [radius] image pixels around
+  /// [position], given in logical pixels of [size] and clamped into the image.
+  Uint8List patchAround(Offset position, {required int radius}) {
+    final (:x, :y) = pixelAt(position);
+    final left = math.max(0, x - radius);
+    final right = math.min(image.width - 1, x + radius);
+    final top = math.max(0, y - radius);
+    final bottom = math.min(image.height - 1, y + radius);
+    final rowBytes = (right - left + 1) * 4;
+    final patch = Uint8List(rowBytes * (bottom - top + 1));
+    for (var row = top; row <= bottom; row++) {
+      final from = (row * image.width + left) * 4;
+      patch.setRange(
+        (row - top) * rowBytes,
+        (row - top + 1) * rowBytes,
+        _pixels.buffer.asUint8List(_pixels.offsetInBytes + from, rowBytes),
+      );
+    }
+    return patch;
   }
 
   /// Releases [image].

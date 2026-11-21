@@ -18,6 +18,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -154,6 +155,7 @@ class LibraryScreen extends ConsumerWidget {
     this.editorClips = const [],
     this.scrollController,
     this.cropGuideAspectRatio,
+    this.cropGuideShape = SplitScreenCellShape.rectangle,
     this.maxSelectedClips,
   });
 
@@ -215,6 +217,10 @@ class LibraryScreen extends ConsumerWidget {
   /// a split-screen cell's. Clips of any shape can be picked then, since the
   /// crop decides the shape. `null` when picked clips keep their frame.
   final double? cropGuideAspectRatio;
+
+  /// The shape inside [cropGuideAspectRatio] the clips are cut to, such as
+  /// the circle of a round window.
+  final SplitScreenCellShape cropGuideShape;
 
   /// The most clips one pick may hold — a split-screen layout's free cells.
   /// At one, a tap swaps the picked clip; `null` sets no limit.
@@ -293,6 +299,7 @@ class LibraryScreen extends ConsumerWidget {
       child: switch (cropGuideAspectRatio) {
         final aspectRatio? => ClipCropGuide(
           aspectRatio: aspectRatio,
+          shape: cropGuideShape,
           child: view,
         ),
         null when !selectionMode => LibraryReactionProgressHost(child: view),

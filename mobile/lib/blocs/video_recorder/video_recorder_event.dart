@@ -16,6 +16,7 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
     this.fromEditor = false,
     this.recorderMode,
     this.autoStartRecording = false,
+    this.collabPart = false,
   });
 
   final DivineVideoQuality videoQuality;
@@ -43,12 +44,18 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
   /// starts recording. Used by the bottom-nav hold-to-record shortcut.
   final bool autoStartRecording;
 
+  /// Films someone's part of a collaborative room: opens in capture mode
+  /// without touching the persisted last-used mode, and caps the part at the
+  /// post length.
+  final bool collabPart;
+
   @override
   List<Object?> get props => [
     videoQuality,
     fromEditor,
     recorderMode,
     autoStartRecording,
+    collabPart,
   ];
 }
 
@@ -342,16 +349,34 @@ final class VideoRecorderDualCameraToggled extends VideoRecorderEvent {
   const VideoRecorderDualCameraToggled();
 }
 
-/// Moves the second camera's window in the viewfinder to [center], as
-/// fractions of the frame.
-final class VideoRecorderDualCameraPipMoved extends VideoRecorderEvent {
-  const VideoRecorderDualCameraPipMoved(this.center);
+/// Places the second camera's window in the viewfinder where a drag or a
+/// pinch left it, or where the viewfinder had to move it to show it whole.
+final class VideoRecorderDualCameraPipChanged extends VideoRecorderEvent {
+  const VideoRecorderDualCameraPipChanged({
+    required this.center,
+    required this.scale,
+    required this.rotation,
+  });
 
-  /// The window's new center, as fractions of the frame's width and height.
+  /// The window's new center, as fractions of the width and height of the
+  /// picture the take keeps.
   final Offset center;
 
+  /// The window's new size, as a multiple of its default size; see
+  /// [SecondaryCameraTake.pipScale].
+  final double scale;
+
+  /// The window's new turn, in radians clockwise.
+  final double rotation;
+
   @override
-  List<Object?> get props => [center];
+  List<Object?> get props => [center, scale, rotation];
+}
+
+/// Switches the second camera's window between the portrait picture and the
+/// square from its middle.
+final class VideoRecorderDualCameraPipShapeToggled extends VideoRecorderEvent {
+  const VideoRecorderDualCameraPipShapeToggled();
 }
 
 // === Stop-motion events ===
@@ -448,6 +473,20 @@ final class VideoRecorderChromaKeySettingsChanged extends VideoRecorderEvent {
 
   @override
   List<Object?> get props => [color, similarity, smoothness, spill];
+}
+
+/// Keys on the camera picture around a tap: [rgba] is the patch of the live
+/// preview under the finger, as straight RGBA pixels.
+///
+/// The key's color and amount both come from the patch, the way a measurement
+/// takes them from the wall behind the subject.
+final class VideoRecorderChromaKeyPatchPicked extends VideoRecorderEvent {
+  const VideoRecorderChromaKeyPatchPicked(this.rgba);
+
+  final Uint8List rgba;
+
+  @override
+  List<Object?> get props => [rgba];
 }
 
 /// Replaces what the chroma-key key puts behind the subject.

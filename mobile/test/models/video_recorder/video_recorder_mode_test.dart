@@ -146,14 +146,49 @@ void main() {
     });
 
     group('supportsGhostFrame', () {
-      test('is false only for upload', () {
+      test('is false only for the tabs that record nothing', () {
         for (final mode in VideoRecorderMode.values) {
           expect(
             mode.supportsGhostFrame,
-            mode != VideoRecorderMode.upload,
+            mode.recordsVideo,
             reason: mode.name,
           );
         }
+      });
+    });
+
+    group('recordsVideo', () {
+      test('is false only for Together and Upload', () {
+        expect(
+          [
+            for (final mode in VideoRecorderMode.values)
+              if (!mode.recordsVideo) mode,
+          ],
+          equals([VideoRecorderMode.together, VideoRecorderMode.upload]),
+        );
+      });
+    });
+
+    group('together', () {
+      test('sits between Stop Motion and Classic in the wheel', () {
+        expect(VideoRecorderMode.values, [
+          VideoRecorderMode.capture,
+          VideoRecorderMode.stopMotion,
+          VideoRecorderMode.together,
+          VideoRecorderMode.classic,
+          VideoRecorderMode.upload,
+        ]);
+      });
+
+      test('is labelled "Together" and films nothing itself', () {
+        const mode = VideoRecorderMode.together;
+        expect(mode.label, equals('Together'));
+        expect(mode.hasRecordingLimit, isFalse);
+        expect(mode.hasVideoEditor, isFalse);
+        expect(mode.supportsCountdownTimer, isFalse);
+        expect(mode.supportGridLines, isFalse);
+        expect(mode.supportsVideoStabilization, isFalse);
+        expect(mode.defaultAspectRatio, model.AspectRatio.vertical);
       });
     });
 

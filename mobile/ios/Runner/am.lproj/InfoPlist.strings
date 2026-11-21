@@ -1,0 +1,2 @@
+/* Camera permission purpose, including recording and opt-in Together video. */
+"NSCameraUsageDescription" = "Divine ካሜራዎን ተጠቅሞ ማርትዕ እና ማጋራት የሚችሉትን እንደ ኮሜዲ ትዕይንት ያሉ አጫጭር ቪዲዮዎች እንዲቀርጹ፣ እንዲሁም በTogether ጥሪ ውስጥ ካሜራውን ሲያበሩ ሌሎች እንዲያዩዎት ያስችላል።";

@@ -2,24 +2,45 @@
 // ABOUTME: Contains mode selector wheel and library button
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dart';
 
+/// The modes the wheel offers when the account may not send private
+/// messages: Together rooms run on them, so every invite would fail.
+final List<VideoRecorderMode> _modesWithoutTogether = [
+  for (final mode in VideoRecorderMode.values)
+    if (mode != VideoRecorderMode.together) mode,
+];
+
 /// Bottom bar with the recorder mode selector wheel and library button.
-class VideoRecorderBottomBar extends StatelessWidget {
+class VideoRecorderBottomBar extends ConsumerWidget {
   /// Creates a video recorder bottom bar widget.
   const VideoRecorderBottomBar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = context.select(
       (VideoRecorderBloc b) => (
         isShutterActive: b.state.isShutterActive,
         recorderMode: b.state.recorderMode,
       ),
     );
+    final dmRestricted = ref.watch(isDmRestrictedProvider);
+    if (dmRestricted && state.recorderMode == VideoRecorderMode.together) {
+      // Together as the last mode used, before the account was restricted.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.read<VideoRecorderBloc>().addIfOpen(
+          const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+        );
+      });
+    }
 
     return SafeArea(
       top: false,
@@ -38,6 +59,9 @@ class VideoRecorderBottomBar extends StatelessWidget {
               alignment: .center,
               children: [
                 VideoRecorderModeSelectorWheel(
+                  modes: dmRestricted
+                      ? _modesWithoutTogether
+                      : VideoRecorderMode.values,
                   selectedMode: state.recorderMode,
                   onModeChanged: (mode) => context
                       .read<VideoRecorderBloc>()

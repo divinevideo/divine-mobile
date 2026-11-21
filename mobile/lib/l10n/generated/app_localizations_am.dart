@@ -4043,6 +4043,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'ወደ የተገናኙ መድረኮችዎ ይላኩት። ማተሙ ጥቂት ደቂቃዎች ሊወስድ ይችላል።';
 
   @override
+  String get crosspostStarted => 'ቪዲዮው በጀርባ ወደ ሌሎች መድረኮች እየተለጠፈ ነው።';
+
+  @override
   String get crosspostSubmit => 'ተሻግሮ ማተም';
 
   @override
@@ -4095,6 +4098,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'ተሻግሮ ማተም አልተሳካም።';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>
@@ -8850,6 +8858,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'ካሜራዎችን አቀያይር';
 
   @override
+  String get videoRecorderDualCameraShapeHint => 'በቁም እና በካሬ መካከል ቀይር';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'ወደ $zoom× አጉላ';
   }
@@ -10508,16 +10519,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => 'ከሚወገደው ቀለም ምን ያህል እንደሚጠፋ';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'ጠርዝ';
+  String get videoEditorChromaKeyEdgeLabel => 'ለስላሳ ጠርዝ';
 
   @override
   String get videoEditorChromaKeyEdgeHint => 'ፀጉር እንዳይሸበሸብ መቁረጡን ያለሰልሳል';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'ቀለም መፍሰስ';
+  String get videoEditorChromaKeySpillLabel => 'ቅልሙን ያስወግዱ';
 
   @override
   String get videoEditorChromaKeySpillHint => 'የሚወገደውን ቀለም ቅልም ከሰውዬው ላይ ያነሳል';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'ጥሩ ማስተካከያ';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'በዚህ ተካ';
@@ -10526,17 +10540,16 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'ምንም';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'ጥቁር';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'ቀለም';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'ምስል';
+  String get videoEditorChromaKeyBackgroundImage => 'ፎቶ';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'ቅንጥብ';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10553,6 +10566,12 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'ቅንጥቡን ለማንበብ ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'ሊያስወግዱት የሚፈልጉትን ቀለም ይንኩ';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'የሚወገደውን ቀለም በመፈለግ ላይ…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';
@@ -15449,6 +15468,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get messagesNoRooms => 'ገና ምንም ክፍሎች የሉም';
 
   @override
+  String get messagesRoomConnectionError =>
+      'ይህን ክፍል መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።';
+
+  @override
   String get followedHashtagsTitle => 'የተከተሏቸው ሃሽታጎች';
 
   @override
@@ -15588,6 +15611,48 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'ምስል በምስል ውስጥ፣ ከታች በቀኝ';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'ዘመም ያለ ጎን ለጎን';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'ዘመም ያለ አንዱ በሌላው ላይ';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'ሶስት ዘመም ያሉ ረድፎች';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'አራት ጎን ለጎን';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'አራት ረድፎች';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'ሶስት ከአንድ በላይ';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'አንድ ከሶስት ጎን';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'ሶስት ከአንድ ጎን';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => 'ክብ መስኮት፣ ከላይ በግራ';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => 'ክብ መስኮት፣ ከላይ በቀኝ';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft => 'ክብ መስኮት፣ ከታች በግራ';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight => 'ክብ መስኮት፣ ከታች በቀኝ';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'ሁለት ክብ መስኮቶች';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'ሶስት ክብ መስኮቶች';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16028,4 +16093,266 @@ class AppLocalizationsAm extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat፦ $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'አብረን ቪዲዮ እንሥራ! Divineን ይክፈቱ፣ ክፍሌን ይቀላቀሉ እና የእርስዎን ክፍል ይቅረጹ።';
+
+  @override
+  String get collabRoomJoinDmBody => 'እኔ አለሁ! የኔን ክፍል ለመቅረጽ ጓጉቻለሁ።';
+
+  @override
+  String get collabRoomDeclineDmBody => 'በዚህኛው መሳተፍ አልችልም። መልካም ጊዜ!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'የቪዲዮ ክፍላችንን ለቅቄያለሁ።';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'መቅረጽ ጀምረናል! Divineን ይክፈቱ እና የእርስዎን ክፍል ይቅረጹ።';
+
+  @override
+  String get collabRoomPostedDmBody => 'ቪዲዮአችን ታትሟል! ስለተሳተፉ እናመሰግናለን።';
+
+  @override
+  String get collabRoomCancelledDmBody => 'የቪዲዮ ክፍላችንን ሰርዣለሁ።';
+
+  @override
+  String get collabRoomUpdatedDmBody => 'በቪዲዮ ክፍላችን ለውጥ አለ። ለማየት Divineን ይክፈቱ።';
+
+  @override
+  String get collabRoomCameraMode => 'በጋራ';
+
+  @override
+  String get collabRoomTitle => 'አብሮ መሥራት';
+
+  @override
+  String get collabRoomMissing => 'ይህ ክፍል ከአሁን በኋላ የለም።';
+
+  @override
+  String get collabRoomYou => 'እርስዎ';
+
+  @override
+  String get collabRoomHost => 'አስተናጋጅ';
+
+  @override
+  String get collabRoomStatusInvited => 'ተጋብዘዋል';
+
+  @override
+  String get collabRoomStatusJoined => 'ተቀላቅለዋል';
+
+  @override
+  String get collabRoomStatusPartIn => 'ክፍሉ ደርሷል';
+
+  @override
+  String get collabRoomStatusDeclined => 'መሳተፍ አይችሉም';
+
+  @override
+  String get collabRoomStatusLeft => 'ለቅቀዋል';
+
+  @override
+  String get collabRoomStatusRemoved => 'በዚህኛው የሉም';
+
+  @override
+  String get collabRoomPickLayout => 'አቀማመጥ ይምረጡ';
+
+  @override
+  String get collabRoomStartButton => 'መቅረጽ ይጀምሩ';
+
+  @override
+  String get collabRoomStartHint =>
+      'አንድ ሰው እንደተቀላቀለ ይጀምሩ። እስከዚያ ያልተቀላቀለ በዚህኛው አይሳተፍም።';
+
+  @override
+  String get collabRoomWaitingForHost => 'አስተናጋጁ መቅረጽ እስኪጀምር በመጠበቅ ላይ።';
+
+  @override
+  String get collabRoomJoinButton => 'ይቀላቀሉ';
+
+  @override
+  String get collabRoomLeaveButton => 'ክፍሉን ይልቀቁ';
+
+  @override
+  String get collabRoomFilmPartButton => 'የኔን ክፍል ልቅረጽ';
+
+  @override
+  String get collabRoomRefilmPartButton => 'እንደገና ይቅረጹ';
+
+  @override
+  String get collabRoomFilmHint =>
+      'እያንዳንዱ ሰው የራሱን ክፍል ይቀርጻል። ክፍሉ በእርስዎ ሕዋስ ቅርጽ ይቆረጣል።';
+
+  @override
+  String get collabRoomComposeButton => 'ያገናኙ';
+
+  @override
+  String get collabRoomComposeWaiting => 'የሁሉንም ክፍሎች በመጠበቅ ላይ።';
+
+  @override
+  String get collabRoomSoundHint => 'ድምፁን ለመጠቀም አንድ ክፍል ይንኩ።';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'የዚህን ክፍል ድምፅ ይጠቀሙ';
+
+  @override
+  String get collabRoomRemoveMember => 'ያስወግዱ';
+
+  @override
+  String get collabRoomCancelButton => 'ይሰርዙ';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'ይህ ቪዲዮ ይሰረዝ?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'ክፍሉ ለሁሉም ይዘጋል።';
+
+  @override
+  String get collabRoomPickNewLayout => 'አንድ ሰው ወጥቷል። ለቀሩት ሰዎች አቀማመጥ ይምረጡ።';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'አንድ ሰው ተቀላቅሏል። ለሁሉም የሚስማማ አቀማመጥ ይምረጡ።';
+
+  @override
+  String get collabRoomComposing => 'በማገናኘት ላይ…';
+
+  @override
+  String get collabRoomComposeFailed => 'ቪዲዮውን ማገናኘት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get collabRoomPosted => 'ይህ ቪዲዮ ታትሟል። ሁላችሁም ጥሩ ሠርታችኋል!';
+
+  @override
+  String get collabRoomCancelled => 'ይህ ክፍል ተሰርዟል።';
+
+  @override
+  String get collabRoomActionFailed => 'አልተሳካም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get collabRoomRemovedYou => 'በዚህኛው የሉበትም።';
+
+  @override
+  String get collabRoomDeclinedYou => 'ይህን ግብዣ አልተቀበሉም።';
+
+  @override
+  String get collabRoomPartSent => 'ክፍልዎ ደርሷል። አስተናጋጁ ሁሉንም ያገናኛል።';
+
+  @override
+  String get collabRoomPartTitle => 'የእርስዎ ክፍል';
+
+  @override
+  String get collabRoomPartRendering => 'ክፍልዎ በመዘጋጀት ላይ…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'ክፍልዎን ማዘጋጀት አልተቻለም።';
+
+  @override
+  String get collabRoomPartSendButton => 'ክፍሌን ላክ';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'ክፍልዎ በመጫን ላይ… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'ተጭኗል። ለመላክ ዝግጁ ነው።';
+
+  @override
+  String get collabRoomInviteAgain => 'እንደገና ጋብዝ';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'ይህን ክፍል ይልቀቁ?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'ተመልሰው እንዲገቡ መጋበዝ የሚችለው አዘጋጁ ብቻ ነው።';
+
+  @override
+  String get collabRoomPartSendFailed => 'ክፍልዎን መላክ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get collabRoomLobbyTitle => 'አብሮ ቪዲዮ መሥራት';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'እስከ 3 ጓደኞች ይጋብዙ። እያንዳንዱ ሰው የራሱን ክፍል ይቀርጻል፣ ሁሉም በአንድ የተከፈለ ማያ ቪዲዮ ይገናኛል።';
+
+  @override
+  String get collabRoomLobbyInvite => 'ጓደኞችን ይጋብዙ';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'ማን ይሳተፋል?';
+
+  @override
+  String get collabRoomLobbyRooms => 'የእርስዎ ክፍሎች';
+
+  @override
+  String get collabRoomTileHosting => 'የእርስዎ ክፍል';
+
+  @override
+  String get collabRoomTileGuest => 'የጓደኛ ክፍል';
+
+  @override
+  String get collabRoomPhaseLobby => 'ሰዎች እስኪቀላቀሉ በመጠበቅ ላይ';
+
+  @override
+  String get collabRoomPhaseRecording => 'ክፍሎች እየተቀረጹ ነው';
+
+  @override
+  String get collabRoomPhaseReady => 'ለመቅረጽ ዝግጁ';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => 'አስተናጋጁ መቅረጽ እስኪጀምር በመጠበቅ ላይ';
+
+  @override
+  String get collabRoomPhaseInvited => 'ተጋብዘዋል። ለመቀላቀል ይንኩ።';
+
+  @override
+  String get collabRoomCreateFailed => 'ግብዣዎቹን መላክ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get collabRoomInviteCardTitle => 'አብረን ቪዲዮ እንሥራ';
+
+  @override
+  String get collabRoomInviteCardBody => 'ክፍሉን ይቀላቀሉ፣ እያንዳንዱም የራሱን ክፍል ይቀርጻል።';
+
+  @override
+  String get collabRoomOpenButton => 'ክፍሉን ይክፈቱ';
+
+  @override
+  String get collabRoomCallMute => 'ድምፅ ያጥፉ';
+
+  @override
+  String get collabRoomCallUnmute => 'ድምፅ ይክፈቱ';
+
+  @override
+  String get collabRoomCallCameraOn => 'ካሜራ ያብሩ';
+
+  @override
+  String get collabRoomCallCameraOff => 'ካሜራ ያጥፉ';
+
+  @override
+  String get collabRoomCallConnecting => 'ጥሪዎ በመገናኘት ላይ…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'ጥሪውን መጀመር አልተቻለም። Divine ማይክሮፎንዎን መጠቀም መፈቀዱን ያረጋግጡ።';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'ሌሎቹን ማግኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get collabRoomCallJoin => 'ጥሪውን ተቀላቀል';
+
+  @override
+  String get collabRoomCallCameraFailed => 'ካሜራዎን ማብራት አልተቻለም።';
+
+  @override
+  String get collabRoomCallMuted => 'ድምፅ ጠፍቷል';
+
+  @override
+  String get collabRoomSwapSeatHint => 'ቦታዎቹን ለመቀያየር በአቀማመጡ ላይ ሁለት ቦታዎችን ይንኩ።';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'ይህን ቦታ ይቀይሩ';
 }

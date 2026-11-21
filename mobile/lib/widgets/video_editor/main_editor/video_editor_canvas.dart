@@ -24,6 +24,8 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/collab_room/view/widgets/collab_room_cell_guide.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/audio_volume_curve_mapping.dart';
@@ -52,6 +54,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
@@ -2952,8 +2955,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final previewReleased = scope.previewReleasedNotifier;
     final gate = _decoderReleaseGate = Completer<void>();
     _isMetadataRouteActive = true;
+    // A collaborative room's part goes back to its room, not to a post.
+    final part = ref.read(collabRoomPartProvider);
+    final partRoomId = part != null && part.isActive ? part.roomId : null;
     final navigation = context.push(
-      VideoMetadataScreen.pathForDraft(isStopMotion: _isStopMotionComposition),
+      partRoomId != null
+          ? RoutePaths.collabRoomPartFor(partRoomId)
+          : VideoMetadataScreen.pathForDraft(
+              isStopMotion: _isStopMotionComposition,
+            ),
     );
     try {
       await (awaitCover?.call() ??
@@ -3793,6 +3803,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       builder: (context) => VideoEditorFeedPreviewOverlay(
                         targetAspectRatio: targetAspectRatio.value,
                         isFeedPreviewVisible: editor.isLayerBeingTransformed,
+                      ),
+                      stream: rebuildStream,
+                    ),
+                    ReactiveWidget(
+                      builder: (context) => CollabRoomCellGuide(
+                        frameAspectRatio: targetAspectRatio.value,
                       ),
                       stream: rebuildStream,
                     ),

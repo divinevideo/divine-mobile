@@ -19,6 +19,7 @@ class PublishSuccess extends PublishResult {
     this.signedEventBody,
     this.inviteWarnings = const [],
     this.audioReuseDegraded = false,
+    this.collabRoomNotificationPending = false,
   });
 
   /// The published video's `d` tag, which is also its [VideoEvent.stableId].
@@ -45,6 +46,9 @@ class PublishSuccess extends PublishResult {
   /// but silently dropping an explicit sharing choice is worse than saying so.
   final bool audioReuseDegraded;
 
+  /// Whether the published draft still owns a Together room notification.
+  final bool collabRoomNotificationPending;
+
   bool get hasInviteWarnings => inviteWarnings.isNotEmpty;
 
   @override
@@ -54,6 +58,7 @@ class PublishSuccess extends PublishResult {
     signedEventBody,
     inviteWarnings,
     audioReuseDegraded,
+    collabRoomNotificationPending,
   ];
 }
 

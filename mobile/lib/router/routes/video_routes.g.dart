@@ -34,6 +34,7 @@ mixin $VideoRecorderRouteData on GoRouteData {
       VideoRecorderRouteData(
         challengeRecording: state.uri.queryParameters['challenge_recording'],
         entryPoint: state.uri.queryParameters['entry_point'],
+        collabRoom: state.uri.queryParameters['collab_room'],
         $extra: state.extra as Object?,
       );
 
@@ -46,6 +47,7 @@ mixin $VideoRecorderRouteData on GoRouteData {
       if (_self.challengeRecording != null)
         'challenge_recording': _self.challengeRecording,
       if (_self.entryPoint != null) 'entry_point': _self.entryPoint,
+      if (_self.collabRoom != null) 'collab_room': _self.collabRoom,
     },
   );
 

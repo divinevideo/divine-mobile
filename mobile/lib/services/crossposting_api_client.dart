@@ -248,6 +248,16 @@ class CrosspostingApiException implements Exception {
       '(status: ${statusCode ?? 'none'}, code: ${code ?? 'none'})';
 }
 
+/// A background request cannot obtain a signature without user interaction.
+class CrosspostingPassiveSigningUnavailable extends CrosspostingApiException {
+  const CrosspostingPassiveSigningUnavailable({this.retryable = false})
+    : super('Background signature unavailable');
+
+  /// The current account uses silent remote signing, so a null token may
+  /// reflect a temporary transport failure rather than missing permission.
+  final bool retryable;
+}
+
 /// Client for the Divine crossposter service
 /// (https://crossposter.divine.video).
 ///
@@ -260,10 +270,12 @@ class CrosspostingApiClient {
     required String? ownerPubkey,
     String baseUrl = defaultBaseUrl,
     http.Client? httpClient,
+    http.Client? passiveHttpClient,
   }) : _nip98AuthService = nip98AuthService,
        _ownerPubkey = ownerPubkey,
        _baseUrl = baseUrl,
-       _httpClient = httpClient ?? http.Client();
+       _httpClient = httpClient ?? http.Client(),
+       _passiveHttpClient = passiveHttpClient;
 
   /// The crossposter service, overridable per build with `CROSSPOSTER_URL`
   /// so a local-stack or staging run reaches the same host as the rest of
@@ -281,9 +293,13 @@ class CrosspostingApiClient {
   final String? _ownerPubkey;
   final String _baseUrl;
   final http.Client _httpClient;
+  final http.Client? _passiveHttpClient;
 
   /// Releases resources held by the HTTP client.
-  void close() => _httpClient.close();
+  void close() {
+    _httpClient.close();
+    _passiveHttpClient?.close();
+  }
 
   static const _unauthorized = CrosspostingApiException(
     'Not authenticated',
@@ -301,6 +317,7 @@ class CrosspostingApiClient {
     HttpMethod method,
     Uri uri, {
     String? body,
+    bool allowUserInteraction = true,
   }) async {
     final owner = _ownerPubkey;
     if (owner == null || owner.isEmpty) throw _unauthorized;
@@ -309,7 +326,13 @@ class CrosspostingApiClient {
       method: method,
       payload: body,
       reuseCached: false,
+      allowUserInteraction: allowUserInteraction,
     );
+    if (token == null && !allowUserInteraction) {
+      throw CrosspostingPassiveSigningUnavailable(
+        retryable: _nip98AuthService.usesRemoteSilentSigner(owner),
+      );
+    }
     if (token == null || token.signedEvent.pubkey != owner) {
       throw _unauthorized;
     }
@@ -480,12 +503,14 @@ class CrosspostingApiClient {
   Future<List<CrosspostJob>> createCrossposts({
     required String eventId,
     required List<String> platforms,
+    bool allowUserInteraction = true,
   }) async {
     final json = await _send(
       'POST',
       '/videos/${Uri.encodeComponent(eventId)}/crossposts',
       body: {'platforms': platforms},
       allowEmpty: false,
+      allowUserInteraction: allowUserInteraction,
     );
     return _parseJobs(json);
   }
@@ -496,6 +521,7 @@ class CrosspostingApiClient {
   Future<List<CrosspostJob>> getCrossposts({required String eventId}) async {
     final json = await _get(
       '/videos/${Uri.encodeComponent(eventId)}/crossposts',
+      allowUserInteraction: false,
     );
     return _parseJobs(json);
   }
@@ -513,11 +539,19 @@ class CrosspostingApiClient {
         .toList();
   }
 
-  Future<Map<String, dynamic>> _get(String path) async {
+  Future<Map<String, dynamic>> _get(
+    String path, {
+    bool allowUserInteraction = true,
+  }) async {
     final uri = Uri.parse('$_baseUrl$path');
-    final headers = await _authHeaders(HttpMethod.get, uri);
+    final headers = await _authHeaders(
+      HttpMethod.get,
+      uri,
+      allowUserInteraction: allowUserInteraction,
+    );
+    final client = _transport(allowUserInteraction);
     final response = await _request(
-      () => _httpClient.get(uri, headers: headers),
+      () => client.get(uri, headers: headers),
     );
     return _decode(response);
   }
@@ -527,6 +561,7 @@ class CrosspostingApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool allowEmpty = true,
+    bool allowUserInteraction = true,
   }) async {
     final uri = Uri.parse('$_baseUrl$path');
     final encodedBody = body == null ? null : jsonEncode(body);
@@ -539,19 +574,24 @@ class CrosspostingApiClient {
       },
       uri,
       body: encodedBody,
+      allowUserInteraction: allowUserInteraction,
     );
+    final client = _transport(allowUserInteraction);
     final response = await switch (method) {
       'POST' => _request(
-        () => _httpClient.post(uri, headers: headers, body: encodedBody),
+        () => client.post(uri, headers: headers, body: encodedBody),
       ),
       'PUT' => _request(
-        () => _httpClient.put(uri, headers: headers, body: encodedBody),
+        () => client.put(uri, headers: headers, body: encodedBody),
       ),
-      'DELETE' => _request(() => _httpClient.delete(uri, headers: headers)),
+      'DELETE' => _request(() => client.delete(uri, headers: headers)),
       _ => throw ArgumentError.value(method, 'method'),
     };
     return _decode(response, allowEmpty: allowEmpty);
   }
+
+  http.Client _transport(bool allowUserInteraction) =>
+      allowUserInteraction ? _httpClient : _passiveHttpClient ?? _httpClient;
 
   Future<http.Response> _request(
     Future<http.Response> Function() request,

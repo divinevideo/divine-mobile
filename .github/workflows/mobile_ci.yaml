@@ -45,7 +45,7 @@ jobs:
       # Fetch only the test-backed detector. The changed-file list itself still
       # comes from the REST API, avoiding a full-history checkout on the
       # workflow's critical path (every other job `needs: changes`).
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           sparse-checkout: mobile/scripts/ci/detect_mobile_ci_scope.sh
           sparse-checkout-cone-mode: false
@@ -64,7 +64,7 @@ jobs:
     name: Codex Configuration
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Verify generated skills and lifecycle hooks
         run: bash .codex/scripts/test-config.sh
 
@@ -87,7 +87,7 @@ jobs:
     name: Codemagic Variable Groups
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🔑 Verify every Codemagic variable group is documented
         # Static — no simulator, no build, no credentials — so fork PRs get it
         # too. Codemagic validates the whole config before provisioning, so an
@@ -101,7 +101,7 @@ jobs:
     name: CI Configuration Tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           # Provenance tests verify the historical release baseline tree.
           fetch-depth: 0
@@ -129,7 +129,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -185,7 +185,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🔀 Fetch origin/main for ratchet baselines
         # The ratchet scripts compare against origin/main. Fetch it once here
         # so each script is order-independent; a fetch failure fails the job
@@ -236,7 +236,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -260,7 +260,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -291,7 +291,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -432,7 +432,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🏷️ Verify skip_very_good_optimization tag count does not increase
         # Guards #3137. The tag set drifts silently: a feature PR can add a
         # new `@Tags(['skip_very_good_optimization'])` opt-out without anyone
@@ -500,7 +500,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -560,7 +560,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -608,7 +608,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Select Xcode 26
         # The image defaults to Xcode 16; divine_camera targets iOS 26 API
         # behind `#available(iOS 26.0, *)`, which needs the iOS 26 SDK.
@@ -866,7 +866,7 @@ jobs:
             exit 1
           fi
       - name: Checkout timing budget inputs
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         if: ${{ needs.changes.outputs.app == 'true' }}
         with:
           sparse-checkout: |

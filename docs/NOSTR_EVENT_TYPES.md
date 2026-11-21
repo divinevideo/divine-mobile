@@ -229,6 +229,66 @@ one of their videos, and the ones they hid
 - Sent by `QuestionAnswerCubit` through `DmRepository.sendSharedVideo`; never
   sent as a plaintext kind 4 copy
 
+### Collaborative Recording Rooms (NIP-17)
+**Used for:** The camera's Together mode, where up to four people each film
+their own part of one split-screen video
+
+**Implementation:**
+- No new event kind. A room lives in one-to-one NIP-17 messages between its
+  author and each invitee, so members never message each other and nothing
+  about the room is public until the video is posted
+- Every room message carries `["divine", "collab-room", "1"]` and
+  `["collab-room", "<room id>", "<type>", "<recipient pubkey>"]`. The room id
+  is 16 random bytes in hex. The recipient must be the other side of the
+  message's conversation, or the message is ignored
+- Kind 14 types: `invite`, `state` (author to member), `join`, `decline`,
+  `leave` (member to author). `invite` and `state` also carry
+  `["collab-room-state", "<snapshot JSON>"]`: revision, phase
+  (`lobby`/`recording`/`posted`/`cancelled`), members with status and layout
+  cell, layout name, `vertical` or `square`, whose sound the video keeps, the
+  finished parts, and the posted video's address. The highest revision wins
+- Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
+  Blossom sent to the author as a NIP-17 file message. The author forwards each
+  part's URL and key to joined members while the room is open
+- The author is whoever sent the account its invite. Room ids are random, so
+  an honest room has one inviter; a room the account was invited to by two
+  people is dropped, since rumor timestamps are the senders' own to choose.
+  On a member's device the member counts as joined only once its own `join`
+  for the current invite revision is in its history, whatever the author's
+  snapshot says
+- Every device folds its own DM history into its rooms
+  (`foldCollabRooms` in `dm_repository`); the author's device publishes a new
+  snapshot whenever it knows more than its last one shows. With nobody left in
+  the room, a snapshot goes to everyone it ever had, since the author's device
+  only learns its own snapshots from the messages it sent
+- The author can invite someone who left, declined or was removed again: a new
+  `invite` to them, with a snapshot listing them as invited and the member's
+  new `invite` revision. Replies and parts for a repeat invitation carry
+  that revision as a fifth field in their `collab-room` tag, so delayed
+  answers or takes from the previous invitation are ignored
+- The posted video tags everyone who handed in a part with the usual
+  collaborator `p` tag, so the collaborator invite and kind 34238 acceptance
+  run as for any other collaboration
+- The snapshot also carries the room's call key, a private key the author
+  generates. Joined members are in a peer-to-peer WebRTC call while the room
+  is open on their screen; it joins on its own with the microphone on. Each
+  signal is NIP-44 encrypted between the sender and recipient's accounts
+  and bound to the room key's public key. A short-lived kind 1059 event wraps
+  the encrypted signal and routing information using the room key, with
+  `["p", "<call pubkey>"]` and a NIP-40 `["expiration", ...]` ten minutes out.
+  relay.divine.video accepts only an allowlist of kinds, and none of its
+  ephemeral kinds fits. The JSON inside says `hello`, `offer`, `answer`,
+  `state`, `bye` or `lobby`. The routing is sealed only to the room key, which
+  never changes, so everyone who ever held it, a member taken out included,
+  can see who signals whom and when, though not what
+- `lobby` is the author's lobby as it stands — the layout and who sits where —
+  so the others see a change within a few hundred milliseconds instead of
+  waiting for the next snapshot, which is held back half a second to batch
+  taps and then signed through the account's signer. It is only a preview:
+  members apply it only from the author's pubkey and only in the lobby, and the
+  first snapshot with a revision past the one it names replaces it. The
+  signed room snapshot stays the record
+
 ## Event Subscription Requirements
 
 ### VideoEventService Subscriptions

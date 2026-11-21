@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -189,13 +190,28 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'turns dual-camera capture off again',
+        'folds the capture rail as it turns dual-camera capture on',
+        build: buildBloc,
+        act: (bloc) => bloc
+          ..add(const VideoRecorderActionRailToggled())
+          ..add(const VideoRecorderDualCameraToggled()),
+        verify: (bloc) {
+          expect(bloc.state.isDualCameraEnabled, isTrue);
+          expect(bloc.state.isActionRailExpanded, isFalse);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'turns dual-camera capture off again and folds the capture rail',
         setUp: () => dualEnabled = true,
         build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderDualCameraToggled()),
+        act: (bloc) => bloc
+          ..add(const VideoRecorderActionRailToggled())
+          ..add(const VideoRecorderDualCameraToggled()),
         verify: (bloc) {
           verify(() => camera.setDualCameraEnabled(enabled: false)).called(1);
           expect(bloc.state.isDualCameraEnabled, isFalse);
+          expect(bloc.state.isActionRailExpanded, isFalse);
           expect(bloc.state.secondaryPreviewTextureId, isNull);
         },
       );
@@ -475,15 +491,27 @@ void main() {
       );
     });
 
-    group(VideoRecorderDualCameraPipMoved, () {
+    group(VideoRecorderDualCameraPipChanged, () {
       setUp(stubCamera);
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps the window center inside the frame',
         build: buildBloc,
         act: (bloc) => bloc
-          ..add(const VideoRecorderDualCameraPipMoved(Offset(0.25, 0.6)))
-          ..add(const VideoRecorderDualCameraPipMoved(Offset(1.4, -0.2))),
+          ..add(
+            const VideoRecorderDualCameraPipChanged(
+              center: Offset(0.25, 0.6),
+              scale: 1,
+              rotation: 0,
+            ),
+          )
+          ..add(
+            const VideoRecorderDualCameraPipChanged(
+              center: Offset(1.4, -0.2),
+              scale: 1,
+              rotation: 0,
+            ),
+          ),
         expect: () => [
           isA<VideoRecorderBlocState>().having(
             (s) => s.dualCameraPipCenter,
@@ -494,6 +522,68 @@ void main() {
             (s) => s.dualCameraPipCenter,
             'dualCameraPipCenter',
             const Offset(1, 0),
+          ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the pinched size no larger than the largest window',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoRecorderDualCameraPipChanged(
+            center: Offset(0.5, 0.5),
+            scale: 3,
+            rotation: 0,
+          ),
+        ),
+        expect: () => [
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.dualCameraPipScale,
+            'dualCameraPipScale',
+            SecondaryCameraTake.pipMaxScale,
+          ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'stores a turn past half a circle as the turn the other way',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoRecorderDualCameraPipChanged(
+            center: Offset(0.5, 0.5),
+            scale: 1,
+            rotation: 1.5 * math.pi,
+          ),
+        ),
+        expect: () => [
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.dualCameraPipRotation,
+            'dualCameraPipRotation',
+            closeTo(-math.pi / 2, 1e-9),
+          ),
+        ],
+      );
+    });
+
+    group(VideoRecorderDualCameraPipShapeToggled, () {
+      setUp(stubCamera);
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'switches the window between portrait and square',
+        build: buildBloc,
+        act: (bloc) => bloc
+          ..add(const VideoRecorderDualCameraPipShapeToggled())
+          ..add(const VideoRecorderDualCameraPipShapeToggled()),
+        expect: () => [
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.dualCameraPipAspectRatio,
+            'dualCameraPipAspectRatio',
+            model.AspectRatio.square,
+          ),
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.dualCameraPipAspectRatio,
+            'dualCameraPipAspectRatio',
+            model.AspectRatio.vertical,
           ),
         ],
       );
@@ -524,6 +614,9 @@ void main() {
             captureChromaKey: any(named: 'captureChromaKey'),
             secondaryRecording: any(named: 'secondaryRecording'),
             secondaryPipCenter: any(named: 'secondaryPipCenter'),
+            secondaryPipScale: any(named: 'secondaryPipScale'),
+            secondaryPipRotation: any(named: 'secondaryPipRotation'),
+            secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
           ),
         ).thenReturn(
           DivineVideoClip(
@@ -557,10 +650,16 @@ void main() {
       });
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'hands the second file and the window position to the clip',
-        build: () =>
-            buildBloc(recordingState: VideoRecorderState.recording)
-              ..add(const VideoRecorderDualCameraPipMoved(Offset(0.2, 0.3))),
+        'hands the second file and the window placement to the clip',
+        build: () => buildBloc(recordingState: VideoRecorderState.recording)
+          ..add(
+            const VideoRecorderDualCameraPipChanged(
+              center: Offset(0.2, 0.3),
+              scale: 1.5,
+              rotation: 0.4,
+            ),
+          )
+          ..add(const VideoRecorderDualCameraPipShapeToggled()),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
         verify: (_) {
           verify(
@@ -573,6 +672,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: second,
               secondaryPipCenter: const Offset(0.2, 0.3),
+              secondaryPipScale: 1.5,
+              secondaryPipRotation: 0.4,
+              secondaryPipAspectRatio: model.AspectRatio.square,
             ),
           ).called(1);
         },
@@ -611,6 +713,9 @@ void main() {
               captureChromaKey: any(named: 'captureChromaKey'),
               secondaryRecording: any(named: 'secondaryRecording'),
               secondaryPipCenter: any(named: 'secondaryPipCenter'),
+              secondaryPipScale: any(named: 'secondaryPipScale'),
+              secondaryPipRotation: any(named: 'secondaryPipRotation'),
+              secondaryPipAspectRatio: any(named: 'secondaryPipAspectRatio'),
             ),
           ).thenAnswer((_) => captured);
         });

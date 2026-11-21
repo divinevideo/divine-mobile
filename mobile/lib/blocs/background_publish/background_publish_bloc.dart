@@ -223,7 +223,11 @@ class BackgroundPublishBloc
         }
         return;
       }
-      await _deletePublishedDrafts(event.draft);
+      if (result.collabRoomNotificationPending) {
+        await _deleteSourceDraft(event.draft);
+      } else {
+        await _deletePublishedDrafts(event.draft);
+      }
       return;
     }
 

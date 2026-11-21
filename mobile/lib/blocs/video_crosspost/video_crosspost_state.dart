@@ -27,6 +27,7 @@ enum VideoCrosspostSubmitError {
   notEligible,
   notConnected,
   unauthorized,
+  signingUnavailable,
   network,
 }
 
@@ -57,6 +58,12 @@ class VideoCrosspostState extends Equatable {
 
   List<String> get connectedPlatforms =>
       connectedConnections.map((c) => c.platform.wireName).toList();
+
+  /// The connected connections the creator left selected.
+  List<CrosspostingConnection> get selectedConnections => [
+    for (final connection in connectedConnections)
+      if (selectedPlatforms.contains(connection.platform.wireName)) connection,
+  ];
 
   bool get hasPendingJobs => jobs.any((j) => j.status.isPending);
 

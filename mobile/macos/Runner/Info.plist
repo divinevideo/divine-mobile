@@ -52,9 +52,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Divine needs access to your camera to record short videos.</string>
+	<string>Divine uses your camera to record short videos, and to show you to the others in a Together call when you turn it on.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Divine needs access to your microphone to record audio for your videos and sounds.</string>
+	<string>Divine uses your microphone to record audio for your videos and sounds, and to let you talk to the others in a Together call.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Divine needs access to save videos to your Photos library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

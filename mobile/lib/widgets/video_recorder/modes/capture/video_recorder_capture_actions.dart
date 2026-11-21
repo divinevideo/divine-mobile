@@ -50,7 +50,8 @@ const List<Shadow> _railCaptionShadows = [
 /// Folded, the rail offers flash, lens and aspect ratio, and a fourth button
 /// that unfolds it. Unfolded, it lists every control the mode offers, each
 /// with its name next to the icon, and the unfold button moves to the bottom
-/// to fold it again. A take or a stop-motion interval folds it as well.
+/// to fold it again. A take, a stop-motion interval or turning dual-camera
+/// capture on or off folds it as well.
 class VideoRecorderCaptureActions extends ConsumerWidget {
   const VideoRecorderCaptureActions({super.key});
 
@@ -338,7 +339,7 @@ class _ColorMaskButton extends StatelessWidget {
       (VideoRecorderBloc b) => b.state.isChromaKeyEnabled,
     );
     return _RailButton(
-      icon: .selection,
+      icon: .colorMask,
       label: context.l10n.videoEditorChromaKeyLabel,
       caption: context.l10n.videoEditorChromaKeyLabel,
       identifier: SemanticIds.cameraColorMaskButton,

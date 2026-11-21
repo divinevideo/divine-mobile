@@ -308,10 +308,12 @@ class SplitScreenPresetPicker extends StatelessWidget {
         children: [
           for (final preset in SplitScreenLayoutPreset.values) ...[
             if (preset.index > 0) const SizedBox(width: 12),
-            _PresetTile(
+            SplitScreenPresetTile(
               preset: preset,
               frameAspectRatio: frameAspectRatio,
               isSelected: preset == selected,
+              onTap: () =>
+                  context.read<SplitScreenLayoutCubit>().presetSelected(preset),
             ),
           ],
         ],
@@ -320,16 +322,23 @@ class SplitScreenPresetPicker extends StatelessWidget {
   }
 }
 
-class _PresetTile extends StatelessWidget {
-  const _PresetTile({
+/// A tile drawing [preset]'s cells, the picked one outlined in the accent.
+///
+/// Shared by the editor's layout screen and the collaborative room, where the
+/// author picks the layout everyone films in.
+class SplitScreenPresetTile extends StatelessWidget {
+  const SplitScreenPresetTile({
     required this.preset,
     required this.frameAspectRatio,
     required this.isSelected,
+    required this.onTap,
+    super.key,
   });
 
   final SplitScreenLayoutPreset preset;
   final double frameAspectRatio;
   final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -337,10 +346,9 @@ class _PresetTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: _label(context),
+      label: splitScreenPresetLabel(context, preset),
       child: GestureDetector(
-        onTap: () =>
-            context.read<SplitScreenLayoutCubit>().presetSelected(preset),
+        onTap: onTap,
         child: Container(
           width: SplitScreenPresetPicker.tileHeight,
           padding: const .all(8),
@@ -357,7 +365,7 @@ class _PresetTile extends StatelessWidget {
               aspectRatio: frameAspectRatio,
               child: CustomPaint(
                 painter: _PresetPainter(
-                  cells: preset.cellRects(
+                  cells: preset.cells(
                     aspectRatio: frameAspectRatio,
                     gap: _iconGap,
                   ),
@@ -375,59 +383,83 @@ class _PresetTile extends StatelessWidget {
 
   /// Wide enough that the cells read as separate at icon size.
   static const double _iconGap = 0.08;
-
-  String _label(BuildContext context) => switch (preset) {
-    .sideBySide => context.l10n.videoEditorLayoutPresetSideBySide,
-    .stacked => context.l10n.videoEditorLayoutPresetStacked,
-    .threeColumns => context.l10n.videoEditorLayoutPresetThreeColumns,
-    .threeStacked => context.l10n.videoEditorLayoutPresetThreeStacked,
-    .oneOverTwo => context.l10n.videoEditorLayoutPresetOneOverTwo,
-    .twoOverOne => context.l10n.videoEditorLayoutPresetTwoOverOne,
-    .oneBesideTwo => context.l10n.videoEditorLayoutPresetOneBesideTwo,
-    .twoBesideOne => context.l10n.videoEditorLayoutPresetTwoBesideOne,
-    .grid => context.l10n.videoEditorLayoutPresetGrid,
-    .oneOverThree => context.l10n.videoEditorLayoutPresetOneOverThree,
-    .pictureInPictureTopLeft =>
-      context.l10n.videoEditorLayoutPresetPictureInPictureTopLeft,
-    .pictureInPictureTopRight =>
-      context.l10n.videoEditorLayoutPresetPictureInPictureTopRight,
-    .pictureInPictureBottomLeft =>
-      context.l10n.videoEditorLayoutPresetPictureInPictureBottomLeft,
-    .pictureInPictureBottomRight =>
-      context.l10n.videoEditorLayoutPresetPictureInPictureBottomRight,
-  };
 }
+
+/// The name screen readers announce for [preset].
+String splitScreenPresetLabel(
+  BuildContext context,
+  SplitScreenLayoutPreset preset,
+) => switch (preset) {
+  .sideBySide => context.l10n.videoEditorLayoutPresetSideBySide,
+  .stacked => context.l10n.videoEditorLayoutPresetStacked,
+  .slantedSideBySide => context.l10n.videoEditorLayoutPresetSlantedSideBySide,
+  .slantedStacked => context.l10n.videoEditorLayoutPresetSlantedStacked,
+  .threeColumns => context.l10n.videoEditorLayoutPresetThreeColumns,
+  .threeStacked => context.l10n.videoEditorLayoutPresetThreeStacked,
+  .slantedThreeStacked =>
+    context.l10n.videoEditorLayoutPresetSlantedThreeStacked,
+  .oneOverTwo => context.l10n.videoEditorLayoutPresetOneOverTwo,
+  .twoOverOne => context.l10n.videoEditorLayoutPresetTwoOverOne,
+  .oneBesideTwo => context.l10n.videoEditorLayoutPresetOneBesideTwo,
+  .twoBesideOne => context.l10n.videoEditorLayoutPresetTwoBesideOne,
+  .grid => context.l10n.videoEditorLayoutPresetGrid,
+  .fourColumns => context.l10n.videoEditorLayoutPresetFourColumns,
+  .fourStacked => context.l10n.videoEditorLayoutPresetFourStacked,
+  .oneOverThree => context.l10n.videoEditorLayoutPresetOneOverThree,
+  .threeOverOne => context.l10n.videoEditorLayoutPresetThreeOverOne,
+  .oneBesideThree => context.l10n.videoEditorLayoutPresetOneBesideThree,
+  .threeBesideOne => context.l10n.videoEditorLayoutPresetThreeBesideOne,
+  .pictureInPictureTopLeft =>
+    context.l10n.videoEditorLayoutPresetPictureInPictureTopLeft,
+  .pictureInPictureTopRight =>
+    context.l10n.videoEditorLayoutPresetPictureInPictureTopRight,
+  .pictureInPictureBottomLeft =>
+    context.l10n.videoEditorLayoutPresetPictureInPictureBottomLeft,
+  .pictureInPictureBottomRight =>
+    context.l10n.videoEditorLayoutPresetPictureInPictureBottomRight,
+  .circleTopLeft => context.l10n.videoEditorLayoutPresetCircleTopLeft,
+  .circleTopRight => context.l10n.videoEditorLayoutPresetCircleTopRight,
+  .circleBottomLeft => context.l10n.videoEditorLayoutPresetCircleBottomLeft,
+  .circleBottomRight => context.l10n.videoEditorLayoutPresetCircleBottomRight,
+  .twoCircles => context.l10n.videoEditorLayoutPresetTwoCircles,
+  .threeCircles => context.l10n.videoEditorLayoutPresetThreeCircles,
+};
 
 class _PresetPainter extends CustomPainter {
   const _PresetPainter({required this.cells, required this.color});
 
-  final List<Rect> cells;
+  final List<SplitScreenCellGeometry> cells;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final fill = Paint()..color = color;
     // The picture-in-picture window sits on its big cell, so it is cut out of
-    // it to stay visible at icon size.
+    // it to stay visible at icon size. A round window already has its ring
+    // cut out of the cell under it.
     final outline = Paint()
       ..color = VineTheme.transparent
       ..blendMode = BlendMode.clear;
     canvas.saveLayer(Offset.zero & size, Paint());
-    for (final (index, cell) in cells.indexed) {
-      final rect = Rect.fromLTWH(
-        cell.left * size.width,
-        cell.top * size.height,
-        cell.width * size.width,
-        cell.height * size.height,
+    for (final (index, (:rect, :shape)) in cells.indexed) {
+      final inTile = Rect.fromLTWH(
+        rect.left * size.width,
+        rect.top * size.height,
+        rect.width * size.width,
+        rect.height * size.height,
       );
-      if (index > 0 && cells.first.overlaps(cell)) {
+      if (!shape.isRectangle) {
+        canvas.drawPath(shape.pathIn(inTile), fill);
+        continue;
+      }
+      if (index > 0 && cells.first.rect.overlaps(rect)) {
         canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.inflate(1.5), const .circular(3)),
+          RRect.fromRectAndRadius(inTile.inflate(1.5), const .circular(3)),
           outline,
         );
       }
       canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const .circular(2)),
+        RRect.fromRectAndRadius(inTile, const .circular(2)),
         fill,
       );
     }

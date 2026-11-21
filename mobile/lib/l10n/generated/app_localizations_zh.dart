@@ -3865,6 +3865,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get crosspostSheetSubtitle => '发送到你已连接的平台。发布可能需要几分钟。';
 
   @override
+  String get crosspostStarted => '正在后台发布到其他平台。';
+
+  @override
   String get crosspostSubmit => '跨平台发布';
 
   @override
@@ -3916,6 +3919,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => '跨平台发布失败。';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform：$reason';
+  }
 
   @override
   String get crosspostStillWorking => '仍在处理中。你可以关掉这个页面——发布会在后台继续。';
@@ -8526,6 +8534,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => '交换摄像头';
 
   @override
+  String get videoRecorderDualCameraShapeHint => '在竖屏和方形之间切换';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '变焦到 $zoom×';
   }
@@ -10156,16 +10167,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyAmountHint => '这个颜色被抠掉多少';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => '边缘';
+  String get videoEditorChromaKeyEdgeLabel => '柔化边缘';
 
   @override
   String get videoEditorChromaKeyEdgeHint => '让抠像边缘更柔和，头发不会毛刺';
 
   @override
-  String get videoEditorChromaKeySpillLabel => '溢色';
+  String get videoEditorChromaKeySpillLabel => '去除色偏';
 
   @override
   String get videoEditorChromaKeySpillHint => '把这个颜色映在主体上的色偏去掉';
+
+  @override
+  String get videoEditorChromaKeyFineTune => '微调';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '替换为';
@@ -10174,16 +10188,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => '无';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => '黑色';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => '颜色';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => '图片';
+  String get videoEditorChromaKeyBackgroundImage => '照片';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => '片段';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint => '片段后面的内容会透出来。';
@@ -10198,6 +10212,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       '读取片段花的时间太长了。再试一次「自动识别」，或者手动选颜色。';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => '点按要去掉的颜色';
+
+  @override
+  String get videoEditorChromaKeyDetecting => '正在查找要去掉的颜色…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';
@@ -14902,6 +14922,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messagesNoRooms => '暂无聊天室';
 
   @override
+  String get messagesRoomConnectionError => '无法连接到这个聊天室。请检查网络连接后重试。';
+
+  @override
   String get followedHashtagsTitle => '已关注的话题标签';
 
   @override
@@ -15035,6 +15058,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight => '画中画，右下';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => '斜线左右';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => '斜线上下';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => '斜线三行';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => '四列并排';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => '四行';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => '上三下一';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => '左一右三';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => '左三右一';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => '圆形窗口，左上';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => '圆形窗口，右上';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft => '圆形窗口，左下';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight => '圆形窗口，右下';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => '两个圆形窗口';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => '三个圆形窗口';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -15466,4 +15531,258 @@ class AppLocalizationsZh extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat：$outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody => '一起拍个视频吧！打开 Divine，加入我的房间，拍下你的部分。';
+
+  @override
+  String get collabRoomJoinDmBody => '我加入！等不及要拍我的部分了。';
+
+  @override
+  String get collabRoomDeclineDmBody => '这次来不了，玩得开心！';
+
+  @override
+  String get collabRoomLeaveDmBody => '我已离开我们的视频房间。';
+
+  @override
+  String get collabRoomStartedDmBody => '开拍了！打开 Divine，拍下你的部分。';
+
+  @override
+  String get collabRoomPostedDmBody => '我们的视频发布啦！谢谢你的参与。';
+
+  @override
+  String get collabRoomCancelledDmBody => '我取消了我们的视频房间。';
+
+  @override
+  String get collabRoomUpdatedDmBody => '我们的视频房间有变化，打开 Divine 看看。';
+
+  @override
+  String get collabRoomCameraMode => '一起拍';
+
+  @override
+  String get collabRoomTitle => '一起来拍';
+
+  @override
+  String get collabRoomMissing => '这个房间已经不存在了。';
+
+  @override
+  String get collabRoomYou => '你';
+
+  @override
+  String get collabRoomHost => '房主';
+
+  @override
+  String get collabRoomStatusInvited => '已邀请';
+
+  @override
+  String get collabRoomStatusJoined => '已加入';
+
+  @override
+  String get collabRoomStatusPartIn => '已交片段';
+
+  @override
+  String get collabRoomStatusDeclined => '来不了';
+
+  @override
+  String get collabRoomStatusLeft => '已离开';
+
+  @override
+  String get collabRoomStatusRemoved => '这次不参加';
+
+  @override
+  String get collabRoomPickLayout => '选择布局';
+
+  @override
+  String get collabRoomStartButton => '开始拍摄';
+
+  @override
+  String get collabRoomStartHint => '有人加入后就能开始。到那时还没加入的人这次就不参加了。';
+
+  @override
+  String get collabRoomWaitingForHost => '正在等待房主开始拍摄。';
+
+  @override
+  String get collabRoomJoinButton => '加入';
+
+  @override
+  String get collabRoomLeaveButton => '离开房间';
+
+  @override
+  String get collabRoomFilmPartButton => '拍我的部分';
+
+  @override
+  String get collabRoomRefilmPartButton => '重新拍';
+
+  @override
+  String get collabRoomFilmHint => '每个人拍自己的部分，会按你所在格子的形状裁剪。';
+
+  @override
+  String get collabRoomComposeButton => '合成视频';
+
+  @override
+  String get collabRoomComposeWaiting => '正在等待所有人的部分。';
+
+  @override
+  String get collabRoomSoundHint => '点一个部分即可使用它的声音。';
+
+  @override
+  String get collabRoomSoundSemanticLabel => '使用这个部分的声音';
+
+  @override
+  String get collabRoomRemoveMember => '移除';
+
+  @override
+  String get collabRoomCancelButton => '取消';
+
+  @override
+  String get collabRoomCancelConfirmTitle => '取消这个视频？';
+
+  @override
+  String get collabRoomCancelConfirmBody => '房间将对所有人关闭。';
+
+  @override
+  String get collabRoomPickNewLayout => '有人退出了。请为剩下的人选择一个布局。';
+
+  @override
+  String get collabRoomPickLayoutForAll => '有人加入了。请为所有人选择一个布局。';
+
+  @override
+  String get collabRoomComposing => '正在合成…';
+
+  @override
+  String get collabRoomComposeFailed => '视频合成失败，请重试。';
+
+  @override
+  String get collabRoomPosted => '这个视频已发布。大家辛苦了！';
+
+  @override
+  String get collabRoomCancelled => '这个房间已取消。';
+
+  @override
+  String get collabRoomActionFailed => '发送失败。请检查网络后重试。';
+
+  @override
+  String get collabRoomRemovedYou => '这次你不在其中。';
+
+  @override
+  String get collabRoomDeclinedYou => '你谢绝了这次邀请。';
+
+  @override
+  String get collabRoomPartSent => '你的部分已送达，房主会把所有部分合在一起。';
+
+  @override
+  String get collabRoomPartTitle => '你的部分';
+
+  @override
+  String get collabRoomPartRendering => '正在准备你的部分…';
+
+  @override
+  String get collabRoomPartRenderFailed => '无法准备你的部分。';
+
+  @override
+  String get collabRoomPartSendButton => '发送我的部分';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return '正在上传你的部分… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => '已上传，可以发送了。';
+
+  @override
+  String get collabRoomInviteAgain => '再次邀请';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => '离开这个房间？';
+
+  @override
+  String get collabRoomLeaveConfirmBody => '只有房主能再次邀请你。';
+
+  @override
+  String get collabRoomPartSendFailed => '无法发送你的部分，请重试。';
+
+  @override
+  String get collabRoomLobbyTitle => '一起拍视频';
+
+  @override
+  String get collabRoomLobbyBody => '最多邀请 3 位朋友。每个人拍自己的部分，最后合成一个分屏视频。';
+
+  @override
+  String get collabRoomLobbyInvite => '邀请朋友';
+
+  @override
+  String get collabRoomInvitePickerTitle => '谁来参加？';
+
+  @override
+  String get collabRoomLobbyRooms => '你的房间';
+
+  @override
+  String get collabRoomTileHosting => '你创建的房间';
+
+  @override
+  String get collabRoomTileGuest => '朋友的房间';
+
+  @override
+  String get collabRoomPhaseLobby => '正在等人加入';
+
+  @override
+  String get collabRoomPhaseRecording => '正在拍摄各部分';
+
+  @override
+  String get collabRoomPhaseReady => '可以开始拍摄了';
+
+  @override
+  String get collabRoomPhaseWaitingForHost => '正在等待房主开始拍摄';
+
+  @override
+  String get collabRoomPhaseInvited => '你收到了邀请，点按即可加入';
+
+  @override
+  String get collabRoomCreateFailed => '邀请发送失败，请重试。';
+
+  @override
+  String get collabRoomInviteCardTitle => '一起拍个视频吧';
+
+  @override
+  String get collabRoomInviteCardBody => '加入房间后，每个人拍自己的部分。';
+
+  @override
+  String get collabRoomOpenButton => '打开房间';
+
+  @override
+  String get collabRoomCallMute => '静音';
+
+  @override
+  String get collabRoomCallUnmute => '取消静音';
+
+  @override
+  String get collabRoomCallCameraOn => '打开摄像头';
+
+  @override
+  String get collabRoomCallCameraOff => '关闭摄像头';
+
+  @override
+  String get collabRoomCallConnecting => '正在连接通话…';
+
+  @override
+  String get collabRoomCallFailed => '无法开始通话。请检查 Divine 是否可以使用你的麦克风。';
+
+  @override
+  String get collabRoomCallUnreachable => '无法连接到其他人。请检查网络后重试。';
+
+  @override
+  String get collabRoomCallJoin => '加入通话';
+
+  @override
+  String get collabRoomCallCameraFailed => '无法打开你的摄像头。';
+
+  @override
+  String get collabRoomCallMuted => '已静音';
+
+  @override
+  String get collabRoomSwapSeatHint => '点按布局中的两个位置即可交换。';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => '交换这个位置';
 }

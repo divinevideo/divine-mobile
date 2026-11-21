@@ -8,6 +8,9 @@
     <!-- Camera and Microphone Permissions for Video Recording -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- The Together room call (flutter_webrtc) routes audio to the speaker
+         and into communication mode; Android ignores both without this. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Media/Storage Permissions for Profile Picture Selection -->

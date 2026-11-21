@@ -62,6 +62,9 @@ class ChromaKeyDetectRow extends StatelessWidget {
             child: DivineButton(
               label: l10n.videoEditorChromaKeyAutoDetect,
               leadingIcon: .sparkle,
+              // Styled like the presets: under Fine-tune it is one of three
+              // equal ways to set the colour, not the screen's main action.
+              type: .secondary,
               size: .small,
               // It is always drawn stretched, so its natural width has to be
               // measured with the stretched padding too, or the row would

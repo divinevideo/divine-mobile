@@ -25,7 +25,7 @@ jobs:
       github.actor != 'dependabot[bot]' &&
       (github.event.action == 'opened' || github.event.changes.title != null)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Lint the issue title
         id: lint

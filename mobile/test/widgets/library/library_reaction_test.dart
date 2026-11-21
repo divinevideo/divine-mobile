@@ -22,6 +22,7 @@ import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
@@ -500,8 +501,12 @@ void main() {
         source: _clip('dual').copyWith(
           secondaryCamera: SecondaryCameraTake(clip: _clip('second')),
         ),
-        record: (_, {required cellAspectRatio, required maxClips}) async =>
-            fail('must not discard the second lens'),
+        record: (
+          _, {
+          required cellAspectRatio,
+          required cellShape,
+          required maxClips,
+        }) async => fail('must not discard the second lens'),
         layout: (_, _, _, _) async => fail('must not open Layout'),
       );
       expect(find.text('react'), findsOneWidget);
@@ -614,7 +619,12 @@ void main() {
               source,
               cleanupAbandoned: (_) async {},
               recordWithCamera:
-                  (_, {required cellAspectRatio, required maxClips}) async {
+                  (
+                    _, {
+                    required cellAspectRatio,
+                    required cellShape,
+                    required maxClips,
+                  }) async {
                     cameraOpens++;
                     return null;
                   },
@@ -726,6 +736,7 @@ void main() {
           final takes = await recordAgain(
             context,
             cellAspectRatio: 0.5,
+            cellShape: SplitScreenCellShape.rectangle,
             maxClips: 1,
           );
           expect(takes?.single.id, 'capture-2');
@@ -1142,10 +1153,16 @@ void main() {
 
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async {
-          events.add('open camera');
-          return null;
-        },
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async {
+              events.add('open camera');
+              return null;
+            },
         layout: (_, _, _, _) async => fail('must not open Layout'),
       );
       final context = tester.element(find.text('react'));
@@ -1175,9 +1192,15 @@ void main() {
       expect(autosave.hasBeenEdited, isFalse);
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         layout: (_, _, _, _) async => layout,
       );
       expect(manager.savedClips['layout'], same(layout));
@@ -1193,9 +1216,15 @@ void main() {
       manager.saveGate = gate;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         layout: (_, _, _, _) async => _clip('layout'),
       );
       final openedBeforeSave = events.contains('open editor');
@@ -1238,9 +1267,15 @@ void main() {
       manager.saveGate = gate;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         layout: (_, _, _, _) async => _clip('layout'),
       );
       owner =
@@ -1262,9 +1297,15 @@ void main() {
       manager.saveGate = pendingSave;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         previewClosed: () => previewClosed,
         layout: (_, _, _, _) async => _clip('layout-${++layoutCount}'),
       );
@@ -1293,9 +1334,15 @@ void main() {
       manager.saveGate = gate;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         layout: (_, _, _, _) async => _clip('layout'),
       );
       expect(manager.clips, isEmpty);
@@ -1315,13 +1362,19 @@ void main() {
       (tester) async {
         await start(
           tester,
-          record: (_, {required cellAspectRatio, required maxClips}) async {
-            expect(manager.clips, isEmpty);
-            expect(cellAspectRatio, 0.5);
-            expect(maxClips, 1);
-            events.add('record');
-            return [_clip('reaction')];
-          },
+          record:
+              (
+                _, {
+                required cellAspectRatio,
+                required cellShape,
+                required maxClips,
+              }) async {
+                expect(manager.clips, isEmpty);
+                expect(cellAspectRatio, 0.5);
+                expect(maxClips, 1);
+                events.add('record');
+                return [_clip('reaction')];
+              },
           layout: (_, clips, _, _) async {
             expect(clips.map((clip) => clip.id), ['source', 'reaction']);
             expect(manager.clips, isEmpty);
@@ -1345,10 +1398,16 @@ void main() {
     ) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async {
-          events.add('record');
-          return [_clip('reaction')];
-        },
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async {
+              events.add('record');
+              return [_clip('reaction')];
+            },
         layout: null,
       );
       final layout = tester
@@ -1371,10 +1430,16 @@ void main() {
     ) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('cut-one'),
-          _clip('cut-two'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('cut-one'),
+              _clip('cut-two'),
+            ],
         merge: ({required clips, required renderId}) async {
           expect(clips.map((clip) => clip.id), ['cut-one', 'cut-two']);
           events.add('merge cuts');
@@ -1412,10 +1477,16 @@ void main() {
       (tester) async {
         await start(
           tester,
-          record: (_, {required cellAspectRatio, required maxClips}) async => [
-            _clip('cut-one'),
-            _clip('cut-two'),
-          ],
+          record:
+              (
+                _, {
+                required cellAspectRatio,
+                required cellShape,
+                required maxClips,
+              }) async => [
+                _clip('cut-one'),
+                _clip('cut-two'),
+              ],
           merge: ({required clips, required renderId}) async =>
               _clip('combined'),
           layout: (_, _, _, _) async => null,
@@ -1435,10 +1506,16 @@ void main() {
     ) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('cut-one'),
-          _clip('cut-two'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('cut-one'),
+              _clip('cut-two'),
+            ],
         merge: ({required clips, required renderId}) async => null,
         layout: (_, _, _, _) async {
           fail('failed merge must not reach layout');
@@ -1458,23 +1535,34 @@ void main() {
           var captures = 0;
           await start(
             tester,
-            record: (_, {required cellAspectRatio, required maxClips}) async {
-              captures++;
-              if (rerecord && captures == 1) return [_clip('initial')];
-              return [
-                for (final id in ['one', 'two'])
-                  _clip(id).copyWith(
-                    captureChromaKey: const ClipChromaKey(key: ChromaKey()),
-                  ),
-              ];
-            },
+            record:
+                (
+                  _, {
+                  required cellAspectRatio,
+                  required cellShape,
+                  required maxClips,
+                }) async {
+                  captures++;
+                  if (rerecord && captures == 1) return [_clip('initial')];
+                  return [
+                    for (final id in ['one', 'two'])
+                      _clip(id).copyWith(
+                        captureChromaKey: const ClipChromaKey(key: ChromaKey()),
+                      ),
+                  ];
+                },
             merge: ({required clips, required renderId}) async {
               fail('a failed bake must not merge raw camera cuts');
             },
             layout: (context, _, _, recordAgain) async {
               expect(rerecord, isTrue);
               expect(
-                await recordAgain(context, cellAspectRatio: 0.5, maxClips: 1),
+                await recordAgain(
+                  context,
+                  cellAspectRatio: 0.5,
+                  cellShape: SplitScreenCellShape.rectangle,
+                  maxClips: 1,
+                ),
                 isNull,
               );
               return null;
@@ -1497,8 +1585,12 @@ void main() {
     ) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async =>
-            null,
+        record: (
+          _, {
+          required cellAspectRatio,
+          required cellShape,
+          required maxClips,
+        }) async => null,
         layout: (_, _, _, _) async {
           fail('cancelled recording must not open the layout');
         },
@@ -1510,9 +1602,15 @@ void main() {
     testWidgets('cancelled layout opens no editor', (tester) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async => [
-          _clip('reaction'),
-        ],
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async => [
+              _clip('reaction'),
+            ],
         layout: (_, _, _, _) async => null,
       );
       expect(events, ['keep draft', 'clear session']);
@@ -1524,10 +1622,16 @@ void main() {
     ) async {
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async {
-          owner = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-          return [_clip('reaction')];
-        },
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async {
+              owner = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+              return [_clip('reaction')];
+            },
         layout: (_, _, _, _) async {
           fail('another account must not receive the reaction');
         },
@@ -1543,9 +1647,15 @@ void main() {
       editor.keepGate = gate;
       await start(
         tester,
-        record: (_, {required cellAspectRatio, required maxClips}) async {
-          fail('must not record after leaving the library');
-        },
+        record:
+            (
+              _, {
+              required cellAspectRatio,
+              required cellShape,
+              required maxClips,
+            }) async {
+              fail('must not record after leaving the library');
+            },
         layout: (_, _, _, _) async => null,
         pushed: true,
       );

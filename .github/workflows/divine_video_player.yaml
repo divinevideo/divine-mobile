@@ -24,7 +24,7 @@ jobs:
     name: Apple Diagnostics
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.9"
@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Java
         uses: actions/setup-java@v6
         with:

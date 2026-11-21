@@ -26,6 +26,7 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 |---|---|---|
 | Capture | Yes | Default mode. The sound chip picks a sound to record against: it plays during each take, can only change while there are no clips, and the clips open muted with the sound as its own track. The color mask button on the control rail swaps the background live while recording; each take is keyed right after recording. The mask is only offered on devices whose renderer can draw the live key. |
 | Stop Motion | Yes | Output must be at least 1 s. |
+| Together | Yes, for your own part | Up to four people each film their own cell of a split-screen layout. The editor shows your cell's crop, brings the room's call back on its own so you can talk while editing (with a mute button), and sends the finished part back to the room; the part plays and uploads while you look at it, so Send only hands it in. The host puts the parts together and posts with everyone as collaborators; from then on everyone in the room can play the posted video from the room. |
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 
@@ -92,7 +93,7 @@ Shape mask:
 
 Layout (split screen), from the editing tools (not for stop motion):
 
-- 14 layouts with two to four cells: two side by side, two stacked, three columns, three rows, one over two, two over one, one beside two, two beside one, a 2×2 grid, one over three, and picture-in-picture with the small window in any of the four corners.
+- 28 layouts with two to four cells: two side by side, two stacked, three columns, three rows, four columns, four rows, one over two, two over one, one beside two, two beside one, a 2×2 grid, one over three, three over one, one beside three, three beside one, picture-in-picture with the small window in any of the four corners, a round window in any of the four corners, and two or three round windows along the bottom. Three more split the frame along slanted lines: two side by side, two stacked and three rows. A round window sits in a ring of the border color as wide as the gap; a slanted gap is as wide as a straight one, measured square to the line.
 - Each cell is filled from the library or the camera, which show the cell's crop while picking. Inside its cell a clip can be dragged to pick the part that shows and zoomed in up to 4×. A gap between the cells and a border color are optional.
 - Done renders the layout into one clip on the timeline, right after the clip under the playhead, or at the seam when the playhead is on one. A cell shorter than the longest holds its last frame until the layout ends. As one clip, the layout trims, splits, reorders and takes transitions like any other; it cannot be rearranged cell by cell afterwards.
 

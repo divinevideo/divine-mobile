@@ -1,9 +1,11 @@
 // ABOUTME: Turns the second-camera takes of dual-camera clips into
 // ABOUTME: picture-in-picture layers that follow their clips on the timeline
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:collection/collection.dart' show DeepCollectionEquality;
+import 'package:models/models.dart' as model show AspectRatio;
 
 import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping;
@@ -26,12 +28,12 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// take with the take's id, leaving out the takes in [placedTakeIds].
 ///
 /// Each take becomes a detached-clip layer over its clip's stretch of the
-/// timeline, sized and placed where the recorder showed the second camera's
-/// window, so move, resize, shape masks, keyframes and split-screen layouts
-/// all work on it like on any detached clip. The take stays on its clip: the
-/// session records which takes it placed, so a layer is made once and one the
-/// creator removed stays removed. The layer follows its clip on the timeline;
-/// see [secondaryCameraLayersFollowingClips].
+/// timeline, sized, turned and placed where the recorder showed the second
+/// camera's window, so move, resize, shape masks, keyframes and split-screen
+/// layouts all work on it like on any detached clip. The take stays on its
+/// clip: the session records which takes it placed, so a layer is made once
+/// and one the creator removed stays removed. The layer follows its clip on
+/// the timeline; see [secondaryCameraLayersFollowingClips].
 ///
 /// [canvasRenderSize] is the editor's render surface: layer widths and
 /// offsets are render coordinates. [now] stamps the layer ids, which must be
@@ -106,16 +108,32 @@ WidgetLayer _layerFor({
     canvasRenderSize,
     owner.targetAspectRatio.value,
   );
-  final width = kept.width * SecondaryCameraTake.pipWidthFraction;
-  final height = width / second.videoAspectRatio;
-  // A layer offset is measured from the canvas center, which is also the
-  // kept part's. The window is kept whole inside that part, as the viewfinder
-  // kept it.
-  final halfFreeWidth = ((kept.width - width) / 2).clamp(0.0, double.infinity);
-  final halfFreeHeight = ((kept.height - height) / 2).clamp(
-    0.0,
-    double.infinity,
+  final unscaledWidth = kept.width * SecondaryCameraTake.pipWidthFraction;
+  final layerSize = Size(
+    unscaledWidth,
+    unscaledWidth / second.videoAspectRatio,
   );
+  // A square window is the middle of the second picture, as the viewfinder's
+  // window covers it: the layer keeps the whole picture and its mask shows
+  // the square, so the creator can widen it again in the editor.
+  final isSquare = take.pipAspectRatio == model.AspectRatio.square;
+  final side = math.min(layerSize.width, layerSize.height);
+  final unscaledSize = isSquare ? Size(side, side) : layerSize;
+  final scale = SecondaryCameraTake.fittingPipScale(
+    scale: take.pipScale,
+    unscaledSize: unscaledSize,
+    rotation: take.pipRotation,
+    area: kept.size,
+  );
+  // A layer offset is measured from the canvas center, which is also the
+  // kept part's. The turned window is kept whole inside that part, as the
+  // viewfinder kept it.
+  final bounds = SecondaryCameraTake.turnedPipBounds(
+    unscaledSize * scale,
+    take.pipRotation,
+  );
+  final halfFreeWidth = math.max(0.0, (kept.width - bounds.width) / 2);
+  final halfFreeHeight = math.max(0.0, (kept.height - bounds.height) / 2);
   final offset = Offset(
     ((take.pipCenter.dx - 0.5) * kept.width).clamp(
       -halfFreeWidth,
@@ -131,18 +149,24 @@ WidgetLayer _layerFor({
     id: layerId,
     startTime: window.start,
     endTime: window.end,
-    width: width,
+    width: unscaledWidth,
     offset: offset,
+    // Pinched and turned as the viewfinder showed the window.
+    scale: scale,
+    rotation: take.pipRotation,
     widget: poster
         ? DetachedClipPoster(meta: meta)
         : DetachedClipLayerView(meta: meta),
     meta: meta,
     exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
-    // Rounded like the viewfinder window, in the export too; the user can
-    // change it to any other shape.
-    mask: const LayerMask(
+    // Shaped and rounded like the viewfinder window, in the export too; the
+    // user can change it to any other shape.
+    mask: LayerMask(
       shape: LayerMaskShape.rectangle,
-      size: Size(1, 1),
+      size: Size(
+        unscaledSize.width / layerSize.width,
+        unscaledSize.height / layerSize.height,
+      ),
       cornerRadius: SecondaryCameraTake.pipCornerRadius,
     ),
   );

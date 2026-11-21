@@ -1,7 +1,8 @@
 // ABOUTME: Riverpod dependency wiring for crossposting settings
-// ABOUTME: Owns the API client lifecycle and repository construction
+// ABOUTME: Owns the API client, repository and background crosspost queue
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/blocs/video_crosspost/crosspost_submission_queue.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -11,6 +12,8 @@ import 'package:openvine/services/auth_service.dart'
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nip98_http_client.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// How this build can drive the crossposting connect flow.
@@ -119,6 +122,13 @@ final crosspostingApiClientFactoryProvider =
               trustedOrigin: Uri.parse(CrosspostingApiClient.defaultBaseUrl),
               retryBudget: CrosspostingApiClient.requestTimeout,
             ),
+            passiveHttpClient: Nip98HttpClient(
+              inner: newHttpClient(),
+              authService: nip98AuthService,
+              trustedOrigin: Uri.parse(CrosspostingApiClient.defaultBaseUrl),
+              retryBudget: CrosspostingApiClient.requestTimeout,
+              allowUserInteraction: false,
+            ),
           );
     });
 
@@ -134,6 +144,29 @@ final crosspostingApiClientProvider = Provider<CrosspostingApiClient>((ref) {
 
 final crosspostingRepositoryProvider = Provider<CrosspostingRepository>((ref) {
   return CrosspostingRepository(ref.watch(crosspostingApiClientProvider));
+});
+
+/// Holds crosspost submissions after the sheet closes, one per account.
+///
+/// Signing out rebuilds this provider and an account switch disposes its
+/// container; either closes the old queue, cancelling its retries and
+/// polling. A rebuild happens only while the provider is listened to, so
+/// callers listen for the length of a submission.
+final crosspostSubmissionQueueProvider = Provider<CrosspostSubmissionQueue>((
+  ref,
+) {
+  final queue = CrosspostSubmissionQueue(
+    repository: ref.watch(crosspostingRepositoryProvider),
+  );
+  ref.onDispose(() {
+    runDetached(
+      queue.close(),
+      'close background crosspost submissions',
+      logName: 'CrosspostSubmissionQueue',
+      category: LogCategory.system,
+    );
+  });
+  return queue;
 });
 
 /// Resolves availability, waiting for the OAuth-support lookup if it has not

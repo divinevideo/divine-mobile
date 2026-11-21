@@ -4136,6 +4136,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اسے اپنے منسلک پلیٹ فارمز پر بھیجیں۔ پوسٹنگ میں چند منٹ لگ سکتے ہیں۔';
 
   @override
+  String get crosspostStarted =>
+      'پس منظر میں دوسرے پلیٹ فارمز پر پوسٹ کیا جا رہا ہے۔';
+
+  @override
   String get crosspostSubmit => 'کراس پوسٹ';
 
   @override
@@ -4191,6 +4195,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get crosspostFailedGeneric => 'کراس پوسٹ ناکام۔';
+
+  @override
+  String crosspostPlatformFailure(String platform, String reason) {
+    return '$platform: $reason';
+  }
 
   @override
   String get crosspostStillWorking =>
@@ -9063,6 +9072,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'کیمرے آپس میں بدلیں';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'عمودی اور مربع کے درمیان تبدیل کریں';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom× تک زوم کریں';
   }
@@ -10744,24 +10757,30 @@ class AppLocalizationsUr extends AppLocalizations {
       'ماسک کیا گیا رنگ کتنا غائب ہوگا';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'کنارہ';
+  String get videoEditorChromaKeyEdgeLabel => 'نرم کنارہ';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'کٹاؤ کو نرم کرتا ہے تاکہ بال کھردرے نہ لگیں';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'رنگ کی جھلک';
+  String get videoEditorChromaKeySpillLabel => 'رنگ کی جھلک ہٹائیں';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'ماسک کیے گئے رنگ کی جھلک آپ کے سبجیکٹ سے ہٹاتا ہے';
 
   @override
+  String get videoEditorChromaKeyFineTune => 'باریک ترتیب';
+
+  @override
   String get videoEditorChromaKeyBackgroundLabel => 'اس سے بدلیں';
 
   @override
   String get videoEditorChromaKeyBackgroundNone => 'کچھ نہیں';
+
+  @override
+  String get videoEditorChromaKeyBackgroundBlack => 'سیاہ';
 
   @override
   String get videoEditorChromaKeyBackgroundColor => 'رنگ';
@@ -10771,10 +10790,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'کلپ';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10791,6 +10806,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'کلپ پڑھنے میں بہت وقت لگ گیا۔ «خودکار شناخت» دوبارہ آزمائیں، یا رنگ خود منتخب کریں۔';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'جس رنگ کو ہٹانا ہے اس پر ٹیپ کریں';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'ہٹانے والا رنگ تلاش ہو رہا ہے…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';
@@ -15826,6 +15848,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get messagesNoRooms => 'ابھی کوئی کمرہ نہیں';
 
   @override
+  String get messagesRoomConnectionError =>
+      'اس کمرے تک رسائی نہیں ہو سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+
+  @override
   String get followedHashtagsTitle => 'فالو کیے گئے ہیش ٹیگز';
 
   @override
@@ -15967,6 +15993,49 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'تصویر میں تصویر، نیچے دائیں';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'ترچھے ساتھ ساتھ';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'ترچھے اوپر نیچے';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'تین ترچھی قطاریں';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'چار ساتھ ساتھ';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'چار قطاریں';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'اوپر تین، نیچے ایک';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'بائیں ایک، دائیں تین';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'بائیں تین، دائیں ایک';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft => 'گول کھڑکی، اوپر بائیں';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight => 'گول کھڑکی، اوپر دائیں';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft => 'گول کھڑکی، نیچے بائیں';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'گول کھڑکی، نیچے دائیں';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'دو گول کھڑکیاں';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'تین گول کھڑکیاں';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16415,4 +16484,283 @@ class AppLocalizationsUr extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'آئیں مل کر ویڈیو بنائیں! Divine کھولیں، میرے روم میں شامل ہوں اور اپنا حصہ فلمائیں۔';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'میں شامل ہوں! اپنا حصہ فلمانے کا انتظار ہے۔';
+
+  @override
+  String get collabRoomDeclineDmBody => 'اس بار نہیں آ سکتا۔ مزے کریں!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'میں نے ہمارا ویڈیو روم چھوڑ دیا۔';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'فلم بندی شروع! Divine کھولیں اور اپنا حصہ فلمائیں۔';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'ہماری ویڈیو لائیو ہے! شامل ہونے کا شکریہ۔';
+
+  @override
+  String get collabRoomCancelledDmBody =>
+      'میں نے ہمارا ویڈیو روم منسوخ کر دیا۔';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'ہمارے ویڈیو روم میں تبدیلی ہوئی ہے۔ دیکھنے کے لیے Divine کھولیں۔';
+
+  @override
+  String get collabRoomCameraMode => 'ساتھ مل کر';
+
+  @override
+  String get collabRoomTitle => 'مل کر بنائیں';
+
+  @override
+  String get collabRoomMissing => 'یہ روم اب موجود نہیں۔';
+
+  @override
+  String get collabRoomYou => 'آپ';
+
+  @override
+  String get collabRoomHost => 'میزبان';
+
+  @override
+  String get collabRoomStatusInvited => 'مدعو';
+
+  @override
+  String get collabRoomStatusJoined => 'شامل';
+
+  @override
+  String get collabRoomStatusPartIn => 'حصہ آ گیا';
+
+  @override
+  String get collabRoomStatusDeclined => 'شامل نہیں ہو سکتے';
+
+  @override
+  String get collabRoomStatusLeft => 'چھوڑ دیا';
+
+  @override
+  String get collabRoomStatusRemoved => 'اس بار شامل نہیں';
+
+  @override
+  String get collabRoomPickLayout => 'لے آؤٹ چنیں';
+
+  @override
+  String get collabRoomStartButton => 'فلم بندی شروع کریں';
+
+  @override
+  String get collabRoomStartHint =>
+      'کسی کے شامل ہوتے ہی شروع کریں۔ جو تب تک شامل نہ ہو، وہ اس بار حصہ نہیں لے گا۔';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'میزبان کے فلم بندی شروع کرنے کا انتظار ہے۔';
+
+  @override
+  String get collabRoomJoinButton => 'شامل ہوں';
+
+  @override
+  String get collabRoomLeaveButton => 'روم چھوڑیں';
+
+  @override
+  String get collabRoomFilmPartButton => 'اپنا حصہ فلمائیں';
+
+  @override
+  String get collabRoomRefilmPartButton => 'دوبارہ فلمائیں';
+
+  @override
+  String get collabRoomFilmHint =>
+      'ہر کوئی اپنا حصہ خود فلماتا ہے۔ اسے آپ کے خانے کی شکل میں کاٹا جاتا ہے۔';
+
+  @override
+  String get collabRoomComposeButton => 'جوڑیں';
+
+  @override
+  String get collabRoomComposeWaiting => 'سب کے حصوں کا انتظار ہے۔';
+
+  @override
+  String get collabRoomSoundHint =>
+      'کسی حصے کی آواز استعمال کرنے کے لیے اسے تھپتھپائیں۔';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'اس حصے کی آواز استعمال کریں';
+
+  @override
+  String get collabRoomRemoveMember => 'ہٹائیں';
+
+  @override
+  String get collabRoomCancelButton => 'منسوخ کریں';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'یہ ویڈیو منسوخ کریں؟';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'روم سب کے لیے بند ہو جائے گا۔';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'کوئی نکل گیا ہے۔ باقی لوگوں کے لیے لے آؤٹ چنیں۔';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'کوئی شامل ہو گیا ہے۔ سب کے لیے لے آؤٹ چنیں۔';
+
+  @override
+  String get collabRoomComposing => 'جوڑا جا رہا ہے…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'ویڈیو جوڑی نہیں جا سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get collabRoomPosted => 'یہ ویڈیو لائیو ہے۔ سب نے کمال کیا!';
+
+  @override
+  String get collabRoomCancelled => 'یہ روم منسوخ کر دیا گیا۔';
+
+  @override
+  String get collabRoomActionFailed =>
+      'یہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get collabRoomRemovedYou => 'اس بار آپ شامل نہیں۔';
+
+  @override
+  String get collabRoomDeclinedYou => 'آپ نے اس بار انکار کیا۔';
+
+  @override
+  String get collabRoomPartSent =>
+      'آپ کا حصہ پہنچ گیا۔ میزبان سب کچھ جوڑیں گے۔';
+
+  @override
+  String get collabRoomPartTitle => 'آپ کا حصہ';
+
+  @override
+  String get collabRoomPartRendering => 'آپ کا حصہ تیار ہو رہا ہے…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'آپ کا حصہ تیار نہیں ہو سکا۔';
+
+  @override
+  String get collabRoomPartSendButton => 'اپنا حصہ بھیجیں';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'آپ کا حصہ اپ لوڈ ہو رہا ہے… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'اپ لوڈ ہو گیا۔ بھیجنے کے لیے تیار۔';
+
+  @override
+  String get collabRoomInviteAgain => 'دوبارہ مدعو کریں';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'یہ روم چھوڑیں؟';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'صرف میزبان آپ کو دوبارہ مدعو کر سکتا ہے۔';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'آپ کا حصہ نہیں بھیجا جا سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get collabRoomLobbyTitle => 'مل کر ویڈیو بنائیں';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'زیادہ سے زیادہ 3 دوستوں کو مدعو کریں۔ ہر کوئی اپنا حصہ فلماتا ہے، اور سب ایک اسپلٹ اسکرین ویڈیو میں جڑ جاتا ہے۔';
+
+  @override
+  String get collabRoomLobbyInvite => 'دوستوں کو مدعو کریں';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'کون شامل ہے؟';
+
+  @override
+  String get collabRoomLobbyRooms => 'آپ کے روم';
+
+  @override
+  String get collabRoomTileHosting => 'آپ کا روم';
+
+  @override
+  String get collabRoomTileGuest => 'کسی دوست کا روم';
+
+  @override
+  String get collabRoomPhaseLobby => 'لوگوں کے شامل ہونے کا انتظار';
+
+  @override
+  String get collabRoomPhaseRecording => 'حصے فلمائے جا رہے ہیں';
+
+  @override
+  String get collabRoomPhaseReady => 'فلم بندی کے لیے تیار';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'میزبان کے فلم بندی شروع کرنے کا انتظار';
+
+  @override
+  String get collabRoomPhaseInvited =>
+      'آپ کو دعوت ملی ہے۔ شامل ہونے کے لیے ٹیپ کریں۔';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'دعوت نامے نہیں بھیجے جا سکے۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get collabRoomInviteCardTitle => 'آئیں مل کر ویڈیو بنائیں';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'روم میں شامل ہوں، اور ہر کوئی اپنا حصہ فلمائے۔';
+
+  @override
+  String get collabRoomOpenButton => 'روم کھولیں';
+
+  @override
+  String get collabRoomCallMute => 'آواز بند کریں';
+
+  @override
+  String get collabRoomCallUnmute => 'آواز کھولیں';
+
+  @override
+  String get collabRoomCallCameraOn => 'کیمرہ آن کریں';
+
+  @override
+  String get collabRoomCallCameraOff => 'کیمرہ بند کریں';
+
+  @override
+  String get collabRoomCallConnecting => 'آپ کی کال جوڑی جا رہی ہے…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'کال شروع نہیں ہو سکی۔ دیکھیں کہ Divine کو آپ کا مائیکروفون استعمال کرنے کی اجازت ہے۔';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'دوسروں سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get collabRoomCallJoin => 'کال میں شامل ہوں';
+
+  @override
+  String get collabRoomCallCameraFailed => 'آپ کا کیمرہ آن نہیں ہو سکا۔';
+
+  @override
+  String get collabRoomCallMuted => 'خاموش';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'لے آؤٹ میں دو جگہوں کو تھپتھپائیں تاکہ وہ آپس میں بدل جائیں۔';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'یہ جگہ بدلیں';
 }

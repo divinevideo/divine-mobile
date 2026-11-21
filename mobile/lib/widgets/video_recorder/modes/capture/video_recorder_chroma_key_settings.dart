@@ -1,7 +1,8 @@
-// ABOUTME: The color mask's settings in capture mode: the sheet that tunes
-// ABOUTME: the key and backdrop over the live camera, and turns the mask off.
+// ABOUTME: The color mask in capture mode: the color mask screen over the live
+// ABOUTME: camera, where a tap picks the wall's color and the rest is tuned.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,56 +15,119 @@ import 'package:openvine/utils/chroma_key_backdrop_image.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_screen_layout.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
-import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
 
-/// Opens the color mask settings over the live viewfinder.
+/// Opens the color mask screen over the camera.
 ///
-/// The barrier stays clear on purpose: the settings are tuned against the
-/// camera, and a scrim would dim exactly the picture being judged.
+/// The same screen the editor opens for a clip, with the live camera where the
+/// clip would be: tapping the picture takes the wall's color, and the settings
+/// below act on the viewfinder as they change. There is nothing to confirm, so
+/// Close and Done both just return to the camera.
 ///
 /// Remote record triggers are paused while it is open, the way the sound
 /// picker pauses them, so a volume key cannot start a take behind it.
 Future<void> showVideoRecorderChromaKeySettings(BuildContext context) {
   final bloc = context.read<VideoRecorderBloc>();
+  final navigator = Navigator.of(context);
   return showWithRemoteRecordPaused(
     bloc,
-    () => VineBottomSheet.show<void>(
-      context: context,
-      contentTitle: context.l10n.videoEditorChromaKeyTitle,
-      barrierColor: VineTheme.transparent,
-      initialChildSize: 0.5,
-      contentWrapper: (_, sheet) => BlocProvider<VideoRecorderBloc>.value(
-        value: bloc,
-        // The sheet's own messenger: a snackbar raised from inside it would
-        // otherwise land on the recorder's scaffold, underneath the sheet.
-        child: ScaffoldMessenger(
-          child: Scaffold(
-            backgroundColor: VineTheme.transparent,
-            resizeToAvoidBottomInset: false,
-            body: sheet,
-          ),
+    () => navigator.push<void>(
+      PageRouteBuilder<void>(
+        settings: const RouteSettings(name: 'video_recorder_color_mask'),
+        // Not opaque, so the recorder below keeps its camera session and the
+        // viewfinder's texture keeps streaming into this screen.
+        opaque: false,
+        barrierColor: VineTheme.backgroundCamera,
+        pageBuilder: (_, _, _) => BlocProvider<VideoRecorderBloc>.value(
+          value: bloc,
+          child: const VideoRecorderColorMaskScreen(),
         ),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
-      buildScrollBody: (scrollController) =>
-          _ChromaKeySettings(scrollController: scrollController),
     ),
   );
 }
 
-/// The settings panel, bound to the recorder, under the button that turns the
-/// mask off.
+/// The color mask screen for the camera, bound to [VideoRecorderBloc].
 ///
-/// The same panel as the editor's chroma key screen, so the key and
-/// backdrop a clip is recorded with are the ones baked into it and the ones
-/// the editor re-opens with.
-class _ChromaKeySettings extends StatelessWidget {
-  const _ChromaKeySettings({required this.scrollController});
+/// Every change goes straight to the recorder, so the viewfinder behind this
+/// screen and the take it records match what is shown here.
+class VideoRecorderColorMaskScreen extends StatefulWidget {
+  const VideoRecorderColorMaskScreen({super.key});
 
-  final ScrollController scrollController;
+  @override
+  State<VideoRecorderColorMaskScreen> createState() =>
+      _VideoRecorderColorMaskScreenState();
+}
+
+class _VideoRecorderColorMaskScreenState
+    extends State<VideoRecorderColorMaskScreen> {
+  /// Whether a tap has picked a color yet. Until one has, the picture says it
+  /// can be tapped: nothing else on screen gives that away.
+  bool _hasPicked = false;
+
+  void _onPatchPicked(Uint8List patch) {
+    setState(() => _hasPicked = true);
+    context.read<VideoRecorderBloc>().add(
+      VideoRecorderChromaKeyPatchPicked(patch),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = context.select(
+      (VideoRecorderBloc b) => b.state.chromaKeyMeasurementStatus,
+    );
+    final hint = chromaKeyPreviewHintText(
+      context,
+      isDetecting: status == ChromaKeyMeasurementStatus.detecting,
+      hasPicked: _hasPicked,
+    );
+    final l10n = context.l10n;
+
+    return ChromaKeyScreenLayout(
+      onClose: () => Navigator.of(context).pop(),
+      closeSemanticLabel: l10n.commonClose,
+      onDone: () => Navigator.of(context).pop(),
+      doneSemanticLabel: l10n.videoEditorChromaKeyDoneSemanticLabel,
+      preview: Stack(
+        children: [
+          VideoRecorderCameraPreview(
+            // A tap picks the color here; focus stays with the camera.
+            enableTapToFocus: false,
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            onColorPatchPicked: _onPatchPicked,
+          ),
+          if (hint != null) ChromaKeyPreviewHint(text: hint),
+        ],
+      ),
+      showRemove: true,
+      onRemove: () {
+        // The key and backdrop stay as they were set, so turning the mask on
+        // again brings them back.
+        context.read<VideoRecorderBloc>().add(
+          const VideoRecorderChromaKeyEnabledSet(enabled: false),
+        );
+        Navigator.of(context).pop();
+      },
+      controls: const _ColorMaskControls(),
+    );
+  }
+}
+
+/// The settings panel, bound to the recorder.
+///
+/// The same panel as the editor's color mask screen, so the key and backdrop
+/// a clip is recorded with are the ones baked into it and the ones the editor
+/// re-opens with.
+class _ColorMaskControls extends StatelessWidget {
+  const _ColorMaskControls();
 
   @override
   Widget build(BuildContext context) {
@@ -94,45 +158,38 @@ class _ChromaKeySettings extends StatelessWidget {
           logName: 'VideoRecorderChromaKeySettings',
         );
       },
-      child: Column(
-        children: [
-          const _RemoveColorMaskButton(),
-          Flexible(
-            child: ChromaKeyControlsPanel(
-              scrollController: scrollController,
-              chromaKey: chromaKey,
-              // Also while a written-off still is out: the camera cannot take a
-              // second one until it is back.
-              isDetecting:
-                  status == ChromaKeyMeasurementStatus.detecting ||
-                  status == ChromaKeyMeasurementStatus.superseded,
-              detectionNotice: _measurementNotice(context.l10n, status),
-              onDetect: () =>
-                  bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
-              onGreenPreset: () => bloc.add(
-                const VideoRecorderChromaKeyPresetSelected(
-                  ChromaKey.greenScreen(),
-                ),
-              ),
-              onBluePreset: () => bloc.add(
-                const VideoRecorderChromaKeyPresetSelected(
-                  ChromaKey.blueScreen(),
-                ),
-              ),
-              onKeyColorChanged: (color) =>
-                  bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
-              onSimilarityChanged: (value) => bloc.add(
-                VideoRecorderChromaKeySettingsChanged(similarity: value),
-              ),
-              onSmoothnessChanged: (value) => bloc.add(
-                VideoRecorderChromaKeySettingsChanged(smoothness: value),
-              ),
-              onSpillChanged: (value) =>
-                  bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
-              onPickBackground: (type) => _pickBackdrop(context, type),
-            ),
+      child: ChromaKeyControlsPanel(
+        chromaKey: chromaKey,
+        // Also while a written-off still is out: the camera cannot take a
+        // second one until it is back.
+        isDetecting:
+            status == ChromaKeyMeasurementStatus.detecting ||
+            status == ChromaKeyMeasurementStatus.superseded,
+        detectionNotice: _measurementNotice(context.l10n, status),
+        showSurfaceHint: status == ChromaKeyMeasurementStatus.failed,
+        onDetect: () =>
+            bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
+        onGreenPreset: () => bloc.add(
+          const VideoRecorderChromaKeyPresetSelected(
+            ChromaKey.greenScreen(),
           ),
-        ],
+        ),
+        onBluePreset: () => bloc.add(
+          const VideoRecorderChromaKeyPresetSelected(
+            ChromaKey.blueScreen(),
+          ),
+        ),
+        onKeyColorChanged: (color) =>
+            bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
+        onSimilarityChanged: (value) => bloc.add(
+          VideoRecorderChromaKeySettingsChanged(similarity: value),
+        ),
+        onSmoothnessChanged: (value) => bloc.add(
+          VideoRecorderChromaKeySettingsChanged(smoothness: value),
+        ),
+        onSpillChanged: (value) =>
+            bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
+        onPickBackground: (type) => _pickBackdrop(context, type),
       ),
     );
   }
@@ -209,38 +266,5 @@ class _ChromaKeySettings extends StatelessWidget {
       );
       messenger.showSnackBar(DivineSnackbarContainer.snackBar(failedMessage));
     }
-  }
-}
-
-/// Turns the color mask off and closes the settings.
-///
-/// The key and backdrop stay as they were set, so turning the mask on again
-/// brings them back.
-class _RemoveColorMaskButton extends StatelessWidget {
-  const _RemoveColorMaskButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final label = context.l10n.videoEditorChromaKeyRemove;
-    return Padding(
-      padding: const .symmetric(horizontal: 16),
-      child: WholeWordButtonTextScale(
-        label: label,
-        child: DivineButton(
-          label: label,
-          type: .ghost,
-          size: .small,
-          expanded: true,
-          maxLines: 2,
-          onPressed: () {
-            context.read<VideoRecorderBloc>().add(
-              const VideoRecorderChromaKeyEnabledSet(enabled: false),
-            );
-            // The sheet sits on the root navigator; this context is inside it.
-            Navigator.of(context).pop();
-          },
-        ),
-      ),
-    );
   }
 }
