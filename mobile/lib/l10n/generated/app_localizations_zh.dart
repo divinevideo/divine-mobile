@@ -8872,6 +8872,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectEcho => '残影';
 
   @override
+  String get videoEditorEffectTimeSplit => '时间分色';
+
+  @override
+  String get videoEditorEffectLongExposure => '长曝光';
+
+  @override
+  String get videoEditorEffectMotionOnly => '只留动态';
+
+  @override
+  String get videoEditorEffectStutter => '抽帧';
+
+  @override
+  String get videoEditorEffectTimeWarp => '时空扭曲';
+
+  @override
   String get videoEditorEffectFisheye => '鱼眼';
 
   @override
@@ -9073,6 +9088,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => '动感';
 
   @override
+  String get videoEditorEffectCategoryTime => '时光';
+
+  @override
   String get videoEditorEffectCategoryParticles => '粒子';
 
   @override
@@ -9178,6 +9196,14 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '一次只能用一个时光效果。两个叠在一起，导出后会和预览不一样，所以我们在这里替换了另一个。';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '一次只能用一个时光效果。两个叠在一起，导出后会和预览不一样。';
 
   @override
   String get videoEditorEffectsOnBeat => '卡点';

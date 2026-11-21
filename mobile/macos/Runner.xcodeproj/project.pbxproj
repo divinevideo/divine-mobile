@@ -53,6 +53,7 @@
 		41986BCDC2BBB92506CBD0DB /* DiscoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */; };
 		B3AB2D12EEE42F551C1CBEB4 /* LaserVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */; };
 		E86CA63F0E6EEF1A2B4DFFC3 /* LightningVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */; };
+		7E11B0A1C0DE4A1B9E2D3F04 /* TimeVideoEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */; };
 		E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */; };
 		71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */; };
 		E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */; };
@@ -150,6 +151,7 @@
 		0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiscoVideoEffect.swift; path = ../ios/Runner/DiscoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LaserVideoEffect.swift; path = ../ios/Runner/LaserVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LightningVideoEffect.swift; path = ../ios/Runner/LightningVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TimeVideoEffects.swift; path = ../ios/Runner/TimeVideoEffects.swift; sourceTree = SOURCE_ROOT; };
 		02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntroOutroVideoEffect.swift; path = ../ios/Runner/IntroOutroVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EightBitVideoEffect.swift; path = ../ios/Runner/EightBitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnaglyphVideoEffect.swift; path = ../ios/Runner/AnaglyphVideoEffect.swift; sourceTree = SOURCE_ROOT; };
@@ -295,6 +297,7 @@
 				0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */,
 				2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */,
 				2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */,
+				7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */,
 				02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */,
 				5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */,
 				44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */,
@@ -624,6 +627,7 @@
 				41986BCDC2BBB92506CBD0DB /* DiscoVideoEffect.swift in Sources */,
 				B3AB2D12EEE42F551C1CBEB4 /* LaserVideoEffect.swift in Sources */,
 				E86CA63F0E6EEF1A2B4DFFC3 /* LightningVideoEffect.swift in Sources */,
+				7E11B0A1C0DE4A1B9E2D3F04 /* TimeVideoEffects.swift in Sources */,
 				E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */,
 				71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */,
 				E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */,

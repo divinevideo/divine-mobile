@@ -9334,6 +9334,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectEcho => 'Yankı';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Zaman Bölme';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Uzun Pozlama';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Sadece Hareket';
+
+  @override
+  String get videoEditorEffectStutter => 'Takılma';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Zaman Bükme';
+
+  @override
   String get videoEditorEffectFisheye => 'Balık Gözü';
 
   @override
@@ -9535,6 +9550,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Hareket';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Zaman';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Parçacıklar';
 
   @override
@@ -9640,6 +9658,14 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Aynı anda tek bir Zaman efekti. İkisi birlikte dışa aktarıldıktan sonra farklı görünür, bu yüzden buradaki diğerini değiştirdik.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Aynı anda tek bir Zaman efekti. İkisi birlikte dışa aktarıldıktan sonra farklı görünür.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Ritme göre';

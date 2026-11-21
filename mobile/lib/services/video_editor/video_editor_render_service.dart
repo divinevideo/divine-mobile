@@ -1004,13 +1004,14 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
       ),
       effects: effects,
-      // The looks after the effects editor's other effects, and Adjust after
-      // all of them, as in the preview; see looksLast and
+      // The effects that read earlier frames first, the looks after the
+      // effects editor's other effects, and Adjust after all of them, as in
+      // the preview; see customVideoEffectsInRenderOrder and
       // adjustVideoEffectsOf for why. Lightning keeps clear of the flashes of
       // the built-in effects.
       customEffects: customVideoEffectsOnOutput(
         [
-          ...looksLast(
+          ...customVideoEffectsInRenderOrder(
             parameters?.customVideoEffectsFromCompleteMeta ?? const [],
           ),
           ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),

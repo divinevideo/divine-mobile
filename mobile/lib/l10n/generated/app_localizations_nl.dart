@@ -9460,6 +9460,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tijdsplitsing';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lange sluitertijd';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Alleen beweging';
+
+  @override
+  String get videoEditorEffectStutter => 'Haperen';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Tijdvervorming';
+
+  @override
   String get videoEditorEffectFisheye => 'Visoog';
 
   @override
@@ -9661,6 +9676,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Beweging';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Tijd';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Deeltjes';
 
   @override
@@ -9766,6 +9784,14 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit, dus hebben we het andere hier vervangen.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Op de beat';

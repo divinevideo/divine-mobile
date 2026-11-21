@@ -23,7 +23,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/exclusive_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
@@ -845,7 +845,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           listIndex: targetIdx,
           skipUpdateHistory: true,
         );
-        _separateFlashingEffects(editor, item.id);
+        _separateExclusiveEffects(editor, item.id);
         _syncEffectsPreview(editor);
     }
 
@@ -1035,7 +1035,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           .firstOrNull;
       if (trimmed?.type == .effect) {
         final editor = VideoEditorScope.of(context).requireEditor;
-        _separateFlashingEffects(editor, trimmed!.id);
+        _separateExclusiveEffects(editor, trimmed!.id);
         _syncEffectsPreview(editor);
       }
       overlayBloc.add(const TimelineOverlayTrimEnded());
@@ -1152,10 +1152,11 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   }
 
   /// Once a gesture ends, lets a flashing effect replace any other flashing
-  /// effect it now overlaps, and says why.
-  void _separateFlashingEffects(ProImageEditorState editor, String id) {
-    if (editor.separateFlashingVideoEffects(id)) {
-      showFlashingEffectReplacedSnackBar(context);
+  /// effect it now overlaps, and an effect that reads earlier frames any other
+  /// such effect, and says why.
+  void _separateExclusiveEffects(ProImageEditorState editor, String id) {
+    if (editor.separateExclusiveVideoEffects(id) case final group?) {
+      showExclusiveEffectReplacedSnackBar(context, group);
     }
   }
 

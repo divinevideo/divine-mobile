@@ -9323,6 +9323,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectEcho => 'Gema';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Waktu Terbelah';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Eksposur Panjang';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Hanya Gerakan';
+
+  @override
+  String get videoEditorEffectStutter => 'Patah-patah';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsi Waktu';
+
+  @override
   String get videoEditorEffectFisheye => 'Mata Ikan';
 
   @override
@@ -9524,6 +9539,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Gerakan';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Waktu';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Partikel';
 
   @override
@@ -9629,6 +9647,14 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor, jadi kami mengganti efek lainnya di sini.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Sesuai ketukan';

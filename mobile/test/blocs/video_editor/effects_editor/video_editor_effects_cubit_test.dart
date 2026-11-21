@@ -172,6 +172,35 @@ void main() {
       );
 
       blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'previews a Time pick without the other Time effects, and keeps the '
+        'rest',
+        build: buildCubit,
+        seed: () => VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect.of(
+              id: 'echo',
+              type: EditorEffectType.echo,
+              intensity: 0.5,
+            ),
+            EditorVideoEffect.of(
+              id: 'comic',
+              type: EditorEffectType.comic,
+              intensity: 0.5,
+            ),
+          ],
+        ),
+        act: (cubit) => cubit
+          ..startEditing()
+          ..selectType(EditorEffectType.motionOnly),
+        verify: (cubit) {
+          expect(
+            [for (final e in cubit.state.previewCustomEffects) e.id],
+            [comicVideoEffectId, motionOnlyVideoEffectId],
+          );
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
         'previews picked lightning without the built-in flashing effects',
         build: buildCubit,
         seed: () => const VideoEditorEffectsState(
@@ -240,8 +269,9 @@ void main() {
       );
 
       blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
-        'feeds a newly picked echo to the native preview after the '
-        'committed one, and keeps it out of the built-in preview',
+        'feeds a newly picked echo to the native preview in place of the '
+        'committed one it would replace, and keeps it out of the built-in '
+        'preview',
         build: buildCubit,
         seed: () => const VideoEditorEffectsState(applied: [vhs, echo]),
         act: (cubit) => cubit
@@ -249,9 +279,8 @@ void main() {
           ..selectType(EditorEffectType.echo)
           ..setIntensity(0.8),
         verify: (cubit) {
-          expect(cubit.state.previewCustomEffects, [
-            echo.custom,
-            const CustomVideoEffect(
+          expect(cubit.state.previewCustomEffects, const [
+            CustomVideoEffect(
               id: echoVideoEffectId,
               params: {EditorVideoEffect.intensityParam: 0.8},
             ),
@@ -383,7 +412,7 @@ void main() {
 
         final result = cubit.confirm();
 
-        expect(result.replacedFlashing, isTrue);
+        expect(result.replaced, EditorEffectExclusiveGroup.flashing);
         expect(result.effects.map((e) => e.id), ['vignette', 'new']);
         expect(cubit.state.applied, result.effects);
       });
@@ -395,7 +424,26 @@ void main() {
           ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe));
         addTearDown(cubit.close);
 
-        expect(cubit.confirm().replacedFlashing, isFalse);
+        expect(cubit.confirm().replaced, isNull);
+      });
+
+      test('lets a new Time effect replace another one in its window, and '
+          'says so', () {
+        final echo = EditorVideoEffect.of(
+          id: 'echo',
+          type: EditorEffectType.echo,
+          intensity: 0.5,
+        );
+        final cubit = buildCubit()
+          ..syncApplied([echo, vignette])
+          ..startEditing()
+          ..selectType(EditorEffectType.timeWarp);
+        addTearDown(cubit.close);
+
+        final result = cubit.confirm();
+
+        expect(result.replaced, EditorEffectExclusiveGroup.earlierFrames);
+        expect(result.effects.map((e) => e.id), ['vignette', 'new']);
       });
 
       test('adds nothing when a new effect is left on "none"', () {

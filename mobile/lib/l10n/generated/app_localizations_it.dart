@@ -9533,6 +9533,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eco';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tempo diviso';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lunga esposizione';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Solo movimento';
+
+  @override
+  String get videoEditorEffectStutter => 'A scatti';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsione temporale';
+
+  @override
   String get videoEditorEffectFisheye => 'Occhio di pesce';
 
   @override
@@ -9734,6 +9749,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Movimento';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Tempo';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particelle';
 
   @override
@@ -9840,6 +9858,14 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati, quindi qui abbiamo sostituito l\'altro.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati.';
 
   @override
   String get videoEditorEffectsOnBeat => 'A tempo';

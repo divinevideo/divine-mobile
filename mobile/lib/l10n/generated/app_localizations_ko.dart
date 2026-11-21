@@ -8973,6 +8973,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectEcho => '에코';
 
   @override
+  String get videoEditorEffectTimeSplit => '타임 스플릿';
+
+  @override
+  String get videoEditorEffectLongExposure => '장노출';
+
+  @override
+  String get videoEditorEffectMotionOnly => '움직임만';
+
+  @override
+  String get videoEditorEffectStutter => '스터터';
+
+  @override
+  String get videoEditorEffectTimeWarp => '타임 워프';
+
+  @override
   String get videoEditorEffectFisheye => '피시아이';
 
   @override
@@ -9174,6 +9189,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => '모션';
 
   @override
+  String get videoEditorEffectCategoryTime => '시간';
+
+  @override
   String get videoEditorEffectCategoryParticles => '파티클';
 
   @override
@@ -9279,6 +9297,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져서 여기서는 다른 효과를 바꿨어요.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져요.';
 
   @override
   String get videoEditorEffectsOnBeat => '비트에 맞추기';

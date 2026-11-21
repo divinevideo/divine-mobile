@@ -9484,6 +9484,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Time Split';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Long Exposure';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Galaw Lang';
+
+  @override
+  String get videoEditorEffectStutter => 'Stutter';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Time Warp';
+
+  @override
   String get videoEditorEffectFisheye => 'Fisheye';
 
   @override
@@ -9685,6 +9700,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Galaw';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Oras';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particles';
 
   @override
@@ -9791,6 +9809,14 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export, kaya pinalitan namin ang isa pa dito.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Sa beat';

@@ -9677,6 +9677,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectEcho => 'ప్రతిధ్వని';
 
   @override
+  String get videoEditorEffectTimeSplit => 'టైమ్ స్ప్లిట్';
+
+  @override
+  String get videoEditorEffectLongExposure => 'లాంగ్ ఎక్స్‌పోజర్';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'కదలిక మాత్రమే';
+
+  @override
+  String get videoEditorEffectStutter => 'తడబాటు';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'టైమ్ వార్ప్';
+
+  @override
   String get videoEditorEffectFisheye => 'ఫిష్‌ఐ';
 
   @override
@@ -9878,6 +9893,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'కదలిక';
 
   @override
+  String get videoEditorEffectCategoryTime => 'సమయం';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'కణాలు';
 
   @override
@@ -9983,6 +10001,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి.';
 
   @override
   String get videoEditorEffectsOnBeat => 'బీట్‌కు అనుగుణంగా';
