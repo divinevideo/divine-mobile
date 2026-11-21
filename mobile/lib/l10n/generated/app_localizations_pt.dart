@@ -9832,6 +9832,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Só um efeito de Tempo de cada vez. Dois juntos ficariam diferentes depois de exportar, por isso substituímos o outro aqui.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Só um efeito de Tempo de cada vez. Dois juntos ficariam diferentes depois de exportar.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'No ritmo';
 
   @override

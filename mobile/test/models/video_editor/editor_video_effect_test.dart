@@ -43,7 +43,7 @@ void main() {
     });
   });
 
-  group('withoutFlashingOverlaps', () {
+  group('withoutExclusiveOverlaps', () {
     Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
     EditorVideoEffect effect(
@@ -74,7 +74,7 @@ void main() {
       ];
 
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           effects,
           keepId: 'glitch',
           createId: createId,
@@ -91,7 +91,7 @@ void main() {
       ];
 
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           effects,
           keepId: 'strobe',
           createId: createId,
@@ -107,7 +107,7 @@ void main() {
         effect('strobe', .strobe),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'strobe',
         createId: createId,
@@ -123,7 +123,7 @@ void main() {
         effect('negative', .negativeFlash, s(2), s(3)),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'negative',
         createId: createId,
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('keeps both pieces of a cut effect on the beat on the beat', () {
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           const EditorVideoEffect(
             id: 'negative',
@@ -165,7 +165,7 @@ void main() {
         effect('negative', .negativeFlash, s(1), s(3)),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'negative',
         createId: createId,
@@ -175,7 +175,88 @@ void main() {
     });
   });
 
-  group('withoutFlashingOverlaps with lightning', () {
+  group('withoutExclusiveOverlaps with Time effects', () {
+    Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
+
+    EditorVideoEffect time(
+      String id,
+      EditorEffectType type, {
+      Duration? start,
+      Duration? end,
+      bool onBeat = false,
+    }) => EditorVideoEffect.of(
+      id: id,
+      type: type,
+      intensity: 0.6,
+      startTime: start,
+      endTime: end,
+      onBeat: onBeat,
+    );
+
+    test('cuts another Time effect out of the window of a Time effect, and '
+        'leaves flashing and other effects alone', () {
+      final result = withoutExclusiveOverlaps(
+        [
+          time('echo', EditorEffectType.echo),
+          time(
+            'stutter',
+            EditorEffectType.stutter,
+            start: s(2),
+            end: s(4),
+            onBeat: true,
+          ),
+          const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+          time('comic', EditorEffectType.comic),
+        ],
+        keepId: 'stutter',
+        createId: () => 'piece',
+      );
+
+      expect(
+        [for (final e in result!) (e.id, e.startTime, e.endTime)],
+        [
+          ('echo', Duration.zero, s(2)),
+          ('piece', s(4), null),
+          ('stutter', s(2), s(4)),
+          ('strobe', null, null),
+          ('comic', null, null),
+        ],
+      );
+      final piece = result.firstWhere((e) => e.id == 'piece');
+      expect(piece.type, EditorEffectType.echo);
+      expect(piece.intensity, 0.6);
+    });
+
+    test('a flashing effect leaves Time effects alone', () {
+      expect(
+        withoutExclusiveOverlaps(
+          [
+            time('echo', EditorEffectType.echo),
+            const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+          ],
+          keepId: 'strobe',
+          createId: () => 'piece',
+        ),
+        isNull,
+      );
+    });
+
+    test('groups the flashing effects and the Time effects, and no other', () {
+      for (final type in EditorEffectType.values) {
+        expect(
+          type.exclusiveGroup,
+          type.isFlashing
+              ? EditorEffectExclusiveGroup.flashing
+              : type.category == EditorEffectCategory.time
+              ? EditorEffectExclusiveGroup.earlierFrames
+              : isNull,
+          reason: type.name,
+        );
+      }
+    });
+  });
+
+  group('withoutExclusiveOverlaps with lightning', () {
     Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
     EditorVideoEffect lightning({
@@ -199,7 +280,7 @@ void main() {
         intensity: 0.7,
       );
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
           lightning(start: s(2), end: s(4)),
@@ -222,7 +303,7 @@ void main() {
 
     test('cuts lightning out of the window of a strobe, keeping its '
         'strength and its beat', () {
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           EditorVideoEffect(
             id: 'strobe',
@@ -1782,7 +1863,7 @@ void main() {
     test('never counts as flashing', () {
       expect(EditorEffectType.echo.isFlashing, isFalse);
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           [echo],
           keepId: 'echo-1',
           createId: () => 'new',

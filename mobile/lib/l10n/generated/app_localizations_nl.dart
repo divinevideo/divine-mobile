@@ -9786,6 +9786,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit, dus hebben we het andere hier vervangen.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Op de beat';
 
   @override

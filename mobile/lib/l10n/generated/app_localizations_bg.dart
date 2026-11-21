@@ -9831,6 +9831,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране, затова тук заменихме другия.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'В ритъм';
 
   @override

@@ -9867,6 +9867,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Immer nur ein Zeit-Effekt. Zwei zusammen sähen nach dem Export anders aus, deshalb haben wir den anderen hier ersetzt.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Immer nur ein Zeit-Effekt. Zwei zusammen sähen nach dem Export anders aus.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Im Takt';
 
   @override

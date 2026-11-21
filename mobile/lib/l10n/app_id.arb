@@ -2808,6 +2808,8 @@
   "videoEditorDropsShuffle": "Acak",
   "videoEditorEffectsFlashingReplaced": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.",
+  "videoEditorEffectsTimeReplaced": "Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor, jadi kami mengganti efek lainnya di sini.",
+  "videoEditorEffectsTimeNotDuplicated": "Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor.",
   "videoEditorEffectsOnBeat": "Sesuai ketukan",
   "videoEditorEffectsOnBeatFinding": "Mencari ketukan…",
   "videoEditorEffectsOnBeatNoBeat": "Tidak ada ketukan yang stabil di suara ini",

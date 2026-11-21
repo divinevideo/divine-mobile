@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Blanda",
   "videoEditorEffectsFlashingReplaced": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.",
   "videoEditorEffectsFlashingNotDuplicated": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.",
+  "videoEditorEffectsTimeReplaced": "En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten, så vi har ersatt den andra här.",
+  "videoEditorEffectsTimeNotDuplicated": "En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten.",
   "videoEditorEffectsOnBeat": "I takt",
   "videoEditorEffectsOnBeatFinding": "Letar efter takten…",
   "videoEditorEffectsOnBeatNoBeat": "Ingen jämn takt i det här ljudet",

@@ -9697,6 +9697,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Mỗi lúc chỉ một hiệu ứng Thời gian. Dùng hai cùng lúc sẽ trông khác sau khi xuất, nên chúng mình đã thay hiệu ứng kia ở đây.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Mỗi lúc chỉ một hiệu ứng Thời gian. Dùng hai cùng lúc sẽ trông khác sau khi xuất.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Theo nhịp';
 
   @override

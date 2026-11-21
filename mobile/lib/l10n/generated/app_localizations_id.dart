@@ -9649,6 +9649,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor, jadi kami mengganti efek lainnya di sini.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Sesuai ketukan';
 
   @override

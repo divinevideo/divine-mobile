@@ -4912,6 +4912,8 @@
   "videoEditorDropsShuffle": "ملائیں",
   "videoEditorEffectsFlashingReplaced": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔",
   "videoEditorEffectsFlashingNotDuplicated": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔",
+  "videoEditorEffectsTimeReplaced": "ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔",
+  "videoEditorEffectsTimeNotDuplicated": "ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے۔",
   "videoEditorEffectsOnBeat": "بیٹ کے ساتھ",
   "videoEditorEffectsOnBeatFinding": "بیٹ تلاش ہو رہی ہے…",
   "videoEditorEffectsOnBeatNoBeat": "اس آواز میں کوئی باقاعدہ بیٹ نہیں",

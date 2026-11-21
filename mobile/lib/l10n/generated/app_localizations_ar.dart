@@ -9762,6 +9762,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير، لذلك استبدلنا التأثير الآخر هنا.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'على الإيقاع';
 
   @override

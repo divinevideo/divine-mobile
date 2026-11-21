@@ -299,6 +299,20 @@ enum EditorEffectCategory {
   ];
 }
 
+/// A group of effects only one of which may play at any moment; see
+/// [EditorEffectType.exclusiveGroup] and [withoutExclusiveOverlaps].
+enum EditorEffectExclusiveGroup {
+  /// The effects that flash: two at once could pass three flashes a second.
+  flashing,
+
+  /// The effects that read earlier frames, the [EditorEffectCategory.time]
+  /// ones. A second one running with the first would read the first one's
+  /// output in the Android export, but the unprocessed frames in the preview
+  /// and the iOS export, so it would look different once exported; see
+  /// [customVideoEffectsInRenderOrder].
+  earlierFrames,
+}
+
 /// Where a new effect goes on the editor timeline; see
 /// [EditorEffectType.placement] and [defaultVideoEffectWindow].
 enum EditorEffectPlacement {
@@ -775,6 +789,14 @@ class EditorEffectType {
   /// [customVideoEffectsInRenderOrder] for why it matters where they run.
   bool get readsEarlierFrames => category == EditorEffectCategory.time;
 
+  /// The group of effects this type may not overlap, or `null` for one that
+  /// may overlap any other; see [withoutExclusiveOverlaps].
+  EditorEffectExclusiveGroup? get exclusiveGroup => isFlashing
+      ? EditorEffectExclusiveGroup.flashing
+      : readsEarlierFrames
+      ? EditorEffectExclusiveGroup.earlierFrames
+      : null;
+
   /// The category the effects picker lists this type under.
   ///
   /// A built-in effect without one does not compile. Throws a [StateError]
@@ -1160,8 +1182,9 @@ EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
 /// effect before it in the chain; the custom effects run first there, ahead
 /// of the built-in ones. So the [EditorEffectType.readsEarlierFrames] effects
 /// go first, where all three read the same frames, and whatever comes after
-/// them, such as a comic look, draws over their trails and ghosts alike. Only
-/// a second one of them still reads the first one's output on Android.
+/// them, such as a comic look, draws over their trails and ghosts alike. A
+/// second one would still read the first one's output on Android, so no two
+/// of them overlap; see [EditorEffectExclusiveGroup.earlierFrames].
 ///
 /// A look grades the finished picture, like a colour filter, so it goes last;
 /// see `adjustVideoEffectsOf` for Adjust, which goes after the looks.
@@ -2004,24 +2027,27 @@ Set<ContentLabel> requiredContentLabelsForEffects(
     ? const {ContentLabel.flashingLights}
     : const {};
 
-/// Pieces shorter than this are dropped when a flashing effect is cut, rather
-/// than left as a sliver nobody could see or grab on the timeline.
+/// Pieces shorter than this are dropped when an effect is cut out of another
+/// one's window, rather than left as a sliver nobody could see or grab on the
+/// timeline.
 const minimumVideoEffectPiece = Duration(milliseconds: 100);
 
-/// Cuts every other flashing effect out of the window of the effect with
-/// [keepId], so no two flashing effects overlap.
+/// Cuts every other effect of its [EditorEffectExclusiveGroup] out of the
+/// window of the effect with [keepId], so no two flashing effects, and no two
+/// effects that read earlier frames, overlap.
 ///
 /// A cut effect keeps whatever lies before and after that window; the part
 /// after it becomes a new effect, named by [createId], whose animation starts
-/// over there. Returns `null` when [keepId] is not a flashing effect or
-/// overlaps none.
-List<EditorVideoEffect>? withoutFlashingOverlaps(
+/// over there. Returns `null` when [keepId] is in no such group or overlaps
+/// none of its group.
+List<EditorVideoEffect>? withoutExclusiveOverlaps(
   List<EditorVideoEffect> effects, {
   required String keepId,
   required String Function() createId,
 }) {
   final kept = effects.where((e) => e.id == keepId).firstOrNull;
-  if (kept == null || !kept.type.isFlashing) return null;
+  final group = kept?.type.exclusiveGroup;
+  if (kept == null || group == null) return null;
   final keptStart = kept.startTime ?? Duration.zero;
   final keptEnd = kept.endTime;
 
@@ -2032,7 +2058,7 @@ List<EditorVideoEffect>? withoutFlashingOverlaps(
     final end = entry.endTime;
     final overlaps =
         entry.id != keepId &&
-        entry.type.isFlashing &&
+        entry.type.exclusiveGroup == group &&
         (keptEnd == null || start < keptEnd) &&
         (end == null || keptStart < end);
     if (!overlaps) {

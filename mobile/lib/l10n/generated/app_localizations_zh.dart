@@ -9198,6 +9198,14 @@ class AppLocalizationsZh extends AppLocalizations {
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      '一次只能用一个时光效果。两个叠在一起，导出后会和预览不一样，所以我们在这里替换了另一个。';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '一次只能用一个时光效果。两个叠在一起，导出后会和预览不一样。';
+
+  @override
   String get videoEditorEffectsOnBeat => '卡点';
 
   @override

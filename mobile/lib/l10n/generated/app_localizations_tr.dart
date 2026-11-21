@@ -9660,6 +9660,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Aynı anda tek bir Zaman efekti. İkisi birlikte dışa aktarıldıktan sonra farklı görünür, bu yüzden buradaki diğerini değiştirdik.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Aynı anda tek bir Zaman efekti. İkisi birlikte dışa aktarıldıktan sonra farklı görünür.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Ritme göre';
 
   @override

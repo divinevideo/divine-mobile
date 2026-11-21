@@ -2132,6 +2132,8 @@
   "videoEditorDropsShuffle": "I-shuffle",
   "videoEditorEffectsFlashingReplaced": "Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.",
   "videoEditorEffectsFlashingNotDuplicated": "Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.",
+  "videoEditorEffectsTimeReplaced": "Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export, kaya pinalitan namin ang isa pa dito.",
+  "videoEditorEffectsTimeNotDuplicated": "Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export.",
   "videoEditorEffectsOnBeat": "Sa beat",
   "videoEditorEffectsOnBeatFinding": "Hinahanap ang beat…",
   "videoEditorEffectsOnBeatNoBeat": "Walang steady na beat sa sound na ito",

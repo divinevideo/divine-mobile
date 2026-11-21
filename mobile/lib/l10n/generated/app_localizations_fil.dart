@@ -9811,6 +9811,14 @@ class AppLocalizationsFil extends AppLocalizations {
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export, kaya pinalitan namin ang isa pa dito.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Isang Oras effect lang sa isang pagkakataon. Iba ang magiging itsura ng dalawang magkasabay kapag na-export.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Sa beat';
 
   @override

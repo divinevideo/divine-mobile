@@ -9892,6 +9892,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés, alors on a remplacé l\'autre ici.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Sur le rythme';
 
   @override

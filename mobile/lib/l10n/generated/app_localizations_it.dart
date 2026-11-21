@@ -9860,6 +9860,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati, quindi qui abbiamo sostituito l\'altro.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'A tempo';
 
   @override

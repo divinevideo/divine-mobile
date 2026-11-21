@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Amestecă",
   "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
   "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
+  "videoEditorEffectsTimeReplaced": "Un singur efect Timp odată. Două împreună ar arăta altfel după export, așa că l-am înlocuit aici pe celălalt.",
+  "videoEditorEffectsTimeNotDuplicated": "Un singur efect Timp odată. Două împreună ar arăta altfel după export.",
   "videoEditorEffectsOnBeat": "Pe ritm",
   "videoEditorEffectsOnBeatFinding": "Se caută ritmul…",
   "videoEditorEffectsOnBeatNoBeat": "Sunetul acesta nu are un ritm constant",

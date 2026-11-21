@@ -9965,6 +9965,14 @@ class AppLocalizationsPl extends AppLocalizations {
       'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie, więc zastąpiliśmy tutaj ten drugi.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'W rytm';
 
   @override

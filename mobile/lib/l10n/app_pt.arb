@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Embaralhar",
   "videoEditorEffectsFlashingReplaced": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.",
   "videoEditorEffectsFlashingNotDuplicated": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.",
+  "videoEditorEffectsTimeReplaced": "Só um efeito de Tempo de cada vez. Dois juntos ficariam diferentes depois de exportar, por isso substituímos o outro aqui.",
+  "videoEditorEffectsTimeNotDuplicated": "Só um efeito de Tempo de cada vez. Dois juntos ficariam diferentes depois de exportar.",
   "videoEditorEffectsOnBeat": "No ritmo",
   "videoEditorEffectsOnBeatFinding": "Procurando o ritmo…",
   "videoEditorEffectsOnBeatNoBeat": "Este som não tem um ritmo constante",

@@ -9280,6 +9280,14 @@ class AppLocalizationsJa extends AppLocalizations {
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わるので、ここではもう一方を置き換えました。';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わります。';
+
+  @override
   String get videoEditorEffectsOnBeat => 'ビートに合わせる';
 
   @override

@@ -9741,6 +9741,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten, så vi har ersatt den andra här.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'I takt';
 
   @override

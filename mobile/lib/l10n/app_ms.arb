@@ -4912,6 +4912,8 @@
   "videoEditorDropsShuffle": "Kocok",
   "videoEditorEffectsFlashingReplaced": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.",
+  "videoEditorEffectsTimeReplaced": "Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport, jadi kami menggantikan yang satu lagi di sini.",
+  "videoEditorEffectsTimeNotDuplicated": "Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport.",
   "videoEditorEffectsOnBeat": "Ikut rentak",
   "videoEditorEffectsOnBeatFinding": "Mencari rentak…",
   "videoEditorEffectsOnBeatNoBeat": "Tiada rentak yang tetap dalam bunyi ini",

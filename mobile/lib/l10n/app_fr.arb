@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Mélanger",
   "videoEditorEffectsFlashingReplaced": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l'autre ici.",
   "videoEditorEffectsFlashingNotDuplicated": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.",
+  "videoEditorEffectsTimeReplaced": "Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés, alors on a remplacé l'autre ici.",
+  "videoEditorEffectsTimeNotDuplicated": "Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés.",
   "videoEditorEffectsOnBeat": "Sur le rythme",
   "videoEditorEffectsOnBeatFinding": "Recherche du rythme…",
   "videoEditorEffectsOnBeatNoBeat": "Pas de rythme régulier dans ce son",

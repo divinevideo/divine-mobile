@@ -2846,6 +2846,8 @@
   "videoEditorDropsShuffle": "Mezclar",
   "videoEditorEffectsFlashingReplaced": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.",
   "videoEditorEffectsFlashingNotDuplicated": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.",
+  "videoEditorEffectsTimeReplaced": "Solo un efecto de Tiempo a la vez. Dos juntos se verían distintos al exportar, así que aquí hemos reemplazado el otro.",
+  "videoEditorEffectsTimeNotDuplicated": "Solo un efecto de Tiempo a la vez. Dos juntos se verían distintos al exportar.",
   "videoEditorEffectsOnBeat": "Al ritmo",
   "videoEditorEffectsOnBeatFinding": "Buscando el ritmo…",
   "videoEditorEffectsOnBeatNoBeat": "Este sonido no tiene un ritmo constante",

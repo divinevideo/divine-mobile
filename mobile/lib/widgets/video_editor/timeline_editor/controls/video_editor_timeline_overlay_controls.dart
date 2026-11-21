@@ -37,7 +37,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
-import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/exclusive_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -671,9 +671,10 @@ class _EffectOverlayControls extends StatelessWidget {
     final effects = editor.stateManager.videoEffectEntries;
     final index = effects.indexWhere((e) => e.id == item.id);
     if (index < 0) return;
-    // The copy would lie on top of the original and flash along with it.
-    if (effects[index].type.isFlashing) {
-      showFlashingEffectNotDuplicatedSnackBar(context);
+    // The copy would lie on top of the original: flash along with it, or
+    // read the same earlier frames, which only one effect may.
+    if (effects[index].type.exclusiveGroup case final group?) {
+      showExclusiveEffectNotDuplicatedSnackBar(context, group);
       return;
     }
 

@@ -193,9 +193,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// with nothing picked adds nothing, and an edited one dialed down to no
   /// intensity is removed, except an intro or outro, whose intensity shapes
   /// its look. A flashing effect replaces other flashing effects in its
-  /// window (see [withoutFlashingOverlaps]); `replacedFlashing` says so, for
-  /// the UI to explain.
-  ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
+  /// window, and an effect that reads earlier frames other such effects (see
+  /// [withoutExclusiveOverlaps]); `replaced` names the group whose effects it
+  /// replaced, for the UI to explain.
+  ({List<EditorVideoEffect> effects, EditorEffectExclusiveGroup? replaced})
+  confirm() {
     final selection = state.selection;
     final picked =
         selection != null &&
@@ -231,7 +233,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
 
     final separated = picked == null || committedId == null
         ? null
-        : withoutFlashingOverlaps(
+        : withoutExclusiveOverlaps(
             effects,
             keepId: committedId,
             createId: _createId,
@@ -245,7 +247,10 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         applied: List.unmodifiable(effects),
       ),
     );
-    return (effects: effects, replacedFlashing: separated != null);
+    return (
+      effects: effects,
+      replaced: separated == null ? null : picked?.type.exclusiveGroup,
+    );
   }
 
   /// Finds the beats when an effect needs them: right away when their music

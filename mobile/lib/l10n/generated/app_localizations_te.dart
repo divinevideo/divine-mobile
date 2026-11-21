@@ -10003,6 +10003,14 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'బీట్‌కు అనుగుణంగా';
 
   @override

@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Husselen",
   "videoEditorEffectsFlashingReplaced": "Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.",
   "videoEditorEffectsFlashingNotDuplicated": "Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.",
+  "videoEditorEffectsTimeReplaced": "Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit, dus hebben we het andere hier vervangen.",
+  "videoEditorEffectsTimeNotDuplicated": "Eén Tijd-effect tegelijk. Twee samen zien er na het exporteren anders uit.",
   "videoEditorEffectsOnBeat": "Op de beat",
   "videoEditorEffectsOnBeatFinding": "Beat zoeken…",
   "videoEditorEffectsOnBeatNoBeat": "Geen vaste beat in dit geluid",

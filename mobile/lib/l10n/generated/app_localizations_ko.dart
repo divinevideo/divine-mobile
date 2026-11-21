@@ -9299,6 +9299,14 @@ class AppLocalizationsKo extends AppLocalizations {
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져서 여기서는 다른 효과를 바꿨어요.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져요.';
+
+  @override
   String get videoEditorEffectsOnBeat => '비트에 맞추기';
 
   @override

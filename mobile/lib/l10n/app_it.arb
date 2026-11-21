@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Mescola",
   "videoEditorEffectsFlashingReplaced": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l'altro.",
   "videoEditorEffectsFlashingNotDuplicated": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.",
+  "videoEditorEffectsTimeReplaced": "Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati, quindi qui abbiamo sostituito l'altro.",
+  "videoEditorEffectsTimeNotDuplicated": "Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati.",
   "videoEditorEffectsOnBeat": "A tempo",
   "videoEditorEffectsOnBeatFinding": "Ricerca del ritmo…",
   "videoEditorEffectsOnBeatNoBeat": "Nessun ritmo regolare in questo suono",

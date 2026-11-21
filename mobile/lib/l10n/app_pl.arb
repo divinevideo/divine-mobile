@@ -2838,6 +2838,8 @@
   "videoEditorDropsShuffle": "Wymieszaj",
   "videoEditorEffectsFlashingReplaced": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.",
   "videoEditorEffectsFlashingNotDuplicated": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.",
+  "videoEditorEffectsTimeReplaced": "Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie, więc zastąpiliśmy tutaj ten drugi.",
+  "videoEditorEffectsTimeNotDuplicated": "Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie.",
   "videoEditorEffectsOnBeat": "W rytm",
   "videoEditorEffectsOnBeatFinding": "Szukam rytmu…",
   "videoEditorEffectsOnBeatNoBeat": "Ten dźwięk nie ma równego rytmu",

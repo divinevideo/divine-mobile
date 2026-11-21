@@ -9744,6 +9744,14 @@ class AppLocalizationsUr extends AppLocalizations {
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے۔';
+
+  @override
   String get videoEditorEffectsOnBeat => 'بیٹ کے ساتھ';
 
   @override

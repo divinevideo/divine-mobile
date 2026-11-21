@@ -9747,6 +9747,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport, jadi kami menggantikan yang satu lagi di sini.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Ikut rentak';
 
   @override

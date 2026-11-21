@@ -9836,6 +9836,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'One Time effect at a time. Two together would look different once exported, so we swapped out the other one here.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'One Time effect at a time. Two together would look different once exported.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'On the beat';
 
   @override

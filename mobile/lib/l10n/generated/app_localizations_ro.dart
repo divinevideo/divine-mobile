@@ -9960,6 +9960,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export, așa că l-am înlocuit aici pe celălalt.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Pe ritm';
 
   @override

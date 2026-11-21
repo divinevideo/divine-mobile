@@ -3080,6 +3080,8 @@
   "videoEditorDropsShuffle": "Разбъркай",
   "videoEditorEffectsFlashingReplaced": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.",
   "videoEditorEffectsFlashingNotDuplicated": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.",
+  "videoEditorEffectsTimeReplaced": "Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране, затова тук заменихме другия.",
+  "videoEditorEffectsTimeNotDuplicated": "Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране.",
   "videoEditorEffectsOnBeat": "В ритъм",
   "videoEditorEffectsOnBeatFinding": "Търсене на ритъма…",
   "videoEditorEffectsOnBeatNoBeat": "Няма равномерен ритъм в този звук",

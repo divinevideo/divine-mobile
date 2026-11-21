@@ -9845,6 +9845,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Solo un efecto de Tiempo a la vez. Dos juntos se verían distintos al exportar, así que aquí hemos reemplazado el otro.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Solo un efecto de Tiempo a la vez. Dos juntos se verían distintos al exportar.';
+
+  @override
   String get videoEditorEffectsOnBeat => 'Al ritmo';
 
   @override

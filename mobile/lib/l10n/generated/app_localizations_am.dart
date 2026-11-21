@@ -9527,6 +9527,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
 
   @override
+  String get videoEditorEffectsTimeReplaced =>
+      'አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ።';
+
+  @override
   String get videoEditorEffectsOnBeat => 'ከምቱ ጋር';
 
   @override

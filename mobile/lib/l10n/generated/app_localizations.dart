@@ -16421,6 +16421,18 @@ abstract class AppLocalizations {
   /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.'**
   String get videoEditorEffectsFlashingNotDuplicated;
 
+  /// Snack bar after a Time video effect (echo, time split, long exposure, motion only, stutter, time warp) replaced another Time effect where the two overlapped on the timeline. Explains, without technical terms, that two of them together would render differently in the exported video than in the preview. 'Time' is the effects picker group named by videoEditorEffectCategoryTime.
+  ///
+  /// In en, this message translates to:
+  /// **'One Time effect at a time. Two together would look different once exported, so we swapped out the other one here.'**
+  String get videoEditorEffectsTimeReplaced;
+
+  /// Snack bar when the user tries to duplicate a Time video effect: the copy would play on top of the original, so it is not duplicated. Same reason as videoEditorEffectsTimeReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'One Time effect at a time. Two together would look different once exported.'**
+  String get videoEditorEffectsTimeNotDuplicated;
+
   /// Switch in the video effects editor: the picked effect fires on every beat of the video's music (one zoom, flash or glitch per beat) instead of playing all the time. Keep it short.
   ///
   /// In en, this message translates to:

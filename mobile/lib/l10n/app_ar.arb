@@ -2801,6 +2801,8 @@
   "videoEditorDropsShuffle": "خلط",
   "videoEditorEffectsFlashingReplaced": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.",
   "videoEditorEffectsFlashingNotDuplicated": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.",
+  "videoEditorEffectsTimeReplaced": "تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير، لذلك استبدلنا التأثير الآخر هنا.",
+  "videoEditorEffectsTimeNotDuplicated": "تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير.",
   "videoEditorEffectsOnBeat": "على الإيقاع",
   "videoEditorEffectsOnBeatFinding": "جارٍ البحث عن الإيقاع…",
   "videoEditorEffectsOnBeatNoBeat": "لا يوجد إيقاع ثابت في هذا الصوت",
