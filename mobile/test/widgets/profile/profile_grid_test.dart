@@ -9,6 +9,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -280,6 +281,8 @@ void main() {
       List<Override> additionalOverrides = const [],
       String viewedUserHex = userIdHex,
       bool coveredByOpaqueRoute = false,
+      bool useNestedNavigator = false,
+      ValueListenable<bool>? tickersEnabled,
     }) {
       final profileGrid = MultiBlocProvider(
         providers: [
@@ -296,16 +299,26 @@ void main() {
           scrollController: scrollController,
         ),
       );
-      // An opaque route above keeps the grid built but never laid out.
-      final grid = coveredByOpaqueRoute
+      final grid = coveredByOpaqueRoute || useNestedNavigator
           ? Navigator(
               pages: [
                 MaterialPage<void>(child: profileGrid),
-                const MaterialPage<void>(child: SizedBox.shrink()),
+                // An opaque page above keeps the grid built but never laid out.
+                if (coveredByOpaqueRoute)
+                  const MaterialPage<void>(child: SizedBox.shrink()),
               ],
               onDidRemovePage: (_) {},
             )
           : profileGrid;
+      // An inactive app-shell branch mutes its tickers without a route change.
+      final shelled = tickersEnabled == null
+          ? grid
+          : ValueListenableBuilder<bool>(
+              valueListenable: tickersEnabled,
+              builder: (context, enabled, child) =>
+                  TickerMode(enabled: enabled, child: child!),
+              child: grid,
+            );
 
       return testMaterialApp(
         theme: VineTheme.theme,
@@ -313,12 +326,12 @@ void main() {
           // testMaterialApp takes no locale, so override it here rather than
           // widen a helper every other profile test shares.
           body: locale == null
-              ? grid
+              ? shelled
               : Builder(
                   builder: (context) => Localizations.override(
                     context: context,
                     locale: locale,
-                    child: grid,
+                    child: shelled,
                   ),
                 ),
         ),
@@ -1328,6 +1341,190 @@ void main() {
           epsilon: 1,
         ),
       );
+    });
+
+    for (final isOwnProfile in [false, true]) {
+      testWidgets(
+        'keeps scrolling after an empty load finishes behind an opaque route '
+        '(own: $isOwnProfile)',
+        (tester) async {
+          final controller = ScrollController();
+          addTearDown(controller.dispose);
+          await tester.pumpWidget(
+            buildSubject(
+              isOwnProfile: isOwnProfile,
+              scrollController: controller,
+              useNestedNavigator: true,
+              isLoadingVideos: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 200));
+          await tester.pump();
+          expect(find.byType(ProfileVideosGridSkeleton), findsOneWidget);
+          await tester.fling(
+            find.byType(NestedScrollView),
+            const Offset(0, -60),
+            2500,
+          );
+          expect(controller.position.isScrollingNotifier.value, isTrue);
+          final navigator = tester.state<NavigatorState>(
+            find.byType(Navigator).last,
+          );
+          navigator.push<void>(
+            PageRouteBuilder<void>(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const SizedBox.shrink(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(NestedScrollView), findsNothing);
+          await tester.pumpWidget(
+            buildSubject(
+              isOwnProfile: isOwnProfile,
+              scrollController: controller,
+              useNestedNavigator: true,
+            ),
+          );
+          expect(tester.takeException(), isNull);
+          expect(controller.position.isScrollingNotifier.value, isFalse);
+          navigator.pop();
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              lookupAppLocalizations(const Locale('en')).profileNoVideosTitle,
+            ),
+            findsOneWidget,
+          );
+          final offsetBeforeDrag = controller.offset;
+          expect(offsetBeforeDrag, greaterThan(0));
+          await tester.drag(
+            find.byType(NestedScrollView),
+            const Offset(0, 200),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(controller.offset, lessThan(offsetBeforeDrag));
+        },
+      );
+    }
+
+    testWidgets('keeps a tab flung behind an opaque route where it stopped', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          useNestedNavigator: true,
+          videos: videos(30),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final nested = tester.state<NestedScrollViewState>(
+        find.byType(NestedScrollView),
+      );
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -600),
+        4000,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      final inner = nested.innerController.positions.single;
+      expect(inner.isScrollingNotifier.value, isTrue);
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).last,
+      );
+      navigator.push<void>(
+        PageRouteBuilder<void>(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const SizedBox.shrink(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      final hiddenPixels = inner.pixels;
+      expect(hiddenPixels, greaterThan(0));
+      await tester.pump(const Duration(seconds: 2));
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(inner.pixels, equals(hiddenPixels));
+    });
+
+    testWidgets('keeps a profile flung in a muted tab where it stopped', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      final tickersEnabled = ValueNotifier<bool>(true);
+      addTearDown(tickersEnabled.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          isLoadingVideos: true,
+          tickersEnabled: tickersEnabled,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -60),
+        2500,
+      );
+      expect(controller.position.isScrollingNotifier.value, isTrue);
+
+      tickersEnabled.value = false;
+      await tester.pump();
+      final mutedOffset = controller.offset;
+      expect(mutedOffset, greaterThan(0));
+      await tester.pump(const Duration(seconds: 2));
+
+      tickersEnabled.value = true;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(tester.takeException(), isNull);
+      expect(controller.offset, equals(mutedOffset));
+    });
+
+    testWidgets('keeps a visible fling going when the view padding changes', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: controller,
+          isLoadingVideos: true,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -60),
+        2500,
+      );
+      expect(controller.position.isScrollingNotifier.value, isTrue);
+
+      tester.view.padding = FakeViewPadding(
+        top: 24 * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetPadding);
+      await tester.pump();
+
+      expect(controller.position.isScrollingNotifier.value, isTrue);
     });
 
     testWidgets('starts at the top when the profile changes in place', (
