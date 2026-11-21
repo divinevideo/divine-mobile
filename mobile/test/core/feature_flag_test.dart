@@ -67,6 +67,21 @@ void main() {
       expect(const BuildConfiguration().getDefault(flag), isFalse);
     });
 
+    test(
+      'keeps server-selected Bunny playback internal and off by default',
+      () {
+        final flag = FeatureFlag.values.firstWhere(
+          (flag) => flag.name == 'bunnyPlayback',
+        );
+        expect(flag.isInternal, isTrue);
+        expect(const BuildConfiguration().getDefault(flag), isFalse);
+        expect(
+          const BuildConfiguration().getEnvironmentKey(flag),
+          'FF_BUNNY_PLAYBACK',
+        );
+      },
+    );
+
     test('keeps the Bunny playback canary internal and off by default', () {
       final flag = FeatureFlag.values.firstWhere(
         (flag) => flag.name == 'bunnyPlaybackCanary',

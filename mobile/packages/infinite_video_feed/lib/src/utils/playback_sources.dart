@@ -14,7 +14,7 @@ import 'package:models/models.dart';
 /// [preferB2Original] inserts the dedicated B2 original immediately before an
 /// eligible original in the normal ladder. Resolved renditions stay preferred.
 ///
-/// [bunnyPlaybackPaths] inserts only verified public MP4 paths immediately
+/// [bunnyPlaybackPaths] inserts verified public MP4 and HLS master paths
 /// before the matching canonical source. B2 takes precedence if selected.
 ///
 /// Derivative-resolved Divine blobs use the bare blob as their final fallback,
