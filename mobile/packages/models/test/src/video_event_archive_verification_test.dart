@@ -28,23 +28,36 @@ void main() {
     group('isClassicVine', () {
       test('includes Vine imports through the last second of 2017 UTC', () {
         expect(
-          _video(platformTag: true, publishedAt: '1514764799').isClassicVine,
+          _video(
+            platformTag: true,
+            verificationUnknown: true,
+            publishedAt: '1514764799',
+          ).isClassicVine,
           isTrue,
         );
         expect(
-          _video(platformTag: true, publishedAt: '1514764800').isClassicVine,
+          _video(
+            platformTag: true,
+            verificationUnknown: true,
+            publishedAt: '1514764800',
+          ).isClassicVine,
           isFalse,
         );
       });
 
       test('uses the original publish date for a recently imported Vine', () {
         expect(
-          _video(platformTag: true, publishedAt: '1451606400').isClassicVine,
+          _video(
+            platformTag: true,
+            verificationUnknown: true,
+            publishedAt: '1451606400',
+          ).isClassicVine,
           isTrue,
         );
         expect(
           _video(
             platformTag: true,
+            verificationUnknown: true,
             rawTags: const {'published_at': '1451606400'},
           ).isClassicVine,
           isTrue,
@@ -57,6 +70,7 @@ void main() {
           expect(
             _video(
               platformTag: true,
+              verificationUnknown: true,
               createdAt: 1451606400,
               publishedAt: '1514764800',
             ).isClassicVine,
@@ -77,7 +91,11 @@ void main() {
       });
 
       test('does not use a post-shutdown import time as the original date', () {
-        final video = _video(platformTag: true, createdAt: 1514764799);
+        final video = _video(
+          platformTag: true,
+          verificationUnknown: true,
+          createdAt: 1514764799,
+        );
 
         expect(video.hasUnknownOriginalDate, isTrue);
         expect(video.isClassicVine, isFalse);
@@ -86,15 +104,19 @@ void main() {
       test('does not label Vine imports with missing or invalid dates', () {
         for (final createdAt in [0, -1, 1700000000]) {
           expect(
-            _video(platformTag: true, createdAt: createdAt).isClassicVine,
+            _video(
+              platformTag: true,
+              verificationUnknown: true,
+              createdAt: createdAt,
+            ).isClassicVine,
             isFalse,
           );
         }
       });
 
-      test('display classification does not grant archive trust', () {
+      test('respects an explicit server rejection despite Vine tags', () {
         final video = _video(platformTag: true, createdAt: 1451606400);
-        expect(video.isClassicVine, isTrue);
+        expect(video.isClassicVine, isFalse);
         expect(video.countsAsArchiveVine, isFalse);
         expect(video.isVerifiedArchive, isFalse);
         expect(video.archiveAudioReuseEnabled, isFalse);
