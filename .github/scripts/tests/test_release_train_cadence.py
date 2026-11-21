@@ -1,10 +1,13 @@
 """Rolling release limits, including accepted writes recovered after a restart."""
 
 import unittest
+from unittest.mock import patch
 
 import release_train_fakes  # noqa: F401 - scripts import path
 from release_train.coordinator import PLAY_PUBLICATION_VERSION, observe, plan_tick
+from release_train.runner import Runtime, execute_plan
 from test_release_train_coordinator import NOW, build, snapshot
+from test_release_train_runner import Store
 
 HOUR = 3600
 DAY = 24 * HOUR
@@ -69,6 +72,75 @@ class ReleaseCadenceTest(unittest.TestCase):
                         bool(plan_tick(s, state, {"ios": "testflight"})["actions"]),
                         elapsed >= 12 * HOUR,
                     )
+
+    def test_first_public_group_recovery_obeys_the_release_budget(self):
+        for dates, started, allowed in [
+            ([], NOW - HOUR, False),
+            ([NOW - 13 * HOUR, NOW - 14 * HOUR], NOW - DAY, False),
+            ([], NOW - 12 * HOUR, True),
+        ]:
+            with self.subTest(dates=dates, started=started):
+                s = self.public_snapshot()
+                s["ios"]["submissions"] = dates
+                state = {"operations": {"prior": operation("public-beta", started)}}
+                self.assertEqual(
+                    [a["kind"] for a in plan_tick(s, state, {"ios": "testflight"})["actions"]],
+                    ["attach-beta-groups"] if allowed else [],
+                )
+
+    def test_first_public_recovery_reserves_the_tick_and_survives_restart(self):
+        s = self.public_snapshot()
+        first = s["ios"]["builds"][0]
+        second = first | {"id": "11", "number": 11}
+        third = first | {"id": "12", "number": 12}
+        s["ios"]["builds"] = [first, second, third]
+        state = {"operations": {"prior": operation("public-beta", NOW - DAY)}}
+        state["operations"]["second"] = operation("public-beta", NOW - DAY)
+        state["operations"]["second"]["action"]["build"] = second
+        plan = plan_tick(s, state, {"ios": "testflight"})
+        self.assertEqual(
+            [(a["kind"], a["build"]["id"]) for a in plan["actions"]],
+            [("attach-beta-groups", "10")],
+        )
+
+        class Attached:
+            def execute(self, action, state, snapshot):
+                return {}
+
+        store = Store()
+        execute_plan(plan, state, s, store, Attached())
+        state = store.saves[-1]
+        first.update(public=True, public_complete=True)
+        for elapsed in [12 * HOUR - 1, 12 * HOUR]:
+            with self.subTest(elapsed=elapsed):
+                s["now"] = NOW + elapsed
+                actions = plan_tick(s, state, {"ios": "testflight"})["actions"]
+                self.assertEqual(
+                    [(a["kind"], a["build"]["id"]) for a in actions],
+                    [("attach-beta-groups", "11")] if elapsed == 12 * HOUR else [],
+                )
+
+    def test_already_public_group_recovery_does_not_consume_release_budget(self):
+        for dates in [[], [NOW - HOUR]]:
+            with self.subTest(dates=dates):
+                s = self.public_snapshot()
+                partial = build() | {"groups": ["public"], "public_complete": False}
+                s["ios"]["builds"] = [partial, build() | {
+                    "id": "11", "number": 11, "public": False,
+                }]
+                s["ios"]["submissions"] = dates
+                self.assertEqual(
+                    [a["kind"] for a in plan_tick(s, {}, {"ios": "testflight"})["actions"]],
+                    ["attach-beta-groups"] + ([] if dates else ["public-beta"]),
+                )
+
+        s["ios"]["submissions"] = []
+        s["ios"]["builds"] = s["ios"]["builds"][1:]
+        state = {"operations": {"recovered": operation("attach-beta-groups", NOW)}}
+        self.assertEqual(
+            [a["kind"] for a in plan_tick(s, state, {"ios": "testflight"})["actions"]],
+            ["public-beta"],
+        )
 
     def test_app_store_waits_48_hours_for_provider_state_and_journal(self):
         for source in ["review", "version", "saved", "journal", "publication"]:
@@ -150,3 +222,39 @@ class ReleaseCadenceTest(unittest.TestCase):
             with self.subTest(versions=versions):
                 s["ios"]["versions"] = versions
                 self.assertEqual(observe(s, state)["last_app_store_publication"], NOW - DAY)
+
+    def test_ios_publication_wait_starts_after_the_apple_read(self):
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.list_builds = list
+        runtime.candidate = lambda: "a" * 40
+        runtime.source_ci = lambda sha: True
+        clock = [NOW]
+        ios = self.public_snapshot()["ios"]
+        ios["builds"][0]["public"] = True
+        ios["versions"] = [{
+            "id": "old", "version": "1.0.30", "state": "READY_FOR_SALE",
+        }]
+
+        def apple_read():
+            clock[0] += HOUR
+            return ios
+
+        runtime.apple_snapshot = apple_read
+        with patch("release_train.runner.time.time", side_effect=lambda: clock[0]), patch(
+            "release_train.runner.apple_token", return_value="test-token"
+        ):
+            s = runtime.snapshot({}, {"ios": "app-store", "android": "off"})
+
+        self.assertEqual(s["now"], NOW)
+        self.assertEqual(s["ios"].get("observed_at"), NOW + HOUR)
+        state = observe(s, {})
+        self.assertEqual(state["last_app_store_publication"], NOW + HOUR)
+        s["changes"] = {"ios": False, "android": False}
+        for elapsed in [2 * DAY, HOUR + 2 * DAY - 1, HOUR + 2 * DAY]:
+            with self.subTest(elapsed=elapsed):
+                s["now"] = NOW + elapsed
+                self.assertEqual(
+                    [a["kind"] for a in plan_tick(s, state, {"ios": "app-store"})["actions"]],
+                    ["app-store"] if elapsed == HOUR + 2 * DAY else [],
+                )

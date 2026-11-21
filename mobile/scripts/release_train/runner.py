@@ -878,6 +878,7 @@ class Runtime:
                             "TestFlight groups must preserve the four existing external audiences"
                         )
                     snapshot["ios"] = self.apple_snapshot()
+                    snapshot["ios"]["observed_at"] = int(time.time())
                 else:
                     self.play = Play(
                         play_token(self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])

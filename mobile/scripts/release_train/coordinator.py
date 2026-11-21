@@ -163,7 +163,8 @@ def observe(snapshot, previous):
         ):
             state["highest_app_store_version"] = highest
             state["last_app_store_publication"] = max(
-                snapshot["now"], state.get("last_app_store_publication", 0)
+                ios.get("observed_at", snapshot["now"]),
+                state.get("last_app_store_publication", 0),
             )
     android = snapshot.get("android", {})
     if not android.get("lifecycle_complete"):
@@ -305,7 +306,29 @@ def plan_tick(snapshot, state, levels):
                 f"{platform}: no new build (CI/change/retry/active-build/cadence/exposure checks)"
             )
         if platform == "ios" and level in {"testflight", "app-store"}:
-            for b in data.get("builds", []):
+            builds = data.get("builds", [])
+            dates = data.get("submissions", [])
+            first_attachments = (
+                o.get("started_at", 0)
+                for o in state.get("operations", {}).values()
+                if o["action"]["kind"] == "attach-beta-groups"
+                and not o["action"]["build"].get("public")
+            )
+            budget = (
+                len([d for d in dates if now - d < DAY]) < TESTFLIGHT_DAILY_LIMIT
+                and now
+                - max(
+                    max(dates, default=0),
+                    last_operation_started(state, "public-beta"),
+                    max(first_attachments, default=0),
+                )
+                >= TESTFLIGHT_INTERVAL
+            )
+            if not budget:
+                reasons.append(
+                    "ios public: wait twelve hours; at most two releases per rolling day"
+                )
+            for b in builds:
                 known_operation = any(
                     o["action"]["kind"] == "public-beta"
                     and o["action"].get("build", {}).get("id") == b["id"]
@@ -319,9 +342,12 @@ def plan_tick(snapshot, state, levels):
                     in BETA_WAITING
                     | {"BETA_APPROVED", "READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
                 ):
-                    action("attach-beta-groups", "ios", build=b)
-            builds = data.get("builds", [])
-            dates = data.get("submissions", [])
+                    # Completing an already-public build's missing audiences is
+                    # resumable; its first public attachment consumes a release.
+                    if b.get("public") or budget:
+                        action("attach-beta-groups", "ios", build=b)
+                        if not b.get("public"):
+                            budget = False
             for b in builds:
                 if (
                     b.get("external") in BETA_REJECTED
@@ -336,16 +362,6 @@ def plan_tick(snapshot, state, levels):
                 for b in builds
             )
             waiting = any(b.get("external") in BETA_WAITING for b in builds)
-            budget = (
-                len([d for d in dates if now - d < DAY]) < TESTFLIGHT_DAILY_LIMIT
-                and now
-                - max(max(dates, default=0), last_operation_started(state, "public-beta"))
-                >= TESTFLIGHT_INTERVAL
-            )
-            if not budget:
-                reasons.append(
-                    "ios public: wait twelve hours; at most two releases per rolling day"
-                )
             newest_public = max(
                 (b["number"] for b in builds if b.get("public")), default=0
             )
