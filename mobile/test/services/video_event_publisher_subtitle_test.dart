@@ -938,6 +938,43 @@ void main() {
       });
     });
 
+    for (final parentWrite in [true, false]) {
+      test(
+        'rejects a mismatched signer for ${parentWrite ? 'video' : 'fallback'}',
+        () async {
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((_) async => Event('f' * 64, 34236, [], 'Wrong author'));
+
+          final result = parentWrite
+              ? await republishMirrored(
+                  existingEvent: existingEvent,
+                  textTrackRef: textTrackRef,
+                )
+              : await publisher.publishSubtitleEvent(
+                  video: existingEvent,
+                  vttContent: 'WEBVTT',
+                  blossomUrl: 'https://cdn.example.com/captions',
+                );
+
+          expect(result, isNull);
+          verifyNever(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          );
+          verifyNever(() => mockPersonalEventCache.cacheUserEvent(any()));
+          verifyNever(() => mockVideoEventService.updateVideoEvent(any()));
+        },
+      );
+    }
+
     test('does not update local cache when relay rejects republish', () async {
       when(
         () => mockAuthService.createAndSignEvent(
