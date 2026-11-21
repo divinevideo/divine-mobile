@@ -60,6 +60,7 @@ often it becomes wallpaper.
   spotlight already shown, and the card can be visible while the link is
   below the edge. The record keeps about two weeks of dates so a local date
   that steps back across a Monday still sees last week's count.
+  The visibility check batches updates about every 500 ms. Leaving or tapping before the check can leave a day uncounted and allow the invite on another posting day.
 - **Row:** "Bring your friends →" in the card's accent style, on the
   same line as "See your stats →" (it drops to a second line only when
   both don't fit, such as large text or longer translations). Its own
@@ -77,13 +78,14 @@ often it becomes wallpaper.
     added on its own line when shared, so editing the message cannot drop
     it;
   - a Share button that opens the system share sheet through
-    `showShareSheet`, anchored to the button, with the edited message and
+    `showShareSheetAtOrigin`, anchored to the button, with the edited message and
     the link. If the box is cleared, only the link is shared.
 - **After sharing (my call):** a dismissed share sheet leaves the person
   on the page to try again. Any other outcome (including one the platform
   cannot report) leaves the page: back to the previous screen, or to Inbox
   when the page was opened directly by a link or reload. If another screen
   opened on top while the sheet was up, the page stays underneath it.
+  A failure to open sharing keeps the invite page open and shows an error there.
 - **No new dependencies, permissions, or backend changes.** The page is a
   typed route like the rest of the app.
 

@@ -17,7 +17,7 @@
 ## Global Constraints
 
 - Link: `AppConstants.downloadUrl` (`https://divine.video/download`); no new constant.
-- Share only through `showShareSheet` from `mobile/lib/utils/share_sheet.dart`.
+- Use the shared entry point in `mobile/lib/utils/share_sheet.dart`. The invite page calls `showShareSheetAtOrigin` with the Share button's bounds.
 - Link copy: "Bring your friends" (arrow is the existing `DivineIconName.arrowRight`, as on "See your stats"), on the same line as "See your stats".
 - Default message: "I'm making loops on Divine. You can react and collaborate with me!" The link is always appended on its own line when shared; a cleared message shares only the link.
 - Weekly limit: 3 posting days per Monday-start week, per account, counted when the row is seen; the same day counts once.
