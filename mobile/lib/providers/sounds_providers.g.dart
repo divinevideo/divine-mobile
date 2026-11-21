@@ -160,8 +160,9 @@ String _$soundsRepositoryHash() => r'88713c2898cb6802d5dbfeb3a6f79d210d2dc802';
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -176,8 +177,9 @@ final trendingSoundsProvider = TrendingSoundsProvider._();
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -190,8 +192,9 @@ final class TrendingSoundsProvider
   /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
   /// it fills a screen.
   ///
-  /// Unnamed sounds no other account used are left out
-  /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+  /// From Funnelcake's sound index, and from the relays when it cannot answer
+  /// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+  /// until a second video uses it; a search still finds it.
   ///
   /// Usage:
   /// ```dart
@@ -217,14 +220,15 @@ final class TrendingSoundsProvider
   TrendingSounds create() => TrendingSounds();
 }
 
-String _$trendingSoundsHash() => r'a9bbfc997ee11a4178a221faabe06d82aebc832f';
+String _$trendingSoundsHash() => r'bcaeeb259b0f7007a0250b14e9df3f412d35bf9b';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds no other account used are left out
-/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
+/// From Funnelcake's sound index, and from the relays when it cannot answer
+/// ([SoundsRepository.fetchNewestSounds]). A video's own sound is left out
+/// until a second video uses it; a search still finds it.
 ///
 /// Usage:
 /// ```dart
@@ -250,19 +254,21 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
   }
 }
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given and by the accounts the viewer follows when
+/// [followed], who answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -272,19 +278,21 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 @ProviderFor(soundSearchResults)
 final soundSearchResultsProvider = SoundSearchResultsFamily._();
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given and by the accounts the viewer follows when
+/// [followed], who answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -301,19 +309,21 @@ final class SoundSearchResultsProvider
     with
         $FutureModifier<SoundSearchResults>,
         $FutureProvider<SoundSearchResults> {
-  /// Community sounds matching a free-text [query], and how the relays
-  /// answered it.
+  /// The first page of the community sounds matching a free-text [query], of
+  /// [kind] when one is given and by the accounts the viewer follows when
+  /// [followed], who answered it and how the relays answered it.
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-  /// queries plus the in-memory cache for partial matches, and a
-  /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to no sounds without a round trip;
-  /// the caller shows the trending list instead of searching.
+  /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+  /// typo-tolerant search, ranked best match first, and when that cannot
+  /// answer, the relays' full-text and tag queries plus the in-memory cache,
+  /// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+  /// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+  /// queries resolve to no sounds without a round trip; the caller shows the
+  /// newest list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is up to two relay queries
-  /// per character.
+  /// distinct string, so feeding it raw keystrokes is a search per character.
   ///
   /// Usage:
   /// ```dart
@@ -321,7 +331,7 @@ final class SoundSearchResultsProvider
   /// ```
   SoundSearchResultsProvider._({
     required SoundSearchResultsFamily super.from,
-    required String super.argument,
+    required (String, {SoundKind? kind, bool followed}) super.argument,
   }) : super(
          retry: null,
          name: r'soundSearchResultsProvider',
@@ -337,7 +347,7 @@ final class SoundSearchResultsProvider
   String toString() {
     return r'soundSearchResultsProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -348,8 +358,14 @@ final class SoundSearchResultsProvider
 
   @override
   FutureOr<SoundSearchResults> create(Ref ref) {
-    final argument = this.argument as String;
-    return soundSearchResults(ref, argument);
+    final argument =
+        this.argument as (String, {SoundKind? kind, bool followed});
+    return soundSearchResults(
+      ref,
+      argument.$1,
+      kind: argument.kind,
+      followed: argument.followed,
+    );
   }
 
   @override
@@ -364,21 +380,23 @@ final class SoundSearchResultsProvider
 }
 
 String _$soundSearchResultsHash() =>
-    r'9581d692eadc6ceb60bc77b533f34e8e4391a9c0';
+    r'13f6a850eacb8f58bac0c58a349df49af826d3b5';
 
-/// Community sounds matching a free-text [query], and how the relays
-/// answered it.
+/// The first page of the community sounds matching a free-text [query], of
+/// [kind] when one is given and by the accounts the viewer follows when
+/// [followed], who answered it and how the relays answered it.
 ///
-/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-/// queries plus the in-memory cache for partial matches, and a
-/// reuse lookup that ranks unnamed sounds last — so this is a thin
-/// pass-through. Blank queries resolve to no sounds without a round trip;
-/// the caller shows the trending list instead of searching.
+/// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+/// typo-tolerant search, ranked best match first, and when that cannot
+/// answer, the relays' full-text and tag queries plus the in-memory cache,
+/// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+/// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+/// queries resolve to no sounds without a round trip; the caller shows the
+/// newest list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is up to two relay queries
-/// per character.
+/// distinct string, so feeding it raw keystrokes is a search per character.
 ///
 /// Usage:
 /// ```dart
@@ -386,7 +404,11 @@ String _$soundSearchResultsHash() =>
 /// ```
 
 final class SoundSearchResultsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<SoundSearchResults>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<SoundSearchResults>,
+          (String, {SoundKind? kind, bool followed})
+        > {
   SoundSearchResultsFamily._()
     : super(
         retry: null,
@@ -396,30 +418,408 @@ final class SoundSearchResultsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Community sounds matching a free-text [query], and how the relays
-  /// answered it.
+  /// The first page of the community sounds matching a free-text [query], of
+  /// [kind] when one is given and by the accounts the viewer follows when
+  /// [followed], who answered it and how the relays answered it.
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
-  /// queries plus the in-memory cache for partial matches, and a
-  /// reuse lookup that ranks unnamed sounds last — so this is a thin
-  /// pass-through. Blank queries resolve to no sounds without a round trip;
-  /// the caller shows the trending list instead of searching.
+  /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
+  /// typo-tolerant search, ranked best match first, and when that cannot
+  /// answer, the relays' full-text and tag queries plus the in-memory cache,
+  /// with a reuse lookup that ranks unnamed sounds last. So this is a thin
+  /// pass-through; [SoundSearchPages] holds the pages after this one. Blank
+  /// queries resolve to no sounds without a round trip; the caller shows the
+  /// newest list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is up to two relay queries
-  /// per character.
+  /// distinct string, so feeding it raw keystrokes is a search per character.
   ///
   /// Usage:
   /// ```dart
   /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
   /// ```
 
-  SoundSearchResultsProvider call(String query) =>
-      SoundSearchResultsProvider._(argument: query, from: this);
+  SoundSearchResultsProvider call(
+    String query, {
+    SoundKind? kind,
+    bool followed = false,
+  }) => SoundSearchResultsProvider._(
+    argument: (query, kind: kind, followed: followed),
+    from: this,
+  );
 
   @override
   String toString() => r'soundSearchResultsProvider';
+}
+
+/// Every page a search for [query], of [kind] when one is given and by the
+/// accounts the viewer follows when [followed], has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+@ProviderFor(SoundSearchPages)
+final soundSearchPagesProvider = SoundSearchPagesFamily._();
+
+/// Every page a search for [query], of [kind] when one is given and by the
+/// accounts the viewer follows when [followed], has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+final class SoundSearchPagesProvider
+    extends $AsyncNotifierProvider<SoundSearchPages, PagedSounds> {
+  /// Every page a search for [query], of [kind] when one is given and by the
+  /// accounts the viewer follows when [followed], has loaded, starting with
+  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
+  /// its end ([SoundSearchPages.loadMore]).
+  ///
+  /// Only Funnelcake's answers have more than one page. Its pages can hold
+  /// fewer sounds than asked for, none even, and still not be the last, so the
+  /// list follows its cursor rather than counting sounds.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final results = ref.watch(soundSearchPagesProvider(query));
+  /// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+  /// ```
+  SoundSearchPagesProvider._({
+    required SoundSearchPagesFamily super.from,
+    required (String, {SoundKind? kind, bool followed}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundSearchPagesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundSearchPagesHash();
+
+  @override
+  String toString() {
+    return r'soundSearchPagesProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  SoundSearchPages create() => SoundSearchPages();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundSearchPagesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundSearchPagesHash() => r'0d3a6af0b8c48aec218524019ccacfd46b7a8430';
+
+/// Every page a search for [query], of [kind] when one is given and by the
+/// accounts the viewer follows when [followed], has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+final class SoundSearchPagesFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SoundSearchPages,
+          AsyncValue<PagedSounds>,
+          PagedSounds,
+          FutureOr<PagedSounds>,
+          (String, {SoundKind? kind, bool followed})
+        > {
+  SoundSearchPagesFamily._()
+    : super(
+        retry: null,
+        name: r'soundSearchPagesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Every page a search for [query], of [kind] when one is given and by the
+  /// accounts the viewer follows when [followed], has loaded, starting with
+  /// [soundSearchResults]'s, and loading the next as the list is scrolled to
+  /// its end ([SoundSearchPages.loadMore]).
+  ///
+  /// Only Funnelcake's answers have more than one page. Its pages can hold
+  /// fewer sounds than asked for, none even, and still not be the last, so the
+  /// list follows its cursor rather than counting sounds.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final results = ref.watch(soundSearchPagesProvider(query));
+  /// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+  /// ```
+
+  SoundSearchPagesProvider call(
+    String query, {
+    SoundKind? kind,
+    bool followed = false,
+  }) => SoundSearchPagesProvider._(
+    argument: (query, kind: kind, followed: followed),
+    from: this,
+  );
+
+  @override
+  String toString() => r'soundSearchPagesProvider';
+}
+
+/// Every page a search for [query], of [kind] when one is given and by the
+/// accounts the viewer follows when [followed], has loaded, starting with
+/// [soundSearchResults]'s, and loading the next as the list is scrolled to
+/// its end ([SoundSearchPages.loadMore]).
+///
+/// Only Funnelcake's answers have more than one page. Its pages can hold
+/// fewer sounds than asked for, none even, and still not be the last, so the
+/// list follows its cursor rather than counting sounds.
+///
+/// Usage:
+/// ```dart
+/// final results = ref.watch(soundSearchPagesProvider(query));
+/// ref.read(soundSearchPagesProvider(query).notifier).loadMore();
+/// ```
+
+abstract class _$SoundSearchPages extends $AsyncNotifier<PagedSounds> {
+  late final _$args = ref.$arg as (String, {SoundKind? kind, bool followed});
+  String get query => _$args.$1;
+  SoundKind? get kind => _$args.kind;
+  bool get followed => _$args.followed;
+
+  FutureOr<PagedSounds> build(
+    String query, {
+    SoundKind? kind,
+    bool followed = false,
+  });
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(
+      ref,
+      () => build(_$args.$1, kind: _$args.kind, followed: _$args.followed),
+    );
+  }
+}
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+@ProviderFor(SoundsOfKind)
+final soundsOfKindProvider = SoundsOfKindFamily._();
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+final class SoundsOfKindProvider
+    extends $AsyncNotifierProvider<SoundsOfKind, PagedSounds> {
+  /// The sounds of [kind] in one of the picker's lists ([list]), loading the
+  /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio, so the picker lists these when a kind is chosen
+  /// instead of narrowing its lists by tags almost no sound carries. A single
+  /// empty page when no Funnelcake client is available.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final effects = ref.watch(
+  ///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+  /// );
+  /// ```
+  SoundsOfKindProvider._({
+    required SoundsOfKindFamily super.from,
+    required (SoundKind, SoundListOfKind) super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundsOfKindProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundsOfKindHash();
+
+  @override
+  String toString() {
+    return r'soundsOfKindProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  SoundsOfKind create() => SoundsOfKind();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundsOfKindProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundsOfKindHash() => r'13781cb087cf068b4750aec7dc6831e269040ec1';
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+final class SoundsOfKindFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SoundsOfKind,
+          AsyncValue<PagedSounds>,
+          PagedSounds,
+          FutureOr<PagedSounds>,
+          (SoundKind, SoundListOfKind)
+        > {
+  SoundsOfKindFamily._()
+    : super(
+        retry: null,
+        name: r'soundsOfKindProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The sounds of [kind] in one of the picker's lists ([list]), loading the
+  /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio, so the picker lists these when a kind is chosen
+  /// instead of narrowing its lists by tags almost no sound carries. A single
+  /// empty page when no Funnelcake client is available.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final effects = ref.watch(
+  ///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+  /// );
+  /// ```
+
+  SoundsOfKindProvider call(SoundKind kind, SoundListOfKind list) =>
+      SoundsOfKindProvider._(argument: (kind, list), from: this);
+
+  @override
+  String toString() => r'soundsOfKindProvider';
+}
+
+/// The sounds of [kind] in one of the picker's lists ([list]), loading the
+/// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
+///
+/// From Funnelcake's sound index, which classifies sounds as music or
+/// effects by their audio, so the picker lists these when a kind is chosen
+/// instead of narrowing its lists by tags almost no sound carries. A single
+/// empty page when no Funnelcake client is available.
+///
+/// Usage:
+/// ```dart
+/// final effects = ref.watch(
+///   soundsOfKindProvider(SoundKind.effect, SoundListOfKind.popular),
+/// );
+/// ```
+
+abstract class _$SoundsOfKind extends $AsyncNotifier<PagedSounds> {
+  late final _$args = ref.$arg as (SoundKind, SoundListOfKind);
+  SoundKind get kind => _$args.$1;
+  SoundListOfKind get list => _$args.$2;
+
+  FutureOr<PagedSounds> build(SoundKind kind, SoundListOfKind list);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
+  }
 }
 
 /// Family provider to fetch a single sound by event ID.
@@ -818,167 +1218,6 @@ final class SoundUsageCountFamily extends $Family
   String toString() => r'soundUsageCountProvider';
 }
 
-/// Batched reuse counts for the trending sounds list, keyed by the event id a
-/// reusing video references (`AudioEvent.attributionEventId`).
-///
-/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-/// in a single query through
-/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-/// round trip however many sounds it shows.
-///
-/// Sounds with no referenceable Nostr event — bundled assets, unpublished
-/// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all. So is a sound whose count could
-/// not be looked up.
-///
-/// Usage:
-/// ```dart
-/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-/// final count = counts?[sound.attributionEventId];
-/// ```
-
-@ProviderFor(trendingSoundUsageCounts)
-final trendingSoundUsageCountsProvider = TrendingSoundUsageCountsProvider._();
-
-/// Batched reuse counts for the trending sounds list, keyed by the event id a
-/// reusing video references (`AudioEvent.attributionEventId`).
-///
-/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-/// in a single query through
-/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-/// round trip however many sounds it shows.
-///
-/// Sounds with no referenceable Nostr event — bundled assets, unpublished
-/// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all. So is a sound whose count could
-/// not be looked up.
-///
-/// Usage:
-/// ```dart
-/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-/// final count = counts?[sound.attributionEventId];
-/// ```
-
-final class TrendingSoundUsageCountsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<Map<String, int>>,
-          Map<String, int>,
-          FutureOr<Map<String, int>>
-        >
-    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
-  /// Batched reuse counts for the trending sounds list, keyed by the event id a
-  /// reusing video references (`AudioEvent.attributionEventId`).
-  ///
-  /// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
-  /// per sound, so a 50-row list costs 50 requests. This resolves the whole list
-  /// in a single query through
-  /// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
-  /// round trip however many sounds it shows.
-  ///
-  /// Sounds with no referenceable Nostr event — bundled assets, unpublished
-  /// imports — carry no id and are absent from the map, and a list made only of
-  /// those never reaches the repository at all. So is a sound whose count could
-  /// not be looked up.
-  ///
-  /// Usage:
-  /// ```dart
-  /// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
-  /// final count = counts?[sound.attributionEventId];
-  /// ```
-  TrendingSoundUsageCountsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'trendingSoundUsageCountsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$trendingSoundUsageCountsHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<Map<String, int>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<Map<String, int>> create(Ref ref) {
-    return trendingSoundUsageCounts(ref);
-  }
-}
-
-String _$trendingSoundUsageCountsHash() =>
-    r'c5492e930811075fb6fa755317b14139e842cc43';
-
-/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-/// loads more asks only about its new rows. Each lookup scans a capped number
-/// of videos for the whole batch, so asking again about every row loaded
-/// would also spread that cap ever thinner.
-
-@ProviderFor(_soundUsageCountCache)
-final _soundUsageCountCacheProvider = _SoundUsageCountCacheProvider._();
-
-/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-/// loads more asks only about its new rows. Each lookup scans a capped number
-/// of videos for the whole batch, so asking again about every row loaded
-/// would also spread that cap ever thinner.
-
-final class _SoundUsageCountCacheProvider
-    extends
-        $FunctionalProvider<
-          _SoundUsageCountCache,
-          _SoundUsageCountCache,
-          _SoundUsageCountCache
-        >
-    with $Provider<_SoundUsageCountCache> {
-  /// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
-  /// loads more asks only about its new rows. Each lookup scans a capped number
-  /// of videos for the whole batch, so asking again about every row loaded
-  /// would also spread that cap ever thinner.
-  _SoundUsageCountCacheProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'_soundUsageCountCacheProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$_soundUsageCountCacheHash();
-
-  @$internal
-  @override
-  $ProviderElement<_SoundUsageCountCache> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  _SoundUsageCountCache create(Ref ref) {
-    return _soundUsageCountCache(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(_SoundUsageCountCache value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<_SoundUsageCountCache>(value),
-    );
-  }
-}
-
-String _$_soundUsageCountCacheHash() =>
-    r'47dc3de33708337d2aad049beee12c833d138479';
-
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
 /// page as the list is scrolled ([PopularSounds.loadMore]).
@@ -1113,7 +1352,8 @@ String _$divineSoundsHash() => r'9810f55d815543cfd9e2405e3e6a4100861b3f64';
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1128,7 +1368,8 @@ final forYouSoundsProvider = ForYouSoundsProvider._();
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1141,7 +1382,8 @@ final class ForYouSoundsProvider
   /// The newest sounds published by people the viewer follows, for the
   /// picker's "For you" list, loading older ones page by page as it is
   /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-  /// screen.
+  /// screen. From Funnelcake's sound index, and from the relays when it cannot
+  /// answer ([SoundsRepository.fetchFollowedSounds]).
   ///
   /// Divine's own sounds are left out even when the viewer follows a Divine
   /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1168,12 +1410,13 @@ final class ForYouSoundsProvider
   ForYouSounds create() => ForYouSounds();
 }
 
-String _$forYouSoundsHash() => r'185df5339a875ba58195d980c44b8452d019e458';
+String _$forYouSoundsHash() => r'4cf60a3fb14d49d38f9eca30f6addbe6f83f20b7';
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
 /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
-/// screen.
+/// screen. From Funnelcake's sound index, and from the relays when it cannot
+/// answer ([SoundsRepository.fetchFollowedSounds]).
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1205,9 +1448,9 @@ abstract class _$ForYouSounds extends $AsyncNotifier<PagedSounds> {
 /// found: deleted, or filtered out for this viewer. A sound the lookup has
 /// not reached yet, or could not, is absent.
 ///
-/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-/// lookup rather than one per row, and the list never waits on it. Sounds
-/// that came from no video are absent too.
+/// The whole list resolves in one batched lookup rather than one per row,
+/// and the list never waits on it. Sounds that came from no video are absent
+/// too.
 ///
 /// Usage:
 /// ```dart
@@ -1223,9 +1466,9 @@ final trendingSoundCoversProvider = TrendingSoundCoversProvider._();
 /// found: deleted, or filtered out for this viewer. A sound the lookup has
 /// not reached yet, or could not, is absent.
 ///
-/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-/// lookup rather than one per row, and the list never waits on it. Sounds
-/// that came from no video are absent too.
+/// The whole list resolves in one batched lookup rather than one per row,
+/// and the list never waits on it. Sounds that came from no video are absent
+/// too.
 ///
 /// Usage:
 /// ```dart
@@ -1248,9 +1491,9 @@ final class TrendingSoundCoversProvider
   /// found: deleted, or filtered out for this viewer. A sound the lookup has
   /// not reached yet, or could not, is absent.
   ///
-  /// Like [trendingSoundUsageCounts], the whole list resolves in one batched
-  /// lookup rather than one per row, and the list never waits on it. Sounds
-  /// that came from no video are absent too.
+  /// The whole list resolves in one batched lookup rather than one per row,
+  /// and the list never waits on it. Sounds that came from no video are absent
+  /// too.
   ///
   /// Usage:
   /// ```dart
@@ -1379,14 +1622,14 @@ final class ForYouSoundCoversProvider
 
 String _$forYouSoundCoversHash() => r'f97f9dd50cfc07914a71b535d84b27f66548d148';
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 @ProviderFor(soundSearchCovers)
 final soundSearchCoversProvider = SoundSearchCoversFamily._();
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 final class SoundSearchCoversProvider
     extends
@@ -1398,11 +1641,11 @@ final class SoundSearchCoversProvider
     with
         $FutureModifier<Map<String, SoundCover?>>,
         $FutureProvider<Map<String, SoundCover?>> {
-  /// Covers for the sounds a community search reached, keyed like
-  /// [trendingSoundCovers].
+  /// Covers for the sounds a community search reached, on every page it has
+  /// loaded, keyed like [trendingSoundCovers].
   SoundSearchCoversProvider._({
     required SoundSearchCoversFamily super.from,
-    required String super.argument,
+    required (String, {SoundKind? kind, bool followed}) super.argument,
   }) : super(
          retry: null,
          name: r'soundSearchCoversProvider',
@@ -1418,7 +1661,7 @@ final class SoundSearchCoversProvider
   String toString() {
     return r'soundSearchCoversProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -1429,8 +1672,14 @@ final class SoundSearchCoversProvider
 
   @override
   FutureOr<Map<String, SoundCover?>> create(Ref ref) {
-    final argument = this.argument as String;
-    return soundSearchCovers(ref, argument);
+    final argument =
+        this.argument as (String, {SoundKind? kind, bool followed});
+    return soundSearchCovers(
+      ref,
+      argument.$1,
+      kind: argument.kind,
+      followed: argument.followed,
+    );
   }
 
   @override
@@ -1444,13 +1693,17 @@ final class SoundSearchCoversProvider
   }
 }
 
-String _$soundSearchCoversHash() => r'f3069cf397c4baf79fe2a9e32fe38d1e71fd510c';
+String _$soundSearchCoversHash() => r'0db22dec084cbf0491922afcd78e96a9ebdddaa1';
 
-/// Covers for the sounds a community search reached, keyed like
-/// [trendingSoundCovers].
+/// Covers for the sounds a community search reached, on every page it has
+/// loaded, keyed like [trendingSoundCovers].
 
 final class SoundSearchCoversFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<String, SoundCover?>>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          (String, {SoundKind? kind, bool followed})
+        > {
   SoundSearchCoversFamily._()
     : super(
         retry: null,
@@ -1460,14 +1713,116 @@ final class SoundSearchCoversFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Covers for the sounds a community search reached, keyed like
-  /// [trendingSoundCovers].
+  /// Covers for the sounds a community search reached, on every page it has
+  /// loaded, keyed like [trendingSoundCovers].
 
-  SoundSearchCoversProvider call(String query) =>
-      SoundSearchCoversProvider._(argument: query, from: this);
+  SoundSearchCoversProvider call(
+    String query, {
+    SoundKind? kind,
+    bool followed = false,
+  }) => SoundSearchCoversProvider._(
+    argument: (query, kind: kind, followed: followed),
+    from: this,
+  );
 
   @override
   String toString() => r'soundSearchCoversProvider';
+}
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+@ProviderFor(soundsOfKindCovers)
+final soundsOfKindCoversProvider = SoundsOfKindCoversFamily._();
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+final class SoundsOfKindCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for the sounds of [kind] in [list], on every page it has loaded,
+  /// keyed like [trendingSoundCovers].
+  SoundsOfKindCoversProvider._({
+    required SoundsOfKindCoversFamily super.from,
+    required (SoundKind, SoundListOfKind) super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundsOfKindCoversProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundsOfKindCoversHash();
+
+  @override
+  String toString() {
+    return r'soundsOfKindCoversProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    final argument = this.argument as (SoundKind, SoundListOfKind);
+    return soundsOfKindCovers(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundsOfKindCoversProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundsOfKindCoversHash() =>
+    r'1b594dbda06018b2aa347d5026fa0c55da7185c1';
+
+/// Covers for the sounds of [kind] in [list], on every page it has loaded,
+/// keyed like [trendingSoundCovers].
+
+final class SoundsOfKindCoversFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          (SoundKind, SoundListOfKind)
+        > {
+  SoundsOfKindCoversFamily._()
+    : super(
+        retry: null,
+        name: r'soundsOfKindCoversProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Covers for the sounds of [kind] in [list], on every page it has loaded,
+  /// keyed like [trendingSoundCovers].
+
+  SoundsOfKindCoversProvider call(SoundKind kind, SoundListOfKind list) =>
+      SoundsOfKindCoversProvider._(argument: (kind, list), from: this);
+
+  @override
+  String toString() => r'soundsOfKindCoversProvider';
 }
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and

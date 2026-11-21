@@ -47,6 +47,7 @@ import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
     show
         SoundSearchResults,
+        SoundSearchSource,
         linkDivineSounds,
         rankForYouSounds,
         rankSearchMatches;
@@ -127,9 +128,9 @@ class _AudioSelectionBottomSheetState
 
   /// [_searchQuery] as it stood when the user last paused typing.
   ///
-  /// The relay tag query is keyed on this rather than on every keystroke: one
-  /// provider instance is created per distinct string, so an undebounced field
-  /// would open a relay round trip per character.
+  /// The search is keyed on this rather than on every keystroke: one provider
+  /// instance is created per distinct string, so an undebounced field would
+  /// send a search per character.
   String _debouncedQuery = '';
   Timer? _searchDebounce;
   bool _isLoadingAudio = false;
@@ -138,7 +139,7 @@ class _AudioSelectionBottomSheetState
   /// their last rows clear of it.
   final _selectionCardHeight = ValueNotifier<double>(0);
 
-  /// How long the field must be quiet before the relay is asked.
+  /// How long the field must be quiet before the search is sent.
   static const _searchDebounceDelay = Duration(milliseconds: 350);
 
   /// The sound picked last and where it was picked, so how the pick ends is
@@ -149,8 +150,11 @@ class _AudioSelectionBottomSheetState
   ProviderSubscription<AsyncValue<PagedSounds>>? _tabLoadListener;
   StreamSubscription<SavedSoundsState>? _savedSoundsListener;
 
-  /// The relay search being timed: the query the Newest tab sends.
+  /// The search being timed: the query the open tab sends, the kind it is
+  /// narrowed to, and whether it is For you's, within the followed accounts.
   String _timedSearchQuery = '';
+  SoundKind? _timedSearchKind;
+  bool _timedSearchFollowed = false;
   ProviderSubscription<AsyncValue<SoundSearchResults>>? _searchListener;
 
   @override
@@ -292,14 +296,27 @@ class _AudioSelectionBottomSheetState
     _savedSoundsListener = null;
   }
 
-  /// Times the relay search the Newest tab sends for the debounced query.
+  /// The debounced query the open tab sends out: every tab's but My
+  /// sounds', whose query is often a private label.
+  String get _sentSearchQuery =>
+      _category == AudioCategory.mySounds ? '' : _debouncedQuery;
+
+  /// Times the search the open tab sends for the debounced query and the
+  /// chosen kind.
   ///
-  /// A search still in flight when the query or the tab changes is reported
-  /// abandoned: the picker stops listening to it.
+  /// A search still in flight when the query, the kind or the tab changes is
+  /// reported abandoned: the picker stops listening to it.
   void _syncSearchTiming() {
-    final query = _category == AudioCategory.newest ? _debouncedQuery : '';
-    if (query == _timedSearchQuery) return;
+    final query = _sentSearchQuery;
+    final followed = _category == AudioCategory.forYou;
+    if (query == _timedSearchQuery &&
+        _kind == _timedSearchKind &&
+        followed == _timedSearchFollowed) {
+      return;
+    }
     _timedSearchQuery = query;
+    _timedSearchKind = _kind;
+    _timedSearchFollowed = followed;
     _searchListener?.close();
     _searchListener = null;
     _telemetry.abandonSearch();
@@ -307,7 +324,7 @@ class _AudioSelectionBottomSheetState
 
     _telemetry.startSearch();
     _searchListener = _listenUntilSettled(
-      soundSearchResultsProvider(query),
+      soundSearchResultsProvider(query, kind: _kind, followed: followed),
       (results, {required wasSettled}) {
         final answer = results.value;
         if (answer == null) {
@@ -315,6 +332,7 @@ class _AudioSelectionBottomSheetState
         } else {
           _telemetry.completeSearch(
             answer.sounds.length,
+            source: answer.source,
             relays: answer.relays,
           );
         }
@@ -357,11 +375,16 @@ class _AudioSelectionBottomSheetState
     });
   }
 
+  /// The community [sounds] of a list that match the search.
+  ///
+  /// Not narrowed by kind here: with a kind chosen, every community list
+  /// comes from Funnelcake's sound index narrowed to it already
+  /// ([soundsOfKindProvider]), by the sounds' audio rather than by tags
+  /// almost no sound carries.
   List<AudioEvent> _filterAudioEvents(List<AudioEvent> sounds) {
-    if (_searchQuery.isEmpty && _kind == null) return sounds;
+    if (_searchQuery.isEmpty) return sounds;
     return sounds
         .where((sound) => sound.matchesSearch(_searchQuery))
-        .where(_isOfKind)
         .toList(growable: false);
   }
 
@@ -369,12 +392,14 @@ class _AudioSelectionBottomSheetState
   /// shows while no kind is chosen.
   bool _isOfKind(AudioEvent sound) => _kind == null || sound.soundKind == _kind;
 
-  /// The newest community sounds to show for the current query.
+  /// The newest community sounds to show for the current query, unless
+  /// Funnelcake answered it ([_rankedSearch]).
   ///
   /// The loaded page is filtered first, so the list narrows on the first
   /// keystroke instead of blanking while a debounced query is in flight. Once
-  /// [searchResults] has answered for exactly what is typed, the sounds it
-  /// reached that the page did not hold are appended.
+  /// the relays' [searchResults] have answered for exactly what is typed, the
+  /// sounds they reached that the page did not hold are appended; the search
+  /// was narrowed to the chosen kind already.
   ///
   /// Appended rather than swapped in, for two reasons: rows the user can
   /// already see stay where they are when the answer lands, and the list
@@ -392,8 +417,25 @@ class _AudioSelectionBottomSheetState
     final listed = matches.map((sound) => sound.id).toSet();
     return [
       ...matches,
-      ...reached.where(_isOfKind).where((sound) => listed.add(sound.id)),
+      ...reached.where((sound) => listed.add(sound.id)),
     ];
+  }
+
+  /// Every page Funnelcake's search found for exactly what is typed, or
+  /// `null` while it has not answered that, or the relays answered instead.
+  ///
+  /// [first] tells who answered, [pages] holds what was found. Funnelcake
+  /// finds sounds despite typos, ranks them, and narrows them to the chosen
+  /// kind by their audio rather than by tags most sounds lack, so the open tab
+  /// shows these in its order in place of its own list narrowed to the words
+  /// as typed.
+  PagedSounds? _rankedSearch(
+    AsyncValue<SoundSearchResults> first,
+    AsyncValue<PagedSounds> pages,
+  ) {
+    if (_searchQuery.isEmpty || _debouncedQuery != _searchQuery) return null;
+    if (first.value?.source != SoundSearchSource.funnelcake) return null;
+    return pages.value;
   }
 
   /// [matches] by how well their title fits the search, Divine's first among
@@ -881,45 +923,59 @@ class _AudioSelectionBottomSheetState
     // The open list loads first and the others once its covers are in, so
     // their relay queries do not hold it up: with all three loading at once,
     // For you's covers took 0.71-0.87 s against 0.43-0.57 s alone.
+    // With a kind chosen, the community lists come from Funnelcake's sound
+    // index narrowed to it, as the tags that would tell are almost never set.
+    final kind = _kind;
+    final forYouList = kind == null
+        ? forYouSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.followed);
+    final popularList = kind == null
+        ? popularSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.popular);
+    final newestList = kind == null
+        ? trendingSoundsProvider
+        : soundsOfKindProvider(kind, SoundListOfKind.newest);
+    final forYouCoverList = kind == null
+        ? forYouSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.followed);
+    final popularCoverList = kind == null
+        ? popularSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.popular);
+    final newestCoverList = kind == null
+        ? trendingSoundCoversProvider
+        : soundsOfKindCoversProvider(kind, SoundListOfKind.newest);
     final openCovers = switch (_category) {
-      AudioCategory.forYou => settled(ref.watch(forYouSoundCoversProvider)),
-      AudioCategory.popular => settled(ref.watch(popularSoundCoversProvider)),
-      AudioCategory.newest => settled(ref.watch(trendingSoundCoversProvider)),
+      AudioCategory.forYou => settled(ref.watch(forYouCoverList)),
+      AudioCategory.popular => settled(ref.watch(popularCoverList)),
+      AudioCategory.newest => settled(ref.watch(newestCoverList)),
       AudioCategory.mySounds => const <String, SoundCover?>{},
     };
     bool loads(AudioCategory category) =>
         category == _category || openCovers != null;
     final forYouAsync = loads(.forYou)
-        ? ref.watch(forYouSoundsProvider)
+        ? ref.watch(forYouList)
         : const AsyncLoading<PagedSounds>();
     final divineSoundsAsync = loads(.forYou)
         ? ref.watch(divineSoundsProvider)
         : null;
     final popularAsync = loads(.popular)
-        ? ref.watch(popularSoundsProvider)
+        ? ref.watch(popularList)
         : const AsyncLoading<PagedSounds>();
     final nostrSoundsAsync = loads(.newest)
-        ? ref.watch(trendingSoundsProvider)
+        ? ref.watch(newestList)
         : const AsyncLoading<PagedSounds>();
-    final forYouLookup = loads(.forYou)
-        ? ref.watch(forYouSoundCoversProvider)
-        : null;
-    final popularLookup = loads(.popular)
-        ? ref.watch(popularSoundCoversProvider)
-        : null;
-    final trendingLookup = loads(.newest)
-        ? ref.watch(trendingSoundCoversProvider)
-        : null;
+    final forYouLookup = loads(.forYou) ? ref.watch(forYouCoverList) : null;
+    final popularLookup = loads(.popular) ? ref.watch(popularCoverList) : null;
+    final trendingLookup = loads(.newest) ? ref.watch(newestCoverList) : null;
     final forYouCovers = forYouLookup == null ? null : settled(forYouLookup);
     final popularCovers = popularLookup == null ? null : settled(popularLookup);
     final trendingCovers = trendingLookup == null
         ? null
         : settled(trendingLookup);
-    // One batched query for the whole newest list rather than a count
-    // provider per row. Absent while it resolves, and absent for good if it
-    // fails: the counts are supplementary, so the list never waits on them.
+    // The newest list comes with Funnelcake's counts; read from the relays
+    // instead, it has none, and its rows show no count.
     final usageCounts = loads(.newest)
-        ? ref.watch(trendingSoundUsageCountsProvider).value
+        ? nostrSoundsAsync.value?.usageCounts
         : null;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
     final savedSourcesLookup = loads(.mySounds)
@@ -947,14 +1003,47 @@ class _AudioSelectionBottomSheetState
       titleOf: (sound) => sound.personalLabel ?? sound.audio.title,
       audioOf: (sound) => sound.audio,
     );
-    // Only the Newest tab shows relay results. The field is shared, so on
-    // any other tab the query stays local: on My sounds it is often a
-    // private label, which must not go out as a `#t` filter.
-    final newestQuery = _category == AudioCategory.newest
-        ? _debouncedQuery
-        : '';
-    final searchResults = ref.watch(soundSearchResultsProvider(newestQuery));
-    final searchLookup = ref.watch(soundSearchCoversProvider(newestQuery));
+    // The open tab sends the search out: For you within the accounts the
+    // viewer follows, Popular and New among every sound. My sounds keeps its
+    // query local, as there it is often a private label, which must not go
+    // out as a search.
+    final sentQuery = _sentSearchQuery;
+    final searchesFollowed = _category == AudioCategory.forYou;
+    final searchResults = ref.watch(
+      soundSearchResultsProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
+    );
+    final searchPages = ref.watch(
+      soundSearchPagesProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
+    );
+    final searchLookup = ref.watch(
+      soundSearchCoversProvider(
+        sentQuery,
+        kind: _kind,
+        followed: searchesFollowed,
+      ),
+    );
+    final loadMoreSearch = ref
+        .read(
+          soundSearchPagesProvider(
+            sentQuery,
+            kind: _kind,
+            followed: searchesFollowed,
+          ).notifier,
+        )
+        .loadMore;
+    // Funnelcake's answer for the open tab, which that tab lists in its
+    // order in place of narrowing its own list by the words as typed.
+    final ranked = _rankedSearch(searchResults, searchPages);
+    PagedSounds? rankedIn(AudioCategory category) =>
+        category == _category ? ranked : null;
     final searchCovers = settled(searchLookup);
 
     final bundledVineSounds =
@@ -1006,7 +1095,10 @@ class _AudioSelectionBottomSheetState
       // search field.
       suffix: AudioKindFilterPill(
         selected: _kind,
-        onChanged: (kind) => setState(() => _kind = kind),
+        onChanged: (kind) {
+          setState(() => _kind = kind);
+          _syncSearchTiming();
+        },
       ),
     );
     // A kind narrows a list the way a search does, so an empty result
@@ -1015,17 +1107,19 @@ class _AudioSelectionBottomSheetState
     final emptyState = isNarrowed ? searchEmptyState : const _EmptyState();
     const loadingState = Center(child: BrandedLoadingIndicator());
     // A list loads its next page when scrolled to its end, but not while a
-    // search or a kind narrows it. A search orders it by fit, which changes
-    // with every page. A kind may match nothing a page brings, so the end
-    // would stay in reach and ask on through the whole list: Popular's 1070
-    // sounds held not one effect.
-    final loadsMoreOnScroll = !isNarrowed;
+    // search narrows it: a search orders it by fit, which changes with every
+    // page, and may match nothing a page brings, so the end would stay in
+    // reach and ask on through the whole list. A kind no longer stops it,
+    // since the lists of a kind come narrowed to it by the server; neither
+    // does Funnelcake's search, which the server ranks and pages itself.
+    final loadsMoreOnScroll = _searchQuery.isEmpty;
     final followedPages = [
       for (final page in forYouAsync.value?.pages ?? const <List<AudioEvent>>[])
         _filterAudioEvents(
           page,
         ).where((sound) => !_cannotBeReused(sound, forYouLookup)).toList(),
     ];
+    final forYouFound = rankedIn(AudioCategory.forYou);
     // Its own Material, so the rows' ink shows over the sheet's background.
     final lists = Material(
       type: MaterialType.transparency,
@@ -1039,9 +1133,18 @@ class _AudioSelectionBottomSheetState
             _SoundsContent(
               scrollController: listScrollController,
               selectionCardHeight: _selectionCardHeight,
-              // A search orders by fit instead, with no daily mix.
+              // A search orders by fit instead, with no daily mix; once
+              // Funnelcake has answered it, Divine's matches lead and the
+              // followed accounts' follow in its order.
               sounds: _searchQuery.isEmpty
                   ? _rankedForYou(followedPages, divineSounds)
+                  : forYouFound != null
+                  ? [
+                      ..._soundsBySearchFit(divineSounds),
+                      ...forYouFound.sounds.where(
+                        (sound) => !_cannotBeReused(sound, searchLookup),
+                      ),
+                    ]
                   : _soundsBySearchFit([
                       for (final page in followedPages) ...page,
                       ...divineSounds,
@@ -1049,73 +1152,135 @@ class _AudioSelectionBottomSheetState
               selectedSound: _selectedItem,
               audioService: _audioService,
               onSelect: _selectSound,
-              coversBySourceVideo: forYouCovers,
-              paging: loadsMoreOnScroll ? forYouAsync.value : null,
-              onLoadMore: ref.read(forYouSoundsProvider.notifier).loadMore,
+              usageCounts: {
+                ...?forYouAsync.value?.usageCounts,
+                ...?forYouFound?.usageCounts,
+              },
+              coversBySourceVideo: forYouFound == null
+                  ? forYouCovers
+                  : {...?forYouCovers, ...?searchCovers},
+              paging:
+                  forYouFound ?? (loadsMoreOnScroll ? forYouAsync.value : null),
+              onLoadMore: forYouFound != null
+                  ? loadMoreSearch
+                  : kind == null
+                  ? ref.read(forYouSoundsProvider.notifier).loadMore
+                  : ref
+                        .read(
+                          soundsOfKindProvider(
+                            kind,
+                            SoundListOfKind.followed,
+                          ).notifier,
+                        )
+                        .loadMore,
               emptyState: emptyState,
             )
           else
             loadingState,
           popularAsync.when(
-            data: (popular) => _SoundsContent(
-              scrollController: listScrollController,
-              selectionCardHeight: _selectionCardHeight,
-              sounds: _soundsBySearchFit(
-                _filterAudioEvents(popular.sounds)
-                    .where((sound) => !_cannotBeReused(sound, popularLookup))
-                    .toList(),
-              ),
-              selectedSound: _selectedItem,
-              audioService: _audioService,
-              onSelect: _selectSound,
-              usageCounts: popular.usageCounts,
-              coversBySourceVideo: popularCovers,
-              paging: loadsMoreOnScroll ? popular : null,
-              onLoadMore: ref.read(popularSoundsProvider.notifier).loadMore,
-              emptyState: emptyState,
-            ),
-            loading: () => loadingState,
-            error: (error, stack) => _ErrorState(
-              error: error,
-              onRetry: () => ref.invalidate(popularSoundsProvider),
-            ),
-          ),
-          nostrSoundsAsync.when(
-            data: (newestList) {
-              final nostrSounds = newestList.sounds;
-              final newest = {for (final sound in nostrSounds) sound.id};
+            data: (popular) {
+              final found = rankedIn(AudioCategory.popular);
+              final listed = {for (final sound in popular.sounds) sound.id};
+              // A search result's video is looked up with the search.
+              bool canBeReused(AudioEvent sound) => !_cannotBeReused(
+                sound,
+                listed.contains(sound.id) ? popularLookup : searchLookup,
+              );
               return _SoundsContent(
                 scrollController: listScrollController,
                 selectionCardHeight: _selectionCardHeight,
-                // A search result's video is looked up with the search.
-                sounds: _soundsBySearchFit(
-                  _communitySounds(nostrSounds, searchResults)
-                      .where(
-                        (sound) => !_cannotBeReused(
-                          sound,
-                          newest.contains(sound.id)
-                              ? trendingLookup
-                              : searchLookup,
-                        ),
-                      )
-                      .toList(),
-                ),
+                sounds: found != null
+                    ? found.sounds.where(canBeReused).toList()
+                    : _soundsBySearchFit(
+                        _filterAudioEvents(
+                          popular.sounds,
+                        ).where(canBeReused).toList(),
+                      ),
                 selectedSound: _selectedItem,
                 audioService: _audioService,
                 onSelect: _selectSound,
-                usageCounts: usageCounts,
-                coversBySourceVideo: trendingCovers == null
-                    ? null
-                    : {...trendingCovers, ...?searchCovers},
-                paging: loadsMoreOnScroll ? newestList : null,
-                onLoadMore: ref.read(trendingSoundsProvider.notifier).loadMore,
+                usageCounts: found == null
+                    ? popular.usageCounts
+                    : {...popular.usageCounts, ...found.usageCounts},
+                coversBySourceVideo: found == null
+                    ? popularCovers
+                    : {...?popularCovers, ...?searchCovers},
+                paging: found ?? (loadsMoreOnScroll ? popular : null),
+                onLoadMore: found != null
+                    ? loadMoreSearch
+                    : kind == null
+                    ? ref.read(popularSoundsProvider.notifier).loadMore
+                    : ref
+                          .read(
+                            soundsOfKindProvider(
+                              kind,
+                              SoundListOfKind.popular,
+                            ).notifier,
+                          )
+                          .loadMore,
                 emptyState: emptyState,
               );
             },
             loading: () => loadingState,
             error: (error, stack) => _ErrorState(
               error: error,
-              onRetry: () => ref.invalidate(trendingSoundsProvider),
+              onRetry: () => ref.invalidate(popularList),
+            ),
+          ),
+          nostrSoundsAsync.when(
+            data: (newestList) {
+              final nostrSounds = newestList.sounds;
+              final newest = {for (final sound in nostrSounds) sound.id};
+              // A search result's video is looked up with the search.
+              bool canBeReused(AudioEvent sound) => !_cannotBeReused(
+                sound,
+                newest.contains(sound.id) ? trendingLookup : searchLookup,
+              );
+              final ranked = rankedIn(AudioCategory.newest);
+              return _SoundsContent(
+                scrollController: listScrollController,
+                selectionCardHeight: _selectionCardHeight,
+                // Funnelcake ranked its results and narrowed them to the
+                // kind, so they keep its order and skip the tag filter.
+                sounds: ranked != null
+                    ? ranked.sounds.where(canBeReused).toList()
+                    : _soundsBySearchFit(
+                        _communitySounds(
+                          nostrSounds,
+                          _category == AudioCategory.newest
+                              ? searchResults
+                              : const AsyncLoading<SoundSearchResults>(),
+                        ).where(canBeReused).toList(),
+                      ),
+                selectedSound: _selectedItem,
+                audioService: _audioService,
+                onSelect: _selectSound,
+                usageCounts: ranked == null
+                    ? usageCounts
+                    : {...?usageCounts, ...ranked.usageCounts},
+                coversBySourceVideo: trendingCovers == null
+                    ? null
+                    : {...trendingCovers, ...?searchCovers},
+                paging: ranked ?? (loadsMoreOnScroll ? newestList : null),
+                onLoadMore: ranked != null
+                    ? loadMoreSearch
+                    : kind == null
+                    ? ref.read(trendingSoundsProvider.notifier).loadMore
+                    : ref
+                          .read(
+                            soundsOfKindProvider(
+                              kind,
+                              SoundListOfKind.newest,
+                            ).notifier,
+                          )
+                          .loadMore,
+                emptyState: emptyState,
+              );
+            },
+            loading: () => loadingState,
+            error: (error, stack) => _ErrorState(
+              error: error,
+              onRetry: () => ref.invalidate(newestList),
             ),
           ),
           // My sounds is where the user's own files live, so importing one

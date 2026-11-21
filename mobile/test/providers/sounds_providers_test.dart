@@ -2,6 +2,7 @@
 // ABOUTME: Verifies SoundsRepository provider, trending sounds, and selected sound state
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
@@ -10,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -27,6 +30,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:sounds_repository/sounds_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 // Mock classes
@@ -94,6 +98,28 @@ AudioEvent createTestAudioEvent({
   );
 }
 
+/// A page of a sound search that found [sounds], answered by [source].
+SoundSearchResults searchPage(
+  List<AudioEvent> sounds, {
+  SoundSearchSource source = SoundSearchSource.funnelcake,
+  SoundSearchRelays relays = SoundSearchRelays.notAsked,
+  Map<String, int> usageCounts = const {},
+  String? nextCursor,
+}) => (
+  sounds: sounds,
+  source: source,
+  relays: relays,
+  usageCounts: usageCounts,
+  nextCursor: nextCursor,
+);
+
+/// A page of a list from Funnelcake's sound index holding [sounds].
+SoundIndexPage indexPage(
+  List<AudioEvent> sounds, {
+  Map<String, int> usageCounts = const {},
+  String? nextCursor,
+}) => (sounds: sounds, usageCounts: usageCounts, nextCursor: nextCursor);
+
 /// [sounds] followed by enough others to fill the screen, so a list whose
 /// first page this is does not load more by itself.
 List<AudioEvent> filledUp(List<AudioEvent> sounds) => [
@@ -112,6 +138,7 @@ void main() {
     setUp(() {
       registerFallbackValue(const <String>[]);
       registerFallbackValue(const <AudioEvent>[]);
+      registerFallbackValue(SoundKind.music);
       mockNostrClient = MockNostrClient();
       mockRepository = MockSoundsRepository();
 
@@ -261,15 +288,18 @@ void main() {
         return container;
       }
 
-      /// Answers each newest-sounds fetch with the next of [pages].
+      /// Answers each newest-sounds fetch with the next of [pages], each
+      /// pointing at the one after it.
       void stubPages(List<List<AudioEvent>> pages) {
         var call = 0;
         when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
+          () => mockRepository.fetchNewestSounds(
+            cursor: any(named: 'cursor'),
           ),
-        ).thenAnswer((_) async => pages[call++]);
+        ).thenAnswer((_) async {
+          final index = call++;
+          return indexPage(pages[index], nextCursor: 'page-${index + 1}');
+        });
       }
 
       test('loads the newest page from the repository', () async {
@@ -286,9 +316,27 @@ void main() {
 
         expect(result.sounds.map((sound) => sound.id), ['trend-1', 'trend-2']);
         expect(result.hasMore, isTrue);
-        verify(
-          () => mockRepository.fetchTrendingSounds(limit: 100),
-        ).called(1);
+        verify(() => mockRepository.fetchNewestSounds()).called(1);
+      });
+
+      test("keeps the index's usage counts", () async {
+        when(
+          () => mockRepository.fetchNewestSounds(
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => indexPage(
+            filledUp([createTestAudioEvent(id: 'used')]),
+            usageCounts: {'used': 4},
+          ),
+        );
+
+        final result = await buildContainer().read(
+          trendingSoundsProvider.future,
+        );
+
+        expect(result.usageCounts, {'used': 4});
+        expect(result.hasMore, isFalse);
       });
 
       test('leaves out the imported library', () async {
@@ -306,40 +354,6 @@ void main() {
         );
 
         expect(result.sounds, [community]);
-      });
-
-      test('leaves out the unnamed sounds nobody reused', () async {
-        final named = createTestAudioEvent(id: 'named');
-        final unused = createTestAudioEvent(id: 'unused');
-        stubPages([
-          [named, unused],
-        ]);
-        when(
-          () => mockRepository.withoutUnusedOriginals([named, unused]),
-        ).thenAnswer((_) async => [named]);
-
-        final result = await buildContainer().read(
-          trendingSoundsProvider.future,
-        );
-
-        expect(result.sounds, [named]);
-      });
-
-      test('leaves out the sounds of authors the viewer blocked', () async {
-        final kept = createTestAudioEvent(id: 'kept');
-        final blocked = createTestAudioEvent(id: 'blocked');
-        stubPages([
-          [kept, blocked],
-        ]);
-        when(
-          () => mockRepository.withoutBlockedAuthors([kept, blocked]),
-        ).thenReturn([kept]);
-
-        final result = await buildContainer().read(
-          trendingSoundsProvider.future,
-        );
-
-        expect(result.sounds, [kept]);
       });
 
       test('drops a newly blocked author from the loaded pages, '
@@ -377,9 +391,8 @@ void main() {
           ],
         );
         verify(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until', that: isNull),
+          () => mockRepository.fetchNewestSounds(
+            cursor: any(named: 'cursor'),
           ),
         ).called(1);
       });
@@ -411,19 +424,24 @@ void main() {
               rest,
             ]);
             expect(result.hasMore, isTrue);
+            verify(
+              () => mockRepository.fetchNewestSounds(cursor: 'page-2'),
+            ).called(1);
           },
         );
 
         test('stops after five pages that each kept little', () async {
           var call = 0;
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
             call++;
-            return [createTestAudioEvent(id: 'sound-$call', createdAt: -call)];
+            return indexPage(
+              [createTestAudioEvent(id: 'sound-$call', createdAt: -call)],
+              nextCursor: 'page-$call',
+            );
           });
           final container = buildContainer();
 
@@ -442,11 +460,11 @@ void main() {
         final older = createTestAudioEvent(id: 'older', createdAt: 200);
         final oldest = createTestAudioEvent(id: 'oldest', createdAt: 100);
 
-        test('adds the sounds published up to the oldest it has', () async {
+        test('adds the page the cursor points at, without the sounds it '
+            'has', () async {
           final first = filledUp([newest, older]);
           stubPages([
             first,
-            // `until` takes in its own second, so the oldest comes again.
             [older, oldest],
           ]);
           final container = buildContainer();
@@ -462,20 +480,23 @@ void main() {
           expect(result.hasMore, isTrue);
           expect(result.isLoadingMore, isFalse);
           verify(
-            () => mockRepository.fetchTrendingSounds(limit: 100, until: 200),
+            () => mockRepository.fetchNewestSounds(cursor: 'page-1'),
           ).called(1);
         });
 
         test('keeps a block made while a page loaded', () async {
           final first = filledUp([newest, older]);
-          final page = Completer<List<AudioEvent>>();
+          final page = Completer<SoundIndexPage>();
           var call = 0;
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => call++ == 0 ? first : page.future);
+          ).thenAnswer(
+            (_) async => call++ == 0
+                ? indexPage(first, nextCursor: 'next')
+                : page.future,
+          );
           final container = buildContainer();
           final subscription = container.listen(
             trendingSoundsProvider,
@@ -495,7 +516,7 @@ void main() {
             ],
           );
           container.read(blocklistVersionProvider.notifier).increment();
-          page.complete([oldest]);
+          page.complete(indexPage([oldest]));
           await loading;
 
           expect(
@@ -508,38 +529,38 @@ void main() {
           );
         });
 
-        test('ends the list once a page adds nothing new', () async {
-          stubPages([
-            [newest, older],
-            [older],
-          ]);
+        test('ends the list with the last page', () async {
+          var call = 0;
+          when(
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async => call++ == 0
+                ? indexPage([newest], nextCursor: 'next')
+                : indexPage([older]),
+          );
           final container = buildContainer();
           await container.read(trendingSoundsProvider.future);
+          await pumpEventQueue();
 
-          await container.read(trendingSoundsProvider.notifier).loadMore();
           await container.read(trendingSoundsProvider.notifier).loadMore();
 
           final result = container.read(trendingSoundsProvider).requireValue;
           expect(result.sounds, [newest, older]);
           expect(result.hasMore, isFalse);
-          verify(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
-            ),
-          ).called(2);
+          expect(call, 2);
         });
 
         test('keeps what loaded and ends the list when a page fails', () async {
           var call = 0;
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
-            if (call++ > 0) throw Exception('relay down');
-            return [newest];
+            if (call++ > 0) throw Exception('index down');
+            return indexPage([newest], nextCursor: 'next');
           });
           final container = buildContainer();
           await container.read(trendingSoundsProvider.future);
@@ -554,14 +575,17 @@ void main() {
 
         test('asks once while a page is loading', () async {
           final first = filledUp([newest]);
-          final page = Completer<List<AudioEvent>>();
+          final page = Completer<SoundIndexPage>();
           var call = 0;
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => call++ == 0 ? first : page.future);
+          ).thenAnswer(
+            (_) async => call++ == 0
+                ? indexPage(first, nextCursor: 'next')
+                : page.future,
+          );
           final container = buildContainer();
           await container.read(trendingSoundsProvider.future);
           final notifier = container.read(trendingSoundsProvider.notifier);
@@ -572,7 +596,7 @@ void main() {
             isTrue,
           );
           await notifier.loadMore();
-          page.complete([oldest]);
+          page.complete(indexPage([oldest]));
           await loading;
 
           expect(
@@ -583,17 +607,16 @@ void main() {
         });
 
         test('drops a page that lands after the list started over', () async {
-          final page = Completer<List<AudioEvent>>();
+          final page = Completer<SoundIndexPage>();
           var call = 0;
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => switch (call++) {
               1 => page.future,
-              _ => [newest],
+              _ => indexPage(filledUp([newest]), nextCursor: 'next'),
             },
           );
           final container = buildContainer();
@@ -609,24 +632,24 @@ void main() {
               .loadMore();
           container.invalidate(trendingSoundsProvider);
           await container.read(trendingSoundsProvider.future);
-          page.complete([oldest]);
+          page.complete(indexPage([oldest]));
           await loading;
 
           expect(
             container.read(trendingSoundsProvider).requireValue.sounds,
-            [newest],
+            filledUp([newest]),
           );
         });
 
         test('waits for the list to load anew before paging', () async {
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
-            (invocation) async =>
-                invocation.namedArguments[#until] == null ? [newest] : [older],
+            (invocation) async => invocation.namedArguments[#cursor] == null
+                ? indexPage(filledUp([newest]), nextCursor: 'next')
+                : indexPage([older]),
           );
           final container = buildContainer();
           final subscription = container.listen(
@@ -640,18 +663,17 @@ void main() {
           await container.read(trendingSoundsProvider.notifier).loadMore();
           final result = await container.read(trendingSoundsProvider.future);
 
-          // Paged while it reloaded, the list would ask for its first page
-          // twice, find nothing new in the second and end.
-          expect(result.sounds, [newest]);
+          // Paged while it reloaded, the list would ask for its second page
+          // before its first and end there.
+          expect(result.sounds, filledUp([newest]));
           expect(result.hasMore, isTrue);
         });
 
         test('does nothing before the first page is in', () async {
-          final first = Completer<List<AudioEvent>>();
+          final first = Completer<SoundIndexPage>();
           when(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) => first.future);
           final container = buildContainer();
@@ -664,12 +686,11 @@ void main() {
           await container.read(trendingSoundsProvider.notifier).loadMore();
 
           verify(
-            () => mockRepository.fetchTrendingSounds(
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+            () => mockRepository.fetchNewestSounds(
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
-          first.complete(const []);
+          first.complete(indexPage(const []));
         });
       });
     });
@@ -959,10 +980,16 @@ void main() {
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
         when(
-          () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
+          () => mockRepository.searchSounds(
+            any(),
+            kind: any(named: 'kind'),
+            followedBy: any(named: 'followedBy'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer(
-          (_) async => (
-            sounds: [createTestAudioEvent(id: 'found')],
+          (_) async => searchPage(
+            [createTestAudioEvent(id: 'found')],
+            source: SoundSearchSource.relays,
             relays: SoundSearchRelays.timedOut,
           ),
         );
@@ -988,6 +1015,48 @@ void main() {
         );
       });
 
+      test('narrows the search to the kind it is given', () async {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(
+          soundSearchResultsProvider('rain', kind: SoundKind.effect).future,
+        );
+
+        verify(
+          () => mockRepository.searchSounds('rain', kind: SoundKind.effect),
+        ).called(1);
+      });
+
+      test('searches within the followed accounts for For you', () async {
+        final followRepository = _MockFollowRepository();
+        when(
+          () => followRepository.followingPubkeys,
+        ).thenReturn(const ['alice', 'bob']);
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            followRepositoryProvider.overrideWithValue(followRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(
+          soundSearchResultsProvider('rain', followed: true).future,
+        );
+
+        verify(
+          () => mockRepository.searchSounds(
+            'rain',
+            followedBy: const ['alice', 'bob'],
+          ),
+        ).called(1);
+      });
+
       test('does not search for a query holding a private key', () async {
         final container = ProviderContainer(
           overrides: [
@@ -1008,6 +1077,329 @@ void main() {
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
         );
       });
+    });
+
+    group('soundSearchPagesProvider with Funnelcake failing a later page', () {
+      // The client's exceptions name the request's URL, and a search URL
+      // holds the words typed. A page that fails after the first must not
+      // put them in the captured logs.
+      const query = 'rainy lullaby';
+
+      for (final (name, failLater)
+          in <(String, Future<http.Response> Function())>[
+            ('an error status', () async => http.Response('down', 503)),
+            ('a timeout', () async => throw TimeoutException('slow')),
+          ]) {
+        test('keeps the query out of the logs after $name', () async {
+          var requests = 0;
+          final client = FunnelcakeApiClient(
+            baseUrl: 'https://api.example',
+            retryBaseDelay: Duration.zero,
+            httpClient: MockClient((request) async {
+              if (requests++ > 0) return failLater();
+              return http.Response(
+                jsonEncode({
+                  'data': <Object>[],
+                  'pagination': {'next_cursor': 'o:50', 'has_more': true},
+                }),
+                200,
+              );
+            }),
+          );
+          final repository = SoundsRepository(
+            nostrClient: MockNostrClient(),
+            funnelcakeApiClient: client,
+          );
+          addTearDown(repository.dispose);
+          final container = ProviderContainer(
+            overrides: [soundsRepositoryProvider.overrideWithValue(repository)],
+          );
+          addTearDown(container.dispose);
+          final provider = soundSearchPagesProvider(query);
+          final subscription = container.listen(provider, (_, _) {});
+          addTearDown(subscription.close);
+          final logsBefore =
+              (await LogCaptureService().getAllLogsAsText()).length;
+
+          expect((await container.read(provider.future)).hasMore, isTrue);
+          await container.read(provider.notifier).loadMore();
+
+          expect(container.read(provider).requireValue.hasMore, isFalse);
+          expect(requests, greaterThan(1));
+          final logs = (await LogCaptureService().getAllLogsAsText()).skip(
+            logsBefore,
+          );
+          expect(
+            logs.where((line) => line.contains('Could not load more sounds')),
+            isNotEmpty,
+          );
+          expect(logs.where((line) => line.contains('rainy')), isEmpty);
+        });
+      }
+    });
+
+    group('soundSearchPagesProvider', () {
+      setUp(() {
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer() {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      void answerSearch(
+        SoundSearchResults Function(String? cursor) pageAt,
+      ) {
+        when(
+          () => mockRepository.searchSounds(
+            any(),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              pageAt(invocation.namedArguments[#cursor] as String?),
+        );
+      }
+
+      test('follows the cursor as the list is scrolled', () async {
+        final best = createTestAudioEvent(id: 'best');
+        final again = createTestAudioEvent(id: 'again');
+        final next = createTestAudioEvent(id: 'next');
+        answerSearch(
+          (cursor) => switch (cursor) {
+            null => searchPage(
+              [best, again],
+              usageCounts: {'best': 9, 'again': 2},
+              nextCursor: '50',
+            ),
+            _ => searchPage([again, next], usageCounts: {'next': 4}),
+          },
+        );
+        final container = buildContainer();
+        final subscription = container.listen(
+          soundSearchPagesProvider('cool'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        final first = await container.read(
+          soundSearchPagesProvider('cool').future,
+        );
+        expect(first.sounds, [best, again]);
+        expect(first.hasMore, isTrue);
+
+        await container
+            .read(soundSearchPagesProvider('cool').notifier)
+            .loadMore();
+
+        final result = container
+            .read(soundSearchPagesProvider('cool'))
+            .requireValue;
+        // The ranking moved, so a sound from the first page came round again.
+        expect(result.pages, [
+          [best, again],
+          [next],
+        ]);
+        expect(result.usageCounts, {'best': 9, 'again': 2, 'next': 4});
+        expect(result.hasMore, isFalse);
+        verify(() => mockRepository.searchSounds('cool', cursor: '50'))
+            .called(1);
+      });
+
+      test('keeps loading past a page that found nothing', () async {
+        final late = createTestAudioEvent(id: 'late');
+        answerSearch(
+          (cursor) => switch (cursor) {
+            null => searchPage(const [], nextCursor: '25'),
+            _ => searchPage([late]),
+          },
+        );
+        final container = buildContainer();
+        final subscription = container.listen(
+          soundSearchPagesProvider('cool'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        final first = await container.read(
+          soundSearchPagesProvider('cool').future,
+        );
+        expect(first.sounds, isEmpty);
+        expect(first.canLoadMore, isTrue);
+
+        await container
+            .read(soundSearchPagesProvider('cool').notifier)
+            .loadMore();
+
+        expect(
+          container.read(soundSearchPagesProvider('cool')).requireValue.sounds,
+          [late],
+        );
+      });
+
+      test('holds a relay answer as its only page', () async {
+        final found = createTestAudioEvent(id: 'found');
+        answerSearch(
+          (_) => searchPage(
+            [found],
+            source: SoundSearchSource.relays,
+            relays: SoundSearchRelays.answered,
+          ),
+        );
+
+        final result = await buildContainer().read(
+          soundSearchPagesProvider('cool').future,
+        );
+
+        expect(result.sounds, [found]);
+        expect(result.hasMore, isFalse);
+      });
+
+      test('reads no repository for a blank query', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final result = await container.read(
+          soundSearchPagesProvider('  ').future,
+        );
+
+        expect(result.sounds, isEmpty);
+        expect(result.hasMore, isFalse);
+      });
+    });
+
+    group('soundsOfKindProvider', () {
+      late _MockFollowRepository followRepository;
+
+      setUp(() {
+        followRepository = _MockFollowRepository();
+        when(() => followRepository.followingPubkeys).thenReturn(const []);
+        _keepEverySound(mockRepository);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer() {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            followRepositoryProvider.overrideWithValue(followRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      SoundIndexPage indexPage(
+        List<AudioEvent> sounds, {
+        String? nextCursor,
+      }) => (
+        sounds: sounds,
+        usageCounts: {for (final sound in sounds) sound.id: 1},
+        nextCursor: nextCursor,
+      );
+
+      test('pages the popular sounds of a kind by their cursor', () async {
+        final first = createTestAudioEvent(id: 'first');
+        final again = createTestAudioEvent(id: 'again');
+        final next = createTestAudioEvent(id: 'next');
+        when(
+          () => mockRepository.fetchPopularSoundsOfKind(
+            SoundKind.effect,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async => switch (invocation.namedArguments[#cursor]) {
+            null => indexPage([first, again], nextCursor: 'o:50'),
+            _ => indexPage([again, next]),
+          },
+        );
+        final container = buildContainer();
+        final provider = soundsOfKindProvider(
+          SoundKind.effect,
+          SoundListOfKind.popular,
+        );
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+
+        final firstPage = await container.read(provider.future);
+        expect(firstPage.hasMore, isTrue);
+        await container.read(provider.notifier).loadMore();
+
+        final result = container.read(provider).requireValue;
+        expect(result.pages, [
+          [first, again],
+          [next],
+        ]);
+        expect(result.hasMore, isFalse);
+        verify(
+          () => mockRepository.fetchPopularSoundsOfKind(
+            SoundKind.effect,
+            cursor: 'o:50',
+          ),
+        ).called(1);
+      });
+
+      test('lists the newest sounds of a kind', () async {
+        final newest = createTestAudioEvent(id: 'newest');
+        when(
+          () => mockRepository.fetchNewestSounds(
+            kind: SoundKind.music,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => indexPage([newest]));
+
+        final result = await buildContainer().read(
+          soundsOfKindProvider(SoundKind.music, SoundListOfKind.newest).future,
+        );
+
+        expect(result.sounds, [newest]);
+        expect(result.usageCounts, {'newest': 1});
+      });
+
+      test(
+        "lists the followed accounts' sounds without Divine's own",
+        () async {
+          when(
+            () => followRepository.followingPubkeys,
+          ).thenReturn(const ['alice', kHqPubkeyHex]);
+          final followed = createTestAudioEvent(id: 'followed');
+          final divine = createTestAudioEvent(
+            id: 'divine',
+            pubkey: kHqPubkeyHex,
+          );
+          when(
+            () => mockRepository.fetchFollowedSounds(
+              any(),
+              kind: SoundKind.effect,
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) async => indexPage([followed, divine]));
+
+          final result = await buildContainer().read(
+            soundsOfKindProvider(
+              SoundKind.effect,
+              SoundListOfKind.followed,
+            ).future,
+          );
+
+          expect(result.sounds, [followed]);
+          verify(
+            () => mockRepository.fetchFollowedSounds(const [
+              'alice',
+              kHqPubkeyHex,
+            ], kind: SoundKind.effect),
+          ).called(1);
+        },
+      );
     });
 
     group('soundsByCreatorProvider', () {
@@ -1118,153 +1510,6 @@ void main() {
       });
     });
 
-    group('trendingSoundUsageCountsProvider', () {
-      const audioEventId1 =
-          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
-      const audioEventId2 =
-          'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
-
-      ProviderContainer buildContainer(List<AudioEvent> trending) {
-        when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
-          ),
-        ).thenAnswer((_) async => trending);
-        _keepEverySound(mockRepository);
-        when(() => mockRepository.initialize()).thenAnswer((_) async {});
-        when(() => mockRepository.dispose()).thenAnswer((_) async {});
-
-        final container = ProviderContainer(
-          overrides: [
-            soundsRepositoryProvider.overrideWithValue(mockRepository),
-          ],
-        );
-        addTearDown(container.dispose);
-        return container;
-      }
-
-      test('resolves the whole list through one repository call', () async {
-        when(
-          () => mockRepository.fetchVideosUsingSoundCounts(any()),
-        ).thenAnswer((_) async => {audioEventId1: 7, audioEventId2: 0});
-
-        final container = buildContainer([
-          createTestAudioEvent(id: audioEventId1),
-          createTestAudioEvent(id: audioEventId2),
-        ]);
-
-        final counts = await container.read(
-          trendingSoundUsageCountsProvider.future,
-        );
-
-        expect(counts, {audioEventId1: 7, audioEventId2: 0});
-        final captured = verify(
-          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
-        ).captured;
-        expect(captured, hasLength(1));
-        expect(
-          (captured.single as Iterable<String>).toSet(),
-          {audioEventId1, audioEventId2},
-        );
-      });
-
-      test('asks for the reused event id behind an original sound', () async {
-        when(
-          () => mockRepository.fetchVideosUsingSoundCounts(any()),
-        ).thenAnswer((_) async => {audioEventId1: 3});
-
-        final container = buildContainer([
-          createTestAudioEvent(id: 'video_$audioEventId1'),
-        ]);
-
-        await container.read(trendingSoundUsageCountsProvider.future);
-
-        final captured = verify(
-          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
-        ).captured;
-        expect((captured.single as Iterable<String>).toSet(), {audioEventId1});
-      });
-
-      test('counts only the sounds a new page added', () async {
-        final older = createTestAudioEvent(id: audioEventId2, createdAt: 100);
-        when(
-          () => mockRepository.fetchVideosUsingSoundCounts(any()),
-        ).thenAnswer(
-          (invocation) async => {
-            for (final id
-                in invocation.positionalArguments.single as Iterable<String>)
-              id: id == audioEventId1 ? 7 : 2,
-          },
-        );
-        final newer = createTestAudioEvent(id: audioEventId1, createdAt: 200);
-        final container = buildContainer([newer]);
-        // The list holds less than a screenful, so it loads the older page
-        // by itself.
-        when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
-          ),
-        ).thenAnswer(
-          (invocation) async =>
-              invocation.namedArguments[#until] == null ? [newer] : [older],
-        );
-        final subscription = container.listen(
-          trendingSoundUsageCountsProvider,
-          (_, _) {},
-        );
-        addTearDown(subscription.close);
-        await container.read(trendingSoundUsageCountsProvider.future);
-        // The counts follow the new page once its change has gone round.
-        await pumpEventQueue();
-        final counts = await container.read(
-          trendingSoundUsageCountsProvider.future,
-        );
-
-        expect(counts, {audioEventId1: 7, audioEventId2: 2});
-        final captured = verify(
-          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
-        ).captured;
-        expect(
-          [for (final ids in captured) (ids as Iterable<String>).toSet()],
-          [
-            {audioEventId1},
-            {audioEventId2},
-          ],
-        );
-      });
-
-      test('leaves out the counts it could not look up', () async {
-        when(
-          () => mockRepository.fetchVideosUsingSoundCounts(any()),
-        ).thenThrow(Exception('relay down'));
-
-        final container = buildContainer([
-          createTestAudioEvent(id: audioEventId1),
-        ]);
-
-        expect(
-          await container.read(trendingSoundUsageCountsProvider.future),
-          isEmpty,
-        );
-      });
-
-      test('never queries for sounds with no referenceable event', () async {
-        final container = buildContainer([
-          createTestAudioEvent(id: '${AudioEvent.bundledMarker}_wednesday'),
-          createTestAudioEvent(id: 'local-import-not-published'),
-        ]);
-
-        final counts = await container.read(
-          trendingSoundUsageCountsProvider.future,
-        );
-
-        expect(counts, isEmpty);
-        verifyNever(() => mockRepository.fetchVideosUsingSoundCounts(any()));
-      });
-    });
-
     group('divineSoundsProvider', () {
       test("hands over the repository's Divine sounds", () async {
         final divine = createTestAudioEvent(id: 'divine-sound');
@@ -1310,12 +1555,17 @@ void main() {
         Future<List<AudioEvent>> Function(Invocation invocation) answer,
       ) {
         when(
-          () => mockRepository.fetchSoundsByCreators(
+          () => mockRepository.fetchFollowedSounds(
             any(),
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
           ),
-        ).thenAnswer(answer);
+        ).thenAnswer((invocation) async {
+          final sounds = await answer(invocation);
+          return indexPage(
+            sounds,
+            nextCursor: sounds.isEmpty ? null : 'next',
+          );
+        });
       }
 
       test('asks for the sounds of everyone the viewer follows', () async {
@@ -1328,10 +1578,7 @@ void main() {
         expect(result.sounds, [followed]);
         expect(result.hasMore, isTrue);
         verify(
-          () => mockRepository.fetchSoundsByCreators(const [
-            'alice',
-            'bob',
-          ], limit: 100),
+          () => mockRepository.fetchFollowedSounds(const ['alice', 'bob']),
         ).called(1);
       });
 
@@ -1347,20 +1594,6 @@ void main() {
 
         final result = await container.read(forYouSoundsProvider.future);
         expect(result.sounds, [followed]);
-      });
-
-      test('leaves out the unnamed sounds nobody reused', () async {
-        final named = createTestAudioEvent(id: 'named');
-        final unused = createTestAudioEvent(id: 'unused');
-        stubCreatorSounds((_) async => [named, unused]);
-        when(
-          () => mockRepository.withoutUnusedOriginals([named, unused]),
-        ).thenAnswer((_) async => [named]);
-
-        final container = buildContainer(const ['alice']);
-
-        final result = await container.read(forYouSoundsProvider.future);
-        expect(result.sounds, [named]);
       });
 
       test(
@@ -1382,27 +1615,13 @@ void main() {
         },
       );
 
-      test('leaves out the sounds of authors the viewer blocked', () async {
-        final kept = createTestAudioEvent(id: 'kept');
-        final muted = createTestAudioEvent(id: 'muted');
-        stubCreatorSounds((_) async => [kept, muted]);
-        when(
-          () => mockRepository.withoutBlockedAuthors([kept, muted]),
-        ).thenReturn([kept]);
-
-        final container = buildContainer(const ['alice']);
-
-        final result = await container.read(forYouSoundsProvider.future);
-        expect(result.sounds, [kept]);
-      });
-
       test('loads older sounds as it is scrolled', () async {
         final newer = createTestAudioEvent(id: 'newer', createdAt: 200);
         final older = createTestAudioEvent(id: 'older', createdAt: 100);
         final first = filledUp([newer]);
         stubCreatorSounds(
           (invocation) async =>
-              invocation.namedArguments[#until] == null ? first : [older],
+              invocation.namedArguments[#cursor] == null ? first : [older],
         );
         final container = buildContainer(const ['alice']);
         await container.read(forYouSoundsProvider.future);
@@ -1414,11 +1633,9 @@ void main() {
           [older],
         ]);
         verify(
-          () => mockRepository.fetchSoundsByCreators(
-            const ['alice'],
-            limit: 100,
-            until: 200,
-          ),
+          () => mockRepository.fetchFollowedSounds(const [
+            'alice',
+          ], cursor: 'next'),
         ).called(1);
       });
 
@@ -1433,10 +1650,9 @@ void main() {
           container.read(forYouSoundsProvider.future).ignore();
           async.flushMicrotasks();
           verify(
-            () => mockRepository.fetchSoundsByCreators(
+            () => mockRepository.fetchFollowedSounds(
               any(),
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
 
@@ -1444,10 +1660,9 @@ void main() {
           container.read(forYouSoundsProvider.future).ignore();
           async.flushMicrotasks();
           verify(
-            () => mockRepository.fetchSoundsByCreators(
+            () => mockRepository.fetchFollowedSounds(
               any(),
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         });
@@ -1460,10 +1675,9 @@ void main() {
         expect(result.sounds, isEmpty);
         expect(result.hasMore, isFalse);
         verifyNever(
-          () => mockRepository.fetchSoundsByCreators(
+          () => mockRepository.fetchFollowedSounds(
             any(),
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
           ),
         );
       });
@@ -1532,11 +1746,10 @@ void main() {
         String? viewer,
       }) {
         when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
+          () => mockRepository.fetchNewestSounds(
+            cursor: any(named: 'cursor'),
           ),
-        ).thenAnswer((_) async => trending);
+        ).thenAnswer((_) async => indexPage(trending));
         _keepEverySound(mockRepository);
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
@@ -1620,13 +1833,13 @@ void main() {
         ).copyWith(sourceVideoReference: normalReference);
         final container = buildContainer([newer]);
         when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
+          () => mockRepository.fetchNewestSounds(
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (invocation) async =>
-              invocation.namedArguments[#until] == null ? [newer] : [older],
+          (invocation) async => invocation.namedArguments[#cursor] == null
+              ? indexPage([newer], nextCursor: 'next')
+              : indexPage([older]),
         );
         when(
           () => videosRepository.getVideosFromRelaysByAddressableIds(
@@ -1833,6 +2046,42 @@ void main() {
           isTrue,
         );
         verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      });
+
+      test('covers the sounds of every page a search loaded', () async {
+        stubBothSourceVideos();
+        final [onFirstPage, onSecondPage] = soundsFrom(const [
+          verticalReference,
+          normalReference,
+        ]);
+        when(
+          () => mockRepository.searchSounds(
+            any(),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (invocation) async => invocation.namedArguments[#cursor] == null
+              ? searchPage([onFirstPage], nextCursor: '50')
+              : searchPage([onSecondPage]),
+        );
+        final container = buildContainer(const []);
+        final subscription = container.listen(
+          soundSearchCoversProvider('clip'),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await container.read(soundSearchCoversProvider('clip').future);
+
+        await container
+            .read(soundSearchPagesProvider('clip').notifier)
+            .loadMore();
+        await pumpEventQueue();
+        final covers = await container.read(
+          soundSearchCoversProvider('clip').future,
+        );
+
+        expect(covers.keys, containsAll([verticalReference, normalReference]));
       });
 
       group('reuse', () {

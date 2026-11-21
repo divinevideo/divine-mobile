@@ -4,15 +4,24 @@
 // by creator, by usage count) for audio reuse.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
-    show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
+    show
+        AudioEvent,
+        AudioEventKind,
+        NIP71VideoKinds,
+        SoundKind,
+        VideoEvent,
+        audioEventKind,
+        searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:sounds_repository/src/sound_library_api_client.dart';
+import 'package:sounds_repository/src/sound_search_page_exception.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The sounds being picked up right now, the most trending first, with the
@@ -22,11 +31,33 @@ typedef RankedSounds = ({
   Map<String, int> usageCounts,
 });
 
+/// One page of a sound list from Funnelcake's sound index: its sounds, in
+/// the index's order, Funnelcake's count of the videos using each, keyed by
+/// event id, and the cursor of the page after it, `null` on the last.
+typedef SoundIndexPage = ({
+  List<AudioEvent> sounds,
+  Map<String, int> usageCounts,
+  String? nextCursor,
+});
+
+/// Who answered a [SoundsRepository.searchSounds] query.
+enum SoundSearchSource {
+  /// Funnelcake's sound search, which finds sounds despite typos and partial
+  /// words, ranks them best match first and pages through them.
+  funnelcake,
+
+  /// The relays' full-text and tag search with the repository's cached
+  /// matches, which only match whole or partial words as typed: the fallback
+  /// when Funnelcake cannot answer. [SoundSearchRelays] tells how the relays
+  /// answered.
+  relays,
+}
+
 /// How the relays answered a [SoundsRepository.searchSounds] query.
 ///
-/// Every value but [answered] means the sounds are, wholly or in part, the
-/// repository's cached matches standing in for an answer the relays did not
-/// give.
+/// Every value but [answered] and [notAsked] means the sounds are, wholly or
+/// in part, the repository's cached matches standing in for an answer the
+/// relays did not give.
 enum SoundSearchRelays {
   /// The relays answered the query in time.
   answered,
@@ -41,15 +72,24 @@ enum SoundSearchRelays {
   /// The relay query threw, so the sounds are the cached matches alone.
   failed,
 
-  /// Nothing was asked: the query has no search terms.
+  /// The relays were not searched: the query has no search terms, or
+  /// Funnelcake answered it.
   notAsked,
 }
 
-/// The sounds a [SoundsRepository.searchSounds] query found, and how the
-/// relays answered it.
+/// One page of the sounds a [SoundsRepository.searchSounds] query found, who
+/// answered it, and how the relays answered it.
+///
+/// For a Funnelcake answer, `usageCounts` holds Funnelcake's count of the
+/// videos using each sound it found, keyed by event id, and `nextCursor`
+/// asks for the page after this one, `null` on the last. A relay answer is a
+/// single page with neither.
 typedef SoundSearchResults = ({
   List<AudioEvent> sounds,
+  SoundSearchSource source,
   SoundSearchRelays relays,
+  Map<String, int> usageCounts,
+  String? nextCursor,
 });
 
 /// Repository for managing audio events (Kind 1063) for audio reuse.
@@ -247,6 +287,9 @@ class SoundsRepository {
   /// Keeps sounds by authors the viewer blocked or muted: a caller paging by
   /// [until] needs the whole page, or a page of nothing but theirs would end
   /// its list. Narrow the page with [withoutBlockedAuthors].
+  ///
+  /// Read as [_newestSounds] describes, so a busy relay does not cut a page
+  /// short, which would end a list paged by [until].
   Future<List<AudioEvent>> fetchTrendingSounds({
     int limit = 50,
     int? until,
@@ -258,14 +301,7 @@ class SoundsRepository {
     );
 
     try {
-      final events = await _nostrClient.queryEvents([
-        Filter(
-          kinds: const [audioEventKind],
-          m: audioMimeTypes,
-          limit: limit,
-          until: until,
-        ),
-      ]);
+      final events = await _newestSounds(limit: limit, until: until);
 
       final audioEvents = _processAndCacheEvents(events);
 
@@ -318,22 +354,71 @@ class SoundsRepository {
       for (final sound in ranked)
         if (sound.id.isNotEmpty) sound.id: sound.usageCount,
     };
-    if (usageCounts.isEmpty) {
-      return (sounds: const <AudioEvent>[], usageCounts: const <String, int>{});
-    }
-
-    final events = await _nostrClient.queryEvents([
-      Filter(ids: usageCounts.keys.toList(), kinds: const [audioEventKind]),
-    ]);
-    final byId = {
-      for (final sound in _processAndCacheEvents(events)) sound.id: sound,
-    };
     return (
-      sounds: withoutBlockedAuthors([
-        for (final id in usageCounts.keys) ?byId[id],
-      ]),
+      sounds: withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
       usageCounts: usageCounts,
     );
+  }
+
+  /// How long [_soundsInOrder] waits for every relay to answer on the shared
+  /// connections before it asks again for the sounds still missing on
+  /// connections of their own.
+  static const soundLookupTimeout = Duration(seconds: 2);
+
+  /// How long the second ask of [_soundsInOrder] and [_newestSounds], on
+  /// connections of their own, may take.
+  static const freshSoundLookupTimeout = Duration(seconds: 5);
+
+  /// The sounds [ids] name, in that order, loaded from the relays, so each
+  /// carries the reuse and source-video tags the picker relies on. One no
+  /// relay returns is left out. Empty, without asking, for no ids.
+  ///
+  /// Sounds this repository holds already are not asked for again. The rest
+  /// are read waiting for every relay to answer: a read that does not wait
+  /// ends as soon as the local event cache has answered, with only the
+  /// sounds it held, whenever the relay is still busy with the requests
+  /// queued ahead of it on the same connection, as it is while the app
+  /// starts. When the relays have not all answered within
+  /// [soundLookupTimeout], the sounds still missing are asked for again on
+  /// connections of their own, which no other request is queued on.
+  Future<List<AudioEvent>> _soundsInOrder(Iterable<String> ids) async {
+    final wanted = ids.toList();
+    if (wanted.isEmpty) return const [];
+    final found = <String, AudioEvent>{
+      for (final id in wanted) id: ?_cache[id],
+    };
+
+    List<Filter> missing() => [
+      Filter(
+        ids: [
+          for (final id in wanted)
+            if (!found.containsKey(id)) id,
+        ],
+        kinds: const [audioEventKind],
+      ),
+    ];
+    void addFound(List<Event> events) {
+      for (final sound in _processAndCacheEvents(events)) {
+        found[sound.id] = sound;
+      }
+    }
+
+    if (found.length < wanted.length) {
+      final read = await _nostrClient.queryEventsDetailed(
+        missing(),
+        timeout: soundLookupTimeout,
+        requireAllRelaysSettled: true,
+      );
+      addFound(read.events);
+      if (read.timedOut && found.length < wanted.length) {
+        final retry = await _nostrClient.queryEventsOnFreshConnections(
+          missing(),
+          timeout: freshSoundLookupTimeout,
+        );
+        addFound(retry.events);
+      }
+    }
+    return [for (final id in wanted) ?found[id]];
   }
 
   /// Fetch the newest sounds published by any of [pubkeys], or with [until]
@@ -342,7 +427,8 @@ class SoundsRepository {
   /// Keeps sounds by authors the viewer blocked or muted, for the reason
   /// [fetchTrendingSounds] does.
   ///
-  /// Returns an empty list without querying when [pubkeys] is empty.
+  /// Returns an empty list without querying when [pubkeys] is empty. Read as
+  /// [_newestSounds] describes, like [fetchTrendingSounds].
   Future<List<AudioEvent>> fetchSoundsByCreators(
     Iterable<String> pubkeys, {
     int limit = 50,
@@ -354,16 +440,64 @@ class SoundsRepository {
     };
     if (authors.isEmpty) return const [];
 
-    final events = await _nostrClient.queryEvents([
-      Filter(
-        authors: authors.toList(),
-        kinds: const [audioEventKind],
-        m: audioMimeTypes,
-        limit: limit,
-        until: until,
-      ),
-    ]);
+    final events = await _newestSounds(
+      authors: authors.toList(),
+      limit: limit,
+      until: until,
+    );
     return _processAndCacheEvents(events);
+  }
+
+  /// How long [_newestSounds] waits for every relay to answer on the shared
+  /// connections before it asks again on connections of its own.
+  static const newestSoundsTimeout = Duration(seconds: 3);
+
+  /// The [limit] newest sound events, by [authors] when given and published
+  /// at or before [until] when given, for a list that pages back in time by
+  /// the oldest of them.
+  ///
+  /// Read from the relays alone, waiting for every one to answer. A page
+  /// holding only sounds listed already ends the list, and both shortcuts
+  /// make one:
+  ///
+  /// * The local event cache holds file events other clients published on
+  ///   other relays, many without a playable URL. Mixed in, they took most
+  ///   of a page's places, and the sounds they pushed out were never asked
+  ///   for again. It is read only when no relay can be reached, as all the
+  ///   device has then.
+  /// * A read that does not wait ends as soon as the cache has answered,
+  ///   whenever the relay is still busy with the requests queued ahead of it
+  ///   on the same connection. When the relays have not all answered within
+  ///   [newestSoundsTimeout], they are asked again on connections of their
+  ///   own, and the newest of both answers are kept.
+  Future<List<Event>> _newestSounds({
+    required int limit,
+    List<String>? authors,
+    int? until,
+  }) async {
+    final filter = Filter(
+      authors: authors,
+      kinds: const [audioEventKind],
+      m: audioMimeTypes,
+      limit: limit,
+      until: until,
+    );
+    final read = await _nostrClient.queryEventsDetailed(
+      [filter],
+      useCache: false,
+      timeout: newestSoundsTimeout,
+      requireAllRelaysSettled: true,
+    );
+    if (read.noRelays) return _nostrClient.queryEvents([filter]);
+    if (!read.timedOut) return read.events;
+    final retry = await _nostrClient.queryEventsOnFreshConnections(
+      [filter],
+      timeout: freshSoundLookupTimeout,
+    );
+    final newest = {
+      for (final event in [...read.events, ...retry.events]) event.id: event,
+    }.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return newest.take(limit).toList();
   }
 
   /// Divine's own sounds published on the network, newest first: those
@@ -611,7 +745,367 @@ class SoundsRepository {
     }
   }
 
-  /// Sounds matching [query], drawn from the relays and from this cache.
+  /// The newest sounds, of [kind] when one is given, a page at a time: the
+  /// picker's New list.
+  ///
+  /// From Funnelcake's sound index, which classifies sounds as music or
+  /// effects by their audio (almost no sound carries a tag that says so) and
+  /// leaves out sounds that are only someone talking or silent. Each sound is
+  /// loaded from the relays, as [fetchPopularSounds] does. Left out are
+  /// sounds by authors the viewer blocked or muted, and a video's own sound
+  /// shared as it was ([AudioEvent.isAutoSharedOriginal]) until a second
+  /// video uses it, as the index counts: most of the newest sounds are such,
+  /// and most of those are someone talking. So a page can hold fewer sounds
+  /// than the index listed, or none, and still not be the last: pass its
+  /// `nextCursor` as [cursor] for the next.
+  ///
+  /// When the index cannot answer the first page, because no Funnelcake
+  /// client is available or with any [Exception] on the way, the newest
+  /// sounds are read from the relays instead ([fetchTrendingSounds]),
+  /// narrowed to [kind] by their tags, and paged by time; the cursor tells
+  /// the two apart. A later page of the index does not switch: it throws
+  /// what the Funnelcake request or the relay lookup throws, or a
+  /// [FunnelcakeNotConfiguredException] without a client.
+  Future<SoundIndexPage> fetchNewestSounds({
+    SoundKind? kind,
+    String? cursor,
+  }) => _newestSoundList(kind: kind, cursor: cursor);
+
+  /// The sounds of [kind] people are picking up, the most trending first, a
+  /// page at a time: the picker's Popular list with a kind chosen.
+  ///
+  /// From Funnelcake's sound index, like [fetchNewestSounds], but keeping a
+  /// video's own sound, which only ranks once people use it. A single empty
+  /// page, without asking, when no Funnelcake client is available; throws
+  /// what the Funnelcake request or the relay lookup throws, as there is no
+  /// ranking to fall back on.
+  Future<SoundIndexPage> fetchPopularSoundsOfKind(
+    SoundKind kind, {
+    String? cursor,
+  }) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) return _noIndexSounds;
+    return _indexPage(
+      await client.listSounds(
+        sort: SoundListSort.trending,
+        kind: kind,
+        cursor: cursor,
+      ),
+    );
+  }
+
+  /// The newest sounds by the accounts in [following], of [kind] when one is
+  /// given, a page at a time: the picker's For you list. Narrowed and
+  /// falling back to the relays as [fetchNewestSounds] is.
+  ///
+  /// The index takes at most [FunnelcakeApiClient.maxSoundListAuthors]
+  /// creators, so it is asked about the most recently followed of them; a
+  /// contact list adds each follow at its end. Divine's sound accounts and
+  /// authors the viewer blocked or muted are passed over, since their sounds
+  /// would be left out anyway. The relays are asked about the same
+  /// creators. A single empty page, without asking, when none of
+  /// [following] is left to ask about.
+  Future<SoundIndexPage> fetchFollowedSounds(
+    Iterable<String> following, {
+    SoundKind? kind,
+    String? cursor,
+  }) async {
+    final authors = _indexAuthors(following);
+    if (authors.isEmpty) return _noIndexSounds;
+    return _newestSoundList(kind: kind, authors: authors, cursor: cursor);
+  }
+
+  /// How many sounds a page of [fetchNewestSounds] or [fetchFollowedSounds]
+  /// asks the index or the relays for. The most the index hands out, as it
+  /// lists many more sounds than these lists keep.
+  static const newestListPageSize = 100;
+
+  /// Marks a cursor of [fetchNewestSounds] or [fetchFollowedSounds] as the
+  /// relays' rather than the index's: the Unix time the next page starts at
+  /// follows it.
+  static const _relayCursorPrefix = 'relays:';
+
+  Future<SoundIndexPage> _newestSoundList({
+    SoundKind? kind,
+    List<String>? authors,
+    String? cursor,
+  }) async {
+    if (cursor != null && cursor.startsWith(_relayCursorPrefix)) {
+      return _relayNewestPage(
+        kind: kind,
+        authors: authors,
+        until: int.tryParse(cursor.substring(_relayCursorPrefix.length)),
+      );
+    }
+    final client = _funnelcakeApiClient;
+    if (cursor != null) {
+      if (client == null) throw const FunnelcakeNotConfiguredException();
+      return _newestIndexPage(
+        client,
+        kind: kind,
+        authors: authors,
+        cursor: cursor,
+      );
+    }
+    if (client != null && client.isAvailable) {
+      try {
+        return await _newestIndexPage(client, kind: kind, authors: authors);
+      } on Exception catch (e) {
+        final reason = _failureReason(e);
+        Log.warning(
+          'Funnelcake could not list sounds ($reason), listing the relays',
+          name: 'SoundsRepository',
+          category: LogCategory.api,
+        );
+      }
+    }
+    return _relayNewestPage(kind: kind, authors: authors);
+  }
+
+  Future<SoundIndexPage> _newestIndexPage(
+    FunnelcakeApiClient client, {
+    SoundKind? kind,
+    List<String>? authors,
+    String? cursor,
+  }) async {
+    final page = await _indexPage(
+      await client.listSounds(
+        authors: authors ?? const [],
+        kind: kind,
+        limit: newestListPageSize,
+        cursor: cursor,
+      ),
+    );
+    final usageCounts = page.usageCounts;
+    return (
+      sounds: [
+        for (final sound in page.sounds)
+          if (!sound.isAutoSharedOriginal || (usageCounts[sound.id] ?? 0) > 1)
+            sound,
+      ],
+      usageCounts: usageCounts,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  /// A page of the newest sounds from the relays, by [authors] when given
+  /// and published at or before [until] when given, narrowed as
+  /// [fetchNewestSounds] describes, with the reuse lookup of
+  /// [withoutUnusedOriginals] in place of the index's counts.
+  ///
+  /// The next page starts at the oldest sound the relays returned, whether
+  /// or not it was kept; none follows when they returned nothing older than
+  /// [until].
+  Future<SoundIndexPage> _relayNewestPage({
+    SoundKind? kind,
+    List<String>? authors,
+    int? until,
+  }) async {
+    final events = await _newestSounds(
+      limit: newestListPageSize,
+      authors: authors,
+      until: until,
+    );
+    final oldest = events.isEmpty
+        ? null
+        : events.map((event) => event.createdAt).reduce(min);
+    final sounds = withoutBlockedAuthors(_processAndCacheEvents(events));
+    return (
+      sounds: await withoutUnusedOriginals([
+        for (final sound in sounds)
+          if (kind == null || sound.soundKind == kind) sound,
+      ]),
+      usageCounts: const <String, int>{},
+      nextCursor: oldest == null || oldest == until
+          ? null
+          : '$_relayCursorPrefix$oldest',
+    );
+  }
+
+  static const SoundIndexPage _noIndexSounds = (
+    sounds: <AudioEvent>[],
+    usageCounts: <String, int>{},
+    nextCursor: null,
+  );
+
+  /// [page] with its sounds loaded from the relays in its order, leaving out
+  /// those by authors the viewer blocked or muted.
+  Future<SoundIndexPage> _indexPage(SoundSearchResponse page) async {
+    final usageCounts = {
+      for (final sound in page.sounds)
+        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
+    };
+    return (
+      sounds: List<AudioEvent>.unmodifiable(
+        withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
+      ),
+      usageCounts: usageCounts,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  /// A lowercase hex public key.
+  static final _hexPubkey = RegExp(r'^[0-9a-f]{64}$');
+
+  /// The creators of [following] a followed list asks the index about; see
+  /// [fetchFollowedSounds].
+  List<String> _indexAuthors(Iterable<String> following) {
+    final isBlocked = _blockFilter;
+    final authors = <String>{};
+    for (final pubkey in following.toList().reversed) {
+      if (authors.length == FunnelcakeApiClient.maxSoundListAuthors) break;
+      final author = pubkey.toLowerCase();
+      if (_hexPubkey.hasMatch(author) &&
+          !_divineSoundPublishers.contains(author) &&
+          !(isBlocked?.call(author) ?? false)) {
+        authors.add(author);
+      }
+    }
+    return authors.toList();
+  }
+
+  /// Why a Funnelcake request failed, for a log: its status code, or the
+  /// type of the error. Not the exception itself, whose URL would put a
+  /// search query in the logs.
+  static String _failureReason(Exception e) => e is FunnelcakeApiException
+      ? 'status ${e.statusCode}'
+      : '${e.runtimeType}';
+
+  /// Sounds matching [query], a page at a time.
+  ///
+  /// Funnelcake's sound search answers when it can. It finds sounds despite
+  /// typos and partial words, so "pianno" finds piano sounds, and ranks them
+  /// best match first, with Divine's own first among equal matches; that
+  /// order is kept. Each sound is loaded from the relays, as
+  /// [fetchPopularSounds] does, so it carries the reuse and source-video tags
+  /// the picker relies on, and one no relay returns is left out. A page can
+  /// therefore hold fewer sounds than [limit], or none, and still not be the
+  /// last: pass its `nextCursor` as [cursor] for the next.
+  ///
+  /// When Funnelcake cannot answer the first page, the relays are searched
+  /// instead ([SoundSearchSource.relays]), in one page. That covers a client
+  /// that is missing or not configured, and any [Exception] on the way: a
+  /// refused query, the 503 Funnelcake answers while its search index is
+  /// down, a timeout, an unreadable answer, or the relays failing to load the
+  /// sounds it found. A later page has no fallback and throws what failed,
+  /// since a list cannot switch to another order halfway down.
+  ///
+  /// With a [kind], only sounds of that kind are found: Funnelcake judges
+  /// them by its audio analysis, the relay search by their tags
+  /// ([AudioEventKind.soundKind]), which most sounds lack.
+  ///
+  /// With [followedBy], only sounds by those accounts are found: the picker's
+  /// For you search. As [fetchFollowedSounds] does, it asks about the
+  /// most recently followed of them, passing over Divine's sound accounts and
+  /// blocked or muted authors, and finds nothing, without asking, when none
+  /// is left.
+  ///
+  /// Either way, sounds by authors the viewer blocked or muted are left out,
+  /// and the sounds found are cached like any other fetch.
+  ///
+  /// Throws a [FunnelcakeNotConfiguredException] for a [cursor] without a
+  /// Funnelcake client: only Funnelcake hands out cursors. A page for a
+  /// [cursor] that fails with an [Exception] throws a
+  /// [SoundSearchPageException] that names only why, since the request's own
+  /// exceptions carry its URL and with it the query.
+  Future<SoundSearchResults> searchSounds(
+    String query, {
+    SoundKind? kind,
+    Iterable<String>? followedBy,
+    int limit = maxSearchResults,
+    String? cursor,
+  }) async {
+    final terms = searchTermsOf(query);
+    final authors = followedBy == null ? null : _indexAuthors(followedBy);
+    if (terms.isEmpty || (authors != null && authors.isEmpty)) {
+      Log.debug(
+        'Nothing to search for sounds',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return _relayResults(const [], SoundSearchRelays.notAsked);
+    }
+
+    final client = _funnelcakeApiClient;
+    if (cursor != null) {
+      if (client == null) throw const FunnelcakeNotConfiguredException();
+      try {
+        return await _searchFunnelcake(
+          client,
+          terms,
+          kind: kind,
+          authors: authors,
+          limit: limit,
+          cursor: cursor,
+        );
+      } on Exception catch (e) {
+        throw SoundSearchPageException(_failureReason(e));
+      }
+    }
+    if (client != null && client.isAvailable) {
+      try {
+        return await _searchFunnelcake(
+          client,
+          terms,
+          kind: kind,
+          authors: authors,
+          limit: limit,
+        );
+      } on Exception catch (e) {
+        final reason = _failureReason(e);
+        Log.warning(
+          'Funnelcake could not search sounds ($reason), searching the relays',
+          name: 'SoundsRepository',
+          category: LogCategory.api,
+        );
+      }
+    }
+    return _searchRelays(
+      query,
+      terms,
+      kind: kind,
+      authors: authors,
+      limit: limit,
+    );
+  }
+
+  /// A page of Funnelcake's sound search for [terms]; see [searchSounds].
+  Future<SoundSearchResults> _searchFunnelcake(
+    FunnelcakeApiClient client,
+    List<String> terms, {
+    required SoundKind? kind,
+    required List<String>? authors,
+    required int limit,
+    String? cursor,
+  }) async {
+    final page = await _indexPage(
+      await client.searchSounds(
+        query: terms.join(' '),
+        kind: kind,
+        authors: authors ?? const [],
+        limit: limit,
+        cursor: cursor,
+      ),
+    );
+
+    Log.debug(
+      'Funnelcake sound search for ${terms.length} term(s) found '
+      '${page.sounds.length} on this page, more: ${page.nextCursor != null}',
+      name: 'SoundsRepository',
+      category: LogCategory.api,
+    );
+
+    return (
+      sounds: page.sounds,
+      source: SoundSearchSource.funnelcake,
+      relays: SoundSearchRelays.notAsked,
+      usageCounts: page.usageCounts,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  /// Sounds matching [query], drawn from the relays and from this cache: the
+  /// search [searchSounds] falls back to.
   ///
   /// Two sources, because neither answers the question alone. A relay `#t`
   /// filter is the only way to reach a sound outside the window
@@ -622,7 +1116,8 @@ class SoundsRepository {
   ///
   /// Full-text search finds names and descriptions without a warm cache.
   /// Tag search also finds relays' hashtag matches; [AudioEvent.matchesSearch]
-  /// requires every query term across the sound's searchable fields.
+  /// requires every query term across the sound's searchable fields, so a
+  /// typo matches nothing.
   ///
   /// Newest first, except that a video's own audio left untitled and
   /// uncredited that no other account used follows the rest
@@ -638,27 +1133,23 @@ class SoundsRepository {
   /// times out or reaches no relay, the second query is skipped and every
   /// unnamed match follows the rest, as it does when that query cannot tell.
   /// Anything that is not an [Exception] still propagates, from either
-  /// query. Results are cached like any other fetch.
+  /// query.
   ///
   /// The result says how the relays answered, so a caller can tell the
   /// cached matches standing in for a failed relay query from a relay answer.
-  Future<SoundSearchResults> searchSounds(
-    String query, {
-    int limit = maxSearchResults,
+  Future<SoundSearchResults> _searchRelays(
+    String query,
+    List<String> terms, {
+    required SoundKind? kind,
+    required List<String>? authors,
+    required int limit,
   }) async {
-    final terms = searchTermsOf(query);
-    if (terms.isEmpty) {
-      Log.debug(
-        'Blank sound search query',
-        name: 'SoundsRepository',
-        category: LogCategory.api,
-      );
-      return (sounds: const <AudioEvent>[], relays: SoundSearchRelays.notAsked);
-    }
-
+    bool wanted(AudioEvent sound) =>
+        sound.matchesSearch(query) &&
+        (authors == null || authors.contains(sound.pubkey));
     final matches = <String, AudioEvent>{
       for (final sound in _cache.values)
-        if (sound.matchesSearch(query)) sound.id: sound,
+        if (wanted(sound)) sound.id: sound,
     };
 
     SoundSearchRelays relays;
@@ -668,12 +1159,14 @@ class SoundsRepository {
       final read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [audioEventKind],
+          authors: authors,
           m: audioMimeTypes,
           search: terms.join(' '),
           limit: limit,
         ),
         Filter(
           kinds: const [audioEventKind],
+          authors: authors,
           m: audioMimeTypes,
           t: terms,
           limit: limit,
@@ -686,7 +1179,7 @@ class SoundsRepository {
           ? SoundSearchRelays.timedOut
           : SoundSearchRelays.answered;
       for (final sound in _processAndCacheEvents(read.events)) {
-        if (sound.matchesSearch(query)) matches[sound.id] = sound;
+        if (wanted(sound)) matches[sound.id] = sound;
       }
     } on Exception catch (e) {
       relays = SoundSearchRelays.failed;
@@ -697,8 +1190,10 @@ class SoundsRepository {
       );
     }
 
-    final newestFirst = withoutBlockedAuthors(matches.values.toList())
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final newestFirst = withoutBlockedAuthors([
+      for (final sound in matches.values)
+        if (kind == null || sound.soundKind == kind) sound,
+    ])..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     // Relays that just failed or ran out the search would most likely do the
     // same to the reuse lookup, so the unnamed sounds go last without it.
     final results = relays == SoundSearchRelays.answered
@@ -712,8 +1207,20 @@ class SoundsRepository {
       category: LogCategory.api,
     );
 
-    return (sounds: List<AudioEvent>.unmodifiable(results), relays: relays);
+    return _relayResults(results, relays);
   }
+
+  /// A relay answer to [searchSounds]: one page of [sounds].
+  SoundSearchResults _relayResults(
+    List<AudioEvent> sounds,
+    SoundSearchRelays relays,
+  ) => (
+    sounds: List<AudioEvent>.unmodifiable(sounds),
+    source: SoundSearchSource.relays,
+    relays: relays,
+    usageCounts: const <String, int>{},
+    nextCursor: null,
+  );
 
   /// Fetch a specific sound by event ID.
   ///

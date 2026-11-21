@@ -2725,6 +2725,170 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Searches published sounds for [query], best match first, each with its
+  /// [SoundStats.usageCount].
+  ///
+  /// The server matches titles, tags, creators and descriptions despite
+  /// typos and partial words, and ranks by how well a sound matches, then by
+  /// its use, trend, age and creator, with Divine's own sounds first among
+  /// equal matches.
+  ///
+  /// [kind] narrows the search to music or to effects as the server's audio
+  /// analysis classified them; `null` searches every sound. [authors] narrows
+  /// it to sounds by those creators, given as hex pubkeys; empty searches
+  /// every creator's. [limit] is the
+  /// most sounds a page holds; the server takes 1 to 100. [cursor] is the
+  /// [SoundSearchResponse.nextCursor] of the page before. A page can hold
+  /// fewer sounds than [limit], none even, and still not be the last; follow
+  /// [SoundSearchResponse.nextCursor] until it is `null`.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if [authors] holds more than [maxSoundListAuthors].
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [query] is blank, since the endpoint lists
+  ///   sounds instead of searching without one.
+  /// - [FunnelcakeApiException] if the request fails; status 503 when the
+  ///   server's sound search is unavailable.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<SoundSearchResponse> searchSounds({
+    required String query,
+    SoundKind? kind,
+    List<String> authors = const [],
+    int limit = 50,
+    String? cursor,
+  }) async {
+    if (authors.length > maxSoundListAuthors) {
+      throw ArgumentError.value(
+        authors.length,
+        'authors',
+        'At most $maxSoundListAuthors creators',
+      );
+    }
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      throw const FunnelcakeException('Search query cannot be empty');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/search/sounds').replace(
+      queryParameters: {
+        'q': trimmed,
+        if (kind != null) 'kind': _soundKindParameter(kind),
+        if (authors.isNotEmpty) 'authors': authors.join(','),
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to search sounds',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw const FormatException('Malformed sound search response');
+      }
+      return SoundSearchResponse.fromJson(data);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to search sounds: $e', cause: e);
+    }
+  }
+
+  /// Most creators one [listSounds] call can narrow its list to.
+  static const maxSoundListAuthors = 100;
+
+  /// Lists published sounds without a search query, from the server's sound
+  /// index, each with its [SoundStats.usageCount].
+  ///
+  /// The list leaves out sounds the server's audio analysis found to be only
+  /// someone talking, sounds it found silent, and sounds whose file is gone.
+  ///
+  /// [sort] orders it newest first or by trending score. [authors] narrows it
+  /// to sounds by those creators, given as hex pubkeys; empty lists every
+  /// creator's. [kind] narrows it to music or to effects as the analysis
+  /// classified them; `null` lists every kind. [cursor] is the
+  /// [SoundSearchResponse.nextCursor] of the page before. A page can hold
+  /// fewer sounds than [limit], none even, and still not be the last.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if [authors] holds more than [maxSoundListAuthors].
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeApiException] if the request fails; status 503 when the
+  ///   server's sound index is unavailable.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<SoundSearchResponse> listSounds({
+    SoundListSort sort = SoundListSort.recent,
+    List<String> authors = const [],
+    SoundKind? kind,
+    int limit = 50,
+    String? cursor,
+  }) async {
+    if (authors.length > maxSoundListAuthors) {
+      throw ArgumentError.value(
+        authors.length,
+        'authors',
+        'At most $maxSoundListAuthors creators',
+      );
+    }
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/search/sounds').replace(
+      queryParameters: {
+        'sort': sort.name,
+        if (authors.isNotEmpty) 'authors': authors.join(','),
+        if (kind != null) 'kind': _soundKindParameter(kind),
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to list sounds',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw const FormatException('Malformed sound list response');
+      }
+      return SoundSearchResponse.fromJson(data);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to list sounds: $e', cause: e);
+    }
+  }
+
+  /// The `kind` parameter of the sound index for [kind].
+  static String _soundKindParameter(SoundKind kind) => switch (kind) {
+    SoundKind.music => 'music',
+    SoundKind.effect => 'sfx',
+  };
+
   /// Fetches the sounds being adopted right now, the most trending first,
   /// each with its [SoundStats.usageCount].
   ///
