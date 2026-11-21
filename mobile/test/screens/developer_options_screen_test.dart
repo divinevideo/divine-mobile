@@ -109,6 +109,16 @@ void main() {
       },
     );
 
+    testWidgets('offers no staging or POC environment on a production build', (
+      tester,
+    ) async {
+      await pumpScreen(tester, await mockPrefs());
+
+      expect(find.widgetWithText(ListTile, 'Production'), findsOneWidget);
+      expect(find.text('Staging'), findsNothing);
+      expect(find.text('POC'), findsNothing);
+    });
+
     testWidgets(
       'DeveloperOptionsScreen constrains menu content width on wide screens',
       (tester) async {

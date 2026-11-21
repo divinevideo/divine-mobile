@@ -54,6 +54,44 @@ void main() {
     });
   });
 
+  group('selectableEnvironments', () {
+    test('offers only production on a production build', () {
+      expect(
+        selectableEnvironments(
+          current: AppEnvironment.production,
+          buildDefault: AppEnvironment.production,
+        ),
+        equals([EnvironmentConfig.production]),
+      );
+    });
+
+    test('adds the environment the build defaults to', () {
+      expect(
+        selectableEnvironments(
+          current: AppEnvironment.local,
+          buildDefault: AppEnvironment.local,
+        ),
+        equals([
+          EnvironmentConfig.production,
+          const EnvironmentConfig(environment: AppEnvironment.local),
+        ]),
+      );
+    });
+
+    test('keeps a stored staging choice listed so it shows as selected', () {
+      expect(
+        selectableEnvironments(
+          current: AppEnvironment.staging,
+          buildDefault: AppEnvironment.production,
+        ),
+        equals([
+          EnvironmentConfig.production,
+          const EnvironmentConfig(environment: AppEnvironment.staging),
+        ]),
+      );
+    });
+  });
+
   group('EnvironmentConfig', () {
     // The LOCAL assertions below spell out 10.0.2.2. Without an explicit
     // override they would inherit TargetPlatform.android from the test
