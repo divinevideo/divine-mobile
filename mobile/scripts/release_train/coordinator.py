@@ -11,6 +11,9 @@ from release_train.versions import parse_version
 
 HOUR = 3600
 DAY = 24 * HOUR
+TESTFLIGHT_INTERVAL = 12 * HOUR
+TESTFLIGHT_DAILY_LIMIT = 2
+PRODUCTION_INTERVAL = 2 * DAY
 PLAY_PUBLICATION_VERSION = 1
 ACTIVE = {
     "initializing",
@@ -147,6 +150,21 @@ def observe(snapshot, previous):
             in STORE_WAITING | {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
         },
     )
+    ios = snapshot.get("ios", {})
+    published = [
+        v["version"]
+        for v in ios.get("versions", [])
+        if v["state"] in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
+    ]
+    if published and not ios.get("error"):
+        highest = max(published, key=parse_version)
+        if parse_version(highest) > parse_version(
+            state.get("highest_app_store_version", "0.0.0")
+        ):
+            state["highest_app_store_version"] = highest
+            state["last_app_store_publication"] = max(
+                snapshot["now"], state.get("last_app_store_publication", 0)
+            )
     android = snapshot.get("android", {})
     if not android.get("lifecycle_complete"):
         return state
@@ -179,6 +197,18 @@ def observe(snapshot, previous):
         publication["highest_production_build"] = highest
         state["last_play_promotion"] = max(now, state.get("last_play_promotion", 0))
     return state
+
+
+def last_operation_started(state, kind):
+    """Accepted writes may precede provider visibility or a saved success clock."""
+    return max(
+        (
+            o.get("started_at", 0)
+            for o in state.get("operations", {}).values()
+            if o["action"]["kind"] == kind
+        ),
+        default=0,
+    )
 
 
 def plan_tick(snapshot, state, levels):
@@ -234,7 +264,7 @@ def plan_tick(snapshot, state, levels):
         )
         candidate = snapshot.get("candidate")
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
-        interval = 6 * HOUR if platform == "ios" else 4 * HOUR
+        interval = TESTFLIGHT_INTERVAL if platform == "ios" else 4 * HOUR
         can_replace = not (platform == "android" and data.get("internal_pending"))
         if not can_replace:
             reasons.append(
@@ -307,9 +337,15 @@ def plan_tick(snapshot, state, levels):
             )
             waiting = any(b.get("external") in BETA_WAITING for b in builds)
             budget = (
-                len([d for d in dates if now - d < DAY]) < 6
-                and now - max(dates, default=0) >= 4 * HOUR
+                len([d for d in dates if now - d < DAY]) < TESTFLIGHT_DAILY_LIMIT
+                and now
+                - max(max(dates, default=0), last_operation_started(state, "public-beta"))
+                >= TESTFLIGHT_INTERVAL
             )
+            if not budget:
+                reasons.append(
+                    "ios public: wait twelve hours; at most two releases per rolling day"
+                )
             newest_public = max(
                 (b["number"] for b in builds if b.get("public")), default=0
             )
@@ -392,6 +428,10 @@ def plan_tick(snapshot, state, levels):
                     v["submitted_at"] for v in versions if v.get("submitted_at")
                 ]
                 submitted += state.get("app_store_submissions", [])
+                submitted += [
+                    state.get("last_app_store_publication", 0),
+                    last_operation_started(state, "app-store"),
+                ]
                 highest = max(
                     (
                         parse_version(v["version"])
@@ -415,7 +455,12 @@ def plan_tick(snapshot, state, levels):
                 ]
                 if resumable:
                     eligible = [b for b in eligible if b["number"] in resumable]
-                if not blocked and eligible and now - max(submitted, default=0) >= DAY:
+                store_budget = now - max(submitted, default=0) >= PRODUCTION_INTERVAL
+                if not store_budget:
+                    reasons.append(
+                        "ios app-store: wait 48 hours after the last submission or observed publication"
+                    )
+                if not blocked and eligible and store_budget:
                     action(
                         "app-store",
                         platform,
@@ -441,7 +486,19 @@ def plan_tick(snapshot, state, levels):
                 and periods.get(str(b["number"]), {}).get("completed")
                 and parse_version(b["version"]) > highest
             ]
-            if eligible and now - state.get("last_play_promotion", 0) >= DAY:
+            play_budget = (
+                now
+                - max(
+                    state.get("last_play_promotion", 0),
+                    last_operation_started(state, "play-production"),
+                )
+                >= PRODUCTION_INTERVAL
+            )
+            if not play_budget:
+                reasons.append(
+                    "android production: wait 48 hours after the last promotion or observed publication"
+                )
+            if eligible and play_budget:
                 action(
                     "play-production",
                     platform,
