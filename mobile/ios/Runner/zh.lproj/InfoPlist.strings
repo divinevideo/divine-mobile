@@ -1,0 +1,2 @@
+/* Camera permission purpose, including recording and opt-in Together video. */
+"NSCameraUsageDescription" = "Divine 使用相机拍摄可供你编辑和分享的短视频（例如喜剧小品），并在你于 Together 通话中开启相机时向其他人显示你的影像。";

@@ -1,0 +1,2 @@
+/* Camera permission purpose, including recording and opt-in Together video. */
+"NSCameraUsageDescription" = "Divine utilise ta caméra pour enregistrer de courtes vidéos que tu peux modifier et partager, comme un sketch comique, et pour te montrer dans les appels Together lorsque tu l’actives.";

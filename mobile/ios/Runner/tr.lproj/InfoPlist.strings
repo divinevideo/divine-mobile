@@ -1,0 +1,2 @@
+/* Camera permission purpose, including recording and opt-in Together video. */
+"NSCameraUsageDescription" = "Divine, komedi skeci gibi düzenleyip paylaşabileceğin kısa videolar çekmek ve kameranı açtığında Together aramalarında seni göstermek için kameranı kullanır.";

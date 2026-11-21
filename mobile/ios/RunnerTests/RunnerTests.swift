@@ -4962,3 +4962,39 @@ final class DeviceStorageSpaceTests: XCTestCase {
     XCTAssertLessThanOrEqual(free, total)
   }
 }
+
+final class CameraPurposeLocalizationTests: XCTestCase {
+  func testEveryDeclaredLanguageBundlesItsOwnCameraPurpose() throws {
+    let app = Bundle.main
+    let languages = try XCTUnwrap(
+      app.object(forInfoDictionaryKey: "CFBundleLocalizations") as? [String]
+    )
+    XCTAssertFalse(languages.isEmpty)
+    let resources = try XCTUnwrap(app.resourceURL)
+    let english = try XCTUnwrap(
+      app.infoDictionary?["NSCameraUsageDescription"] as? String
+    )
+
+    for language in languages {
+      // Read the exact resource, so Bundle's fallback cannot hide a missing file.
+      let directory = resources.appendingPathComponent("\(language).lproj")
+      let data = try Data(contentsOf: directory.appendingPathComponent("InfoPlist.strings"))
+      let values = try XCTUnwrap(
+        PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+      )
+      let purpose = try XCTUnwrap(values["NSCameraUsageDescription"], language)
+      XCTAssertFalse(purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, language)
+      let localized = try XCTUnwrap(Bundle(url: directory))
+      XCTAssertEqual(
+        localized.localizedString(forKey: "NSCameraUsageDescription", value: nil, table: "InfoPlist"),
+        purpose,
+        language
+      )
+      if language == "en" {
+        XCTAssertEqual(purpose, english)
+      } else {
+        XCTAssertNotEqual(purpose, english, language)
+      }
+    }
+  }
+}
