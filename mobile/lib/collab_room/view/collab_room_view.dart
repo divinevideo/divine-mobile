@@ -977,6 +977,7 @@ class _Members extends StatelessWidget {
             canInviteAgain:
                 room.isAuthor &&
                 room.phase.isOpen &&
+                room.canReinviteAtPartLength &&
                 member.pubkey != room.authorPubkey &&
                 !member.status.isActive &&
                 state.actionStatus != CollabRoomActionStatus.busy,

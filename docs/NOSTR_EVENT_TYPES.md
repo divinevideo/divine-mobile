@@ -256,7 +256,9 @@ their own part of one split-screen video
   snapshot still names a layout, so an app that predates series can seat its
   people and film; the composer joins the parts in seat order, each cut to
   `partMs` and keeping its own sound, so the whole video stays within the
-  recording limit
+  recording limit. The host fixes `partMs` when filming starts. Later
+  invitations reserve room for another part at that length; someone leaving
+  does not change the length for the people still filming.
 - Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
   Blossom sent to the author as a NIP-17 file message. The author forwards each
   part's URL and key to joined members while the room is open

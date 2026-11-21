@@ -1038,6 +1038,7 @@ void main() {
           _member(_kai, .joined, 2),
         ],
         arrangement: CollabRoomArrangement.series,
+        partLength: const Duration(milliseconds: 2100),
       );
 
       blocTest<CollabRoomCubit, CollabRoomState>(
@@ -1059,14 +1060,44 @@ void main() {
           );
           await pumpEventQueue();
         },
-        verify: (_) {
+        verify: (cubit) {
           final snapshot = published.single;
           expect(snapshot.layout, collabRoomLayoutsFor(2).first.name);
+          expect(cubit.state.partLength, const Duration(milliseconds: 2100));
           expect(snapshot.members, [
             _member(_author, .joined, 0),
             _member(_sam, .joined, 1),
             _member(_kai, .left),
           ]);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'does not invite a third person into a three-second series',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 3,
+                phase: CollabRoomPhase.recording,
+                layout: collabRoomLayoutsFor(2).first.name,
+                members: [
+                  _member(_author, .joined, 0),
+                  _member(_sam, .joined, 1),
+                  _member(_kai, .left),
+                ],
+                arrangement: CollabRoomArrangement.series,
+                partLength: const Duration(seconds: 3),
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.reinvite(_kai);
+        },
+        verify: (cubit) {
+          expect(cubit.state.room?.canReinviteAtPartLength, isFalse);
+          verifyNever(() => service.reinvite(any(), any(), any()));
         },
       );
 

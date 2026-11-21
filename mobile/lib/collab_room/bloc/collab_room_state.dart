@@ -183,11 +183,13 @@ class CollabRoomState extends Equatable {
   /// Whether the parts play one after another.
   bool get inSeries => arrangement == CollabRoomArrangement.series;
 
-  /// How long each part plays in series, for the people in the room now.
-  Duration get partLength => collabRoomPartLengthFor(
-    (_picksLead ? pickedPartLength : null) ?? room?.snapshot.partLength,
-    room?.participants.length ?? 0,
-  );
+  /// How long each part plays in series, editable only in the host's lobby.
+  Duration get partLength => _picksLead
+      ? collabRoomPartLengthFor(
+          pickedPartLength ?? room?.snapshot.partLength,
+          room?.participants.length ?? 0,
+        )
+      : room?.partLength ?? collabRoomDefaultPartLength;
 
   /// The people who fill a cell in the lobby, in cell order, with
   /// [pendingSeats] applied: whoever it names first, then anyone it does not

@@ -91,9 +91,24 @@ extension CollabRoomLayout on CollabRoom {
   /// side by side.
   bool get inSeries => arrangement == CollabRoomArrangement.series;
 
-  /// How long each part plays in series.
-  Duration get partLength =>
-      collabRoomPartLengthFor(snapshot.partLength, participants.length);
+  /// How long each part plays in series. Once set at Start, the length does
+  /// not change when someone leaves or returns.
+  Duration get partLength => collabRoomPartLengthFor(
+    snapshot.partLength,
+    phase == CollabRoomPhase.lobby || snapshot.partLength == null
+        ? participants.length
+        : collabRoomMinParticipants,
+  );
+
+  /// Whether one more invitation fits without shortening the series. Pending
+  /// invitations reserve time too, since they can all be accepted later.
+  bool get canReinviteAtPartLength {
+    if (!inSeries || phase != CollabRoomPhase.recording) return true;
+    final occupied = members.where(
+      (member) => member.pubkey == authorPubkey || member.status.isActive,
+    );
+    return partLength <= collabRoomMaxPartLength(occupied.length + 1);
+  }
 
   /// Where each cell of the picked layout sits, as fractions of the frame.
   List<Rect> get cellRects =>

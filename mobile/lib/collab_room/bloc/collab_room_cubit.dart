@@ -520,7 +520,12 @@ class CollabRoomCubit extends Cubit<CollabRoomState>
   /// mistake, declined or was removed. Their earlier answers no longer count.
   Future<void> reinvite(String pubkey) async {
     final room = state.room;
-    if (room == null || !room.isAuthor || !room.phase.isOpen) return;
+    if (room == null ||
+        !room.isAuthor ||
+        !room.phase.isOpen ||
+        !room.canReinviteAtPartLength) {
+      return;
+    }
     final member = room.members.where((m) => m.pubkey == pubkey).firstOrNull;
     if (member == null ||
         member.pubkey == room.authorPubkey ||
