@@ -237,6 +237,56 @@ void main() {
         ],
       );
 
+      for (final archiveVerdict in [
+        (
+          name: 'archive verification',
+          replace: (VideoEvent video) =>
+              video.copyWith(isVerifiedArchive: true),
+          read: (VideoEvent video) => video.isVerifiedArchive,
+        ),
+        (
+          name: 'archive verification availability',
+          replace: (VideoEvent video) =>
+              video.copyWith(isArchiveVerificationUnknown: true),
+          read: (VideoEvent video) => video.isArchiveVerificationUnknown,
+        ),
+        (
+          name: 'archive audio reuse policy',
+          replace: (VideoEvent video) =>
+              video.copyWith(archiveAudioReuseEnabled: true),
+          read: (VideoEvent video) => video.archiveAudioReuseEnabled,
+        ),
+      ]) {
+        test(
+          'retains same-ID ${archiveVerdict.name} hydration on completion',
+          () async {
+            final cached = createVideo(id: 'same-video');
+            when(
+              () => mockVideosRepository.searchVideos(
+                query: 'flutter',
+                sort: any(named: 'sort'),
+              ),
+            ).thenAnswer(
+              (_) => Stream.fromIterable([
+                [cached],
+                [archiveVerdict.replace(cached)],
+              ]),
+            );
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            final completed = bloc.stream.firstWhere(
+              (state) => state.status == VideoSearchStatus.success,
+            );
+            bloc.add(const VideoSearchQueryChanged('flutter'));
+
+            final result = await completed;
+
+            expect(result.videos.single.id, 'same-video');
+            expect(archiveVerdict.read(result.videos.single), isTrue);
+          },
+        );
+      }
+
       blocTest<VideoSearchBloc, VideoSearchState>(
         'stays searching when local cache is empty '
         'until API yields results and stream completes',
@@ -556,6 +606,7 @@ void main() {
           VideoSearchStatus.success,
           'test',
           videos,
+          [(verified: false, verificationUnknown: false, audioReuse: false)],
           -1,
           0,
           -1,
@@ -792,6 +843,116 @@ void main() {
             ),
           ).called(1);
         },
+      );
+
+      for (final archiveVerdict in [
+        (
+          name: 'archive verification',
+          replace: (VideoEvent video) =>
+              video.copyWith(isVerifiedArchive: true),
+          read: (VideoEvent video) => video.isVerifiedArchive,
+        ),
+        (
+          name: 'archive verification availability',
+          replace: (VideoEvent video) =>
+              video.copyWith(isArchiveVerificationUnknown: true),
+          read: (VideoEvent video) => video.isArchiveVerificationUnknown,
+        ),
+        (
+          name: 'archive audio reuse policy',
+          replace: (VideoEvent video) =>
+              video.copyWith(archiveAudioReuseEnabled: true),
+          read: (VideoEvent video) => video.archiveAudioReuseEnabled,
+        ),
+      ]) {
+        blocTest<VideoSearchBloc, VideoSearchState>(
+          'takes the ${archiveVerdict.name} of a result found again on the '
+          'next page',
+          setUp: () {
+            when(
+              () => mockVideosRepository.searchVideosViaApi(
+                query: 'flutter',
+                offset: 50,
+                sort: any(named: 'sort'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                videos: [archiveVerdict.replace(createVideo(id: 'same'))],
+                totalCount: 1,
+                hasMore: false,
+              ),
+            );
+          },
+          build: createBloc,
+          seed: () => VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'flutter',
+            videos: [createVideo(id: 'same')],
+            apiOffset: 50,
+            hasMore: true,
+          ),
+          act: (bloc) => bloc.add(const VideoSearchLoadMore()),
+          skip: 1,
+          expect: () => [
+            isA<VideoSearchState>().having(
+              (s) => archiveVerdict.read(s.videos.single),
+              archiveVerdict.name,
+              isTrue,
+            ),
+          ],
+        );
+      }
+
+      blocTest<VideoSearchBloc, VideoSearchState>(
+        'keeps a revision verdict off another revision of the same address',
+        setUp: () {
+          when(
+            () => mockVideosRepository.deduplicateVideosPreservingOrder(any()),
+          ).thenAnswer((inv) {
+            final seen = <String>{};
+            return (inv.positionalArguments.first as List<VideoEvent>)
+                .where((video) => seen.add(video.feedDedupKey))
+                .toList();
+          });
+          when(
+            () => mockVideosRepository.searchVideosViaApi(
+              query: 'flutter',
+              offset: 50,
+              sort: any(named: 'sort'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              videos: [
+                createVideo(
+                  id: 'revision-2',
+                ).copyWith(addressableDTag: 'clip', isVerifiedArchive: true),
+              ],
+              totalCount: 1,
+              hasMore: false,
+            ),
+          );
+        },
+        build: createBloc,
+        seed: () => VideoSearchState(
+          status: VideoSearchStatus.success,
+          query: 'flutter',
+          videos: [
+            createVideo(id: 'revision-1').copyWith(addressableDTag: 'clip'),
+          ],
+          apiOffset: 50,
+          hasMore: true,
+        ),
+        act: (bloc) => bloc.add(const VideoSearchLoadMore()),
+        skip: 1,
+        expect: () => [
+          isA<VideoSearchState>()
+              .having((s) => s.videos.single.id, 'id', 'revision-1')
+              .having(
+                (s) => s.videos.single.isVerifiedArchive,
+                'isVerifiedArchive',
+                isFalse,
+              ),
+        ],
       );
 
       blocTest<VideoSearchBloc, VideoSearchState>(

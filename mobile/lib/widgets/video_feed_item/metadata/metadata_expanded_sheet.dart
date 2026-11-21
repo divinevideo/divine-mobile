@@ -234,7 +234,9 @@ class _OverviewSection extends ConsumerWidget {
         final hasTitle = title != null && title.isNotEmpty;
         final hasDescription = description.isNotEmpty;
         final hasBadges =
-            video.shouldShowProofModeBadge || video.shouldShowNotDivineBadge;
+            video.isClassicVine ||
+            video.shouldShowProofModeBadge ||
+            video.shouldShowNotDivineBadge;
         final hasTags =
             video.categories.isNotEmpty || video.displayableHashtags.isNotEmpty;
 

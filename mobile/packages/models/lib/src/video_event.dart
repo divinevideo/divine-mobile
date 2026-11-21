@@ -1625,10 +1625,27 @@ class VideoEvent {
   ///
   /// The meaning of `platform` differs by ingestion path, and any publisher
   /// can write the tag, so this is a display signal rather than archive
-  /// provenance. Decisions that rely on provenance (badges, filters, credit,
-  /// audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine] instead.
+  /// provenance. Decisions that rely on provenance (trust badges, filters,
+  /// credit, audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine]
+  /// instead; display labels such as [isClassicVine] may use it.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
+  }
+
+  /// Whether a Vine-origin video from 2017 or earlier shows the Classic Vine
+  /// chip.
+  ///
+  /// Use the original publish date, or a legacy event date from before Vine
+  /// shut down. This display label does not grant verification or audio reuse.
+  bool get isClassicVine {
+    if (!isOriginalVine && !isVerifiedArchive) return false;
+
+    final originalPublishedAt =
+        int.tryParse(publishedAt ?? '') ??
+        int.tryParse(rawTags['published_at'] ?? '') ??
+        (createdAt < _vineShutdownAtUtcSeconds ? createdAt : 0);
+    return originalPublishedAt > 0 &&
+        originalPublishedAt < _classicVineCutoffUtcSeconds;
   }
 
   /// Whether trust decisions (the "verified only" preference, the Not Divine
@@ -1731,6 +1748,9 @@ class VideoEvent {
   }
 
   static const int _vineShutdownAtUtcSeconds = 1484611200;
+
+  // January 1, 2018 UTC: the Classic Vine display label includes all of 2017.
+  static const int _classicVineCutoffUtcSeconds = 1514764800;
 
   /// Whether [key] names a video URL inside an `imeta` tag.
   ///
