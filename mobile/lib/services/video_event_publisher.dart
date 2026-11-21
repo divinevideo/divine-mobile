@@ -1269,8 +1269,9 @@ class VideoEventPublisher {
     final vineId = video.vineId;
     if (vineId == null ||
         vineId.isEmpty ||
-        _authService?.currentPublicKeyHex != video.pubkey)
+        _authService?.currentPublicKeyHex != video.pubkey) {
       return null;
+    }
     return publishSubtitleTrack(
       vineId: vineId,
       videoKind: video.referenceKind,
