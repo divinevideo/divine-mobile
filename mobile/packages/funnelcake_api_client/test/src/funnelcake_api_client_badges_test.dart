@@ -114,7 +114,7 @@ void main() {
       try {
         await client.getBadgeDiscovery();
         fail('expected transport failure');
-      } catch (error, stackTrace) {
+      } on FunnelcakeException catch (error, stackTrace) {
         expect(
           error,
           isA<FunnelcakeException>()
