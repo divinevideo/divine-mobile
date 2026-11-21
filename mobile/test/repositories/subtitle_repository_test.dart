@@ -606,9 +606,8 @@ void main() {
       });
 
       group('fails the save when the subtitle event', () {
-        // Playback prefers the captions served from the subtitle event, so a
-        // republish whose subtitle event did not land still shows the old
-        // text. Saving again rebuilds both from the newest revision.
+        // A reader using the subtitle event can still play the old captions
+        // when the subtitle publish fails after the video is accepted.
         setUp(() {
           when(
             () => publisher.republishWithSubtitles(

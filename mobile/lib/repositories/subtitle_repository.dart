@@ -93,8 +93,8 @@ class SubtitleRepository {
   /// The 39307 address serves the captions of every revision of [video], so
   /// it is replaced only after the video republish succeeds: a republish that
   /// fails leaves the published captions alone. If that last publish fails,
-  /// the save fails too, because playback prefers the captions served from
-  /// it; saving again rebuilds both from the newest revision.
+  /// the save fails too, because readers using that address can still play
+  /// the old captions. Saving again rebuilds both from the newest revision.
   ///
   /// Throws:
   ///
