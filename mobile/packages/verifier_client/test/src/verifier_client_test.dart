@@ -595,6 +595,67 @@ void main() {
         );
       }
 
+      for (final (status, code, refusal) in [
+        (403, 'confirmation_required', SignInRefusal.confirmationRequired),
+        (
+          503,
+          'confirmation_unavailable',
+          SignInRefusal.confirmationUnavailable,
+        ),
+      ]) {
+        test('$status $code is a SignInConfirmException', () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => http.Response(
+                jsonEncode({'error': 'x', 'code': code}),
+                status,
+              ),
+            ),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(
+              isA<SignInConfirmException>()
+                  .having((e) => e.statusCode, 'statusCode', status)
+                  .having((e) => e.refusal, 'refusal', refusal),
+            ),
+          );
+        });
+      }
+
+      for (final (status, body) in [
+        (503, '{}'),
+        (503, 'oops'),
+        (500, '{"code":"signin_not_found"}'),
+        (500, '{"code":"confirmation_required"}'),
+      ]) {
+        test('$status with body $body stays a VerifierApiException', () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient((_) async => http.Response(body, status)),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(
+              isA<VerifierApiException>().having(
+                (e) => e.statusCode,
+                'statusCode',
+                status,
+              ),
+            ),
+          );
+        });
+      }
+
       test('does not count a 200 that does not say linked', () async {
         final client = VerifierClient(
           baseUrl: 'https://verifier.example',
@@ -799,6 +860,123 @@ void main() {
           expect(client.oauthRevokeUrl, equals(expected));
         });
       }
+    });
+
+    group('fetchConfirmationAccess', () {
+      const nip98Event = <String, dynamic>{
+        'kind': 27235,
+        'tags': [
+          ['u', 'https://verifier.example/auth/confirmation-access'],
+          ['method', 'GET'],
+        ],
+      };
+
+      VerifierClient clientAnswering(int status, String body) => VerifierClient(
+        baseUrl: 'https://verifier.example',
+        httpClient: MockClient((_) async => http.Response(body, status)),
+      );
+
+      test(
+        'sends the NIP-98 event as a Nostr Authorization header to '
+        'confirmationAccessUrl',
+        () async {
+          late http.Request sent;
+          final client = VerifierClient(
+            // Uppercase host and a trailing slash: the signed URL has to be
+            // the normalized one the request goes to.
+            baseUrl: 'https://VERIFIER.example/',
+            httpClient: MockClient((req) async {
+              sent = req;
+              return http.Response(jsonEncode({'access': 'yes'}), 200);
+            }),
+          );
+
+          await client.fetchConfirmationAccess(nip98Event: nip98Event);
+
+          expect(sent.method, equals('GET'));
+          expect(
+            sent.url.toString(),
+            equals('https://verifier.example/auth/confirmation-access'),
+          );
+          expect(client.confirmationAccessUrl, equals(sent.url.toString()));
+          final header = sent.headers['Authorization']!;
+          expect(header, startsWith('Nostr '));
+          final decoded = jsonDecode(
+            utf8.decode(base64Decode(header.substring('Nostr '.length))),
+          );
+          expect(decoded, equals(nip98Event));
+        },
+      );
+
+      test('yes -> true, no -> false', () async {
+        expect(
+          await clientAnswering(
+            200,
+            jsonEncode({'access': 'yes'}),
+          ).fetchConfirmationAccess(nip98Event: nip98Event),
+          isTrue,
+        );
+        expect(
+          await clientAnswering(
+            200,
+            jsonEncode({'access': 'no'}),
+          ).fetchConfirmationAccess(nip98Event: nip98Event),
+          isFalse,
+        );
+      });
+
+      test(
+        'unavailable, 404, 401, 500 and a malformed body -> null',
+        () async {
+          final cases = <(int, String)>[
+            (200, jsonEncode({'access': 'unavailable'})),
+            (200, jsonEncode({'access': true})),
+            (200, jsonEncode(<String, dynamic>{})),
+            (200, jsonEncode(['yes'])),
+            (200, 'not json'),
+            // Today's verifier has no such route: the app must read that as
+            // not knowing, not as "no".
+            (404, jsonEncode({'error': 'Not Found'})),
+            (401, jsonEncode({'access': 'yes'})),
+            (500, jsonEncode({'access': 'no'})),
+            (204, ''),
+          ];
+          for (final (status, body) in cases) {
+            expect(
+              await clientAnswering(
+                status,
+                body,
+              ).fetchConfirmationAccess(nip98Event: nip98Event),
+              isNull,
+              reason: '$status $body',
+            );
+          }
+        },
+      );
+
+      test('a timeout or a network failure throws as the others do', () async {
+        final slow = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          timeout: const Duration(milliseconds: 10),
+          httpClient: MockClient((_) async {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+            return http.Response('{}', 200);
+          }),
+        );
+        await expectLater(
+          () => slow.fetchConfirmationAccess(nip98Event: nip98Event),
+          throwsA(isA<VerifierTimeoutException>()),
+        );
+
+        final offline = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((_) async => throw http.ClientException('x')),
+        );
+        await expectLater(
+          () => offline.fetchConfirmationAccess(nip98Event: nip98Event),
+          throwsA(isA<VerifierNetworkException>()),
+        );
+      });
     });
   });
 }

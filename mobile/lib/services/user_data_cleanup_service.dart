@@ -14,6 +14,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
@@ -269,6 +270,9 @@ class UserDataCleanupService {
     // Sound library. SavedSoundsService is pubkey-scoped and swept
     // separately; this second store is not scoped and was missed.
     SoundLibraryService.customSoundsStorageKey,
+    // Developer override of the Confirmation answer: it forces a result for
+    // the signed-in account, so the next account must see its own real one.
+    confirmationAccessOverrideKey,
     // TOS acceptance (user must re-accept on new account)
     ...TermsAcceptanceKeys.all,
   ];

@@ -1,9 +1,13 @@
 // ABOUTME: Tests the profile routes registered by profileRoutes.
 // ABOUTME: Pins their locations against the path builders and their extra hints.
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -13,6 +17,7 @@ import 'package:openvine/router/widgets/following_screen_router.dart';
 import 'package:openvine/router/widgets/other_profile_screen_router.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
+import 'package:openvine/screens/verify/verify_confirmation_screen.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -130,6 +135,17 @@ void main() {
         expect(const VerifyRouteData().location, equals(VerifyPage.path));
       });
 
+      test('the confirmation screen sits under /verify', () {
+        expect(
+          const VerifyConfirmationRouteData().location,
+          equals('/verify/confirmation'),
+        );
+        expect(
+          '${VerifyPage.path}/${VerifyConfirmationPage.path}',
+          equals('/verify/confirmation'),
+        );
+      });
+
       // The platform key comes from the verifier service, and the hand-written
       // call site resolved it by route name, which encodes it.
       for (final platform in ['github', 'two words', 'a/b', '100%']) {
@@ -149,6 +165,50 @@ void main() {
           );
         });
       }
+    });
+
+    group('confirmation route', () {
+      Future<BuildContext> scoped(WidgetTester tester, bool flagOn) async {
+        late BuildContext scopedContext;
+        final overrides = <Override>[
+          featureFlagStateProvider.overrideWithValue({
+            FeatureFlag.confirmationSignIn: flagOn,
+          }),
+        ];
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: overrides,
+            child: Builder(
+              builder: (c) {
+                scopedContext = c;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        return scopedContext;
+      }
+
+      final state = _FakeGoRouterState(location: '/verify/confirmation');
+
+      testWidgets('redirects to /verify with the flag off', (tester) async {
+        final c = await scoped(tester, false);
+
+        expect(
+          const VerifyConfirmationRouteData().redirect(c, state),
+          VerifyPage.path,
+        );
+      });
+
+      testWidgets('opens with the flag on', (tester) async {
+        final c = await scoped(tester, true);
+
+        expect(const VerifyConfirmationRouteData().redirect(c, state), isNull);
+        expect(
+          routeNamed(VerifyConfirmationPage.routeName).builder!(c, state),
+          isA<VerifyConfirmationPage>(),
+        );
+      });
     });
 
     group('builders', () {

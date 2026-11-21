@@ -589,6 +589,21 @@ IdentityClaimsRepository identityClaimsRepository(Ref ref) {
     identityVerificationsDao: database.identityVerificationsDao,
     nostrClient: ref.watch(nostrServiceProvider),
     signEvent: authService.createAndSignEvent,
+    // Checks that run on screen open must not launch an external signer
+    // (NIP-55) or a bunker prompt over the app.
+    signPassively:
+        ({
+          required kind,
+          required content,
+          required tags,
+          createdAt,
+        }) => authService.createAndSignEvent(
+          kind: kind,
+          content: content,
+          tags: tags,
+          createdAt: createdAt,
+          allowUserInteraction: false,
+        ),
     identityEventsDao: database.identityEventsDao,
   );
 }

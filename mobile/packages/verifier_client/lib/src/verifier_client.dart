@@ -44,6 +44,11 @@ class VerifierClient {
   /// cannot drift apart.
   static const String _oauthRevokePath = '/auth/oauth/revoke';
 
+  /// Path of the Confirmation access endpoint, shared by
+  /// [fetchConfirmationAccess] and [confirmationAccessUrl] for the same
+  /// reason.
+  static const String _confirmationAccessPath = '/auth/confirmation-access';
+
   final String _baseUrl;
   final http.Client _httpClient;
   final Duration _timeout;
@@ -173,9 +178,11 @@ class VerifierClient {
   /// whose new claim carries [SignInSecrets.confirmBindingFor]. Send the same
   /// [event] again after a lost answer; a re-signed one is refused as used.
   ///
-  /// Throws [SignInConfirmException] for a refusal, [VerifierApiException]
-  /// for a server error or a success that doesn't name the linked account,
-  /// and the timeout and network exceptions as [verifyBatch].
+  /// Throws [SignInConfirmException] for a refusal, and for a 5xx carrying
+  /// `confirmation_unavailable` (the check couldn't run; not a refusal),
+  /// [VerifierApiException] for any other server error or a success that
+  /// doesn't name the linked account, and the timeout and network exceptions
+  /// as [verifyBatch].
   Future<SignInConfirmation> confirmSignIn({
     required String code,
     required String startSecret,
@@ -196,6 +203,14 @@ class VerifierClient {
     // Neither the code nor the secret goes into an exception message: they
     // are what the verifier redeems.
     if (res.statusCode >= 500) {
+      // Only this code is read on a server error: it says the Confirmation
+      // check could not run, which is not the verifier being unreachable.
+      if (json?['code'] == 'confirmation_unavailable') {
+        throw SignInConfirmException(
+          res.statusCode,
+          SignInRefusal.confirmationUnavailable,
+        );
+      }
       throw VerifierApiException(
         res.statusCode,
         'verifier returned ${res.statusCode}',
@@ -254,6 +269,51 @@ class VerifierClient {
   /// directly would skip the normalization `Uri.parse` applies, and the
   /// verifier compares the `u` tag to the request URL exactly.
   String get oauthRevokeUrl => _uriFor(_oauthRevokePath).toString();
+
+  /// Asks the verifier whether the signer of [nip98Event] holds Divine
+  /// Confirmation.
+  ///
+  /// [nip98Event] must be a signed NIP-98 (kind 27235) event whose `u` tag is
+  /// [confirmationAccessUrl] and whose `method` tag is `GET`. It travels as
+  /// `Authorization: Nostr <base64 of its JSON>`.
+  ///
+  /// Returns true for `200 {"access":"yes"}` and false for
+  /// `200 {"access":"no"}`. Every other answer is null: the verifier said it
+  /// could not tell (`"unavailable"`), refused the request, failed, or is an
+  /// older deployment without this endpoint (404). None of those is a "no".
+  ///
+  /// Throws [VerifierTimeoutException] and [VerifierNetworkException] as
+  /// [verifyBatch] does.
+  Future<bool?> fetchConfirmationAccess({
+    required Map<String, dynamic> nip98Event,
+  }) async {
+    final uri = _uriFor(_confirmationAccessPath);
+    final authorization =
+        'Nostr ${base64Encode(utf8.encode(jsonEncode(nip98Event)))}';
+    final res = await _fetch(
+      () => _httpClient.get(uri, headers: {'Authorization': authorization}),
+    );
+    if (res.statusCode != 200) return null;
+    final Object? json;
+    try {
+      json = jsonDecode(res.body);
+    } on FormatException {
+      return null;
+    }
+    if (json is! Map<String, dynamic>) return null;
+    return switch (json['access']) {
+      'yes' => true,
+      'no' => false,
+      _ => null,
+    };
+  }
+
+  /// Absolute URL of the Confirmation access endpoint, for the `u` tag of the
+  /// NIP-98 event passed to [fetchConfirmationAccess].
+  ///
+  /// Built through [_uriFor] for the same reason as [oauthRevokeUrl].
+  String get confirmationAccessUrl =>
+      _uriFor(_confirmationAccessPath).toString();
 
   /// The one place a request URL is built.
   ///

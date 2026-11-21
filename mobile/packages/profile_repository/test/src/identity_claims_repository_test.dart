@@ -1543,6 +1543,35 @@ void main() {
       });
 
       group('reports why a sign-in stopped counting', () {
+        test('records a sign-in whose owner needs Confirmation', () async {
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: false,
+                checkedAt: 100,
+                cached: false,
+                code: 'signin_needs_confirmation',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(
+            status.signInCodes,
+            equals({'twitter:jack': SignInLapse.needsConfirmation}),
+          );
+        });
+
         test('records a sign-in the verifier says expired', () async {
           when(() => client.verifyBatch(any())).thenAnswer(
             (_) async => const [
@@ -4452,6 +4481,299 @@ void main() {
         exception.toString(),
         'IdentityClaimNotSignedException: declined',
       );
+    });
+  });
+
+  group('IdentityClaimsRepository.confirmationAccess', () {
+    const accessUrl = 'https://verifier.example/auth/confirmation-access';
+    late _MockVerifierClient client;
+    late _MockNostrClient nostrClient;
+    late List<({int kind, String content, List<List<String>> tags})> signed;
+    late Future<Event?> Function() signAnswer;
+    late int interactiveSigns;
+
+    /// The signer that may prompt the user. It answers with a usable event,
+    /// so a check that wrongly used it would get an answer, not unknown.
+    Future<Event?> signInteractively({
+      required int kind,
+      required String content,
+      required List<List<String>> tags,
+      int? createdAt,
+    }) async {
+      interactiveSigns++;
+      return _event(id: _eventId(5), kind: kind, tags: tags);
+    }
+
+    IdentityClaimsRepository buildRepo() => IdentityClaimsRepository(
+      verifierClient: client,
+      nostrClient: nostrClient,
+      signEvent: signInteractively,
+      signPassively:
+          ({
+            required kind,
+            required content,
+            required tags,
+            createdAt,
+          }) {
+            signed.add((kind: kind, content: content, tags: tags));
+            return signAnswer();
+          },
+    );
+
+    void stubFetch(Future<bool?> Function() answer) {
+      when(
+        () => client.fetchConfirmationAccess(
+          nip98Event: any(named: 'nip98Event'),
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
+    /// Points the client at [accessUrl] and has the verifier answer. Called
+    /// by each test that reaches the verifier, not from a shared setUp, so
+    /// a test that never gets that far doesn't inherit a stub it doesn't use.
+    void stubVerifier([Future<bool?> Function()? answer]) {
+      when(() => client.confirmationAccessUrl).thenReturn(accessUrl);
+      stubFetch(answer ?? () async => true);
+    }
+
+    /// Checks the fetches since the last check: mocktail resets the count
+    /// on each verify.
+    void verifyFetchCalled(int times) {
+      Object? call() => client.fetchConfirmationAccess(
+        nip98Event: any(named: 'nip98Event'),
+      );
+      if (times == 0) {
+        verifyNever(call);
+      } else {
+        verify(call).called(times);
+      }
+    }
+
+    setUp(() {
+      client = _MockVerifierClient();
+      nostrClient = _MockNostrClient();
+      signed = [];
+      interactiveSigns = 0;
+      signAnswer = () async => _event(
+        id: _eventId(3),
+        kind: 27235,
+        tags: [
+          ['u', accessUrl],
+          ['method', 'GET'],
+        ],
+      );
+    });
+
+    test('signs a GET NIP-98 event for the exact access URL', () async {
+      stubVerifier();
+      final event = _event(id: _eventId(4), kind: 27235);
+      signAnswer = () async => event;
+
+      await buildRepo().confirmationAccess();
+
+      expect(signed, hasLength(1));
+      expect(signed.single.kind, equals(27235));
+      expect(signed.single.content, isEmpty);
+      expect(
+        signed.single.tags,
+        equals([
+          ['u', accessUrl],
+          ['method', 'GET'],
+        ]),
+      );
+      final sent =
+          verify(
+                () => client.fetchConfirmationAccess(
+                  nip98Event: captureAny(named: 'nip98Event'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(sent, equals(event.toJson()));
+    });
+
+    test('signs passively, never through the interactive signer', () async {
+      stubVerifier();
+      await buildRepo().confirmationAccess();
+
+      expect(signed, hasLength(1));
+      expect(interactiveSigns, isZero);
+    });
+
+    test('maps true/false/null to has/hasNot/unknown', () async {
+      stubVerifier();
+      for (final (answer, expected) in [
+        (true, ConfirmationAccess.has),
+        (false, ConfirmationAccess.hasNot),
+        (null, ConfirmationAccess.unknown),
+      ]) {
+        stubVerifier(() async => answer);
+        expect(
+          await buildRepo().confirmationAccess(),
+          equals(expected),
+          reason: '$answer',
+        );
+      }
+    });
+
+    group('no signer, a declined signature or a thrown error is unknown', () {
+      test('without any signer', () async {
+        final readOnly = IdentityClaimsRepository(verifierClient: client);
+
+        expect(
+          await readOnly.confirmationAccess(),
+          equals(ConfirmationAccess.unknown),
+        );
+        verifyFetchCalled(0);
+      });
+
+      test('with only the interactive signer', () async {
+        stubVerifier();
+        final interactiveOnly = IdentityClaimsRepository(
+          verifierClient: client,
+          nostrClient: nostrClient,
+          signEvent: signInteractively,
+        );
+
+        expect(
+          await interactiveOnly.confirmationAccess(),
+          equals(ConfirmationAccess.unknown),
+        );
+        expect(interactiveSigns, isZero);
+        verifyFetchCalled(0);
+      });
+
+      test('when the passive signer declines', () async {
+        stubVerifier();
+        signAnswer = () async => null;
+
+        expect(
+          await buildRepo().confirmationAccess(),
+          equals(ConfirmationAccess.unknown),
+        );
+        expect(interactiveSigns, isZero);
+        verifyFetchCalled(0);
+      });
+
+      test('when the signer throws', () async {
+        stubVerifier();
+        signAnswer = () async => throw StateError('signer gone');
+
+        expect(
+          await buildRepo().confirmationAccess(),
+          equals(ConfirmationAccess.unknown),
+        );
+      });
+
+      test('when the verifier cannot be reached', () async {
+        stubVerifier(
+          () async => throw const VerifierNetworkException('offline'),
+        );
+
+        expect(
+          await buildRepo().confirmationAccess(),
+          equals(ConfirmationAccess.unknown),
+        );
+      });
+    });
+
+    test('a second call reuses the answer; refresh asks again', () async {
+      stubVerifier();
+      final repo = buildRepo();
+
+      expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+      expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+      verifyFetchCalled(1);
+
+      stubFetch(() async => false);
+      expect(
+        await repo.confirmationAccess(refresh: true),
+        equals(ConfirmationAccess.hasNot),
+      );
+      verifyFetchCalled(1);
+      // The refreshed answer is the one remembered.
+      expect(
+        await repo.confirmationAccess(),
+        equals(ConfirmationAccess.hasNot),
+      );
+      verifyFetchCalled(0);
+      expect(signed, hasLength(2));
+    });
+
+    test('an unknown answer is returned but not remembered', () async {
+      stubVerifier(
+        () async => throw const VerifierNetworkException('offline'),
+      );
+      final repo = buildRepo();
+
+      expect(
+        await repo.confirmationAccess(),
+        equals(ConfirmationAccess.unknown),
+      );
+      verifyFetchCalled(1);
+
+      // The blip passed: the next plain call asks again, not the old unknown.
+      stubFetch(() async => true);
+      expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+      verifyFetchCalled(1);
+      expect(signed, hasLength(2));
+    });
+
+    test('callers arriving while a check is in flight share it', () async {
+      final answer = Completer<bool?>();
+      stubVerifier(() => answer.future);
+      final repo = buildRepo();
+
+      final first = repo.confirmationAccess();
+      final second = repo.confirmationAccess();
+      answer.complete(true);
+
+      expect(await first, equals(ConfirmationAccess.has));
+      expect(await second, equals(ConfirmationAccess.has));
+      verifyFetchCalled(1);
+      expect(signed, hasLength(1));
+    });
+
+    group('a check a refresh overtook follows the refresh', () {
+      late Completer<bool?> stale;
+      late Completer<bool?> fresh;
+      late IdentityClaimsRepository repo;
+      late Future<ConfirmationAccess> before;
+      late Future<ConfirmationAccess> refreshed;
+
+      setUp(() async {
+        stale = Completer<bool?>();
+        fresh = Completer<bool?>();
+        final answers = [stale, fresh];
+        stubVerifier(() => answers.removeAt(0).future);
+        repo = buildRepo();
+
+        before = repo.confirmationAccess();
+        // Let the first check reach the verifier before refreshing.
+        await pumpEventQueue();
+        refreshed = repo.confirmationAccess(refresh: true);
+        await pumpEventQueue();
+      });
+
+      test('when the overtaken check finishes last', () async {
+        fresh.complete(true);
+        expect(await refreshed, equals(ConfirmationAccess.has));
+        stale.complete(false);
+
+        expect(await before, equals(ConfirmationAccess.has));
+        expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+        verifyFetchCalled(2);
+      });
+
+      test('when the overtaken check finishes first', () async {
+        stale.complete(false);
+        await pumpEventQueue();
+        fresh.complete(true);
+
+        expect(await before, equals(ConfirmationAccess.has));
+        expect(await refreshed, equals(ConfirmationAccess.has));
+        expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+        verifyFetchCalled(2);
+      });
     });
   });
 }
