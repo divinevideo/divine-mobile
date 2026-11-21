@@ -76,6 +76,10 @@ enum DivineIconName {
   clockCountdown3('clock_countdown_3'),
   closedCaptioning('closed_captioning'),
   closedCaptioningFill('closed_captioning_fill'),
+
+  /// A frame split diagonally into a color and a checkerboard: the color mask,
+  /// which turns one color in a clip or the camera picture transparent.
+  colorMask('color_mask'),
   compass('compass'),
   copy('copy'),
   copyNpub('copy_npub'),
@@ -83,6 +87,10 @@ enum DivineIconName {
   copySimpleFill('copy_simple_fill'),
   cropSquare('crop_square'),
   cropPortrait('crop_portrait'),
+
+  /// Crop marks with a turning arrow: the Transform tool, which crops,
+  /// rotates, and flips a clip or a frame.
+  cropRotate('crop_rotate'),
 
   /// An outline crosshair: following a point, as the video editor's Track
   /// action pins a layer to a moving object.
@@ -142,6 +150,10 @@ enum DivineIconName {
   image('image'),
   images('images'),
   imagesSquare('imagesSquare'),
+
+  /// An infinity loop: Boomerang, which plays a clip forward and then
+  /// backward.
+  infinity('infinity'),
   info('info'),
 
   /// Two overlapping circles with their overlap filled: two pictures
@@ -162,6 +174,9 @@ enum DivineIconName {
   logo('logo'),
   menu('menu'),
   microphone('microphone'),
+
+  /// A microphone struck through: the microphone is muted.
+  microphoneSlash('microphone_slash'),
   minus('minus'),
   moreHoriz('more_horiz'),
   musicNote('music_note'),

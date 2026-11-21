@@ -227,9 +227,11 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
           // capture-mode metadata UI. Upload has no video editor, so recorder
           // navigation pushes this route without a mode query. A restored
           // draft uses the capture stack even when upload is the persisted
-          // recorder mode.
+          // recorder mode. A Together room's video is put together from its
+          // parts and posted from here like a capture.
           .capture ||
           .stopMotion ||
+          .together ||
           .upload => const VideoMetadataCaptureStack(),
           .classic => const VideoMetadataClassicStack(),
         },

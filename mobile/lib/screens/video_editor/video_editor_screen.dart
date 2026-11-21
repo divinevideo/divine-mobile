@@ -26,6 +26,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
+import 'package:openvine/collab_room/call/collab_room_call_providers.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
@@ -49,6 +50,7 @@ import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/add_yours_context_provider.dart';
@@ -372,6 +374,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     if (!_isLoadingDraft.value) _reportClipsLoaded(initialClips);
 
     addPostFrameCallbackIfMounted(() {
+      // A room part's editor follows the camera, which let go of the
+      // microphone: the room's call comes back to talk while editing.
+      _comeBackToCall();
       _runDetached(
         _initializeEditor().onError<Object>((error, stackTrace) {
           // Only a draft's canvas waits for this; it never shows now.
@@ -531,6 +536,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     );
   }
 
+  /// Brings a room part's call back once the camera or the voice-over
+  /// recorder let go of the microphone.
+  void _comeBackToCall() => _runDetached(
+    comeBackCollabRoomPartCall(ref),
+    'bring the collab room call back to the editor',
+  );
+
   void _runDetached(Future<void> operation, String description) {
     runDetached(
       operation,
@@ -577,6 +589,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     required ClipEditorBloc clipEditorBloc,
     required Duration playhead,
   }) async {
+    await stepAsideCollabRoomPartCall(ref);
+    if (!mounted) return;
     final initialClips = ref.read(clipManagerProvider).clips;
     final initialIds = initialClips.map((c) => c.id).toSet();
     // A stop-motion composition adds the new stills into its single frames clip
@@ -597,6 +611,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     // A navigation back to a page below the editor disposes it before the
     // push resolves; `ref` and the clip editor bloc are gone then.
     if (!mounted) return;
+    _comeBackToCall();
 
     final notifier = ref.read(clipManagerProvider.notifier);
     if (result != true) {
@@ -780,6 +795,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   Future<List<DivineVideoClip>?> _pickLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) {
     return VineBottomSheet.show<List<DivineVideoClip>>(
@@ -793,6 +809,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         allowsMixedClipTypes: true,
         scrollController: scrollController,
         cropGuideAspectRatio: cellAspectRatio,
+        cropGuideShape: cellShape,
         maxSelectedClips: maxClips,
       ),
     );
@@ -808,8 +825,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   Future<List<DivineVideoClip>?> _recordLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,
+    required SplitScreenCellShape cellShape,
     required int maxClips,
   }) async {
+    await stepAsideCollabRoomPartCall(ref);
+    if (!context.mounted) return null;
     final notifier = ref.read(clipManagerProvider.notifier);
     final initialIds = notifier.clips.map((c) => c.id).toSet();
 
@@ -819,10 +839,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           fromEditor: true,
           entryPoint: CreationEntryPoint.editor,
           cropGuideAspectRatio: cellAspectRatio,
+          cropGuideShape: cellShape,
         ),
       ),
     );
     if (!mounted) return null;
+    _comeBackToCall();
 
     final takes = notifier.clips
         .where((c) => !initialIds.contains(c.id))
@@ -1372,6 +1394,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// length (at most [VideoEditorConstants.maxDuration]). All takes are
   /// committed in a single history entry so one undo removes them together.
   Future<void> _openVoiceOver({required VideoEditorMainBloc mainBloc}) async {
+    await stepAsideCollabRoomPartCall(ref);
+    if (!mounted) return;
     final availableDuration = resolveVoiceOverAvailableDuration(
       clipDuration: _clipEditorBloc.state.totalDuration,
       maxDuration: VideoEditorConstants.maxDuration,
@@ -1414,6 +1438,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       await deleteVoiceOverTakeFiles(takes);
       return;
     }
+    _comeBackToCall();
     // The recorder left the preview wherever its last take stopped.
     mainBloc
       ..add(const VideoEditorMainSubEditorClosed())

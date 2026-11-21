@@ -225,7 +225,8 @@ ratio and `camera_rail_options_button`, which unfolds it to list every other
 control and folds it again. The rest are not built while it is folded, so a
 flow taps the options button (`utils/unfoldCaptureRail`) before it drives or
 asserts one of them, and folds the rail back (`utils/foldCaptureRail`) before
-it hands over. A take or a stop-motion interval folds it as well.
+it hands over. A take, a stop-motion interval, or turning dual capture on or
+off folds it as well.
 
 The color mask button is on capture's rail only where the renderer can key the
 viewfinder live, and the dual-camera button only where the device can run both

@@ -8979,6 +8979,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Kameraların yerini değiştir';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Dikey ve kare arasında geçiş yap';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom× yakınlaştır';
   }
@@ -10645,18 +10649,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Maskelenen rengin ne kadarı kaybolacak';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Kenar';
+  String get videoEditorChromaKeyEdgeLabel => 'Yumuşak kenar';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Kesiti yumuşatır, saçlar tırtıklı çıkmaz';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Renk taşması';
+  String get videoEditorChromaKeySpillLabel => 'Tonu kaldır';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Maskelenen rengin tonunu öznenin üzerinden çeker';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'İnce ayar';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Şununla değiştir';
@@ -10665,17 +10672,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Hiçbir şey';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Siyah';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Renk';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Görsel';
+  String get videoEditorChromaKeyBackgroundImage => 'Fotoğraf';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Klip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10692,6 +10698,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Klibi okumak çok uzun sürdü. Otomatik algıla\'yı yeniden dene ya da rengi elle seç.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Kaldırmak istediğin renge dokun';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Kaldırılacak renk aranıyor…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';
@@ -15733,6 +15745,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get messagesNoRooms => 'Henüz oda yok';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Bu odaya ulaşılamadı. Bağlantını kontrol et ve tekrar dene.';
+
+  @override
   String get followedHashtagsTitle => 'Takip edilen etiketler';
 
   @override
@@ -15874,6 +15890,52 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'Resim içinde resim, sağ alt';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Çapraz yan yana';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Çapraz üst üste';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked => 'Çapraz üç satır';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Yan yana dört';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Dört satır';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Üstte üç, altta bir';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Solda bir, sağda üç';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Solda üç, sağda bir';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Yuvarlak pencere, sol üst';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Yuvarlak pencere, sağ üst';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Yuvarlak pencere, sol alt';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Yuvarlak pencere, sağ alt';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'İki yuvarlak pencere';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Üç yuvarlak pencere';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16323,4 +16385,277 @@ class AppLocalizationsTr extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Hadi birlikte video yapalım! Divine\'ı aç, odama katıl ve kendi bölümünü çek.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Ben de varım! Bölümümü çekmek için sabırsızlanıyorum.';
+
+  @override
+  String get collabRoomDeclineDmBody => 'Bu sefer olmuyor. İyi eğlenceler!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Video odamızdan ayrıldım.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Çekime başladık! Divine\'ı aç ve kendi bölümünü çek.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Videomuz yayında! Parçası olduğun için teşekkürler.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Video odamızı iptal ettim.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Video odamızda bir şey değişti. Yenilikleri görmek için Divine\'ı aç.';
+
+  @override
+  String get collabRoomCameraMode => 'Birlikte';
+
+  @override
+  String get collabRoomTitle => 'Birlikte yapın';
+
+  @override
+  String get collabRoomMissing => 'Bu oda artık yok.';
+
+  @override
+  String get collabRoomYou => 'Sen';
+
+  @override
+  String get collabRoomHost => 'Ev sahibi';
+
+  @override
+  String get collabRoomStatusInvited => 'Davet edildi';
+
+  @override
+  String get collabRoomStatusJoined => 'Katıldı';
+
+  @override
+  String get collabRoomStatusPartIn => 'Bölüm geldi';
+
+  @override
+  String get collabRoomStatusDeclined => 'Katılamıyor';
+
+  @override
+  String get collabRoomStatusLeft => 'Ayrıldı';
+
+  @override
+  String get collabRoomStatusRemoved => 'Bu seferlik yok';
+
+  @override
+  String get collabRoomPickLayout => 'Bir düzen seç';
+
+  @override
+  String get collabRoomStartButton => 'Çekime başla';
+
+  @override
+  String get collabRoomStartHint =>
+      'Biri katılır katılmaz başla. O zamana kadar katılmayanlar bu seferlik dışarıda kalır.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'Ev sahibinin çekime başlaması bekleniyor.';
+
+  @override
+  String get collabRoomJoinButton => 'Katıl';
+
+  @override
+  String get collabRoomLeaveButton => 'Odadan ayrıl';
+
+  @override
+  String get collabRoomFilmPartButton => 'Bölümümü çek';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Tekrar çek';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Herkes kendi bölümünü çeker. Bölümün, hücrenin şekline göre kırpılır.';
+
+  @override
+  String get collabRoomComposeButton => 'Birleştir';
+
+  @override
+  String get collabRoomComposeWaiting => 'Herkesin bölümü bekleniyor.';
+
+  @override
+  String get collabRoomSoundHint => 'Sesini kullanmak için bir bölüme dokun.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Bu bölümün sesini kullan';
+
+  @override
+  String get collabRoomRemoveMember => 'Çıkar';
+
+  @override
+  String get collabRoomCancelButton => 'İptal et';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Bu video iptal edilsin mi?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'Oda herkes için kapanır.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Biri ayrıldı. Kalanlar için bir düzen seç.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'Biri katıldı. Herkes için bir düzen seç.';
+
+  @override
+  String get collabRoomComposing => 'Birleştiriliyor…';
+
+  @override
+  String get collabRoomComposeFailed => 'Video birleştirilemedi. Tekrar dene.';
+
+  @override
+  String get collabRoomPosted => 'Bu video yayında. Herkes harikaydı!';
+
+  @override
+  String get collabRoomCancelled => 'Bu oda iptal edildi.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Gönderilemedi. Bağlantını kontrol edip tekrar dene.';
+
+  @override
+  String get collabRoomRemovedYou => 'Bu seferlik yoksun.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Bunu reddettin.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Bölümün geldi. Ev sahibi her şeyi birleştirecek.';
+
+  @override
+  String get collabRoomPartTitle => 'Senin bölümün';
+
+  @override
+  String get collabRoomPartRendering => 'Bölümün hazırlanıyor…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Bölümün hazırlanamadı.';
+
+  @override
+  String get collabRoomPartSendButton => 'Bölümümü gönder';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Bölümün yükleniyor… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Yüklendi. Göndermeye hazır.';
+
+  @override
+  String get collabRoomInviteAgain => 'Yeniden davet et';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Bu odadan ayrılmak istiyor musun?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Seni yalnızca ev sahibi yeniden davet edebilir.';
+
+  @override
+  String get collabRoomPartSendFailed => 'Bölümün gönderilemedi. Tekrar dene.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Birlikte video yapın';
+
+  @override
+  String get collabRoomLobbyBody =>
+      '3 arkadaşına kadar davet et. Herkes kendi bölümünü çeker ve hepsi tek bir bölünmüş ekran videoda birleşir.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Arkadaşlarını davet et';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Kimler var?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Odaların';
+
+  @override
+  String get collabRoomTileHosting => 'Senin odan';
+
+  @override
+  String get collabRoomTileGuest => 'Bir arkadaşın odası';
+
+  @override
+  String get collabRoomPhaseLobby => 'Katılımcılar bekleniyor';
+
+  @override
+  String get collabRoomPhaseRecording => 'Bölümler çekiliyor';
+
+  @override
+  String get collabRoomPhaseReady => 'Çekime hazır';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Ev sahibinin çekime başlaması bekleniyor';
+
+  @override
+  String get collabRoomPhaseInvited => 'Davet edildin. Katılmak için dokun.';
+
+  @override
+  String get collabRoomCreateFailed => 'Davetler gönderilemedi. Tekrar dene.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Hadi birlikte video yapalım';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Odaya katıl, herkes kendi bölümünü çeksin.';
+
+  @override
+  String get collabRoomOpenButton => 'Odayı aç';
+
+  @override
+  String get collabRoomCallMute => 'Sesi kapat';
+
+  @override
+  String get collabRoomCallUnmute => 'Sesi aç';
+
+  @override
+  String get collabRoomCallCameraOn => 'Kamerayı aç';
+
+  @override
+  String get collabRoomCallCameraOff => 'Kamerayı kapat';
+
+  @override
+  String get collabRoomCallConnecting => 'Görüşmen bağlanıyor…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Görüşme başlatılamadı. Divine\'ın mikrofonunu kullanabildiğinden emin ol.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Diğerlerine ulaşılamadı. Bağlantını kontrol edip tekrar dene.';
+
+  @override
+  String get collabRoomCallJoin => 'Görüşmeye katıl';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Kameran açılamadı.';
+
+  @override
+  String get collabRoomCallMuted => 'Sessizde';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Yerlerini değiştirmek için düzende iki yere dokun.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Bu yeri değiştir';
 }

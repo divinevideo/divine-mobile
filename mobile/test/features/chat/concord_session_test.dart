@@ -53,6 +53,15 @@ void main() {
     });
   });
   group('ConcordRoomCatalog', () {
+    test('catalog does not retry a terminal relay failure', () {
+      final retry =
+          concordRoomCatalogProvider.retry ?? ProviderContainer.defaultRetry;
+      expect(retry(0, const RelayConnectionException('offline')), isNull);
+      expect(retry(0, const RelayRejectedException('closed')), isNull);
+      final other = TimeoutException('history timeout');
+      expect(retry(0, other), ProviderContainer.defaultRetry(0, other));
+    });
+
     test('configured catalog failure never resolves to the POC catalog', () {
       final result = resolveConcordCatalog(
         AsyncError<ConcordRoomCatalog>(

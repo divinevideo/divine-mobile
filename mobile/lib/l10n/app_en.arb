@@ -6560,6 +6560,10 @@
   "@videoRecorderDualCameraSwapLabel": {
     "description": "Accessibility label of the small second-camera window in the recorder while both cameras record; tapping it swaps which camera fills the viewfinder."
   },
+  "videoRecorderDualCameraShapeHint": "Switch between portrait and square",
+  "@videoRecorderDualCameraShapeHint": {
+    "description": "Screen-reader hint for the long press on the small second-camera window in the recorder; a long press switches the window between a portrait (9:16) and a square (1:1) shape."
+  },
   "videoRecorderZoomLevelLabel": "Zoom to {zoom}×",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",
@@ -8107,23 +8111,39 @@
   "@videoEditorChromaKeyAmountHint": {
     "description": "Hint under the colour-mask similarity slider. Raise it when parts of the masked colour survive, lower it when the subject starts disappearing."
   },
-  "videoEditorChromaKeyEdgeLabel": "Edge",
+  "videoEditorChromaKeyEdgeLabel": "Soft edge",
+  "@videoEditorChromaKeyEdgeLabel": {
+    "description": "Label of the colour-mask slider that softens the edge of the cutout. Describe the effect, not the parameter: the slider sits under Fine-tune with its hint, videoEditorChromaKeyEdgeHint, shown right under it."
+  },
   "videoEditorChromaKeyEdgeHint": "Softens the cutout so hair doesn't turn jagged",
-  "videoEditorChromaKeySpillLabel": "Spill",
+  "videoEditorChromaKeySpillLabel": "Remove tint",
+  "@videoEditorChromaKeySpillLabel": {
+    "description": "Label of the colour-mask slider that removes the masked colour's tint where it reflects onto the subject — compositors call it spill suppression. Describe what it does in plain words rather than using the jargon; its hint, videoEditorChromaKeySpillHint, is shown right under it."
+  },
   "videoEditorChromaKeySpillHint": "Pulls the masked color's tint back off your subject",
+  "videoEditorChromaKeyFineTune": "Fine-tune",
+  "@videoEditorChromaKeyFineTune": {
+    "description": "Row on the colour-mask screen that opens and closes the key's own settings: Auto-detect, the green and blue presets, the colour swatch, the soft-edge slider and the tint slider. Short, sentence case, no punctuation; it sits on one line beside a caret."
+  },
   "videoEditorChromaKeyBackgroundLabel": "Replace with",
   "videoEditorChromaKeyBackgroundNone": "Nothing",
+  "videoEditorChromaKeyBackgroundBlack": "Black",
+  "@videoEditorChromaKeyBackgroundBlack": {
+    "description": "Background chip on the colour-mask screen of a timeline clip that leaves the masked area empty. A video file cannot hold transparency, so empty exports as black, and the preview shows it black; name the colour, not \"nothing\". Keep it to one short word: it sits beside videoEditorChromaKeyBackgroundColor, videoEditorChromaKeyBackgroundImage and videoEditorChromaKeyBackgroundVideo in a row of chips."
+  },
   "videoEditorChromaKeyBackgroundColor": "Color",
-  "videoEditorChromaKeyBackgroundImage": "Image",
+  "videoEditorChromaKeyBackgroundImage": "Photo",
+  "@videoEditorChromaKeyBackgroundImage": {
+    "description": "Background tile on the colour-mask screen that opens the camera to shoot a photo for behind the subject (the gallery is deliberately not offered). Name it a photo, not an image or a file. One short word: it sits under an icon in a quarter of a phone's width, beside videoEditorChromaKeyBackgroundColor and videoEditorChromaKeyBackgroundVideo."
+  },
   "videoEditorChromaKeyBackgroundVideo": "Clip",
-  "videoEditorChromaKeyTransparentHint": "Video can't hold transparency, so this exports as black.",
   "videoEditorChromaKeyCanvasTransparentHint": "Whatever's behind the clip shows through.",
   "@videoEditorChromaKeyCanvasTransparentHint": {
-    "description": "Shown under the background chips of the colour-mask screen when \"Nothing\" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle."
+    "description": "Shown under the background chips of the colour-mask screen when \"Nothing\" is selected for a clip that was detached onto the editor canvas. A reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. A timeline clip offers videoEditorChromaKeyBackgroundBlack instead, because its empty area exports as black. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle."
   },
   "videoEditorChromaKeySurfaceHint": "Replacing your background? A bold color or an evenly lit white wall works, as long as it fills the frame and you're not wearing it.",
   "@videoEditorChromaKeySurfaceHint": {
-    "description": "Standing tip in the colour-mask controls, directly above the Auto-detect button. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject."
+    "description": "Tip at the top of the colour-mask controls, shown under videoEditorChromaKeyDetectFailed when auto-detect found no colour to mask. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject."
   },
   "videoEditorChromaKeyDetectFailed": "Couldn't find one even color around the edges of the frame. Pick the color by hand instead.",
   "@videoEditorChromaKeyDetectFailed": {
@@ -8132,6 +8152,14 @@
   "videoEditorChromaKeyDetectTimedOut": "Took too long to read the clip. Try Auto-detect again, or pick the color by hand.",
   "@videoEditorChromaKeyDetectTimedOut": {
     "description": "Shown when auto-detect gave up waiting for the footage to decode, which says nothing about the footage itself. Two things have to survive translation: that the user can simply run Auto-detect again, and that the colour can be picked by hand instead. Name the button exactly as videoEditorChromaKeyAutoDetect does in this locale, and end on what the user can do next."
+  },
+  "videoEditorChromaKeyTapToPick": "Tap the color you want to remove",
+  "@videoEditorChromaKeyTapToPick": {
+    "description": "Shown over the top of the colour-mask preview until the user taps it once. Tapping the video picks the colour under the finger as the colour to remove. Keep it a short instruction that fits one or two lines over a phone-width video, no full stop."
+  },
+  "videoEditorChromaKeyDetecting": "Finding the color to remove…",
+  "@videoEditorChromaKeyDetecting": {
+    "description": "Shown over the top of the colour-mask preview while the screen measures which colour to remove from the footage, which takes a second or two after it opens. Ends in an ellipsis because it is still running."
   },
   "videoEditorChromaKeyPickClipTitle": "Pick a clip",
   "videoEditorChromaKeyNoLibraryClips": "Your library is empty. Save a clip first, then use it as a background.",
@@ -12874,6 +12902,10 @@
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",
+  "messagesRoomConnectionError": "Can't reach this room. Check your connection and try again.",
+  "@messagesRoomConnectionError": {
+    "description": "Shown inside a community room when the relay cannot be reached, reconnecting gave up, or the room's history never finished loading. A Retry button sits below it."
+  },
   "@messagesDirect": {
     "description": "Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip."
   },
@@ -13068,6 +13100,62 @@
   "videoEditorLayoutPresetPictureInPictureBottomRight": "Picture in picture, bottom right",
   "@videoEditorLayoutPresetPictureInPictureBottomRight": {
     "description": "Name of the layout with one clip filling the frame and a small one in its bottom-right corner."
+  },
+  "videoEditorLayoutPresetSlantedSideBySide": "Slanted side by side",
+  "@videoEditorLayoutPresetSlantedSideBySide": {
+    "description": "Name of the layout with two clips next to each other, split by a line that leans to one side."
+  },
+  "videoEditorLayoutPresetSlantedStacked": "Slanted stacked",
+  "@videoEditorLayoutPresetSlantedStacked": {
+    "description": "Name of the layout with two clips on top of each other, split by a slanted line."
+  },
+  "videoEditorLayoutPresetSlantedThreeStacked": "Three slanted rows",
+  "@videoEditorLayoutPresetSlantedThreeStacked": {
+    "description": "Name of the layout with three clips in rows split by two parallel slanted lines."
+  },
+  "videoEditorLayoutPresetFourColumns": "Four side by side",
+  "@videoEditorLayoutPresetFourColumns": {
+    "description": "Name of the layout with four clips next to each other in four equal columns."
+  },
+  "videoEditorLayoutPresetFourStacked": "Four rows",
+  "@videoEditorLayoutPresetFourStacked": {
+    "description": "Name of the layout with four clips in four equal rows."
+  },
+  "videoEditorLayoutPresetThreeOverOne": "Three over one",
+  "@videoEditorLayoutPresetThreeOverOne": {
+    "description": "Name of the layout with three clips in a row across the top third and one clip across the bottom two thirds."
+  },
+  "videoEditorLayoutPresetOneBesideThree": "One beside three",
+  "@videoEditorLayoutPresetOneBesideThree": {
+    "description": "Name of the layout with one clip down the left two thirds and three clips stacked on the right."
+  },
+  "videoEditorLayoutPresetThreeBesideOne": "Three beside one",
+  "@videoEditorLayoutPresetThreeBesideOne": {
+    "description": "Name of the layout with three clips stacked on the left third and one clip down the right two thirds."
+  },
+  "videoEditorLayoutPresetCircleTopLeft": "Round window, top left",
+  "@videoEditorLayoutPresetCircleTopLeft": {
+    "description": "Name of the layout with one clip filling the frame and a small round one in its top-left corner."
+  },
+  "videoEditorLayoutPresetCircleTopRight": "Round window, top right",
+  "@videoEditorLayoutPresetCircleTopRight": {
+    "description": "Name of the layout with one clip filling the frame and a small round one in its top-right corner."
+  },
+  "videoEditorLayoutPresetCircleBottomLeft": "Round window, bottom left",
+  "@videoEditorLayoutPresetCircleBottomLeft": {
+    "description": "Name of the layout with one clip filling the frame and a small round one in its bottom-left corner."
+  },
+  "videoEditorLayoutPresetCircleBottomRight": "Round window, bottom right",
+  "@videoEditorLayoutPresetCircleBottomRight": {
+    "description": "Name of the layout with one clip filling the frame and a small round one in its bottom-right corner."
+  },
+  "videoEditorLayoutPresetTwoCircles": "Two round windows",
+  "@videoEditorLayoutPresetTwoCircles": {
+    "description": "Name of the layout with one clip filling the frame and two small round clips along its bottom."
+  },
+  "videoEditorLayoutPresetThreeCircles": "Three round windows",
+  "@videoEditorLayoutPresetThreeCircles": {
+    "description": "Name of the layout with one clip filling the frame and three small round clips along its bottom."
   },
   "videoEditorLayoutCellSemanticLabel": "Cell {number}",
   "@videoEditorLayoutCellSemanticLabel": {
@@ -13599,5 +13687,347 @@
         "type": "String"
       }
     }
+  },
+  "collabRoomInviteDmBody": "Let's make a video together! Open Divine to join my room and film your part.",
+  "@collabRoomInviteDmBody": {
+    "description": "Plaintext body of the DM that invites someone into a collaborative video room. Shown in the inbox preview and in other Nostr clients."
+  },
+  "collabRoomJoinDmBody": "I'm in! Can't wait to film my part.",
+  "@collabRoomJoinDmBody": {
+    "description": "Plaintext body of the DM a person sends the room's host when they join a collaborative video room."
+  },
+  "collabRoomDeclineDmBody": "Can't make this one. Have fun!",
+  "@collabRoomDeclineDmBody": {
+    "description": "Plaintext body of the DM a person sends the room's host when they turn down a collaborative video room."
+  },
+  "collabRoomLeaveDmBody": "I left our video room.",
+  "@collabRoomLeaveDmBody": {
+    "description": "Plaintext body of the DM a person sends the room's host when they leave a collaborative video room."
+  },
+  "collabRoomStartedDmBody": "We're filming! Open Divine and film your part.",
+  "@collabRoomStartedDmBody": {
+    "description": "Plaintext body of the DM the host sends everyone when filming starts in a collaborative video room."
+  },
+  "collabRoomPostedDmBody": "Our video is live! Thanks for being part of it.",
+  "@collabRoomPostedDmBody": {
+    "description": "Plaintext body of the DM the host sends everyone once the collaborative video is posted."
+  },
+  "collabRoomCancelledDmBody": "I called off our video room.",
+  "@collabRoomCancelledDmBody": {
+    "description": "Plaintext body of the DM the host sends everyone when they call off a collaborative video room."
+  },
+  "collabRoomUpdatedDmBody": "Our video room changed. Open Divine to see what's new.",
+  "@collabRoomUpdatedDmBody": {
+    "description": "Plaintext body of the DM the host sends everyone when a collaborative video room changes, for example when someone joins or hands in their part."
+  },
+  "collabRoomCameraMode": "Together",
+  "@collabRoomCameraMode": {
+    "description": "Short camera mode label for filming a video with other people."
+  },
+  "collabRoomTitle": "Make it together",
+  "@collabRoomTitle": {
+    "description": "Title of the screen of a collaborative video room, where up to four people each film their own part of a split-screen video."
+  },
+  "collabRoomMissing": "This room isn't here anymore.",
+  "@collabRoomMissing": {
+    "description": "Shown when a collaborative video room cannot be found on this device."
+  },
+  "collabRoomYou": "You",
+  "@collabRoomYou": {
+    "description": "Label under your own avatar in a collaborative video room."
+  },
+  "collabRoomHost": "Host",
+  "@collabRoomHost": {
+    "description": "Label for the person who created a collaborative video room and posts the video."
+  },
+  "collabRoomStatusInvited": "Invited",
+  "@collabRoomStatusInvited": {
+    "description": "Status of someone who was invited to a collaborative video room and has not answered."
+  },
+  "collabRoomStatusJoined": "In",
+  "@collabRoomStatusJoined": {
+    "description": "Status of someone who joined a collaborative video room."
+  },
+  "collabRoomStatusPartIn": "Part's in",
+  "@collabRoomStatusPartIn": {
+    "description": "Status of someone who handed in their filmed part of a collaborative video."
+  },
+  "collabRoomStatusDeclined": "Can't make it",
+  "@collabRoomStatusDeclined": {
+    "description": "Status of someone who turned down a collaborative video room."
+  },
+  "collabRoomStatusLeft": "Left",
+  "@collabRoomStatusLeft": {
+    "description": "Status of someone who left a collaborative video room."
+  },
+  "collabRoomStatusRemoved": "Not in this one",
+  "@collabRoomStatusRemoved": {
+    "description": "Status of someone the host took out of a collaborative video room, or who had not joined when filming started."
+  },
+  "collabRoomPickLayout": "Pick a layout",
+  "@collabRoomPickLayout": {
+    "description": "Heading above the split-screen layouts the host of a collaborative video room can pick from."
+  },
+  "collabRoomStartButton": "Start filming",
+  "@collabRoomStartButton": {
+    "description": "Button the host taps to lock the layout and let everyone film their part."
+  },
+  "collabRoomStartHint": "Start once someone joins. Anyone who hasn't joined by then sits this one out.",
+  "@collabRoomStartHint": {
+    "description": "Hint under the start button of a collaborative video room."
+  },
+  "collabRoomWaitingForHost": "Waiting for the host to start filming.",
+  "@collabRoomWaitingForHost": {
+    "description": "Shown to people in a collaborative video room until the host starts filming."
+  },
+  "collabRoomJoinButton": "Join",
+  "@collabRoomJoinButton": {
+    "description": "Button to join a collaborative video room."
+  },
+  "collabRoomLeaveButton": "Leave room",
+  "@collabRoomLeaveButton": {
+    "description": "Button to leave a collaborative video room."
+  },
+  "collabRoomFilmPartButton": "Film my part",
+  "@collabRoomFilmPartButton": {
+    "description": "Button that opens the camera to film your part of a collaborative video."
+  },
+  "collabRoomRefilmPartButton": "Film it again",
+  "@collabRoomRefilmPartButton": {
+    "description": "Button that opens the camera to film your part of a collaborative video again, after you already handed one in."
+  },
+  "collabRoomFilmHint": "Everyone films their own part. It's cut to the shape of your cell.",
+  "@collabRoomFilmHint": {
+    "description": "Hint in a collaborative video room once filming started."
+  },
+  "collabRoomComposeButton": "Put it together",
+  "@collabRoomComposeButton": {
+    "description": "Button the host taps to combine everyone's parts into one split-screen video."
+  },
+  "collabRoomComposeWaiting": "Waiting for everyone's part.",
+  "@collabRoomComposeWaiting": {
+    "description": "Shown to the host of a collaborative video room until every part is in."
+  },
+  "collabRoomSoundHint": "Tap a part to use its sound.",
+  "@collabRoomSoundHint": {
+    "description": "Hint telling the host they can pick whose sound the collaborative video plays."
+  },
+  "collabRoomSoundSemanticLabel": "Use this part's sound",
+  "@collabRoomSoundSemanticLabel": {
+    "description": "Screen reader label of a part in a collaborative video room, which the host taps to use that part's sound."
+  },
+  "collabRoomRemoveMember": "Remove",
+  "@collabRoomRemoveMember": {
+    "description": "Button the host taps to take someone out of a collaborative video room."
+  },
+  "collabRoomCancelButton": "Call it off",
+  "@collabRoomCancelButton": {
+    "description": "Button the host taps to close a collaborative video room for everyone."
+  },
+  "collabRoomCancelConfirmTitle": "Call off this video?",
+  "@collabRoomCancelConfirmTitle": {
+    "description": "Title of the prompt confirming the host wants to close a collaborative video room."
+  },
+  "collabRoomCancelConfirmBody": "The room closes for everyone.",
+  "@collabRoomCancelConfirmBody": {
+    "description": "Body of the prompt confirming the host wants to close a collaborative video room."
+  },
+  "collabRoomPickNewLayout": "Someone's out. Pick a layout for who's still here.",
+  "@collabRoomPickNewLayout": {
+    "description": "Shown to the host when the number of people in a collaborative video room no longer fits its layout."
+  },
+  "collabRoomPickLayoutForAll": "Someone joined. Pick a layout that fits everyone.",
+  "@collabRoomPickLayoutForAll": {
+    "description": "Shown to the host while filming when someone joined the collaborative video room and the layout no longer has a cell for everyone."
+  },
+  "collabRoomComposing": "Putting it together…",
+  "@collabRoomComposing": {
+    "description": "Shown while everyone's parts are combined into one split-screen video."
+  },
+  "collabRoomComposeFailed": "Couldn't put the video together. Try again.",
+  "@collabRoomComposeFailed": {
+    "description": "Shown when combining the parts of a collaborative video failed."
+  },
+  "collabRoomPosted": "This video is live. Nice work, everyone!",
+  "@collabRoomPosted": {
+    "description": "Shown in a collaborative video room after its video was posted."
+  },
+  "collabRoomCancelled": "This room was called off.",
+  "@collabRoomCancelled": {
+    "description": "Shown in a collaborative video room after the host closed it."
+  },
+  "collabRoomActionFailed": "That didn't go through. Check your connection and try again.",
+  "@collabRoomActionFailed": {
+    "description": "Shown when an action in a collaborative video room could not be sent."
+  },
+  "collabRoomRemovedYou": "You're not in this one.",
+  "@collabRoomRemovedYou": {
+    "description": "Shown to someone who is no longer in a collaborative video room."
+  },
+  "collabRoomDeclinedYou": "You turned this one down.",
+  "@collabRoomDeclinedYou": {
+    "description": "Shown to someone who turned down a collaborative video room."
+  },
+  "collabRoomPartSent": "Your part's in. The host puts it all together.",
+  "@collabRoomPartSent": {
+    "description": "Shown to someone after they handed in their part of a collaborative video."
+  },
+  "collabRoomPartTitle": "Your part",
+  "@collabRoomPartTitle": {
+    "description": "Title of the screen where you review and hand in your part of a collaborative video."
+  },
+  "collabRoomPartRendering": "Getting your part ready…",
+  "@collabRoomPartRendering": {
+    "description": "Shown while your edited part of a collaborative video is rendered."
+  },
+  "collabRoomPartRenderFailed": "Couldn't get your part ready.",
+  "@collabRoomPartRenderFailed": {
+    "description": "Shown when rendering your part of a collaborative video failed."
+  },
+  "collabRoomPartSendButton": "Send my part",
+  "@collabRoomPartSendButton": {
+    "description": "Button that hands in your part of a collaborative video."
+  },
+  "collabRoomPartUploading": "Uploading your part… {progress}",
+  "@collabRoomPartUploading": {
+    "description": "Progress under the preview of your Together part while it uploads, before you send it. {progress} is the share uploaded, already formatted as a percentage for the language.",
+    "placeholders": {
+      "progress": {
+        "type": "String",
+        "example": "42%"
+      }
+    }
+  },
+  "collabRoomPartUploaded": "Uploaded. Ready to send.",
+  "@collabRoomPartUploaded": {
+    "description": "Shown under the preview of your Together part once it is uploaded and Send only has to hand it in."
+  },
+  "collabRoomInviteAgain": "Invite again",
+  "@collabRoomInviteAgain": {
+    "description": "Button next to someone in a Together room who left, declined or was removed: the host asks them back in."
+  },
+  "collabRoomLeaveConfirmTitle": "Leave this room?",
+  "@collabRoomLeaveConfirmTitle": {
+    "description": "Title of the sheet that asks before you leave a Together room."
+  },
+  "collabRoomLeaveConfirmBody": "Only the host can invite you back in.",
+  "@collabRoomLeaveConfirmBody": {
+    "description": "Body of the sheet that asks before you leave a Together room."
+  },
+  "collabRoomPartSendFailed": "Couldn't send your part. Try again.",
+  "@collabRoomPartSendFailed": {
+    "description": "Shown when handing in your part of a collaborative video failed."
+  },
+  "collabRoomLobbyTitle": "Make a video together",
+  "@collabRoomLobbyTitle": {
+    "description": "Headline of the Together camera mode, where you start a collaborative video room."
+  },
+  "collabRoomLobbyBody": "Invite up to 3 friends. Everyone films their own part, and it all comes together in one split-screen video.",
+  "@collabRoomLobbyBody": {
+    "description": "Explains the Together camera mode."
+  },
+  "collabRoomLobbyInvite": "Invite friends",
+  "@collabRoomLobbyInvite": {
+    "description": "Button that opens the picker to invite friends into a new collaborative video room."
+  },
+  "collabRoomInvitePickerTitle": "Who's in?",
+  "@collabRoomInvitePickerTitle": {
+    "description": "Title of the picker where you choose who to invite into a collaborative video room."
+  },
+  "collabRoomLobbyRooms": "Your rooms",
+  "@collabRoomLobbyRooms": {
+    "description": "Heading above the collaborative video rooms you are in."
+  },
+  "collabRoomTileHosting": "Your room",
+  "@collabRoomTileHosting": {
+    "description": "Title of a collaborative video room you host, in the list of your rooms."
+  },
+  "collabRoomTileGuest": "A friend's room",
+  "@collabRoomTileGuest": {
+    "description": "Title of a collaborative video room someone else hosts, in the list of your rooms."
+  },
+  "collabRoomPhaseLobby": "Waiting for people to join",
+  "@collabRoomPhaseLobby": {
+    "description": "Subtitle of a collaborative video room whose host has not started filming yet."
+  },
+  "collabRoomPhaseRecording": "Filming parts",
+  "@collabRoomPhaseRecording": {
+    "description": "Subtitle of a collaborative video room where everyone is filming their part."
+  },
+  "collabRoomPhaseReady": "Ready to start filming",
+  "@collabRoomPhaseReady": {
+    "description": "Subtitle of a collaborative video room for its host once someone joined, while filming has not started yet."
+  },
+  "collabRoomPhaseWaitingForHost": "Waiting for the host to start filming",
+  "@collabRoomPhaseWaitingForHost": {
+    "description": "Subtitle of a collaborative video room for a guest who joined, while the host has not started filming yet."
+  },
+  "collabRoomPhaseInvited": "You're invited. Tap to join.",
+  "@collabRoomPhaseInvited": {
+    "description": "Subtitle of a collaborative video room for someone who was invited and has not joined yet. Tapping the card opens the invite."
+  },
+  "collabRoomCreateFailed": "Couldn't send the invites. Try again.",
+  "@collabRoomCreateFailed": {
+    "description": "Shown when the invites to a new collaborative video room could not be sent."
+  },
+  "collabRoomInviteCardTitle": "Let's make a video together",
+  "@collabRoomInviteCardTitle": {
+    "description": "Title of the card in a chat that invites you into a collaborative video room."
+  },
+  "collabRoomInviteCardBody": "Join the room, and everyone films their own part.",
+  "@collabRoomInviteCardBody": {
+    "description": "Body of the card in a chat that invites you into a collaborative video room."
+  },
+  "collabRoomOpenButton": "Open room",
+  "@collabRoomOpenButton": {
+    "description": "Button that opens a collaborative video room."
+  },
+  "collabRoomCallMute": "Mute",
+  "@collabRoomCallMute": {
+    "description": "Button that mutes your microphone in a Together room's call."
+  },
+  "collabRoomCallUnmute": "Unmute",
+  "@collabRoomCallUnmute": {
+    "description": "Button that turns your microphone back on in a Together room's call."
+  },
+  "collabRoomCallCameraOn": "Turn camera on",
+  "@collabRoomCallCameraOn": {
+    "description": "Button that turns your camera on in a Together room's call."
+  },
+  "collabRoomCallCameraOff": "Turn camera off",
+  "@collabRoomCallCameraOff": {
+    "description": "Button that turns your camera off in a Together room's call."
+  },
+  "collabRoomCallConnecting": "Connecting your call…",
+  "@collabRoomCallConnecting": {
+    "description": "Shown while the call between the people in a Together room starts."
+  },
+  "collabRoomCallFailed": "Couldn't start the call. Check that Divine may use your microphone.",
+  "@collabRoomCallFailed": {
+    "description": "Shown when the microphone for a Together room's call could not be opened."
+  },
+  "collabRoomCallUnreachable": "Couldn't reach the others. Check your connection and try again.",
+  "@collabRoomCallUnreachable": {
+    "description": "Shown in a collaborative video room when the call could not reach the others because the relays did not carry its messages."
+  },
+  "collabRoomCallJoin": "Join the call",
+  "@collabRoomCallJoin": {
+    "description": "Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part."
+  },
+  "collabRoomCallCameraFailed": "Couldn't turn your camera on.",
+  "@collabRoomCallCameraFailed": {
+    "description": "Shown when the camera for a Together room's call could not be opened."
+  },
+  "collabRoomCallMuted": "Muted",
+  "@collabRoomCallMuted": {
+    "description": "Screen reader label of the badge on someone's cell whose microphone is off in a Together room's call."
+  },
+  "collabRoomSwapSeatHint": "Tap two places in the layout to swap who's where.",
+  "@collabRoomSwapSeatHint": {
+    "description": "Hint for the host of a Together room: tapping two cells of the layout swaps the people in them."
+  },
+  "collabRoomSwapSeatSemanticLabel": "Swap this place",
+  "@collabRoomSwapSeatSemanticLabel": {
+    "description": "Screen reader label of a cell in a Together room's layout, which the host taps to swap the people in two cells."
   }
 }

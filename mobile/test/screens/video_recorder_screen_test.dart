@@ -193,6 +193,7 @@ Widget buildNavigatorTestWidget({
   required List<Override> overrides,
   ProviderContainer? container,
   CreationAnalyticsSession? reactionSession,
+  bool collabPart = false,
 }) {
   final child = MaterialApp(
     localizationsDelegates: appLocalizationsDelegates,
@@ -219,6 +220,7 @@ Widget buildNavigatorTestWidget({
                           ? CreationEntryPoint.direct
                           : CreationEntryPoint.library,
                       analyticsSession: reactionSession,
+                      collabPart: collabPart,
                     ),
                   ),
                 ),
@@ -1103,6 +1105,39 @@ void main() {
         // open inherits its aspect ratio.
         expect(fakeVideoPublishNotifier.clearAllCalls, equals(1));
         expect(fakeVideoPublishNotifier.keepAutosavedDraftValues, [isFalse]);
+      });
+
+      testWidgets('keeps the autosave when a room part recorder pops', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({'why_six_seconds_shown': true});
+        final prefs = await SharedPreferences.getInstance();
+        final fakeVideoPublishNotifier = _FakeVideoPublishNotifier();
+
+        await tester.pumpWidget(
+          buildNavigatorTestWidget(
+            fromEditor: false,
+            collabPart: true,
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              // A part session never autosaves, yet the editor's flag still
+              // reads as autosaved: the slot belongs to the user's own work.
+              videoEditorProvider.overrideWith(
+                _AutosaveVideoEditorNotifier.new,
+              ),
+              videoPublishProvider.overrideWith(() => fakeVideoPublishNotifier),
+            ],
+          ),
+        );
+
+        await tester.tap(find.text('Open recorder'));
+        await tester.pumpAndSettle();
+
+        Navigator.of(tester.element(find.byType(VideoRecorderView))).pop();
+        await tester.pumpAndSettle();
+
+        expect(fakeVideoPublishNotifier.clearAllCalls, equals(1));
+        expect(fakeVideoPublishNotifier.keepAutosavedDraftValues, [isTrue]);
       });
     });
 

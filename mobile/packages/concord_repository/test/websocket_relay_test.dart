@@ -15,6 +15,11 @@ const _eventId =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _event = <String, dynamic>{'id': _eventId, 'kind': 9, 'content': 'hi'};
 
+final Matcher _throwsConnectionLost = throwsA(
+  isA<RelayConnectionException>(),
+);
+final Matcher _throwsRejected = throwsA(isA<RelayRejectedException>());
+
 void main() {
   late _LocalRelay relay;
   late WebSocketRelayGateway gateway;
@@ -70,14 +75,23 @@ void main() {
     });
     test('negative OK fails publication', () async {
       final frame = relay.nextFrame('EVENT');
-      final result = expectLater(gateway.publish(_event), throwsStateError);
+      final result = expectLater(
+        gateway.publish(_event),
+        throwsA(
+          isA<RelayRejectedException>().having(
+            (error) => error.message,
+            'message',
+            'Relay rejected event: blocked: policy',
+          ),
+        ),
+      );
       await frame;
       relay.send(['OK', _eventId, false, 'blocked: policy']);
       await result;
     });
     test('NOTICE fails pending publication', () async {
       final frame = relay.nextFrame('EVENT');
-      final result = expectLater(gateway.publish(_event), throwsStateError);
+      final result = expectLater(gateway.publish(_event), _throwsRejected);
       await frame;
       relay.send(['NOTICE', 'publication unavailable']);
       await result;
@@ -159,7 +173,10 @@ void main() {
       'disconnect fails an in-flight publish and a new publish reconnects',
       () async {
         final frame = relay.nextFrame('EVENT');
-        final failure = expectLater(gateway.publish(_event), throwsStateError);
+        final failure = expectLater(
+          gateway.publish(_event),
+          _throwsConnectionLost,
+        );
         await frame;
         await relay.sockets.last.close();
         await failure;
@@ -434,7 +451,7 @@ void main() {
             onError: (Object _) {},
           );
       addTearDown(subscription.cancel);
-      final history = expectLater(gateway.historyReady, throwsStateError);
+      final history = expectLater(gateway.historyReady, _throwsRejected);
       final req = await request;
       relay.send(['CLOSED', req[1], 'restricted']);
       await history;
@@ -492,7 +509,10 @@ void main() {
         final listener = relay.frames.stream.listen(frames.add);
         addTearDown(listener.cancel);
         final event = relay.nextFrame('EVENT');
-        final publish = expectLater(gateway.publish(_event), throwsStateError);
+        final publish = expectLater(
+          gateway.publish(_event),
+          _throwsConnectionLost,
+        );
         await event;
         await relay.sockets.last.close();
         await publish;
@@ -513,7 +533,16 @@ void main() {
         });
         final result = expectLater(
           stream,
-          emitsInOrder([emitsError(isStateError), emitsDone]),
+          emitsInOrder([
+            emitsError(
+              isA<RelayRejectedException>().having(
+                (error) => error.message,
+                'message',
+                'Relay closed subscription: restricted',
+              ),
+            ),
+            emitsDone,
+          ]),
         );
         final req = await request;
         relay.send(['CLOSED', req[1], 'restricted']);
@@ -559,7 +588,10 @@ void main() {
         await expectLater(gateway.connect(), throwsA(isA<Exception>()));
         await expectLater(
           gateway.subscribe({}),
-          emitsInOrder([emitsError(isStateError), emitsDone]),
+          emitsInOrder([
+            emitsError(isA<RelayConnectionException>()),
+            emitsDone,
+          ]),
         );
       },
     );
@@ -637,7 +669,10 @@ void main() {
         addTearDown(closer.cancel);
         await expectLater(
           gateway.subscribe({}),
-          emitsInOrder([emitsError(isStateError), emitsDone]),
+          emitsInOrder([
+            emitsError(isA<RelayConnectionException>()),
+            emitsDone,
+          ]),
         );
         expect(relay.sockets, hasLength(3));
       },
@@ -659,7 +694,7 @@ void main() {
       await expectLater(
         gateway.historyReady,
         throwsA(
-          isA<StateError>().having(
+          isA<RelayConnectionException>().having(
             (error) => error.message,
             'message',
             'Relay reconnect exhausted',

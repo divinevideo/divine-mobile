@@ -59,6 +59,7 @@ class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
     this.recorderMode = VideoRecorderMode.capture,
     this.modeBeforeUpload,
+    this.isCollabPart = false,
     this.recordingState = VideoRecorderState.idle,
     this.zoomLevel = 1.0,
     this.minZoomLevel = 1.0,
@@ -76,6 +77,9 @@ class VideoRecorderBlocState extends Equatable {
     this.isDualCameraChosen = false,
     this.secondaryPreviewTextureId,
     this.dualCameraPipCenter = SecondaryCameraTake.defaultPipCenter,
+    this.dualCameraPipScale = 1.0,
+    this.dualCameraPipRotation = 0.0,
+    this.dualCameraPipAspectRatio = model.AspectRatio.vertical,
     this.hasFlash = true,
     this.isScreenFlashActive = false,
     this.countdownValue = 0,
@@ -119,11 +123,21 @@ class VideoRecorderBlocState extends Equatable {
   /// Recorder mode from the camera.
   final VideoRecorderMode recorderMode;
 
-  /// The recording mode the Upload tab was entered from, or null outside it.
+  /// The recording mode the Upload or Together tab was entered from, or null
+  /// outside them.
   ///
   /// The session's clips belong to that mode: returning to it keeps them,
   /// moving on to any other recording mode discards them.
   final VideoRecorderMode? modeBeforeUpload;
+
+  /// Whether the recorder films someone's part of a collaborative room.
+  ///
+  /// The part is capped at the post length like a Classic take, and is cut
+  /// to the shape of the person's layout cell afterwards.
+  final bool isCollabPart;
+
+  /// Whether a take may not run past the post length.
+  bool get hasRecordingLimit => recorderMode.hasRecordingLimit || isCollabPart;
 
   /// Camera focus point in normalized coordinates (0.0-1.0).
   final Offset focusPoint;
@@ -177,9 +191,21 @@ class VideoRecorderBlocState extends Equatable {
   final int? secondaryPreviewTextureId;
 
   /// Where the second camera's window sits in the viewfinder: its center as
-  /// fractions of the frame. The editor places the picture-in-picture layer
-  /// there.
+  /// fractions of the picture the take keeps. The editor places the
+  /// picture-in-picture layer there.
   final Offset dualCameraPipCenter;
+
+  /// How much the creator pinched the second camera's window larger or
+  /// smaller; see [SecondaryCameraTake.pipScale].
+  final double dualCameraPipScale;
+
+  /// How far the creator turned the second camera's window, in radians
+  /// clockwise; see [SecondaryCameraTake.pipRotation].
+  final double dualCameraPipRotation;
+
+  /// The second camera's window shape, portrait or square; see
+  /// [SecondaryCameraTake.pipAspectRatio].
+  final model.AspectRatio dualCameraPipAspectRatio;
 
   /// Whether the camera has flash capability.
   final bool hasFlash;
@@ -251,8 +277,8 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether the capture rail lists every control with its name, rather than
   /// only flash, lens and aspect ratio.
   ///
-  /// Folds back when a take or a stop-motion interval starts, and a recorder
-  /// opened anew starts folded.
+  /// Folds back when a take or a stop-motion interval starts or dual-camera
+  /// capture is turned on or off, and a recorder opened anew starts folded.
   final bool isActionRailExpanded;
 
   /// True while [VideoRecorderRecordingStartRequested] is in-flight (between
@@ -492,6 +518,7 @@ class VideoRecorderBlocState extends Equatable {
     VideoRecorderMode? recorderMode,
     VideoRecorderMode? modeBeforeUpload,
     bool clearModeBeforeUpload = false,
+    bool? isCollabPart,
     VideoRecorderState? recordingState,
     double? zoomLevel,
     double? minZoomLevel,
@@ -510,6 +537,9 @@ class VideoRecorderBlocState extends Equatable {
     int? secondaryPreviewTextureId,
     bool clearSecondaryPreviewTextureId = false,
     Offset? dualCameraPipCenter,
+    double? dualCameraPipScale,
+    double? dualCameraPipRotation,
+    model.AspectRatio? dualCameraPipAspectRatio,
     bool? hasFlash,
     bool? isScreenFlashActive,
     int? countdownValue,
@@ -554,6 +584,7 @@ class VideoRecorderBlocState extends Equatable {
       modeBeforeUpload: clearModeBeforeUpload
           ? null
           : modeBeforeUpload ?? this.modeBeforeUpload,
+      isCollabPart: isCollabPart ?? this.isCollabPart,
       recordingState: recordingState ?? this.recordingState,
       zoomLevel: zoomLevel ?? this.zoomLevel,
       minZoomLevel: minZoomLevel ?? this.minZoomLevel,
@@ -575,6 +606,11 @@ class VideoRecorderBlocState extends Equatable {
           ? null
           : (secondaryPreviewTextureId ?? this.secondaryPreviewTextureId),
       dualCameraPipCenter: dualCameraPipCenter ?? this.dualCameraPipCenter,
+      dualCameraPipScale: dualCameraPipScale ?? this.dualCameraPipScale,
+      dualCameraPipRotation:
+          dualCameraPipRotation ?? this.dualCameraPipRotation,
+      dualCameraPipAspectRatio:
+          dualCameraPipAspectRatio ?? this.dualCameraPipAspectRatio,
       hasFlash: hasFlash ?? this.hasFlash,
       isScreenFlashActive: isScreenFlashActive ?? this.isScreenFlashActive,
       countdownValue: countdownValue ?? this.countdownValue,
@@ -634,6 +670,7 @@ class VideoRecorderBlocState extends Equatable {
   List<Object?> get props => [
     recorderMode,
     modeBeforeUpload,
+    isCollabPart,
     recordingState,
     zoomLevel,
     minZoomLevel,
@@ -651,6 +688,9 @@ class VideoRecorderBlocState extends Equatable {
     isDualCameraChosen,
     secondaryPreviewTextureId,
     dualCameraPipCenter,
+    dualCameraPipScale,
+    dualCameraPipRotation,
+    dualCameraPipAspectRatio,
     hasFlash,
     isScreenFlashActive,
     countdownValue,

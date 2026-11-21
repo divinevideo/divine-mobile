@@ -11,8 +11,9 @@ appId: co.openvine.app.staging
 # and falls back to Capture when the key is absent, so a first run after a
 # `clearState` never opens here on its own.
 #
-# Classic sits two places from Capture, which is further than any other mode
-# a flow has to travel. The wheel is a lazy ListView that only builds entries
+# Classic sits three places from Capture, past Stop Motion and Together,
+# which is further than any other mode a flow has to travel. Passing over
+# Together pauses the camera for a moment; Classic resumes it. The wheel is a lazy ListView that only builds entries
 # near the armed one, so the hop below steps one entry at a time rather than
 # betting on how many the viewport happens to have built — openCaptureMode documents the same trap from the other end
 # ("from Classic the Capture entry is not rendered at all").
@@ -32,6 +33,8 @@ appId: co.openvine.app.staging
     commands:
       - tapOn:
           id: camera_mode_stopMotion
+      - tapOn:
+          id: camera_mode_together
 
 # Tapping the armed entry is a no-op in the bloc, so this is also safe on the
 # rerun path that skipped the hop above.

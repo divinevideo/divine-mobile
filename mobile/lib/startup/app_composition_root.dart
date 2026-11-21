@@ -19,6 +19,7 @@ import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_scope.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/features/appearance/providers/appearance_providers.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
@@ -264,6 +265,8 @@ VideoPublishService createBackgroundPublishService(
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
     ),
     scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
+    onCollabVideoPublished: (roomId, address) =>
+        ref.read(collabRoomServiceProvider).markPosted(roomId, address),
     performanceMonitor: ref.read(performanceMonitoringServiceProvider),
     isDmRestricted: () => ref.read(isDmRestrictedProvider),
     onProgressChanged: ({required String draftId, required double progress}) {

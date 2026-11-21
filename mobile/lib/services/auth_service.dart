@@ -2607,11 +2607,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         return AuthResult.failure('Failed to import identity: $e');
       }
       // Native key-storage errors need diagnostics. Other cleanup causes can
-      // contain private rows and must retain their safe wrapper.
-      final reportedError =
-          e is UserDataCleanupException && e.cause is SecureKeyStorageException
-          ? e.cause!
-          : e;
+      // contain private rows, so they contribute only the refusing check or
+      // their type: the wrapper's message alone is shared by every check.
+      final Object reportedError = switch (e) {
+        UserDataCleanupException(:final SecureKeyStorageException cause) =>
+          cause,
+        UserDataCleanupException(:final diagnostic) => diagnostic,
+        _ => e,
+      };
       final failure = KeyImportFailedException.redacting(
         reportedError,
         secrets(),

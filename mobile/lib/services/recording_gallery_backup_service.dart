@@ -1,7 +1,6 @@
 // ABOUTME: Copies new camera recordings to the device gallery once signed
 // ABOUTME: Holds unsigned recordings back and finishes them after late signing
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:models/models.dart' show NativeProofData;
@@ -12,6 +11,7 @@ import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/recording_gallery_backup_preference_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
@@ -113,7 +113,14 @@ class RecordingGalleryBackupService {
       _inFlight.remove(clipId);
     }
     // This one was signed, so earlier ones can likely be signed now too.
-    if (signed) unawaited(finishPendingBackups());
+    if (signed) {
+      runDetached(
+        finishPendingBackups(),
+        'finish pending gallery backups after a signed recording',
+        logName: _logName,
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Finishes every backup of this account's library that is still
@@ -122,7 +129,8 @@ class RecordingGalleryBackupService {
   ///
   /// Stops at the first recording whose signing fails, since the next would
   /// fail the same way, and leaves the rest for the next call. A call while
-  /// one runs makes it go over the library once more. Never throws.
+  /// one runs makes it go over the library once more. Operational exceptions
+  /// are logged; unexpected errors are left to the caller's error boundary.
   Future<void> finishPendingBackups() {
     if (_finishing case final running?) {
       _finishAgain = true;

@@ -9200,6 +9200,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Inverser les caméras';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Basculer entre portrait et carré';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoomer à $zoom×';
   }
@@ -10895,18 +10899,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Quelle part de la couleur masquée disparaît';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Contour';
+  String get videoEditorChromaKeyEdgeLabel => 'Contour adouci';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Adoucit la découpe pour que les cheveux ne soient pas crénelés';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Débordement';
+  String get videoEditorChromaKeySpillLabel => 'Retirer la teinte';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Retire la teinte de la couleur masquée sur ton sujet';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Réglages fins';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Remplacer par';
@@ -10915,17 +10922,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Rien';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Noir';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Couleur';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Image';
+  String get videoEditorChromaKeyBackgroundImage => 'Photo';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'La vidéo ne gère pas la transparence : à l\'export, ce sera du noir.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10942,6 +10948,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'La lecture du clip a pris trop de temps. Relance « Détection auto », ou choisis la couleur à la main.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick => 'Touche la couleur à retirer';
+
+  @override
+  String get videoEditorChromaKeyDetecting =>
+      'Recherche de la couleur à retirer…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Choisir un clip';
@@ -16068,6 +16081,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get messagesNoRooms => 'Aucun salon pour le moment';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Impossible d\'accéder à ce salon. Vérifie ta connexion et réessaie.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtags suivis';
 
   @override
@@ -16212,6 +16229,53 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'Image dans l\'image, en bas à droite';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Côte à côte en biais';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Superposés en biais';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked =>
+      'Trois rangées en biais';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Quatre côte à côte';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Quatre rangées';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Trois sur un';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Un à côté de trois';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Trois à côté d\'un';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Fenêtre ronde, en haut à gauche';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Fenêtre ronde, en haut à droite';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Fenêtre ronde, en bas à gauche';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Fenêtre ronde, en bas à droite';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Deux fenêtres rondes';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Trois fenêtres rondes';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16661,4 +16725,284 @@ class AppLocalizationsFr extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat : $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Faisons une vidéo ensemble ! Ouvre Divine, rejoins mon salon et filme ta partie.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'J\'en suis ! Trop hâte de filmer ma partie.';
+
+  @override
+  String get collabRoomDeclineDmBody =>
+      'Pas pour cette fois. Amusez-vous bien !';
+
+  @override
+  String get collabRoomLeaveDmBody => 'J\'ai quitté notre salon vidéo.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'On tourne ! Ouvre Divine et filme ta partie.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Notre vidéo est en ligne ! Merci d\'en avoir fait partie.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'J\'ai annulé notre salon vidéo.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Notre salon vidéo a changé. Ouvre Divine pour voir les nouveautés.';
+
+  @override
+  String get collabRoomCameraMode => 'Ensemble';
+
+  @override
+  String get collabRoomTitle => 'Faites-le ensemble';
+
+  @override
+  String get collabRoomMissing => 'Ce salon n\'existe plus.';
+
+  @override
+  String get collabRoomYou => 'Toi';
+
+  @override
+  String get collabRoomHost => 'Hôte';
+
+  @override
+  String get collabRoomStatusInvited => 'Invité·e';
+
+  @override
+  String get collabRoomStatusJoined => 'Dedans';
+
+  @override
+  String get collabRoomStatusPartIn => 'Partie reçue';
+
+  @override
+  String get collabRoomStatusDeclined => 'Pas dispo';
+
+  @override
+  String get collabRoomStatusLeft => 'Parti·e';
+
+  @override
+  String get collabRoomStatusRemoved => 'Pas pour cette fois';
+
+  @override
+  String get collabRoomPickLayout => 'Choisis une mise en page';
+
+  @override
+  String get collabRoomStartButton => 'Lancer le tournage';
+
+  @override
+  String get collabRoomStartHint =>
+      'Lance dès que quelqu\'un a rejoint. Les autres passent leur tour cette fois.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'En attente que l\'hôte lance le tournage.';
+
+  @override
+  String get collabRoomJoinButton => 'Rejoindre';
+
+  @override
+  String get collabRoomLeaveButton => 'Quitter le salon';
+
+  @override
+  String get collabRoomFilmPartButton => 'Filmer ma partie';
+
+  @override
+  String get collabRoomRefilmPartButton => 'La refilmer';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Chacun filme sa propre partie. Elle est recadrée à la forme de ta case.';
+
+  @override
+  String get collabRoomComposeButton => 'Assembler';
+
+  @override
+  String get collabRoomComposeWaiting =>
+      'En attente des parties de tout le monde.';
+
+  @override
+  String get collabRoomSoundHint => 'Touche une partie pour garder son son.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Utiliser le son de cette partie';
+
+  @override
+  String get collabRoomRemoveMember => 'Retirer';
+
+  @override
+  String get collabRoomCancelButton => 'Annuler';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Annuler cette vidéo ?';
+
+  @override
+  String get collabRoomCancelConfirmBody =>
+      'Le salon ferme pour tout le monde.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Quelqu\'un est parti. Choisis une mise en page pour celles et ceux qui restent.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'Quelqu\'un est arrivé. Choisis une mise en page pour tout le monde.';
+
+  @override
+  String get collabRoomComposing => 'Assemblage en cours…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Impossible d\'assembler la vidéo. Réessaie.';
+
+  @override
+  String get collabRoomPosted =>
+      'Cette vidéo est en ligne. Bravo à toute l\'équipe !';
+
+  @override
+  String get collabRoomCancelled => 'Ce salon a été annulé.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Ça n\'est pas passé. Vérifie ta connexion et réessaie.';
+
+  @override
+  String get collabRoomRemovedYou => 'Tu n\'es pas de celle-ci.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Tu as décliné celle-ci.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Ta partie est arrivée. L\'hôte assemble tout.';
+
+  @override
+  String get collabRoomPartTitle => 'Ta partie';
+
+  @override
+  String get collabRoomPartRendering => 'Préparation de ta partie…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Impossible de préparer ta partie.';
+
+  @override
+  String get collabRoomPartSendButton => 'Envoyer ma partie';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Envoi de ta partie… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Envoyée. Prête à partir.';
+
+  @override
+  String get collabRoomInviteAgain => 'Réinviter';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Quitter ce salon ?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'Seul l\'hôte peut te réinviter.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Impossible d\'envoyer ta partie. Réessaie.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Faire une vidéo ensemble';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Invite jusqu\'à 3 ami·es. Chacun filme sa propre partie, et tout se retrouve dans une vidéo en écran partagé.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Inviter des ami·es';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Qui en est ?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Tes salons';
+
+  @override
+  String get collabRoomTileHosting => 'Ton salon';
+
+  @override
+  String get collabRoomTileGuest => 'Le salon d\'un·e ami·e';
+
+  @override
+  String get collabRoomPhaseLobby => 'En attente de participants';
+
+  @override
+  String get collabRoomPhaseRecording => 'Tournage des parties';
+
+  @override
+  String get collabRoomPhaseReady => 'Tout est prêt pour le tournage';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'En attente que l\'hôte lance le tournage';
+
+  @override
+  String get collabRoomPhaseInvited =>
+      'Tu as une invitation. Touche pour rejoindre.';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Impossible d\'envoyer les invitations. Réessaie.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Faisons une vidéo ensemble';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Rejoins le salon, et chacun filme sa propre partie.';
+
+  @override
+  String get collabRoomOpenButton => 'Ouvrir le salon';
+
+  @override
+  String get collabRoomCallMute => 'Couper le micro';
+
+  @override
+  String get collabRoomCallUnmute => 'Réactiver le micro';
+
+  @override
+  String get collabRoomCallCameraOn => 'Activer la caméra';
+
+  @override
+  String get collabRoomCallCameraOff => 'Couper la caméra';
+
+  @override
+  String get collabRoomCallConnecting => 'Connexion de ton appel…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Impossible de lancer l\'appel. Vérifie que Divine peut utiliser ton micro.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Impossible de joindre les autres. Vérifie ta connexion et réessaie.';
+
+  @override
+  String get collabRoomCallJoin => 'Rejoindre l\'appel';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Impossible d\'activer ta caméra.';
+
+  @override
+  String get collabRoomCallMuted => 'Micro coupé';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Touche deux places dans la mise en page pour les échanger.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Échanger cette place';
 }

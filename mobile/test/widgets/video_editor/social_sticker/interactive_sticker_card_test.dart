@@ -2,6 +2,7 @@
 // ABOUTME: who joined or replied in the player's copy, and the buttons on them.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -32,8 +33,13 @@ void main() {
       ],
     );
 
-    Future<void> pump(WidgetTester tester, Widget child) => tester.pumpWidget(
+    Future<void> pump(
+      WidgetTester tester,
+      Widget child, {
+      Locale? locale,
+    }) => tester.pumpWidget(
       MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Center(child: SizedBox(width: 360, height: 300, child: child)),
@@ -155,6 +161,108 @@ void main() {
           tester.getSize(find.byType(InteractiveStickerCard)),
           equals(without),
         );
+      });
+      group('in a language with a long count', () {
+        const german = Locale('de');
+        final de = lookupAppLocalizations(german);
+        const joined = StickerResponses(
+          count: 12,
+          latest: [
+            StickerResponsePreview(),
+            StickerResponsePreview(),
+            StickerResponsePreview(),
+          ],
+        );
+
+        testWidgets('the whole count of an Add yours beside its button', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            InteractiveStickerCopy(
+              data: addYours,
+              responses: joined,
+              onJoin: () {},
+              onOpenResponses: () {},
+            ),
+            locale: german,
+          );
+          final count = find.text(de.videoStickerAddYoursJoined(12));
+
+          expect(
+            tester.renderObject<RenderParagraph>(count).didExceedMaxLines,
+            isFalse,
+          );
+          expect(
+            tester.getRect(count).right,
+            lessThanOrEqualTo(
+              tester.getRect(find.text(de.videoStickerAddYoursButton)).left,
+            ),
+          );
+        });
+
+        testWidgets('a count too long for the row scaled down, not cut short', (
+          tester,
+        ) async {
+          const vietnamese = Locale('vi');
+          final vi = lookupAppLocalizations(vietnamese);
+          await pump(
+            tester,
+            InteractiveStickerCopy(
+              data: addYours,
+              responses: const StickerResponses(
+                count: 500,
+                countIsAtLeast: true,
+                latest: [
+                  StickerResponsePreview(),
+                  StickerResponsePreview(),
+                  StickerResponsePreview(),
+                ],
+              ),
+              onJoin: () {},
+              onOpenResponses: () {},
+            ),
+            locale: vietnamese,
+          );
+          final count = find.text(vi.videoStickerAddYoursJoinedAtLeast('500+'));
+
+          expect(
+            tester.renderObject<RenderParagraph>(count).didExceedMaxLines,
+            isFalse,
+          );
+          expect(
+            tester.getRect(count).right,
+            lessThanOrEqualTo(
+              tester.getRect(find.text(vi.videoStickerAddYoursButton)).left,
+            ),
+          );
+        });
+
+        testWidgets('an Add yours the same size with or without who joined, '
+            'so the copy lies on the frames', (tester) async {
+          await pump(
+            tester,
+            const FittedBox(child: InteractiveStickerCard(data: addYours)),
+            locale: german,
+          );
+          final without = tester.getSize(find.byType(InteractiveStickerCard));
+          await pump(
+            tester,
+            const FittedBox(
+              child: InteractiveStickerCard(
+                data: addYours,
+                overFrames: true,
+                responses: joined,
+              ),
+            ),
+            locale: german,
+          );
+
+          expect(
+            tester.getSize(find.byType(InteractiveStickerCard)),
+            equals(without),
+          );
+        });
       });
     });
 

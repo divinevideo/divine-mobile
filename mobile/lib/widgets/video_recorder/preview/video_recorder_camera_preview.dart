@@ -12,10 +12,12 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/platform_helpers.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_tap_to_pick.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_dual_camera_window.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
@@ -32,11 +34,17 @@ class VideoRecorderCameraPreview extends StatelessWidget {
   const VideoRecorderCameraPreview({
     this.enableTapToFocus = true,
     this.borderRadius = .zero,
+    this.onColorPatchPicked,
     super.key,
   });
 
   final BorderRadius borderRadius;
   final bool enableTapToFocus;
+
+  /// When set, a tap on the picture reads the patch of raw camera pixels
+  /// under the finger — below the color mask, so the wall's own color — and
+  /// hands it over as straight RGBA, for the color mask screen.
+  final ValueChanged<Uint8List>? onColorPatchPicked;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +83,10 @@ class VideoRecorderCameraPreview extends StatelessWidget {
                   // The blur wraps the whole stack from above its camera-rebuild
                   // [ValueKey], so a switch's rebuild doesn't dispose the ramp.
                   child: _CameraSwitchBlur(
-                    child: _StackItems(enableTapToFocus: enableTapToFocus),
+                    child: _StackItems(
+                      enableTapToFocus: enableTapToFocus,
+                      onColorPatchPicked: onColorPatchPicked,
+                    ),
                   ),
                 ),
               );
@@ -88,9 +99,13 @@ class VideoRecorderCameraPreview extends StatelessWidget {
 }
 
 class _StackItems extends StatelessWidget {
-  const _StackItems({required this.enableTapToFocus});
+  const _StackItems({
+    required this.enableTapToFocus,
+    required this.onColorPatchPicked,
+  });
 
   final bool enableTapToFocus;
+  final ValueChanged<Uint8List>? onColorPatchPicked;
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +124,10 @@ class _StackItems extends StatelessWidget {
         // Simulators never initialize the camera, so the screenshot pipeline
         // renders the stubbed preview instead of the black placeholder.
         if (state.isCameraInitialized || ScreenshotMode.enabled)
-          _CameraPreview(enableTapToFocus: enableTapToFocus)
+          _CameraPreview(
+            enableTapToFocus: enableTapToFocus,
+            onColorPatchPicked: onColorPatchPicked,
+          )
         else
           VideoRecorderCameraPlaceholder(
             errorMessage: switch (state.initializationError) {
@@ -121,7 +139,7 @@ class _StackItems extends StatelessWidget {
           ),
         const VideoRecorderGhostFrame(),
         if (ClipCropGuide.maybeOf(context) case final guide?)
-          _CropGuide(aspectRatio: guide.aspectRatio),
+          _CropGuide(aspectRatio: guide.aspectRatio, shape: guide.shape),
         const _OverlayGrid(),
         if (enableTapToFocus) const VideoRecorderFocusPoint(),
         if (state.isCameraInitialized && state.isDualCameraEnabled)
@@ -137,9 +155,10 @@ class _StackItems extends StatelessWidget {
 /// with — so the crop is cut from the sensor's shape, not the box's, and can
 /// reach past a square preview on one side.
 class _CropGuide extends StatelessWidget {
-  const _CropGuide({required this.aspectRatio});
+  const _CropGuide({required this.aspectRatio, required this.shape});
 
   final double aspectRatio;
+  final SplitScreenCellShape shape;
 
   @override
   Widget build(BuildContext context) {
@@ -150,14 +169,19 @@ class _CropGuide extends StatelessWidget {
     return ClipCropGuideOverlay(
       aspectRatio: aspectRatio,
       contentAspectRatio: sensorAspectRatio,
+      shape: shape,
     );
   }
 }
 
 class _CameraPreview extends StatelessWidget {
-  const _CameraPreview({required this.enableTapToFocus});
+  const _CameraPreview({
+    required this.enableTapToFocus,
+    required this.onColorPatchPicked,
+  });
 
   final bool enableTapToFocus;
+  final ValueChanged<Uint8List>? onColorPatchPicked;
 
   @override
   Widget build(BuildContext context) {
@@ -196,15 +220,34 @@ class _CameraPreview extends StatelessWidget {
               // blur — it lives above [_StackItems], so its ramp-out plays over
               // the new frame.
               _ChromaKeyViewfinder(
-                child: VideoRecorderMobilePreview(
-                  key: ValueKey(textureId),
-                  enableTapToFocus: enableTapToFocus,
+                child: _TapToPickWhenAsked(
+                  onPatchPicked: onColorPatchPicked,
+                  child: VideoRecorderMobilePreview(
+                    key: ValueKey(textureId),
+                    enableTapToFocus: enableTapToFocus,
+                  ),
                 ),
               ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Wraps [child] in [ChromaKeyTapToPick] when [onPatchPicked] is set, and
+/// passes it through otherwise.
+class _TapToPickWhenAsked extends StatelessWidget {
+  const _TapToPickWhenAsked({required this.onPatchPicked, required this.child});
+
+  final ValueChanged<Uint8List>? onPatchPicked;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final onPatchPicked = this.onPatchPicked;
+    if (onPatchPicked == null) return child;
+    return ChromaKeyTapToPick(onPatchPicked: onPatchPicked, child: child);
   }
 }
 

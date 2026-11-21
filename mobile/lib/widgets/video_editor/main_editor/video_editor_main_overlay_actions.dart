@@ -9,6 +9,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/collab_room/view/collab_room_call_view.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -76,6 +78,9 @@ class _TopActions extends ConsumerWidget {
     final isAutosavedDraft = ref.watch(
       videoEditorProvider.select((s) => s.isAutosavedDraft),
     );
+    final isRoomPart = ref.watch(
+      collabRoomPartProvider.select((part) => part?.isActive ?? false),
+    );
 
     // Frames-per-image control lives in the toolbar's center slot — top
     // centre, inline between the back and done buttons — only for a
@@ -131,12 +136,16 @@ class _TopActions extends ConsumerWidget {
         // The wrap hint is brief and only follows a text the user is
         // sizing, so it takes the slot over from the frames chip meanwhile.
         center: VideoEditorTextWrapHint(
-          fallback: stopMotionData == null
-              ? null
-              : _StopMotionFramesChip(
+          fallback: stopMotionData != null
+              ? _StopMotionFramesChip(
                   clipId: stopMotionData.clipId,
                   value: stopMotionData.value,
-                ),
+                )
+              // A room part's editor offers the room's call, to talk while
+              // editing.
+              : isRoomPart
+              ? const CollabRoomEditorCallButton()
+              : null,
         ),
         onClose: close,
         onDone: hasLoopSuggestion || isFinishing

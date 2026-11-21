@@ -28,6 +28,9 @@ abstract final class RoutePaths {
   static const blueskySettings = '/bluesky-settings';
   static const chat = '/chat';
   static const clipRecovery = '/clip-recovery';
+  static const collabRoomBase = '/collab-room';
+  static const collabRoom = '$collabRoomBase/:roomId';
+  static const collabRoomPart = '$collabRoom/part';
   static const contentFilters = '/content-filters';
   static const contentPreferences = '/content-preferences';
   static const createPeopleList = '/people-lists/new';
@@ -135,6 +138,9 @@ abstract final class RoutePaths {
     return '/categories/${Uri.encodeComponent(categoryName)}';
   }
 
+  static String collabRoomFor(String roomId) => '$collabRoomBase/$roomId';
+  static String collabRoomPartFor(String roomId) =>
+      '$collabRoomBase/$roomId/part';
   static String conversationForId(String id) => '$inbox/conversation/$id';
   static String curatedListByAuthorFor({
     required String pubkey,

@@ -15191,6 +15191,12 @@ abstract class AppLocalizations {
   /// **'Swap cameras'**
   String get videoRecorderDualCameraSwapLabel;
 
+  /// Screen-reader hint for the long press on the small second-camera window in the recorder; a long press switches the window between a portrait (9:16) and a square (1:1) shape.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between portrait and square'**
+  String get videoRecorderDualCameraShapeHint;
+
   /// Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.
   ///
   /// In en, this message translates to:
@@ -18239,10 +18245,10 @@ abstract class AppLocalizations {
   /// **'How much of the masked color disappears'**
   String get videoEditorChromaKeyAmountHint;
 
-  /// No description provided for @videoEditorChromaKeyEdgeLabel.
+  /// Label of the colour-mask slider that softens the edge of the cutout. Describe the effect, not the parameter: the slider sits under Fine-tune with its hint, videoEditorChromaKeyEdgeHint, shown right under it.
   ///
   /// In en, this message translates to:
-  /// **'Edge'**
+  /// **'Soft edge'**
   String get videoEditorChromaKeyEdgeLabel;
 
   /// No description provided for @videoEditorChromaKeyEdgeHint.
@@ -18251,10 +18257,10 @@ abstract class AppLocalizations {
   /// **'Softens the cutout so hair doesn\'t turn jagged'**
   String get videoEditorChromaKeyEdgeHint;
 
-  /// No description provided for @videoEditorChromaKeySpillLabel.
+  /// Label of the colour-mask slider that removes the masked colour's tint where it reflects onto the subject — compositors call it spill suppression. Describe what it does in plain words rather than using the jargon; its hint, videoEditorChromaKeySpillHint, is shown right under it.
   ///
   /// In en, this message translates to:
-  /// **'Spill'**
+  /// **'Remove tint'**
   String get videoEditorChromaKeySpillLabel;
 
   /// No description provided for @videoEditorChromaKeySpillHint.
@@ -18262,6 +18268,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pulls the masked color\'s tint back off your subject'**
   String get videoEditorChromaKeySpillHint;
+
+  /// Row on the colour-mask screen that opens and closes the key's own settings: Auto-detect, the green and blue presets, the colour swatch, the soft-edge slider and the tint slider. Short, sentence case, no punctuation; it sits on one line beside a caret.
+  ///
+  /// In en, this message translates to:
+  /// **'Fine-tune'**
+  String get videoEditorChromaKeyFineTune;
 
   /// No description provided for @videoEditorChromaKeyBackgroundLabel.
   ///
@@ -18275,16 +18287,22 @@ abstract class AppLocalizations {
   /// **'Nothing'**
   String get videoEditorChromaKeyBackgroundNone;
 
+  /// Background chip on the colour-mask screen of a timeline clip that leaves the masked area empty. A video file cannot hold transparency, so empty exports as black, and the preview shows it black; name the colour, not "nothing". Keep it to one short word: it sits beside videoEditorChromaKeyBackgroundColor, videoEditorChromaKeyBackgroundImage and videoEditorChromaKeyBackgroundVideo in a row of chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get videoEditorChromaKeyBackgroundBlack;
+
   /// No description provided for @videoEditorChromaKeyBackgroundColor.
   ///
   /// In en, this message translates to:
   /// **'Color'**
   String get videoEditorChromaKeyBackgroundColor;
 
-  /// No description provided for @videoEditorChromaKeyBackgroundImage.
+  /// Background tile on the colour-mask screen that opens the camera to shoot a photo for behind the subject (the gallery is deliberately not offered). Name it a photo, not an image or a file. One short word: it sits under an icon in a quarter of a phone's width, beside videoEditorChromaKeyBackgroundColor and videoEditorChromaKeyBackgroundVideo.
   ///
   /// In en, this message translates to:
-  /// **'Image'**
+  /// **'Photo'**
   String get videoEditorChromaKeyBackgroundImage;
 
   /// No description provided for @videoEditorChromaKeyBackgroundVideo.
@@ -18293,19 +18311,13 @@ abstract class AppLocalizations {
   /// **'Clip'**
   String get videoEditorChromaKeyBackgroundVideo;
 
-  /// No description provided for @videoEditorChromaKeyTransparentHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Video can\'t hold transparency, so this exports as black.'**
-  String get videoEditorChromaKeyTransparentHint;
-
-  /// Shown under the background chips of the colour-mask screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
+  /// Shown under the background chips of the colour-mask screen when "Nothing" is selected for a clip that was detached onto the editor canvas. A reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. A timeline clip offers videoEditorChromaKeyBackgroundBlack instead, because its empty area exports as black. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
   ///
   /// In en, this message translates to:
   /// **'Whatever\'s behind the clip shows through.'**
   String get videoEditorChromaKeyCanvasTransparentHint;
 
-  /// Standing tip in the colour-mask controls, directly above the Auto-detect button. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject.
+  /// Tip at the top of the colour-mask controls, shown under videoEditorChromaKeyDetectFailed when auto-detect found no colour to mask. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. A white wall works because the mask weighs brightness for a neutral colour, and that is also why it has to be lit evenly: a shadow on a white wall survives the mask. Keep every fact when translating: a bold colour or an evenly lit white wall, filling the frame, and not worn by the subject.
   ///
   /// In en, this message translates to:
   /// **'Replacing your background? A bold color or an evenly lit white wall works, as long as it fills the frame and you\'re not wearing it.'**
@@ -18322,6 +18334,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Took too long to read the clip. Try Auto-detect again, or pick the color by hand.'**
   String get videoEditorChromaKeyDetectTimedOut;
+
+  /// Shown over the top of the colour-mask preview until the user taps it once. Tapping the video picks the colour under the finger as the colour to remove. Keep it a short instruction that fits one or two lines over a phone-width video, no full stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the color you want to remove'**
+  String get videoEditorChromaKeyTapToPick;
+
+  /// Shown over the top of the colour-mask preview while the screen measures which colour to remove from the footage, which takes a second or two after it opens. Ends in an ellipsis because it is still running.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the color to remove…'**
+  String get videoEditorChromaKeyDetecting;
 
   /// No description provided for @videoEditorChromaKeyPickClipTitle.
   ///
@@ -26385,6 +26409,12 @@ abstract class AppLocalizations {
   /// **'No rooms yet'**
   String get messagesNoRooms;
 
+  /// Shown inside a community room when the relay cannot be reached, reconnecting gave up, or the room's history never finished loading. A Retry button sits below it.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach this room. Check your connection and try again.'**
+  String get messagesRoomConnectionError;
+
   /// Title of the account-scoped followed hashtags screen.
   ///
   /// In en, this message translates to:
@@ -26654,6 +26684,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Picture in picture, bottom right'**
   String get videoEditorLayoutPresetPictureInPictureBottomRight;
+
+  /// Name of the layout with two clips next to each other, split by a line that leans to one side.
+  ///
+  /// In en, this message translates to:
+  /// **'Slanted side by side'**
+  String get videoEditorLayoutPresetSlantedSideBySide;
+
+  /// Name of the layout with two clips on top of each other, split by a slanted line.
+  ///
+  /// In en, this message translates to:
+  /// **'Slanted stacked'**
+  String get videoEditorLayoutPresetSlantedStacked;
+
+  /// Name of the layout with three clips in rows split by two parallel slanted lines.
+  ///
+  /// In en, this message translates to:
+  /// **'Three slanted rows'**
+  String get videoEditorLayoutPresetSlantedThreeStacked;
+
+  /// Name of the layout with four clips next to each other in four equal columns.
+  ///
+  /// In en, this message translates to:
+  /// **'Four side by side'**
+  String get videoEditorLayoutPresetFourColumns;
+
+  /// Name of the layout with four clips in four equal rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Four rows'**
+  String get videoEditorLayoutPresetFourStacked;
+
+  /// Name of the layout with three clips in a row across the top third and one clip across the bottom two thirds.
+  ///
+  /// In en, this message translates to:
+  /// **'Three over one'**
+  String get videoEditorLayoutPresetThreeOverOne;
+
+  /// Name of the layout with one clip down the left two thirds and three clips stacked on the right.
+  ///
+  /// In en, this message translates to:
+  /// **'One beside three'**
+  String get videoEditorLayoutPresetOneBesideThree;
+
+  /// Name of the layout with three clips stacked on the left third and one clip down the right two thirds.
+  ///
+  /// In en, this message translates to:
+  /// **'Three beside one'**
+  String get videoEditorLayoutPresetThreeBesideOne;
+
+  /// Name of the layout with one clip filling the frame and a small round one in its top-left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Round window, top left'**
+  String get videoEditorLayoutPresetCircleTopLeft;
+
+  /// Name of the layout with one clip filling the frame and a small round one in its top-right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Round window, top right'**
+  String get videoEditorLayoutPresetCircleTopRight;
+
+  /// Name of the layout with one clip filling the frame and a small round one in its bottom-left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Round window, bottom left'**
+  String get videoEditorLayoutPresetCircleBottomLeft;
+
+  /// Name of the layout with one clip filling the frame and a small round one in its bottom-right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Round window, bottom right'**
+  String get videoEditorLayoutPresetCircleBottomRight;
+
+  /// Name of the layout with one clip filling the frame and two small round clips along its bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Two round windows'**
+  String get videoEditorLayoutPresetTwoCircles;
+
+  /// Name of the layout with one clip filling the frame and three small round clips along its bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Three round windows'**
+  String get videoEditorLayoutPresetThreeCircles;
 
   /// Screen reader label for a filled cell of the split-screen layout. {number} is the cell's position, counted from 1 and already formatted. Tapping selects the cell; dragging moves the picture inside it.
   ///
@@ -27380,6 +27494,510 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{chat}: {outcome}'**
   String dmVideoOutcomeInChat(String chat, String outcome);
+
+  /// Plaintext body of the DM that invites someone into a collaborative video room. Shown in the inbox preview and in other Nostr clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s make a video together! Open Divine to join my room and film your part.'**
+  String get collabRoomInviteDmBody;
+
+  /// Plaintext body of the DM a person sends the room's host when they join a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m in! Can\'t wait to film my part.'**
+  String get collabRoomJoinDmBody;
+
+  /// Plaintext body of the DM a person sends the room's host when they turn down a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t make this one. Have fun!'**
+  String get collabRoomDeclineDmBody;
+
+  /// Plaintext body of the DM a person sends the room's host when they leave a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'I left our video room.'**
+  String get collabRoomLeaveDmBody;
+
+  /// Plaintext body of the DM the host sends everyone when filming starts in a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re filming! Open Divine and film your part.'**
+  String get collabRoomStartedDmBody;
+
+  /// Plaintext body of the DM the host sends everyone once the collaborative video is posted.
+  ///
+  /// In en, this message translates to:
+  /// **'Our video is live! Thanks for being part of it.'**
+  String get collabRoomPostedDmBody;
+
+  /// Plaintext body of the DM the host sends everyone when they call off a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'I called off our video room.'**
+  String get collabRoomCancelledDmBody;
+
+  /// Plaintext body of the DM the host sends everyone when a collaborative video room changes, for example when someone joins or hands in their part.
+  ///
+  /// In en, this message translates to:
+  /// **'Our video room changed. Open Divine to see what\'s new.'**
+  String get collabRoomUpdatedDmBody;
+
+  /// Short camera mode label for filming a video with other people.
+  ///
+  /// In en, this message translates to:
+  /// **'Together'**
+  String get collabRoomCameraMode;
+
+  /// Title of the screen of a collaborative video room, where up to four people each film their own part of a split-screen video.
+  ///
+  /// In en, this message translates to:
+  /// **'Make it together'**
+  String get collabRoomTitle;
+
+  /// Shown when a collaborative video room cannot be found on this device.
+  ///
+  /// In en, this message translates to:
+  /// **'This room isn\'t here anymore.'**
+  String get collabRoomMissing;
+
+  /// Label under your own avatar in a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get collabRoomYou;
+
+  /// Label for the person who created a collaborative video room and posts the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get collabRoomHost;
+
+  /// Status of someone who was invited to a collaborative video room and has not answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited'**
+  String get collabRoomStatusInvited;
+
+  /// Status of someone who joined a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'In'**
+  String get collabRoomStatusJoined;
+
+  /// Status of someone who handed in their filmed part of a collaborative video.
+  ///
+  /// In en, this message translates to:
+  /// **'Part\'s in'**
+  String get collabRoomStatusPartIn;
+
+  /// Status of someone who turned down a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t make it'**
+  String get collabRoomStatusDeclined;
+
+  /// Status of someone who left a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get collabRoomStatusLeft;
+
+  /// Status of someone the host took out of a collaborative video room, or who had not joined when filming started.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in this one'**
+  String get collabRoomStatusRemoved;
+
+  /// Heading above the split-screen layouts the host of a collaborative video room can pick from.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a layout'**
+  String get collabRoomPickLayout;
+
+  /// Button the host taps to lock the layout and let everyone film their part.
+  ///
+  /// In en, this message translates to:
+  /// **'Start filming'**
+  String get collabRoomStartButton;
+
+  /// Hint under the start button of a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Start once someone joins. Anyone who hasn\'t joined by then sits this one out.'**
+  String get collabRoomStartHint;
+
+  /// Shown to people in a collaborative video room until the host starts filming.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the host to start filming.'**
+  String get collabRoomWaitingForHost;
+
+  /// Button to join a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get collabRoomJoinButton;
+
+  /// Button to leave a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave room'**
+  String get collabRoomLeaveButton;
+
+  /// Button that opens the camera to film your part of a collaborative video.
+  ///
+  /// In en, this message translates to:
+  /// **'Film my part'**
+  String get collabRoomFilmPartButton;
+
+  /// Button that opens the camera to film your part of a collaborative video again, after you already handed one in.
+  ///
+  /// In en, this message translates to:
+  /// **'Film it again'**
+  String get collabRoomRefilmPartButton;
+
+  /// Hint in a collaborative video room once filming started.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone films their own part. It\'s cut to the shape of your cell.'**
+  String get collabRoomFilmHint;
+
+  /// Button the host taps to combine everyone's parts into one split-screen video.
+  ///
+  /// In en, this message translates to:
+  /// **'Put it together'**
+  String get collabRoomComposeButton;
+
+  /// Shown to the host of a collaborative video room until every part is in.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for everyone\'s part.'**
+  String get collabRoomComposeWaiting;
+
+  /// Hint telling the host they can pick whose sound the collaborative video plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a part to use its sound.'**
+  String get collabRoomSoundHint;
+
+  /// Screen reader label of a part in a collaborative video room, which the host taps to use that part's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this part\'s sound'**
+  String get collabRoomSoundSemanticLabel;
+
+  /// Button the host taps to take someone out of a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get collabRoomRemoveMember;
+
+  /// Button the host taps to close a collaborative video room for everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Call it off'**
+  String get collabRoomCancelButton;
+
+  /// Title of the prompt confirming the host wants to close a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Call off this video?'**
+  String get collabRoomCancelConfirmTitle;
+
+  /// Body of the prompt confirming the host wants to close a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'The room closes for everyone.'**
+  String get collabRoomCancelConfirmBody;
+
+  /// Shown to the host when the number of people in a collaborative video room no longer fits its layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone\'s out. Pick a layout for who\'s still here.'**
+  String get collabRoomPickNewLayout;
+
+  /// Shown to the host while filming when someone joined the collaborative video room and the layout no longer has a cell for everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone joined. Pick a layout that fits everyone.'**
+  String get collabRoomPickLayoutForAll;
+
+  /// Shown while everyone's parts are combined into one split-screen video.
+  ///
+  /// In en, this message translates to:
+  /// **'Putting it together…'**
+  String get collabRoomComposing;
+
+  /// Shown when combining the parts of a collaborative video failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t put the video together. Try again.'**
+  String get collabRoomComposeFailed;
+
+  /// Shown in a collaborative video room after its video was posted.
+  ///
+  /// In en, this message translates to:
+  /// **'This video is live. Nice work, everyone!'**
+  String get collabRoomPosted;
+
+  /// Shown in a collaborative video room after the host closed it.
+  ///
+  /// In en, this message translates to:
+  /// **'This room was called off.'**
+  String get collabRoomCancelled;
+
+  /// Shown when an action in a collaborative video room could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t go through. Check your connection and try again.'**
+  String get collabRoomActionFailed;
+
+  /// Shown to someone who is no longer in a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not in this one.'**
+  String get collabRoomRemovedYou;
+
+  /// Shown to someone who turned down a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'You turned this one down.'**
+  String get collabRoomDeclinedYou;
+
+  /// Shown to someone after they handed in their part of a collaborative video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your part\'s in. The host puts it all together.'**
+  String get collabRoomPartSent;
+
+  /// Title of the screen where you review and hand in your part of a collaborative video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your part'**
+  String get collabRoomPartTitle;
+
+  /// Shown while your edited part of a collaborative video is rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting your part ready…'**
+  String get collabRoomPartRendering;
+
+  /// Shown when rendering your part of a collaborative video failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get your part ready.'**
+  String get collabRoomPartRenderFailed;
+
+  /// Button that hands in your part of a collaborative video.
+  ///
+  /// In en, this message translates to:
+  /// **'Send my part'**
+  String get collabRoomPartSendButton;
+
+  /// Progress under the preview of your Together part while it uploads, before you send it. {progress} is the share uploaded, already formatted as a percentage for the language.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading your part… {progress}'**
+  String collabRoomPartUploading(String progress);
+
+  /// Shown under the preview of your Together part once it is uploaded and Send only has to hand it in.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded. Ready to send.'**
+  String get collabRoomPartUploaded;
+
+  /// Button next to someone in a Together room who left, declined or was removed: the host asks them back in.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite again'**
+  String get collabRoomInviteAgain;
+
+  /// Title of the sheet that asks before you leave a Together room.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this room?'**
+  String get collabRoomLeaveConfirmTitle;
+
+  /// Body of the sheet that asks before you leave a Together room.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the host can invite you back in.'**
+  String get collabRoomLeaveConfirmBody;
+
+  /// Shown when handing in your part of a collaborative video failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send your part. Try again.'**
+  String get collabRoomPartSendFailed;
+
+  /// Headline of the Together camera mode, where you start a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a video together'**
+  String get collabRoomLobbyTitle;
+
+  /// Explains the Together camera mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite up to 3 friends. Everyone films their own part, and it all comes together in one split-screen video.'**
+  String get collabRoomLobbyBody;
+
+  /// Button that opens the picker to invite friends into a new collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite friends'**
+  String get collabRoomLobbyInvite;
+
+  /// Title of the picker where you choose who to invite into a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Who\'s in?'**
+  String get collabRoomInvitePickerTitle;
+
+  /// Heading above the collaborative video rooms you are in.
+  ///
+  /// In en, this message translates to:
+  /// **'Your rooms'**
+  String get collabRoomLobbyRooms;
+
+  /// Title of a collaborative video room you host, in the list of your rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Your room'**
+  String get collabRoomTileHosting;
+
+  /// Title of a collaborative video room someone else hosts, in the list of your rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'A friend\'s room'**
+  String get collabRoomTileGuest;
+
+  /// Subtitle of a collaborative video room whose host has not started filming yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for people to join'**
+  String get collabRoomPhaseLobby;
+
+  /// Subtitle of a collaborative video room where everyone is filming their part.
+  ///
+  /// In en, this message translates to:
+  /// **'Filming parts'**
+  String get collabRoomPhaseRecording;
+
+  /// Subtitle of a collaborative video room for its host once someone joined, while filming has not started yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to start filming'**
+  String get collabRoomPhaseReady;
+
+  /// Subtitle of a collaborative video room for a guest who joined, while the host has not started filming yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the host to start filming'**
+  String get collabRoomPhaseWaitingForHost;
+
+  /// Subtitle of a collaborative video room for someone who was invited and has not joined yet. Tapping the card opens the invite.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re invited. Tap to join.'**
+  String get collabRoomPhaseInvited;
+
+  /// Shown when the invites to a new collaborative video room could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the invites. Try again.'**
+  String get collabRoomCreateFailed;
+
+  /// Title of the card in a chat that invites you into a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s make a video together'**
+  String get collabRoomInviteCardTitle;
+
+  /// Body of the card in a chat that invites you into a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the room, and everyone films their own part.'**
+  String get collabRoomInviteCardBody;
+
+  /// Button that opens a collaborative video room.
+  ///
+  /// In en, this message translates to:
+  /// **'Open room'**
+  String get collabRoomOpenButton;
+
+  /// Button that mutes your microphone in a Together room's call.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get collabRoomCallMute;
+
+  /// Button that turns your microphone back on in a Together room's call.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get collabRoomCallUnmute;
+
+  /// Button that turns your camera on in a Together room's call.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn camera on'**
+  String get collabRoomCallCameraOn;
+
+  /// Button that turns your camera off in a Together room's call.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn camera off'**
+  String get collabRoomCallCameraOff;
+
+  /// Shown while the call between the people in a Together room starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting your call…'**
+  String get collabRoomCallConnecting;
+
+  /// Shown when the microphone for a Together room's call could not be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the call. Check that Divine may use your microphone.'**
+  String get collabRoomCallFailed;
+
+  /// Shown in a collaborative video room when the call could not reach the others because the relays did not carry its messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the others. Check your connection and try again.'**
+  String get collabRoomCallUnreachable;
+
+  /// Button that joins the voice call of a Together room: on the room screen when out of the call, and in the editor while editing your part.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the call'**
+  String get collabRoomCallJoin;
+
+  /// Shown when the camera for a Together room's call could not be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t turn your camera on.'**
+  String get collabRoomCallCameraFailed;
+
+  /// Screen reader label of the badge on someone's cell whose microphone is off in a Together room's call.
+  ///
+  /// In en, this message translates to:
+  /// **'Muted'**
+  String get collabRoomCallMuted;
+
+  /// Hint for the host of a Together room: tapping two cells of the layout swaps the people in them.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap two places in the layout to swap who\'s where.'**
+  String get collabRoomSwapSeatHint;
+
+  /// Screen reader label of a cell in a Together room's layout, which the host taps to swap the people in two cells.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap this place'**
+  String get collabRoomSwapSeatSemanticLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -3605,5 +3605,54 @@ void main() {
         },
       );
     });
+
+    group('Together parts', () {
+      File partOf(String owner) => File(
+        '${tempDir.path}/documents/collab_rooms/$owner/'
+        '0123456789abcdef0123456789abcdef/part.mp4',
+      )..createSync(recursive: true);
+
+      Future<void> cleanUp({
+        bool forgetAccount = false,
+        bool deleteUserData = false,
+      }) {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          forgetAccount: forgetAccount,
+          deleteUserData: deleteUserData,
+        );
+      }
+
+      for (final removal in ['forget', 'erase']) {
+        test(
+          "go with the account on $removal, and only that account's",
+          () async {
+            final removed = partOf(_pubkeyA);
+            final staying = partOf(_pubkeyB);
+
+            await cleanUp(
+              forgetAccount: removal == 'forget',
+              deleteUserData: removal == 'erase',
+            );
+
+            expect(removed.existsSync(), isFalse);
+            expect(staying.existsSync(), isTrue);
+          },
+        );
+      }
+
+      test('stay through an account switch', () async {
+        final kept = partOf(_pubkeyA);
+
+        await cleanUp();
+
+        expect(kept.existsSync(), isTrue);
+      });
+    });
   });
 }

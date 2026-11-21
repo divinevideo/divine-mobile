@@ -24,6 +24,7 @@ const _pubkeyHex =
 const _conversationId =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _listId = 'weekend-picks';
+const _collabRoomId = '0123456789abcdef0123456789abcdef';
 const _announcementId = 'cc3897b7-a83f-4d9f-9ce4-a7daa7c07a63';
 final String _npub = NostrKeyUtils.encodePubKey(_pubkeyHex);
 final String _challengeNaddr = NIP19Tlv.encodeNaddr(
@@ -108,6 +109,8 @@ final _locations = <String, List<String>>{
   ],
   'appDetailForSlug': [RoutePaths.appDetailForSlug('sample-app')],
   'categoryGalleryFor': [RoutePaths.categoryGalleryFor('Wild Life')],
+  'collabRoomFor': [RoutePaths.collabRoomFor(_collabRoomId)],
+  'collabRoomPartFor': [RoutePaths.collabRoomPartFor(_collabRoomId)],
   'conversationForId': [RoutePaths.conversationForId(_conversationId)],
   'curatedListByAuthorFor': [
     RoutePaths.curatedListByAuthorFor(pubkey: _pubkeyHex, listId: _listId),
@@ -160,6 +163,7 @@ const _notLocations = {
   'challenge',
   // Prefixes the builders extend. No route is registered at the bare prefix.
   'announcementDetailBase',
+  'collabRoomBase',
   'curatedListFeedBase',
   'followersBase',
   'followingBase',
@@ -173,6 +177,8 @@ const _notLocations = {
   'questionAnswerBase',
   'videoRepliesBase',
   // Route patterns with a placeholder; their builders are checked instead.
+  'collabRoom',
+  'collabRoomPart',
   'questionAnswer',
   'videoReplies',
   // Child-route segments, registered relative to their parent route.

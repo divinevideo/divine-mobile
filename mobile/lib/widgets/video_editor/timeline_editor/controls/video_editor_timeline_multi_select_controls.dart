@@ -53,7 +53,7 @@ class TimelineMultiSelectControls extends StatelessWidget {
           type: .primary,
         ),
         TimelineActionButton(
-          icon: .arrowUUpRight,
+          icon: .infinity,
           label: context.l10n.videoEditorBoomerangLabel,
           semanticLabel:
               context.l10n.videoEditorBoomerangSelectedClipsSemanticLabel,

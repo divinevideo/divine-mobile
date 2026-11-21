@@ -12,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -136,6 +137,7 @@ void main() {
               (
                 clip: cell.clip,
                 rect: ui.Rect.fromLTRB(index * 0.5, 0, index * 0.5 + 0.5, 1),
+                shape: SplitScreenCellShape.rectangle,
                 alignment: Alignment.center,
                 zoom: cell.zoom,
               ),
@@ -195,6 +197,58 @@ void main() {
       expect(layer.mask, isNotNull);
     });
 
+    test('cuts an untouched round window to its circle with a matte', () async {
+      final layout = SplitScreenLayoutPreset.circleBottomRight.cells(
+        aspectRatio: model.AspectRatio.vertical.value,
+        gap: 0,
+      );
+      await expectLater(
+        SplitScreenLayoutRenderService.render(
+          cells: [
+            for (final (index, (:rect, :shape)) in layout.indexed)
+              (
+                clip: _clip('$index'),
+                rect: rect,
+                shape: shape,
+                alignment: Alignment.center,
+                zoom: 1,
+              ),
+          ],
+          aspectRatio: model.AspectRatio.vertical,
+          backgroundColor: const ui.Color(0xFFFF0000),
+          taskId: 'layout',
+        ),
+        throwsA(isA<_Rendered>()),
+      );
+
+      final [under, window] = editor.tasks.single.composition!.layers;
+      // With no gap there is no ring to cut, so the clip under the window
+      // keeps the renderer's own fit.
+      expect(under.mask, isNull);
+      expect(window.mask, isNotNull);
+      expect(window.clips.single.transform!.fit, SegmentFit.fill);
+
+      // The matte is a disc, not the window's square: the corners of what it
+      // keeps are clear and its middle is solid.
+      final codec = await ui.instantiateImageCodec(window.mask!.byteArray!);
+      final matte = (await codec.getNextFrame()).image;
+      final rgba = (await matte.toByteData())!;
+      int alpha(int x, int y) => rgba.getUint8((y * matte.width + x) * 4 + 3);
+      var (left, top, right, bottom) = (matte.width, matte.height, 0, 0);
+      for (var y = 0; y < matte.height; y++) {
+        for (var x = 0; x < matte.width; x++) {
+          if (alpha(x, y) < 128) continue;
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+        }
+      }
+      expect(alpha((left + right) ~/ 2, (top + bottom) ~/ 2), 255);
+      expect(alpha(left, top), 0);
+      expect(alpha(right, bottom), 0);
+    });
+
     test(
       'keeps the output at the canvas size whatever its first clip',
       () async {
@@ -207,12 +261,14 @@ void main() {
               (
                 clip: _clip('a'),
                 rect: const ui.Rect.fromLTRB(0, 0, 0.5, 1),
+                shape: SplitScreenCellShape.rectangle,
                 alignment: Alignment.center,
                 zoom: 1,
               ),
               (
                 clip: _clip('b'),
                 rect: const ui.Rect.fromLTRB(0.5, 0, 1, 1),
+                shape: SplitScreenCellShape.rectangle,
                 alignment: Alignment.center,
                 zoom: 1,
               ),
@@ -238,6 +294,7 @@ void main() {
             (
               clip: _clip('fast').copyWith(playbackSpeed: 2),
               rect: const ui.Rect.fromLTRB(0, 0, 1, 1),
+              shape: SplitScreenCellShape.rectangle,
               alignment: Alignment.center,
               zoom: 1,
             ),
@@ -310,6 +367,7 @@ void main() {
             (
               clip: _clip('gone'),
               rect: const ui.Rect.fromLTRB(0, 0, 1, 1),
+              shape: SplitScreenCellShape.rectangle,
               alignment: Alignment.center,
               zoom: 1,
             ),

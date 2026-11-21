@@ -5,12 +5,15 @@
 // (invalid nsec, invalid hex, wrong ncryptsec password) plus the happy path into
 // a LocalNostrIdentity, using a real channel-backed SecureKeyStorage.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Nip19, Nip49, generatePrivateKey;
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -207,6 +210,70 @@ void main() {
             }
           }
           expect(authService.lastError, contains(safeMessage));
+          expect(
+            crashReporter.reported.single.error.toString(),
+            allOf(contains(safeMessage), contains('StateError')),
+          );
+        },
+      );
+
+      test(
+        'names the refusing activation check in the report without keys',
+        () async {
+          final privateKeyHex = generatePrivateKey();
+          final nsec = Nip19.encodePrivateKey(privateKeyHex);
+          final ownerPubkey = SecureKeyContainer.fromPrivateKeyHex(
+            privateKeyHex,
+          ).publicKeyHex;
+          // An interrupted switch for another account admits only that one.
+          final otherPubkey = SecureKeyContainer.fromPrivateKeyHex(
+            generatePrivateKey(),
+          ).publicKeyHex;
+          SharedPreferences.setMockInitialValues({
+            kKnownAccountsKey: '[]',
+            AccountActivationCoordinator.storageKey: jsonEncode({
+              'version': 1,
+              'token': 'ab' * 24,
+              'ownerPubkey': otherPubkey,
+              'phase': 'pending',
+            }),
+          });
+          final authService = createAuthService();
+          addTearDown(authService.dispose);
+
+          final result = await authService.importFromNsec(nsec);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+          expect(authService.isAuthenticated, isFalse);
+          final (:error, :reason) = crashReporter.reported.single;
+          expect(reason, 'importFromNsec');
+          expect(error, isA<KeyImportFailedException>());
+          expect(
+            error.toString(),
+            'KeyImportFailedException: Could not establish the account '
+            'safely (Account activation evidence requires recovery)',
+          );
+          final surfaces = {
+            'log': LogCaptureService()
+                .getRecentLogs()
+                .map((log) => log.message)
+                .join('\n'),
+            'lastError': authService.lastError ?? '',
+            'crash report': error.toString(),
+          };
+          for (final MapEntry(:key, :value) in surfaces.entries) {
+            for (final secret in [nsec, privateKeyHex]) {
+              expect(value, isNot(contains(secret)), reason: key);
+            }
+          }
+          for (final pubkey in [ownerPubkey, otherPubkey]) {
+            expect(error.toString(), isNot(contains(pubkey)));
+            expect(
+              error.toString(),
+              isNot(contains(Nip19.encodePubKey(pubkey))),
+            );
+          }
         },
       );
     });

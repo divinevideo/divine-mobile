@@ -193,7 +193,7 @@ void main() {
     );
   });
 
-  group('published challenge recovery', () {
+  group('published draft recovery', () {
     test(
       'published recovery returns its exact event without uploading or signing',
       () async {
@@ -218,6 +218,59 @@ void main() {
         verifyZeroInteractions(mockAuthService);
         verifyZeroInteractions(mockVideoEventPublisher);
         verifyZeroInteractions(mockBlossomService);
+      },
+    );
+
+    test(
+      'retries a room notification without publishing the video again',
+      () async {
+        final pubkey = 'a' * 64;
+        final event = Event(pubkey, 34236, [
+          ['d', 'synthetic-video'],
+        ], 'Already published');
+        final draft =
+            DivineVideoDraft.create(
+              clips: _createTestDraft().clips,
+              title: '',
+              description: '',
+              hashtags: const {},
+              selectedApproach: 'video',
+              collabRoomId: '0123456789abcdef0123456789abcdef',
+            ).copyWith(
+              publishStatus: PublishStatus.published,
+              publishedVideoEvent: jsonEncode(event.toJson()),
+            );
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(pubkey);
+        final notifications = <(String, String)>[];
+        final recovery = VideoPublishService(
+          uploadManager: mockUploadManager,
+          authService: mockAuthService,
+          videoEventPublisher: mockVideoEventPublisher,
+          blossomService: mockBlossomService,
+          draftService: mockDraftService,
+          onProgressChanged: ({required draftId, required progress}) {},
+          isDmRestricted: () => false,
+          onCollabVideoPublished: (roomId, address) async {
+            notifications.add((roomId, address));
+            if (notifications.length == 1) {
+              throw const FileSystemException('Busy');
+            }
+          },
+        );
+
+        final pending =
+            await recovery.publishVideo(draft: draft) as PublishSuccess;
+        expect(pending.collabRoomNotificationPending, isTrue);
+
+        final delivered =
+            await recovery.publishVideo(draft: draft) as PublishSuccess;
+        expect(delivered.collabRoomNotificationPending, isFalse);
+        expect(
+          notifications,
+          List.filled(2, (draft.collabRoomId, '34236:$pubkey:synthetic-video')),
+        );
+        verifyZeroInteractions(mockUploadManager);
+        verifyZeroInteractions(mockVideoEventPublisher);
       },
     );
   });
@@ -561,6 +614,59 @@ void main() {
 
           expect(result, isA<PublishSuccess>());
           verifyNever(() => mockDraftService.deleteDraft(any()));
+        },
+      );
+
+      test(
+        'leaves no room update pending when the published copy was not kept',
+        () async {
+          // No signed event came back, so nothing could be kept to retry the
+          // room's update from. Reporting it pending would keep the copy,
+          // still saved as publishing, and offer the live video again.
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+            readyUpload: _createPendingUpload(
+              status: UploadStatus.readyToPublish,
+              videoId: 'room-video',
+            ),
+          );
+          final notifications = <String>[];
+          final roomService = VideoPublishService(
+            uploadManager: mockUploadManager,
+            authService: mockAuthService,
+            videoEventPublisher: mockVideoEventPublisher,
+            blossomService: mockBlossomService,
+            draftService: mockDraftService,
+            onProgressChanged: ({required draftId, required progress}) {},
+            isDmRestricted: () => false,
+            onCollabVideoPublished: (roomId, address) async {
+              notifications.add(address);
+              throw const FileSystemException('Busy');
+            },
+          );
+          final draft = DivineVideoDraft.create(
+            clips: _createTestDraft().clips,
+            title: 'Together',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            collabRoomId: '0123456789abcdef0123456789abcdef',
+          );
+
+          final result = await roomService.publishVideo(draft: draft);
+
+          expect(notifications, hasLength(1));
+          expect(
+            result,
+            isA<PublishSuccess>().having(
+              (r) => r.collabRoomNotificationPending,
+              'collabRoomNotificationPending',
+              isFalse,
+            ),
+          );
         },
       );
 

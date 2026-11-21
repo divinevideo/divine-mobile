@@ -14,7 +14,40 @@ class AudioSessionService {
 
   final AudioSessionWrapper _audioSessionWrapper;
 
-  /// Configures the audio session for recording mode.
+  /// How many voice calls hold the platform audio session. There is one
+  /// session per process and several services configure it, so every
+  /// instance shares the count.
+  static int _callHolds = 0;
+
+  /// Whether a voice call holds the platform audio session.
+  ///
+  /// The configurations below leave the session alone then: switching it to
+  /// playback takes the call's microphone and speaker away, and the call
+  /// sets up the session it needs itself.
+  static bool get isHeldByCall => _callHolds > 0;
+
+  /// Holds the platform audio session for a voice call until
+  /// [releaseFromCall].
+  static void holdForCall() => _callHolds++;
+
+  /// Lets go of a hold taken with [holdForCall].
+  static void releaseFromCall() {
+    if (_callHolds > 0) _callHolds--;
+  }
+
+  /// Whether a call holds the session, so [configuration] is skipped.
+  bool _keptForCall(String configuration) {
+    if (!isHeldByCall) return false;
+    Log.debug(
+      "Kept the call's audio session instead of $configuration",
+      name: 'AudioSessionService',
+      category: LogCategory.video,
+    );
+    return true;
+  }
+
+  /// Configures the audio session for recording mode, unless a voice call
+  /// holds it ([isHeldByCall]).
   ///
   /// This sets up the audio session to:
   /// - Allow audio playback during recording via A2DP to Bluetooth headphones
@@ -25,6 +58,7 @@ class AudioSessionService {
   /// allowBluetooth enables HFP (phone call mode) which causes
   /// "call started/ended" sounds on Bluetooth headsets.
   Future<void> configureForRecording() async {
+    if (_keptForCall('recording')) return;
     try {
       await _audioSessionWrapper.configure(
         audio_session.AudioSessionConfiguration(
@@ -63,12 +97,14 @@ class AudioSessionService {
     }
   }
 
-  /// Configures the audio session for mixed playback.
+  /// Configures the audio session for mixed playback, unless a voice call
+  /// holds it ([isHeldByCall]).
   ///
   /// This allows audio to play simultaneously with other audio sources
   /// (e.g., video player). Use this in the video editor to prevent
   /// the audio from pausing the video.
   Future<void> configureForMixedPlayback() async {
+    if (_keptForCall('mixed playback')) return;
     try {
       await _audioSessionWrapper.configure(
         const audio_session.AudioSessionConfiguration(
@@ -105,10 +141,12 @@ class AudioSessionService {
     }
   }
 
-  /// Resets the audio session to default playback configuration.
+  /// Resets the audio session to default playback configuration, unless a
+  /// voice call holds it ([isHeldByCall]).
   ///
   /// Call this when exiting recording mode.
   Future<void> resetAudioSession() async {
+    if (_keptForCall('the default')) return;
     try {
       await _audioSessionWrapper.configure(
         const audio_session.AudioSessionConfiguration(

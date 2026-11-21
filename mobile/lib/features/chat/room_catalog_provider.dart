@@ -120,7 +120,16 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
       );
       await session.start();
       yield* watchConcordCatalog(session);
-    });
+    }, retry: _retryCatalog);
+
+Duration? _retryCatalog(int retryCount, Object error) {
+  // The relay has already exhausted its reconnect budget or refused the
+  // subscription. Surface the failure instead of recreating the session.
+  if (error is RelayConnectionException || error is RelayRejectedException) {
+    return null;
+  }
+  return ProviderContainer.defaultRetry(retryCount, error);
+}
 
 /// POC synchronous callers stay available when no real invite is configured.
 /// Configured real Rooms never fall through to deterministic test keys.

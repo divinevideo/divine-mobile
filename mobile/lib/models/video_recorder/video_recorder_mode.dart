@@ -5,9 +5,14 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 ///
 /// [capture] is the leftmost entry and the default; [upload] sits at the far
 /// right.
+///
+/// [together] and [upload] are tabs that record nothing themselves: Together
+/// starts a room where up to four people each film their own part of a
+/// split-screen layout, and every part is filmed in a recorder of its own.
 enum VideoRecorderMode {
   capture,
   stopMotion,
+  together,
   classic,
   upload;
 
@@ -32,6 +37,18 @@ enum VideoRecorderMode {
     .capture => 'Capture',
     .stopMotion => 'Stop Motion',
     .classic => 'Classic',
+    .together => 'Together',
+  };
+
+  /// Whether the tab films. Upload and Together pause the camera and show a
+  /// screen of their own instead, so peeking at them keeps the session's
+  /// clips.
+  bool get recordsVideo => switch (this) {
+    .upload => false,
+    .together => false,
+    .capture => true,
+    .stopMotion => true,
+    .classic => true,
   };
 
   bool get hasRecordingLimit => switch (this) {
@@ -39,6 +56,7 @@ enum VideoRecorderMode {
     .capture => false,
     .stopMotion => false,
     .classic => true,
+    .together => false,
   };
 
   bool get hasVideoEditor => switch (this) {
@@ -46,6 +64,7 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => true,
     .classic => false,
+    .together => false,
   };
 
   bool get supportGridLines => switch (this) {
@@ -53,6 +72,7 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => true,
     .classic => true,
+    .together => false,
   };
 
   /// Whether the user can lay the previous take's last frame over the live
@@ -62,6 +82,7 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => true,
     .classic => true,
+    .together => false,
   };
 
   /// The settings the timer button cycles through, [TimerDuration.off] first,
@@ -75,6 +96,7 @@ enum VideoRecorderMode {
     .capture => _delayedStartDurations,
     .stopMotion => const [.off, .three, .five, .ten],
     .classic => const [],
+    .together => const [],
   };
 
   static const List<TimerDuration> _delayedStartDurations = [
@@ -91,6 +113,7 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => false,
     .classic => false,
+    .together => false,
   };
 
   /// Whether the mode offers dual-camera capture: every take records the
@@ -103,6 +126,7 @@ enum VideoRecorderMode {
     .stopMotion => false,
     // Classic renders straight to a post and never opens the editor.
     .classic => false,
+    .together => false,
   };
 
   model.AspectRatio get defaultAspectRatio => switch (this) {
@@ -110,6 +134,7 @@ enum VideoRecorderMode {
     .capture => .vertical,
     .stopMotion => .vertical,
     .classic => .square,
+    .together => .vertical,
   };
 
   /// Whether this mode captures still photos (stop-motion) instead of

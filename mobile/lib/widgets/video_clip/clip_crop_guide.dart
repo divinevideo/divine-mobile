@@ -18,11 +18,16 @@ class ClipCropGuide extends InheritedWidget {
   const ClipCropGuide({
     required this.aspectRatio,
     required super.child,
+    this.shape = SplitScreenCellShape.rectangle,
     super.key,
   });
 
   /// Width / height of the crop.
   final double aspectRatio;
+
+  /// What of the crop the clip ends up showing, such as the circle of a round
+  /// window.
+  final SplitScreenCellShape shape;
 
   /// The nearest guide above [context], or `null` when nothing is cropped.
   static ClipCropGuide? maybeOf(BuildContext context) =>
@@ -30,11 +35,11 @@ class ClipCropGuide extends InheritedWidget {
 
   @override
   bool updateShouldNotify(ClipCropGuide oldWidget) =>
-      aspectRatio != oldWidget.aspectRatio;
+      aspectRatio != oldWidget.aspectRatio || shape != oldWidget.shape;
 }
 
 /// Dims everything outside the crop of [aspectRatio] that a centred cut of
-/// footage shaped [contentAspectRatio] keeps.
+/// footage shaped [contentAspectRatio] keeps, cut to [shape].
 ///
 /// The footage is assumed to cover this widget's box, centred — how a
 /// thumbnail and the viewfinder both lay it out — so the crop can reach past
@@ -43,11 +48,13 @@ class ClipCropGuideOverlay extends StatelessWidget {
   const ClipCropGuideOverlay({
     required this.aspectRatio,
     required this.contentAspectRatio,
+    this.shape = SplitScreenCellShape.rectangle,
     super.key,
   });
 
   final double aspectRatio;
   final double contentAspectRatio;
+  final SplitScreenCellShape shape;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +64,7 @@ class ClipCropGuideOverlay extends StatelessWidget {
           painter: _CropGuidePainter(
             aspectRatio: aspectRatio,
             contentAspectRatio: contentAspectRatio,
+            shape: shape,
           ),
           child: const SizedBox.expand(),
         ),
@@ -68,6 +76,18 @@ class ClipCropGuideOverlay extends StatelessWidget {
 /// The crop [ClipCropGuideOverlay] draws, in the coordinates of a box of
 /// [size].
 Rect clipCropGuideRect({
+  required Size size,
+  required double aspectRatio,
+  required double contentAspectRatio,
+}) => _uncutCropRect(
+  size: size,
+  aspectRatio: aspectRatio,
+  contentAspectRatio: contentAspectRatio,
+).intersect(Offset.zero & size);
+
+/// The crop in the coordinates of a box of [size], including any part past
+/// the box.
+Rect _uncutCropRect({
   required Size size,
   required double aspectRatio,
   required double contentAspectRatio,
@@ -88,21 +108,27 @@ Rect clipCropGuideRect({
     origin.dy + crop.top * content.height,
     crop.width * content.width,
     crop.height * content.height,
-  ).intersect(Offset.zero & size);
+  );
 }
 
 class _CropGuidePainter extends CustomPainter {
   const _CropGuidePainter({
     required this.aspectRatio,
     required this.contentAspectRatio,
+    required this.shape,
   });
 
   final double aspectRatio;
   final double contentAspectRatio;
+  final SplitScreenCellShape shape;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty || aspectRatio <= 0 || contentAspectRatio <= 0) return;
+    if (!shape.isRectangle) {
+      _paintShape(canvas, size);
+      return;
+    }
     final crop = clipCropGuideRect(
       size: size,
       aspectRatio: aspectRatio,
@@ -125,8 +151,38 @@ class _CropGuidePainter extends CustomPainter {
       );
   }
 
+  /// The guide for a cell that is not a rectangle: everything outside the
+  /// shape dimmed, the shape outlined. The shape is fitted to the whole crop,
+  /// so a crop reaching past the box keeps its shape and is cut by the box.
+  void _paintShape(Canvas canvas, Size size) {
+    final box = Offset.zero & size;
+    final outline = shape.pathIn(
+      _uncutCropRect(
+        size: size,
+        aspectRatio: aspectRatio,
+        contentAspectRatio: contentAspectRatio,
+      ),
+    );
+    canvas
+      ..save()
+      ..clipRect(box)
+      ..drawPath(
+        Path.combine(PathOperation.difference, Path()..addRect(box), outline),
+        Paint()..color = VineTheme.scrim50,
+      )
+      ..drawPath(
+        outline,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = VineTheme.whiteText,
+      )
+      ..restore();
+  }
+
   @override
   bool shouldRepaint(_CropGuidePainter oldDelegate) =>
       oldDelegate.aspectRatio != aspectRatio ||
-      oldDelegate.contentAspectRatio != contentAspectRatio;
+      oldDelegate.contentAspectRatio != contentAspectRatio ||
+      oldDelegate.shape != shape;
 }

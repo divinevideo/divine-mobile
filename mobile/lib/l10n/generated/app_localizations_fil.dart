@@ -9128,6 +9128,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Pagpalitin ang mga camera';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Magpalit sa pagitan ng patayo at parisukat';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'I-zoom sa $zoom×';
   }
@@ -10809,18 +10813,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Gaano karami ng na-mask na kulay ang mawawala';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Gilid';
+  String get videoEditorChromaKeyEdgeLabel => 'Malambot na gilid';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Pinapalambot ang gupit para hindi magaspang ang buhok';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Spill';
+  String get videoEditorChromaKeySpillLabel => 'Alisin ang tint';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Inaalis ang tint ng na-mask na kulay sa subject mo';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'I-fine-tune';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Palitan ng';
@@ -10829,17 +10836,16 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Wala';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Itim';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Kulay';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Larawan';
+  String get videoEditorChromaKeyBackgroundImage => 'Litrato';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -10856,6 +10862,13 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Masyadong natagalan ang pagbasa ng clip. Subukan ulit ang Auto-detect, o pumili ng kulay nang manual.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'I-tap ang kulay na gusto mong alisin';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Hinahanap ang kulay na aalisin…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';
@@ -15947,6 +15960,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get messagesNoRooms => 'Wala pang mga silid';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Hindi makonekta sa silid na ito. Tingnan ang koneksyon mo at subukan ulit.';
+
+  @override
   String get followedHashtagsTitle => 'Mga sinusundang hashtag';
 
   @override
@@ -16088,6 +16105,53 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'Picture in picture, kanan sa ibaba';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide => 'Pahilig na magkatabi';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked => 'Pahilig na magkapatong';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked =>
+      'Tatlong pahilig na hilera';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Apat na magkakatabi';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Apat na hilera';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Tatlo sa ibabaw ng isa';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Isa sa tabi ng tatlo';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Tatlo sa tabi ng isa';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Bilog na window, kaliwa sa itaas';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Bilog na window, kanan sa itaas';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Bilog na window, kaliwa sa ibaba';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Bilog na window, kanan sa ibaba';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Dalawang bilog na window';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Tatlong bilog na window';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16538,4 +16602,283 @@ class AppLocalizationsFil extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Gawa tayo ng video nang sabay! I-open ang Divine, sumali sa room ko, at i-film ang part mo.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Game ako! Excited na akong i-film ang part ko.';
+
+  @override
+  String get collabRoomDeclineDmBody =>
+      'Hindi ako makakasama ngayon. Enjoy kayo!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Umalis na ako sa video room natin.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Nagfi-film na tayo! I-open ang Divine at i-film ang part mo.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Live na ang video natin! Salamat sa pagsali.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Kinansela ko ang video room natin.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'May nagbago sa video room natin. I-open ang Divine para makita.';
+
+  @override
+  String get collabRoomCameraMode => 'Magkasama';
+
+  @override
+  String get collabRoomTitle => 'Gawin nang sabay-sabay';
+
+  @override
+  String get collabRoomMissing => 'Wala na ang room na ito.';
+
+  @override
+  String get collabRoomYou => 'Ikaw';
+
+  @override
+  String get collabRoomHost => 'Host';
+
+  @override
+  String get collabRoomStatusInvited => 'Inimbita';
+
+  @override
+  String get collabRoomStatusJoined => 'Kasali';
+
+  @override
+  String get collabRoomStatusPartIn => 'Nandito na ang part';
+
+  @override
+  String get collabRoomStatusDeclined => 'Hindi makakasama';
+
+  @override
+  String get collabRoomStatusLeft => 'Umalis';
+
+  @override
+  String get collabRoomStatusRemoved => 'Hindi kasali ngayon';
+
+  @override
+  String get collabRoomPickLayout => 'Pumili ng layout';
+
+  @override
+  String get collabRoomStartButton => 'Simulan ang pag-film';
+
+  @override
+  String get collabRoomStartHint =>
+      'Magsimula kapag may sumali na. Ang hindi pa sumasali noon ay hindi muna kasama ngayon.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'Hinihintay na simulan ng host ang pag-film.';
+
+  @override
+  String get collabRoomJoinButton => 'Sumali';
+
+  @override
+  String get collabRoomLeaveButton => 'Umalis sa room';
+
+  @override
+  String get collabRoomFilmPartButton => 'I-film ang part ko';
+
+  @override
+  String get collabRoomRefilmPartButton => 'I-film ulit';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Bawat isa ay nagfi-film ng sariling part. Kino-crop ito sa hugis ng cell mo.';
+
+  @override
+  String get collabRoomComposeButton => 'Pagsamahin';
+
+  @override
+  String get collabRoomComposeWaiting => 'Hinihintay ang part ng lahat.';
+
+  @override
+  String get collabRoomSoundHint =>
+      'I-tap ang isang part para gamitin ang tunog nito.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Gamitin ang tunog ng part na ito';
+
+  @override
+  String get collabRoomRemoveMember => 'Alisin';
+
+  @override
+  String get collabRoomCancelButton => 'Kanselahin';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Kanselahin ang video na ito?';
+
+  @override
+  String get collabRoomCancelConfirmBody => 'Magsasara ang room para sa lahat.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'May umalis. Pumili ng layout para sa mga natira.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'May sumali. Pumili ng layout para sa lahat.';
+
+  @override
+  String get collabRoomComposing => 'Pinagsasama…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Hindi napagsama ang video. Subukan ulit.';
+
+  @override
+  String get collabRoomPosted =>
+      'Live na ang video na ito. Ang galing ninyong lahat!';
+
+  @override
+  String get collabRoomCancelled => 'Kinansela ang room na ito.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'Hindi ito natuloy. I-check ang connection mo at subukan ulit.';
+
+  @override
+  String get collabRoomRemovedYou => 'Hindi ka kasali ngayon.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Tinanggihan mo ito.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Nandito na ang part mo. Pagsasamahin ng host ang lahat.';
+
+  @override
+  String get collabRoomPartTitle => 'Ang part mo';
+
+  @override
+  String get collabRoomPartRendering => 'Inihahanda ang part mo…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Hindi naihanda ang part mo.';
+
+  @override
+  String get collabRoomPartSendButton => 'Ipadala ang part ko';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Ina-upload ang part mo… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Na-upload na. Handa nang ipadala.';
+
+  @override
+  String get collabRoomInviteAgain => 'Imbitahan ulit';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Umalis sa room na ito?';
+
+  @override
+  String get collabRoomLeaveConfirmBody =>
+      'Ang host lang ang puwedeng mag-imbita ulit sa iyo.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Hindi naipadala ang part mo. Subukan ulit.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Gumawa ng video nang sabay-sabay';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Mag-imbita ng hanggang 3 kaibigan. Bawat isa ay nagfi-film ng sariling part, at magsasama-sama ito sa isang split-screen na video.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Mag-imbita ng mga kaibigan';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Sino ang kasali?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Mga room mo';
+
+  @override
+  String get collabRoomTileHosting => 'Room mo';
+
+  @override
+  String get collabRoomTileGuest => 'Room ng kaibigan';
+
+  @override
+  String get collabRoomPhaseLobby => 'Hinihintay na may sumali';
+
+  @override
+  String get collabRoomPhaseRecording => 'Nagfi-film ng mga part';
+
+  @override
+  String get collabRoomPhaseReady => 'Handa nang mag-film';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Hinihintay na simulan ng host ang pag-film';
+
+  @override
+  String get collabRoomPhaseInvited => 'Inimbitahan ka. I-tap para sumali.';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Hindi naipadala ang mga imbitasyon. Subukan ulit.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Gawa tayo ng video nang sabay';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Sumali sa room, at bawat isa ay magfi-film ng sariling part.';
+
+  @override
+  String get collabRoomOpenButton => 'Buksan ang room';
+
+  @override
+  String get collabRoomCallMute => 'I-mute';
+
+  @override
+  String get collabRoomCallUnmute => 'I-unmute';
+
+  @override
+  String get collabRoomCallCameraOn => 'I-on ang camera';
+
+  @override
+  String get collabRoomCallCameraOff => 'I-off ang camera';
+
+  @override
+  String get collabRoomCallConnecting => 'Kinokonekta ang call mo…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Hindi masimulan ang call. I-check kung puwedeng gamitin ng Divine ang mic mo.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Hindi maabot ang iba. I-check ang connection mo at subukan ulit.';
+
+  @override
+  String get collabRoomCallJoin => 'Sumali sa call';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Hindi ma-on ang camera mo.';
+
+  @override
+  String get collabRoomCallMuted => 'Naka-mute';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'I-tap ang dalawang puwesto sa layout para pagpalitin sila.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Palitan ang puwestong ito';
 }

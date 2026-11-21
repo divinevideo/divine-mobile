@@ -9270,6 +9270,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoRecorderDualCameraSwapLabel => 'Inversează camerele';
 
   @override
+  String get videoRecorderDualCameraShapeHint =>
+      'Comută între vertical și pătrat';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoom la $zoom×';
   }
@@ -10958,18 +10962,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cât din culoarea mascată dispare';
 
   @override
-  String get videoEditorChromaKeyEdgeLabel => 'Margine';
+  String get videoEditorChromaKeyEdgeLabel => 'Margine moale';
 
   @override
   String get videoEditorChromaKeyEdgeHint =>
       'Înmoaie decupajul ca părul să nu iasă zimțat';
 
   @override
-  String get videoEditorChromaKeySpillLabel => 'Reflexie';
+  String get videoEditorChromaKeySpillLabel => 'Elimină nuanța';
 
   @override
   String get videoEditorChromaKeySpillHint =>
       'Scoate nuanța culorii mascate de pe subiect';
+
+  @override
+  String get videoEditorChromaKeyFineTune => 'Reglaj fin';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Înlocuiește cu';
@@ -10978,17 +10985,16 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorChromaKeyBackgroundNone => 'Nimic';
 
   @override
+  String get videoEditorChromaKeyBackgroundBlack => 'Negru';
+
+  @override
   String get videoEditorChromaKeyBackgroundColor => 'Culoare';
 
   @override
-  String get videoEditorChromaKeyBackgroundImage => 'Imagine';
+  String get videoEditorChromaKeyBackgroundImage => 'Fotografie';
 
   @override
   String get videoEditorChromaKeyBackgroundVideo => 'Clip';
-
-  @override
-  String get videoEditorChromaKeyTransparentHint =>
-      'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
   String get videoEditorChromaKeyCanvasTransparentHint =>
@@ -11005,6 +11011,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
       'Citirea clipului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.';
+
+  @override
+  String get videoEditorChromaKeyTapToPick =>
+      'Atinge culoarea pe care vrei s-o elimini';
+
+  @override
+  String get videoEditorChromaKeyDetecting => 'Caut culoarea de eliminat…';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';
@@ -16132,6 +16145,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get messagesNoRooms => 'Încă nu există camere';
 
   @override
+  String get messagesRoomConnectionError =>
+      'Camera aceasta nu poate fi accesată. Verifică conexiunea și încearcă din nou.';
+
+  @override
   String get followedHashtagsTitle => 'Hashtaguri urmărite';
 
   @override
@@ -16274,6 +16291,55 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayoutPresetPictureInPictureBottomRight =>
       'Imagine în imagine, dreapta jos';
+
+  @override
+  String get videoEditorLayoutPresetSlantedSideBySide =>
+      'Unul lângă altul, în diagonală';
+
+  @override
+  String get videoEditorLayoutPresetSlantedStacked =>
+      'Unul peste altul, în diagonală';
+
+  @override
+  String get videoEditorLayoutPresetSlantedThreeStacked =>
+      'Trei rânduri în diagonală';
+
+  @override
+  String get videoEditorLayoutPresetFourColumns => 'Patru unul lângă altul';
+
+  @override
+  String get videoEditorLayoutPresetFourStacked => 'Patru rânduri';
+
+  @override
+  String get videoEditorLayoutPresetThreeOverOne => 'Trei peste unul';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideThree => 'Unul lângă trei';
+
+  @override
+  String get videoEditorLayoutPresetThreeBesideOne => 'Trei lângă unul';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopLeft =>
+      'Fereastră rotundă, stânga sus';
+
+  @override
+  String get videoEditorLayoutPresetCircleTopRight =>
+      'Fereastră rotundă, dreapta sus';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomLeft =>
+      'Fereastră rotundă, stânga jos';
+
+  @override
+  String get videoEditorLayoutPresetCircleBottomRight =>
+      'Fereastră rotundă, dreapta jos';
+
+  @override
+  String get videoEditorLayoutPresetTwoCircles => 'Două ferestre rotunde';
+
+  @override
+  String get videoEditorLayoutPresetThreeCircles => 'Trei ferestre rotunde';
 
   @override
   String videoEditorLayoutCellSemanticLabel(String number) {
@@ -16724,4 +16790,281 @@ class AppLocalizationsRo extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get collabRoomInviteDmBody =>
+      'Hai să facem un video împreună! Deschide Divine, intră în camera mea și filmează-ți partea.';
+
+  @override
+  String get collabRoomJoinDmBody =>
+      'Sunt și eu! Abia aștept să-mi filmez partea.';
+
+  @override
+  String get collabRoomDeclineDmBody =>
+      'De data asta nu pot. Distracție plăcută!';
+
+  @override
+  String get collabRoomLeaveDmBody => 'Am ieșit din camera noastră video.';
+
+  @override
+  String get collabRoomStartedDmBody =>
+      'Filmăm! Deschide Divine și filmează-ți partea.';
+
+  @override
+  String get collabRoomPostedDmBody =>
+      'Videoul nostru e online! Mersi că ai fost parte din el.';
+
+  @override
+  String get collabRoomCancelledDmBody => 'Am anulat camera noastră video.';
+
+  @override
+  String get collabRoomUpdatedDmBody =>
+      'Ceva s-a schimbat în camera noastră video. Deschide Divine să vezi.';
+
+  @override
+  String get collabRoomCameraMode => 'Împreună';
+
+  @override
+  String get collabRoomTitle => 'Faceți-l împreună';
+
+  @override
+  String get collabRoomMissing => 'Camera asta nu mai există.';
+
+  @override
+  String get collabRoomYou => 'Tu';
+
+  @override
+  String get collabRoomHost => 'Gazdă';
+
+  @override
+  String get collabRoomStatusInvited => 'Invitat';
+
+  @override
+  String get collabRoomStatusJoined => 'Înăuntru';
+
+  @override
+  String get collabRoomStatusPartIn => 'Partea a ajuns';
+
+  @override
+  String get collabRoomStatusDeclined => 'Nu poate';
+
+  @override
+  String get collabRoomStatusLeft => 'A ieșit';
+
+  @override
+  String get collabRoomStatusRemoved => 'Nu de data asta';
+
+  @override
+  String get collabRoomPickLayout => 'Alege un aspect';
+
+  @override
+  String get collabRoomStartButton => 'Începe filmarea';
+
+  @override
+  String get collabRoomStartHint =>
+      'Începe imediat ce intră cineva. Cine n-a intrat până atunci stă pe tușă de data asta.';
+
+  @override
+  String get collabRoomWaitingForHost =>
+      'Așteptăm ca gazda să înceapă filmarea.';
+
+  @override
+  String get collabRoomJoinButton => 'Intră';
+
+  @override
+  String get collabRoomLeaveButton => 'Ieși din cameră';
+
+  @override
+  String get collabRoomFilmPartButton => 'Filmează-mi partea';
+
+  @override
+  String get collabRoomRefilmPartButton => 'Filmează din nou';
+
+  @override
+  String get collabRoomFilmHint =>
+      'Fiecare își filmează propria parte. E decupată după forma celulei tale.';
+
+  @override
+  String get collabRoomComposeButton => 'Pune-le cap la cap';
+
+  @override
+  String get collabRoomComposeWaiting => 'Așteptăm partea fiecăruia.';
+
+  @override
+  String get collabRoomSoundHint => 'Atinge o parte ca să-i folosești sunetul.';
+
+  @override
+  String get collabRoomSoundSemanticLabel => 'Folosește sunetul acestei părți';
+
+  @override
+  String get collabRoomRemoveMember => 'Elimină';
+
+  @override
+  String get collabRoomCancelButton => 'Anulează';
+
+  @override
+  String get collabRoomCancelConfirmTitle => 'Anulezi acest video?';
+
+  @override
+  String get collabRoomCancelConfirmBody =>
+      'Camera se închide pentru toată lumea.';
+
+  @override
+  String get collabRoomPickNewLayout =>
+      'Cineva a ieșit. Alege un aspect pentru cei rămași.';
+
+  @override
+  String get collabRoomPickLayoutForAll =>
+      'S-a alăturat cineva. Alege un aspect pentru toți.';
+
+  @override
+  String get collabRoomComposing => 'Le punem cap la cap…';
+
+  @override
+  String get collabRoomComposeFailed =>
+      'Videoul nu a putut fi asamblat. Încearcă din nou.';
+
+  @override
+  String get collabRoomPosted => 'Videoul ăsta e online. Bravo tuturor!';
+
+  @override
+  String get collabRoomCancelled => 'Camera asta a fost anulată.';
+
+  @override
+  String get collabRoomActionFailed =>
+      'N-a mers. Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
+  String get collabRoomRemovedYou => 'De data asta nu ești în echipă.';
+
+  @override
+  String get collabRoomDeclinedYou => 'Ai refuzat de data asta.';
+
+  @override
+  String get collabRoomPartSent =>
+      'Partea ta a ajuns. Gazda le pune pe toate cap la cap.';
+
+  @override
+  String get collabRoomPartTitle => 'Partea ta';
+
+  @override
+  String get collabRoomPartRendering => 'Îți pregătim partea…';
+
+  @override
+  String get collabRoomPartRenderFailed => 'Partea ta nu a putut fi pregătită.';
+
+  @override
+  String get collabRoomPartSendButton => 'Trimite-mi partea';
+
+  @override
+  String collabRoomPartUploading(String progress) {
+    return 'Îți încărcăm partea… $progress';
+  }
+
+  @override
+  String get collabRoomPartUploaded => 'Încărcată. Gata de trimis.';
+
+  @override
+  String get collabRoomInviteAgain => 'Invită din nou';
+
+  @override
+  String get collabRoomLeaveConfirmTitle => 'Ieși din această cameră?';
+
+  @override
+  String get collabRoomLeaveConfirmBody => 'Doar gazda te poate invita înapoi.';
+
+  @override
+  String get collabRoomPartSendFailed =>
+      'Partea ta nu a putut fi trimisă. Încearcă din nou.';
+
+  @override
+  String get collabRoomLobbyTitle => 'Faceți un video împreună';
+
+  @override
+  String get collabRoomLobbyBody =>
+      'Invită până la 3 prieteni. Fiecare își filmează propria parte și totul se adună într-un singur video cu ecran împărțit.';
+
+  @override
+  String get collabRoomLobbyInvite => 'Invită prieteni';
+
+  @override
+  String get collabRoomInvitePickerTitle => 'Cine intră?';
+
+  @override
+  String get collabRoomLobbyRooms => 'Camerele tale';
+
+  @override
+  String get collabRoomTileHosting => 'Camera ta';
+
+  @override
+  String get collabRoomTileGuest => 'Camera unui prieten';
+
+  @override
+  String get collabRoomPhaseLobby => 'Așteptăm să intre oameni';
+
+  @override
+  String get collabRoomPhaseRecording => 'Se filmează părțile';
+
+  @override
+  String get collabRoomPhaseReady => 'Gata de filmare';
+
+  @override
+  String get collabRoomPhaseWaitingForHost =>
+      'Așteptăm ca gazda să înceapă filmarea';
+
+  @override
+  String get collabRoomPhaseInvited => 'Ai o invitație. Atinge ca să intri.';
+
+  @override
+  String get collabRoomCreateFailed =>
+      'Invitațiile nu au putut fi trimise. Încearcă din nou.';
+
+  @override
+  String get collabRoomInviteCardTitle => 'Hai să facem un video împreună';
+
+  @override
+  String get collabRoomInviteCardBody =>
+      'Intră în cameră și fiecare își filmează propria parte.';
+
+  @override
+  String get collabRoomOpenButton => 'Deschide camera';
+
+  @override
+  String get collabRoomCallMute => 'Dezactivează sunetul';
+
+  @override
+  String get collabRoomCallUnmute => 'Activează sunetul';
+
+  @override
+  String get collabRoomCallCameraOn => 'Pornește camera';
+
+  @override
+  String get collabRoomCallCameraOff => 'Oprește camera';
+
+  @override
+  String get collabRoomCallConnecting => 'Se conectează apelul…';
+
+  @override
+  String get collabRoomCallFailed =>
+      'Apelul nu a putut porni. Verifică dacă Divine îți poate folosi microfonul.';
+
+  @override
+  String get collabRoomCallUnreachable =>
+      'Nu i-am putut contacta pe ceilalți. Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
+  String get collabRoomCallJoin => 'Intră în apel';
+
+  @override
+  String get collabRoomCallCameraFailed => 'Camera nu a putut fi pornită.';
+
+  @override
+  String get collabRoomCallMuted => 'Fără sunet';
+
+  @override
+  String get collabRoomSwapSeatHint =>
+      'Atinge două locuri din aspect ca să le schimbi între ele.';
+
+  @override
+  String get collabRoomSwapSeatSemanticLabel => 'Schimbă acest loc';
 }
