@@ -6,6 +6,7 @@
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
+import 'package:models/src/caption_text_track.dart';
 import 'package:models/src/nip71_video_kinds.dart';
 import 'package:models/src/sound_credit.dart';
 import 'package:models/src/video_attribution.dart';
@@ -715,6 +716,9 @@ class VideoEvent {
           // Subtitle/caption track reference
           // Format: ['text-track', '<coords-or-url>', '<relay>', 'captions',
           //          '<lang>']
+          // Playback falls back through these refs in order, so a chapters
+          // or metadata track must not become one.
+          if (!isCaptionTextTrackType(tag.length > 3 ? tag[3] : null)) break;
           if (tagValue.isNotEmpty) {
             textTrackRefsLocal.add(tagValue);
           }
