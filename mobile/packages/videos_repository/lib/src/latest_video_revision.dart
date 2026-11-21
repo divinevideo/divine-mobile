@@ -10,7 +10,7 @@ sealed class LatestVideoRevision {
   const LatestVideoRevision();
 }
 
-/// Every relay answered, and [event] is the newest signed revision.
+/// The read settled, and [event] is the newest signed revision it returned.
 final class LatestVideoRevisionFound extends LatestVideoRevision {
   /// The newest revision is [event].
   const LatestVideoRevisionFound(this.event);
@@ -19,9 +19,9 @@ final class LatestVideoRevisionFound extends LatestVideoRevision {
   final Event event;
 }
 
-/// Every relay answered and none holds a revision at the address.
+/// The read settled without a signed revision at the address.
 final class LatestVideoRevisionAbsent extends LatestVideoRevision {
-  /// No revision exists at the address.
+  /// No signed revision was returned for the address.
   const LatestVideoRevisionAbsent();
 }
 
