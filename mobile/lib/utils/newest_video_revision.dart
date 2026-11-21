@@ -65,7 +65,7 @@ Future<Event?> newestVideoRevision(
       return null;
     case LatestVideoRevisionAbsent():
       Log.warning(
-        'Not republishing $address: no relay holds a revision of it',
+        'Not republishing $address: no signed revision was returned',
         name: logName,
         category: LogCategory.video,
       );

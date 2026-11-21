@@ -153,7 +153,10 @@ void main() {
 
     for (final (name, revision) in [
       ('no relay answered in full', const LatestVideoRevisionUnknown()),
-      ('no relay holds a revision', const LatestVideoRevisionAbsent()),
+      (
+        'the relays return no signed revision',
+        const LatestVideoRevisionAbsent(),
+      ),
     ]) {
       test('returns null when $name', () async {
         when(
