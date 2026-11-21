@@ -1147,8 +1147,9 @@ class VideoEventPublisher {
     List<String> extraTextTrackRefs = const [],
     String textTrackLang = 'en',
   }) async {
-    final ownsVideo = _authService?.currentPublicKeyHex == existingEvent.pubkey;
-    if (!ownsVideo) {
+    bool ownsVideo() =>
+        _authService?.currentPublicKeyHex == existingEvent.pubkey;
+    if (!ownsVideo()) {
       Log.error(
         'Cannot republish subtitles for video ${existingEvent.id}: '
         "it is not the signed-in account's",
@@ -1156,7 +1157,7 @@ class VideoEventPublisher {
         category: LogCategory.video,
       );
     }
-    final latest = ownsVideo
+    final latest = ownsVideo()
         ? await newestVideoRevision(
             _videosRepositoryGetter?.call(),
             existingEvent,
@@ -1192,6 +1193,7 @@ class VideoEventPublisher {
     updatedTags.addAll(tags);
 
     // Sign the updated event
+    if (!ownsVideo()) return null;
     final event = await _authService?.createAndSignEvent(
       kind: latest.kind,
       content: latest.content,
@@ -1199,7 +1201,7 @@ class VideoEventPublisher {
       createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
     );
 
-    if (event == null) {
+    if (event == null || event.pubkey != existingEvent.pubkey || !ownsVideo()) {
       Log.error(
         'Failed to sign republished event with subtitles',
         name: _logName,
@@ -1216,6 +1218,7 @@ class VideoEventPublisher {
     if (!published) return null;
 
     final updatedVideo = VideoEvent.fromNostrEvent(event, permissive: true);
+    if (!ownsVideo()) return updatedVideo;
 
     try {
       _personalEventCache?.cacheUserEvent(event);
@@ -1264,7 +1267,10 @@ class VideoEventPublisher {
     String lang = 'en',
   }) async {
     final vineId = video.vineId;
-    if (vineId == null || vineId.isEmpty) return null;
+    if (vineId == null ||
+        vineId.isEmpty ||
+        _authService?.currentPublicKeyHex != video.pubkey)
+      return null;
     return publishSubtitleTrack(
       vineId: vineId,
       videoKind: video.referenceKind,
@@ -1313,7 +1319,9 @@ class VideoEventPublisher {
       ],
       createdAt: createdAt,
     );
-    if (event == null) {
+    if (event == null ||
+        event.pubkey != pubkey ||
+        _authService?.currentPublicKeyHex != pubkey) {
       Log.error(
         'Failed to sign subtitle event',
         name: _logName,

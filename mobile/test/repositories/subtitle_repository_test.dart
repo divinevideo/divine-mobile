@@ -175,6 +175,41 @@ void main() {
       },
     );
 
+    test('does not publish the fallback if the account changes after the video save', () async {
+      when(() => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')))
+          .thenAnswer(
+            (_) async => const BlossomUploadResult(
+              success: true,
+              url: 'https://media.divine.video/hash',
+              videoId: 'hash',
+            ),
+          );
+      when(
+        () => publisher.republishWithSubtitles(
+          existingEvent: any(named: 'existingEvent'),
+          textTrackRef: any(named: 'textTrackRef'),
+          extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+          textTrackLang: any(named: 'textTrackLang'),
+        ),
+      ).thenAnswer((_) async {
+        when(() => auth.currentPublicKeyHex).thenReturn('other-account');
+        return _updatedVideo;
+      });
+
+      await expectLater(
+        repo.publishEditedSubtitles(video: _video, cues: _cues),
+        throwsA(isA<SubtitleEditException>()),
+      );
+      verifyNever(
+        () => publisher.publishSubtitleEvent(
+          video: any(named: 'video'),
+          vttContent: any(named: 'vttContent'),
+          blossomUrl: any(named: 'blossomUrl'),
+          lang: any(named: 'lang'),
+        ),
+      );
+    });
+
     test('uploads VTT, republishes the video with both refs, then publishes '
         '39307', () async {
       when(
