@@ -4755,6 +4755,30 @@ void main() {
         });
 
         test(
+          'stale Watch Start leaves a running stop-motion interval alone',
+          () async {
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+            // The loop runs between stills: nothing is in flight and the
+            // recording state is idle, so only the active shutter tells a
+            // Start from a Watch that has not seen the loop yet.
+            bloc.emit(
+              bloc.state.copyWith(
+                recorderMode: VideoRecorderMode.stopMotion,
+                isIntervalCaptureRunning: true,
+              ),
+            );
+
+            trigger!(RemoteRecordTrigger.watchStart);
+            await pumpEventQueue();
+
+            expect(bloc.state.isIntervalCaptureRunning, isTrue);
+          },
+        );
+
+        test(
           'reenables remote triggers after reinitializing a failed preview',
           () async {
             final bloc = buildBloc();
