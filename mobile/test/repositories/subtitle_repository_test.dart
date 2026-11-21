@@ -375,9 +375,19 @@ void main() {
             ),
             track(
               'https://media.divine.video/replacement.vtt',
-              'captions',
+              ' Captions ',
               'pt-BR',
             ),
+          ]),
+          'pt-BR',
+        );
+      });
+
+      test('ignores a chapter tag sharing the selected caption ref', () async {
+        expect(
+          await savedLanguage(openedFromCache, [
+            track(portuguese, 'chapters', 'pt-PT'),
+            track(portuguese, 'captions', 'pt-BR'),
           ]),
           'pt-BR',
         );

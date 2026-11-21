@@ -1232,11 +1232,10 @@ class VideoEventPublisher {
     required String lang,
     required List<String> editedRefs,
   }) {
-    final type = tag.length > 3 ? tag[3] : '';
     final trackLang = tag.length > 4 ? tag[4].trim().toLowerCase() : '';
     return tag.first == 'text-track' &&
         ((tag.length > 1 && editedRefs.contains(tag[1])) ||
-            ((type.isEmpty || type == 'captions' || type == 'subtitles') &&
+            (isCaptionTextTrackType(tag.length > 3 ? tag[3] : null) &&
                 (trackLang.isEmpty || trackLang == lang.trim().toLowerCase())));
   }
 
