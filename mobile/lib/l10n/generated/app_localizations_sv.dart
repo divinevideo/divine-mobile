@@ -4467,6 +4467,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Relät accepterade inte ändringen. Försök igen om en stund.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Videon har ändrats på en annan enhet och har nu för många taggar eller samarbetspartner. Öppna den igen och ta bort några.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Kunde inte uppdatera videon. Försök igen.';
 

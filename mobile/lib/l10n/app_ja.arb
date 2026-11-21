@@ -1535,6 +1535,7 @@
   "videoUpdateErrorNoPlayableVideo": "この動画には再生できるソースがないから、編集できない。",
   "videoUpdateErrorCouldNotSign": "更新に署名できなかった。もう一回試してみて。",
   "videoUpdateErrorPublishRejected": "リレーが更新を受け付けなかった。少ししてからもう一回試してみて。",
+  "videoUpdateErrorConcurrentEditsOverLimit": "この動画は別のデバイスで変更され、タグまたはコラボレーターが多すぎます。もう一度開いて、いくつか削除してください。",
   "videoUpdateErrorGeneric": "この動画を更新できなかった。もう一回試してみて。",
   "shareMenuDeleteVideoQuestion": "動画を削除する?",
   "shareMenuDeleteCleanupInProgress": "動画を削除しています…",

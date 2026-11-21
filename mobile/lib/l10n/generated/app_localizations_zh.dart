@@ -4176,6 +4176,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoUpdateErrorPublishRejected => '中继未接受此次更新，请稍后重试。';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '这个视频在另一台设备上被修改了，现在标签或协作者太多了。重新打开它，删掉一些吧。';
+
+  @override
   String get videoUpdateErrorGeneric => '无法更新这个视频，请重试。';
 
   @override

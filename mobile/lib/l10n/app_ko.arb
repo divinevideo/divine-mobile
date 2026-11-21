@@ -1081,6 +1081,7 @@
   "videoUpdateErrorNoPlayableVideo": "이 영상에는 재생 가능한 소스가 없어서 수정할 수 없어요.",
   "videoUpdateErrorCouldNotSign": "업데이트에 서명하지 못했어요. 다시 시도해보세요.",
   "videoUpdateErrorPublishRejected": "릴레이가 업데이트를 받지 않았어요. 잠시 후 다시 시도해보세요.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "이 영상이 다른 기기에서 변경되어 태그나 콜라보레이터가 너무 많아요. 다시 열어서 몇 개를 지워 주세요.",
   "videoUpdateErrorGeneric": "이 영상을 업데이트하지 못했어요. 다시 시도해보세요.",
   "shareMenuDeleteVideoQuestion": "영상을 삭제할까요?",
   "shareMenuDeleteCleanupInProgress": "영상을 삭제하는 중…",

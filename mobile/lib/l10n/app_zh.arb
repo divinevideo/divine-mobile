@@ -2151,6 +2151,7 @@
   "videoUpdateErrorNoPlayableVideo": "这个视频没有可播放的源，无法编辑。",
   "videoUpdateErrorCouldNotSign": "更新签名失败，请重试。",
   "videoUpdateErrorPublishRejected": "中继未接受此次更新，请稍后重试。",
+  "videoUpdateErrorConcurrentEditsOverLimit": "这个视频在另一台设备上被修改了，现在标签或协作者太多了。重新打开它，删掉一些吧。",
   "videoUpdateErrorGeneric": "无法更新这个视频，请重试。",
   "shareMenuDeleteVideoQuestion": "删除视频？",
   "shareMenuDeleteCleanupInProgress": "正在移除视频…",

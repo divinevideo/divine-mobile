@@ -4486,6 +4486,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'De relay accepteerde de wijziging niet. Probeer het zo nog eens.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Deze video is op een ander apparaat gewijzigd en heeft nu te veel tags of samenwerkers. Open hem opnieuw en verwijder er een paar.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Deze video kon niet bijgewerkt worden. Probeer het opnieuw.';
 

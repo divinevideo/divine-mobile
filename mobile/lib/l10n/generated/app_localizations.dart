@@ -7495,6 +7495,12 @@ abstract class AppLocalizations {
   /// **'The relay wouldn\'t accept the update. Try again in a moment.'**
   String get videoUpdateErrorPublishRejected;
 
+  /// Shown when saving video details fails because this device's edit and another device's edit together go over the hashtag or collaborator limit. Saving the same edit again fails the same way; reopening the video loads the other device's changes.
+  ///
+  /// In en, this message translates to:
+  /// **'This video changed on another device and now has too many tags or collaborators. Open it again and remove some.'**
+  String get videoUpdateErrorConcurrentEditsOverLimit;
+
   /// No description provided for @videoUpdateErrorGeneric.
   ///
   /// In en, this message translates to:

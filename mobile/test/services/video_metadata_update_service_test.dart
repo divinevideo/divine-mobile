@@ -995,7 +995,14 @@ void main() {
             initialCollaboratorPubkeys: const {},
           );
 
-          expect(result, isA<VideoUpdateFailure>());
+          expect(
+            result,
+            isA<VideoUpdateFailure>().having(
+              (failure) => failure.reason,
+              'reason',
+              VideoMetadataUpdateError.concurrentEditsOverLimit,
+            ),
+          );
           verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
         },
       );
@@ -1025,7 +1032,14 @@ void main() {
           initialCollaboratorPubkeys: const {},
         );
 
-        expect(result, isA<VideoUpdateFailure>());
+        expect(
+          result,
+          isA<VideoUpdateFailure>().having(
+            (failure) => failure.reason,
+            'reason',
+            VideoMetadataUpdateError.concurrentEditsOverLimit,
+          ),
+        );
         verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
       });
 

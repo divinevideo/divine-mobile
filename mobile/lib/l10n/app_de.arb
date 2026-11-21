@@ -1545,6 +1545,7 @@
   "videoUpdateErrorNoPlayableVideo": "Dieses Video hat keine abspielbare Quelle und kann nicht bearbeitet werden.",
   "videoUpdateErrorCouldNotSign": "Die Änderung konnte nicht signiert werden. Versuch es nochmal.",
   "videoUpdateErrorPublishRejected": "Das Relay hat die Änderung nicht angenommen. Versuch es gleich nochmal.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Dieses Video wurde auf einem anderen Gerät geändert und hat jetzt zu viele Tags oder Mitwirkende. Öffne es noch mal und entferne ein paar.",
   "videoUpdateErrorGeneric": "Dieses Video konnte nicht aktualisiert werden. Versuch es nochmal.",
   "shareMenuDeleteVideoQuestion": "Video löschen?",
   "shareMenuDeleteCleanupInProgress": "Video wird entfernt…",

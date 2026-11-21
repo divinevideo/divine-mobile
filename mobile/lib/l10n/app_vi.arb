@@ -2151,6 +2151,7 @@
   "videoUpdateErrorNoPlayableVideo": "Video này không có nguồn phát được nên không thể chỉnh sửa.",
   "videoUpdateErrorCouldNotSign": "Không ký được bản cập nhật. Thử lại nhé.",
   "videoUpdateErrorPublishRejected": "Relay không chấp nhận bản cập nhật. Thử lại sau giây lát.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Video này đã thay đổi trên thiết bị khác và giờ có quá nhiều thẻ hoặc cộng tác viên. Mở lại rồi xoá bớt nhé.",
   "videoUpdateErrorGeneric": "Không cập nhật được video này. Thử lại nhé.",
   "shareMenuDeleteVideoQuestion": "Xóa video?",
   "shareMenuDeleteCleanupInProgress": "Đang xóa video…",

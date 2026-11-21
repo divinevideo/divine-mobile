@@ -4475,6 +4475,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ریلے نے اپ ڈیٹ قبول نہیں کی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'یہ ویڈیو کسی دوسرے ڈیوائس پر بدلی گئی ہے اور اب اس میں بہت زیادہ ٹیگز یا شریک کار ہیں۔ اسے دوبارہ کھولیں اور کچھ ہٹا دیں۔';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'اس ویڈیو کو اپ ڈیٹ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
 

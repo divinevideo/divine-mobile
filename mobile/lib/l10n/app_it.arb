@@ -1545,6 +1545,7 @@
   "videoUpdateErrorNoPlayableVideo": "Questo video non ha una sorgente riproducibile, quindi non può essere modificato.",
   "videoUpdateErrorCouldNotSign": "Impossibile firmare la modifica. Riprova.",
   "videoUpdateErrorPublishRejected": "Il relay non ha accettato la modifica. Riprova tra poco.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Questo video è stato modificato su un altro dispositivo e ora ha troppi tag o troppe persone che collaborano. Riaprilo e fai un po' di pulizia.",
   "videoUpdateErrorGeneric": "Impossibile aggiornare questo video. Riprova.",
   "shareMenuDeleteVideoQuestion": "Eliminare il video?",
   "shareMenuDeleteCleanupInProgress": "Rimozione del video…",

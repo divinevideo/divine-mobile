@@ -4524,6 +4524,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Релето не прие промяната. Опитай пак след малко.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Това видео е променено на друго устройство и вече има твърде много етикети или хора, които сътрудничат. Отвори го отново и махни някои.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Това видео не можа да бъде обновено. Опитай пак.';
 

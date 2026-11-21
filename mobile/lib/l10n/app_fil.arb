@@ -1164,6 +1164,7 @@
   "videoUpdateErrorNoPlayableVideo": "Walang mapa-play na source ang video na ito, kaya hindi ito ma-edit.",
   "videoUpdateErrorCouldNotSign": "Hindi na-sign ang update. Subukan ulit.",
   "videoUpdateErrorPublishRejected": "Hindi tinanggap ng relay ang update. Subukan ulit maya-maya.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Nabago ang video na ito sa ibang device at sobrang dami na ng tag o collaborator nito. Buksan ulit at magtanggal ng ilan.",
   "videoUpdateErrorGeneric": "Hindi na-update ang video na ito. Subukan ulit.",
   "shareMenuDeleteVideoQuestion": "Burahin ang Video?",
   "shareMenuDeleteCleanupInProgress": "Inaalis ang video…",

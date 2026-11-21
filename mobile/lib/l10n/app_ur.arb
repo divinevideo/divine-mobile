@@ -2151,6 +2151,7 @@
   "videoUpdateErrorNoPlayableVideo": "اس ویڈیو کا کوئی قابلِ چلاؤ ماخذ نہیں، اس لیے اسے ایڈٹ نہیں کیا جا سکتا۔",
   "videoUpdateErrorCouldNotSign": "اپ ڈیٹ پر دستخط نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
   "videoUpdateErrorPublishRejected": "ریلے نے اپ ڈیٹ قبول نہیں کی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+  "videoUpdateErrorConcurrentEditsOverLimit": "یہ ویڈیو کسی دوسرے ڈیوائس پر بدلی گئی ہے اور اب اس میں بہت زیادہ ٹیگز یا شریک کار ہیں۔ اسے دوبارہ کھولیں اور کچھ ہٹا دیں۔",
   "videoUpdateErrorGeneric": "اس ویڈیو کو اپ ڈیٹ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
   "shareMenuDeleteVideoQuestion": "ویڈیو حذف کریں؟",
   "shareMenuDeleteCleanupInProgress": "ویڈیو ہٹائی جا رہی ہے…",

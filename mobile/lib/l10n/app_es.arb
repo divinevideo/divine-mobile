@@ -1549,6 +1549,7 @@
   "videoUpdateErrorNoPlayableVideo": "Este video no tiene una fuente reproducible, así que no se puede editar.",
   "videoUpdateErrorCouldNotSign": "No se pudo firmar la actualización. Probá de nuevo.",
   "videoUpdateErrorPublishRejected": "El relay no aceptó la actualización. Probá de nuevo en un momento.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Este video cambió en otro dispositivo y ahora tiene demasiadas etiquetas o personas que colaboran. Abrilo de nuevo y sacá algunas.",
   "videoUpdateErrorGeneric": "No se pudo actualizar este video. Probá de nuevo.",
   "shareMenuDeleteVideoQuestion": "¿Eliminar video?",
   "shareMenuDeleteCleanupInProgress": "Eliminando video…",
