@@ -79,6 +79,56 @@ class ZendeskCreateTicketErrorDetailsTest {
     }
 
     @Test
+    fun `names the identity type the SDK app expects`() {
+        // An anonymous identity on an app set up for JWT: retrying with another
+        // anonymous identity cannot succeed, so Dart must set a JWT one.
+        val details = zendeskCreateTicketErrorDetails(
+            errorResponse(
+                "The expected type of authentication is jwt. " +
+                    "The local identity is present.\nThe local identity is anonymous.",
+                400,
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "status" to 400,
+                "networkError" to false,
+                "authFailed" to true,
+                "expectedAuth" to "jwt",
+            ),
+            details,
+        )
+    }
+
+    @Test
+    fun `names an anonymous app when it refuses a JWT identity`() {
+        val details = zendeskCreateTicketErrorDetails(
+            errorResponse(
+                "The expected type of authentication is anonymous. " +
+                    "The local identity is present.\nThe local identity is jwt.",
+                400,
+            ),
+        )
+
+        assertEquals("anonymous", details["expectedAuth"])
+    }
+
+    @Test
+    fun `names no type when the SDK settings were never downloaded`() {
+        val details = zendeskCreateTicketErrorDetails(
+            errorResponse(
+                "The expected type of authentication is null. " +
+                    "Check that settings have been downloaded.",
+                400,
+            ),
+        )
+
+        assertEquals(true, details["authFailed"])
+        assertEquals(false, details.containsKey("expectedAuth"))
+    }
+
+    @Test
     fun `flags a 401 as an auth failure`() {
         val details = zendeskCreateTicketErrorDetails(errorResponse("401", 401))
 

@@ -638,6 +638,15 @@ class MainActivity : FlutterFragmentActivity() {
                     try {
                         Log.d(ZENDESK_TAG, "Creating ticket programmatically - subject: $subject")
 
+                        // `Support.provider()` is also null when the SDK holds no
+                        // identity, which it discards after a 401 or an identity of
+                        // the wrong type. Dart can set one and retry; it cannot
+                        // initialize an SDK that is already initialized.
+                        if (Zendesk.INSTANCE.identity == null) {
+                            result.error("NO_IDENTITY", "Set an identity before creating a ticket", null)
+                            return@setMethodCallHandler
+                        }
+
                         // Get RequestProvider from Support SDK
                         val providerStore = Support.INSTANCE.provider()
                         if (providerStore == null) {
@@ -878,6 +887,12 @@ private val zendeskAuthFailureMarkers = listOf(
 private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER =
     "response was null, failed to auth user"
 
+// An identity whose type differs from the one the Zendesk SDK app is set up
+// for is refused with this message, and the SDK clears its stored identity and
+// settings before answering. It names the type the app expects.
+private val zendeskExpectedAuthPattern =
+    Regex("expected type of authentication is (jwt|anonymous)\\.", RegexOption.IGNORE_CASE)
+
 /**
  * The `details` of the `CREATE_FAILED` error that `createTicket` raises when
  * the Zendesk SDK rejects a ticket.
@@ -885,7 +900,9 @@ private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER =
  * `status` is the HTTP status, or -1 when no response arrived; `networkError`
  * marks an I/O failure, including one while exchanging the token; `authFailed`
  * marks a failure to authenticate the current identity, which Dart retries
- * with another identity.
+ * with another identity. `expectedAuth`, `jwt` or `anonymous`, is present only
+ * when the SDK refused an identity of the wrong type, and names the type Dart
+ * must set for the retry to have any chance.
  */
 // `isNetworkError` is deprecated with no replacement on the interface, and
 // `!isHttpError` would also count an unparseable response as offline.
@@ -897,9 +914,11 @@ internal fun zendeskCreateTicketErrorDetails(error: ErrorResponse?): Map<String,
         reason.contains(ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER, ignoreCase = true)
     val authFailed = !offlineDuringTokenExchange &&
         (status == 401 || zendeskAuthFailureMarkers.any { reason.contains(it, ignoreCase = true) })
-    return mapOf(
-        "status" to status,
-        "networkError" to (error?.isNetworkError == true || offlineDuringTokenExchange),
-        "authFailed" to authFailed,
-    )
+    val expectedAuth = zendeskExpectedAuthPattern.find(reason)?.groupValues?.get(1)?.lowercase()
+    return buildMap {
+        put("status", status)
+        put("networkError", error?.isNetworkError == true || offlineDuringTokenExchange)
+        put("authFailed", authFailed)
+        if (expectedAuth != null) put("expectedAuth", expectedAuth)
+    }
 }

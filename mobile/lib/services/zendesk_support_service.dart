@@ -24,6 +24,21 @@ class ZendeskAttachmentUploadException implements Exception {
   const ZendeskAttachmentUploadException();
 }
 
+/// How a request to create a ticket ended.
+enum ZendeskTicketOutcome {
+  /// Zendesk accepted the ticket.
+  created,
+
+  /// No ticket was created, but a later attempt can succeed: the device was
+  /// offline, the server failed or throttled the request, the SDK was not
+  /// ready, or it could not authenticate the identity it held.
+  failed,
+
+  /// Zendesk refused the ticket itself with an HTTP 4xx other than 401, 408
+  /// or 429. Sending the same ticket again gets the same answer.
+  rejected,
+}
+
 /// Service for interacting with Zendesk Support SDK
 class ZendeskSupportService {
   static const MethodChannel _channel = MethodChannel(
@@ -247,6 +262,9 @@ class ZendeskSupportService {
         'name': _userName,
         'email': _userEmail,
       });
+      // The SDK no longer holds the last JWT, so the next action must set one
+      // again rather than reuse it.
+      _lastJwtRefreshAt = null;
       Log.info(
         'Zendesk SDK: anonymous identity set with user info',
         category: LogCategory.system,
@@ -290,6 +308,7 @@ class ZendeskSupportService {
     if (!_initialized) return false;
     try {
       await _channel.invokeMethod('setAnonymousIdentity');
+      _lastJwtRefreshAt = null;
       Log.info(
         'Zendesk anonymous identity set',
         category: LogCategory.system,
@@ -332,17 +351,19 @@ class ZendeskSupportService {
 
   /// Refresh JWT identity before an SDK action.
   /// Gets a fresh pre-auth token and sets it as the SDK identity.
-  /// Reuses a recent successful refresh to avoid redundant network work.
+  /// Reuses a recent successful refresh to avoid redundant network work,
+  /// unless [force] is set because the SDK refused or dropped that identity.
   /// No-op if auth context is not stored or SDK not initialized.
   /// Returns true if identity is fresh or refreshed, false if skipped/failed.
-  static Future<bool> _ensureFreshJwt() async {
+  static Future<bool> _ensureFreshJwt({bool force = false}) async {
     if (!_initialized || _nip98Service == null || _relayManagerUrl == null) {
       return false;
     }
 
     final lastJwtRefreshAt = _lastJwtRefreshAt;
     final now = _now();
-    if (lastJwtRefreshAt != null &&
+    if (!force &&
+        lastJwtRefreshAt != null &&
         now.difference(lastJwtRefreshAt) < _jwtRefreshReuseWindow) {
       Log.debug(
         'Zendesk JWT refresh skipped - recent token still fresh',
@@ -653,7 +674,9 @@ class ZendeskSupportService {
   ///
   /// Creates a support ticket silently in the background without showing any UI.
   /// Useful for automatic content reporting or system-generated tickets.
-  /// Returns true if ticket created successfully, false otherwise.
+  /// Returns true if ticket created successfully, false otherwise. Callers
+  /// that retry a failed ticket use [createTicketWithOutcome], which also says
+  /// whether retrying can help.
   ///
   /// Platform support:
   /// - iOS: Full support via RequestProvider API (with custom fields)
@@ -670,49 +693,78 @@ class ZendeskSupportService {
     List<String>? attachmentPaths,
     String? externalId,
     String? expectedNpub,
+  }) async =>
+      await createTicketWithOutcome(
+        subject: subject,
+        description: description,
+        tags: tags,
+        ticketFormId: ticketFormId,
+        customFields: customFields,
+        attachmentPaths: attachmentPaths,
+        externalId: externalId,
+        expectedNpub: expectedNpub,
+      ) ==
+      ZendeskTicketOutcome.created;
+
+  /// Creates a ticket like [createTicket] and says how the attempt ended, so a
+  /// caller that retries can stop once Zendesk has refused the ticket itself.
+  ///
+  /// Throws [ZendeskAttachmentUploadException] if an attachment could not be
+  /// uploaded.
+  static Future<ZendeskTicketOutcome> createTicketWithOutcome({
+    required String subject,
+    required String description,
+    List<String>? tags,
+    int? ticketFormId,
+    List<Map<String, dynamic>>? customFields,
+    List<String>? attachmentPaths,
+    String? externalId,
+    String? expectedNpub,
   }) async {
+    const failed = ZendeskTicketOutcome.failed;
     final generation = _identityGeneration;
     bool ownsTicket() =>
         generation == _identityGeneration &&
         (expectedNpub == null || expectedNpub == _userNpub);
-    if (!ownsTicket()) return false;
+    if (!ownsTicket()) return failed;
     await _awaitInitialization();
-    if (!ownsTicket()) return false;
+    if (!ownsTicket()) return failed;
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot create ticket',
         category: LogCategory.system,
       );
-      return false;
+      return failed;
     }
 
     // Refresh the JWT before the SDK action. The pre-auth token has a 5-minute
     // TTL and a refresh is reused for 4 minutes, so an older token is replaced
     // here.
     await _ensureFreshJwt();
-    if (!ownsTicket()) return false;
+    if (!ownsTicket()) return failed;
 
     final sanitizedSubject = sanitizeDiagnosticText(subject);
     final sanitizedDescription = sanitizeDiagnosticText(description);
     final sanitizedCustomFields = _sanitizeCustomFields(customFields);
+    final arguments = {
+      'subject': sanitizedSubject,
+      'description': sanitizedDescription,
+      'tags': tags ?? [],
+      'ticketFormId': ?ticketFormId,
+      if (sanitizedCustomFields != null && sanitizedCustomFields.isNotEmpty)
+        'customFields': sanitizedCustomFields,
+      if (attachmentPaths != null && attachmentPaths.isNotEmpty)
+        'attachmentPaths': attachmentPaths,
+    };
     try {
-      final result = await _channel.invokeMethod('createTicket', {
-        'subject': sanitizedSubject,
-        'description': sanitizedDescription,
-        'tags': tags ?? [],
-        'ticketFormId': ?ticketFormId,
-        if (sanitizedCustomFields != null && sanitizedCustomFields.isNotEmpty)
-          'customFields': sanitizedCustomFields,
-        if (attachmentPaths != null && attachmentPaths.isNotEmpty)
-          'attachmentPaths': attachmentPaths,
-      });
+      final result = await _channel.invokeMethod('createTicket', arguments);
 
       if (result == true) {
         Log.info(
           'Zendesk ticket created successfully: $sanitizedSubject',
           category: LogCategory.system,
         );
-        return true;
+        return ZendeskTicketOutcome.created;
       } else {
         Log.warning(
           'Failed to create Zendesk ticket: $sanitizedSubject',
@@ -728,26 +780,28 @@ class ZendeskSupportService {
             reason: 'zendesk_sdk_returned_false',
           ),
         );
-        return false;
+        return failed;
       }
     } on MissingPluginException {
-      if (!ownsTicket()) return false;
+      if (!ownsTicket()) return failed;
       // Native SDK not available (macOS, Windows, Web)
       // Fall back to REST API
       Log.info(
         'Native createTicket not available, falling back to REST API',
         category: LogCategory.system,
       );
-      return createTicketViaApi(
-        subject: sanitizedSubject,
-        description: sanitizedDescription,
-        requesterName: _userName,
-        requesterEmail: _userEmail,
-        tags: tags,
-        externalId: externalId,
-      );
+      return await createTicketViaApi(
+            subject: sanitizedSubject,
+            description: sanitizedDescription,
+            requesterName: _userName,
+            requesterEmail: _userEmail,
+            tags: tags,
+            externalId: externalId,
+          )
+          ? ZendeskTicketOutcome.created
+          : failed;
     } on PlatformException catch (e) {
-      if (!ownsTicket()) return false;
+      if (!ownsTicket()) return failed;
       if (e.code == 'UPLOAD_FAILED') {
         Log.error(
           'Zendesk attachment upload failed: ${e.message}',
@@ -764,68 +818,73 @@ class ZendeskSupportService {
       // The error a report names; the retry's own when it fails differently.
       var reportedError = e;
 
-      // The SDK can fail to authenticate when, for example, the JWT refresh
-      // before this call failed or was skipped and the token lapsed. Fall back
-      // to the anonymous identity (it already has name/email from login) and
-      // retry before the REST API. No ticket exists after an authentication
-      // failure, so the retry cannot file a duplicate.
-      if (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e)) {
+      // The SDK holds no identity, or one it could not authenticate: the JWT
+      // refresh before this call failed or was skipped, or the token lapsed.
+      // After a 401 or an identity of the wrong type the SDK has also thrown
+      // away the identity it held, so the next attempt must not trust the
+      // refresh-reuse window. No ticket exists after either failure, so the
+      // retry cannot file a duplicate.
+      if (_needsAnotherIdentity(e)) {
+        _lastJwtRefreshAt = null;
         Log.info(
-          '🔄 Zendesk SDK could not authenticate, retrying with anonymous '
-          'identity',
+          '🔄 Zendesk SDK needs another identity (${e.code}), retrying',
           category: LogCategory.system,
         );
         try {
-          final anonymousSet = await setAnonymousIdentityWithUserInfo();
-          if (!ownsTicket()) return false;
-          if (anonymousSet) {
-            final retryResult = await _channel.invokeMethod('createTicket', {
-              'subject': sanitizedSubject,
-              'description': sanitizedDescription,
-              'tags': tags ?? [],
-              'ticketFormId': ?ticketFormId,
-              if (sanitizedCustomFields != null &&
-                  sanitizedCustomFields.isNotEmpty)
-                'customFields': sanitizedCustomFields,
-              if (attachmentPaths != null && attachmentPaths.isNotEmpty)
-                'attachmentPaths': attachmentPaths,
-            });
+          final identitySet = await _setIdentityForRetry(e);
+          if (!ownsTicket()) return failed;
+          if (identitySet) {
+            final retryResult = await _channel.invokeMethod(
+              'createTicket',
+              arguments,
+            );
             if (retryResult == true) {
               Log.info(
-                'Zendesk ticket created on retry with anonymous identity',
+                'Zendesk ticket created on retry with a new identity',
                 category: LogCategory.system,
               );
-              return true;
+              return ZendeskTicketOutcome.created;
             }
+            Log.warning(
+              'Zendesk retry did not create the ticket',
+              category: LogCategory.system,
+            );
+          } else {
+            Log.warning(
+              'Zendesk retry skipped: no identity the SDK accepts could be set',
+              category: LogCategory.system,
+            );
           }
         } catch (retryError) {
           Log.warning(
-            'Anonymous identity retry also failed: $retryError',
+            'Zendesk identity retry also failed: $retryError',
             category: LogCategory.system,
           );
           if (retryError is PlatformException) reportedError = retryError;
         }
       }
 
-      if (!ownsTicket()) return false;
+      if (!ownsTicket()) return failed;
       // Release builds ship no REST API token, so there the SDK was the only
       // way to deliver this ticket.
       if (!ZendeskConfig.isRestApiConfigured) {
         _reportNativeTicketFailure(reportedError);
-        return false;
+        return _outcomeOf(reportedError);
       }
       Log.info(
         '🔄 Falling back to REST API after SDK error',
         category: LogCategory.system,
       );
-      return createTicketViaApi(
-        subject: sanitizedSubject,
-        description: sanitizedDescription,
-        requesterName: _userName,
-        requesterEmail: _userEmail,
-        tags: tags,
-        externalId: externalId,
-      );
+      return await createTicketViaApi(
+            subject: sanitizedSubject,
+            description: sanitizedDescription,
+            requesterName: _userName,
+            requesterEmail: _userEmail,
+            tags: tags,
+            externalId: externalId,
+          )
+          ? ZendeskTicketOutcome.created
+          : failed;
     } catch (e, stackTrace) {
       Log.error(
         'Unexpected error creating Zendesk ticket: $e',
@@ -839,7 +898,7 @@ class ZendeskSupportService {
           reason: 'zendesk_ticket_unexpected_error',
         ),
       );
-      return false;
+      return failed;
     }
   }
 
@@ -853,6 +912,56 @@ class ZendeskSupportService {
     final details = e.details;
     if (details is Map && details['authFailed'] == true) return true;
     return e.message?.toLowerCase().contains('unauthorized') ?? false;
+  }
+
+  /// Whether a native `createTicket` failure can succeed with another
+  /// identity: Android found none on the SDK, or the SDK could not
+  /// authenticate the one it had.
+  static bool _needsAnotherIdentity(PlatformException e) =>
+      e.code == 'NO_IDENTITY' ||
+      (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e));
+
+  /// Sets the identity a retry after [e] needs, and returns whether one was
+  /// set.
+  ///
+  /// Divine's SDK app authenticates with JWT (#1294). There the SDK refuses an
+  /// anonymous identity and then discards everything it stored, so a fresh
+  /// JWT comes first. The anonymous identity with the user's name and email is
+  /// used when the SDK says it expects one, or when no JWT can be set and the
+  /// SDK has not said it expects JWT (iOS never says).
+  static Future<bool> _setIdentityForRetry(PlatformException e) async {
+    final details = e.details;
+    final expectedAuth = details is Map ? details['expectedAuth'] : null;
+    if (expectedAuth == 'anonymous') return setAnonymousIdentityWithUserInfo();
+    if (await _ensureFreshJwt(force: true)) return true;
+    if (expectedAuth == 'jwt') return false;
+    return setAnonymousIdentityWithUserInfo();
+  }
+
+  /// HTTP 4xx statuses that do not mean Zendesk refused the ticket: an
+  /// identity to authenticate again, a timeout, and throttling.
+  static const Set<int> _retryableClientErrorStatuses = {401, 408, 429};
+
+  /// Whether a ticket the native SDK failed to create can succeed later.
+  ///
+  /// The Android SDK answers a failed authentication with a synthetic 400, so
+  /// a 400 counts as a refusal only when it is not flagged as an auth or
+  /// network failure.
+  static ZendeskTicketOutcome _outcomeOf(PlatformException e) {
+    final details = e.details;
+    if (details is! Map ||
+        details['networkError'] == true ||
+        details['authFailed'] == true) {
+      return ZendeskTicketOutcome.failed;
+    }
+    final status = details['status'];
+    if (status is int &&
+        status >= 400 &&
+        status < 500 &&
+        !_retryableClientErrorStatuses.contains(status)) {
+      return ZendeskTicketOutcome.rejected;
+    }
+    return ZendeskTicketOutcome.failed;
   }
 
   /// Reports a ticket the native SDK failed to create when nothing else can
