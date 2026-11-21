@@ -358,6 +358,17 @@ void main() {
       expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
     });
 
+    testWidgets('leaves out the reply visibility toggle when not a reply', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.videoMetadataShareReplyToFeedTitle), findsNothing);
+    });
+
     testWidgets("audio reuse toggle is shown for the user's own audio", (
       tester,
     ) async {
