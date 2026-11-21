@@ -310,16 +310,18 @@ void main() {
       expect(published, hasLength(1));
     });
 
-    test('reports the recorder closed on the Upload tab', () {
-      stubClips(total: Duration.zero);
-      final bloc = buildBloc()
-        ..emit(openRecorder)
-        ..emit(openRecorder.copyWith(recorderMode: VideoRecorderMode.upload));
-      addTearDown(bloc.close);
+    for (final mode in [VideoRecorderMode.upload, VideoRecorderMode.together]) {
+      test('reports the recorder closed on the ${mode.name} tab', () {
+        stubClips(total: Duration.zero);
+        final bloc = buildBloc()
+          ..emit(openRecorder)
+          ..emit(openRecorder.copyWith(recorderMode: mode));
+        addTearDown(bloc.close);
 
-      expect(published, hasLength(2));
-      expect(published.last, isNull);
-    });
+        expect(published, hasLength(2));
+        expect(published.last, isNull);
+      });
+    }
 
     test(
       'reports shutter availability when a sheet opens and closes',

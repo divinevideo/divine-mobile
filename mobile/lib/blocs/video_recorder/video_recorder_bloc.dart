@@ -505,7 +505,7 @@ class VideoRecorderBloc
   /// what was last published.
   ///
   /// The recorder counts as closed while it has no live preview to trigger:
-  /// before the camera is up, on the Upload tab, while a sheet pauses remote
+  /// before the camera is up, on a tab without a preview, while a sheet pauses remote
   /// recording, and once navigation has locked recording. It also counts as
   /// closed while a sound is selected, because remote presses are ignored
   /// then and the Watch should not show a shutter that does nothing.
@@ -520,7 +520,7 @@ class VideoRecorderBloc
         !recorder.isRemoteRecordPaused &&
         !_remoteRecordPausedForSound &&
         !recorder.recordingLockedForNavigation &&
-        recorder.recorderMode != VideoRecorderMode.upload;
+        recorder.recorderMode.recordsVideo;
     RemoteRecorderState? remote;
     Object? signature;
     if (isOpen) {
@@ -795,7 +795,7 @@ class VideoRecorderBloc
       );
     }
 
-    // Opening straight into Upload: the screen's pause for that tab arrived
+    // Opening straight into Upload or Together: the screen's pause arrived
     // while the camera was still starting and was dropped, so release it now.
     if (!state.recorderMode.recordsVideo) {
       await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
@@ -803,7 +803,7 @@ class VideoRecorderBloc
 
     await _setupRemoteRecordControl();
     if (_isAppForeground &&
-        state.recorderMode != VideoRecorderMode.upload &&
+        state.recorderMode.recordsVideo &&
         lifecycleRevision == _lifecycleRevision &&
         !_isClosing) {
       _remotePreviewReady = true;
@@ -836,9 +836,9 @@ class VideoRecorderBloc
     if (resumed && !_isAppForeground) return;
     _remotePreviewReady = false;
     _syncRemoteRecorder(state);
-    // Upload intentionally keeps the preview paused. Track the foreground
+    // Tabs without a camera intentionally keep it paused. Track the foreground
     // transition anyway so switching back to a capture tab enables the remote.
-    if (resumed && state.recorderMode == VideoRecorderMode.upload) return;
+    if (resumed && !state.recorderMode.recordsVideo) return;
     // The camera goes with the app, so the loop would only tick on into
     // captures that fail.
     if (event.state != AppLifecycleState.resumed) _stopIntervalCapture(emit);
@@ -854,7 +854,7 @@ class VideoRecorderBloc
       if (!resumed || revision != _lifecycleRevision || _isClosing) return;
       // A camera that does not come back would leave a black preview. Show
       // the initialization error instead; the next initialize (leaving and
-      // returning to the Upload tab, or reopening the recorder) recovers.
+      // and returning from a non-recording tab, or reopening) recovers.
       emit(
         state.copyWith(
           isCameraInitialized: false,
@@ -865,7 +865,7 @@ class VideoRecorderBloc
       return;
     }
 
-    // Leaving the Upload tab resumes the camera it paused, into whichever
+    // Leaving a non-recording tab resumes the camera it paused, into whichever
     // mode the user switched to meanwhile.
     if (resumed && revision == _lifecycleRevision && !_isClosing) {
       await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
@@ -3512,7 +3512,7 @@ class VideoRecorderBloc
     // native volume and media handlers.
     if (!_remotePreviewReady || state.isRemoteRecordPaused) return;
 
-    // The Upload tab pauses the camera and shows no preview, so a volume or
+    // Tabs without a preview pause the camera, so a volume or
     // Bluetooth press there must not start a recording the user cannot see.
     if (!state.recorderMode.recordsVideo) {
       Log.debug(
