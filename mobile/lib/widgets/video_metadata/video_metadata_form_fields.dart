@@ -41,7 +41,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
   final bool enableExpiration;
 
   /// Whether the "Post time" tile is offered. Off when editing a published
-  /// video; a video reply hides it too.
+  /// video; replies and Together posts hide it too.
   final bool enableSchedule;
   final bool enableContentWarning;
   final bool enableCollaborators;
@@ -142,6 +142,13 @@ class _VideoMetadataFormFieldsState
     final showClipCredits = VideoMetadataClipCredits.creditedCreators(
       ref,
     ).isNotEmpty;
+    final isReply = ref.watch(videoReplyContextProvider) != null;
+    // Gated for the same reason: replies and Together posts have no post
+    // time, since they are delivered to their thread or room when published.
+    final showSchedule =
+        widget.enableSchedule &&
+        !isReply &&
+        ref.watch(collabRoomPostProvider) == null;
 
     return Padding(
       padding: const .symmetric(horizontal: 16),
@@ -189,8 +196,8 @@ class _VideoMetadataFormFieldsState
           if (widget.enableExpiration)
             const _InputWrapper(child: VideoMetadataExpirationSelector()),
 
-          if (widget.enableSchedule)
-            const _InputWrapper(child: _ScheduleSelectorGate()),
+          if (showSchedule)
+            const _InputWrapper(child: VideoMetadataScheduleSelector()),
 
           if (widget.enableCollaborators)
             const _InputWrapper(child: VideoMetadataCollaboratorsInput()),
@@ -209,7 +216,7 @@ class _VideoMetadataFormFieldsState
 
           const _InputWrapper(child: VideoMetadataVideoReuseToggle()),
 
-          if (widget.enableVideoReply)
+          if (widget.enableVideoReply && isReply)
             const _InputWrapper(child: _VideoReplyVisibilityToggle()),
 
           const SizedBox(height: 48),
@@ -219,28 +226,11 @@ class _VideoMetadataFormFieldsState
   }
 }
 
-/// Shows the "Post time" tile for posts with a scheduling flow. Replies and
-/// Together posts are delivered to their thread or room when published.
-class _ScheduleSelectorGate extends ConsumerWidget {
-  const _ScheduleSelectorGate();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final replyContext = ref.watch(videoReplyContextProvider);
-    final roomId = ref.watch(collabRoomPostProvider);
-    if (replyContext != null || roomId != null) return const SizedBox.shrink();
-    return const VideoMetadataScheduleSelector();
-  }
-}
-
 class _VideoReplyVisibilityToggle extends ConsumerWidget {
   const _VideoReplyVisibilityToggle();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final replyContext = ref.watch(videoReplyContextProvider);
-    if (replyContext == null) return const SizedBox.shrink();
-
     final shareReplyToFeed = ref.watch(
       videoEditorProvider.select((state) => state.shareReplyToFeed),
     );
