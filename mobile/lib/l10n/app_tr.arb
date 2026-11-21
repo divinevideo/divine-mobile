@@ -6443,6 +6443,13 @@
   "creatorHighlightWeeklyLikes": "Bu hafta paylaştığın videoların şu ana kadarki toplam beğeni sayısı: {count}.",
   "creatorHighlightWeeklyComments": "Bu hafta paylaştığın videoların şu ana kadarki toplam yorum sayısı: {count}.",
   "creatorHighlightAnalytics": "İstatistiklerine bak",
+  "creatorHighlightInvite": "Arkadaşlarını getir",
+  "inviteFriendsTitle": "Arkadaşlarını getir",
+  "inviteFriendsMessageLabel": "Mesajın",
+  "inviteFriendsDefaultMessage": "Divine'da döngüler yapıyorum. Tepki verebilir ve benimle iş birliği yapabilirsin!",
+  "inviteFriendsLinkNote": "Bağlantın sona eklenir: {url}",
+  "inviteFriendsShare": "Paylaş",
+  "inviteFriendsShareFailed": "Paylaşım açılamadı. Tekrar dene.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

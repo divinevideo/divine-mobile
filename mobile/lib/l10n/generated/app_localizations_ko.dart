@@ -15689,6 +15689,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get creatorHighlightAnalytics => '내 통계 보기';
 
   @override
+  String get creatorHighlightInvite => '친구 초대하기';
+
+  @override
+  String get inviteFriendsTitle => '친구 초대하기';
+
+  @override
+  String get inviteFriendsMessageLabel => '내 메시지';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Divine에서 루프를 만들고 있어요. 반응하고 저와 함께 콜라보할 수 있어요!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return '링크는 끝에 추가돼요: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => '공유';
+
+  @override
+  String get inviteFriendsShareFailed => '공유를 열 수 없어요. 다시 시도해 주세요.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

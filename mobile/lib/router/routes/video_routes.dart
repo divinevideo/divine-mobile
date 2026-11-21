@@ -1,4 +1,4 @@
-// ABOUTME: Video routes (recorder, detail, sounds, editor, metadata, subtitle, fullscreen, engagement)
+// ABOUTME: Video routes (recorder, detail, sounds, editor, metadata, subtitle, fullscreen, engagement, creator invite)
 // ABOUTME: Typed with go_router_builder; conventions in .claude/rules/routing.md.
 
 import 'package:flutter/widgets.dart';
@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -88,6 +89,22 @@ class VideoRecorderRouteData extends GoRouteData with $VideoRecorderRouteData {
           ),
         ),
       );
+}
+
+@TypedGoRoute<InviteFriendsRouteData>(
+  path: InviteFriendsScreen.path,
+  name: InviteFriendsScreen.routeName,
+)
+/// The editable invite, pushed from the daily highlight in Inbox.
+class InviteFriendsRouteData extends GoRouteData with $InviteFriendsRouteData {
+  const InviteFriendsRouteData();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey =
+      NavigatorKeys.root;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const InviteFriendsScreen();
 }
 
 @TypedGoRoute<CreatorAnalyticsRouteData>(

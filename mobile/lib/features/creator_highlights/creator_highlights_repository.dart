@@ -20,9 +20,16 @@ abstract interface class CreatorHighlightsRepository {
     String localDate, {
     required int nextRotation,
   });
+
+  /// Records that the invite to bring friends was seen on [localDate].
+  ///
+  /// A day counts once toward the weekly limit, however often it is shown.
+  ///
+  /// Throws [CreatorHighlightPresentationException] when storage rejects it.
+  Future<void> markInviteShown(String owner, String localDate);
 }
 
-/// The device could not persist a daily presentation marker.
+/// The device could not persist a highlight record (presentation or invite).
 class CreatorHighlightPresentationException implements Exception {
   const CreatorHighlightPresentationException();
 
@@ -47,6 +54,18 @@ class FunnelcakeCreatorHighlightsRepository
   static const presentationPrefix = 'creator_highlight_presented_';
   static String presentationKey(String owner) => '$presentationPrefix$owner';
 
+  static const invitePrefix = 'creator_highlight_invite_';
+  static String inviteKey(String owner) => '$invitePrefix$owner';
+
+  /// Posting days per week on which the invite may appear.
+  static const maxInviteDaysPerWeek = 3;
+
+  /// Stored as sorted, comma-separated `yyyy-MM-dd` dates from about the last
+  /// two weeks, so a local date that steps back across a Monday (a westward
+  /// time change) still sees the previous week's count.
+  static const _inviteDateSeparator = ',';
+  static const _inviteRetentionDays = 13;
+
   /// Stored as `<localDate>|<nextRotation>`; a bare date predates rotation.
   static const _markerSeparator = '|';
   static const pageSize = 100;
@@ -64,13 +83,8 @@ class FunnelcakeCreatorHighlightsRepository
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(owner)) return null;
     final now = _now().toLocal();
     final today = DateTime(now.year, now.month, now.day);
-    final weekStart = DateTime(
-      today.year,
-      today.month,
-      today.day - today.weekday + 1,
-    );
-    final date =
-        '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final weekStart = _weekStart(today);
+    final date = _dateKey(today);
     final collected = <VideoEvent>[];
     int? offset;
     var complete = false;
@@ -251,12 +265,14 @@ class FunnelcakeCreatorHighlightsRepository
         ? int.tryParse(marker[1])
         : null;
     final topVideo = known ? ranked.first : null;
+    final createdToday = videos
+        .where((video) => !video.timestamp.isBefore(today))
+        .length;
+    final invitedDays = _invitedDays(owner, weekStart);
     return CreatorHighlight(
       owner: owner,
       localDate: date,
-      createdToday: videos
-          .where((video) => !video.timestamp.isBefore(today))
-          .length,
+      createdToday: createdToday,
       creationDaysThisWeek: days.length,
       views: known
           ? counts.fold<int>(0, (total, count) => total + count!)
@@ -267,7 +283,37 @@ class FunnelcakeCreatorHighlightsRepository
       comments: totalOf(commentsByWork),
       celebrate: marker?.first != date,
       rotation: rotation != null && rotation >= 0 ? rotation : 0,
+      showInvite:
+          createdToday > 0 &&
+          (invitedDays.contains(date) ||
+              invitedDays.length < maxInviteDaysPerWeek),
     );
+  }
+
+  static String _dateKey(DateTime day) =>
+      '${day.year.toString().padLeft(4, '0')}-'
+      '${day.month.toString().padLeft(2, '0')}-'
+      '${day.day.toString().padLeft(2, '0')}';
+
+  static DateTime _weekStart(DateTime day) =>
+      DateTime(day.year, day.month, day.day - day.weekday + 1);
+
+  /// Every retained date (about two weeks) the invite was shown to [owner].
+  Set<String> _inviteRecord(String owner) {
+    final raw = _preferences.getString(inviteKey(owner));
+    if (raw == null || raw.isEmpty) return {};
+    return raw.split(_inviteDateSeparator).toSet();
+  }
+
+  /// Days in the week starting [weekStart] the invite was already shown.
+  Set<String> _invitedDays(String owner, DateTime weekStart) {
+    final week = {
+      for (var offset = 0; offset < DateTime.daysPerWeek; offset++)
+        _dateKey(
+          DateTime(weekStart.year, weekStart.month, weekStart.day + offset),
+        ),
+    };
+    return _inviteRecord(owner).where(week.contains).toSet();
   }
 
   @override
@@ -279,6 +325,25 @@ class FunnelcakeCreatorHighlightsRepository
     final saved = await _preferences.setString(
       presentationKey(owner),
       '$localDate$_markerSeparator$nextRotation',
+    );
+    if (!saved) throw const CreatorHighlightPresentationException();
+  }
+
+  @override
+  Future<void> markInviteShown(String owner, String localDate) async {
+    final record = _inviteRecord(owner);
+    if (record.contains(localDate)) return;
+    final day = DateTime.parse(localDate);
+    // ISO dates sort as text; later dates stay in case the clock went back.
+    final oldest = _dateKey(
+      DateTime(day.year, day.month, day.day - _inviteRetentionDays),
+    );
+    final kept =
+        (record..add(localDate)).where((d) => d.compareTo(oldest) >= 0).toList()
+          ..sort();
+    final saved = await _preferences.setString(
+      inviteKey(owner),
+      kept.join(_inviteDateSeparator),
     );
     if (!saved) throw const CreatorHighlightPresentationException();
   }

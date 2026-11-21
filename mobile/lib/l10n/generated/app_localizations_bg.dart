@@ -16589,6 +16589,31 @@ class AppLocalizationsBg extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Виж статистиката си';
 
   @override
+  String get creatorHighlightInvite => 'Доведи компанията си';
+
+  @override
+  String get inviteFriendsTitle => 'Доведи компанията си';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Твоето съобщение';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Правя лупове в Divine. Можеш да реагираш и да си сътрудничиш с мен!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Връзката ти се добавя накрая: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Сподели';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Споделянето не се отвори. Опитай пак.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

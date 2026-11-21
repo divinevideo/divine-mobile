@@ -147,6 +147,11 @@ void main() {
               builder: (_, _) =>
                   const Scaffold(body: Text('Analytics destination')),
             ),
+            GoRoute(
+              path: RoutePaths.inviteFriends,
+              builder: (_, _) =>
+                  const Scaffold(body: Text('Invite destination')),
+            ),
           ],
         );
         addTearDown(router.dispose);
@@ -268,6 +273,11 @@ void main() {
         await tester.tap(find.text(l10n.creatorHighlightAnalytics));
         await tester.pumpAndSettle();
         expect(find.text('Analytics destination'), findsOneWidget);
+        router.pop();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.creatorHighlightInvite));
+        await tester.pumpAndSettle();
+        expect(find.text('Invite destination'), findsOneWidget);
         router.pop();
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.notificationsTabLikes));

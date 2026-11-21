@@ -140,6 +140,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.peopleListRoster:
     case RouteType.peopleListAddPeople:
     case RouteType.creatorAnalytics:
+    case RouteType.inviteFriends:
     case RouteType.sound:
     case RouteType.originalSound:
     case RouteType.secureAccount:

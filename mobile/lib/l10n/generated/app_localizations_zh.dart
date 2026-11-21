@@ -15482,6 +15482,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatorHighlightAnalytics => '查看你的数据';
 
   @override
+  String get creatorHighlightInvite => '叫上你的朋友';
+
+  @override
+  String get inviteFriendsTitle => '叫上你的朋友';
+
+  @override
+  String get inviteFriendsMessageLabel => '你的消息';
+
+  @override
+  String get inviteFriendsDefaultMessage => '我在 Divine 上做循环。你可以来互动，也可以和我一起合作！';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return '你的链接会附在末尾：$url';
+  }
+
+  @override
+  String get inviteFriendsShare => '分享';
+
+  @override
+  String get inviteFriendsShareFailed => '无法打开分享。请再试一次。';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

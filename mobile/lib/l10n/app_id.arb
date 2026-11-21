@@ -6443,6 +6443,13 @@
   "creatorHighlightWeeklyLikes": "Total suka sejauh ini pada video yang kamu posting minggu ini: {count}.",
   "creatorHighlightWeeklyComments": "Total komentar sejauh ini pada video yang kamu posting minggu ini: {count}.",
   "creatorHighlightAnalytics": "Lihat statistikmu",
+  "creatorHighlightInvite": "Ajak teman-temanmu",
+  "inviteFriendsTitle": "Ajak teman-temanmu",
+  "inviteFriendsMessageLabel": "Pesanmu",
+  "inviteFriendsDefaultMessage": "Aku lagi bikin loop di Divine. Kamu bisa kasih reaksi dan kolaborasi bareng aku!",
+  "inviteFriendsLinkNote": "Tautanmu ditambahkan di akhir: {url}",
+  "inviteFriendsShare": "Bagikan",
+  "inviteFriendsShareFailed": "Gagal membuka menu bagikan. Coba lagi.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

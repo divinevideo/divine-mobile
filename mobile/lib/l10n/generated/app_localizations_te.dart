@@ -16814,6 +16814,31 @@ class AppLocalizationsTe extends AppLocalizations {
   String get creatorHighlightAnalytics => 'మీ గణాంకాలను చూడండి';
 
   @override
+  String get creatorHighlightInvite => 'మీ స్నేహితులను ఆహ్వానించండి';
+
+  @override
+  String get inviteFriendsTitle => 'మీ స్నేహితులను ఆహ్వానించండి';
+
+  @override
+  String get inviteFriendsMessageLabel => 'మీ సందేశం';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'నేను Divineలో లూప్‌లు తయారు చేస్తున్నాను. మీరు స్పందించవచ్చు, నాతో కలిసి పని చేయవచ్చు!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'మీ లింక్ చివర్లో జోడించబడుతుంది: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'భాగస్వామ్యం చేయండి';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'షేరింగ్‌ను తెరవలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

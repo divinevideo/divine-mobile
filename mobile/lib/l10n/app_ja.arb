@@ -6443,6 +6443,13 @@
   "creatorHighlightWeeklyLikes": "今週投稿した動画の、これまでの合計いいね数：{count}件。",
   "creatorHighlightWeeklyComments": "今週投稿した動画の、これまでの合計コメント数：{count}件。",
   "creatorHighlightAnalytics": "自分の統計を見る",
+  "creatorHighlightInvite": "友だちを招待",
+  "inviteFriendsTitle": "友だちを招待",
+  "inviteFriendsMessageLabel": "メッセージ",
+  "inviteFriendsDefaultMessage": "Divineでループを作っています。リアクションしたり、一緒にコラボしたりできます！",
+  "inviteFriendsLinkNote": "最後にリンクが追加されます：{url}",
+  "inviteFriendsShare": "シェア",
+  "inviteFriendsShareFailed": "共有を開けませんでした。もう一度お試しください。",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

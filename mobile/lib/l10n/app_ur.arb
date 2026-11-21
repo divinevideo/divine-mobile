@@ -7748,6 +7748,13 @@
   "creatorHighlightWeeklyLikes": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کی کل پسندیں: {count}۔",
   "creatorHighlightWeeklyComments": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل تبصرے: {count}۔",
   "creatorHighlightAnalytics": "اپنے اعداد و شمار دیکھیں",
+  "creatorHighlightInvite": "اپنے دوستوں کو لائیں",
+  "inviteFriendsTitle": "اپنے دوستوں کو لائیں",
+  "inviteFriendsMessageLabel": "آپ کا پیغام",
+  "inviteFriendsDefaultMessage": "میرے لوپس Divine پر ہیں۔ ان پر ری ایکٹ کریں اور میرے ساتھ کولیب کریں!",
+  "inviteFriendsLinkNote": "آپ کا لنک آخر میں شامل کر دیا جاتا ہے: {url}",
+  "inviteFriendsShare": "شیئر",
+  "inviteFriendsShareFailed": "شیئرنگ نہیں کھل سکی۔ دوبارہ کوشش کریں۔",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

@@ -60,6 +60,7 @@ final _locations = <String, List<String>>{
   'followingNew': [RoutePaths.followingNew],
   'generalSettings': [RoutePaths.generalSettings],
   'inbox': [RoutePaths.inbox],
+  'inviteFriends': [RoutePaths.inviteFriends],
   'keyImport': [RoutePaths.keyImport],
   'keyManagement': [RoutePaths.keyManagement],
   'legal': [RoutePaths.legal],

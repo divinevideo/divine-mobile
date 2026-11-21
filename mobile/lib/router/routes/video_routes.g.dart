@@ -8,6 +8,7 @@ part of 'video_routes.dart';
 
 List<RouteBase> get $appRoutes => [
   $videoRecorderRouteData,
+  $inviteFriendsRouteData,
   $creatorAnalyticsRouteData,
   $videoDetailRouteData,
   $soundDetailRouteData,
@@ -65,6 +66,35 @@ mixin $VideoRecorderRouteData on GoRouteData {
   @override
   void replace(BuildContext context) =>
       context.replace(location, extra: _self.$extra);
+}
+
+RouteBase get $inviteFriendsRouteData => GoRouteData.$route(
+  path: '/invite-friends',
+  name: 'invite-friends',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: InviteFriendsRouteData.$parentNavigatorKey,
+  factory: $InviteFriendsRouteData._fromState,
+);
+
+mixin $InviteFriendsRouteData on GoRouteData {
+  static InviteFriendsRouteData _fromState(GoRouterState state) =>
+      const InviteFriendsRouteData();
+
+  @override
+  String get location => GoRouteData.$location('/invite-friends');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $creatorAnalyticsRouteData => GoRouteData.$route(

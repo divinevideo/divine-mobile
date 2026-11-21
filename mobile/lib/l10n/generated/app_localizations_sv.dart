@@ -16453,6 +16453,31 @@ class AppLocalizationsSv extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Se din statistik';
 
   @override
+  String get creatorHighlightInvite => 'Ta med dina vänner';
+
+  @override
+  String get inviteFriendsTitle => 'Ta med dina vänner';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Ditt meddelande';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Jag gör loopar på Divine. Du kan reagera och samarbeta med mig!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Din länk läggs till i slutet: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Dela';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Det gick inte att öppna delning. Försök igen.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 
