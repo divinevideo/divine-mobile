@@ -189,25 +189,7 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                       spacing: 20,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          spacing: 4,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                l10n.creatorHighlightAnalytics,
-                                style: VineTheme.labelLargeFont(
-                                  color: colors.accentPositive,
-                                ),
-                              ),
-                            ),
-                            DivineIcon(
-                              icon: DivineIconName.arrowRight,
-                              size: 16,
-                              color: colors.accentPositive,
-                            ),
-                          ],
-                        ),
+                        _ActionLabel(label: l10n.creatorHighlightAnalytics),
                         if (card.showInvite)
                           _InviteAction(
                             onTap: widget.onInvite,
@@ -246,7 +228,6 @@ class _InviteAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.vineColors;
     final label = context.l10n.creatorHighlightInvite;
     return Semantics(
       container: true,
@@ -266,29 +247,32 @@ class _InviteAction extends StatelessWidget {
             child: VisibilityDetector(
               key: visibilityKey,
               onVisibilityChanged: onVisibilityChanged,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 4,
-                children: [
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: VineTheme.labelLargeFont(
-                        color: colors.accentPositive,
-                      ),
-                    ),
-                  ),
-                  DivineIcon(
-                    icon: DivineIconName.arrowRight,
-                    size: 16,
-                    color: colors.accentPositive,
-                  ),
-                ],
-              ),
+              child: _ActionLabel(label: label),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ActionLabel extends StatelessWidget {
+  const _ActionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.accentPositive;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        Flexible(
+          child: Text(label, style: VineTheme.labelLargeFont(color: color)),
+        ),
+        DivineIcon(icon: DivineIconName.arrowRight, size: 16, color: color),
+      ],
     );
   }
 }
