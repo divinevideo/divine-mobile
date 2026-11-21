@@ -1282,6 +1282,7 @@ void main() {
       test('skips a chapters track before the caption track in event '
           'tags', () {
         final json = {
+          'text_track_ref': 'https://media.divine.video/chapters',
           'event': {
             'id': 'test-id',
             'pubkey': 'test-pubkey',
@@ -1318,6 +1319,31 @@ void main() {
 
         expect(stats.textTrackRef, equals('39307:abc123:subtitles:video-1'));
         expect(stats.textTrackLang, 'ja');
+        expect(stats.toVideoEvent().textTrackRefs, [
+          '39307:abc123:subtitles:video-1',
+        ]);
+      });
+
+      test('keeps caption tag order and appends an indexed fallback', () {
+        const original = 'https://media.divine.video/edited.vtt';
+        const translation = 'https://media.divine.video/translated.vtt';
+        const indexed = '39307:abc123:subtitles:video-1';
+        final video = VideoStats.fromJson(const {
+          'id': 'test-id',
+          'pubkey': 'test-pubkey',
+          'created_at': 1700000000,
+          'd_tag': 'video-1',
+          'text_track_ref': indexed,
+          'tags': [
+            ['text-track', original, '', 'captions', 'ja-JP'],
+            ['text-track', translation, '', 'subtitles', 'en'],
+            ['text-track', original],
+          ],
+        }).toVideoEvent();
+
+        expect(video.textTrackRef, original);
+        expect(video.textTrackRefs, [original, translation, indexed]);
+        expect(video.textTrackLang, 'ja');
       });
 
       test('normalizes empty text-track fields to null', () {
