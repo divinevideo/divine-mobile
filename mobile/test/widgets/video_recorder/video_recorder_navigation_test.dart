@@ -779,6 +779,33 @@ void main() {
       expect(fakeClipManager.state.clips, equals([offeredClip]));
     });
 
+    testWidgets('holds remote record until a dismissed Continue has restored', (
+      tester,
+    ) async {
+      final restore = fakeEditor.restoreGate = Completer<void>();
+      final l10n = await pushRecorderAndOffer(tester);
+
+      await tester.tap(find.text(l10n.videoRecorderAutosaveContinueButton));
+      await tester.pump();
+      // Tap the barrier above the sheet. The offer's own pause ends here,
+      // but the restore is still writing the session's clips.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      verify(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+      ).called(2);
+      verify(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+      ).called(1);
+
+      restore.complete();
+      await tester.pumpAndSettle();
+
+      verify(
+        () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+      ).called(1);
+    });
+
     testWidgets('restores once when Continue is tapped twice', (tester) async {
       final restore = fakeEditor.restoreGate = Completer<void>();
       final l10n = await pushRecorderAndOffer(tester);
