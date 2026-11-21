@@ -6560,6 +6560,13 @@
   "creatorHighlightWeeklyLikes": "Харесвания досега на видеата, които публикува тази седмица: {count}.",
   "creatorHighlightWeeklyComments": "Коментари досега към видеата, които публикува тази седмица: {count}.",
   "creatorHighlightAnalytics": "Виж статистиката си",
+  "creatorHighlightInvite": "Доведи компанията си",
+  "inviteFriendsTitle": "Доведи компанията си",
+  "inviteFriendsMessageLabel": "Твоето съобщение",
+  "inviteFriendsDefaultMessage": "Правя лупове в Divine. Можеш да реагираш и да си сътрудничиш с мен!",
+  "inviteFriendsLinkNote": "Връзката ти се добавя накрая: {url}",
+  "inviteFriendsShare": "Сподели",
+  "inviteFriendsShareFailed": "Споделянето не се отвори. Опитай пак.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

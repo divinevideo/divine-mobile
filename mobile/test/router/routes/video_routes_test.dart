@@ -11,6 +11,7 @@ import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
@@ -157,6 +158,7 @@ void main() {
           videoRoutes().map((route) => (route as GoRoute).path),
           equals([
             '/video-recorder',
+            '/invite-friends',
             '/creator-analytics',
             '/video/:id',
             '/sound/:id',
@@ -182,6 +184,7 @@ void main() {
           _flatten(videoRoutes()).map((route) => route.name),
           equals([
             'video-recorder',
+            'invite-friends',
             'creator-analytics',
             'creator-analytics-post',
             'video',
@@ -227,11 +230,19 @@ void main() {
         );
       });
 
+      test('the invite page covers the shell on the root navigator', () {
+        expect(
+          _routeNamed(InviteFriendsScreen.routeName).parentNavigatorKey,
+          same(NavigatorKeys.root),
+        );
+      });
+
       test("every other route uses the router's own navigator", () {
         final others = _flatten(videoRoutes()).where(
           (route) =>
               route.name != CreatorAnalyticsScreen.routeName &&
-              route.name != PostAnalyticsDetailScreen.routeName,
+              route.name != PostAnalyticsDetailScreen.routeName &&
+              route.name != InviteFriendsScreen.routeName,
         );
 
         expect(others, hasLength(12));
@@ -364,6 +375,10 @@ void main() {
         expect(
           const CreatorAnalyticsRouteData().location,
           equals('/creator-analytics'),
+        );
+        expect(
+          const InviteFriendsRouteData().location,
+          equals('/invite-friends'),
         );
         expect(const VideoEditorRouteData().location, equals('/video-editor'));
         expect(

@@ -16434,6 +16434,31 @@ class AppLocalizationsUr extends AppLocalizations {
   String get creatorHighlightAnalytics => 'اپنے اعداد و شمار دیکھیں';
 
   @override
+  String get creatorHighlightInvite => 'اپنے دوستوں کو لائیں';
+
+  @override
+  String get inviteFriendsTitle => 'اپنے دوستوں کو لائیں';
+
+  @override
+  String get inviteFriendsMessageLabel => 'آپ کا پیغام';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'میرے لوپس Divine پر ہیں۔ ان پر ری ایکٹ کریں اور میرے ساتھ کولیب کریں!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'آپ کا لنک آخر میں شامل کر دیا جاتا ہے: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'شیئر';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'شیئرنگ نہیں کھل سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

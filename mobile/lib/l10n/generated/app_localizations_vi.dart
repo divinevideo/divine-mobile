@@ -16378,6 +16378,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
 
   @override
+  String get creatorHighlightInvite => 'Rủ bạn bè cùng tham gia';
+
+  @override
+  String get inviteFriendsTitle => 'Rủ bạn bè cùng tham gia';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Tin nhắn của bạn';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Mình đang làm loop trên Divine. Bạn có thể thả cảm xúc và cùng hợp tác với mình!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Liên kết của bạn được thêm vào cuối: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Chia sẻ';
+
+  @override
+  String get inviteFriendsShareFailed => 'Không mở được chia sẻ. Thử lại nhé.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

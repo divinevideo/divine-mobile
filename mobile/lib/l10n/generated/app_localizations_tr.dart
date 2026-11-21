@@ -16362,6 +16362,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get creatorHighlightAnalytics => 'İstatistiklerine bak';
 
   @override
+  String get creatorHighlightInvite => 'Arkadaşlarını getir';
+
+  @override
+  String get inviteFriendsTitle => 'Arkadaşlarını getir';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Mesajın';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Divine\'da döngüler yapıyorum. Tepki verebilir ve benimle iş birliği yapabilirsin!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Bağlantın sona eklenir: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Paylaş';
+
+  @override
+  String get inviteFriendsShareFailed => 'Paylaşım açılamadı. Tekrar dene.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

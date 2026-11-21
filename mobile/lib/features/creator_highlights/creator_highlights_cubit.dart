@@ -138,14 +138,33 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         ),
       );
     }
+    await _markPresented(card.localDate, nextRotation);
+  }
+
+  /// Counts today toward the weekly invite limit once the card has painted
+  /// its invite on screen.
+  ///
+  /// Separate from spotlight presentation: a refresh can turn the invite on
+  /// for a spotlight already presented, and only a visible frame counts.
+  Future<void> inviteSeen(CreatorHighlight card) async {
+    if (isClosed ||
+        !card.showInvite ||
+        card.owner != owner ||
+        card.localDate != _today()) {
+      return;
+    }
+    await _inviteShown(card.localDate);
+  }
+
+  Future<void> _markPresented(String localDate, int nextRotation) async {
     try {
       await _repository.markPresented(
         owner,
-        card.localDate,
+        localDate,
         nextRotation: nextRotation,
       );
     } on Object catch (error, stackTrace) {
-      if (isClosed) return;
+      // Reported even after close; only state emission needs the close guard.
       addError(
         asReportableError(error, context: 'CreatorHighlightsCubit.presented') ??
             error,
@@ -153,6 +172,23 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
       );
       // The in-memory claim still prevents a replay in this account session.
       // A storage failure cannot interrupt the notification feed.
+    }
+  }
+
+  Future<void> _inviteShown(String localDate) async {
+    try {
+      await _repository.markInviteShown(owner, localDate);
+    } on Object catch (error, stackTrace) {
+      // Reported even after close; only state emission needs the close guard.
+      addError(
+        asReportableError(
+              error,
+              context: 'CreatorHighlightsCubit.inviteShown',
+            ) ??
+            error,
+        stackTrace,
+      );
+      // An uncounted day only lets the invite appear once more this week.
     }
   }
 }

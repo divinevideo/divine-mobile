@@ -16578,6 +16578,31 @@ class AppLocalizationsFil extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Tingnan ang stats mo';
 
   @override
+  String get creatorHighlightInvite => 'Isama ang mga kaibigan mo';
+
+  @override
+  String get inviteFriendsTitle => 'Isama ang mga kaibigan mo';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Ang message mo';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Gumagawa ako ng loops sa Divine. Puwede kang mag-react at makipag-collab sa akin!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Idadagdag ang link mo sa dulo: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'I-share';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Hindi ma-open ang share. Subukan ulit.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

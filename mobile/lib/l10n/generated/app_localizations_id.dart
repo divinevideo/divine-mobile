@@ -16323,6 +16323,31 @@ class AppLocalizationsId extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Lihat statistikmu';
 
   @override
+  String get creatorHighlightInvite => 'Ajak teman-temanmu';
+
+  @override
+  String get inviteFriendsTitle => 'Ajak teman-temanmu';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Pesanmu';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Aku lagi bikin loop di Divine. Kamu bisa kasih reaksi dan kolaborasi bareng aku!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Tautanmu ditambahkan di akhir: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Bagikan';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Gagal membuka menu bagikan. Coba lagi.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

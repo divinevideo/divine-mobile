@@ -16044,6 +16044,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
 
   @override
+  String get creatorHighlightInvite => 'ጓደኞችዎን ይጋብዙ';
+
+  @override
+  String get inviteFriendsTitle => 'ጓደኞችዎን ይጋብዙ';
+
+  @override
+  String get inviteFriendsMessageLabel => 'መልዕክትዎ';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'በDivine ላይ ሉፖችን እየሠራሁ ነው። ምላሽ መስጠት እና ከእኔ ጋር መተባበር ይችላሉ!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'አገናኝዎ መጨረሻ ላይ ይጨመራል፦ $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'ያጋሩ';
+
+  @override
+  String get inviteFriendsShareFailed => 'ማጋራት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

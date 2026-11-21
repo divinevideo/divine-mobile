@@ -16487,6 +16487,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get creatorHighlightAnalytics => 'عرض إحصاءاتك';
 
   @override
+  String get creatorHighlightInvite => 'دعوة الأحبة';
+
+  @override
+  String get inviteFriendsTitle => 'دعوة الأحبة';
+
+  @override
+  String get inviteFriendsMessageLabel => 'رسالتك';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'أصنع مقاطع على Divine. يمكنك التفاعل والتعاون معي!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'ستتم إضافة رابطك في النهاية: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'مشاركة';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'تعذّر فتح المشاركة. يُرجى المحاولة مرة أخرى.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

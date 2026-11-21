@@ -15,6 +15,8 @@ class CreatorHighlightCard extends StatefulWidget {
     required this.onPresented,
     required this.onAnalytics,
     required this.onWatch,
+    required this.onInvite,
+    required this.onInviteSeen,
     super.key,
   });
 
@@ -24,16 +26,27 @@ class CreatorHighlightCard extends StatefulWidget {
   final VoidCallback onAnalytics;
   final VoidCallback onWatch;
 
+  /// Opens the invite page; only reachable when the highlight offers it.
+  final VoidCallback onInvite;
+
+  /// Called once per account and day, after the invite has painted on screen.
+  final VoidCallback onInviteSeen;
+
   @override
   State<CreatorHighlightCard> createState() => _CreatorHighlightCardState();
 }
 
 class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
   String? _presented;
+  String? _inviteSeen;
   String? _animationIdentity;
   bool _animate = false;
   bool _inViewport = false;
   Key _visibilityKey = UniqueKey();
+  // The invite link is measured on its own: the card can show while the link
+  // sits below the edge of a short screen or under large text.
+  bool _inviteInViewport = false;
+  Key _inviteVisibilityKey = UniqueKey();
 
   @override
   void didUpdateWidget(CreatorHighlightCard oldWidget) {
@@ -45,6 +58,8 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
       _inViewport = false;
       _animate = false;
       _visibilityKey = UniqueKey();
+      _inviteInViewport = false;
+      _inviteVisibilityKey = UniqueKey();
     }
   }
 
@@ -53,6 +68,14 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
     final inViewport = info.visibleFraction > 0;
     if (_inViewport != inViewport) {
       setState(() => _inViewport = inViewport);
+    }
+  }
+
+  void _onInviteVisibilityChanged(VisibilityInfo info) {
+    if (!mounted || info.key != _inviteVisibilityKey) return;
+    final inViewport = info.visibleFraction > 0;
+    if (_inviteInViewport != inViewport) {
+      setState(() => _inviteInViewport = inViewport);
     }
   }
 
@@ -75,6 +98,27 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
         }
         _presented = identity;
         widget.onPresented();
+      });
+    }
+    // Counted apart from the spotlight: a refresh can turn the invite on for
+    // a spotlight already presented, and only a visible frame counts.
+    final inviteIdentity = '${card.owner}:${card.localDate}';
+    if (widget.isVisible &&
+        _inviteInViewport &&
+        card.showInvite &&
+        _inviteSeen != inviteIdentity) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final current = widget.highlight;
+        if (!mounted ||
+            !widget.isVisible ||
+            !_inviteInViewport ||
+            !current.showInvite ||
+            _inviteSeen == inviteIdentity ||
+            inviteIdentity != '${current.owner}:${current.localDate}') {
+          return;
+        }
+        _inviteSeen = inviteIdentity;
+        widget.onInviteSeen();
       });
     }
     final colors = context.vineColors;
@@ -140,23 +184,18 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
                           ],
                       ],
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 4,
+                    // Both links share a line, wrapping only when they don't fit.
+                    Wrap(
+                      spacing: 20,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Flexible(
-                          child: Text(
-                            l10n.creatorHighlightAnalytics,
-                            style: VineTheme.labelLargeFont(
-                              color: colors.accentPositive,
-                            ),
+                        _ActionLabel(label: l10n.creatorHighlightAnalytics),
+                        if (card.showInvite)
+                          _InviteAction(
+                            onTap: widget.onInvite,
+                            visibilityKey: _inviteVisibilityKey,
+                            onVisibilityChanged: _onInviteVisibilityChanged,
                           ),
-                        ),
-                        DivineIcon(
-                          icon: DivineIconName.arrowRight,
-                          size: 16,
-                          color: colors.accentPositive,
-                        ),
                       ],
                     ),
                   ],
@@ -166,6 +205,74 @@ class _CreatorHighlightCardState extends State<CreatorHighlightCard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Opens the invite page.
+///
+/// Its own tap target, so inviting never also opens stats.
+class _InviteAction extends StatelessWidget {
+  const _InviteAction({
+    required this.onTap,
+    required this.visibilityKey,
+    required this.onVisibilityChanged,
+  });
+
+  final VoidCallback onTap;
+
+  /// Measures the label and arrow, not the taller tap target around them,
+  /// so blank padding at a screen edge does not count as the invite shown.
+  final Key visibilityKey;
+  final ValueChanged<VisibilityInfo> onVisibilityChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.creatorHighlightInvite;
+    return Semantics(
+      container: true,
+      button: true,
+      label: label,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          // Align keeps the measured row at its natural height inside the
+          // taller tap target.
+          child: Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerStart,
+            child: VisibilityDetector(
+              key: visibilityKey,
+              onVisibilityChanged: onVisibilityChanged,
+              child: _ActionLabel(label: label),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionLabel extends StatelessWidget {
+  const _ActionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.accentPositive;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        Flexible(
+          child: Text(label, style: VineTheme.labelLargeFont(color: color)),
+        ),
+        DivineIcon(icon: DivineIconName.arrowRight, size: 16, color: color),
+      ],
     );
   }
 }

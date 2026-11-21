@@ -13680,6 +13680,37 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
+  "creatorHighlightInvite": "Bring your friends",
+  "@creatorHighlightInvite": {
+    "description": "Action on the daily creator highlight in Inbox, shown on days the creator posted. Opens a page where the creator edits an invite message and shares it with the Divine download link."
+  },
+  "inviteFriendsTitle": "Bring your friends",
+  "@inviteFriendsTitle": {
+    "description": "Title of the page, opened from the daily creator highlight, where the creator edits an invite message before sharing it."
+  },
+  "inviteFriendsMessageLabel": "Your message",
+  "@inviteFriendsMessageLabel": {
+    "description": "Label of the editable invite message field on the invite page."
+  },
+  "inviteFriendsDefaultMessage": "I'm making loops on Divine. You can react and collaborate with me!",
+  "@inviteFriendsDefaultMessage": {
+    "description": "Default, editable invite message a creator sends a friend. The download link is added after it on its own line."
+  },
+  "inviteFriendsLinkNote": "Your link is added at the end: {url}",
+  "@inviteFriendsLinkNote": {
+    "description": "Note under the invite message explaining that the Divine download link is always appended. {url} is the link; keep it unchanged.",
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
+  "inviteFriendsShare": "Share",
+  "@inviteFriendsShare": {
+    "description": "Button on the invite page that opens the system share sheet with the message and link."
+  },
+  "inviteFriendsShareFailed": "Couldn't open sharing. Try again.",
+  "@inviteFriendsShareFailed": {
+    "description": "Error shown on the invite page when the system share sheet fails to open. Nothing was sent."
+  },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
   "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
   "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",

@@ -15672,6 +15672,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get creatorHighlightAnalytics => '自分の統計を見る';
 
   @override
+  String get creatorHighlightInvite => '友だちを招待';
+
+  @override
+  String get inviteFriendsTitle => '友だちを招待';
+
+  @override
+  String get inviteFriendsMessageLabel => 'メッセージ';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Divineでループを作っています。リアクションしたり、一緒にコラボしたりできます！';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return '最後にリンクが追加されます：$url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'シェア';
+
+  @override
+  String get inviteFriendsShareFailed => '共有を開けませんでした。もう一度お試しください。';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

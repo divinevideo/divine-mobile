@@ -16606,6 +16606,31 @@ class AppLocalizationsPt extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Veja suas estatísticas';
 
   @override
+  String get creatorHighlightInvite => 'Chame sua galera';
+
+  @override
+  String get inviteFriendsTitle => 'Chame sua galera';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Sua mensagem';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Estou fazendo loops no Divine. Você pode reagir e colaborar comigo!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Seu link é adicionado no final: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Compartilhar';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Não foi possível abrir o compartilhamento. Tente de novo.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

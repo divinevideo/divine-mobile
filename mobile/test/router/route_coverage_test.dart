@@ -403,6 +403,16 @@ void main() {
       });
     });
 
+    group('Invite friends route', () {
+      // Unrecognized paths fall back to Home, which tab history records as a
+      // Home visit, so the invite page needs its own non-tab type.
+      test('${RoutePaths.inviteFriends} parses to its own type and back', () {
+        final context = parseRoute(RoutePaths.inviteFriends);
+        expect(context.type, RouteType.inviteFriends);
+        expect(buildRoute(context), RoutePaths.inviteFriends);
+      });
+    });
+
     group('People list routes parse correctly', () {
       test(
         '${CreatePeopleListPage.path} parses to RouteType.peopleListCreate',

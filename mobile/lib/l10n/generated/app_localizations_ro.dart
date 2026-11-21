@@ -16766,6 +16766,31 @@ class AppLocalizationsRo extends AppLocalizations {
   String get creatorHighlightAnalytics => 'Vezi statisticile tale';
 
   @override
+  String get creatorHighlightInvite => 'Adu-ți gașca';
+
+  @override
+  String get inviteFriendsTitle => 'Adu-ți gașca';
+
+  @override
+  String get inviteFriendsMessageLabel => 'Mesajul tău';
+
+  @override
+  String get inviteFriendsDefaultMessage =>
+      'Fac bucle pe Divine. Poți reacționa și colabora cu mine!';
+
+  @override
+  String inviteFriendsLinkNote(String url) {
+    return 'Linkul tău e adăugat la final: $url';
+  }
+
+  @override
+  String get inviteFriendsShare => 'Partajează';
+
+  @override
+  String get inviteFriendsShareFailed =>
+      'Nu s-a putut deschide partajarea. Încearcă din nou.';
+
+  @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 

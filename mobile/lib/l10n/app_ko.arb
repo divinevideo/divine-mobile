@@ -5989,6 +5989,13 @@
   "creatorHighlightWeeklyLikes": "이번 주에 올린 동영상의 지금까지 누적 좋아요: {count}개.",
   "creatorHighlightWeeklyComments": "이번 주에 올린 동영상의 지금까지 누적 댓글: {count}개.",
   "creatorHighlightAnalytics": "내 통계 보기",
+  "creatorHighlightInvite": "친구 초대하기",
+  "inviteFriendsTitle": "친구 초대하기",
+  "inviteFriendsMessageLabel": "내 메시지",
+  "inviteFriendsDefaultMessage": "Divine에서 루프를 만들고 있어요. 반응하고 저와 함께 콜라보할 수 있어요!",
+  "inviteFriendsLinkNote": "링크는 끝에 추가돼요: {url}",
+  "inviteFriendsShare": "공유",
+  "inviteFriendsShareFailed": "공유를 열 수 없어요. 다시 시도해 주세요.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },

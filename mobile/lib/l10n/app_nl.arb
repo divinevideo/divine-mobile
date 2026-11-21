@@ -6443,6 +6443,13 @@
   "creatorHighlightWeeklyLikes": "Totaal aantal likes tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
   "creatorHighlightWeeklyComments": "Totaal aantal reacties tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
   "creatorHighlightAnalytics": "Bekijk je statistieken",
+  "creatorHighlightInvite": "Neem je vrienden mee",
+  "inviteFriendsTitle": "Neem je vrienden mee",
+  "inviteFriendsMessageLabel": "Je bericht",
+  "inviteFriendsDefaultMessage": "Ik maak loops op Divine. Je kunt reageren en met me samenwerken!",
+  "inviteFriendsLinkNote": "Je link wordt aan het eind toegevoegd: {url}",
+  "inviteFriendsShare": "Delen",
+  "inviteFriendsShareFailed": "Delen kon niet worden geopend. Probeer het opnieuw.",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
