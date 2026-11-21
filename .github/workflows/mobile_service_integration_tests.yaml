@@ -40,7 +40,7 @@ jobs:
       focused: ${{ steps.resolved.outputs.focused }}
       app: ${{ steps.resolved.outputs.app }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           sparse-checkout: |
             mobile/scripts/ci/detect_mobile_ci_scope.sh
@@ -100,7 +100,7 @@ jobs:
       run:
         working-directory: mobile/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
