@@ -12861,13 +12861,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Abonează-te la insignă';
+  String get badgeSubscribeAction => 'Urmărește comunitatea';
 
   @override
-  String get badgeSubscribedAction => 'Abonat';
+  String get badgeSubscribedAction => 'Urmărești comunitatea';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Persoane care au acceptat insigna';
+  String get badgeAcceptedHoldersTitle => 'Oameni din această comunitate';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -17067,4 +17067,49 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Schimbă acest loc';
+
+  @override
+  String get badgeDiscoveryTitle => 'Insignele aduc oamenii împreună';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Oricine poate crea și acorda insigne. Tu alegi care apar pe profilul tău. Explorează o insignă ca să-i cunoști comunitatea și să urmărești oamenii din ea.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Insignele mele';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nu am găsit comunități încă. Trage în jos ca să încerci din nou.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual.';
+
+  @override
+  String get badgeOfficialLabel => 'Oficială';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Află mai multe pe $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Videoclipuri de la $badgeName';
+  }
 }

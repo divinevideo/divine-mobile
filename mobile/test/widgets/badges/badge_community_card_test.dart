@@ -220,6 +220,46 @@ void main() {
           semantics.dispose();
         });
       }
+      testWidgets('compact artwork keeps all member faces outside the image', (
+        tester,
+      ) async {
+        final issuer = '2'.padLeft(64, '0');
+        final members = [for (var i = 3; i < 6; i++) '$i'.padLeft(64, '0')];
+        final definition = Nip58BadgeDefinition(
+          event: Event(issuer, EventKind.badgeDefinition, const [], ''),
+          coordinate: '30009:$issuer:compact',
+          dTag: 'compact',
+          name: 'Compact',
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 200,
+                child: BadgeCommunityCard(
+                  definition: definition,
+                  memberPubkeys: members,
+                  compactArtwork: true,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final image = tester.getRect(find.byType(AspectRatio));
+        final faces = find.byWidgetPredicate(
+          (w) => w is UserAvatar && w.size == 28,
+        );
+        expect(faces, findsNWidgets(3));
+        for (final face in faces.evaluate()) {
+          final rect = tester.getRect(find.byWidget(face.widget));
+          expect(rect.top, greaterThanOrEqualTo(image.bottom));
+          expect(rect.right, lessThanOrEqualTo(200));
+        }
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('shows at most three members and skips vanished ones', (
         tester,
       ) async {

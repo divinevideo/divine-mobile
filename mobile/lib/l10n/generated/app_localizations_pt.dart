@@ -12717,13 +12717,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Seguir emblema';
+  String get badgeSubscribeAction => 'Seguir comunidade';
 
   @override
-  String get badgeSubscribedAction => 'A seguir';
+  String get badgeSubscribedAction => 'Seguindo comunidade';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Pessoas que aceitaram o emblema';
+  String get badgeAcceptedHoldersTitle => 'Pessoas desta comunidade';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16907,4 +16907,49 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Trocar este lugar';
+
+  @override
+  String get badgeDiscoveryTitle => 'Emblemas aproximam pessoas';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Qualquer pessoa pode criar e conceder emblemas. Você escolhe quais aparecem no seu perfil. Explore um emblema para conhecer sua comunidade e seguir as pessoas dela.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Meus emblemas';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nenhuma comunidade encontrada ainda. Puxe para baixo para tentar de novo.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Adiciona vídeos da comunidade ao seu feed Seguindo. Siga as pessoas individualmente.';
+
+  @override
+  String get badgeOfficialLabel => 'Oficial';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Saiba mais em $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Vídeos de $badgeName';
+  }
 }

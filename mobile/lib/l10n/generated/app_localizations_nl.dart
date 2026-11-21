@@ -12654,13 +12654,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Badge volgen';
+  String get badgeSubscribeAction => 'Community volgen';
 
   @override
-  String get badgeSubscribedAction => 'Volgend';
+  String get badgeSubscribedAction => 'Je volgt deze community';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Geaccepteerde badgehouders';
+  String get badgeAcceptedHoldersTitle => 'Mensen in deze community';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16824,4 +16824,49 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Deze plek wisselen';
+
+  @override
+  String get badgeDiscoveryTitle => 'Badges brengen mensen samen';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Iedereen kan badges maken en uitreiken. Jij kiest welke op je profiel staan. Ontdek een badge, leer de community kennen en volg de mensen erin.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Mijn badges';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nog geen communities gevonden. Trek omlaag om het opnieuw te proberen.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Voegt communityvideo’s toe aan je Volgend-feed. Volg mensen afzonderlijk.';
+
+  @override
+  String get badgeOfficialLabel => 'Officieel';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Meer informatie op $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Video’s van $badgeName';
+  }
 }

@@ -6552,5 +6552,14 @@
   "badgeOfficialLabel": "公式",
   "badgeDiscoveryCardLabel": "{badgeName}、{issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}、{issuerName}、{officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "詳しくは{website}へ"
+  "badgeDiscoveryWebsiteLabel": "詳しくは{website}へ",
+  "badgeDiscoveryVideosLabel": "{badgeName}の動画",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

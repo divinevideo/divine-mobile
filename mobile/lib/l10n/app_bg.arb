@@ -6669,5 +6669,14 @@
   "badgeOfficialLabel": "Официално",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Научете повече на {website}"
+  "badgeDiscoveryWebsiteLabel": "Научете повече на {website}",
+  "badgeDiscoveryVideosLabel": "Видеоклипове от {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

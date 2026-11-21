@@ -14091,5 +14091,14 @@
         "type": "String"
       }
     }
+  },
+  "badgeDiscoveryVideosLabel": "Videos from {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
   }
 }

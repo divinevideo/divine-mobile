@@ -12603,13 +12603,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Langgan lencana';
+  String get badgeSubscribeAction => 'Ikuti komuniti';
 
   @override
-  String get badgeSubscribedAction => 'Melanggan';
+  String get badgeSubscribedAction => 'Mengikuti komuniti';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+  String get badgeAcceptedHoldersTitle => 'Orang dalam komuniti ini';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16735,4 +16735,49 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Tukar tempat ini';
+
+  @override
+  String get badgeDiscoveryTitle => 'Lencana menyatukan orang ramai';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Sesiapa sahaja boleh mencipta dan menganugerahkan lencana. Anda memilih lencana yang muncul pada profil anda. Terokai lencana untuk mengenali komunitinya dan mengikuti ahlinya.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Lencana saya';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Belum ada komuniti ditemui. Tarik ke bawah untuk mencuba lagi.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Menambahkan video komuniti pada suapan Mengikuti anda. Ikuti orang secara individu.';
+
+  @override
+  String get badgeOfficialLabel => 'Rasmi';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Ketahui lebih lanjut di $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Video daripada $badgeName';
+  }
 }

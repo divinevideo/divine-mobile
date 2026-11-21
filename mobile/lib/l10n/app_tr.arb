@@ -6552,5 +6552,14 @@
   "badgeOfficialLabel": "Resmî",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "{website} adresinde daha fazla bilgi edinin"
+  "badgeDiscoveryWebsiteLabel": "{website} adresinde daha fazla bilgi edinin",
+  "badgeDiscoveryVideosLabel": "{badgeName} videoları",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

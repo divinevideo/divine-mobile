@@ -12019,13 +12019,13 @@ class AppLocalizationsKo extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => '배지 구독';
+  String get badgeSubscribeAction => '커뮤니티 팔로우';
 
   @override
-  String get badgeSubscribedAction => '구독 중';
+  String get badgeSubscribedAction => '커뮤니티 팔로우 중';
 
   @override
-  String get badgeAcceptedHoldersTitle => '배지를 수락한 사람';
+  String get badgeAcceptedHoldersTitle => '이 커뮤니티의 사람들';
 
   @override
   String get badgeSubscriptionLoadError => '배지 구독을 불러오지 못했어요. 다시 시도해 주세요.';
@@ -15971,4 +15971,48 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => '이 자리 바꾸기';
+
+  @override
+  String get badgeDiscoveryTitle => '배지로 사람들과 연결돼요';
+
+  @override
+  String get badgeDiscoveryBody =>
+      '누구나 배지를 만들고 수여할 수 있어요. 프로필에 표시할 배지는 직접 선택해요. 배지를 둘러보며 커뮤니티를 알아보고 사람들을 팔로우해 보세요.';
+
+  @override
+  String get badgeDiscoveryMyBadges => '내 배지';
+
+  @override
+  String get badgeDiscoveryEmpty => '아직 커뮤니티를 찾지 못했어요. 아래로 당겨 다시 시도해 보세요.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      '커뮤니티 동영상을 팔로잉 피드에 추가해요. 사람들은 개별적으로 팔로우해요.';
+
+  @override
+  String get badgeOfficialLabel => '공식';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$website에서 자세히 알아보기';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName의 동영상';
+  }
 }

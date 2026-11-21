@@ -7853,5 +7853,14 @@
   "badgeOfficialLabel": "آفیشل",
   "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "{website} پر مزید جانیں"
+  "badgeDiscoveryWebsiteLabel": "{website} پر مزید جانیں",
+  "badgeDiscoveryVideosLabel": "{badgeName} کی ویڈیوز",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

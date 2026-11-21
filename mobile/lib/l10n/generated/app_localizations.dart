@@ -21369,22 +21369,22 @@ abstract class AppLocalizations {
   /// **'Your badge subscriptions are public.'**
   String get badgeSubscriptionsPublicNotice;
 
-  /// No description provided for @badgeSubscribeAction.
+  /// Button on a badge page that adds the badge community's videos to the Following feed. It does not follow any person.
   ///
   /// In en, this message translates to:
-  /// **'Subscribe to badge'**
+  /// **'Follow community'**
   String get badgeSubscribeAction;
 
-  /// No description provided for @badgeSubscribedAction.
+  /// The Follow community button once the community's videos are in the Following feed; tapping it again stops.
   ///
   /// In en, this message translates to:
-  /// **'Subscribed'**
+  /// **'Following community'**
   String get badgeSubscribedAction;
 
   /// No description provided for @badgeAcceptedHoldersTitle.
   ///
   /// In en, this message translates to:
-  /// **'Accepted holders'**
+  /// **'People in this community'**
   String get badgeAcceptedHoldersTitle;
 
   /// Shown when badge subscription preferences could not be read; retry reloads only subscriptions.
@@ -21729,7 +21729,7 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get badgeDetailShareAction;
 
-  /// Body of the share sheet when sharing a badge. The link is an naddr reference.
+  /// Body of the share sheet when sharing a badge. The link is a badges.divine.video URL, or a raw badge coordinate when the badge identifier is too long for an naddr.
   ///
   /// In en, this message translates to:
   /// **'Check out this badge on Divine: {link}'**
@@ -27998,6 +27998,70 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap this place'**
   String get collabRoomSwapSeatSemanticLabel;
+
+  /// No description provided for @badgeDiscoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Badges bring people together'**
+  String get badgeDiscoveryTitle;
+
+  /// No description provided for @badgeDiscoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.'**
+  String get badgeDiscoveryBody;
+
+  /// No description provided for @badgeDiscoveryMyBadges.
+  ///
+  /// In en, this message translates to:
+  /// **'My badges'**
+  String get badgeDiscoveryMyBadges;
+
+  /// No description provided for @badgeDiscoveryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No communities found yet. Pull down to try again.'**
+  String get badgeDiscoveryEmpty;
+
+  /// Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds community videos to your Following feed. Follow people individually.'**
+  String get badgeCommunityFollowHint;
+
+  /// Label for a badge issued by the pinned official Divine badge issuer.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get badgeOfficialLabel;
+
+  /// Screen reader label for a badge discovery card.
+  ///
+  /// In en, this message translates to:
+  /// **'{badgeName}, {issuerName}'**
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName);
+
+  /// Screen reader label for an official Divine badge discovery card.
+  ///
+  /// In en, this message translates to:
+  /// **'{badgeName}, {issuerName}, {officialLabel}'**
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  );
+
+  /// Screen reader label for the external badge discovery website link.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more at {website}'**
+  String badgeDiscoveryWebsiteLabel(String website);
+
+  /// Screen reader label for opening a badge community video feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos from {badgeName}'**
+  String badgeDiscoveryVideosLabel(String badgeName);
 }
 
 class _AppLocalizationsDelegate

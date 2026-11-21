@@ -6,16 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show NIP71VideoKinds, VideoEvent;
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, Nip19;
+import 'package:nostr_sdk/nostr_sdk.dart' show Nip19;
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/badge_clip_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
-import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -291,31 +289,29 @@ class ExploreBadgesView extends StatelessWidget {
   }
 }
 
-class _BadgePreviewCard extends StatelessWidget {
+class _BadgePreviewCard extends ConsumerWidget {
   const _BadgePreviewCard({required this.definition});
 
   final Nip58BadgeDefinition definition;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final coordinate = definition.coordinate;
     final cubit = context.read<ExploreBadgesCubit>();
+    final clips = context.select(
+      (ExploreBadgesCubit cubit) =>
+          cubit.state.videoPreviews[coordinate] ?? const <BadgeVideoPreview>[],
+    );
+    final visible = ref.watch(visibleBadgeClipsProvider(clips));
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) cubit.loadPreview(coordinate);
+      if (context.mounted && visible.isEmpty) cubit.loadPreview(coordinate);
     });
     final parsed = BadgeCoordinate.parse(coordinate)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
       children: [
-        BlocSelector<
-          ExploreBadgesCubit,
-          ExploreBadgesState,
-          List<BadgeVideoPreview>
-        >(
-          selector: (state) => state.videoPreviews[coordinate] ?? const [],
-          builder: (context, videos) => _BadgeClips(videos: videos),
-        ),
+        _BadgeClips(videos: visible),
         BlocSelector<ExploreBadgesCubit, ExploreBadgesState, List<String>>(
           selector: (state) => state.previews[coordinate] ?? const [],
           builder: (context, members) => BadgeCommunityCard(
@@ -328,6 +324,17 @@ class _BadgePreviewCard extends StatelessWidget {
         ),
         DivineButton(
           label: context.l10n.profileVideosLabel,
+          semanticLabel: context.l10n.badgeDiscoveryVideosLabel(
+            [
+                      definition.name,
+                      definition.dTag,
+                    ]
+                    .whereType<String>()
+                    .map(sanitizeUtf16)
+                    .where((name) => name.trim().isNotEmpty)
+                    .firstOrNull ??
+                context.l10n.profileBadgeFallbackSemanticLabel,
+          ),
           leadingIcon: DivineIconName.playCircle,
           type: DivineButtonType.secondary,
           onPressed: () =>
@@ -338,60 +345,22 @@ class _BadgePreviewCard extends StatelessWidget {
   }
 }
 
-class _BadgeClips extends ConsumerWidget {
+class _BadgeClips extends StatelessWidget {
   const _BadgeClips({required this.videos});
-
   final List<BadgeVideoPreview> videos;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     if (videos.isEmpty) return const SizedBox.shrink();
-    ref.watch(blocklistVersionProvider);
-    ref.watch(videoProvenanceFilterVersionProvider);
-    final repository = ref.watch(videosRepositoryProvider);
-    final visible = <BadgeVideoPreview>[];
-    for (final clip in videos) {
-      if (ref.watch(profileVanishedProvider(clip.pubkey))) continue;
-      final video = _previewEvent(clip);
-      if (video == null || !repository.canShowUnblurredPreview(video)) {
-        continue;
-      }
-      visible.add(clip);
-    }
-    if (visible.isEmpty) return const SizedBox.shrink();
     return Row(
       spacing: 6,
       children: [
-        for (var index = 0; index < visible.length; index++)
+        for (var index = 0; index < videos.length; index++)
           Expanded(
-            child: _BadgeClip(video: visible[index], index: index),
+            child: _BadgeClip(video: videos[index], index: index),
           ),
       ],
     );
-  }
-
-  VideoEvent? _previewEvent(BadgeVideoPreview clip) {
-    if (!NIP71VideoKinds.isAcceptableVideoKind(clip.kind)) return null;
-    try {
-      return VideoEvent.fromNostrEvent(
-        Event.fromJson({
-          'id': clip.id,
-          'pubkey': clip.pubkey,
-          'created_at': clip.createdAt,
-          'kind': clip.kind,
-          'tags': clip.tags,
-          'content': '',
-        }),
-        permissive: true,
-      ).copyWith(
-        moderationLabels: clip.moderationLabels,
-        isVerifiedArchive: clip.verifiedArchive,
-        isArchiveVerificationUnknown:
-            !clip.verifiedArchive && !clip.archiveProvenanceAvailable,
-      );
-    } on Exception {
-      return null;
-    }
   }
 }
 
@@ -432,13 +401,14 @@ class _BadgeClip extends StatelessWidget {
                 Center(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: context.vineColors.surfaceContainerHigh,
+                      color: context.vineColors.mediaChrome,
                       shape: BoxShape.circle,
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
                       child: DivineIcon(
                         icon: DivineIconName.playCircle,
+                        color: context.vineColors.mediaChromeForeground,
                       ),
                     ),
                   ),

@@ -6,10 +6,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -36,8 +36,26 @@ class _MockExploreBadgesCubit extends MockCubit<ExploreBadgesState>
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {
   @override
-  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async =>
-      throw const FunnelcakeNotConfiguredException();
+  List<Nip58BadgeDefinition> mergeDiscoveryDefinitions(
+    List<Nip58BadgeDefinition> primary,
+    List<Nip58BadgeDefinition> federated,
+  ) => mergeBadgeDiscoveryDefinitions(primary, federated);
+
+  @override
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery({
+    bool Function()? isActive,
+  }) async => [
+    for (final definition in await loadPublicDefinitions())
+      (definition: definition, videos: const <BadgeVideoPreview>[]),
+  ];
+
+  @override
+  Future<List<Nip58BadgeDefinition>> loadFederatedDiscovery() async => const [];
+}
+
+class _PreviewVideoService extends MockVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => false;
 }
 
 void main() {
@@ -800,6 +818,7 @@ void main() {
         addTearDown(router.dispose);
         await tester.pumpWidget(
           testProviderScope(
+            mockVideoEventService: _PreviewVideoService(),
             child: MaterialApp.router(
               routerConfig: router,
               localizationsDelegates: appLocalizationsDelegates,
@@ -809,6 +828,11 @@ void main() {
         );
         final semantics = tester.ensureSemantics();
         await tester.pumpAndSettle();
+        expect(
+          find.bySemanticsLabel('Videos from Loop makers'),
+          findsOneWidget,
+        );
+        verifyNever(() => cubit.loadPreview(_definition.coordinate));
         await tester.tap(find.bySemanticsLabel('A community clip'));
         await tester.pumpAndSettle();
         semantics.dispose();
@@ -862,16 +886,15 @@ void main() {
         );
 
         await tester.pumpWidget(
-          testProviderScope(
+          testMaterialApp(
+            mockVideoEventService: _PreviewVideoService(),
             additionalOverrides: [
               videosRepositoryProvider.overrideWithValue(repository),
             ],
-            child: testMaterialApp(
-              home: Scaffold(
-                body: BlocProvider<ExploreBadgesCubit>.value(
-                  value: cubit,
-                  child: const ExploreBadgesView(),
-                ),
+            home: Scaffold(
+              body: BlocProvider<ExploreBadgesCubit>.value(
+                value: cubit,
+                child: const ExploreBadgesView(),
               ),
             ),
           ),

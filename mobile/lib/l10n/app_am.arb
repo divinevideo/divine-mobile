@@ -6605,5 +6605,14 @@
   "badgeOfficialLabel": "ይፋዊ",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "በ{website} ላይ ተጨማሪ ይወቁ"
+  "badgeDiscoveryWebsiteLabel": "በ{website} ላይ ተጨማሪ ይወቁ",
+  "badgeDiscoveryVideosLabel": "የ{badgeName} ቪዲዮዎች",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

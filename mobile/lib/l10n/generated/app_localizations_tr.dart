@@ -12511,13 +12511,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Rozete abone ol';
+  String get badgeSubscribeAction => 'Topluluğu takip et';
 
   @override
-  String get badgeSubscribedAction => 'Abone olundu';
+  String get badgeSubscribedAction => 'Topluluk takip ediliyor';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Rozeti kabul edenler';
+  String get badgeAcceptedHoldersTitle => 'Bu topluluktaki insanlar';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16658,4 +16658,49 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Bu yeri değiştir';
+
+  @override
+  String get badgeDiscoveryTitle => 'Rozetler insanları bir araya getirir';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Herkes rozet oluşturup verebilir. Profilinde hangilerinin görüneceğini sen seçersin. Bir rozeti keşfederek topluluğunu tanı ve içindeki insanları takip et.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Rozetlerim';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Henüz topluluk bulunamadı. Tekrar denemek için aşağı çek.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Topluluk videolarını Takip Edilenler akışına ekler. İnsanları ayrı ayrı takip et.';
+
+  @override
+  String get badgeOfficialLabel => 'Resmî';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$website adresinde daha fazla bilgi edinin';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName videoları';
+  }
 }

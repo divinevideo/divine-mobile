@@ -5582,5 +5582,14 @@
   "badgeOfficialLabel": "Opisyal",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Alamin pa sa {website}"
+  "badgeDiscoveryWebsiteLabel": "Alamin pa sa {website}",
+  "badgeDiscoveryVideosLabel": "Mga video mula sa {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

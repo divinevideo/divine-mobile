@@ -7853,5 +7853,14 @@
   "badgeOfficialLabel": "Chính thức",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Tìm hiểu thêm tại {website}"
+  "badgeDiscoveryWebsiteLabel": "Tìm hiểu thêm tại {website}",
+  "badgeDiscoveryVideosLabel": "Video từ {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

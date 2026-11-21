@@ -7853,5 +7853,14 @@
   "badgeOfficialLabel": "Rasmi",
   "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
   "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
-  "badgeDiscoveryWebsiteLabel": "Ketahui lebih lanjut di {website}"
+  "badgeDiscoveryWebsiteLabel": "Ketahui lebih lanjut di {website}",
+  "badgeDiscoveryVideosLabel": "Video daripada {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

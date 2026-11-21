@@ -12749,13 +12749,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Abzeichen abonnieren';
+  String get badgeSubscribeAction => 'Community folgen';
 
   @override
-  String get badgeSubscribedAction => 'Abonniert';
+  String get badgeSubscribedAction => 'Du folgst der Community';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Personen mit angenommenem Abzeichen';
+  String get badgeAcceptedHoldersTitle => 'Menschen in dieser Community';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16935,4 +16935,49 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Diesen Platz tauschen';
+
+  @override
+  String get badgeDiscoveryTitle => 'Abzeichen bringen Menschen zusammen';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Alle können Abzeichen erstellen und verleihen. Du entscheidest, welche in deinem Profil erscheinen. Entdecke ein Abzeichen, lerne seine Community kennen und folge ihren Mitgliedern.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Meine Abzeichen';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Noch keine Communitys gefunden. Zieh nach unten, um es erneut zu versuchen.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Fügt Community-Videos zu deinem „Folge ich“-Feed hinzu. Personen folgst du einzeln.';
+
+  @override
+  String get badgeOfficialLabel => 'Offiziell';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Mehr erfahren auf $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Videos von $badgeName';
+  }
 }
