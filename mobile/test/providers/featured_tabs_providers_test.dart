@@ -8,6 +8,7 @@ import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
 
@@ -33,6 +34,7 @@ void main() {
           ageVerificationService,
         ),
         currentAuthStateProvider.overrideWithValue(authState),
+        isProtectedMinorProvider.overrideWithValue(false),
       ],
       retry: retry,
     );
@@ -52,6 +54,7 @@ void main() {
           ageVerificationService,
         ),
         currentAuthStateProvider.overrideWithValue(authState),
+        isProtectedMinorProvider.overrideWithValue(false),
       ]);
     }
   }
@@ -142,6 +145,34 @@ void main() {
       expect(
         container.read(featuredTabAgeGateProvider),
         FeaturedTabAudience.adult,
+      );
+    });
+
+    test('re-gates when a verified adult becomes a protected minor', () async {
+      when(() => ageVerificationService.isAdultContentVerified)
+          .thenReturn(true);
+      final container = createContainer();
+      await container.read(featuredTabViewerIsAdultProvider.future);
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        FeaturedTabAudience.adult,
+      );
+
+      container.updateOverrides([
+        ageVerificationServiceProvider.overrideWithValue(
+          ageVerificationService,
+        ),
+        currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+        isProtectedMinorProvider.overrideWithValue(true),
+      ]);
+      await container.pump();
+      expect(
+        container.read(featuredTabAgeGateProvider),
+        isNot(FeaturedTabAudience.adult),
+      );
+      expect(
+        await container.read(featuredTabViewerIsAdultProvider.future),
+        isFalse,
       );
     });
 

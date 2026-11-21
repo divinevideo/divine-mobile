@@ -7,6 +7,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -32,6 +33,8 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
   ref
     ..watch(currentAuthStateProvider)
     ..watch(adultContentVerificationVersionProvider);
+  final isProtectedMinor = ref.watch(isProtectedMinorProvider);
+  if (isProtectedMinor) return false;
   final service = ref.watch(ageVerificationServiceProvider);
   try {
     await service.initialized;
@@ -51,8 +54,8 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
 /// Everything but [FeaturedTabAudience.adult] fails closed: a pending auth or
 /// verification check is `loading`, a failed check is `failed`, and a
 /// signed-out viewer is `unverified`. Protected-minor accounts also
-/// stay gated because [AgeVerificationService] prevents them from completing
-/// adult-content verification.
+/// stay gated when their live designation changes, even if adult-content
+/// verification was previously completed.
 final featuredTabAgeGateProvider = Provider<FeaturedTabAudience>((ref) {
   final auth = ref.watch(currentAuthStateProvider);
   if (auth == AuthState.authenticating || auth == AuthState.checking) {
