@@ -140,7 +140,25 @@ def publish_release_drafts(
             messages.append("Release campaign draft accepted: " + draft["sourceId"] + ".")
         except urllib.error.HTTPError as error:
             error.close()
-            messages.append("Release campaign draft unavailable; will retry next tick.")
-        except (http.client.HTTPException, OSError, ValueError):
+            if error.code in {401, 403}:
+                messages.append(
+                    f"Release campaign draft rejected (HTTP {error.code}); "
+                    "check Access credentials and API configuration."
+                )
+            elif 400 <= error.code < 500 and error.code not in {408, 429}:
+                messages.append(
+                    f"Release campaign draft rejected (HTTP {error.code}); "
+                    "check API configuration and draft contract."
+                )
+            else:
+                messages.append(
+                    f"Release campaign draft unavailable (HTTP {error.code}); "
+                    "will retry next tick."
+                )
+        except ValueError:
+            messages.append(
+                "Release campaign draft rejected; check request header configuration."
+            )
+        except (http.client.HTTPException, OSError):
             messages.append("Release campaign draft unavailable; will retry next tick.")
     return messages

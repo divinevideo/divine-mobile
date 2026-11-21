@@ -179,6 +179,39 @@ class DraftProducerTest(unittest.TestCase):
                     self.assertNotIn("private payload", " ".join(messages))
                 self.assertEqual(len(self.capture(snapshot())[0]), 1)
 
+    def test_http_auth_and_configuration_failures_are_actionable_and_redacted(self):
+        for status in [400, 401, 403, 404]:
+            with self.subTest(status=status), patch("urllib.request.build_opener") as opener:
+                opener.return_value.open.side_effect = urllib.error.HTTPError(
+                    "https://campaigns.example", status, "synthetic-secret", {},
+                    io.BytesIO(b"private payload"),
+                )
+                message = " ".join(publish_release_drafts(snapshot(), ENV, LEVELS))
+                self.assertIn(str(status), message)
+                self.assertIn("configuration", message)
+                self.assertNotIn("will retry", message)
+                self.assertNotIn("synthetic-secret", message)
+                self.assertNotIn("private payload", message)
+
+        with patch("urllib.request.build_opener") as opener:
+            opener.return_value.open.side_effect = ValueError("synthetic-secret")
+            message = " ".join(publish_release_drafts(snapshot(), ENV, LEVELS))
+            self.assertIn("configuration", message)
+            self.assertNotIn("will retry", message)
+            self.assertNotIn("synthetic-secret", message)
+
+    def test_transient_http_errors_include_the_status_and_retry(self):
+        for status in [408, 429, 500, 503]:
+            with self.subTest(status=status), patch("urllib.request.build_opener") as opener:
+                opener.return_value.open.side_effect = urllib.error.HTTPError(
+                    "https://campaigns.example", status, "synthetic-secret", {},
+                    io.BytesIO(b"private payload"),
+                )
+                message = " ".join(publish_release_drafts(snapshot(), ENV, LEVELS))
+                self.assertIn(str(status), message)
+                self.assertIn("will retry", message)
+                self.assertNotIn("synthetic-secret", message)
+
     def test_availability_adapter_failure_is_nonfatal(self):
         class Unavailable:
             def confirmed_version(self):
