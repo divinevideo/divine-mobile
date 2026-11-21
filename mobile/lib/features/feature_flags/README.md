@@ -226,8 +226,10 @@ Selection requests have a one-second deadline, at most eight concurrent parents,
 256 cached parents and 30-second expiry. Transport/configuration failures keep
 canonical playback. A policy denial remains terminal, including when event-key
 video bytes are cached. Bunny network/timeout/503 failures can use the matching
-canonical source; 401/403/404 and unknown failures stop. HLS children inherit the
-native host-wide cache bypass and carry no viewer credentials.
+canonical source; 401/403/404 and unknown failures stop. HLS children carry no viewer credentials. Android bypasses its app-owned
+disk cache for every Bunny request. iOS HLS uses a direct AVURLAsset rather than
+the progressive download cache; native streaming-cache behavior still needs
+device validation.
 
 Turning the flag off rebuilds live and queued sources and ignores late selection
 responses. Disk prefetch is suspended while server selection is active. Uploads

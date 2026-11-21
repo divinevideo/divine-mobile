@@ -623,9 +623,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       widget.bunnyPlaybackPaths,
       oldWidget.bunnyPlaybackPaths,
     );
-    final routingChanged =
+    final bunnyRoutingChanged =
         widget.bunnyPlaybackSelector != oldWidget.bunnyPlaybackSelector ||
-        bunnyPathsChanged ||
+        bunnyPathsChanged;
+    final routingChanged =
+        bunnyRoutingChanged ||
         widget.preferB2Original != oldWidget.preferB2Original;
     if (widget.videos == oldWidget.videos && !routingChanged) {
       return;
@@ -669,10 +671,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     _terminalErrorTypesByVideoId.clear();
     final sameVideos = identical(widget.videos, oldWidget.videos);
-    _teardownAllControllers(keepViewerHeaders: sameVideos && bunnyPathsChanged);
+    _teardownAllControllers(
+      keepViewerHeaders: sameVideos && bunnyRoutingChanged,
+    );
 
     _currentIndex = _clampIndex(
-      sameVideos && bunnyPathsChanged ? _currentIndex : widget.initialIndex,
+      sameVideos && bunnyRoutingChanged ? _currentIndex : widget.initialIndex,
     );
     _lastAppliedGate = null;
     _pagePosition.value = _currentIndex.toDouble();

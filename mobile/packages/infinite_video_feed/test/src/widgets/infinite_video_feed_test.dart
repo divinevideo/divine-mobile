@@ -601,6 +601,79 @@ void main() {
       );
     }
 
+    testWidgets('server flag changes preserve viewer authorization and index', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install();
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final videos = [
+        _makeVideo('first', videoUrl: raw),
+        _makeVideo('second', videoUrl: raw),
+      ];
+      var selectionCalls = 0;
+      Future<Set<String>> select(VideoEvent _) async {
+        selectionCalls++;
+        return {path};
+      }
+
+      Future<void> mount({required bool enabled}) async {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: videos,
+              cache: cache,
+              urlResolver: (_) => canonical,
+              bunnyPlaybackSelector: enabled ? select : null,
+              keepNextAlive: false,
+              keepPreviousAlive: false,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      try {
+        await mount(enabled: false);
+        unawaited(key.currentState!.animateToPage(1));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump();
+        expect(key.currentState!.currentIndex, 1);
+        final retry = key.currentState!.retryAt(
+          1,
+          httpHeaders: const {'Authorization': 'Nostr test'},
+        );
+        await tester.pump();
+        await tester.pump();
+        await retry;
+        expect(harness.clipsHandedToPlayer.last['httpHeaders'], {
+          'Authorization': 'Nostr test',
+        });
+        await mount(enabled: true);
+        expect(key.currentState!.currentIndex, 1);
+        expect(selectionCalls, 0);
+        expect(harness.clipsHandedToPlayer.last['uri'], canonical);
+        expect(harness.clipsHandedToPlayer.last['httpHeaders'], {
+          'Authorization': 'Nostr test',
+        });
+        await mount(enabled: false);
+        expect(key.currentState!.currentIndex, 1);
+        expect(harness.clipsHandedToPlayer.last['httpHeaders'], {
+          'Authorization': 'Nostr test',
+        });
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets('an authenticated retry opens only the canonical host', (
       tester,
     ) async {
