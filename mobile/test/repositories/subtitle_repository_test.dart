@@ -214,7 +214,7 @@ void main() {
       // republish that fails leaves the captions every revision serves alone.
       verifyInOrder([
         () => publisher.republishWithSubtitles(
-          existingEvent: _video,
+          existingEvent: any(named: 'existingEvent'),
           textTrackRef: 'https://media.divine.video/hash',
           extraTextTrackRefs: const ['39307:pk1:subtitles:my-vine-id'],
         ),
@@ -524,6 +524,85 @@ void main() {
             lang: any(named: 'lang'),
           ),
         );
+      });
+
+      group('the republish reads the relays again', () {
+        /// Saves from [video] while the relays hold [newest], and returns the
+        /// video the republish was told to read no older than.
+        Future<VideoEvent> floorOfSecondRead(
+          VideoEvent video,
+          Event newest,
+        ) async {
+          when(
+            () => videos.fetchLatestVideoRevision(any()),
+          ).thenAnswer((_) async => LatestVideoRevisionFound(newest));
+          when(
+            () => publisher.republishWithSubtitles(
+              existingEvent: any(named: 'existingEvent'),
+              textTrackRef: any(named: 'textTrackRef'),
+              extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+            ),
+          ).thenAnswer((_) async => _updatedVideo);
+          when(
+            () => publisher.publishSubtitleEvent(
+              video: any(named: 'video'),
+              vttContent: any(named: 'vttContent'),
+              blossomUrl: any(named: 'blossomUrl'),
+              lang: any(named: 'lang'),
+            ),
+          ).thenAnswer((_) async => '39307:pk1:subtitles:my-vine-id');
+
+          await repo.publishEditedSubtitles(video: video, cues: _cues);
+
+          return verify(
+                () => publisher.republishWithSubtitles(
+                  existingEvent: captureAny(named: 'existingEvent'),
+                  textTrackRef: any(named: 'textTrackRef'),
+                  extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+                  textTrackLang: any(named: 'textTrackLang'),
+                ),
+              ).captured.single
+              as VideoEvent;
+        }
+
+        test('no older than the revision this save was built on', () async {
+          final newer = Event(
+            'a' * 64,
+            34236,
+            [
+              ['d', 'my-vine-id'],
+            ],
+            'revision from another device',
+            createdAt: 1700000500,
+          );
+
+          final floor = await floorOfSecondRead(_video, newer);
+
+          expect(floor.id, newer.id);
+          expect(floor.eventCreatedAt, newer.createdAt);
+        });
+
+        test('no older than the opened event when its copy has no Nostr '
+            'timestamp', () async {
+          final relayCopy = Event(
+            'a' * 64,
+            34236,
+            [
+              ['d', 'my-vine-id'],
+            ],
+            '',
+            createdAt: 1700000500,
+          );
+          // A REST row can carry the event's ID with only a display date.
+          final opened = _video.copyWith(id: relayCopy.id);
+          expect(opened.eventCreatedAt, isNull);
+
+          final floor = await floorOfSecondRead(opened, relayCopy);
+
+          expect(floor.id, relayCopy.id);
+          expect(floor.eventCreatedAt, relayCopy.createdAt);
+        });
       });
 
       group('fails the save when the subtitle event', () {

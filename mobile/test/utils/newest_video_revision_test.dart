@@ -1,5 +1,5 @@
-// ABOUTME: Pins the read a video republish rebuilds from: the address it asks
-// ABOUTME: for, and that an unanswered or empty read gives no revision.
+// ABOUTME: Pins the read a video republish rebuilds from: the address, the
+// ABOUTME: opened revision as its floor, and none when unanswered or empty.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -103,6 +103,42 @@ void main() {
       );
 
       expect(result, isNull);
+    });
+
+    group('when the relay revision has the opened timestamp', () {
+      final sameSecond = Event(
+        _owner,
+        34236,
+        [
+          ['d', 'my-video'],
+        ],
+        'same-second relay revision',
+        createdAt: 1700000000,
+      );
+
+      setUp(() {
+        when(
+          () => repository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => LatestVideoRevisionFound(sameSecond));
+      });
+
+      Future<Event?> readFrom(String openedId) => newestVideoRevision(
+        repository,
+        _video().copyWith(id: openedId, eventCreatedAt: 1700000000),
+        logName: 'test',
+      );
+
+      test('returns it when it is the opened event', () async {
+        expect(await readFrom(sameSecond.id), same(sameSecond));
+      });
+
+      test('returns it when its ID wins the NIP-01 tie', () async {
+        expect(await readFrom('f' * 64), same(sameSecond));
+      });
+
+      test('refuses it when the opened event wins the tie', () async {
+        expect(await readFrom('0' * 64), isNull);
+      });
     });
 
     test('returns null when there is no repository to ask', () async {
