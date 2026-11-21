@@ -14,7 +14,16 @@ enum RemoteRecordTrigger {
   volumeDown,
 
   /// A Bluetooth remote or headphone button was pressed.
-  bluetooth;
+  bluetooth,
+
+  /// A legacy Watch toggle without an explicit action.
+  watch,
+
+  /// The Watch showed the Start action.
+  watchStart,
+
+  /// The Watch showed the Stop action.
+  watchStop;
 
   /// Converts a native string to a [RemoteRecordTrigger].
   static RemoteRecordTrigger fromNativeString(String value) {
@@ -22,6 +31,9 @@ enum RemoteRecordTrigger {
       'volumeUp' => RemoteRecordTrigger.volumeUp,
       'volumeDown' => RemoteRecordTrigger.volumeDown,
       'bluetooth' => RemoteRecordTrigger.bluetooth,
+      'watch' => RemoteRecordTrigger.watch,
+      'watchStart' => RemoteRecordTrigger.watchStart,
+      'watchStop' => RemoteRecordTrigger.watchStop,
       _ => RemoteRecordTrigger.volumeUp,
     };
   }
@@ -32,6 +44,9 @@ enum RemoteRecordTrigger {
       RemoteRecordTrigger.volumeUp => 'volumeUp',
       RemoteRecordTrigger.volumeDown => 'volumeDown',
       RemoteRecordTrigger.bluetooth => 'bluetooth',
+      RemoteRecordTrigger.watch => 'watch',
+      RemoteRecordTrigger.watchStart => 'watchStart',
+      RemoteRecordTrigger.watchStop => 'watchStop',
     };
   }
 }

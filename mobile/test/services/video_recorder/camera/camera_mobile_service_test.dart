@@ -520,7 +520,7 @@ void main() {
         var presses = 0;
         platform.shouldFail = false;
         await service.initialize();
-        service.setOnRemoteRecordTrigger(() => presses++);
+        service.setOnRemoteRecordTrigger((_) => presses++);
 
         // Leaving the recorder disposes the camera, which drops every native
         // callback; a volume key or Bluetooth shutter must still record after

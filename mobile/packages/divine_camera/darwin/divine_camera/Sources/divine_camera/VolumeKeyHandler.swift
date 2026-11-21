@@ -19,6 +19,9 @@ import UIKit
 /// it is released on `didEnterBackground` and re-claimed on `didBecomeActive`
 /// while the handler is enabled. Camera capture is suspended in the background
 /// anyway, so no remote trigger is lost.
+///
+/// The session is not claimed at all while a paired Apple Watch has the Watch
+/// remote: see `MediaSessionScopePolicy`. Volume buttons keep working.
 class VolumeKeyHandler: NSObject {
     private var volumeKeysEnabled = true  // Can be toggled independently
     private var onTrigger: ((String) -> Void)?
@@ -120,6 +123,20 @@ class VolumeKeyHandler: NSObject {
     func setVolumeKeysEnabled(_ enabled: Bool) {
         volumeKeysEnabled = enabled
         DivineCameraLog.shared.debug("DivineCameraVolumeKeyHandler: Volume keys \(enabled ? "enabled" : "disabled")")
+    }
+
+    /// Tells the handler whether a paired Apple Watch has the Watch remote.
+    /// While it does, Bluetooth media buttons do not start or stop a take.
+    func setWatchRemoteAvailable(_ available: Bool) {
+        let appActive = UIApplication.shared.applicationState == .active
+        switch scope.onWatchRemoteChanged(hasWatchRemote: available, appActive: appActive) {
+        case .claim:
+            performActivateMediaSession()
+        case .release:
+            performDeactivateMediaSession()
+        case .none:
+            break
+        }
     }
 
     /// Whether volume key handling is currently enabled.

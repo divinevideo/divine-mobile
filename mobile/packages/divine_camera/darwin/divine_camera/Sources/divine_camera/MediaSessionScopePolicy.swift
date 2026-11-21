@@ -20,11 +20,24 @@ import Foundation
 /// `NostrBridgeAttestationPolicy` in the Runner test target). Each mutating
 /// method returns whether the caller must run the matching native side effect,
 /// keeping the handler a thin performer over these decisions.
+///
+/// The session is also left unclaimed while a paired Apple Watch has the Watch
+/// remote: watchOS shows a "Now Playing" app as a card with play and pause
+/// over the remote, and the Watch then starts takes the user did not ask for.
 public struct MediaSessionScopePolicy {
     /// Whether the handler is listening (between `enable()` and `disable()`).
     public private(set) var isEnabled: Bool
     /// Whether the Now Playing session is currently claimed.
     public private(set) var isMediaSessionActive: Bool
+    /// Whether a paired Apple Watch has the Watch remote installed.
+    public private(set) var hasWatchRemote = false
+
+    /// What the caller must do to the Now Playing session after a change.
+    public enum SessionChange: Equatable {
+        case none
+        case claim
+        case release
+    }
 
     public init(isEnabled: Bool = false, isMediaSessionActive: Bool = false) {
         self.isEnabled = isEnabled
@@ -38,7 +51,7 @@ public struct MediaSessionScopePolicy {
     public mutating func onEnable(appActive: Bool) -> Bool {
         guard !isEnabled else { return false }
         isEnabled = true
-        guard appActive, !isMediaSessionActive else { return false }
+        guard appActive, !hasWatchRemote, !isMediaSessionActive else { return false }
         isMediaSessionActive = true
         return true
     }
@@ -64,10 +77,28 @@ public struct MediaSessionScopePolicy {
 
     /// The app became foreground-active. Returns `true` if the caller should
     /// (re)claim the Now Playing session — only while still enabled and not
-    /// already claimed.
+    /// already claimed, and never while the Watch remote is there.
     public mutating func onBecomeActive() -> Bool {
-        guard isEnabled, !isMediaSessionActive else { return false }
+        guard isEnabled, !hasWatchRemote, !isMediaSessionActive else { return false }
         isMediaSessionActive = true
         return true
+    }
+
+    /// A paired Apple Watch gained or lost the Watch remote. Releases the
+    /// session when the remote appears, and claims it when the remote goes
+    /// while the handler is enabled and the app is foreground-active.
+    public mutating func onWatchRemoteChanged(
+        hasWatchRemote: Bool,
+        appActive: Bool
+    ) -> SessionChange {
+        self.hasWatchRemote = hasWatchRemote
+        if hasWatchRemote {
+            guard isMediaSessionActive else { return .none }
+            isMediaSessionActive = false
+            return .release
+        }
+        guard isEnabled, appActive, !isMediaSessionActive else { return .none }
+        isMediaSessionActive = true
+        return .claim
     }
 }

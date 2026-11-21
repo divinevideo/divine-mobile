@@ -78,7 +78,6 @@ struct CameraQuickActionWidgetView: View {
     }
 }
 
-@main
 struct CameraQuickActionWidget: Widget {
     let kind = "CameraQuickActionWidget"
 
@@ -89,6 +88,16 @@ struct CameraQuickActionWidget: Widget {
         .configurationDisplayName("divine_quick_actions_camera_widget_name")
         .description("divine_quick_actions_camera_widget_description")
         .supportedFamilies([.systemSmall, .accessoryCircular])
+    }
+}
+
+@main
+struct DivineWidgets: WidgetBundle {
+    var body: some Widget {
+        CameraQuickActionWidget()
+        if #available(iOSApplicationExtension 16.2, *) {
+            RecorderLiveActivity()
+        }
     }
 }
 

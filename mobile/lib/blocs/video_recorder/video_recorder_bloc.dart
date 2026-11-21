@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:clock/clock.dart';
 import 'package:collection/collection.dart';
 import 'package:divine_camera/divine_camera.dart'
     show
@@ -16,6 +17,8 @@ import 'package:divine_camera/divine_camera.dart'
         DivineVideoQuality,
         DivineVideoStabilizationMode,
         PhotoCaptureResult,
+        RemoteRecordTrigger,
+        RemoteRecorderState,
         VideoRecordingResult;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, VideoClip;
@@ -127,6 +130,12 @@ typedef ReadSharedPreferences = SharedPreferences Function();
 /// Reports the recorder mode only after media capture actually starts.
 typedef RecordingStartedCallback = void Function(VideoRecorderMode mode);
 
+/// Tells remote controls (the Apple Watch app) what the recorder is doing, or
+/// that it is not on screen when `state` is null.
+typedef RemoteRecorderStatePublisher = Future<void> Function(
+  RemoteRecorderState? state,
+);
+
 /// Measures the chroma-key screen in the still at `photoPath`, keeping only the
 /// centre shaped like the video (width over height).
 ///
@@ -216,6 +225,7 @@ class VideoRecorderBloc
     AudioPlaybackServiceFactory? audioPlaybackServiceFactory,
     PerformanceTraceMonitor? performanceMonitor,
     RecordingStartedCallback? onRecordingStarted,
+    RemoteRecorderStatePublisher? publishRemoteRecorderState,
     bool liveChromaKeySupported = false,
     ChromaKeyStillDetector detectChromaKeyStill = detectChromaKeyInStill,
   }) : _readClipManager = readClipManager,
@@ -231,6 +241,7 @@ class VideoRecorderBloc
        _performanceMonitor =
            performanceMonitor ?? const NoOpPerformanceTraceMonitor(),
        _onRecordingStarted = onRecordingStarted,
+       _publishRemoteRecorderState = publishRemoteRecorderState,
        _liveChromaKeySupported = liveChromaKeySupported,
        _detectChromaKeyStill = detectChromaKeyStill,
        super(
@@ -263,6 +274,9 @@ class VideoRecorderBloc
     on<VideoRecorderAppLifecycleChanged>(_onAppLifecycleChanged);
     on<VideoRecorderRemoteRecordPaused>(_onRemoteRecordPaused);
     on<VideoRecorderRemoteRecordResumed>(_onRemoteRecordResumed);
+    on<VideoRecorderRemoteStateRefreshRequested>(
+      (event, emit) => _syncRemoteRecorder(state),
+    );
     on<VideoRecorderFlashToggled>(_onFlashToggled);
     on<VideoRecorderAspectRatioToggled>(_onAspectRatioToggled);
     on<VideoRecorderAspectRatioSet>(_onAspectRatioSet);
@@ -380,6 +394,7 @@ class VideoRecorderBloc
   final AudioPlaybackServiceFactory _audioPlaybackServiceFactory;
   final PerformanceTraceMonitor _performanceMonitor;
   final RecordingStartedCallback? _onRecordingStarted;
+  final RemoteRecorderStatePublisher? _publishRemoteRecorderState;
   final bool _liveChromaKeySupported;
   final ChromaKeyStillDetector _detectChromaKeyStill;
 
@@ -415,12 +430,21 @@ class VideoRecorderBloc
   /// off natively but leaves this set, so the resume turns it back on.
   bool _remoteRecordControlEnabled = false;
 
+  /// What [_syncRemoteRecorder] last published: null for a closed recorder.
+  Object? _publishedRemoteRecorder;
+  int _finishedStillCaptures = 0;
+  bool _remotePreviewReady = true;
+  int _lifecycleRevision = 0;
+  bool _isAppForeground = true;
+
   /// How long the zoom ruler stays visible after the last pinch activity
   /// before the auto-hide timer clears it.
   static const _zoomIndicatorHideDelay = Duration(milliseconds: 1000);
 
   /// One step of the stop-motion interval countdown.
   static const _intervalCaptureTickInterval = Duration(seconds: 1);
+
+  static const _minimumRecordingDuration = Duration(milliseconds: 30);
 
   /// The current active camera lens. Delegates to the camera service.
   DivineCameraLens get currentLens => _cameraService.currentLens;
@@ -454,6 +478,111 @@ class VideoRecorderBloc
     } else if (!isCapturing) {
       _releaseChromaKeyBakes();
     }
+    _syncRemoteRecorder(change.nextState);
+  }
+
+  /// Publishes what a remote control should mirror, when it differs from
+  /// what was last published.
+  ///
+  /// The recorder counts as closed while it has no live preview to trigger:
+  /// before the camera is up, on a tab without a preview, while a sheet pauses remote
+  /// recording, and once navigation has locked recording. It also counts as
+  /// closed while a sound is selected, because remote presses are ignored
+  /// then and the Watch should not show a shutter that does nothing.
+  void _syncRemoteRecorder(VideoRecorderBlocState recorder) {
+    final publish = _publishRemoteRecorderState;
+    if (publish == null) return;
+
+    final isOpen =
+        !_isClosing &&
+        _remotePreviewReady &&
+        recorder.isCameraInitialized &&
+        !recorder.isRemoteRecordPaused &&
+        !_remoteRecordPausedForSound &&
+        !recorder.recordingLockedForNavigation &&
+        recorder.recorderMode.recordsVideo;
+    RemoteRecorderState? remote;
+    Object? signature;
+    if (isOpen) {
+      final clipManager = _readClipManager();
+      final isTakeRunning =
+          recorder.isCapturingFootage && !recorder.isStoppingRecording;
+      // What the recorder's own shutter shows: a countdown and stop-motion's
+      // interval are stopped by the next press too.
+      final isShutterActive =
+          recorder.showsActiveRecording || recorder.isIntervalCaptureRunning;
+      final totalDuration = clipManager.totalDuration;
+      const budget = VideoEditorConstants.maxDuration;
+      final canStart =
+          recorder.canRecord &&
+          recorder.recordingState == VideoRecorderState.idle &&
+          !recorder.hasRecordingInFlight &&
+          (!recorder.hasRecordingLimit ||
+              budget - totalDuration >= _minimumRecordingDuration);
+      final isShutterEnabled =
+          !recorder.isSwitchingCamera && (isShutterActive || canStart);
+      final stillShutterCount = recorder.recorderMode.capturesStills
+          ? _finishedStillCaptures
+          : 0;
+      final takeDuration = clipManager.activeRecordingDuration;
+      final (recorded, remoteBudget) = recorder.recorderMode.capturesStills
+          ? _stillsProgress(recorder, clipManager)
+          // A take being finalized is not in the clips yet, but its time is
+          // already spent.
+          : (
+              isTakeRunning ? totalDuration : totalDuration + takeDuration,
+              budget,
+            );
+      remote = RemoteRecorderState(
+        recorded: recorded,
+        activeTakeStartedAt: isTakeRunning
+            ? clock.now().subtract(takeDuration)
+            : null,
+        budget: remoteBudget,
+        modeName: recorder.recorderMode.label,
+        isShutterActive: isShutterActive,
+        isShutterEnabled: isShutterEnabled,
+        stillShutterCount: stillShutterCount,
+      );
+      signature = (
+        isTakeRunning,
+        isShutterActive,
+        isShutterEnabled,
+        recorded,
+        remoteBudget,
+        recorder.recorderMode,
+        stillShutterCount,
+      );
+    }
+    if (signature == _publishedRemoteRecorder) return;
+    _publishedRemoteRecorder = signature;
+    runDetached(
+      publish(remote),
+      'publish remote recorder state',
+      logName: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+  }
+
+  /// The iPhone's shot budget as clip time, so a remote fills its progress
+  /// the way the recorder's shot counter does: stills taken against the most
+  /// this session fits, each held for the composition's hold.
+  ///
+  /// The stills are not in the clips until the session ends, so the clip
+  /// time recorded so far would not move while the user shoots.
+  (Duration, Duration) _stillsProgress(
+    VideoRecorderBlocState recorder,
+    ClipManagerNotifier clipManager,
+  ) {
+    final framesPerImage = StopMotionFrameOps.captureFramesPerImageFor(
+      clipManager.clips,
+    );
+    final still = StopMotionFrameOps.framesPerImageToDuration(framesPerImage);
+    final maxStills = StopMotionFrameOps.maxCaptureFramesAfter(
+      clipManager.totalDuration,
+      framesPerImage: framesPerImage,
+    );
+    return (still * recorder.stopMotionFrameCount, still * maxStills);
   }
 
   void _releaseChromaKeyBakes() {
@@ -467,6 +596,7 @@ class VideoRecorderBloc
     VideoRecorderInitializeRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final lifecycleRevision = _lifecycleRevision;
     // Re-initialization marks the end of any navigation teardown, so release
     // the navigation recording lock up front — this covers the camera-init
     // error returns below too, which previously left the recorder locked until
@@ -643,13 +773,20 @@ class VideoRecorderBloc
     // on.
     await _applyCameraForRecorderMode(emit);
 
-    // Opening straight into Upload: the screen's pause for that tab arrived
+    // Opening straight into Upload or Together: the screen's pause arrived
     // while the camera was still starting and was dropped, so release it now.
     if (!state.recorderMode.recordsVideo) {
       await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
     }
 
     await _setupRemoteRecordControl();
+    if (_isAppForeground &&
+        state.recorderMode.recordsVideo &&
+        lifecycleRevision == _lifecycleRevision &&
+        !_isClosing) {
+      _remotePreviewReady = true;
+      _syncRemoteRecorder(state);
+    }
 
     Log.info(
       '✅ Video recorder initialized successfully',
@@ -671,6 +808,15 @@ class VideoRecorderBloc
     VideoRecorderAppLifecycleChanged event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final revision = ++_lifecycleRevision;
+    final resumed = event.state == AppLifecycleState.resumed;
+    if (!event.isTabTransition) _isAppForeground = resumed;
+    if (resumed && !_isAppForeground) return;
+    _remotePreviewReady = false;
+    _syncRemoteRecorder(state);
+    // Tabs without a camera intentionally keep it paused. Track the foreground
+    // transition anyway so switching back to a capture tab enables the remote.
+    if (resumed && !state.recorderMode.recordsVideo) return;
     // The camera goes with the app, so the loop would only tick on into
     // captures that fail.
     if (event.state != AppLifecycleState.resumed) _stopIntervalCapture(emit);
@@ -683,10 +829,10 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
       addError(e, stackTrace);
-      if (event.state != AppLifecycleState.resumed) return;
+      if (!resumed || revision != _lifecycleRevision || _isClosing) return;
       // A camera that does not come back would leave a black preview. Show
       // the initialization error instead; the next initialize (leaving and
-      // returning to the Upload tab, or reopening the recorder) recovers.
+      // returning from a non-recording tab, or reopening) recovers.
       emit(
         state.copyWith(
           isCameraInitialized: false,
@@ -697,10 +843,13 @@ class VideoRecorderBloc
       return;
     }
 
-    // Leaving the Upload tab resumes the camera it paused, into whichever
+    // Leaving a non-recording tab resumes the camera it paused, into whichever
     // mode the user switched to meanwhile.
-    if (event.state == AppLifecycleState.resumed) {
+    if (resumed && revision == _lifecycleRevision && !_isClosing) {
       await _applyCameraForRecorderMode(emit, clearRetainedRequest: true);
+      if (revision != _lifecycleRevision || _isClosing) return;
+      _remotePreviewReady = true;
+      _syncRemoteRecorder(state);
     }
   }
 
@@ -1012,10 +1161,10 @@ class VideoRecorderBloc
     }
   }
 
-  Future<void> _onRecordingToggleRequested(
+  void _onRecordingToggleRequested(
     VideoRecorderRecordingToggleRequested event,
     Emitter<VideoRecorderBlocState> emit,
-  ) async {
+  ) {
     if (_cameraService.isSwitchingCamera) {
       Log.debug(
         '🎮 toggleRecording ignored - camera switch in progress',
@@ -1073,7 +1222,7 @@ class VideoRecorderBloc
     if (state.recordingLockedForNavigation ||
         !_cameraService.canRecord ||
         state.hasRecordingInFlight ||
-        (remainingDuration < const Duration(milliseconds: 30) &&
+        (remainingDuration < _minimumRecordingDuration &&
             state.hasRecordingLimit)) {
       Log.debug(
         '🎥 Recording start ignored - '
@@ -2765,7 +2914,12 @@ class VideoRecorderBloc
   Future<void> _onStopMotionFrameCaptured(
     VideoRecorderStopMotionFrameCaptured event,
     Emitter<VideoRecorderBlocState> emit,
-  ) => _captureStopMotionFrame(emit);
+  ) async {
+    await _captureStopMotionFrame(emit);
+    // The Watch can take another still once this droppable handler finishes.
+    _finishedStillCaptures++;
+    _syncRemoteRecorder(state);
+  }
 
   /// Captures one still, appends it to [state.stopMotionFrames], and persists
   /// the growing session to the library. Returns whether a still was appended.
@@ -3215,7 +3369,11 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    // The Upload tab pauses the camera and shows no preview, so a volume or
+    // WatchConnectivity can still deliver a tap after the sheet pauses the
+    // native volume and media handlers.
+    if (!_remotePreviewReady || state.isRemoteRecordPaused) return;
+
+    // Tabs without a preview pause the camera, so a volume or
     // Bluetooth press there must not start a recording the user cannot see.
     if (!state.recorderMode.recordsVideo) {
       Log.debug(
@@ -3249,7 +3407,32 @@ class VideoRecorderBloc
       name: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
-    add(const VideoRecorderRecordingToggleRequested());
+    switch (event.trigger) {
+      case RemoteRecordTrigger.watch:
+        // Older Watch builds cannot identify the displayed action.
+        return;
+      case RemoteRecordTrigger.watchStart:
+        if (!state.isCameraInitialized ||
+            state.isShutterActive ||
+            state.hasRecordingInFlight ||
+            state.recordingState != VideoRecorderState.idle) {
+          return;
+        }
+      case RemoteRecordTrigger.watchStop:
+        if (!state.isCameraInitialized ||
+            !state.isShutterActive ||
+            state.isStoppingRecording) {
+          return;
+        }
+      case RemoteRecordTrigger.volumeUp:
+      case RemoteRecordTrigger.volumeDown:
+      case RemoteRecordTrigger.bluetooth:
+        break;
+    }
+    _onRecordingToggleRequested(
+      const VideoRecorderRecordingToggleRequested(),
+      emit,
+    );
   }
 
   Future<void> _onAutoStopped(
@@ -3290,9 +3473,9 @@ class VideoRecorderBloc
   }
 
   Future<void> _setupRemoteRecordControl() async {
-    _cameraService.setOnRemoteRecordTrigger(() {
+    _cameraService.setOnRemoteRecordTrigger((trigger) {
       if (isClosed) return;
-      add(const _VideoRecorderRemoteRecordTriggered());
+      add(_VideoRecorderRemoteRecordTriggered(trigger));
     });
 
     final success = await _cameraService.setRemoteRecordControlEnabled(
@@ -3630,6 +3813,7 @@ class VideoRecorderBloc
     if (_reactionStartCancellation case final cancellation?) {
       if (!cancellation.isCompleted) cancellation.complete();
     }
+    _syncRemoteRecorder(state);
     _releaseChromaKeyBakes();
     // Route replacement can bypass Back. Wait for a native start or stop
     // already in flight, or finish the active take before releasing the camera.

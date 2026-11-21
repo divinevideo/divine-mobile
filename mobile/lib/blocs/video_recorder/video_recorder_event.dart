@@ -61,12 +61,16 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
 
 /// Forwarded from `WidgetsBindingObserver.didChangeAppLifecycleState`.
 final class VideoRecorderAppLifecycleChanged extends VideoRecorderEvent {
-  const VideoRecorderAppLifecycleChanged(this.state);
+  const VideoRecorderAppLifecycleChanged(
+    this.state, {
+    this.isTabTransition = false,
+  });
 
   final AppLifecycleState state;
+  final bool isTabTransition;
 
   @override
-  List<Object?> get props => [state];
+  List<Object?> get props => [state, isTabTransition];
 }
 
 /// Temporarily pauses remote record control (volume buttons / Bluetooth).
@@ -84,6 +88,15 @@ final class VideoRecorderRemoteRecordPaused extends VideoRecorderEvent {
 /// Resumes remote record control after [VideoRecorderRemoteRecordPaused].
 final class VideoRecorderRemoteRecordResumed extends VideoRecorderEvent {
   const VideoRecorderRemoteRecordResumed();
+}
+
+/// The recorded clips or the selected sound changed outside the recorder's
+/// own start and stop (a clip was added, deleted or restored, or a sound was
+/// picked or removed), so remote controls mirroring the clip budget and the
+/// shutter need the new state.
+final class VideoRecorderRemoteStateRefreshRequested
+    extends VideoRecorderEvent {
+  const VideoRecorderRemoteStateRefreshRequested();
 }
 
 /// Cycles flash mode `off → torch → auto → off`.
@@ -540,7 +553,9 @@ final class _VideoRecorderCameraStateChanged extends VideoRecorderEvent {
 /// Bluetooth media key). Dispatched from the
 /// `CameraService.setOnRemoteRecordTrigger` callback.
 final class _VideoRecorderRemoteRecordTriggered extends VideoRecorderEvent {
-  const _VideoRecorderRemoteRecordTriggered();
+  const _VideoRecorderRemoteRecordTriggered(this.trigger);
+
+  final RemoteRecordTrigger trigger;
 }
 
 /// Internal event: the camera auto-stopped recording on its own, without a

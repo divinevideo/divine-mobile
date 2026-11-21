@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -84,6 +85,16 @@ class _NonAutosaveVideoEditorNotifier extends VideoEditorNotifier {
   @override
   VideoEditorProviderState build() =>
       VideoEditorProviderState(isAutosavedDraft: false);
+}
+
+/// Leaves out the debounced autosave a sound change schedules, which would
+/// outlive a test that does not wait for it.
+class _NoAutosaveTimerVideoEditorNotifier extends VideoEditorNotifier {
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void triggerAutosave() {}
 }
 
 class _AutosaveVideoEditorNotifier extends VideoEditorNotifier {
@@ -536,12 +547,18 @@ void main() {
 
           verify(
             () => recorderBloc.add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
             ),
           ).called(1);
           verify(
             () => recorderBloc.add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.resumed,
+                isTabTransition: true,
+              ),
             ),
           ).called(1);
           // Only the open initializes; the return resumes the live camera.
@@ -554,8 +571,9 @@ void main() {
         }
       });
 
-      testWidgets('keeps the camera paused when the app returns to the '
-          'Upload tab', (tester) async {
+      testWidgets('forwards resumes on the Upload tab to the recorder bloc', (
+        tester,
+      ) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
         try {
           when(() => recorderBloc.state).thenReturn(
@@ -572,11 +590,11 @@ void main() {
           );
           await tester.pump();
 
-          verifyNever(
+          verify(
             () => recorderBloc.add(
               const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
             ),
-          );
+          ).called(1);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -681,6 +699,51 @@ void main() {
 
         expect(container.read(overlayVisibilityProvider).isPageOpen, isFalse);
         expect(pageOpenChanges, equals([false]));
+      });
+    });
+
+    group('Remote recorder state', () {
+      testWidgets('refreshes the remote when a sound is picked or removed', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        when(() => recorderBloc.isClosed).thenReturn(false);
+        try {
+          await tester.pumpWidget(
+            buildTestWidget(
+              overrides: [
+                videoEditorProvider.overrideWith(
+                  _NoAutosaveTimerVideoEditorNotifier.new,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          clearInteractions(recorderBloc);
+          final editor = ProviderScope.containerOf(
+            tester.element(find.byType(VideoRecorderView)),
+          ).read(videoEditorProvider.notifier);
+
+          editor.selectSound(
+            AudioEvent(id: 'sound', pubkey: 'a' * 64, createdAt: 0),
+          );
+          await tester.pump();
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderRemoteStateRefreshRequested(),
+            ),
+          ).called(1);
+
+          editor.selectSound(null);
+          await tester.pump();
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderRemoteStateRefreshRequested(),
+            ),
+          ).called(1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       });
     });
 
@@ -1202,6 +1265,7 @@ void main() {
         Object? autosaveLookupError,
         bool failAutosaveLookupOnce = false,
       }) async {
+        when(() => recorderBloc.isClosed).thenReturn(false);
         final mockDraftStorage = _MockDraftStorageService();
         var autosaveReads = 0;
         when(mockDraftStorage.getAutosaveDraft).thenAnswer((_) {
@@ -1467,7 +1531,7 @@ void main() {
         expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsOneWidget);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
-        ).called(1);
+        ).called(2);
         verifyNever(
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
         );
@@ -1479,7 +1543,7 @@ void main() {
         expect(find.text(l10n.videoRecorderWhySixSecondsTitle), findsNothing);
         verify(
           () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
-        ).called(1);
+        ).called(2);
       });
     });
 
@@ -1526,12 +1590,13 @@ void main() {
         verifyNever(drafts.getAutosaveDraft);
       });
 
-      testWidgets('shows bottom sheet when autosaved draft has been edited', (
+      testWidgets('holds remote input during autosave lookup and offer', (
         tester,
       ) async {
         // Skip the "why six seconds" prompt
         SharedPreferences.setMockInitialValues({'why_six_seconds_shown': true});
         final prefs = await SharedPreferences.getInstance();
+        when(() => recorderBloc.isClosed).thenReturn(false);
 
         final mockDraftStorage = _MockDraftStorageService();
         final editedDraft = DivineVideoDraft(
@@ -1555,9 +1620,9 @@ void main() {
           publishStatus: PublishStatus.draft,
           publishAttempts: 0,
         );
-        when(
-          mockDraftStorage.getAutosaveDraft,
-        ).thenAnswer((_) async => editedDraft);
+        final lookup = Completer<DivineVideoDraft?>();
+        when(mockDraftStorage.getAutosaveDraft)
+            .thenAnswer((_) => lookup.future);
 
         final mockClipLibrary = _MockClipLibraryService();
         when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
@@ -1588,7 +1653,13 @@ void main() {
 
         // Trigger post-frame callback
         await tester.pump();
-        // Wait for async draft check
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+        lookup.complete(editedDraft);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
 
@@ -1603,6 +1674,18 @@ void main() {
           find.text(l10n.videoRecorderAutosaveDiscardButton),
           findsOneWidget,
         );
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoRecorderAutosaveFoundTitle), findsNothing);
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        ).called(2);
       });
 
       testWidgets('shows bottom sheet when autosaved draft only has clips', (
