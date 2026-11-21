@@ -339,6 +339,26 @@ void main() {
       const verificationPubkey =
           'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
+      test(
+        'forgets the invite record without logging its account key',
+        () async {
+          final logs = LogCaptureService();
+          await logs.clearAllLogs();
+          const key = 'creator_highlight_invite_$verificationPubkey';
+          await prefs.setString(key, '2026-11-20');
+
+          await service.clearUserSpecificData(
+            userPubkey: verificationPubkey,
+            forgetAccount: true,
+          );
+
+          expect(prefs.containsKey(key), isFalse);
+          final messages = logs.getRecentLogs().map((entry) => entry.message);
+          expect(messages, contains(startsWith('Cleared keys: ')));
+          expect(messages, isNot(contains(contains(key))));
+        },
+      );
+
       test('destructive delete purges only that account verification', () async {
         const otherPubkey =
             'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';

@@ -761,13 +761,13 @@ class UserDataCleanupService {
     int clearedCount = 0;
     final clearedKeys = <String>[];
 
-    Future<void> remove(String key) async {
+    Future<void> remove(String key, {String? diagnosticKey}) async {
       if (!_prefs.containsKey(key)) return;
       if (!await _prefs.remove(key)) {
         throw const UserDataCleanupException('Could not clear account cache');
       }
       clearedCount++;
-      clearedKeys.add(key);
+      clearedKeys.add(diagnosticKey ?? key);
     }
 
     if (deleteUserData && userPubkey != null) {
@@ -856,6 +856,7 @@ class UserDataCleanupService {
       );
       await remove(
         FunnelcakeCreatorHighlightsRepository.inviteKey(userPubkey),
+        diagnosticKey: FunnelcakeCreatorHighlightsRepository.invitePrefix,
       );
       for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);
