@@ -1166,8 +1166,9 @@ class VideoEventPublisher {
 
     // The reason a revision is missing was logged where it was looked up.
     if (latest == null ||
+        !ownsVideo() ||
         !tags.any((tag) => tag.length >= 2 && tag.first == 'd')) {
-      if (latest != null) {
+      if (latest != null && ownsVideo()) {
         Log.error(
           'Cannot republish subtitles for video ${existingEvent.id}: '
           'missing d tag',
@@ -1185,7 +1186,6 @@ class VideoEventPublisher {
     updatedTags.addAll(tags);
 
     // Sign the updated event
-    if (!ownsVideo()) return null;
     final event = await _authService?.createAndSignEvent(
       kind: latest.kind,
       content: latest.content,
