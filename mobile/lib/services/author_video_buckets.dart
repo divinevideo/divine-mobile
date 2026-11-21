@@ -97,7 +97,7 @@ class AuthorVideoBuckets {
   }
 
   /// Caches [video], deduplicating addressable (NIP-71) events by
-  /// `(pubkey, vineId)` because each edit mints a new event id.
+  /// `(kind, pubkey, vineId)` because each edit mints a new event id.
   ///
   /// An existing entry is overwritten only by a newer
   /// [VideoEvent.nostrCreatedAt]; `createdAt` prefers `published_at`, which
@@ -112,7 +112,9 @@ class AuthorVideoBuckets {
     final bucket = _buckets.putIfAbsent(authorPubkey, () => []);
     final existingIndex = bucket.indexWhere(
       (existing) =>
-          existing.vineId == video.vineId && existing.pubkey == video.pubkey,
+          existing.vineId == video.vineId &&
+          existing.pubkey == video.pubkey &&
+          existing.referenceKind == video.referenceKind,
     );
 
     if (existingIndex != -1) {

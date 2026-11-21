@@ -442,6 +442,7 @@ void main() {
     test('keeps the short video when a normal video shares its d tag', () {
       const pubkey =
           'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      when(() => mockNostrService.publicKey).thenReturn(pubkey);
       final tags = [
         ['d', 'shared-video'],
         ['url', 'https://example.com/video.mp4'],
@@ -469,6 +470,10 @@ void main() {
       expect(
         service.discoveryVideos.map((video) => video.id),
         contains(short.id),
+      );
+      expect(
+        service.authorVideos(pubkey).map((video) => video.id),
+        unorderedEquals([short.id, normal.id]),
       );
     });
 
