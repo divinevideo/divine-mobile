@@ -1279,6 +1279,47 @@ void main() {
         expect(stats.toVideoEvent().textTrackLang, 'ja');
       });
 
+      test('skips a chapters track before the caption track in event '
+          'tags', () {
+        final json = {
+          'event': {
+            'id': 'test-id',
+            'pubkey': 'test-pubkey',
+            'created_at': 1700000000,
+            'kind': 34236,
+            'tags': [
+              ['d', 'video-1'],
+              ['url', 'https://example.com/video.mp4'],
+              [
+                'text-track',
+                'https://media.divine.video/chapters',
+                '',
+                'chapters',
+                'fr',
+              ],
+              [
+                'text-track',
+                '39307:abc123:subtitles:video-1',
+                '',
+                'captions',
+                'ja-JP',
+              ],
+            ],
+          },
+          'stats': {
+            'reactions': 0,
+            'comments': 0,
+            'reposts': 0,
+            'engagement_score': 0,
+          },
+        };
+
+        final stats = VideoStats.fromJson(json);
+
+        expect(stats.textTrackRef, equals('39307:abc123:subtitles:video-1'));
+        expect(stats.textTrackLang, 'ja');
+      });
+
       test('normalizes empty text-track fields to null', () {
         final json = {
           'id': 'test-id',

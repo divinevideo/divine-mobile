@@ -3,6 +3,7 @@
 // ABOUTME: ClickHouse-backed analytics API.
 
 import 'package:meta/meta.dart';
+import 'package:models/src/caption_text_track.dart';
 import 'package:models/src/engagement_count_parser.dart';
 import 'package:models/src/video_attribution.dart';
 import 'package:models/src/video_event.dart';
@@ -286,7 +287,8 @@ class VideoStats {
           if (tagName == 'views' && views == null) {
             views = int.tryParse(tagValue);
           }
-          if (tagName == 'text-track') {
+          if (tagName == 'text-track' &&
+              isCaptionTextTrackType(tag.length > 3 ? '${tag[3]}' : null)) {
             textTrackRef ??= tagValue;
             if (textTrackLang == null && tag.length > 4) {
               final rawLang = tag[4].toString().trim();
