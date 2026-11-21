@@ -11,6 +11,7 @@ import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
@@ -293,6 +294,22 @@ void main() {
         expect(
           const PostAnalyticsDetailRouteData(videoId: _hexId).location,
           equals('/creator-analytics/$_hexId'),
+        );
+      });
+
+      test('a post-analytics location carries the post coordinate', () {
+        const route = PostAnalyticsDetailRouteData(
+          videoId: _hexId,
+          coordinate: _coordinate,
+        );
+
+        expect(
+          route.location,
+          equals(RoutePaths.postAnalytics(_hexId, coordinate: _coordinate)),
+        );
+        expect(
+          Uri.parse(route.location).queryParameters['coordinate'],
+          equals(_coordinate),
         );
       });
 
@@ -739,6 +756,18 @@ void main() {
           isA<PostAnalyticsDetailScreen>()
               .having((screen) => screen.videoId, 'videoId', _hexId)
               .having((screen) => screen.performance, 'performance', isNull),
+        );
+      });
+
+      test('post analytics keeps the coordinate it was opened with', () {
+        expect(
+          _build(
+            _videoRouter(),
+            RoutePaths.postAnalytics(_hexId, coordinate: _coordinate),
+          ),
+          isA<PostAnalyticsDetailScreen>()
+              .having((screen) => screen.videoId, 'videoId', _hexId)
+              .having((screen) => screen.coordinate, 'coordinate', _coordinate),
         );
       });
 

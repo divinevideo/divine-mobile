@@ -2892,6 +2892,17 @@ class AppLocalizationsKo extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '새 게시물 활동을 잠금 화면에 표시';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      '게시물의 첫 1시간 동안의 조회수, 좋아요, 댓글';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhone 설정에서 Divine의 실시간 현황이 꺼져 있어요';
+
+  @override
   String get notificationSettingsActions => '작업';
 
   @override
@@ -3135,6 +3146,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => '게시물 열기';
+
+  @override
+  String get analyticsStatsOnTheirWay => '통계가 곧 도착해요';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '아직 조회수가 없어요 · 공개 후 $minutes분',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => '이 게시물의 통계를 찾을 수 없어요';
+
+  @override
+  String get analyticsViewPost => '게시물 보기';
+
+  @override
+  String get analyticsStopLiveActivity => '잠금 화면 활동 중지';
 
   @override
   String get analyticsRecentDailyInteractions => '최근 일별 상호작용';

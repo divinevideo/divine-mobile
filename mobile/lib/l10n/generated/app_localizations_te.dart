@@ -3191,6 +3191,18 @@ class AppLocalizationsTe extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'కొత్త పోస్ట్ యాక్టివిటీని లాక్ స్క్రీన్‌పై చూపించండి';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'మీ పోస్ట్ మొదటి గంటలో వీక్షణలు, లైక్‌లు మరియు కామెంట్‌లు';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhone సెట్టింగ్‌లలో Divine కోసం Live Activities ఆఫ్‌లో ఉన్నాయి';
+
+  @override
   String get notificationSettingsActions => 'చర్యలు';
 
   @override
@@ -3475,6 +3487,29 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'ఓపెన్ పోస్ట్';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'గణాంకాలు త్వరలో వస్తాయి';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'ఇంకా వీక్షణలు లేవు · $minutes నిమిషాలుగా లైవ్‌లో ఉంది',
+      one: 'ఇంకా వీక్షణలు లేవు · $minutes నిమిషంగా లైవ్‌లో ఉంది',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'ఈ పోస్ట్‌కు గణాంకాలు కనుగొనలేకపోయాము';
+
+  @override
+  String get analyticsViewPost => 'పోస్ట్ చూడండి';
+
+  @override
+  String get analyticsStopLiveActivity => 'లాక్ స్క్రీన్ యాక్టివిటీని ఆపండి';
 
   @override
   String get analyticsRecentDailyInteractions =>

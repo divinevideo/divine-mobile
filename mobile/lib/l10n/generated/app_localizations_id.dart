@@ -3008,6 +3008,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Tampilkan aktivitas postingan baru di Layar Kunci';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Tayangan, suka, dan komentar untuk jam pertama postinganmu';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities dimatikan untuk Divine di Pengaturan iPhone';
+
+  @override
   String get notificationSettingsActions => 'Aksi';
 
   @override
@@ -3264,6 +3276,29 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Buka Postingan';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Statistik segera muncul';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Belum ada tayangan · tayang selama $minutes mnt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Kami tidak menemukan statistik untuk postingan ini';
+
+  @override
+  String get analyticsViewPost => 'Lihat postingan';
+
+  @override
+  String get analyticsStopLiveActivity => 'Hentikan aktivitas di Layar Kunci';
 
   @override
   String get analyticsRecentDailyInteractions => 'Interaksi Harian Terbaru';

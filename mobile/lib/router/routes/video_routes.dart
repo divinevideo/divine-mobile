@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -115,12 +116,20 @@ class CreatorAnalyticsRouteData extends GoRouteData
 /// One post's analytics, pushed from the creator's analytics list.
 class PostAnalyticsDetailRouteData extends GoRouteData
     with $PostAnalyticsDetailRouteData {
-  const PostAnalyticsDetailRouteData({required this.videoId, this.$extra});
+  const PostAnalyticsDetailRouteData({
+    required this.videoId,
+    @TypedQueryParameter(name: 'coordinate') this.coordinate,
+    this.$extra,
+  });
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey =
       NavigatorKeys.root;
 
   final String videoId;
+
+  /// The post's `kind:pubkey:d-tag` address, from the Live Activity's link;
+  /// it still resolves after an edit retires [videoId].
+  final String? coordinate;
 
   /// The tapped post's [VideoPerformance], read through [extraAs]; absent
   /// after a deep link, when the screen refetches it.
@@ -130,6 +139,7 @@ class PostAnalyticsDetailRouteData extends GoRouteData
   Widget build(BuildContext context, GoRouterState state) =>
       PostAnalyticsDetailScreen(
         videoId: videoId,
+        coordinate: coordinate,
         performance: extraAs<VideoPerformance>($extra),
       );
 }

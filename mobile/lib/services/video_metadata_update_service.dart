@@ -21,9 +21,11 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
@@ -246,7 +248,9 @@ class VideoMetadataUpdateService {
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
     required CollaboratorInviteService collaboratorInviteService,
-  }) : _authService = authService,
+    PostLiveActivityRepository? liveActivity,
+  }) : _liveActivity = liveActivity,
+       _authService = authService,
        _blossomService = blossomService,
        _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
@@ -259,6 +263,34 @@ class VideoMetadataUpdateService {
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
   final CollaboratorInviteService _collaboratorInviteService;
+  final PostLiveActivityRepository? _liveActivity;
+
+  /// Tells the post Live Activity the post has a new event, so its stats
+  /// registration follows the edit. Best-effort: it never fails the edit.
+  void _noteEdited(VideoEvent updated) {
+    final liveActivity = _liveActivity;
+    if (liveActivity == null) return;
+    try {
+      runDetached(
+        liveActivity.noteEdited(
+          postCoordinate:
+              '${updated.shareKind}:${updated.pubkey}:${updated.stableId}',
+          newEventId: updated.id,
+        ),
+        'note the post edit to its Live Activity',
+        logName: 'VideoMetadataUpdateService',
+        category: LogCategory.video,
+      );
+    } catch (error, stackTrace) {
+      Log.warning(
+        'Could not note the edit to the post Live Activity: $error',
+        name: 'VideoMetadataUpdateService',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
   ///
@@ -520,6 +552,8 @@ class VideoMetadataUpdateService {
         initialCollaboratorPubkeys: initialCollaboratorPubkeys,
         updatedCollaboratorPubkeys: collaboratorPubkeys,
       );
+
+      _noteEdited(updatedVideoEvent);
 
       return VideoUpdateSuccess(
         updatedEvent: updatedVideoEvent,

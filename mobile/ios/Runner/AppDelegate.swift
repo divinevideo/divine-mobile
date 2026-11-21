@@ -106,6 +106,9 @@ extension FlutterError: @retroactive Error {}
       pluginRegistry: engineBridge.pluginRegistry
     )
 
+    // Set up the post Live Activity bridge (ActivityKit).
+    PostLiveActivityPlugin.setup(messenger: engineBridge.applicationRegistrar.messenger())
+
     // Set up ProofMode platform channel
     setupProofModeChannel(with: engineBridge)
 

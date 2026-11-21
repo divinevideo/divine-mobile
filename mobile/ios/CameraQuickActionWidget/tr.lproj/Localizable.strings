@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine kamerasını aç";
 "divine_quick_actions_camera_widget_description" = "Divine kamerasını ana ekrandan doğrudan açar.";
+"divine_post_activity_your_post" = "Gönderin";
+"divine_post_activity_posting" = "Gönderiliyor…";
+"divine_post_activity_live" = "Gönderin yayında";
+"divine_post_activity_no_views_yet %@" = "Henüz izlenme yok · %@ süredir yayında";
+"divine_post_activity_cant_find" = "Bu gönderi için istatistik bulamıyoruz";
+"divine_post_activity_first_hour" = "İlk saat";
+"divine_post_activity_no_views_first_hour" = "İlk saatte izlenme yok";
+"divine_post_activity_updated %@" = "%@ önce güncellendi";
+"divine_post_activity_first_run_note" = "İlk saatin için canlı istatistikler · Ayarlar'dan kapat";

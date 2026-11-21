@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine-Kamera öffnen";
 "divine_quick_actions_camera_widget_description" = "Öffnet die Divine-Kamera direkt vom Startbildschirm.";
+"divine_post_activity_your_post" = "Dein Post";
+"divine_post_activity_posting" = "Wird gepostet…";
+"divine_post_activity_live" = "Dein Post ist online";
+"divine_post_activity_no_views_yet %@" = "Noch keine Aufrufe · seit %@ online";
+"divine_post_activity_cant_find" = "Wir finden keine Statistiken für diesen Post";
+"divine_post_activity_first_hour" = "Erste Stunde";
+"divine_post_activity_no_views_first_hour" = "Keine Aufrufe in der ersten Stunde";
+"divine_post_activity_updated %@" = "Vor %@ aktualisiert";
+"divine_post_activity_first_run_note" = "Live-Statistiken für deine erste Stunde · in den Einstellungen abschaltbar";

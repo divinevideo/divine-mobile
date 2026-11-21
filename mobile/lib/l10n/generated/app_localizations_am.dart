@@ -3017,6 +3017,18 @@ class AppLocalizationsAm extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'በመቆለፊያ ማያ ገጽ ላይ የአዲስ ልጥፍ እንቅስቃሴን አሳይ';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'ለልጥፍዎ የመጀመሪያ ሰዓት እይታዎች፣ መውደዶች እና አስተያየቶች';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities ለ Divine በ iPhone ቅንብሮች ውስጥ ጠፍተዋል';
+
+  @override
   String get notificationSettingsActions => 'ድርጊቶች';
 
   @override
@@ -3267,6 +3279,29 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'ፖስት ክፈት';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'ስታቲስቲክስ በቅርቡ ይደርሳል';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'እስካሁን ምንም እይታ የለም · ከታተመ $minutes ደቂቃ',
+      one: 'እስካሁን ምንም እይታ የለም · ከታተመ $minutes ደቂቃ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'ለዚህ ልጥፍ ስታቲስቲክስ ማግኘት አልቻልንም';
+
+  @override
+  String get analyticsViewPost => 'ልጥፉን ይመልከቱ';
+
+  @override
+  String get analyticsStopLiveActivity => 'የመቆለፊያ ማያ ገጽ እንቅስቃሴን ያቁሙ';
 
   @override
   String get analyticsRecentDailyInteractions => 'የቅርብ ጊዜ ዕለታዊ ግንኙነቶች';

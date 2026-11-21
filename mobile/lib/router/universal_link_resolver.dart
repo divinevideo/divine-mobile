@@ -82,10 +82,11 @@ String? deepLinkRouterPath(DeepLink deepLink) {
       );
     case DeepLinkType.peopleList:
       return peopleListDeepLinkToRouterPath(deepLink);
-    // savedVideos only arrives over divine://, and the callers that can see it
-    // — customSchemeToRouterPath and the deep-link coordinator — route it
-    // themselves.
+    // savedVideos and postAnalytics only arrive over divine://, and the
+    // callers that can see them — customSchemeToRouterPath and the deep-link
+    // coordinator — route them themselves.
     case DeepLinkType.savedVideos:
+    case DeepLinkType.postAnalytics:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return null;
@@ -95,14 +96,23 @@ String? deepLinkRouterPath(DeepLink deepLink) {
 /// Converts a `divine://` custom-scheme app-route link into an internal path.
 ///
 /// Returns null for everything else, including NIP-46 signer callbacks. A
-/// custom scheme can be opened by any app on the device, so only saved videos
-/// and the AASA-parity route prefixes resolve to a location here.
+/// custom scheme can be opened by any app on the device, so only saved videos,
+/// post analytics and the AASA-parity route prefixes resolve to a location
+/// here.
 String? customSchemeToRouterPath(Uri uri) {
   if (uri.scheme != 'divine') return null;
 
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
   if (deepLink.type == DeepLinkType.savedVideos) {
     return SavedVideosScreen.path;
+  }
+  if (deepLink.type == DeepLinkType.postAnalytics) {
+    final eventId = deepLink.postEventId;
+    if (eventId == null) return null;
+    return RoutePaths.postAnalytics(
+      eventId,
+      coordinate: deepLink.postCoordinate,
+    );
   }
 
   // Only the authority-less form addresses app routes. Anything else is a
@@ -176,6 +186,7 @@ String? universalLinkToRouterPath(Uri uri) {
   switch (deepLink.type) {
     case DeepLinkType.video:
     case DeepLinkType.savedVideos:
+    case DeepLinkType.postAnalytics:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return _invalidPeopleListRoute(uri, deepLink);

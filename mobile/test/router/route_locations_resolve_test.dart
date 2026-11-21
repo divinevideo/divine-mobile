@@ -50,6 +50,10 @@ final _locations = <String, List<String>>{
   'contentPreferences': [RoutePaths.contentPreferences],
   'createPeopleList': [RoutePaths.createPeopleList],
   'creatorAnalytics': [RoutePaths.creatorAnalytics],
+  'postAnalytics': [
+    RoutePaths.postAnalytics(_eventId),
+    RoutePaths.postAnalytics(_eventId, coordinate: 'a&b=c+d?e/f g'),
+  ],
   'crosspostingSettings': [RoutePaths.crosspostingSettings],
   'developerOptions': [RoutePaths.developerOptions],
   'discoverLists': [RoutePaths.discoverLists],

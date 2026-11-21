@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Öppna Divine-kamera";
 "divine_quick_actions_camera_widget_description" = "Öppnar Divine-kameran direkt från startskärmen.";
+"divine_post_activity_your_post" = "Ditt inlägg";
+"divine_post_activity_posting" = "Publicerar…";
+"divine_post_activity_live" = "Ditt inlägg är live";
+"divine_post_activity_no_views_yet %@" = "Inga visningar än · live i %@";
+"divine_post_activity_cant_find" = "Vi hittar ingen statistik för det här inlägget";
+"divine_post_activity_first_hour" = "Första timmen";
+"divine_post_activity_no_views_first_hour" = "Inga visningar under första timmen";
+"divine_post_activity_updated %@" = "Uppdaterad för %@ sedan";
+"divine_post_activity_first_run_note" = "Livestatistik för din första timme · stäng av i Inställningar";

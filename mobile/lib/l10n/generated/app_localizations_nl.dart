@@ -3097,6 +3097,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Toon activiteit van je nieuwe post op het toegangsscherm';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Weergaven, likes en reacties van het eerste uur van je post';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities staan uit voor Divine in de iPhone-instellingen';
+
+  @override
   String get notificationSettingsActions => 'Acties';
 
   @override
@@ -3354,6 +3366,31 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Post openen';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Statistieken zijn onderweg';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Nog geen weergaven · $minutes min. online',
+      one: 'Nog geen weergaven · $minutes min. online',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'We kunnen geen statistieken voor deze post vinden';
+
+  @override
+  String get analyticsViewPost => 'Post bekijken';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Activiteit op toegangsscherm stoppen';
 
   @override
   String get analyticsRecentDailyInteractions =>

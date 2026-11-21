@@ -4,16 +4,20 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/post_analytics_detail/post_analytics_detail_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
+import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
@@ -203,6 +207,7 @@ class _CreatorAnalyticsScreenState
       appBar: DiVineAppBar(
         title: context.l10n.analyticsTitle,
         showBackButton: true,
+        onBackPressed: () => context.safePop(),
         actions: [
           DiVineAppBarAction(
             icon: SvgIconSource(
@@ -1023,13 +1028,13 @@ class _TopVideoRow extends StatelessWidget {
 /// Per-post analytics, addressable at `/creator-analytics/:videoId`.
 ///
 /// The dashboard hands the already-built [VideoPerformance] over in `extra` so
-/// the tap stays instant. Arriving without it — a cold entry after an account
-/// swap, or any future `router.go` — refetches the creator's analytics and
-/// rebuilds the same object from the matching [VideoEvent]; every field of
-/// [VideoPerformance] derives from that one event.
-class PostAnalyticsDetailScreen extends ConsumerStatefulWidget {
+/// the tap stays instant. Arriving without it, such as from the post's Live
+/// Activity, the screen resolves the post by its event id or, after an edit
+/// retired that id, by its [coordinate].
+class PostAnalyticsDetailScreen extends ConsumerWidget {
   const PostAnalyticsDetailScreen({
     required this.videoId,
+    this.coordinate,
     this.performance,
     super.key,
   });
@@ -1038,80 +1043,118 @@ class PostAnalyticsDetailScreen extends ConsumerStatefulWidget {
   static const subpath = ':videoId';
 
   final String videoId;
+
+  /// The post's `kind:pubkey:d-tag` address when opened from its Live
+  /// Activity; it still finds the post after an edit retires [videoId].
+  final String? coordinate;
   final VideoPerformance? performance;
 
   @override
-  ConsumerState<PostAnalyticsDetailScreen> createState() =>
-      _PostAnalyticsDetailScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.watch(creatorAnalyticsRepositoryProvider);
+    final ownerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+    // Device-scoped and built once, so it cannot go stale under the cubit.
+    final liveActivity = ref.read(postLiveActivityRepositoryProvider);
+    return BlocProvider<PostAnalyticsDetailCubit>(
+      key: ValueKey((repository, ownerPubkey, videoId)),
+      create: (_) {
+        final cubit = PostAnalyticsDetailCubit(
+          repository: repository,
+          ownerPubkey: ownerPubkey,
+          videoId: videoId,
+          coordinate: coordinate,
+          initialPerformance: performance,
+          liveActivity: liveActivity,
+        );
+        runDetached(
+          cubit.load(),
+          'load post analytics',
+          logName: 'CreatorAnalyticsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
+      child: PostAnalyticsDetailView(videoId: videoId),
+    );
+  }
 }
 
-class _PostAnalyticsDetailScreenState
-    extends ConsumerState<PostAnalyticsDetailScreen> {
-  Future<VideoPerformance?>? _resolved;
+/// The post stats screen for whatever [PostAnalyticsDetailCubit] knows.
+class PostAnalyticsDetailView extends StatelessWidget {
+  @visibleForTesting
+  const PostAnalyticsDetailView({required this.videoId, super.key});
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.performance == null) {
-      _resolved = _resolvePerformance();
-    }
-  }
-
-  Future<VideoPerformance?> _resolvePerformance() async {
-    final pubkey = ref.read(authServiceProvider).currentPublicKeyHex;
-    if (pubkey == null || pubkey.isEmpty) return null;
-
-    final repository = ref.read(creatorAnalyticsRepositoryProvider);
-    final snapshot = await repository.fetchCreatorAnalytics(pubkey);
-    final hasEngagementData = !snapshot.diagnostics.failedSources.contains(
-      AnalyticsDataSource.bulkVideoStats,
-    );
-    for (final video in snapshot.videos) {
-      if (video.id == widget.videoId) {
-        return VideoPerformance.fromVideo(
-          video,
-          hasEngagementData: hasEngagementData,
-        );
-      }
-    }
-    return null;
-  }
+  /// The event id the screen was opened with, the last resort for "View
+  /// post".
+  final String videoId;
 
   @override
   Widget build(BuildContext context) {
-    final performance = widget.performance;
-    if (performance != null) {
-      return _PostAnalyticsDetailView(performance: performance);
-    }
-
-    return FutureBuilder<VideoPerformance?>(
-      future: _resolved,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const _PostAnalyticsDetailPlaceholder(
+    final status = context.select(
+      (PostAnalyticsDetailCubit cubit) => cubit.state.status,
+    );
+    return _RefreshLiveActivityOnResume(
+      child: switch (status) {
+        PostAnalyticsDetailStatus.loading =>
+          const _PostAnalyticsDetailPlaceholder(
             child: BrandedLoadingIndicator(),
-          );
-        }
-        final resolved = snapshot.data;
-        if (resolved == null) {
-          return _PostAnalyticsDetailPlaceholder(
-            child: Text(
-              context.l10n.analyticsUnableToLoad,
-              textAlign: TextAlign.center,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.mutedText,
-              ),
-            ),
-          );
-        }
-        return _PostAnalyticsDetailView(performance: resolved);
+          ),
+        PostAnalyticsDetailStatus.ready => const _PostAnalyticsDetailReady(),
+        PostAnalyticsDetailStatus.couldNotLoad =>
+          const _PostAnalyticsDetailPlaceholder(
+            child: _PostStatsCouldNotLoad(),
+          ),
+        PostAnalyticsDetailStatus.onTheirWay ||
+        PostAnalyticsDetailStatus.nothingYet ||
+        PostAnalyticsDetailStatus.cantFind => _PostAnalyticsDetailPlaceholder(
+          child: _PostStatsMessage(videoId: videoId),
+        ),
       },
     );
   }
 }
 
-/// Chrome shared by the loading and not-found states of a cold entry, so the
-/// back button exists before the post is resolved.
+/// Re-checks the Live Activity when the app returns to the foreground, the
+/// usual way back after it was dismissed from the Lock Screen.
+class _RefreshLiveActivityOnResume extends StatefulWidget {
+  const _RefreshLiveActivityOnResume({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_RefreshLiveActivityOnResume> createState() =>
+      _RefreshLiveActivityOnResumeState();
+}
+
+class _RefreshLiveActivityOnResumeState
+    extends State<_RefreshLiveActivityOnResume> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onResume: () => runDetached(
+        context.read<PostAnalyticsDetailCubit>().refreshLiveActivity(),
+        'refresh post Live Activity',
+        logName: 'CreatorAnalyticsScreen',
+        category: LogCategory.ui,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Chrome shared by the states that have no stats to show, so the back button
+/// exists before the post is resolved.
 class _PostAnalyticsDetailPlaceholder extends StatelessWidget {
   const _PostAnalyticsDetailPlaceholder({required this.child});
 
@@ -1128,33 +1171,167 @@ class _PostAnalyticsDetailPlaceholder extends StatelessWidget {
             context.safePop(fallback: CreatorAnalyticsScreen.path),
       ),
       body: Center(
-        child: Padding(padding: const EdgeInsets.all(24), child: child),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: child,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _PostAnalyticsDetailView extends StatelessWidget {
-  const _PostAnalyticsDetailView({required this.performance});
+/// On their way, nothing yet, or can't find: what is known, plus the post
+/// itself and the Stop control.
+class _PostStatsMessage extends StatelessWidget {
+  const _PostStatsMessage({required this.videoId});
 
-  final VideoPerformance performance;
+  final String videoId;
 
   @override
   Widget build(BuildContext context) {
-    final likes = performance.likes;
-    final comments = performance.comments;
-    final reposts = performance.reposts;
-    final hasEngagementData = performance.hasEngagementData;
-    final total = hasEngagementData ? performance.interactions : 0;
+    final l10n = context.l10n;
+    final (status, liveMinutes, running) = context.select(
+      (PostAnalyticsDetailCubit cubit) => (
+        cubit.state.status,
+        cubit.state.liveMinutes,
+        cubit.state.liveActivityRunning,
+      ),
+    );
+    final message = switch (status) {
+      PostAnalyticsDetailStatus.nothingYet => l10n.analyticsNoViewsYet(
+        liveMinutes,
+      ),
+      PostAnalyticsDetailStatus.cantFind => l10n.analyticsCantFindStats,
+      _ => l10n.analyticsStatsOnTheirWay,
+    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 16,
+      children: [
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
+        ),
+        _ViewPostButton(videoId: videoId),
+        if (running) const _StopLiveActivityButton(),
+      ],
+    );
+  }
+}
 
-    final likesShare = total == 0 ? 0.0 : likes / total;
-    final commentsShare = total == 0 ? 0.0 : comments / total;
-    final repostShare = total == 0 ? 0.0 : reposts / total;
+class _PostStatsCouldNotLoad extends StatelessWidget {
+  const _PostStatsCouldNotLoad();
+
+  @override
+  Widget build(BuildContext context) {
+    final running = context.select(
+      (PostAnalyticsDetailCubit cubit) => cubit.state.liveActivityRunning,
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 16,
+      children: [
+        Text(
+          context.l10n.analyticsUnableToLoad,
+          textAlign: TextAlign.center,
+          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
+        ),
+        DivineButton(
+          label: context.l10n.analyticsRetry,
+          onPressed: context.read<PostAnalyticsDetailCubit>().retry,
+        ),
+        // Added only while running so the column leaves no gap for it.
+        if (running) const _StopLiveActivityButton(),
+      ],
+    );
+  }
+}
+
+/// Opens the post: the version stats found, else its address, else the id
+/// the screen was opened with.
+class _ViewPostButton extends StatelessWidget {
+  const _ViewPostButton({required this.videoId});
+
+  final String videoId;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = context.select(
+      (PostAnalyticsDetailCubit cubit) =>
+          cubit.state.performance?.video.id ?? cubit.state.coordinate,
+    );
+    final id = target ?? videoId;
+    return DivineButton(
+      label: context.l10n.analyticsViewPost,
+      leadingIcon: DivineIconName.playCircle,
+      type: DivineButtonType.secondary,
+      expanded: true,
+      onPressed: id.isEmpty
+          ? null
+          : () => runDetached(
+              VideoDetailRouteData(id: id).push<void>(context),
+              'open post video',
+              logName: 'CreatorAnalyticsScreen',
+              category: LogCategory.ui,
+            ),
+    );
+  }
+}
+
+/// Ends the post's Lock Screen Live Activity; shown only while it runs.
+///
+/// [topGap] is the space above the button, left out with it when hidden.
+class _StopLiveActivityButton extends StatelessWidget {
+  const _StopLiveActivityButton({this.topGap = 0});
+
+  final double topGap;
+
+  @override
+  Widget build(BuildContext context) {
+    final running = context.select(
+      (PostAnalyticsDetailCubit cubit) => cubit.state.liveActivityRunning,
+    );
+    if (!running) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(top: topGap),
+      child: DivineButton(
+        label: context.l10n.analyticsStopLiveActivity,
+        type: DivineButtonType.secondary,
+        expanded: true,
+        onPressed: context.read<PostAnalyticsDetailCubit>().stop,
+      ),
+    );
+  }
+}
+
+class _PostAnalyticsDetailReady extends StatelessWidget {
+  const _PostAnalyticsDetailReady();
+
+  @override
+  Widget build(BuildContext context) {
+    final (performance, counts) = context.select(
+      (PostAnalyticsDetailCubit cubit) =>
+          (cubit.state.performance, cubit.state.counts),
+    );
+    // The cubit only reports ready once it found the post.
+    if (performance == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    String show(int? count) => count == null
+        ? l10n.analyticsNa
+        : StringUtils.formatCompactNumber(count);
+    final interactions = counts.interactions;
+    final engagementRate = counts.engagementRate;
+    double share(int count) =>
+        interactions == null || interactions == 0 ? 0 : count / interactions;
 
     return Scaffold(
       backgroundColor: context.vineColors.background,
       appBar: DiVineAppBar(
-        title: context.l10n.analyticsPostAnalytics,
+        title: l10n.analyticsPostAnalytics,
         showBackButton: true,
         // safePop: this screen has a registered path, so the back stack
         // can be empty on a cold entry and a raw pop would throw GoError.
@@ -1178,81 +1355,65 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                       runSpacing: 10,
                       children: [
                         _MetricPill(
-                          label: context.l10n.analyticsViews,
-                          value: performance.views == null
-                              ? context.l10n.analyticsNa
-                              : StringUtils.formatCompactNumber(
-                                  performance.views!,
-                                ),
+                          label: l10n.analyticsViews,
+                          value: show(counts.views),
                         ),
                         _MetricPill(
-                          label: context.l10n.analyticsUniqueViewers,
-                          value: performance.uniqueViewers == null
-                              ? context.l10n.analyticsNa
-                              : StringUtils.formatCompactNumber(
-                                  performance.uniqueViewers!,
-                                ),
+                          label: l10n.analyticsUniqueViewers,
+                          value: show(counts.uniqueViewers),
                         ),
                         _MetricPill(
-                          label: context.l10n.analyticsLikes,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(likes)
-                              : context.l10n.analyticsNa,
+                          label: l10n.analyticsLikes,
+                          value: show(counts.likes),
                         ),
                         _MetricPill(
-                          label: context.l10n.analyticsComments,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(comments)
-                              : context.l10n.analyticsNa,
+                          label: l10n.analyticsComments,
+                          value: show(counts.comments),
                         ),
                         _MetricPill(
-                          label: context.l10n.analyticsReposts,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(reposts)
-                              : context.l10n.analyticsNa,
+                          label: l10n.analyticsReposts,
+                          value: show(counts.reposts),
                         ),
                         _MetricPill(
-                          label: context.l10n.analyticsEngagement,
-                          value:
-                              !hasEngagementData ||
-                                  performance.engagementRate == null
-                              ? context.l10n.analyticsNa
-                              : '${(performance.engagementRate! * 100).toStringAsFixed(1)}%',
+                          label: l10n.analyticsEngagement,
+                          value: engagementRate == null
+                              ? l10n.analyticsNa
+                              : '${(engagementRate * 100).toStringAsFixed(1)}%',
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    if (hasEngagementData) ...[
+                    if (interactions != null) ...[
                       _BreakdownRow(
-                        label: context.l10n.analyticsLikes,
-                        value: likes,
-                        share: likesShare,
+                        label: l10n.analyticsLikes,
+                        value: counts.likes!,
+                        share: share(counts.likes!),
                         color: VineTheme.likeRed,
                       ),
                       const SizedBox(height: 8),
                       _BreakdownRow(
-                        label: context.l10n.analyticsComments,
-                        value: comments,
-                        share: commentsShare,
+                        label: l10n.analyticsComments,
+                        value: counts.comments!,
+                        share: share(counts.comments!),
                         color: VineTheme.commentBlue,
                       ),
                       const SizedBox(height: 8),
                       _BreakdownRow(
-                        label: context.l10n.analyticsReposts,
-                        value: reposts,
-                        share: repostShare,
+                        label: l10n.analyticsReposts,
+                        value: counts.reposts!,
+                        share: share(counts.reposts!),
                         color: VineTheme.vineGreenDark,
                       ),
                     ] else
                       Text(
-                        context.l10n.analyticsNa,
+                        l10n.analyticsNa,
                         style: VineTheme.bodySmallFont(
                           color: context.vineColors.onSurfaceMuted,
                         ),
                       ),
                     const SizedBox(height: 14),
                     DivineButton(
-                      label: context.l10n.analyticsOpenPost,
+                      label: l10n.analyticsOpenPost,
                       leadingIcon: DivineIconName.playCircle,
                       type: DivineButtonType.secondary,
                       expanded: true,
@@ -1267,6 +1428,7 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                               category: LogCategory.ui,
                             ),
                     ),
+                    const _StopLiveActivityButton(topGap: 10),
                   ],
                 ),
               ),
@@ -1655,63 +1817,6 @@ class _CreatorAnalyticsSummary {
       );
     });
   }
-}
-
-class VideoPerformance {
-  const VideoPerformance({
-    required this.video,
-    required this.views,
-    required this.uniqueViewers,
-    required this.hasEngagementData,
-    required this.likes,
-    required this.comments,
-    required this.reposts,
-    required this.interactions,
-    required this.engagementRate,
-    required this.displayTitle,
-  });
-
-  factory VideoPerformance.fromVideo(
-    VideoEvent video, {
-    bool hasEngagementData = true,
-  }) {
-    final likes = liveLikeCountSeed(video) ?? 0;
-    final comments = liveCommentCountSeed(video) ?? 0;
-    final reposts = liveRepostCountSeed(video) ?? 0;
-    final views = extractVideoViews(video);
-    final uniqueViewers = extractUniqueViewers(video);
-    final interactions = likes + comments + reposts;
-    final engagementRate = (views != null && views > 0)
-        ? interactions / views
-        : null;
-    final displayTitle = video.title?.trim().isNotEmpty == true
-        ? video.title!.trim()
-        : video.id;
-
-    return VideoPerformance(
-      video: video,
-      views: views,
-      uniqueViewers: uniqueViewers,
-      hasEngagementData: hasEngagementData,
-      likes: likes,
-      comments: comments,
-      reposts: reposts,
-      interactions: interactions,
-      engagementRate: engagementRate,
-      displayTitle: displayTitle,
-    );
-  }
-
-  final VideoEvent video;
-  final int? views;
-  final int? uniqueViewers;
-  final bool hasEngagementData;
-  final int likes;
-  final int comments;
-  final int reposts;
-  final int interactions;
-  final double? engagementRate;
-  final String displayTitle;
 }
 
 class _DailyInteractionPoint {

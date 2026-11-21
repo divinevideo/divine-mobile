@@ -7,7 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		41F9074567E9ADBECE04A5D7 /* Localizable.stringsdict in Resources */ = {isa = PBXBuildFile; fileRef = 1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */; };
+		E8F5C7098A6B89ECBF26ABAC /* DivineWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */; };
+		85DB97C154E21DEB99E0A3EE /* PostLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */; };
+		96A0C3CF711372436D3ACF5D /* PostActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */; };
+		8D3514AC5375BB325C999704 /* PostActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */; };
+		9426502F7C5BD1F17FB38100 /* PostActivityViewsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */; };
+		EA5C0A29E349A99263035489 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		FF91BCB20397A7944304CBE4 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 992F75580C42A8A09950DC34 /* ActivityKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
+		48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */; };
+		381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
+		60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */; };
+		A17C0002000000000000AA01 /* PostActivityContentStateCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */; };
+		06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		A17C0001000000000000AA01 /* PostLiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0001000000000000BB01 /* PostLiveActivityPlugin.swift */; };
+		A17C0001000000000000AA02 /* PostActivityThumbnailWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0001000000000000BB02 /* PostActivityThumbnailWriter.swift */; };
+		A17C0001000000000000AA03 /* PostLiveActivityPluginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0001000000000000BB03 /* PostLiveActivityPluginTests.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		38FD4E59291C9572AF216296 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3B2A13AD2D9A576685353158 /* Pods_Runner.framework */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -130,6 +147,33 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B27C3624CD00680EC5C9CAF4 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = tr; path = tr.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		41F0E5D82B456959155931EE /* sv */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = sv; path = sv.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		E801C42D14A733B2503B9981 /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ro; path = ro.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		9D842FD51C521700D646EB43 /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = pt; path = pt.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		D07631FFE0C2C8DD42F58814 /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = pl; path = pl.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		0663F32C0D4530F6B07E5811 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = nl; path = nl.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		B399F5FB26A41BF639216FA3 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ko; path = ko.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		7285ECA36901FB8994177119 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ja; path = ja.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		6BE6B10E80486636657773F6 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = it; path = it.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		9E3B2CFE9CBE2BCD46EEB3CC /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = id; path = id.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		FDFCA2F0EB7517A105B4C1B8 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = fr; path = fr.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		801D8E92572343BF2295A1AC /* fil */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = fil; path = fil.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		B6D178472A4F57A4D9210AB3 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = es; path = es.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		55C31F09721D16C9055C6552 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = de; path = de.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		BCCD59149D701B9190435C3B /* bg */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = bg; path = bg.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		2B7E66ADDC4BC9FA04EAD99E /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ar; path = ar.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		237B8F72966E828300B1175C /* am */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = am; path = am.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		43E85EBACDAE4F41E45301AB /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = en; path = en.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DivineWidgetBundle.swift; sourceTree = "<group>"; };
+		13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostLiveActivityWidget.swift; sourceTree = "<group>"; };
+		3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityViews.swift; sourceTree = "<group>"; };
+		1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityViewsTests.swift; sourceTree = "<group>"; };
+		992F75580C42A8A09950DC34 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplay.swift; sourceTree = "<group>"; };
+		9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityAttributes.swift; sourceTree = "<group>"; };
+		A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityContentStateCodingTests.swift; sourceTree = "<group>"; };
+		792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityDisplayTests.swift; sourceTree = "<group>"; };
 		029BDD854485FA62BC5A9C26 /* Pods-RunnerTests.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		037A7FC0D83198C29E787FD1 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		06671AD11C80317FA3B1799D /* NostrBridgeAttestationPlugin.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NostrBridgeAttestationPlugin.swift; sourceTree = "<group>"; };
@@ -181,6 +225,9 @@
 		1EF10235DDCC51D74DC45009 /* NotificationServiceExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = NotificationServiceExtension.entitlements; sourceTree = "<group>"; };
 		2C53DBBEBD271C190B3C98EF /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		2ECE9F51A53445ABB44F885B /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A17C0001000000000000BB01 /* PostLiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostLiveActivityPlugin.swift; sourceTree = "<group>"; };
+		A17C0001000000000000BB02 /* PostActivityThumbnailWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostActivityThumbnailWriter.swift; sourceTree = "<group>"; };
+		A17C0001000000000000BB03 /* PostLiveActivityPluginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostLiveActivityPluginTests.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B2A13AD2D9A576685353158 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -280,6 +327,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FF91BCB20397A7944304CBE4 /* ActivityKit.framework in Frameworks */,
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
 				6FDAD046102CCA6028B8B9A3 /* BuildFile in Frameworks */,
 				38FD4E59291C9572AF216296 /* Pods_Runner.framework in Frameworks */,
@@ -297,12 +345,31 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA5C0A29E349A99263035489 /* ActivityKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		812A562A34344CD10B451E08 /* PostLiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				3CC96B39C8D5D772DC989F21 /* PostActivityViews.swift */,
+				59931E6CD280F38CFE37A346 /* PostActivityDisplay.swift */,
+				9AC32972C5D79AAE7FE1608D /* PostActivityAttributes.swift */,
+			);
+			path = PostLiveActivity;
+			sourceTree = "<group>";
+		};
+		DC11BE9D462D5DF537321AAB /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				812A562A34344CD10B451E08 /* PostLiveActivity */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		27D5A01E0DFB594EB489DDCD /* iOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -314,6 +381,10 @@
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
+				1E7DBB88A06925DACBE04D48 /* PostActivityViewsTests.swift */,
+				792C91E09B579516ECCD41DE /* PostActivityDisplayTests.swift */,
+				A17C0002000000000000BB01 /* PostActivityContentStateCodingTests.swift */,
+				A17C0001000000000000BB03 /* PostLiveActivityPluginTests.swift */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
 			path = RunnerTests;
@@ -346,6 +417,7 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
+				DC11BE9D462D5DF537321AAB /* Shared */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -385,6 +457,8 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				06671AD11C80317FA3B1799D /* NostrBridgeAttestationPlugin.swift */,
+				A17C0001000000000000BB01 /* PostLiveActivityPlugin.swift */,
+				A17C0001000000000000BB02 /* PostActivityThumbnailWriter.swift */,
 				8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */,
 				F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */,
 				6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */,
@@ -434,6 +508,9 @@
 		D1A00000000000000000001C /* CameraQuickActionWidget */ = {
 			isa = PBXGroup;
 			children = (
+				1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */,
+				FDB5B14645FE5C6BFE69FC03 /* DivineWidgetBundle.swift */,
+				13C56D9D683CAEDDA1301D4F /* PostLiveActivityWidget.swift */,
 				D1A000000000000000000005 /* CameraQuickActionWidget.swift */,
 				D1A00000000000000000001B /* Localizable.strings */,
 				D1A000000000000000000006 /* Info.plist */,
@@ -686,6 +763,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41F9074567E9ADBECE04A5D7 /* Localizable.stringsdict in Resources */,
 				D1A000000000000000000003 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -842,6 +920,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9426502F7C5BD1F17FB38100 /* PostActivityViewsTests.swift in Sources */,
+				06C89F01F1B1AB5252E242C5 /* PostActivityDisplayTests.swift in Sources */,
+				A17C0002000000000000AA01 /* PostActivityContentStateCodingTests.swift in Sources */,
+				A17C0001000000000000AA03 /* PostLiveActivityPluginTests.swift in Sources */,
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -850,8 +932,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8D3514AC5375BB325C999704 /* PostActivityViews.swift in Sources */,
+				48C59EE125CCFEA420673CD1 /* PostActivityDisplay.swift in Sources */,
+				60DF02F30134932669CCB8ED /* PostActivityAttributes.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				3EB13B9046685257BDD640FB /* NostrBridgeAttestationPlugin.swift in Sources */,
+				A17C0001000000000000AA01 /* PostLiveActivityPlugin.swift in Sources */,
+				A17C0001000000000000AA02 /* PostActivityThumbnailWriter.swift in Sources */,
 				D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */,
 				F15E7E0E1A2B3C4D5E6F7A02 /* FisheyeVideoEffect.swift in Sources */,
 				6A1C55E0B7D24F3E9A8C2B12 /* DropsVideoEffect.swift in Sources */,
@@ -900,6 +987,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E8F5C7098A6B89ECBF26ABAC /* DivineWidgetBundle.swift in Sources */,
+				85DB97C154E21DEB99E0A3EE /* PostLiveActivityWidget.swift in Sources */,
+				96A0C3CF711372436D3ACF5D /* PostActivityViews.swift in Sources */,
+				519C7FF20ABB1C77E5F48FE2 /* PostActivityDisplay.swift in Sources */,
+				381A22671A8662C7F656447E /* PostActivityAttributes.swift in Sources */,
 				D1A000000000000000000001 /* CameraQuickActionWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -941,6 +1033,31 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
+		1E635C0F856AE301E48B9B07 /* Localizable.stringsdict */ = {
+			isa = PBXVariantGroup;
+			children = (
+				B27C3624CD00680EC5C9CAF4 /* tr */,
+				41F0E5D82B456959155931EE /* sv */,
+				E801C42D14A733B2503B9981 /* ro */,
+				9D842FD51C521700D646EB43 /* pt */,
+				D07631FFE0C2C8DD42F58814 /* pl */,
+				0663F32C0D4530F6B07E5811 /* nl */,
+				B399F5FB26A41BF639216FA3 /* ko */,
+				7285ECA36901FB8994177119 /* ja */,
+				6BE6B10E80486636657773F6 /* it */,
+				9E3B2CFE9CBE2BCD46EEB3CC /* id */,
+				FDFCA2F0EB7517A105B4C1B8 /* fr */,
+				801D8E92572343BF2295A1AC /* fil */,
+				B6D178472A4F57A4D9210AB3 /* es */,
+				55C31F09721D16C9055C6552 /* de */,
+				BCCD59149D701B9190435C3B /* bg */,
+				2B7E66ADDC4BC9FA04EAD99E /* ar */,
+				237B8F72966E828300B1175C /* am */,
+				43E85EBACDAE4F41E45301AB /* en */,
+			);
+			name = Localizable.stringsdict;
+			sourceTree = "<group>";
+		};
 		97C146FA1CF9000F007C117D /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (

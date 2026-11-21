@@ -3123,6 +3123,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Neue Post-Aktivität auf dem Sperrbildschirm zeigen';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Aufrufe, Likes und Kommentare in der ersten Stunde deines Posts';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live-Aktivitäten sind für Divine in den iPhone-Einstellungen ausgeschaltet';
+
+  @override
   String get notificationSettingsActions => 'Aktionen';
 
   @override
@@ -3380,6 +3392,31 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Beitrag öffnen';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Statistiken sind unterwegs';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Noch keine Aufrufe · seit $minutes Min. online',
+      one: 'Noch keine Aufrufe · seit $minutes Min. online',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Wir finden keine Statistiken für diesen Post';
+
+  @override
+  String get analyticsViewPost => 'Post ansehen';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Aktivität auf dem Sperrbildschirm beenden';
 
   @override
   String get analyticsRecentDailyInteractions =>

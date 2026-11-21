@@ -3068,6 +3068,18 @@ class AppLocalizationsMs extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Tunjukkan aktiviti pos baharu pada Skrin Kunci';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Tontonan, suka dan komen untuk sejam pertama pos anda';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities dimatikan untuk Divine dalam Tetapan iPhone';
+
+  @override
   String get notificationSettingsActions => 'Tindakan';
 
   @override
@@ -3327,6 +3339,29 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Buka Siaran';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Statistik akan tiba sebentar lagi';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Belum ada tontonan · disiarkan $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Kami tidak dapat mencari statistik untuk siaran ini';
+
+  @override
+  String get analyticsViewPost => 'Lihat siaran';
+
+  @override
+  String get analyticsStopLiveActivity => 'Hentikan aktiviti Skrin Kunci';
 
   @override
   String get analyticsRecentDailyInteractions => 'Interaksi Harian Terkini';

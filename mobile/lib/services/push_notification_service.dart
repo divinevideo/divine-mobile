@@ -5,6 +5,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart'
+    show AuthorizationStatus;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -18,7 +20,19 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// Whether the OS lets the app show notifications, as the push service
+/// needs to know it for a Live Activity registration.
+///
+/// Provisional authorization delivers quietly but does deliver.
+bool notificationsAuthorizedFor(AuthorizationStatus status) => switch (status) {
+  AuthorizationStatus.authorized || AuthorizationStatus.provisional => true,
+  AuthorizationStatus.denied ||
+  AuthorizationStatus.deniedPermanently ||
+  AuthorizationStatus.notDetermined => false,
+};
 
 /// Describes whether a push-token registration should be retried.
 enum PushRegistrationResult {
@@ -130,6 +144,10 @@ class PushNotificationService {
   static int _deviceTimeZoneOffsetMinutes() =>
       DateTime.now().timeZoneOffset.inMinutes;
 
+  /// Whether this session still publishes registrations; false once
+  /// [deactivateRegistration] ran for sign-out or an account switch.
+  bool get acceptsRegistration => _acceptsRegistration;
+
   /// Prevents future token registration publishes for this session.
   ///
   /// Teardown cleanup may still use the captured identity to deregister the
@@ -151,6 +169,40 @@ class PushNotificationService {
   Future<PushRegistrationResult> register(
     String userPubkey, {
     FutureOr<bool> Function()? isCurrent,
+  }) => _registerCurrentToken(userPubkey, isCurrent: isCurrent);
+
+  /// Registers this device's post Live Activity with the push service.
+  ///
+  /// Publishes the same kind [pushRegistrationKind] event as [register], with
+  /// the activity and whether notifications are allowed added to the payload.
+  /// Results mean what they mean for [register].
+  Future<PushRegistrationResult> registerLiveActivity(
+    String userPubkey,
+    LiveActivityRegistration registration, {
+    required bool notificationsAuthorized,
+  }) async {
+    // The registration is signed by the current account, so it must be that
+    // account's own activity.
+    if (!pubkeysEqual(registration.ownerPubkey, userPubkey)) {
+      return PushRegistrationResult.terminalFailure;
+    }
+    return _registerCurrentToken(
+      userPubkey,
+      extraPayload: {
+        'notificationsAuthorized': notificationsAuthorized,
+        'liveActivity': registration.liveActivityWire(),
+      },
+      action: 'live activity',
+      recordsTimezone: false,
+    );
+  }
+
+  Future<PushRegistrationResult> _registerCurrentToken(
+    String userPubkey, {
+    FutureOr<bool> Function()? isCurrent,
+    Map<String, Object?> extraPayload = const {},
+    String action = 'registration',
+    bool recordsTimezone = true,
   }) async {
     if (kIsWeb) return PushRegistrationResult.terminalFailure;
 
@@ -193,6 +245,9 @@ class PushNotificationService {
       token,
       pushServicePubkey,
       isCurrent: isCurrent,
+      extraPayload: extraPayload,
+      action: action,
+      recordsTimezone: recordsTimezone,
     );
   }
 
@@ -428,6 +483,9 @@ class PushNotificationService {
     String token,
     String pushServicePubkey, {
     FutureOr<bool> Function()? isCurrent,
+    Map<String, Object?> extraPayload = const {},
+    String action = 'registration',
+    bool recordsTimezone = true,
   }) async {
     final identity = _authService.currentIdentity;
     if (identity == null || identity.pubkey != userPubkey) {
@@ -449,6 +507,7 @@ class PushNotificationService {
       'timezoneOffsetMinutes': timezone.offset,
       'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
       if (timezone.name != null) 'timezone': timezone.name,
+      ...extraPayload,
     });
 
     String? encrypted;
@@ -511,9 +570,12 @@ class PushNotificationService {
       return _signerUnavailableResult();
     }
 
-    final outcome = await _publishPushControlEvent(event, 'registration');
+    final outcome = await _publishPushControlEvent(event, action);
     if (outcome.confirmed) {
-      _registeredTimezone = timezone;
+      // A Live Activity registration does not refresh the device's
+      // notification timezone, so it must not hide a later change from
+      // registrationTimezoneChanged().
+      if (recordsTimezone) _registeredTimezone = timezone;
       return PushRegistrationResult.published;
     }
     if (outcome.rejectedBy.isNotEmpty) {

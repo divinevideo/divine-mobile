@@ -27,15 +27,7 @@ bool shouldOfferPostPublishCrosspost({
   required AuthenticationSource source,
 }) {
   if (availability == CrosspostingAvailability.unavailable) return false;
-  return switch (source) {
-    AuthenticationSource.divineOAuth ||
-    AuthenticationSource.importedKeys ||
-    AuthenticationSource.automatic => true,
-    AuthenticationSource.none ||
-    AuthenticationSource.bunker ||
-    AuthenticationSource.amber ||
-    AuthenticationSource.nip07 => false,
-  };
+  return signsWithoutPrompting(source);
 }
 
 /// The crossposting prompt for the post-publish confirmation sheet.

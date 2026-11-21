@@ -2,11 +2,13 @@
 // ABOUTME: Covers divine.video host gating and every DeepLinkType branch
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/universal_link_resolver.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/deep_link_service.dart';
 
 void main() {
   // Uri.parse accepts these, but each holds a percent-escape that is not
@@ -340,6 +342,66 @@ void main() {
         customSchemeToRouterPath(Uri.parse('divine:///saved-videos')),
         equals('/saved-videos'),
       );
+    });
+
+    group('post-analytics link', () {
+      const eventId =
+          'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+      const author =
+          '81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95';
+      const coordinate = '34236:$author:a&b=c+d?e/f g';
+      const encoded = '34236:$author:a%26b%3Dc%2Bd%3Fe%2Ff%20g';
+
+      test('maps to the post analytics route with its coordinate', () {
+        final path = customSchemeToRouterPath(
+          Uri.parse('divine:///post-analytics/$eventId?coordinate=$encoded'),
+        );
+
+        expect(
+          path,
+          equals(RoutePaths.postAnalytics(eventId, coordinate: coordinate)),
+        );
+        expect(
+          Uri.parse(path!).queryParameters['coordinate'],
+          equals(coordinate),
+        );
+      });
+
+      test('maps to the bare route when no coordinate rides along', () {
+        expect(
+          customSchemeToRouterPath(
+            Uri.parse('divine:///post-analytics/$eventId'),
+          ),
+          equals('/creator-analytics/$eventId'),
+        );
+      });
+
+      test('returns null for the authority form and a short id', () {
+        expect(
+          customSchemeToRouterPath(
+            Uri.parse('divine://post-analytics/$eventId'),
+          ),
+          isNull,
+        );
+        expect(
+          customSchemeToRouterPath(
+            Uri.parse('divine:///post-analytics/abc123'),
+          ),
+          isNull,
+        );
+      });
+
+      test('leaves routing to the coordinator in deepLinkRouterPath', () {
+        expect(
+          deepLinkRouterPath(
+            const DeepLink(
+              type: DeepLinkType.postAnalytics,
+              postEventId: eventId,
+            ),
+          ),
+          isNull,
+        );
+      });
     });
 
     test('returns null for a NIP-46 signer callback', () {

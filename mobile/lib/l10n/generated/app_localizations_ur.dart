@@ -3086,6 +3086,18 @@ class AppLocalizationsUr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'نئی پوسٹ کی سرگرمی لاک اسکرین پر دکھائیں';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'آپ کی پوسٹ کے پہلے گھنٹے کے ویوز، لائکس اور تبصرے';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhone کی ترتیبات میں Divine کے لیے Live Activities بند ہیں';
+
+  @override
   String get notificationSettingsActions => 'کارروائیاں';
 
   @override
@@ -3341,6 +3353,30 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'پوسٹ کھولیں';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'اعداد و شمار آ رہے ہیں';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'ابھی تک کوئی ویو نہیں · $minutes منٹ سے لائیو ہے',
+      one: 'ابھی تک کوئی ویو نہیں · $minutes منٹ سے لائیو ہے',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'ہمیں اس پوسٹ کے اعداد و شمار نہیں مل رہے';
+
+  @override
+  String get analyticsViewPost => 'پوسٹ دیکھیں';
+
+  @override
+  String get analyticsStopLiveActivity => 'لاک اسکرین کی سرگرمی روکیں';
 
   @override
   String get analyticsRecentDailyInteractions => 'حالیہ روزانہ تفاعلات';

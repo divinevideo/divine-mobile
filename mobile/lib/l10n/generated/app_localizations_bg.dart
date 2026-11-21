@@ -3132,6 +3132,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Показвай активност на новата публикация на заключения екран';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Прегледи, харесвания и коментари през първия час на публикацията ти';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities са изключени за Divine в Настройки на iPhone';
+
+  @override
   String get notificationSettingsActions => 'Действия';
 
   @override
@@ -3391,6 +3403,31 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Отвори публикацията';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Статистиката е на път';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Още няма гледания · онлайн от $minutes мин.',
+      one: 'Още няма гледания · онлайн от $minutes мин.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Не намираме статистика за тази публикация';
+
+  @override
+  String get analyticsViewPost => 'Виж публикацията';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Спри активността на заключения екран';
 
   @override
   String get analyticsRecentDailyInteractions =>

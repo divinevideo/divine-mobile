@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine ካሜራ ክፈት";
 "divine_quick_actions_camera_widget_description" = "Divine ካሜራን ከዋናው ማያ ቀጥታ ይከፍታል።";
+"divine_post_activity_your_post" = "የእርስዎ ልጥፍ";
+"divine_post_activity_posting" = "በመለጠፍ ላይ…";
+"divine_post_activity_live" = "ልጥፍዎ ታትሟል";
+"divine_post_activity_no_views_yet %@" = "እስካሁን ምንም እይታ የለም · ከታተመ %@";
+"divine_post_activity_cant_find" = "ለዚህ ልጥፍ ስታቲስቲክስ ማግኘት አልቻልንም";
+"divine_post_activity_first_hour" = "የመጀመሪያው ሰዓት";
+"divine_post_activity_no_views_first_hour" = "በመጀመሪያው ሰዓት ምንም እይታ የለም";
+"divine_post_activity_updated %@" = "ከ%@ በፊት ተዘምኗል";
+"divine_post_activity_first_run_note" = "የመጀመሪያው ሰዓትዎ የቀጥታ ስታቲስቲክስ · በቅንብሮች ውስጥ ያጥፉት";

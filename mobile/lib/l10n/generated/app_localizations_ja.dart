@@ -2881,6 +2881,17 @@ class AppLocalizationsJa extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '新しい投稿のアクティビティをロック画面に表示';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      '投稿の最初の1時間の再生数、いいね、コメント';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'iPhoneの設定でDivineのライブアクティビティがオフになっています';
+
+  @override
   String get notificationSettingsActions => 'アクション';
 
   @override
@@ -3124,6 +3135,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => '投稿を開く';
+
+  @override
+  String get analyticsStatsOnTheirWay => '統計はまもなく表示されます';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'まだ再生はありません · 公開から$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'この投稿の統計が見つかりません';
+
+  @override
+  String get analyticsViewPost => '投稿を見る';
+
+  @override
+  String get analyticsStopLiveActivity => 'ロック画面のアクティビティを停止';
 
   @override
   String get analyticsRecentDailyInteractions => '最近の日別インタラクション';

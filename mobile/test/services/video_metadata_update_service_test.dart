@@ -24,6 +24,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -38,6 +39,9 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
+
+class _MockPostLiveActivityRepository extends Mock
+    implements PostLiveActivityRepository {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -140,6 +144,70 @@ void main() {
         l10n: lookupAppLocalizations(const Locale('en')),
       ),
     );
+  });
+
+  group('$VideoMetadataUpdateService live activity', () {
+    late _MockPostLiveActivityRepository liveActivity;
+    late VideoMetadataUpdateService withActivity;
+
+    setUp(() {
+      liveActivity = _MockPostLiveActivityRepository();
+      when(
+        () => liveActivity.noteEdited(
+          postCoordinate: any(named: 'postCoordinate'),
+          newEventId: any(named: 'newEventId'),
+        ),
+      ).thenAnswer((_) async {});
+      withActivity = VideoMetadataUpdateService(
+        authService: mockAuthService,
+        blossomService: mockBlossomUploadService,
+        relayPublisher: mockRelayPublisher,
+        personalEventCache: mockPersonalEventCacheService,
+        videoEventService: mockVideoEventService,
+        collaboratorInviteService: CollaboratorInviteService(
+          dmRepository: mockDmRepository,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        ),
+        liveActivity: liveActivity,
+      );
+    });
+
+    test('noteEdited on success only', () async {
+      final result = await withActivity.updateVideo(
+        originalVideo: _testVideo(),
+        editorState: VideoEditorProviderState(),
+        initialCollaboratorPubkeys: const {},
+      );
+
+      final updated = (result as VideoUpdateSuccess).updatedEvent;
+      verify(
+        () => liveActivity.noteEdited(
+          postCoordinate:
+              '${NIP71VideoKinds.addressableShortVideo}:$_ownerPubkey:'
+              '${updated.stableId}',
+          newEventId: updated.id,
+        ),
+      ).called(1);
+
+      when(
+        () => mockRelayPublisher.publishViaWebSocket(any()),
+      ).thenAnswer((_) async => EventPublishOutcome.transientFailure);
+      clearInteractions(liveActivity);
+
+      final rejected = await withActivity.updateVideo(
+        originalVideo: _testVideo(),
+        editorState: VideoEditorProviderState(),
+        initialCollaboratorPubkeys: const {},
+      );
+
+      expect(rejected, isA<VideoUpdateFailure>());
+      verifyNever(
+        () => liveActivity.noteEdited(
+          postCoordinate: any(named: 'postCoordinate'),
+          newEventId: any(named: 'newEventId'),
+        ),
+      );
+    });
   });
 
   group(VideoMetadataUpdateService, () {

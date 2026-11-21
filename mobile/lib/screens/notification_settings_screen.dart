@@ -8,13 +8,16 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/notification_settings/notification_settings_cubit.dart';
 import 'package:openvine/blocs/notification_settings/notification_settings_state.dart';
+import 'package:openvine/blocs/post_live_activity_settings/post_live_activity_settings_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -35,8 +38,15 @@ class NotificationSettingsScreen extends ConsumerWidget {
       notificationPreferencesServiceProvider,
     );
     final repository = ref.watch(notificationRepositoryProvider);
+    final liveActivityRepository = ref.watch(
+      postLiveActivityRepositoryProvider,
+    );
+    final showLiveActivity =
+        liveActivityRepository != null &&
+        ref.watch(isFeatureEnabledProvider(FeatureFlag.postLiveActivity)) &&
+        _signsWithoutPrompting(ref);
 
-    return BlocProvider(
+    final page = BlocProvider(
       // Both providers watch authServiceProvider, so their identities can
       // change on auth flip; re-key so the Cubit reloads with the fresh
       // dependencies instead of operating on stale ones.
@@ -61,20 +71,61 @@ class NotificationSettingsScreen extends ConsumerWidget {
         showNewPosts: ref.watch(
           isFeatureEnabledProvider(FeatureFlag.newPostNotifications),
         ),
+        showLiveActivity: showLiveActivity,
       ),
     );
+    if (!showLiveActivity) return page;
+    return BlocProvider(
+      // The device-level repository is stable, but re-key on it anyway so a
+      // swapped instance reloads instead of driving a stale one.
+      key: ValueKey(liveActivityRepository),
+      create: (_) {
+        final cubit = PostLiveActivitySettingsCubit(
+          repository: liveActivityRepository,
+        );
+        runDetached(
+          cubit.load(),
+          'load post Live Activity settings',
+          logName: 'NotificationSettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
+      child: page,
+    );
   }
+}
+
+/// Whether the signed-in account signs without a prompt, so Live Activities
+/// can register for it.
+///
+/// Watched only once the toggle could show at all, so the screen takes no
+/// auth dependency on devices without Live Activities. The auth source
+/// changes only with auth state, which the watch covers.
+bool _signsWithoutPrompting(WidgetRef ref) {
+  ref.watch(currentAuthStateProvider);
+  return signsWithoutPrompting(
+    ref.watch(authServiceProvider).authenticationSource,
+  );
 }
 
 /// View: renders the notification settings UI from the Cubit state.
 class NotificationSettingsView extends StatelessWidget {
   @visibleForTesting
-  const NotificationSettingsView({required this.showNewPosts, super.key});
+  const NotificationSettingsView({
+    required this.showNewPosts,
+    required this.showLiveActivity,
+    super.key,
+  });
 
   /// Whether to offer the new-post ("bell") toggle. Hidden until the push
   /// service delivers kind 34236, since there is no bell to switch off and
   /// the toggle would change nothing a user could observe.
   final bool showNewPosts;
+
+  /// Whether to offer the post Live Activity toggle. Requires a
+  /// `PostLiveActivitySettingsCubit` above this view when true.
+  final bool showLiveActivity;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -201,6 +252,7 @@ class NotificationSettingsView extends StatelessWidget {
                           value,
                         ),
                       ),
+                      if (showLiveActivity) const _LiveActivityCard(),
                       DivineSectionHeader(
                         context.l10n.notificationSettingsActions,
                         padding: const EdgeInsets.only(top: 24, bottom: 8),
@@ -300,6 +352,40 @@ class _NotificationCard extends StatelessWidget {
       onChanged: onChanged,
     ),
   );
+}
+
+class _LiveActivityCard extends StatelessWidget {
+  const _LiveActivityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<PostLiveActivitySettingsCubit>().state;
+    final cubit = context.read<PostLiveActivitySettingsCubit>();
+    return Card(
+      color: context.vineColors.card,
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: .hardEdge,
+      child: DivineSwitchTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: VineTheme.vineGreen.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const DivineIcon(
+            icon: DivineIconName.lockSimple,
+            color: VineTheme.vineGreen,
+          ),
+        ),
+        title: context.l10n.notificationSettingsLiveActivityTitle,
+        subtitle: state.systemEnabled
+            ? context.l10n.notificationSettingsLiveActivitySubtitle
+            : context.l10n.notificationSettingsLiveActivityUnavailable,
+        value: state.effectivelyOn,
+        onChanged: state.systemEnabled ? cubit.setToggleOn : null,
+      ),
+    );
+  }
 }
 
 class _ActionCard extends StatelessWidget {

@@ -3195,6 +3195,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Arată activitatea noii postări pe ecranul de blocare';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Vizualizări, aprecieri și comentarii din prima oră a postării tale';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Activitățile live sunt dezactivate pentru Divine în Setările iPhone';
+
+  @override
   String get notificationSettingsActions => 'Acțiuni';
 
   @override
@@ -3454,6 +3466,32 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Deschide postarea';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Statisticile sunt pe drum';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Încă nicio vizionare · live de $minutes min',
+      few: 'Încă nicio vizionare · live de $minutes min',
+      one: 'Încă nicio vizionare · live de $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Nu găsim statistici pentru această postare';
+
+  @override
+  String get analyticsViewPost => 'Vezi postarea';
+
+  @override
+  String get analyticsStopLiveActivity =>
+      'Oprește activitatea de pe ecranul de blocare';
 
   @override
   String get analyticsRecentDailyInteractions => 'Interacțiuni zilnice recente';

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>divine_post_activity_views_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>zero</key>
+			<string>%lld مشاهدة</string>
+			<key>one</key>
+			<string>مشاهدة واحدة</string>
+			<key>two</key>
+			<string>مشاهدتان</string>
+			<key>few</key>
+			<string>%lld مشاهدات</string>
+			<key>many</key>
+			<string>%lld مشاهدة</string>
+			<key>other</key>
+			<string>%lld مشاهدة</string>
+		</dict>
+	</dict>
+	<key>divine_post_activity_likes_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>zero</key>
+			<string>%lld إعجاب</string>
+			<key>one</key>
+			<string>إعجاب واحد</string>
+			<key>two</key>
+			<string>إعجابان</string>
+			<key>few</key>
+			<string>%lld إعجابات</string>
+			<key>many</key>
+			<string>%lld إعجابًا</string>
+			<key>other</key>
+			<string>%lld إعجاب</string>
+		</dict>
+	</dict>
+	<key>divine_post_activity_comments_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>zero</key>
+			<string>%lld تعليق</string>
+			<key>one</key>
+			<string>تعليق واحد</string>
+			<key>two</key>
+			<string>تعليقان</string>
+			<key>few</key>
+			<string>%lld تعليقات</string>
+			<key>many</key>
+			<string>%lld تعليقًا</string>
+			<key>other</key>
+			<string>%lld تعليق</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

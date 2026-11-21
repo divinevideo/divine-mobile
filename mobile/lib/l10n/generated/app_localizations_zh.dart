@@ -2891,6 +2891,16 @@ class AppLocalizationsZh extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle => '在锁定屏幕上显示新帖子的动态';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle => '帖子第一个小时的观看、点赞和评论';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Divine 的实时活动在 iPhone 设置中已关闭';
+
+  @override
   String get notificationSettingsActions => '操作';
 
   @override
@@ -3128,6 +3138,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => '打开帖子';
+
+  @override
+  String get analyticsStatsOnTheirWay => '数据马上就来';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '还没有观看 · 已发布 $minutes 分钟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => '找不到这条帖子的数据';
+
+  @override
+  String get analyticsViewPost => '查看帖子';
+
+  @override
+  String get analyticsStopLiveActivity => '停止锁定屏幕上的动态';
 
   @override
   String get analyticsRecentDailyInteractions => '近期每日互动';

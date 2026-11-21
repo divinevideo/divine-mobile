@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Deschide camera Divine";
 "divine_quick_actions_camera_widget_description" = "Deschide camera Divine direct de pe ecranul principal.";
+"divine_post_activity_your_post" = "Postarea ta";
+"divine_post_activity_posting" = "Se publică…";
+"divine_post_activity_live" = "Postarea ta e live";
+"divine_post_activity_no_views_yet %@" = "Încă nicio vizionare · live de %@";
+"divine_post_activity_cant_find" = "Nu găsim statistici pentru această postare";
+"divine_post_activity_first_hour" = "Prima oră";
+"divine_post_activity_no_views_first_hour" = "Nicio vizionare în prima oră";
+"divine_post_activity_updated %@" = "Actualizat acum %@";
+"divine_post_activity_first_run_note" = "Statistici live pentru prima ta oră · dezactivează-le din Setări";

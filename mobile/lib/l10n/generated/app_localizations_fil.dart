@@ -3093,6 +3093,18 @@ class AppLocalizationsFil extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Ipakita ang activity ng bagong post sa Lock Screen';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Views, likes at comments sa unang oras ng post mo';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Naka-off ang Live Activities para sa Divine sa Mga Setting ng iPhone';
+
+  @override
   String get notificationSettingsActions => 'Mga Aksyon';
 
   @override
@@ -3352,6 +3364,30 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Buksan ang Post';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Paparating na ang stats';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Wala pang views · $minutes min nang live',
+      one: 'Wala pang views · $minutes min nang live',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Hindi namin mahanap ang stats para sa post na ito';
+
+  @override
+  String get analyticsViewPost => 'Tingnan ang post';
+
+  @override
+  String get analyticsStopLiveActivity => 'Ihinto ang activity sa Lock Screen';
 
   @override
   String get analyticsRecentDailyInteractions =>

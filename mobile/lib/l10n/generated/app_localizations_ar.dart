@@ -3093,6 +3093,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'إظهار نشاط المنشور الجديد على شاشة القفل';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'المشاهدات والإعجابات والتعليقات خلال الساعة الأولى من منشورك';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'الأنشطة المباشرة متوقفة لتطبيق Divine في إعدادات iPhone';
+
+  @override
   String get notificationSettingsActions => 'الإجراءات';
 
   @override
@@ -3344,6 +3356,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'فتح المنشور';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'الإحصاءات في الطريق';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'لا مشاهدات بعد · منشور منذ $minutes دقيقة',
+      many: 'لا مشاهدات بعد · منشور منذ $minutes دقيقة',
+      few: 'لا مشاهدات بعد · منشور منذ $minutes دقائق',
+      two: 'لا مشاهدات بعد · منشور منذ دقيقتين',
+      one: 'لا مشاهدات بعد · منشور منذ دقيقة واحدة',
+      zero: 'لا مشاهدات بعد · منشور منذ $minutes دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'تعذّر العثور على إحصاءات لهذا المنشور';
+
+  @override
+  String get analyticsViewPost => 'عرض المنشور';
+
+  @override
+  String get analyticsStopLiveActivity => 'إيقاف النشاط على شاشة القفل';
 
   @override
   String get analyticsRecentDailyInteractions => 'التفاعلات اليومية الأخيرة';

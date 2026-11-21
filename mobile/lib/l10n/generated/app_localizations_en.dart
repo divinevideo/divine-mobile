@@ -3129,6 +3129,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Show new post activity on Lock Screen';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Views, likes and comments for your post\'s first hour';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'Live Activities are off for Divine in iPhone Settings';
+
+  @override
   String get notificationSettingsActions => 'Actions';
 
   @override
@@ -3405,6 +3417,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Open Post';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'Stats are on their way';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'No views yet · live for $minutes min',
+      one: 'No views yet · live for $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats => 'We can\'t find stats for this post';
+
+  @override
+  String get analyticsViewPost => 'View post';
+
+  @override
+  String get analyticsStopLiveActivity => 'Stop Lock Screen activity';
 
   @override
   String get analyticsRecentDailyInteractions => 'Recent Daily Interactions';

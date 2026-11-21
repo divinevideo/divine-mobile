@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -36,6 +38,7 @@ void main() {
             '/list/:pubkey/:id',
             '/people-lists/:id',
             '/saved-videos',
+            '/creator-analytics/:videoId',
           ])
             GoRoute(path: path, builder: (_, _) => const SizedBox()),
         ],
@@ -152,6 +155,90 @@ void main() {
           ),
           equals('/saved-videos'),
         );
+      });
+
+      group('post analytics', () {
+        const eventId =
+            'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+        const coordinate =
+            '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+            ':a&b=c d';
+
+        test('routes the link to that post with its coordinate', () {
+          final location = handleAndReadLocation(
+            const DeepLink(
+              type: DeepLinkType.postAnalytics,
+              postEventId: eventId,
+              postCoordinate: coordinate,
+            ),
+          );
+
+          expect(
+            location,
+            equals(RoutePaths.postAnalytics(eventId, coordinate: coordinate)),
+          );
+        });
+
+        // `go` rebuilds the matched hierarchy, so account stats sits under the
+        // post and back from the post lands there. `push` would put the post
+        // alone over the feed.
+        testWidgets('builds account stats beneath the post', (tester) async {
+          final nested = GoRouter(
+            initialLocation: '/home/0',
+            routes: [
+              GoRoute(
+                path: '/home/0',
+                builder: (_, _) => const Text('feed'),
+              ),
+              GoRoute(
+                path: '/creator-analytics',
+                builder: (_, _) => const Text('account stats'),
+                routes: [
+                  GoRoute(
+                    path: ':videoId',
+                    builder: (_, _) => const Text('post stats'),
+                  ),
+                ],
+              ),
+            ],
+          );
+          addTearDown(nested.dispose);
+          await tester.pumpWidget(
+            MaterialApp.router(
+              routerConfig: nested,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          );
+
+          DeepLinkCoordinator(
+            router: nested,
+            authService: authService,
+          ).handle(
+            const AsyncValue.data(
+              DeepLink(
+                type: DeepLinkType.postAnalytics,
+                postEventId: eventId,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('post stats'), findsOneWidget);
+
+          nested.pop();
+          await tester.pumpAndSettle();
+
+          expect(find.text('account stats'), findsOneWidget);
+        });
+
+        test('leaves the current route alone when the link has no id', () {
+          expect(
+            handleAndReadLocation(
+              const DeepLink(type: DeepLinkType.postAnalytics),
+            ),
+            equals('/home/0'),
+          );
+        });
       });
 
       test('leaves the current route alone for an unknown link', () {

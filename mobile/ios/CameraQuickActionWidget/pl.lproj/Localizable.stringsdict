@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>divine_post_activity_views_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld wyświetlenie</string>
+			<key>few</key>
+			<string>%lld wyświetlenia</string>
+			<key>many</key>
+			<string>%lld wyświetleń</string>
+			<key>other</key>
+			<string>%lld wyświetlenia</string>
+		</dict>
+	</dict>
+	<key>divine_post_activity_likes_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld polubienie</string>
+			<key>few</key>
+			<string>%lld polubienia</string>
+			<key>many</key>
+			<string>%lld polubień</string>
+			<key>other</key>
+			<string>%lld polubienia</string>
+		</dict>
+	</dict>
+	<key>divine_post_activity_comments_count %lld</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld komentarz</string>
+			<key>few</key>
+			<string>%lld komentarze</string>
+			<key>many</key>
+			<string>%lld komentarzy</string>
+			<key>other</key>
+			<string>%lld komentarza</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

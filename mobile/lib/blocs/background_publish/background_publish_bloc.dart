@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:models/models.dart' show NIP71VideoKinds;
 import 'package:openvine/blocs/background_publish/publish_foreground_session.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -12,6 +14,8 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'background_publish_event.dart';
@@ -31,12 +35,18 @@ class BackgroundPublishBloc
     Future<void> Function(DivineVideoDraft draft, String? signedVideo)?
     challengeVideoSuccess,
     Future<void> Function(DivineVideoDraft draft)? challengeDraftCleanup,
+    PostLiveActivityRepository? liveActivity,
+    String? Function()? currentOwnerPubkey,
+    bool Function(DivineVideoDraft draft)? isScheduledDraft,
   }) : _videoPublishServiceFactory = videoPublishServiceFactory,
        _draftStorageService = draftStorageService,
        _foregroundSession = foregroundSession,
        _challengeHandoff = challengeHandoff,
        _challengeVideoSuccess = challengeVideoSuccess,
        _challengeDraftCleanup = challengeDraftCleanup,
+       _liveActivity = liveActivity,
+       _currentOwnerPubkey = currentOwnerPubkey,
+       _isScheduledDraft = isScheduledDraft,
        super(const BackgroundPublishState()) {
     on<BackgroundPublishRequested>(_onBackgroundPublishRequested);
     on<_BackgroundPublishQueued>(
@@ -68,6 +78,19 @@ class BackgroundPublishBloc
   /// ended. Null disables the behaviour (e.g. in tests).
   final PublishForegroundSession? _foregroundSession;
 
+  /// The post Live Activity, or null off iOS. Every call is best-effort: a
+  /// Live Activity failure must never fail or delay a publish. Whether the
+  /// feature is on is the repository's call.
+  final PostLiveActivityRepository? _liveActivity;
+
+  /// The signed-in account, read when a publish is requested because the
+  /// account can change after this bloc is built.
+  final String? Function()? _currentOwnerPubkey;
+
+  /// Whether a draft will be held for later rather than posted now. A held
+  /// post has no activity until it posts.
+  final bool Function(DivineVideoDraft draft)? _isScheduledDraft;
+
   /// Drafts [parkInFlight] already wrote back to draft status. The sequential
   /// handler is still awaiting those publishes, and account-switch teardown
   /// settles them after the park returns. Recording that settlement would
@@ -91,6 +114,7 @@ class BackgroundPublishBloc
       (upload) => upload.draft.id == event.draft.id,
     );
     if (!alreadyUploading) {
+      _startLiveActivity(event.draft);
       final newUpload = BackgroundUpload(
         draft: event.draft,
         result: null,
@@ -160,6 +184,7 @@ class BackgroundPublishBloc
     required Uint8List? thumbnailBytes,
   }) async {
     if (result is PublishSuccess) {
+      _markLiveActivityLive(event.draft.id, result);
       final updatedUploads = state.uploads
           .where((upload) => upload.draft.id != event.draft.id)
           .toList();
@@ -232,6 +257,7 @@ class BackgroundPublishBloc
     }
 
     if (result is PublishScheduled) {
+      _endLiveActivity(event.draft.id);
       // The media is up and the signed event waits for its time (#3538).
       // The publish copy stays as the scheduled draft the section above the
       // drafts shows and a cancel parks; only the source it was copied from
@@ -253,6 +279,7 @@ class BackgroundPublishBloc
       return;
     }
 
+    _endLiveActivity(event.draft.id);
     final updatedUploads = state.uploads.map((upload) {
       if (upload.draft.id == event.draft.id) {
         return upload.copyWith(result: result, progress: 1.0);
@@ -354,6 +381,7 @@ class BackgroundPublishBloc
     }).toList();
     emit(state.copyWith(uploads: remainingUploads));
 
+    _endLiveActivity(event.draftId);
     await _park(draftId: event.draftId, draft: uploadToVanish?.draft);
   }
 
@@ -496,6 +524,114 @@ class BackgroundPublishBloc
       progress: 0,
     );
     emit(state.copyWith(uploads: [...state.uploads, failedUpload]));
+  }
+
+  /// Starts the Live Activity for a publish just requested.
+  ///
+  /// Skipped for a draft held for later: its activity starts when it posts.
+  /// A retry re-adds the same event, so it starts again after a failure.
+  void _startLiveActivity(DivineVideoDraft draft) {
+    final liveActivity = _liveActivity;
+    if (liveActivity == null) return;
+    try {
+      if (_isScheduledDraft?.call(draft) ?? false) return;
+      final owner = _currentOwnerPubkey?.call();
+      if (owner == null) return;
+      liveActivity.startPosting(
+        key: draft.id,
+        ownerPubkey: owner,
+        thumbnail: _readCoverThumbnail(draft),
+      );
+    } catch (error, stackTrace) {
+      _logLiveActivityFailure('start', error, stackTrace);
+    }
+  }
+
+  void _markLiveActivityLive(String draftId, PublishSuccess result) {
+    final liveActivity = _liveActivity;
+    if (liveActivity == null) return;
+    try {
+      final target = _liveTarget(result);
+      if (target == null) {
+        _endLiveActivity(draftId);
+        return;
+      }
+      runDetached(
+        liveActivity.markLive(
+          key: draftId,
+          postCoordinate: target.coordinate,
+          postEventId: target.eventId,
+        ),
+        'mark the post Live Activity live',
+        logName: 'BackgroundPublishBloc',
+        category: LogCategory.video,
+      );
+    } catch (error, stackTrace) {
+      _logLiveActivityFailure('mark live', error, stackTrace);
+      // A post that cannot be addressed never goes live; without this the
+      // activity would sit on "Posting…" until it went stale.
+      _endLiveActivity(draftId);
+    }
+  }
+
+  void _endLiveActivity(String draftId) {
+    final liveActivity = _liveActivity;
+    if (liveActivity == null) return;
+    try {
+      runDetached(
+        liveActivity.end(key: draftId),
+        'end the post Live Activity',
+        logName: 'BackgroundPublishBloc',
+        category: LogCategory.video,
+      );
+    } catch (error, stackTrace) {
+      _logLiveActivityFailure('end', error, stackTrace);
+    }
+  }
+
+  void _logLiveActivityFailure(
+    String action,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    Log.warning(
+      'Could not $action the post Live Activity: $error',
+      name: 'BackgroundPublishBloc',
+      category: LogCategory.video,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// The addressable coordinate and event id of a published video, from the
+  /// signed event, falling back to the upload's own identifiers. Null when
+  /// neither names a post.
+  ({String coordinate, String eventId})? _liveTarget(PublishSuccess result) {
+    Map<String, dynamic>? body;
+    final raw = result.signedEventBody;
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) body = decoded;
+      } on FormatException {
+        // An unreadable body falls back to the upload's identifiers.
+      }
+    }
+    String? dTag;
+    for (final tag in body?['tags'] as List<dynamic>? ?? const []) {
+      if (tag is List && tag.length > 1 && tag.first == 'd') {
+        dTag = tag[1] as String?;
+        break;
+      }
+    }
+    final kind = body?['kind'] as int? ?? NIP71VideoKinds.addressableShortVideo;
+    final pubkey = body?['pubkey'] as String? ?? _currentOwnerPubkey?.call();
+    final d = dTag ?? result.stableId;
+    final eventId = body?['id'] as String? ?? result.eventId;
+    if (pubkey == null || d == null || d.isEmpty || eventId == null) {
+      return null;
+    }
+    return (coordinate: '$kind:$pubkey:$d', eventId: eventId);
   }
 
   /// Reads the draft's cover frame so the post-publish confirmation can

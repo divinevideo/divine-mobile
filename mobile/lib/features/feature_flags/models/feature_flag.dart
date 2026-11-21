@@ -61,6 +61,12 @@ enum FeatureFlag {
         'subscribers — with it off, the bell would publish a subscription '
         'that nothing ever delivers.',
   ),
+  postLiveActivity(
+    'Post Live Activity',
+    'Follow a just-published post on the Lock Screen and in the Dynamic '
+        'Island (iOS).',
+    audience: FeatureFlagAudience.internal,
+  ),
   clientSeenFiltering(
     'Client Seen-Video Filtering',
     'Demote recently-seen videos in home feeds and drop them from '

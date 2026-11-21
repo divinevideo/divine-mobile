@@ -112,6 +112,8 @@
 	     submission whenever the binary references those APIs. -->
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Divine does not use speech recognition. This permission is only requested if a feature you start needs to turn speech in your recording into text.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

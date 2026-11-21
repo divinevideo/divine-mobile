@@ -3115,6 +3115,18 @@ class AppLocalizationsPt extends AppLocalizations {
       'Occasional product and community updates';
 
   @override
+  String get notificationSettingsLiveActivityTitle =>
+      'Mostrar a atividade do novo post na Tela Bloqueada';
+
+  @override
+  String get notificationSettingsLiveActivitySubtitle =>
+      'Visualizações, curtidas e comentários da primeira hora do seu post';
+
+  @override
+  String get notificationSettingsLiveActivityUnavailable =>
+      'As Atividades ao Vivo estão desativadas para o Divine em Configurações do iPhone';
+
+  @override
   String get notificationSettingsActions => 'Ações';
 
   @override
@@ -3373,6 +3385,31 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get analyticsOpenPost => 'Abrir post';
+
+  @override
+  String get analyticsStatsOnTheirWay => 'As estatísticas estão a caminho';
+
+  @override
+  String analyticsNoViewsYet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Ainda sem visualizações · no ar há $minutes min',
+      many: 'Ainda sem visualizações · no ar há $minutes min',
+      one: 'Ainda sem visualizações · no ar há $minutes min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsCantFindStats =>
+      'Não encontramos estatísticas desta publicação';
+
+  @override
+  String get analyticsViewPost => 'Ver publicação';
+
+  @override
+  String get analyticsStopLiveActivity => 'Parar a atividade na Tela Bloqueada';
 
   @override
   String get analyticsRecentDailyInteractions => 'Interações diárias recentes';

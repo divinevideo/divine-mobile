@@ -195,6 +195,16 @@ abstract final class RoutePaths {
 
   static String exploreForIndex(int? index) =>
       index == null ? explore : '$explore/$index';
+
+  /// One post's analytics, nested under [creatorAnalytics]. [coordinate] is
+  /// the post's `kind:pubkey:d-tag` address, for when its event id no longer
+  /// resolves after an edit.
+  static String postAnalytics(String videoId, {String? coordinate}) {
+    final base = '$creatorAnalytics/${Uri.encodeComponent(videoId)}';
+    if (coordinate == null) return base;
+    return '$base?coordinate=${Uri.encodeQueryComponent(coordinate)}';
+  }
+
   static String followersForPubkey(String pubkey) => '$followersBase/$pubkey';
   static String followingForPubkey(String pubkey) => '$followingBase/$pubkey';
   static String hashtagForTag(String tag) {

@@ -37,6 +37,7 @@ import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -64,6 +65,8 @@ import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/post_live_activity_channel.dart';
+import 'package:openvine/services/post_live_activity_registrar.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
@@ -72,6 +75,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
@@ -108,6 +112,9 @@ class _MockContentDeletionService extends Mock
     implements ContentDeletionService {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
+
+class _MockPostLiveActivityRepository extends Mock
+    implements PostLiveActivityRepository {}
 
 class _ControlledVideoSend extends Fake implements DmVideoSendService {
   final result = Completer<NIP17SendResult>();
@@ -276,6 +283,29 @@ void main() {
     );
   }
 
+  void overrideLiveActivity(PostLiveActivityRepository repository) {
+    deviceScope = DeviceScope(
+      database: database,
+      sharedPreferences: deviceScope.sharedPreferences,
+      announcementSessions: AnnouncementSessions(),
+      feedModePersistence: deviceScope.feedModePersistence,
+      switchController: controller,
+      appVersion: 'test',
+      crashReporting: CrashReportingService(),
+      startupPerformance: StartupPerformanceService(
+        crashReporting: CrashReportingService(),
+      ),
+      documentsPath: '/documents',
+      logMessageBatcher: LogMessageBatcher(),
+      postLiveActivity: PostLiveActivityDevice(
+        channel: PostLiveActivityChannel(isSupported: () => false),
+        registrar: PostLiveActivityRegistrar(),
+        repository: repository,
+      ),
+      accountOverrides: deviceScope.accountOverrides,
+    );
+  }
+
   AuthService makeIncomingAuth({
     bool failClaim = false,
     UserDataCleanupService? userDataCleanupService,
@@ -330,6 +360,7 @@ void main() {
         startupPerformance: deviceScope.startupPerformance,
         crashReporting: deviceScope.crashReporting,
         logMessageBatcher: deviceScope.logMessageBatcher,
+        postLiveActivity: deviceScope.postLiveActivity,
         accountOverrides: [
           ...deviceScope.accountOverrides.where(
             (o) => o.origin != authServiceProvider,
@@ -1011,6 +1042,96 @@ void main() {
       await tester.pump();
 
       expect(_isDisposed(initial), isTrue);
+    });
+  });
+
+  group('post Live Activity', () {
+    testWidgets(
+      'ends the outgoing account activities at commit with no outgoing '
+      'push coordinator',
+      (tester) async {
+        final repository = _MockPostLiveActivityRepository();
+        ProviderContainer? signedInto;
+        // Captured, not asserted in the stub: the swap catches and logs a
+        // failure from endLocally, so an expect there could never fail.
+        final currentAtEnd = <ProviderContainer?>[];
+        when(
+          () => repository.endLocally(ownerPubkey: any(named: 'ownerPubkey')),
+        ).thenAnswer((_) async {
+          currentAtEnd.add(controller.currentContainer);
+        });
+        overrideLiveActivity(repository);
+        final initial = await pumpHost(tester);
+        expect(initial.exists(pushNotificationSyncProvider), isFalse);
+
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (container, _) async => signedInto = container,
+          ),
+        );
+        await tester.pump();
+
+        verify(() => repository.endLocally(ownerPubkey: leavingHex)).called(1);
+        verifyNever(
+          () => repository.endLocally(ownerPubkey: targetHex),
+        );
+        expect(signedInto, isNotNull);
+        expect(currentAtEnd, [same(signedInto)]);
+      },
+    );
+
+    testWidgets('keeps the target account live when ending fails', (
+      tester,
+    ) async {
+      final repository = _MockPostLiveActivityRepository();
+      when(
+        () => repository.endLocally(ownerPubkey: any(named: 'ownerPubkey')),
+      ).thenAnswer((_) async => throw StateError('platform unavailable'));
+      overrideLiveActivity(repository);
+      final initial = await pumpHost(tester);
+      ProviderContainer? signedInto;
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, _) async => signedInto = container,
+        ),
+      );
+      await tester.pump();
+
+      verify(() => repository.endLocally(ownerPubkey: leavingHex)).called(1);
+      expect(controller.currentContainer, same(signedInto));
+      expect(_isDisposed(initial), isTrue);
+    });
+
+    testWidgets('ends nothing when the target sign-in fails', (tester) async {
+      final repository = _MockPostLiveActivityRepository();
+      overrideLiveActivity(repository);
+      final initial = await pumpHost(tester);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw StateError('session expired'),
+        ),
+        expected: throwsStateError,
+      );
+      await tester.pump();
+
+      verifyNever(
+        () => repository.endLocally(ownerPubkey: any(named: 'ownerPubkey')),
+      );
+      expect(_isDisposed(initial), isFalse);
     });
   });
 

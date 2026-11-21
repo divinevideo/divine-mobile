@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
@@ -26,6 +27,12 @@ class _MockAuthService extends Mock implements AuthService {}
 
 /// Hands the test a real [Ref] so [appRouterRedirect] can be driven through a
 /// GoRouter instead of being called in isolation.
+const _postId =
+    'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+const _postCoordinateEncoded =
+    '34236%3A81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+    '%3Aip1dd9tAlmw';
+
 final _refProvider = Provider<Ref>((ref) => ref);
 
 // go_router applies the legacy top-level redirect at most once per navigation
@@ -93,6 +100,8 @@ void main() {
           VideoFeedPage.pathForIndex(0),
           MinorAccountReviewScreen.path,
           SavedVideosScreen.path,
+          RoutePaths.creatorAnalytics,
+          '${RoutePaths.creatorAnalytics}/:videoId',
           SettingsScreen.path,
           VideoDetailScreen.path,
           '${VideoDetailScreen.path}/likers',
@@ -130,6 +139,10 @@ void main() {
     ('divine:///profile/npub1abc', '/profile/npub1abc'),
     ('divine:///hashtag/art', '/hashtag/art'),
     ('divine:///search/music', '/search-results/music'),
+    (
+      'divine:///post-analytics/$_postId?coordinate=$_postCoordinateEncoded',
+      '/creator-analytics/$_postId?coordinate=$_postCoordinateEncoded',
+    ),
   ];
 
   group('a restricted-minor account', () {

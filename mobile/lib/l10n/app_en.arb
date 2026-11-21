@@ -2215,6 +2215,18 @@
   "notificationSettingsNewPostsSubtitle": "When someone you're watching posts",
   "notificationSettingsCampaigns": "Divine updates",
   "notificationSettingsCampaignsSubtitle": "Occasional product and community updates",
+  "notificationSettingsLiveActivityTitle": "Show new post activity on Lock Screen",
+  "@notificationSettingsLiveActivityTitle": {
+    "description": "Title of the Notification settings switch that shows a Live Activity on the iOS Lock Screen after the user posts. Lock Screen and Live Activities are Apple's terms."
+  },
+  "notificationSettingsLiveActivitySubtitle": "Views, likes and comments for your post's first hour",
+  "@notificationSettingsLiveActivitySubtitle": {
+    "description": "Subtitle of the post Live Activity switch: what the activity shows and for how long."
+  },
+  "notificationSettingsLiveActivityUnavailable": "Live Activities are off for Divine in iPhone Settings",
+  "@notificationSettingsLiveActivityUnavailable": {
+    "description": "Replaces the post Live Activity switch subtitle when iOS has Live Activities turned off for the app, so the switch is disabled."
+  },
   "notificationSettingsActions": "Actions",
   "notificationSettingsMarkAllAsRead": "Mark All as Read",
   "notificationSettingsMarkAllAsReadSubtitle": "Mark all notifications as read",
@@ -2358,6 +2370,31 @@
   },
   "analyticsPostAnalytics": "Post Analytics",
   "analyticsOpenPost": "Open Post",
+  "analyticsStatsOnTheirWay": "Stats are on their way",
+  "@analyticsStatsOnTheirWay": {
+    "description": "Post stats screen, when Funnelcake has not caught up with a just-published post yet, before the 10-minute settle point. A promise the screen keeps: it reloads at the settle point."
+  },
+  "analyticsNoViewsYet": "{minutes, plural, one{No views yet · live for {minutes} min} other{No views yet · live for {minutes} min}}",
+  "@analyticsNoViewsYet": {
+    "description": "Post stats screen, when the post's views, likes and comments are confirmed zero past the 10-minute settle point. {minutes} is how long the post has been live. Matches the Lock Screen Live Activity's 'No views yet · live for …'.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "analyticsCantFindStats": "We can't find stats for this post",
+  "@analyticsCantFindStats": {
+    "description": "Post stats screen, when Funnelcake still has no record of the post 10 minutes after publishing. Claims no cause. Matches the Lock Screen Live Activity's wording."
+  },
+  "analyticsViewPost": "View post",
+  "@analyticsViewPost": {
+    "description": "Button on the post stats screen that opens the post itself in Divine. Distinct from the crosspost sheet's 'View post', which opens the post on an external platform."
+  },
+  "analyticsStopLiveActivity": "Stop Lock Screen activity",
+  "@analyticsStopLiveActivity": {
+    "description": "Button on the post stats screen that ends the post's Live Activity on the iOS Lock Screen. Lock Screen and Live Activity are Apple's terms."
+  },
   "analyticsRecentDailyInteractions": "Recent Daily Interactions",
   "analyticsNoActivityYet": "No activity in this range yet.",
   "analyticsDailyInteractionsExplainer": "Interactions = likes + comments + reposts by post date.",

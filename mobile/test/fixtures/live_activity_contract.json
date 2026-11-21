@@ -1,0 +1,332 @@
+{
+  "version": 1,
+  "timings": {
+    "settleSeconds": 600,
+    "windowSeconds": 3600,
+    "cadenceSeconds": 180,
+    "staleSeconds": 600,
+    "summaryDismissalSeconds": 1800
+  },
+  "counts": [
+    {
+      "name": "zero_before_settle_is_unknown",
+      "secondsSincePosted": 240,
+      "response": "ok",
+      "versions": [
+        {
+          "views": 0,
+          "reactions": 0,
+          "comments": 0
+        }
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "zero_after_settle_is_confirmed",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        {
+          "views": 0,
+          "reactions": 0,
+          "comments": 0
+        }
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": 0,
+        "likes": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "missing_views_uses_fallback",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        {
+          "views": null,
+          "reactions": 3,
+          "comments": 1
+        }
+      ],
+      "viewsFallback": 12,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": 12,
+        "likes": 3,
+        "comments": 1
+      }
+    },
+    {
+      "name": "zero_views_from_fallback_after_settle",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        {
+          "views": null,
+          "reactions": 3,
+          "comments": 1
+        }
+      ],
+      "viewsFallback": 0,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": 0,
+        "likes": 3,
+        "comments": 1
+      }
+    },
+    {
+      "name": "zero_views_from_fallback_before_settle",
+      "secondsSincePosted": 300,
+      "response": "ok",
+      "versions": [
+        {
+          "views": null,
+          "reactions": 0,
+          "comments": 0
+        }
+      ],
+      "viewsFallback": 0,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "max_across_versions",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        {
+          "views": 5,
+          "reactions": 2,
+          "comments": 0
+        },
+        {
+          "views": 9,
+          "reactions": 1,
+          "comments": 4
+        }
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": 9,
+        "likes": 2,
+        "comments": 4
+      }
+    },
+    {
+      "name": "absent_before_settle_keeps_waiting",
+      "secondsSincePosted": 300,
+      "response": "ok",
+      "versions": [
+        "missing"
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "absent_after_settle_first_miss_waits",
+      "secondsSincePosted": 660,
+      "response": "ok",
+      "versions": [
+        "missing"
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "absent_after_settle_second_miss_is_not_found",
+      "secondsSincePosted": 840,
+      "response": "ok",
+      "versions": [
+        "missing"
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 1,
+      "expected": {
+        "action": "end",
+        "phase": "notFound",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "failed_request_skips",
+      "secondsSincePosted": 900,
+      "response": "failed",
+      "versions": [],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "skip",
+        "phase": null,
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "failed_fallback_skips",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        {
+          "views": null,
+          "reactions": 3,
+          "comments": 1
+        }
+      ],
+      "viewsFallback": "failed",
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "skip",
+        "phase": null,
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "missing_post_gets_no_fallback",
+      "secondsSincePosted": 720,
+      "response": "ok",
+      "versions": [
+        "missing"
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expectViewsLookup": false,
+      "expected": {
+        "action": "update",
+        "phase": "live",
+        "views": null,
+        "likes": null,
+        "comments": null
+      }
+    },
+    {
+      "name": "window_end_is_summary",
+      "secondsSincePosted": 3600,
+      "response": "ok",
+      "versions": [
+        {
+          "views": 40,
+          "reactions": 5,
+          "comments": 2
+        }
+      ],
+      "viewsFallback": null,
+      "absentChecksBefore": 0,
+      "expected": {
+        "action": "end",
+        "phase": "summary",
+        "views": 40,
+        "likes": 5,
+        "comments": 2
+      }
+    }
+  ],
+  "contentStates": [
+    {
+      "name": "full",
+      "json": {
+        "phase": "live",
+        "views": 12,
+        "likes": 3,
+        "comments": 1,
+        "updatedAt": 1763500000,
+        "showFirstRunNote": true,
+        "postCoordinate": "34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:plain-d-tag",
+        "postEventId": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+      },
+      "expected": {
+        "phase": "live",
+        "views": 12,
+        "likes": 3,
+        "comments": 1,
+        "updatedAt": 1763500000,
+        "showFirstRunNote": true,
+        "postCoordinate": "34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:plain-d-tag",
+        "postEventId": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+      }
+    },
+    {
+      "name": "missing_coordinate_and_event_id",
+      "json": {
+        "phase": "posting",
+        "views": null,
+        "likes": null,
+        "comments": null,
+        "updatedAt": 1763500000,
+        "showFirstRunNote": false
+      },
+      "expected": {
+        "phase": "posting",
+        "views": null,
+        "likes": null,
+        "comments": null,
+        "updatedAt": 1763500000,
+        "showFirstRunNote": false,
+        "postCoordinate": null,
+        "postEventId": null
+      }
+    }
+  ],
+  "links": [
+    {
+      "postEventId": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "postCoordinate": "34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:plain-d-tag",
+      "url": "divine:///post-analytics/b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2?coordinate=34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:plain-d-tag"
+    },
+    {
+      "postEventId": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "postCoordinate": "34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:a&b=c+d?e/f g",
+      "url": "divine:///post-analytics/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3?coordinate=34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:a%26b%3Dc%2Bd%3Fe%2Ff%20g"
+    },
+    {
+      "postEventId": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      "postCoordinate": "34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:vine_2024.clip~1",
+      "url": "divine:///post-analytics/d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4?coordinate=34236:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1:vine_2024.clip~1"
+    }
+  ]
+}

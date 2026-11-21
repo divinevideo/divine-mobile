@@ -3,24 +3,40 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/post_analytics_detail/post_analytics_detail_cubit.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
+import 'package:openvine/features/creator_analytics/video_performance.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
+import 'package:openvine/providers/post_live_activity_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:post_live_activity_repository/post_live_activity_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockPostAnalyticsDetailCubit extends MockCubit<PostAnalyticsDetailState>
+    implements PostAnalyticsDetailCubit {}
+
+class _MockPostLiveActivityRepository extends Mock
+    implements PostLiveActivityRepository {}
 
 class _MockCreatorAnalyticsRepository extends Mock
     implements CreatorAnalyticsRepository {}
@@ -173,6 +189,19 @@ void main() {
     );
   }
 
+  /// The Page provides its cubit from these, so a warm entry needs them too
+  /// even though it never fetches.
+  List<Override> postDetailOverrides() {
+    final authService = _MockAuthService();
+    when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+    return [
+      authServiceProvider.overrideWithValue(authService),
+      creatorAnalyticsRepositoryProvider.overrideWithValue(
+        _MockCreatorAnalyticsRepository(),
+      ),
+    ];
+  }
+
   group(CreatorAnalyticsScreen, () {
     testWidgets('shows unique viewers in per-video analytics', (tester) async {
       final video = analyticsVideo(
@@ -185,6 +214,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: postDetailOverrides(),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -203,11 +233,18 @@ void main() {
     });
 
     testWidgets('shows N/A when unique-viewer data is missing', (tester) async {
-      final video = analyticsVideo(id: 'video-no-unique-data', views: 120);
+      final video = analyticsVideo(
+        id: 'video-no-unique-data',
+        views: 120,
+        originalLikes: 3,
+        originalComments: 1,
+        originalReposts: 1,
+      );
       final l10n = lookupAppLocalizations(const Locale('en'));
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: postDetailOverrides(),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -234,6 +271,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: postDetailOverrides(),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -425,6 +463,105 @@ void main() {
       );
 
       expect(find.text('25'), findsWidgets);
+    });
+
+    group('back', () {
+      Future<GoRouter> pumpRouted(
+        WidgetTester tester, {
+        required String initialLocation,
+      }) async {
+        final authService = _MockAuthService();
+        final repository = _MockCreatorAnalyticsRepository();
+        when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+        when(() => repository.fetchCreatorSounds(any()))
+            .thenAnswer((_) async => const <CreatorSound>[]);
+        when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+          (_) async => CreatorAnalyticsSnapshot(
+            videos: const [],
+            socialCounts: null,
+            diagnostics: CreatorAnalyticsDiagnostics(
+              totalVideos: 0,
+              videosWithAnyViews: 0,
+              videosMissingViews: 0,
+              videosHydratedByBulkStats: 0,
+              videosHydratedByViewsEndpoint: 0,
+              sourcesUsed: const {AnalyticsDataSource.bulkVideoStats},
+              fetchedAt: DateTime.now(),
+            ),
+          ),
+        );
+        final router = GoRouter(
+          initialLocation: initialLocation,
+          routes: [
+            GoRoute(
+              path: defaultSafePopFallback,
+              builder: (_, _) => const Text('feed'),
+            ),
+            GoRoute(
+              path: RoutePaths.creatorAnalytics,
+              builder: (_, _) => const CreatorAnalyticsScreen(),
+              routes: [
+                GoRoute(
+                  path: ':videoId',
+                  builder: (_, _) => const Text('post stats'),
+                ),
+              ],
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(authService),
+              creatorAnalyticsRepositoryProvider.overrideWithValue(repository),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return router;
+      }
+
+      Future<void> tapBack(WidgetTester tester) async {
+        await tester.tap(find.bySemanticsIdentifier('back_button'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('falls back to the home feed when nothing is beneath', (
+        tester,
+      ) async {
+        final router = await pumpRouted(
+          tester,
+          initialLocation: RoutePaths.creatorAnalytics,
+        );
+
+        await tapBack(tester);
+
+        expect(router.state.uri.path, equals(defaultSafePopFallback));
+        expect(find.text('feed'), findsOneWidget);
+      });
+
+      testWidgets('from a post opened by link lands on account stats, then '
+          'the feed', (tester) async {
+        final router = await pumpRouted(
+          tester,
+          initialLocation: RoutePaths.postAnalytics('a' * 64),
+        );
+        expect(find.text('post stats'), findsOneWidget);
+
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(CreatorAnalyticsScreen), findsOneWidget);
+
+        await tapBack(tester);
+        expect(find.text('feed'), findsOneWidget);
+      });
     });
 
     testWidgets('toggles diagnostics from the app bar action', (tester) async {
@@ -774,6 +911,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
+            overrides: postDetailOverrides(),
             child: MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -900,6 +1038,318 @@ void main() {
           logs.single.message,
           'Failed to open post analytics: Exception: route failed',
         );
+      });
+    });
+  });
+
+  group(PostAnalyticsDetailScreen, () {
+    testWidgets('draws a warm post on the first frame, before the Live '
+        'Activity answers', (tester) async {
+      final liveActivity = _MockPostLiveActivityRepository();
+      when(
+        () => liveActivity.postedAtFor(any()),
+      ).thenAnswer((_) => Completer<DateTime?>().future);
+      when(
+        () => liveActivity.isRunningFor(any()),
+      ).thenAnswer((_) => Completer<bool>().future);
+      // An address, so the Live Activity lookups actually run.
+      final video = analyticsVideo(
+        id: 'video-warm',
+        views: 120,
+      ).copyWith(vineId: 'post-d-tag');
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...postDetailOverrides(),
+            postLiveActivityRepositoryProvider.overrideWithValue(liveActivity),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: PostAnalyticsDetailScreen(
+              videoId: video.id,
+              performance: VideoPerformance.fromVideo(video),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Analytics Fixture Video'), findsOneWidget);
+      expect(find.text(l10n.analyticsViews), findsOneWidget);
+      expect(find.text('120'), findsOneWidget);
+    });
+  });
+
+  group(PostAnalyticsDetailView, () {
+    const coordinate =
+        '34236:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        ':post-d-tag';
+    late _MockPostAnalyticsDetailCubit cubit;
+    late MockGoRouter goRouter;
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    setUp(() {
+      cubit = _MockPostAnalyticsDetailCubit();
+      goRouter = MockGoRouter();
+      when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
+      when(() => cubit.retry()).thenAnswer((_) async {});
+      when(() => cubit.stop()).thenAnswer((_) async {});
+      when(() => cubit.refreshLiveActivity()).thenAnswer((_) async {});
+    });
+
+    Future<void> pumpView(
+      WidgetTester tester,
+      PostAnalyticsDetailState state,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      when(() => cubit.state).thenReturn(state);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: MockGoRouterProvider(
+            goRouter: goRouter,
+            child: BlocProvider<PostAnalyticsDetailCubit>.value(
+              value: cubit,
+              child: const PostAnalyticsDetailView(videoId: 'video-id'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    group('renders', () {
+      testWidgets('the on-their-way copy', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.onTheirWay,
+          ),
+        );
+
+        expect(find.text(l10n.analyticsStatsOnTheirWay), findsOneWidget);
+      });
+
+      testWidgets('how long the post has been live when nothing came yet', (
+        tester,
+      ) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.nothingYet,
+            counts: PostCounts(views: 0, likes: 0, comments: 0),
+            liveMinutes: 14,
+          ),
+        );
+
+        expect(find.text(l10n.analyticsNoViewsYet(14)), findsOneWidget);
+      });
+
+      testWidgets('the cannot-find copy', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.cantFind,
+            coordinate: coordinate,
+          ),
+        );
+
+        expect(find.text(l10n.analyticsCantFindStats), findsOneWidget);
+        expect(find.text(l10n.analyticsViewPost), findsOneWidget);
+      });
+
+      testWidgets('the could-not-load copy with a retry', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.couldNotLoad,
+          ),
+        );
+
+        expect(find.text(l10n.analyticsUnableToLoad), findsOneWidget);
+        expect(find.text(l10n.analyticsRetry), findsOneWidget);
+        expect(find.text(l10n.analyticsCantFindStats), findsNothing);
+      });
+
+      testWidgets('an unknown count as N/A, never as zero', (tester) async {
+        final video = analyticsVideo(id: 'video-id', views: 9);
+        await pumpView(
+          tester,
+          PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.ready,
+            performance: VideoPerformance.fromVideo(video),
+            counts: const PostCounts(views: 9),
+          ),
+        );
+
+        expect(find.text('9'), findsOneWidget);
+        expect(find.text('0'), findsNothing);
+        expect(find.text(l10n.analyticsNa), findsWidgets);
+      });
+
+      group('the ready card', () {
+        final video = analyticsVideo(id: 'video-id', views: 9);
+
+        Future<(Rect, Rect)> openPostAndCard(
+          WidgetTester tester, {
+          required bool running,
+        }) async {
+          await pumpView(
+            tester,
+            PostAnalyticsDetailState(
+              status: PostAnalyticsDetailStatus.ready,
+              performance: VideoPerformance.fromVideo(video),
+              counts: const PostCounts(views: 9),
+              coordinate: coordinate,
+              liveActivityRunning: running,
+            ),
+          );
+          final openPost = find.widgetWithText(
+            DivineButton,
+            l10n.analyticsOpenPost,
+          );
+          final cardColumn = find
+              .ancestor(of: openPost, matching: find.byType(Column))
+              .first;
+          return (tester.getRect(openPost), tester.getRect(cardColumn));
+        }
+
+        testWidgets('ends at Open post, with no gap, when Stop is hidden', (
+          tester,
+        ) async {
+          final (openPost, card) = await openPostAndCard(
+            tester,
+            running: false,
+          );
+
+          expect(openPost.bottom, equals(card.bottom));
+        });
+
+        testWidgets('puts a gap between Open post and Stop', (tester) async {
+          final (openPost, _) = await openPostAndCard(tester, running: true);
+          final stop = tester.getRect(
+            find.widgetWithText(DivineButton, l10n.analyticsStopLiveActivity),
+          );
+
+          expect(stop.top - openPost.bottom, equals(10));
+        });
+      });
+
+      group('a message with Stop hidden', () {
+        for (final (state, lastButton) in [
+          (PostAnalyticsDetailStatus.cantFind, l10n.analyticsViewPost),
+          (PostAnalyticsDetailStatus.couldNotLoad, l10n.analyticsRetry),
+        ]) {
+          testWidgets('$state ends at its last button, with no gap', (
+            tester,
+          ) async {
+            await pumpView(
+              tester,
+              PostAnalyticsDetailState(status: state, coordinate: coordinate),
+            );
+            final button = find.widgetWithText(DivineButton, lastButton);
+            final column = find
+                .ancestor(of: button, matching: find.byType(Column))
+                .first;
+
+            expect(
+              tester.getRect(button).bottom,
+              equals(tester.getRect(column).bottom),
+            );
+          });
+        }
+      });
+
+      testWidgets('Stop only while the Lock Screen activity runs', (
+        tester,
+      ) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.cantFind,
+            coordinate: coordinate,
+          ),
+        );
+
+        expect(find.text(l10n.analyticsStopLiveActivity), findsNothing);
+      });
+    });
+
+    group('interactions', () {
+      testWidgets('View post opens the post by its address', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.cantFind,
+            coordinate: coordinate,
+          ),
+        );
+
+        await tester.tap(find.text(l10n.analyticsViewPost));
+        await tester.pump();
+
+        verify(
+          () => goRouter.push<void>(VideoDetailScreen.pathForId(coordinate)),
+        ).called(1);
+      });
+
+      testWidgets('retry reloads', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.couldNotLoad,
+          ),
+        );
+
+        await tester.tap(find.text(l10n.analyticsRetry));
+        await tester.pump();
+
+        verify(() => cubit.retry()).called(1);
+      });
+
+      testWidgets('Stop ends the Lock Screen activity', (tester) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.onTheirWay,
+            coordinate: coordinate,
+            liveActivityRunning: true,
+          ),
+        );
+
+        await tester.tap(find.text(l10n.analyticsStopLiveActivity));
+        await tester.pump();
+
+        verify(() => cubit.stop()).called(1);
+      });
+
+      testWidgets('returning to the app re-checks the Lock Screen activity', (
+        tester,
+      ) async {
+        await pumpView(
+          tester,
+          const PostAnalyticsDetailState(
+            status: PostAnalyticsDetailStatus.onTheirWay,
+            coordinate: coordinate,
+            liveActivityRunning: true,
+          ),
+        );
+        verifyNever(() => cubit.refreshLiveActivity());
+
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+
+        verify(() => cubit.refreshLiveActivity()).called(1);
       });
     });
   });

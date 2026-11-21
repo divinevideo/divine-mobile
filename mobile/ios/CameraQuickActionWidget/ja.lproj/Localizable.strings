@@ -1,3 +1,12 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divineカメラを開く";
 "divine_quick_actions_camera_widget_description" = "ホーム画面からDivineカメラを直接開きます。";
+"divine_post_activity_your_post" = "あなたの投稿";
+"divine_post_activity_posting" = "投稿中…";
+"divine_post_activity_live" = "投稿を公開しました";
+"divine_post_activity_no_views_yet %@" = "まだ再生はありません · 公開から%@";
+"divine_post_activity_cant_find" = "この投稿の統計が見つかりません";
+"divine_post_activity_first_hour" = "最初の1時間";
+"divine_post_activity_no_views_first_hour" = "最初の1時間の再生はありません";
+"divine_post_activity_updated %@" = "%@前に更新";
+"divine_post_activity_first_run_note" = "最初の1時間のライブ統計 · 設定でオフにできます";
