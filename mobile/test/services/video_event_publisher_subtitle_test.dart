@@ -733,7 +733,7 @@ void main() {
           'text-track',
           'https://cdn.example.com/subs-en-old.vtt',
           'wss://relay.divine.video',
-          'captions',
+          ' Captions ',
           'EN',
         ];
         relaysAnswer(

@@ -207,19 +207,22 @@ class SubtitleRepository {
       for (final tag in newestTags)
         if (tag.length > 4 &&
             tag.first == 'text-track' &&
-            const {'', 'captions', 'subtitles'}.contains(tag[3]) &&
+            isCaptionTextTrackType(tag[3]) &&
             tag[4].trim().split('-').first.toLowerCase() == baseLanguage)
           tag[4].trim(),
     };
     return sameBase.length == 1 ? sameBase.single : video.textTrackLang;
   }
 
-  /// The language of the `text-track` at [ref] among [tags]: `''` when that
-  /// track names none, or null when [tags] holds no track at [ref].
+  /// The language of the caption track at [ref] among [tags]: `''` when that
+  /// track names none, or null when [tags] holds no caption track at [ref].
   static String? _trackLanguageAt(List<List<String>> tags, String? ref) {
     String? language;
     for (final tag in tags) {
-      if (tag.length < 2 || tag.first != 'text-track' || tag[1] != ref) {
+      if (tag.length < 2 ||
+          tag.first != 'text-track' ||
+          tag[1] != ref ||
+          !isCaptionTextTrackType(tag.length > 3 ? tag[3] : null)) {
         continue;
       }
       final named = tag.length > 4 ? tag[4].trim() : '';
