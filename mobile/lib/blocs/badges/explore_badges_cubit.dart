@@ -5,10 +5,7 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart'
-    show FunnelcakeApiException, FunnelcakeNotConfiguredException;
 import 'package:openvine/blocs/close_guard.dart';
-import 'package:openvine/config/badge_issuers.dart';
 
 part 'explore_badges_state.dart';
 
@@ -46,42 +43,20 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       ),
     );
     try {
-      List<IndexedBadgeDiscovery>? indexed;
-      try {
-        indexed = await _repository.loadIndexedDiscovery();
-      } on FunnelcakeNotConfiguredException {
-        // An unconfigured API is supported by relay-only environments.
-      } on FunnelcakeApiException catch (error, stackTrace) {
-        if (error.statusCode != 404) addError(error, stackTrace);
-      } on Exception catch (error, stackTrace) {
-        addError(error, stackTrace);
-      }
-      if (indexed == null) {
-        final definitions = await _repository.loadPublicDefinitions();
-        if (!_isCurrent(generation)) return;
-        final retained = state.federatedDefinitions;
-        final refreshSupplement =
-            retained.isNotEmpty || state.videoPreviews.isNotEmpty;
-        _applyDefinitions(
-          refreshSupplement
-              ? _mergeDefinitions(definitions, retained)
-              : definitions,
-          generation,
-          const {},
-        );
-        if (refreshSupplement) {
-          unawaited(_appendFederated(generation, definitions));
-        }
-        return;
-      }
-
+      final indexed = await _repository.loadIndexedDiscovery(
+        isActive: () => _isCurrent(generation),
+      );
       if (!_isCurrent(generation)) return;
       final definitions = indexed.map((card) => card.definition).toList();
       final videoPreviews = {
-        for (final card in indexed) card.definition.coordinate: card.videos,
+        for (final card in indexed)
+          if (card.videos.isNotEmpty) card.definition.coordinate: card.videos,
       };
       _applyDefinitions(
-        _mergeDefinitions(definitions, state.federatedDefinitions),
+        _repository.mergeDiscoveryDefinitions(
+          definitions,
+          state.federatedDefinitions,
+        ),
         generation,
         videoPreviews,
       );
@@ -111,7 +86,7 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
     try {
       final federated = await _repository.loadFederatedDiscovery();
       if (!_isCurrent(generation)) return;
-      final merged = _mergeDefinitions(indexed, federated);
+      final merged = _repository.mergeDiscoveryDefinitions(indexed, federated);
       emitIfOpen(
         state.copyWith(
           definitions: List.unmodifiable(merged),
@@ -120,28 +95,8 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       );
     } catch (error, stackTrace) {
       // External relays are supplemental and never replace the indexed page.
-      if (_isCurrent(generation)) addError(error, stackTrace);
+      addError(error, stackTrace);
     }
-  }
-
-  List<Nip58BadgeDefinition> _mergeDefinitions(
-    List<Nip58BadgeDefinition> indexed,
-    List<Nip58BadgeDefinition> federated,
-  ) {
-    final coordinates = <String>{};
-    final counts = <String, int>{};
-    return [
-      for (final definition in [...indexed, ...federated])
-        if (coordinates.add(definition.coordinate) &&
-            (definition.event.pubkey == kDivineBadgeIssuerPubkey ||
-                counts.update(
-                      definition.event.pubkey,
-                      (count) => count + 1,
-                      ifAbsent: () => 1,
-                    ) <=
-                    3))
-          definition,
-    ];
   }
 
   bool _isCurrent(int generation) =>
@@ -220,7 +175,6 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   void loadPreview(String coordinate) {
     if (isClosed ||
         state.isRefreshing ||
-        state.videoPreviews.containsKey(coordinate) ||
         state.requestedPreviews.contains(coordinate) ||
         !state.visibleDefinitions.any((d) => d.coordinate == coordinate)) {
       return;

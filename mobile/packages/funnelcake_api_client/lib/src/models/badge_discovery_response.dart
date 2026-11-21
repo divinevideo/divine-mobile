@@ -22,10 +22,19 @@ typedef BadgeVideoPreview = ({
   bool archiveProvenanceAvailable,
 });
 
+/// Maximum cards returned in one discovery page.
+const badgeDiscoveryPageLimit = 48;
+
+/// Maximum indexed clips on each badge card.
+const badgeDiscoveryClipLimit = 3;
+
+/// Largest Unix timestamp representable by Dart's DateTime on every platform.
+const _maxPreviewTimestamp = 8640000000000;
+
 /// Parses the bounded discovery page without treating malformed data as empty.
 List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
   final badges = json['badges'] as List<dynamic>;
-  if (badges.length > 48) {
+  if (badges.length > badgeDiscoveryPageLimit) {
     throw const FormatException('Badge discovery page exceeds its limit');
   }
   return badges
@@ -33,7 +42,8 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
         final badge = value as Map<String, dynamic>;
         final event = badge['definition'] as Map<String, dynamic>;
         final videos = badge['videos'] as List<dynamic>;
-        if (event['sig'] is! String || videos.length > 3) {
+        if (event['sig'] is! String ||
+            videos.length > badgeDiscoveryClipLimit) {
           throw const FormatException('Invalid indexed badge card');
         }
         return (
@@ -43,12 +53,18 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
           videos: videos
               .map((value) {
                 final video = value as Map<String, dynamic>;
+                final createdAt = video['created_at'] as int;
+                if (createdAt < 0 || createdAt > _maxPreviewTimestamp) {
+                  throw const FormatException(
+                    'Invalid badge preview timestamp',
+                  );
+                }
                 return (
                   id: video['id'] as String,
                   pubkey: video['pubkey'] as String,
                   title: video['title'] as String,
                   thumbnail: video['thumbnail'] as String,
-                  createdAt: video['created_at'] as int,
+                  createdAt: createdAt,
                   kind: video['kind'] as int,
                   moderationLabels: List<String>.from(
                     video['moderation_labels'] as List<dynamic>,

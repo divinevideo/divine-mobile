@@ -2350,27 +2350,40 @@ class FunnelcakeApiClient {
   /// Fetches the ranked public badge gallery and video previews in one read.
   Future<List<IndexedBadgeCard>> getBadgeDiscovery() async {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
-    final uri = Uri.parse('$_baseUrl/api/badges/discovery?limit=48');
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/discovery?limit=$badgeDiscoveryPageLimit',
+    );
+    late http.Response response;
     try {
-      final response = await _sendGet(uri).timeout(_timeout);
-      if (response.statusCode != 200) {
-        throw FunnelcakeApiException(
-          message: 'Badge discovery unavailable',
-          statusCode: response.statusCode,
-          url: uri.toString(),
-        );
-      }
+      response = await _sendGet(uri).timeout(_timeout);
+    } on TimeoutException catch (_, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeTimeoutException(uri.toString()),
+        stackTrace,
+      );
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Failed to fetch badge discovery', cause: error),
+        stackTrace,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw FunnelcakeApiException(
+        message: 'Badge discovery unavailable',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    }
+    try {
       return parseBadgeDiscoveryResponse(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
-    } on TimeoutException {
-      throw FunnelcakeTimeoutException(uri.toString());
-    } on FunnelcakeException {
-      rethrow;
-    } catch (error) {
-      throw FunnelcakeException(
-        'Invalid badge discovery response',
-        cause: error,
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Invalid badge discovery response', cause: error),
+        stackTrace,
       );
     }
   }

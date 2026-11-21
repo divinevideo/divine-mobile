@@ -3,17 +3,35 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 
-class _IndexedRepository extends Mock implements BadgeRepository {}
+class _IndexedRepository extends Mock implements BadgeRepository {
+  @override
+  List<Nip58BadgeDefinition> mergeDiscoveryDefinitions(
+    List<Nip58BadgeDefinition> primary,
+    List<Nip58BadgeDefinition> federated,
+  ) => mergeBadgeDiscoveryDefinitions(primary, federated);
+}
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {
   @override
-  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async =>
-      throw const FunnelcakeNotConfiguredException();
+  List<Nip58BadgeDefinition> mergeDiscoveryDefinitions(
+    List<Nip58BadgeDefinition> primary,
+    List<Nip58BadgeDefinition> federated,
+  ) => mergeBadgeDiscoveryDefinitions(primary, federated);
+
+  @override
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery({
+    bool Function()? isActive,
+  }) async => [
+    for (final definition in await loadPublicDefinitions())
+      (definition: definition, videos: const <BadgeVideoPreview>[]),
+  ];
+
+  @override
+  Future<List<Nip58BadgeDefinition>> loadFederatedDiscovery() async => const [];
 }
 
 void main() {
@@ -76,7 +94,9 @@ void main() {
             ['url', 'https://media.divine.video/clip.mp4'],
           ],
         );
-        when(indexed.loadIndexedDiscovery).thenAnswer(
+        when(
+          () => indexed.loadIndexedDiscovery(isActive: any(named: 'isActive')),
+        ).thenAnswer(
           (_) async => [
             (definition: _definition, videos: [video]),
           ],
@@ -89,7 +109,7 @@ void main() {
 
         expect(cubit.state.status, ExploreBadgesStatus.loaded);
         expect(cubit.state.videoPreviews[_definition.coordinate], [video]);
-        expect(waiting.isCompleted, isFalse);
+        verify(indexed.loadFederatedDiscovery).called(1);
         verifyNever(indexed.loadPublicDefinitions);
         waiting.complete([_definition]);
         await pumpEventQueue();
@@ -111,7 +131,9 @@ void main() {
         );
         final next = Completer<List<Nip58BadgeDefinition>>();
         var relayReads = 0;
-        when(indexed.loadIndexedDiscovery).thenAnswer(
+        when(
+          () => indexed.loadIndexedDiscovery(isActive: any(named: 'isActive')),
+        ).thenAnswer(
           (_) async => [(definition: definitions.first, videos: [])],
         );
         when(indexed.loadFederatedDiscovery).thenAnswer(
@@ -138,13 +160,12 @@ void main() {
         coordinate: '30009:$_issuer:external',
         dTag: 'external',
       );
-      var apiReads = 0;
       var relayReads = 0;
       final nextRelayRead = Completer<List<Nip58BadgeDefinition>>();
-      when(indexed.loadIndexedDiscovery).thenAnswer((_) async {
-        if (apiReads++ > 0) throw TimeoutException('discovery API');
-        return [(definition: _definition, videos: [])];
-      });
+      when(() => indexed.loadIndexedDiscovery(isActive: any(named: 'isActive')))
+          .thenAnswer((_) async {
+            return [(definition: _definition, videos: [])];
+          });
       when(indexed.loadPublicDefinitions)
           .thenAnswer((_) async => [_definition]);
       when(indexed.loadFederatedDiscovery).thenAnswer(
@@ -162,6 +183,46 @@ void main() {
       await pumpEventQueue();
       expect(cubit.state.definitions, [_definition]);
     });
+
+    test('empty indexed clips still load accepted member previews', () async {
+      final indexed = _IndexedRepository();
+      when(() => indexed.loadIndexedDiscovery(isActive: any(named: 'isActive')))
+          .thenAnswer((_) async => [(definition: _definition, videos: [])]);
+      when(indexed.loadFederatedDiscovery).thenAnswer((_) async => []);
+      when(() => indexed.loadHolderPreview(any()))
+          .thenAnswer((_) async => [_issuer]);
+      final cubit = ExploreBadgesCubit(repository: indexed);
+      addTearDown(cubit.close);
+      await cubit.load();
+      cubit.loadPreview(_definition.coordinate);
+      await pumpEventQueue();
+      expect(cubit.state.previews[_definition.coordinate], [_issuer]);
+    });
+
+    final federatedError = StateError('superseded external relay');
+    late Completer<List<Nip58BadgeDefinition>> oldFederated;
+    blocTest<ExploreBadgesCubit, ExploreBadgesState>(
+      'superseded federated failures still reach diagnostics',
+      build: () {
+        oldFederated = Completer<List<Nip58BadgeDefinition>>();
+        final indexed = _IndexedRepository();
+        var reads = 0;
+        when(
+          () => indexed.loadIndexedDiscovery(isActive: any(named: 'isActive')),
+        ).thenAnswer((_) async => [(definition: _definition, videos: [])]);
+        when(indexed.loadFederatedDiscovery).thenAnswer(
+          (_) => reads++ == 0 ? oldFederated.future : Future.value([]),
+        );
+        return ExploreBadgesCubit(repository: indexed);
+      },
+      act: (cubit) async {
+        await cubit.load();
+        await cubit.refresh();
+        oldFederated.completeError(federatedError);
+        await pumpEventQueue();
+      },
+      errors: () => [same(federatedError)],
+    );
 
     test('superseded discovery cannot overwrite a newer refresh', () async {
       final first = Completer<List<Nip58BadgeDefinition>>();
