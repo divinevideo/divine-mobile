@@ -537,7 +537,7 @@ class VideoRecorderBloc
           recorder.canRecord &&
           recorder.recordingState == VideoRecorderState.idle &&
           !recorder.hasRecordingInFlight &&
-          (!recorder.recorderMode.hasRecordingLimit ||
+          (!recorder.hasRecordingLimit ||
               budget - totalDuration >= _minimumRecordingDuration);
       final isShutterEnabled =
           !recorder.isSwitchingCamera && (isShutterActive || canStart);

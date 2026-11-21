@@ -5398,7 +5398,6 @@ final class ZendeskCreateTicketErrorDetailsTests: XCTestCase {
   }
 }
 
-
 /// What the camera's Live Activity shows comes from the map the recorder
 /// publishes for remote controls. A misread key leaves the Activity at
 /// `00:00` with no error anywhere.
