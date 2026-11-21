@@ -285,6 +285,33 @@ void main() {
       );
     });
 
+    test('skips an indexed definition whose ID does not match it', () async {
+      final signed = definition(key1);
+      // Keep the signed ID and signature but change what they cover, so only
+      // the hash check can tell the definition was altered.
+      final altered = Event.fromJson({
+        ...signed.toJson(),
+        'tags': [
+          ['d', 'shared'],
+          ['name', 'Altered name'],
+        ],
+      });
+      final valid = definition(key2);
+      when(api.getBadgeDiscovery).thenAnswer(
+        (_) async => [
+          for (final event in [altered, valid])
+            (
+              definition: event,
+              holderCount: 0,
+              followerCount: 0,
+              videos: <BadgeVideoPreview>[],
+            ),
+        ],
+      );
+      final cards = await repository.loadIndexedDiscovery();
+      expect(cards.single.definition.event.id, valid.id);
+    });
+
     test(
       'uses server order without relay reads and hides blocked videos',
       () async {
