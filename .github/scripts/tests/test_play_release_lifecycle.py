@@ -365,6 +365,9 @@ class PlayLifecycleTest(unittest.TestCase):
         self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
         s["now"] += 86400 - 21600
         state = observe(s, state)
+        self.assertFalse(plan_tick(s, state, {"android": "production"})["actions"])
+        s["now"] += 86400
+        state = observe(s, state)
         self.assertEqual(
             plan_tick(s, state, {"android": "production"})["actions"][0]["kind"],
             "play-production",
