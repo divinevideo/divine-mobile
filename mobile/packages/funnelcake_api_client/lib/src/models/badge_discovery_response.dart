@@ -1,4 +1,5 @@
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// One indexed badge and its public video previews.
 typedef IndexedBadgeCard = ({
@@ -51,13 +52,35 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
           holderCount: badge['holder_count'] as int,
           followerCount: badge['follower_count'] as int,
           videos: videos
-              .map((value) {
+              .map<BadgeVideoPreview?>((value) {
                 final video = value as Map<String, dynamic>;
                 final createdAt = video['created_at'] as int;
                 if (createdAt < 0 || createdAt > _maxPreviewTimestamp) {
                   throw const FormatException(
                     'Invalid badge preview timestamp',
                   );
+                }
+                final tags = (video['tags'] as List<dynamic>)
+                    .map((tag) => List<String>.from(tag as List<dynamic>))
+                    .toList(growable: false);
+                // VideoEvent uses the last singleton tag, including an empty
+                // final tag, and falls back to created_at for nonnumeric text.
+                String? publishedAt;
+                for (final tag in tags) {
+                  if (tag.isNotEmpty && tag.first == 'published_at') {
+                    publishedAt = tag.length > 1 ? tag[1] : '';
+                  }
+                }
+                final effectiveTimestamp =
+                    int.tryParse(publishedAt ?? '') ?? createdAt;
+                if (effectiveTimestamp < -_maxPreviewTimestamp ||
+                    effectiveTimestamp > _maxPreviewTimestamp) {
+                  Log.warning(
+                    'Skipping badge discovery clip ${video['id']} '
+                    'with invalid published_at',
+                    name: 'FunnelcakeApiClient',
+                  );
+                  return null;
                 }
                 return (
                   id: video['id'] as String,
@@ -72,11 +95,10 @@ List<IndexedBadgeCard> parseBadgeDiscoveryResponse(Map<String, dynamic> json) {
                   verifiedArchive: video['verified_archive'] as bool,
                   archiveProvenanceAvailable:
                       video['archive_provenance_available'] as bool,
-                  tags: (video['tags'] as List<dynamic>)
-                      .map((tag) => List<String>.from(tag as List<dynamic>))
-                      .toList(growable: false),
+                  tags: tags,
                 );
               })
+              .whereType<BadgeVideoPreview>()
               .toList(growable: false),
         );
       })
