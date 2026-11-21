@@ -569,8 +569,9 @@ class BadgeRepository {
   bool _indexedDiscoveryNotFound = false;
 
   /// Prefers the ranked index, falling back to verified relay discovery when
-  /// unavailable or empty before viewer filtering. A 404 is cached for this
-  /// repository session so refreshes do not repeatedly wait on an absent route.
+  /// it is unavailable, or has no valid definition before viewer filtering.
+  /// A 404 is cached for this repository session so refreshes do not
+  /// repeatedly wait on an absent route.
   Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery({
     bool Function()? isActive,
   }) async {
@@ -608,13 +609,13 @@ class BadgeRepository {
       }
     }
     if (_disposed || !(isActive?.call() ?? true)) return const [];
-    if (cards == null || cards.isEmpty) {
-      return [
-        for (final definition in await loadPublicDefinitions())
-          (definition: definition, videos: const <BadgeVideoPreview>[]),
-      ];
-    }
+    Future<List<IndexedBadgeDiscovery>> relayFallback() async => [
+      for (final definition in await loadPublicDefinitions())
+        (definition: definition, videos: const <BadgeVideoPreview>[]),
+    ];
+    if (cards == null || cards.isEmpty) return relayFallback();
     final result = <IndexedBadgeDiscovery>[];
+    var validDefinitions = 0;
     final seen = <String>{};
     final counts = <String, int>{};
     for (final card in cards) {
@@ -631,6 +632,7 @@ class BadgeRepository {
         );
         continue;
       }
+      validDefinitions++;
       if ((_isHiddenPubkey?.call(event.pubkey) ?? false) ||
           !seen.add(definition.coordinate)) {
         continue;
@@ -655,6 +657,9 @@ class BadgeRepository {
         ],
       ));
     }
+    // A page with nothing valid is as unusable as an empty one. A valid page
+    // that viewer policy hides is not, so it does not reach the relays.
+    if (validDefinitions == 0) return relayFallback();
     return result;
   }
 
