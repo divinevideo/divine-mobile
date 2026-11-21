@@ -6087,9 +6087,9 @@
   "settingsBadgesTitle": "بیجز",
   "settingsBadgesSubtitle": "ایوارڈز قبول کریں اور جاری شدہ بیج اسٹیٹس چیک کریں۔",
   "badgesTitle": "بیجز",
-  "badgeSubscribeAction": "بیج سبسکرائب کریں",
-  "badgeSubscribedAction": "سبسکرائب کر لیا",
-  "badgeAcceptedHoldersTitle": "بیج قبول کرنے والے",
+  "badgeSubscribeAction": "کمیونٹی کو فالو کریں",
+  "badgeSubscribedAction": "کمیونٹی کو فالو کر رہے ہیں",
+  "badgeAcceptedHoldersTitle": "اس کمیونٹی کے لوگ",
   "badgeSubscriptionLoadError": "آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔",
   "badgesLoadError": "بیجز لوڈ نہیں ہو سکے",
   "badgesUpdateError": "بیج اپڈیٹ نہیں ہو سکا",
@@ -7846,5 +7846,23 @@
   "collabRoomCallCameraFailed": "آپ کا کیمرہ آن نہیں ہو سکا۔",
   "collabRoomCallMuted": "خاموش",
   "collabRoomSwapSeatHint": "لے آؤٹ میں دو جگہوں کو تھپتھپائیں تاکہ وہ آپس میں بدل جائیں۔",
-  "collabRoomSwapSeatSemanticLabel": "یہ جگہ بدلیں"
+  "collabRoomSwapSeatSemanticLabel": "یہ جگہ بدلیں",
+  "badgeDiscoveryTitle": "بیجز لوگوں کو اکٹھا کرتے ہیں",
+  "badgeDiscoveryBody": "کوئی بھی بیجز بنا سکتا ہے اور دے سکتا ہے۔ آپ منتخب کرتے ہیں کہ آپ کے پروفائل پر کون سے بیجز نظر آئیں۔ کسی بیج کو دیکھ کر اس کی کمیونٹی سے واقف ہوں اور اس کے لوگوں کو فالو کریں۔",
+  "badgeDiscoveryMyBadges": "میرے بیجز",
+  "badgeDiscoveryEmpty": "ابھی کوئی کمیونٹی نہیں ملی۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔",
+  "badgeCommunityFollowHint": "کمیونٹی کی ویڈیوز آپ کی فالوونگ فیڈ میں شامل کرتا ہے۔ لوگوں کو الگ الگ فالو کریں۔",
+  "badgeOfficialLabel": "آفیشل",
+  "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website} پر مزید جانیں",
+  "badgeDiscoveryVideosLabel": "{badgeName} کی ویڈیوز",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

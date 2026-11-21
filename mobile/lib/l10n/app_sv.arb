@@ -6446,9 +6446,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Prenumererar",
-  "badgeSubscribeAction": "Prenumerera på märket",
-  "badgeAcceptedHoldersTitle": "Personer som godkänt märket",
+  "badgeSubscribedAction": "Följer gemenskapen",
+  "badgeSubscribeAction": "Följ gemenskapen",
+  "badgeAcceptedHoldersTitle": "Personer i den här gemenskapen",
   "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen.",
   "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
   "minorAccountReviewVideoSubmittedTitle": "Videon har skickats",
@@ -6545,5 +6545,23 @@
   "collabRoomCallCameraFailed": "Det gick inte att slå på kameran.",
   "collabRoomCallMuted": "Avstängd mikrofon",
   "collabRoomSwapSeatHint": "Tryck på två platser i layouten för att byta dem.",
-  "collabRoomSwapSeatSemanticLabel": "Byt den här platsen"
+  "collabRoomSwapSeatSemanticLabel": "Byt den här platsen",
+  "badgeDiscoveryTitle": "Märken för människor samman",
+  "badgeDiscoveryBody": "Alla kan skapa och dela ut märken. Du väljer vilka som visas på din profil. Utforska ett märke för att lära känna gemenskapen och följa människorna där.",
+  "badgeDiscoveryMyBadges": "Mina märken",
+  "badgeDiscoveryEmpty": "Inga gemenskaper hittades än. Dra nedåt för att försöka igen.",
+  "badgeCommunityFollowHint": "Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig.",
+  "badgeOfficialLabel": "Officiellt",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Läs mer på {website}",
+  "badgeDiscoveryVideosLabel": "Videor från {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

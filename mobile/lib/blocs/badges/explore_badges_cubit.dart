@@ -1,4 +1,6 @@
-// ABOUTME: Cubit for Explore's curated badge definitions.
+// ABOUTME: Public community discovery with bounded, nonblocking people previews.
+
+import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:equatable/equatable.dart';
@@ -7,50 +9,231 @@ import 'package:openvine/blocs/close_guard.dart';
 
 part 'explore_badges_state.dart';
 
-/// Issuers whose badge definitions Divine curates in Explore.
-///
-/// The first key is the public issuer published by badges.divine.video.
-const exploreBadgeIssuers = <String>{
-  'e21369e63b98f58de8aa171ec9794006eb0118891ae70895106d44525b718d2b',
-};
-
-/// Loads the badge definitions published by [exploreBadgeIssuers].
+/// Discovers public badges without requiring a signer or an issuer allowlist.
 class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
     with CloseGuardedEmit<ExploreBadgesState> {
   /// Creates the cubit.
   ExploreBadgesCubit({
     required BadgeRepository repository,
-    Set<String> issuers = exploreBadgeIssuers,
+    Set<String> hiddenIssuers = const {},
   }) : _repository = repository,
-       _issuers = issuers,
-       super(const ExploreBadgesState());
+       super(
+         ExploreBadgesState(hiddenIssuers: Set.unmodifiable(hiddenIssuers)),
+       );
+
+  /// Preview reads allowed in flight at once.
+  static const _maxConcurrentPreviews = 4;
 
   final BadgeRepository _repository;
-  final Set<String> _issuers;
 
   /// Loads the definitions, showing the loading state.
-  Future<void> load() async {
-    emit(state.copyWith(status: ExploreBadgesStatus.loading));
-    await refresh();
+  Future<void> load() => _refresh(showLoading: true);
+
+  /// Reloads while keeping the currently revealed cards on screen.
+  Future<void> refresh() => _refresh();
+
+  Future<void> _refresh({bool showLoading = false}) async {
+    if (isClosed) return;
+    final generation = state.refreshGeneration + 1;
+    emit(
+      state.copyWith(
+        status: showLoading ? ExploreBadgesStatus.loading : state.status,
+        refreshGeneration: generation,
+        isRefreshing: true,
+      ),
+    );
+    try {
+      final indexed = await _repository.loadIndexedDiscovery(
+        isActive: () => _isCurrent(generation),
+      );
+      if (!_isCurrent(generation)) return;
+      final definitions = indexed.map((card) => card.definition).toList();
+      final videoPreviews = {
+        for (final card in indexed)
+          if (card.videos.isNotEmpty) card.definition.coordinate: card.videos,
+      };
+      _applyDefinitions(
+        _repository.mergeDiscoveryDefinitions(
+          definitions,
+          state.federatedDefinitions,
+        ),
+        generation,
+        videoPreviews,
+      );
+      unawaited(_appendFederated(generation, definitions));
+    } catch (error, stackTrace) {
+      // Log even a superseded read: its failure is still a relay symptom.
+      addError(error, stackTrace);
+      if (isClosed || generation != state.refreshGeneration) return;
+      final hadSnapshot = state.status == ExploreBadgesStatus.loaded;
+      emitIfOpen(
+        state.copyWith(
+          status: hadSnapshot
+              ? ExploreBadgesStatus.loaded
+              : ExploreBadgesStatus.failure,
+          isRefreshing: false,
+          refreshFailures: state.refreshFailures + (hadSnapshot ? 1 : 0),
+        ),
+      );
+      _drainPreviews();
+    }
   }
 
-  /// Reloads the definitions without clearing what is already on screen.
-  Future<void> refresh() async {
+  Future<void> _appendFederated(
+    int generation,
+    List<Nip58BadgeDefinition> indexed,
+  ) async {
     try {
-      final definitions = await _repository.loadDefinitionsByIssuers(_issuers);
+      final federated = await _repository.loadFederatedDiscovery();
+      if (!_isCurrent(generation)) return;
+      final merged = _repository.mergeDiscoveryDefinitions(indexed, federated);
       emitIfOpen(
-        ExploreBadgesState(
-          status: ExploreBadgesStatus.loaded,
-          definitions: definitions,
+        state.copyWith(
+          definitions: List.unmodifiable(merged),
+          federatedDefinitions: List.unmodifiable(federated),
         ),
       );
     } catch (error, stackTrace) {
+      // External relays are supplemental and never replace the indexed page.
       addError(error, stackTrace);
-      emitIfOpen(
-        state.status == ExploreBadgesStatus.loaded
-            ? state.copyWith(refreshFailures: state.refreshFailures + 1)
-            : state.copyWith(status: ExploreBadgesStatus.failure),
+    }
+  }
+
+  bool _isCurrent(int generation) =>
+      !isClosed && generation == state.refreshGeneration;
+
+  void _applyDefinitions(
+    List<Nip58BadgeDefinition> definitions,
+    int generation,
+    Map<String, List<BadgeVideoPreview>> videos,
+  ) {
+    final previousIds = {
+      for (final definition in state.definitions)
+        definition.coordinate: definition.event.id,
+    };
+    final previews = {
+      for (final definition in definitions)
+        if (previousIds[definition.coordinate] == definition.event.id &&
+            state.previews.containsKey(definition.coordinate))
+          definition.coordinate: state.previews[definition.coordinate]!,
+    };
+    emitIfOpen(
+      state.copyWith(
+        status: ExploreBadgesStatus.loaded,
+        definitions: List.unmodifiable(definitions),
+        isRefreshing: false,
+        previewGeneration: generation,
+        videoPreviews: Map.unmodifiable(videos),
+        previews: Map.unmodifiable(previews),
+        previewQueue: const [],
+        requestedPreviews: Set.unmodifiable(previews.keys),
+      ),
+    );
+  }
+
+  /// Updates local gallery visibility using the currently loaded definitions.
+  void updateHiddenIssuers(Set<String> hiddenIssuers) {
+    if (isClosed) return;
+    final updated = state.copyWith(
+      hiddenIssuers: Set.unmodifiable(hiddenIssuers),
+    );
+    if (state.previewQueue.isEmpty) {
+      emit(updated);
+      return;
+    }
+
+    final visibleCoordinates = updated.visibleDefinitions
+        .map((definition) => definition.coordinate)
+        .toSet();
+    final dropped = state.previewQueue
+        .where((coordinate) => !visibleCoordinates.contains(coordinate))
+        .toSet();
+    emit(
+      updated.copyWith(
+        previewQueue: List.unmodifiable(
+          state.previewQueue.where(visibleCoordinates.contains),
+        ),
+        requestedPreviews: Set.unmodifiable(
+          state.requestedPreviews.difference(dropped),
+        ),
+      ),
+    );
+  }
+
+  /// Reveals another finite page from the loaded discovery window.
+  void showMore() {
+    if (isClosed || !state.hasMore) return;
+    emit(
+      state.copyWith(
+        visibleCount: state.visibleCount + ExploreBadgesState.pageSize,
+      ),
+    );
+  }
+
+  /// Called only for cards built by the lazy gallery. A preview failure never
+  /// removes a badge or starts the expensive complete holder reconciliation.
+  void loadPreview(String coordinate) {
+    if (isClosed ||
+        state.isRefreshing ||
+        state.requestedPreviews.contains(coordinate) ||
+        !state.visibleDefinitions.any((d) => d.coordinate == coordinate)) {
+      return;
+    }
+    emit(
+      state.copyWith(
+        previewQueue: List.unmodifiable([...state.previewQueue, coordinate]),
+        requestedPreviews: Set.unmodifiable({
+          ...state.requestedPreviews,
+          coordinate,
+        }),
+      ),
+    );
+    _drainPreviews();
+  }
+
+  void _drainPreviews() {
+    while (!isClosed &&
+        !state.isRefreshing &&
+        state.activePreviews < _maxConcurrentPreviews &&
+        state.previewQueue.isNotEmpty) {
+      final coordinate = state.previewQueue.first;
+      final generation = state.previewGeneration;
+      emit(
+        state.copyWith(
+          activePreviews: state.activePreviews + 1,
+          previewQueue: List.unmodifiable(state.previewQueue.skip(1)),
+        ),
       );
+      // _loadPreview handles failures and owns this request's completion.
+      unawaited(_loadPreview(coordinate, generation));
+    }
+  }
+
+  Future<void> _loadPreview(String coordinate, int generation) async {
+    List<String>? preview;
+    try {
+      final parsed = BadgeCoordinate.parse(coordinate);
+      if (parsed != null) {
+        final holders = await _repository.loadHolderPreview(parsed);
+        preview = List.unmodifiable(
+          holders.take(BadgeRepository.holderPreviewLimit),
+        );
+      }
+    } catch (error, stackTrace) {
+      // The card stays usable without indexed people; log why it has none.
+      addError(error, stackTrace);
+    } finally {
+      if (!isClosed) {
+        emitIfOpen(
+          state.copyWith(
+            activePreviews: state.activePreviews - 1,
+            previews: preview != null && generation == state.previewGeneration
+                ? Map.unmodifiable({...state.previews, coordinate: preview})
+                : state.previews,
+          ),
+        );
+        _drainPreviews();
+      }
     }
   }
 }

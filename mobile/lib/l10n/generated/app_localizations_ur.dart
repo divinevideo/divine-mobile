@@ -12611,13 +12611,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'بیج سبسکرائب کریں';
+  String get badgeSubscribeAction => 'کمیونٹی کو فالو کریں';
 
   @override
-  String get badgeSubscribedAction => 'سبسکرائب کر لیا';
+  String get badgeSubscribedAction => 'کمیونٹی کو فالو کر رہے ہیں';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'بیج قبول کرنے والے';
+  String get badgeAcceptedHoldersTitle => 'اس کمیونٹی کے لوگ';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16745,4 +16745,49 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'یہ جگہ بدلیں';
+
+  @override
+  String get badgeDiscoveryTitle => 'بیجز لوگوں کو اکٹھا کرتے ہیں';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'کوئی بھی بیجز بنا سکتا ہے اور دے سکتا ہے۔ آپ منتخب کرتے ہیں کہ آپ کے پروفائل پر کون سے بیجز نظر آئیں۔ کسی بیج کو دیکھ کر اس کی کمیونٹی سے واقف ہوں اور اس کے لوگوں کو فالو کریں۔';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'میرے بیجز';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'ابھی کوئی کمیونٹی نہیں ملی۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'کمیونٹی کی ویڈیوز آپ کی فالوونگ فیڈ میں شامل کرتا ہے۔ لوگوں کو الگ الگ فالو کریں۔';
+
+  @override
+  String get badgeOfficialLabel => 'آفیشل';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName، $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName، $issuerName، $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$website پر مزید جانیں';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName کی ویڈیوز';
+  }
 }

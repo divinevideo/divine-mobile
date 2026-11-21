@@ -6087,9 +6087,9 @@
   "settingsBadgesTitle": "徽章",
   "settingsBadgesSubtitle": "接受奖项，查看已发徽章的状态。",
   "badgesTitle": "徽章",
-  "badgeSubscribeAction": "订阅徽章",
-  "badgeSubscribedAction": "已订阅",
-  "badgeAcceptedHoldersTitle": "已接受徽章的人",
+  "badgeSubscribeAction": "关注社区",
+  "badgeSubscribedAction": "已关注社区",
+  "badgeAcceptedHoldersTitle": "社区成员",
   "badgeSubscriptionLoadError": "无法加载你的徽章订阅。请重试。",
   "badgesLoadError": "徽章加载失败",
   "badgesUpdateError": "徽章更新失败",
@@ -7846,5 +7846,23 @@
   "collabRoomCallCameraFailed": "无法打开你的摄像头。",
   "collabRoomCallMuted": "已静音",
   "collabRoomSwapSeatHint": "点按布局中的两个位置即可交换。",
-  "collabRoomSwapSeatSemanticLabel": "交换这个位置"
+  "collabRoomSwapSeatSemanticLabel": "交换这个位置",
+  "badgeDiscoveryTitle": "徽章让人们相聚",
+  "badgeDiscoveryBody": "任何人都可以创建和颁发徽章。你可以选择在个人资料中展示哪些徽章。探索一个徽章，了解它的社区，并关注其中的人。",
+  "badgeDiscoveryMyBadges": "我的徽章",
+  "badgeDiscoveryEmpty": "暂未找到社区。下拉重试。",
+  "badgeCommunityFollowHint": "将社区视频添加到你的关注动态中。关注个人需要单独操作。",
+  "badgeOfficialLabel": "官方",
+  "badgeDiscoveryCardLabel": "{badgeName}，{issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}，{issuerName}，{officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "前往{website}了解更多",
+  "badgeDiscoveryVideosLabel": "{badgeName}的视频",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

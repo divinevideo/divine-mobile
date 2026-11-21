@@ -6446,9 +6446,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Subskrybujesz",
-  "badgeSubscribeAction": "Subskrybuj odznakę",
-  "badgeAcceptedHoldersTitle": "Osoby, które przyjęły odznakę",
+  "badgeSubscribedAction": "Obserwujesz społeczność",
+  "badgeSubscribeAction": "Obserwuj społeczność",
+  "badgeAcceptedHoldersTitle": "Osoby w tej społeczności",
   "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie.",
   "minorAccountReviewVideoSubmittedBody": "Twój film został przesłany do sprawdzenia.",
   "minorAccountReviewVideoSubmittedTitle": "Film przesłany",
@@ -6545,5 +6545,23 @@
   "collabRoomCallCameraFailed": "Nie udało się włączyć kamery.",
   "collabRoomCallMuted": "Wyciszony mikrofon",
   "collabRoomSwapSeatHint": "Dotknij dwóch miejsc w układzie, aby je zamienić.",
-  "collabRoomSwapSeatSemanticLabel": "Zamień to miejsce"
+  "collabRoomSwapSeatSemanticLabel": "Zamień to miejsce",
+  "badgeDiscoveryTitle": "Odznaki łączą ludzi",
+  "badgeDiscoveryBody": "Każdy może tworzyć i przyznawać odznaki. Ty wybierasz, które pojawią się na twoim profilu. Odkryj odznakę, poznaj jej społeczność i obserwuj jej członków.",
+  "badgeDiscoveryMyBadges": "Moje odznaki",
+  "badgeDiscoveryEmpty": "Nie znaleziono jeszcze społeczności. Przeciągnij w dół, aby spróbować ponownie.",
+  "badgeCommunityFollowHint": "Dodaje filmy społeczności do aktualności Obserwowani. Osoby obserwujesz osobno.",
+  "badgeOfficialLabel": "Oficjalna",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Dowiedz się więcej na {website}",
+  "badgeDiscoveryVideosLabel": "Filmy społeczności {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

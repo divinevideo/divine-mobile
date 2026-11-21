@@ -52,8 +52,7 @@ class BadgeCoordinate {
 
   /// Parses either encoding: an `naddr1…` reference or a raw coordinate.
   static BadgeCoordinate? tryParse(String value) {
-    final trimmed = value.trim();
-    return fromNaddr(trimmed) ?? parse(trimmed);
+    return fromNaddr(value) ?? parse(value);
   }
 
   /// Pubkey of the badge's issuer, hex encoded.

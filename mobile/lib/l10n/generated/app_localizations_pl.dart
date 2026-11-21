@@ -12860,13 +12860,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Subskrybuj odznakę';
+  String get badgeSubscribeAction => 'Obserwuj społeczność';
 
   @override
-  String get badgeSubscribedAction => 'Subskrybujesz';
+  String get badgeSubscribedAction => 'Obserwujesz społeczność';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Osoby, które przyjęły odznakę';
+  String get badgeAcceptedHoldersTitle => 'Osoby w tej społeczności';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -17094,4 +17094,49 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Zamień to miejsce';
+
+  @override
+  String get badgeDiscoveryTitle => 'Odznaki łączą ludzi';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Każdy może tworzyć i przyznawać odznaki. Ty wybierasz, które pojawią się na twoim profilu. Odkryj odznakę, poznaj jej społeczność i obserwuj jej członków.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Moje odznaki';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nie znaleziono jeszcze społeczności. Przeciągnij w dół, aby spróbować ponownie.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Dodaje filmy społeczności do aktualności Obserwowani. Osoby obserwujesz osobno.';
+
+  @override
+  String get badgeOfficialLabel => 'Oficjalna';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Dowiedz się więcej na $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Filmy społeczności $badgeName';
+  }
 }

@@ -1023,6 +1023,25 @@ void main() {
           expect(holders, [testPubkey]);
         },
       );
+
+      test('reports a non-string holder as a malformed response', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"holders":["$testPubkey",{"pubkey":"$testPubkey"}]}',
+            200,
+          ),
+        );
+
+        await expectLater(
+          client.getBadgeHolderPreview(
+            creatorPubkey: testPubkey,
+            dTag: 'art/day',
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+      });
     });
 
     group('getHomeFeed', () {

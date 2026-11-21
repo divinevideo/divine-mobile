@@ -12721,13 +12721,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Абониране за значката';
+  String get badgeSubscribeAction => 'Следвай общността';
 
   @override
-  String get badgeSubscribedAction => 'Абониран';
+  String get badgeSubscribedAction => 'Следваш общността';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Приели значката';
+  String get badgeAcceptedHoldersTitle => 'Хора в тази общност';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16896,4 +16896,49 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Размени това място';
+
+  @override
+  String get badgeDiscoveryTitle => 'Значките събират хората';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Всеки може да създава и връчва значки. Ти избираш кои да се показват в профила ти. Разгледай значка, за да опознаеш общността ѝ и да последваш хората в нея.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Моите значки';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Все още няма намерени общности. Дръпни надолу, за да опиташ отново.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Добавя видеата на общността към потока „Следвани“. Следвай хората поотделно.';
+
+  @override
+  String get badgeOfficialLabel => 'Официално';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Научете повече на $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Видеоклипове от $badgeName';
+  }
 }

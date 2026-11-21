@@ -6087,9 +6087,9 @@
   "settingsBadgesTitle": "Huy hiệu",
   "settingsBadgesSubtitle": "Nhận giải thưởng và kiểm tra trạng thái huy hiệu đã phát.",
   "badgesTitle": "Huy hiệu",
-  "badgeSubscribeAction": "Theo dõi huy hiệu",
-  "badgeSubscribedAction": "Đang theo dõi",
-  "badgeAcceptedHoldersTitle": "Người đã chấp nhận huy hiệu",
+  "badgeSubscribeAction": "Theo dõi cộng đồng",
+  "badgeSubscribedAction": "Đang theo dõi cộng đồng",
+  "badgeAcceptedHoldersTitle": "Những người trong cộng đồng này",
   "badgeSubscriptionLoadError": "Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại.",
   "badgesLoadError": "Không tải được huy hiệu",
   "badgesUpdateError": "Không cập nhật được huy hiệu",
@@ -7846,5 +7846,23 @@
   "collabRoomCallCameraFailed": "Không bật được camera của bạn.",
   "collabRoomCallMuted": "Đã tắt tiếng",
   "collabRoomSwapSeatHint": "Chạm vào hai vị trí trong bố cục để đổi chỗ.",
-  "collabRoomSwapSeatSemanticLabel": "Đổi vị trí này"
+  "collabRoomSwapSeatSemanticLabel": "Đổi vị trí này",
+  "badgeDiscoveryTitle": "Huy hiệu kết nối mọi người",
+  "badgeDiscoveryBody": "Ai cũng có thể tạo và trao huy hiệu. Bạn chọn huy hiệu nào xuất hiện trên hồ sơ của mình. Khám phá một huy hiệu để tìm hiểu cộng đồng và theo dõi những người trong đó.",
+  "badgeDiscoveryMyBadges": "Huy hiệu của tôi",
+  "badgeDiscoveryEmpty": "Chưa tìm thấy cộng đồng nào. Kéo xuống để thử lại.",
+  "badgeCommunityFollowHint": "Thêm video cộng đồng vào bảng tin Đang theo dõi. Theo dõi từng người riêng lẻ.",
+  "badgeOfficialLabel": "Chính thức",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Tìm hiểu thêm tại {website}",
+  "badgeDiscoveryVideosLabel": "Video từ {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

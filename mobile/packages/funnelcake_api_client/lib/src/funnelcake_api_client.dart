@@ -179,15 +179,14 @@ class FunnelcakeApiClient {
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) => _retryRead(
+  Future<http.Response> _get(Uri uri) => _retryRead(uri, () => _sendGet(uri));
+
+  Future<http.Response> _sendGet(Uri uri) => _httpClient.get(
     uri,
-    () => _httpClient.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        ...buildDivineClientHeaders(appVersion: _appVersion),
-      },
-    ),
+    headers: {
+      'Accept': 'application/json',
+      ...buildDivineClientHeaders(appVersion: _appVersion),
+    },
   );
 
   /// Retries an idempotent read within one shared timeout budget.
@@ -1280,7 +1279,9 @@ class FunnelcakeApiClient {
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final holders = data['holders'] as List<dynamic>;
-      return holders.cast<String>();
+      // Copy eagerly: a lazy cast would throw a malformed holder at the
+      // caller's iteration, outside this method's error translation.
+      return List<String>.from(holders);
     } on TimeoutException {
       throw FunnelcakeTimeoutException(uri.toString());
     } on FunnelcakeException {
@@ -2343,6 +2344,47 @@ class FunnelcakeApiClient {
       rethrow;
     } catch (e) {
       throw FunnelcakeException('Failed to fetch video views: $e');
+    }
+  }
+
+  /// Fetches the ranked public badge gallery and video previews in one read.
+  Future<List<IndexedBadgeCard>> getBadgeDiscovery() async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/discovery?limit=$badgeDiscoveryPageLimit',
+    );
+    late http.Response response;
+    try {
+      response = await _sendGet(uri).timeout(_timeout);
+    } on TimeoutException catch (_, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeTimeoutException(uri.toString()),
+        stackTrace,
+      );
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Failed to fetch badge discovery', cause: error),
+        stackTrace,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw FunnelcakeApiException(
+        message: 'Badge discovery unavailable',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    }
+    try {
+      return parseBadgeDiscoveryResponse(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Invalid badge discovery response', cause: error),
+        stackTrace,
+      );
     }
   }
 

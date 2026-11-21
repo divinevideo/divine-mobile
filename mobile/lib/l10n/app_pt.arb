@@ -6446,9 +6446,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "A seguir",
-  "badgeSubscribeAction": "Seguir emblema",
-  "badgeAcceptedHoldersTitle": "Pessoas que aceitaram o emblema",
+  "badgeSubscribedAction": "Seguindo comunidade",
+  "badgeSubscribeAction": "Seguir comunidade",
+  "badgeAcceptedHoldersTitle": "Pessoas desta comunidade",
   "badgeSubscriptionLoadError": "Não foi possível carregar suas assinaturas de emblemas. Tente novamente.",
   "minorAccountReviewVideoSubmittedBody": "Seu vídeo foi enviado para análise.",
   "minorAccountReviewVideoSubmittedTitle": "Vídeo enviado",
@@ -6545,5 +6545,23 @@
   "collabRoomCallCameraFailed": "Não foi possível ligar sua câmera.",
   "collabRoomCallMuted": "Silenciado",
   "collabRoomSwapSeatHint": "Toque em dois lugares do layout para trocá-los.",
-  "collabRoomSwapSeatSemanticLabel": "Trocar este lugar"
+  "collabRoomSwapSeatSemanticLabel": "Trocar este lugar",
+  "badgeDiscoveryTitle": "Emblemas aproximam pessoas",
+  "badgeDiscoveryBody": "Qualquer pessoa pode criar e conceder emblemas. Você escolhe quais aparecem no seu perfil. Explore um emblema para conhecer sua comunidade e seguir as pessoas dela.",
+  "badgeDiscoveryMyBadges": "Meus emblemas",
+  "badgeDiscoveryEmpty": "Nenhuma comunidade encontrada ainda. Puxe para baixo para tentar de novo.",
+  "badgeCommunityFollowHint": "Adiciona vídeos da comunidade ao seu feed Seguindo. Siga as pessoas individualmente.",
+  "badgeOfficialLabel": "Oficial",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Saiba mais em {website}",
+  "badgeDiscoveryVideosLabel": "Vídeos de {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -12555,13 +12555,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Theo dõi huy hiệu';
+  String get badgeSubscribeAction => 'Theo dõi cộng đồng';
 
   @override
-  String get badgeSubscribedAction => 'Đang theo dõi';
+  String get badgeSubscribedAction => 'Đang theo dõi cộng đồng';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Người đã chấp nhận huy hiệu';
+  String get badgeAcceptedHoldersTitle => 'Những người trong cộng đồng này';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16687,4 +16687,49 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Đổi vị trí này';
+
+  @override
+  String get badgeDiscoveryTitle => 'Huy hiệu kết nối mọi người';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Ai cũng có thể tạo và trao huy hiệu. Bạn chọn huy hiệu nào xuất hiện trên hồ sơ của mình. Khám phá một huy hiệu để tìm hiểu cộng đồng và theo dõi những người trong đó.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Huy hiệu của tôi';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Chưa tìm thấy cộng đồng nào. Kéo xuống để thử lại.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Thêm video cộng đồng vào bảng tin Đang theo dõi. Theo dõi từng người riêng lẻ.';
+
+  @override
+  String get badgeOfficialLabel => 'Chính thức';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Tìm hiểu thêm tại $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Video từ $badgeName';
+  }
 }

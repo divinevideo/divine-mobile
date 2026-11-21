@@ -5992,9 +5992,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "구독 중",
-  "badgeSubscribeAction": "배지 구독",
-  "badgeAcceptedHoldersTitle": "배지를 수락한 사람",
+  "badgeSubscribedAction": "커뮤니티 팔로우 중",
+  "badgeSubscribeAction": "커뮤니티 팔로우",
+  "badgeAcceptedHoldersTitle": "이 커뮤니티의 사람들",
   "badgeSubscriptionLoadError": "배지 구독을 불러오지 못했어요. 다시 시도해 주세요.",
   "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요.",
   "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료",
@@ -6091,5 +6091,23 @@
   "collabRoomCallCameraFailed": "카메라를 켜지 못했어요.",
   "collabRoomCallMuted": "음소거됨",
   "collabRoomSwapSeatHint": "레이아웃에서 두 자리를 탭하면 서로 바뀌어요.",
-  "collabRoomSwapSeatSemanticLabel": "이 자리 바꾸기"
+  "collabRoomSwapSeatSemanticLabel": "이 자리 바꾸기",
+  "badgeDiscoveryTitle": "배지로 사람들과 연결돼요",
+  "badgeDiscoveryBody": "누구나 배지를 만들고 수여할 수 있어요. 프로필에 표시할 배지는 직접 선택해요. 배지를 둘러보며 커뮤니티를 알아보고 사람들을 팔로우해 보세요.",
+  "badgeDiscoveryMyBadges": "내 배지",
+  "badgeDiscoveryEmpty": "아직 커뮤니티를 찾지 못했어요. 아래로 당겨 다시 시도해 보세요.",
+  "badgeCommunityFollowHint": "커뮤니티 동영상을 팔로잉 피드에 추가해요. 사람들은 개별적으로 팔로우해요.",
+  "badgeOfficialLabel": "공식",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website}에서 자세히 알아보기",
+  "badgeDiscoveryVideosLabel": "{badgeName}의 동영상",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

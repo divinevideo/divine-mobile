@@ -11,6 +11,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
+import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
@@ -24,7 +25,7 @@ class BadgeAwardScreen extends ConsumerWidget {
 
   /// Path that opens the award flow for [coordinate].
   static String pathFor(BadgeCoordinate coordinate) =>
-      '/badges/b/${coordinate.toNaddr()}/award';
+      '/badges/b/${badgeRouteReference(coordinate)}/award';
 
   /// Creates the award screen.
   const BadgeAwardScreen({required this.coordinate, super.key});

@@ -15,6 +15,7 @@ import 'package:openvine/blocs/badges/badge_detail_cubit.dart';
 import 'package:openvine/blocs/badges/badge_holders_cubit.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
@@ -32,10 +34,12 @@ import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -51,7 +55,7 @@ class BadgeDetailScreen extends ConsumerWidget {
 
   /// Path that opens the detail page for [coordinate].
   static String pathFor(BadgeCoordinate coordinate) =>
-      '/badges/b/${coordinate.toNaddr()}';
+      '/badges/b/${badgeRouteReference(coordinate)}';
 
   /// Creates the badge detail screen.
   const BadgeDetailScreen({required this.coordinate, super.key});
@@ -87,13 +91,13 @@ class BadgeDetailScreen extends ConsumerWidget {
 }
 
 /// Body of [BadgeDetailScreen].
-class BadgeDetailView extends StatelessWidget {
+class BadgeDetailView extends ConsumerWidget {
   /// Creates the badge detail view.
   @visibleForTesting
   const BadgeDetailView({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     return BlocConsumer<BadgeDetailCubit, BadgeDetailState>(
       listenWhen: (previous, current) =>
@@ -165,7 +169,13 @@ class BadgeDetailView extends StatelessWidget {
                   iconColor: VineTheme.error,
                   onPressed: state.isBusy ? null : () => _delete(context),
                 ),
-              ],
+              ] else if (definition != null)
+                DiVineAppBarAction(
+                  icon: SvgIconSource(DivineIconName.flag.assetPath),
+                  tooltip: l10n.videoActionReportLabel,
+                  semanticLabel: l10n.videoActionReportLabel,
+                  onPressed: () => _report(context, ref, definition),
+                ),
             ],
           ),
           backgroundColor: context.vineColors.background,
@@ -183,12 +193,30 @@ class BadgeDetailView extends StatelessWidget {
     );
   }
 
+  static Future<void> _report(
+    BuildContext context,
+    WidgetRef ref,
+    Nip58BadgeDefinition definition,
+  ) async {
+    if (!ref.read(authServiceProvider).isAuthenticated) {
+      await const LoginOptionsRouteData().push<void>(context);
+      return;
+    }
+    await ReportContentDialog.showForBadge(
+      context,
+      eventId: definition.event.id,
+      authorPubkey: definition.event.pubkey,
+      coordinate: definition.coordinate,
+      name: definition.name ?? definition.dTag,
+    );
+  }
+
   static Future<void> _share(
     BuildContext context,
     BadgeCoordinate coordinate,
   ) async {
     final message = context.l10n.badgeDetailShareMessage(
-      'https://badges.divine.video/b/${coordinate.toNaddr()}',
+      badgeShareReference(coordinate),
     );
     await showShareSheet(context, ShareParams(text: message));
   }
@@ -583,6 +611,13 @@ class _BadgeEngagementActions extends StatelessWidget {
         ),
         if (canSubscribe)
           Text(
+            context.l10n.badgeCommunityFollowHint,
+            style: VineTheme.bodySmallFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+        if (canSubscribe)
+          Text(
             context.l10n.badgeSubscriptionsPublicNotice,
             style: VineTheme.bodySmallFont(
               color: context.vineColors.onSurfaceVariant,
@@ -815,6 +850,13 @@ class _BadgeHero extends StatelessWidget {
                   color: context.vineColors.onSurface,
                 ),
               ),
+              if (definition?.event.pubkey == kDivineBadgeIssuerPubkey)
+                Text(
+                  context.l10n.badgeOfficialLabel,
+                  style: VineTheme.labelSmallFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
               if (definition?.description?.isNotEmpty ?? false)
                 Text(
                   definition!.description!,
