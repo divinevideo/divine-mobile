@@ -101,6 +101,9 @@ class SubtitleRepository {
   /// * [SubtitleEditException] when the user is not authenticated.
   /// * [SubtitleEditException] when [video] is not the signed-in account's.
   /// * [SubtitleEditException] when [video] has no addressable identifier.
+  /// * [SubtitleEditException] when [video] is not a short video (kind
+  ///   34236). Its 39307 address names no kind, so an edit of a normal video
+  ///   would replace the captions a short video at the same `d` tag serves.
   /// * [SubtitleEditException] when the newest revision of [video] cannot be
   ///   read.
   /// * [SubtitleEditException] when the Blossom upload fails.
@@ -124,6 +127,9 @@ class SubtitleRepository {
     final vineId = video.vineId;
     if (vineId == null || vineId.isEmpty) {
       throw SubtitleEditException('Video has no addressable identifier');
+    }
+    if (video.referenceKind != NIP71VideoKinds.addressableShortVideo) {
+      throw SubtitleEditException('Subtitle edits are limited to short videos');
     }
     final newest = await newestVideoRevision(
       _videosRepository,

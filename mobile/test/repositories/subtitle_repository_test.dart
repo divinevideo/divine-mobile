@@ -686,6 +686,25 @@ void main() {
         });
       }
 
+      test('when the video is a normal video', () async {
+        // One 39307 address serves both kinds at a d tag, so the edit would
+        // replace the captions a short video there serves.
+        await expectLater(
+          repo.publishEditedSubtitles(
+            video: _video.copyWith(
+              eventKind: NIP71VideoKinds.addressableNormalVideo,
+            ),
+            cues: _cues,
+          ),
+          throwsA(isA<SubtitleEditException>()),
+        );
+
+        verifyNever(() => videos.fetchLatestVideoRevision(any()));
+        verifyNever(
+          () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
+        );
+      });
+
       test("when the video is not the signed-in account's", () async {
         when(() => auth.currentPublicKeyHex).thenReturn('someone-else');
 
