@@ -2140,7 +2140,12 @@ class VideosRepository {
   /// Every relay must settle and the local cache is skipped: a republish
   /// built from an older revision outranks the newer one and deletes what
   /// only it held (#11250). A read that did not finish is
-  /// [LatestVideoRevisionUnknown], never an empty answer. Only events at
+  /// [LatestVideoRevisionUnknown], never an empty answer. A relay's terminal
+  /// `CLOSED` refusal counts as settled once another relay has sent `EOSE`,
+  /// so one relay that always refuses reads cannot block every edit; a newer
+  /// revision held only by a relay that refused is then missed. Silence, a
+  /// dropped socket, and `rate-limited`, `auth-required`, `error:` or
+  /// unclassified refusals still leave the read unfinished. Only events at
   /// exactly that address whose id and signature verify count, and no viewer
   /// preference filters them out.
   ///
