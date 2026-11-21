@@ -171,9 +171,10 @@ class AnnouncementsRepository {
   /// Fetches a complete snapshot; failures retain the last valid catalog.
   /// Concurrent refreshes share the same request.
   ///
-  /// Completes with whether the endpoint answered, with a new snapshot or
-  /// "not modified". A failed refresh completes with false: the retained
-  /// catalog may predate an announcement, so its absence there proves nothing.
+  /// Completes with whether the endpoint supplied a validated new snapshot or
+  /// confirmed "not modified". A failed refresh completes with false: the
+  /// retained catalog may predate an announcement, so its absence there proves
+  /// nothing.
   Future<bool> refresh() {
     if (_closed) return Future.value(false);
     return _refresh ??= _refreshCatalog().whenComplete(() => _refresh = null);
@@ -186,7 +187,6 @@ class AnnouncementsRepository {
     try {
       final fetched = await _fetch();
       if (_closed) return false;
-      answered = true;
       if (fetched != null) {
         _catalog = _decodeCatalog(fetched.catalog);
         _catalogJson = fetched.catalog;
@@ -204,6 +204,7 @@ class AnnouncementsRepository {
           await _store.writeSeen(seen);
         });
       }
+      answered = true;
     } on Exception catch (error) {
       // Network, schema, and storage failures never erase valid cached rows.
       // A fetch that close() cut off is not a catalog failure.

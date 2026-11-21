@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
@@ -8,6 +12,20 @@ import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
 
 class _MockAnnouncementsRepository extends Mock
     implements AnnouncementsRepository {}
+
+class _MemoryAnnouncementStore implements AnnouncementStore {
+  @override
+  Future<String?> readCatalog() async => null;
+
+  @override
+  Future<List<String>> readSeen() async => [];
+
+  @override
+  Future<void> writeCatalog(String value) async {}
+
+  @override
+  Future<void> writeSeen(List<String> values) async {}
+}
 
 void main() {
   final item = AnnouncementNotification(
@@ -17,6 +35,75 @@ void main() {
     timestamp: DateTime.utc(2026, 10, 23),
     expiresAt: DateTime.utc(2026, 11, 23),
   );
+
+  group('AnnouncementDetailCubit catalog validation', () {
+    for (final invalid in {
+      'unsupported schema': {
+        'schemaVersion': 999,
+        'announcements': <Object?>[],
+      },
+      'unsupported action': {
+        'schemaVersion': 1,
+        'announcements': [
+          {
+            'id': item.announcementId,
+            'title': item.title,
+            'body': item.body,
+            'publishedAt': item.timestamp.toIso8601String(),
+            'platforms': <String>[],
+            'expiresAt': item.expiresAt.toIso8601String(),
+            'action': {'type': 'future_action'},
+          },
+        ],
+      },
+    }.entries) {
+      test('a cold ${invalid.key} response fails and retry recovers', () async {
+        var response = invalid.value;
+        final repository = AnnouncementsRepository(
+          endpoint: Uri.https('catalog.example', '/announcements'),
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode(response),
+              200,
+              headers: {'content-type': 'application/json'},
+            ),
+          ),
+          store: _MemoryAnnouncementStore(),
+          platform: 'ios',
+          appVersion: '1.0.0',
+          clock: Clock.fixed(DateTime.utc(2026, 11, 21)),
+        );
+        addTearDown(repository.close);
+        final cubit = AnnouncementDetailCubit(
+          announcementId: item.announcementId,
+          repository: repository,
+        );
+        addTearDown(cubit.close);
+
+        final failed = await cubit.stream.first;
+        expect(repository.hasCatalog, isFalse);
+        expect(failed.status, AnnouncementDetailStatus.failed);
+        expect(failed.announcement, isNull);
+
+        response = {
+          'schemaVersion': 1,
+          'announcements': [
+            {
+              'id': item.announcementId,
+              'title': item.title,
+              'body': item.body,
+              'publishedAt': item.timestamp.toIso8601String(),
+              'platforms': <String>[],
+              'expiresAt': item.expiresAt.toIso8601String(),
+            },
+          ],
+        };
+        await cubit.refresh();
+        expect(cubit.state.status, AnnouncementDetailStatus.ready);
+        expect(cubit.state.announcement?.announcementId, item.announcementId);
+      });
+    }
+  });
 
   group('AnnouncementDetailCubit snapshots', () {
     late _MockAnnouncementsRepository repository;

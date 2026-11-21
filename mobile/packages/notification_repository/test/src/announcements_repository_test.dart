@@ -231,6 +231,39 @@ void main() {
       expect(repository.hasCatalog, isFalse);
     });
 
+    for (final invalid in {
+      'unsupported schema': jsonEncode({
+        'schemaVersion': 999,
+        'announcements': <Object?>[],
+      }),
+      'unsupported action': catalog([
+        announcement()..['action'] = {'type': 'future_action'},
+      ]),
+    }.entries) {
+      test('not when a cold HTTP 200 has ${invalid.key}', () async {
+        create(MockClient((_) async => jsonResponse(invalid.value)));
+
+        expect(await repository.refresh(), isFalse);
+        expect(repository.hasCatalog, isFalse);
+        expect(store.catalogWrites, 0);
+      });
+
+      test('not when HTTP 200 has ${invalid.key} over a valid cache', () async {
+        var response = catalog();
+        create(MockClient((_) async => jsonResponse(response)));
+        expect(await repository.refresh(), isTrue);
+        final cached = store.catalogValue;
+        expect(cached, isNotNull);
+        expect(repository.items, hasLength(1));
+        response = invalid.value;
+
+        expect(await repository.refresh(), isFalse);
+        expect(repository.hasCatalog, isTrue);
+        expect(repository.items.single.announcementId, firstId);
+        expect(store.catalogValue, cached);
+      });
+    }
+
     test('not when close() cuts the request off', () async {
       final client = _HangingClient();
       create(client);
