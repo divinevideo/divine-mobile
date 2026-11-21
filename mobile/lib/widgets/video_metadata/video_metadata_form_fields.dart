@@ -41,7 +41,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
   final bool enableExpiration;
 
   /// Whether the "Post time" tile is offered. Off when editing a published
-  /// video; a video reply hides it too.
+  /// video; replies and Together posts hide it too.
   final bool enableSchedule;
   final bool enableContentWarning;
   final bool enableCollaborators;
