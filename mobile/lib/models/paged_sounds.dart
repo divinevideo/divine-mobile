@@ -53,14 +53,27 @@ class PagedSounds extends Equatable {
   ///
   /// A last page that brought nothing only ends the list: added, it would
   /// change the pages for nothing, and what reads them would read them again.
-  PagedSounds withPage(SoundPage page) =>
-      page.sounds.isEmpty && !page.hasMore && page.usageCounts.isEmpty
-      ? copyWith(hasMore: false, isLoadingMore: false)
-      : PagedSounds(
-          pages: [...pages, page.sounds],
-          usageCounts: {...usageCounts, ...page.usageCounts},
-          hasMore: page.hasMore,
-        );
+  ///
+  /// A sound an earlier page already listed is left out of [page]: lists
+  /// paged by offset repeat one when a sound is published or re-ranked
+  /// between two loads.
+  PagedSounds withPage(SoundPage page) {
+    if (page.sounds.isEmpty && !page.hasMore && page.usageCounts.isEmpty) {
+      return copyWith(hasMore: false, isLoadingMore: false);
+    }
+    final listed = {for (final sound in sounds) sound.id};
+    return PagedSounds(
+      pages: [
+        ...pages,
+        [
+          for (final sound in page.sounds)
+            if (listed.add(sound.id)) sound,
+        ],
+      ],
+      usageCounts: {...usageCounts, ...page.usageCounts},
+      hasMore: page.hasMore,
+    );
+  }
 
   /// This list with each page passed through [narrow].
   PagedSounds narrowed(List<AudioEvent> Function(List<AudioEvent>) narrow) =>
