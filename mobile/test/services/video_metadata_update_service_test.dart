@@ -2308,6 +2308,39 @@ void main() {
     });
 
     group('successful publish', () {
+      test(
+        'reports invites skipped when the account changes after acceptance',
+        () async {
+          when(() => mockRelayPublisher.publishViaWebSocket(any()))
+              .thenAnswer((_) async {
+                when(() => mockAuthService.currentPublicKeyHex)
+                    .thenReturn('f' * 64);
+                return EventPublishOutcome.published;
+              });
+
+          final result = await updateFromRelay(
+            originalVideo: _testVideo(),
+            editorState: VideoEditorProviderState(
+              collaboratorPubkeys: {'b' * 64},
+            ),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(
+            result,
+            isA<VideoUpdateSuccess>().having(
+              (value) => value.inviteFailureCount,
+              'skipped invites',
+              1,
+            ),
+          );
+          verifyNever(
+            () => mockPersonalEventCacheService.cacheUserEvent(any()),
+          );
+          verifyNever(() => mockVideoEventService.updateVideoEvent(any()));
+        },
+      );
+
       test('returns VideoUpdateSuccess on happy path', () async {
         final result = await updateFromRelay(
           originalVideo: _testVideo(),
