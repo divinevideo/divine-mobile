@@ -214,6 +214,41 @@ void main() {
       expect(requests, isNotEmpty);
     });
 
+    test('a page with no valid definition falls back to relays', () async {
+      final relayBadge = definition(key2);
+      events = [relayBadge];
+      final invalid = definition(key1)..sig = '';
+      when(api.getBadgeDiscovery).thenAnswer(
+        (_) async => [
+          (
+            definition: invalid,
+            holderCount: 0,
+            followerCount: 0,
+            videos: <BadgeVideoPreview>[],
+          ),
+        ],
+      );
+      final cards = await repository.loadIndexedDiscovery();
+      expect(cards.map((card) => card.definition.event.id), [relayBadge.id]);
+    });
+
+    test('a valid page hidden by viewer policy does not fall back', () async {
+      events = [definition(key2)];
+      hidden.add(issuer1);
+      when(api.getBadgeDiscovery).thenAnswer(
+        (_) async => [
+          (
+            definition: definition(key1),
+            holderCount: 0,
+            followerCount: 0,
+            videos: <BadgeVideoPreview>[],
+          ),
+        ],
+      );
+      expect(await repository.loadIndexedDiscovery(), isEmpty);
+      expect(requests, isEmpty);
+    });
+
     test('404 is logged and cached for subsequent relay refreshes', () async {
       events = [definition(key1)];
       when(api.getBadgeDiscovery).thenThrow(
