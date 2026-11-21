@@ -247,6 +247,20 @@ their own part of one split-screen video
   (`lobby`/`recording`/`posted`/`cancelled`), members with status and layout
   cell, layout name, `vertical` or `square`, whose sound the video keeps, the
   finished parts, and the posted video's address. The highest revision wins
+- The snapshot can also carry the host's lobby settings: `gap`, the space
+  between cells as a fraction of the frame's shorter side; `border`, the gaps'
+  colour as six lowercase hex digits (`rrggbb`); `arrange`, which is `series`
+  when the parts play one after another, full frame, in seat order; and
+  `partMs`, how long each part plays in series, in milliseconds. A snapshot
+  without them is side by side with the app's default gap and colour. A series
+  snapshot still names a layout so an older app can seat its people and film.
+  Older apps still use the split-screen crop guide and ignore the series part
+  length. When the host composes the video, parts with a different aspect
+  ratio are center-cropped to fill the frame. The composer joins the parts in
+  seat order, trimming longer parts to `partMs` and keeping each part's own
+  sound. The host fixes `partMs` when filming starts. Later invitations
+  reserve room for another part at that length; someone leaving does not
+  change the length for the people still filming.
 - Kind 15 type `part`: a member's finished part, an AES-GCM encrypted video on
   Blossom sent to the author as a NIP-17 file message. The author forwards each
   part's URL and key to joined members while the room is open

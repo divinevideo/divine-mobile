@@ -91,6 +91,10 @@ class CollabRoomState extends Equatable {
     this.selectedSeat,
     this.pendingSeats,
     this.lobbyRevision,
+    this.pickedGap,
+    this.pickedBorderColor,
+    this.pickedArrangement,
+    this.pickedPartLength,
   });
 
   /// Whether the room is known.
@@ -137,6 +141,55 @@ class CollabRoomState extends Equatable {
   /// built on, so a snapshot past it replaces [pendingSeats] and the hinted
   /// layout.
   final int? lobbyRevision;
+
+  /// The gap the author set in the lobby, ahead of the room's snapshot.
+  final double? pickedGap;
+
+  /// The gap colour the author picked in the lobby, ahead of the room's
+  /// snapshot.
+  final Color? pickedBorderColor;
+
+  /// How the author wants the parts to come together, ahead of the room's
+  /// snapshot.
+  final CollabRoomArrangement? pickedArrangement;
+
+  /// The part length the author picked in the lobby, ahead of the room's
+  /// snapshot.
+  final Duration? pickedPartLength;
+
+  /// Whether the author's lobby picks lead: on the author's device, before
+  /// filming starts. Everyone else follows the room's snapshot.
+  bool get _picksLead {
+    final room = this.room;
+    return room != null && room.isAuthor && room.phase == CollabRoomPhase.lobby;
+  }
+
+  /// Space between the cells, as a fraction of the frame's shorter side.
+  double get gap =>
+      (_picksLead ? pickedGap : null) ?? room?.cellGap ?? collabRoomCellGap;
+
+  /// The colour of the gaps between the cells.
+  Color get borderColor =>
+      (_picksLead ? pickedBorderColor : null) ??
+      room?.borderColor ??
+      collabRoomBorderColor;
+
+  /// How the parts come together.
+  CollabRoomArrangement get arrangement =>
+      (_picksLead ? pickedArrangement : null) ??
+      room?.arrangement ??
+      CollabRoomArrangement.sideBySide;
+
+  /// Whether the parts play one after another.
+  bool get inSeries => arrangement == CollabRoomArrangement.series;
+
+  /// How long each part plays in series, editable only in the host's lobby.
+  Duration get partLength => _picksLead
+      ? collabRoomPartLengthFor(
+          pickedPartLength ?? room?.snapshot.partLength,
+          room?.participants.length ?? 0,
+        )
+      : room?.partLength ?? collabRoomDefaultPartLength;
 
   /// The people who fill a cell in the lobby, in cell order, with
   /// [pendingSeats] applied: whoever it names first, then anyone it does not
@@ -190,15 +243,7 @@ class CollabRoomState extends Equatable {
   }
 
   /// Whether the room's layout fits everyone still in it.
-  bool get layoutFits {
-    final room = this.room;
-    final count = room?.layoutPreset?.cellCount;
-    if (room == null || count == null) return false;
-    final cells = room.participants.map((member) => member.cell).toList();
-    return cells.length == count &&
-        cells.toSet().length == count &&
-        cells.every((cell) => cell != null && cell >= 0 && cell < count);
-  }
+  bool get layoutFits => room?.seatsFitLayout ?? false;
 
   /// Whether the author can put the video together.
   bool get canCompose {
@@ -244,6 +289,10 @@ class CollabRoomState extends Equatable {
     List<String>? pendingSeats,
     bool clearPendingSeats = false,
     int? lobbyRevision,
+    double? pickedGap,
+    Color? pickedBorderColor,
+    CollabRoomArrangement? pickedArrangement,
+    Duration? pickedPartLength,
   }) => CollabRoomState(
     status: status ?? this.status,
     room: room ?? this.room,
@@ -258,6 +307,10 @@ class CollabRoomState extends Equatable {
     selectedSeat: clearSelectedSeat ? null : selectedSeat ?? this.selectedSeat,
     pendingSeats: clearPendingSeats ? null : pendingSeats ?? this.pendingSeats,
     lobbyRevision: lobbyRevision ?? this.lobbyRevision,
+    pickedGap: pickedGap ?? this.pickedGap,
+    pickedBorderColor: pickedBorderColor ?? this.pickedBorderColor,
+    pickedArrangement: pickedArrangement ?? this.pickedArrangement,
+    pickedPartLength: pickedPartLength ?? this.pickedPartLength,
   );
 
   @override
@@ -275,5 +328,9 @@ class CollabRoomState extends Equatable {
     selectedSeat,
     pendingSeats,
     lobbyRevision,
+    pickedGap,
+    pickedBorderColor,
+    pickedArrangement,
+    pickedPartLength,
   ];
 }

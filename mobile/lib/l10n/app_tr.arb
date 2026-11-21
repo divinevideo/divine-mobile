@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Kameran açılamadı.",
   "collabRoomCallMuted": "Sessizde",
   "collabRoomSwapSeatHint": "Yerlerini değiştirmek için düzende iki yere dokun.",
-  "collabRoomSwapSeatSemanticLabel": "Bu yeri değiştir"
+  "collabRoomSwapSeatSemanticLabel": "Bu yeri değiştir",
+  "collabRoomArrangementSideBySide": "Yan yana",
+  "collabRoomArrangementSeries": "Art arda",
+  "collabRoomPartLengthLabel": "Her bölüm",
+  "collabRoomSwapOrderHint": "Sıralarını değiştirmek için iki bölüme dokun.",
+  "collabRoomFilmSeriesHint": "Herkes kendi bölümünü en fazla {seconds} sn çeker. Bölümler art arda oynar.",
+  "collabRoomSeriesReadyHint": "Tüm bölümler geldi. Birleştir!"
 }

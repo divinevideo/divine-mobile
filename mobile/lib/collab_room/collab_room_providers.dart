@@ -49,6 +49,7 @@ class CollabRoomPartContext {
     this.me,
     this.callKey,
     this.inviteRevision = 0,
+    this.partLength,
     this.finished = false,
   });
 
@@ -64,6 +65,10 @@ class CollabRoomPartContext {
 
   /// Membership generation that authorized this recording.
   final int inviteRevision;
+
+  /// How long the part may run when the room's parts play one after another,
+  /// or `null` when they play side by side: the recorder stops there.
+  final Duration? partLength;
 
   /// Whether the part flow ended: the part was handed in or the camera
   /// closed. The recorder that was filming keeps its cell until its route is
@@ -118,6 +123,7 @@ class CollabRoomPartNotifier extends Notifier<CollabRoomPartContext?> {
       me: current.me,
       callKey: current.callKey,
       inviteRevision: current.inviteRevision,
+      partLength: current.partLength,
       finished: true,
     );
   }

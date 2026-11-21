@@ -16745,4 +16745,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'یہ جگہ بدلیں';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'ساتھ ساتھ';
+
+  @override
+  String get collabRoomArrangementSeries => 'ایک کے بعد ایک';
+
+  @override
+  String get collabRoomPartLengthLabel => 'ہر حصہ';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'ترتیب بدلنے کے لیے دو حصوں کو تھپتھپائیں۔';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'ہر کوئی اپنا حصہ خود فلماتا ہے، زیادہ سے زیادہ $seconds سیکنڈ۔ حصے ایک کے بعد ایک چلتے ہیں۔';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => 'سب حصے آ گئے۔ انہیں جوڑیں!';
 }

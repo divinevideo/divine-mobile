@@ -15979,4 +15979,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => '이 자리 바꾸기';
+
+  @override
+  String get collabRoomArrangementSideBySide => '좌우 배치';
+
+  @override
+  String get collabRoomArrangementSeries => '차례대로';
+
+  @override
+  String get collabRoomPartLengthLabel => '파트 길이';
+
+  @override
+  String get collabRoomSwapOrderHint => '두 파트를 탭하면 순서가 바뀌어요.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return '모두 자기 파트를 최대 $seconds초까지 찍어요. 파트는 차례대로 재생돼요.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => '모든 파트가 모였어요. 합쳐 보세요!';
 }

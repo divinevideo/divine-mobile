@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Camera nu a putut fi pornită.",
   "collabRoomCallMuted": "Fără sunet",
   "collabRoomSwapSeatHint": "Atinge două locuri din aspect ca să le schimbi între ele.",
-  "collabRoomSwapSeatSemanticLabel": "Schimbă acest loc"
+  "collabRoomSwapSeatSemanticLabel": "Schimbă acest loc",
+  "collabRoomArrangementSideBySide": "Unul lângă altul",
+  "collabRoomArrangementSeries": "Una după alta",
+  "collabRoomPartLengthLabel": "Fiecare parte",
+  "collabRoomSwapOrderHint": "Atinge două părți ca să le schimbi ordinea.",
+  "collabRoomFilmSeriesHint": "Fiecare își filmează propria parte, de până la {seconds} s. Părțile rulează una după alta.",
+  "collabRoomSeriesReadyHint": "Toate părțile au ajuns. Pune-le cap la cap!"
 }

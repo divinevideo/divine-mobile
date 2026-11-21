@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show Locale;
+import 'dart:ui' show Color, Locale;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -17,6 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 
 import '../../helpers/go_router.dart';
 import '../../helpers/scroll.dart';
@@ -37,6 +38,8 @@ CollabRoom _room({
   CollabRoomMemberStatus samStatus = CollabRoomMemberStatus.joined,
   String? layout,
   String? videoAddress,
+  CollabRoomArrangement arrangement = CollabRoomArrangement.sideBySide,
+  Duration? partLength,
 }) => foldCollabRooms([
   DmMessage(
     id: '1' * 64,
@@ -54,6 +57,8 @@ CollabRoom _room({
         phase: phase,
         layout: layout,
         videoAddress: videoAddress,
+        arrangement: arrangement,
+        partLength: partLength,
         members: [
           CollabRoomMember(
             pubkey: _author,
@@ -124,8 +129,9 @@ void main() {
             layout: SplitScreenLayoutPreset.sideBySide,
           ),
         );
-        expect(find.text(l10n.collabRoomPickLayout), findsOneWidget);
         expect(find.text(l10n.collabRoomStartHint), findsOneWidget);
+        await scrollTo(tester, l10n.collabRoomPickLayout);
+        expect(find.text(l10n.collabRoomPickLayout), findsOneWidget);
         await scrollTo(tester, l10n.collabRoomCancelButton);
         expect(find.text(l10n.collabRoomStartButton), findsOneWidget);
         expect(find.text(l10n.collabRoomCancelButton), findsOneWidget);
@@ -142,6 +148,8 @@ void main() {
             layout: SplitScreenLayoutPreset.sideBySide,
           ),
         );
+        await scrollTo(tester, l10n.collabRoomPickLayout);
+        await tester.pump();
         final row = find.ancestor(
           of: find.byType(SplitScreenPresetTile).first,
           matching: find.byType(ListView),
@@ -155,6 +163,84 @@ void main() {
           tester.getRect(find.byType(SplitScreenPresetTile).first).left,
           screen.left + 16,
         );
+      });
+
+      testWidgets('the gap between the cells for the host side by side', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _author),
+            layout: SplitScreenLayoutPreset.sideBySide,
+          ),
+        );
+        expect(find.text(l10n.collabRoomArrangementSideBySide), findsOneWidget);
+        expect(find.text(l10n.collabRoomArrangementSeries), findsOneWidget);
+        await scrollTo(tester, l10n.videoEditorLayoutGapLabel);
+        expect(find.text(l10n.videoEditorLayoutGapLabel), findsOneWidget);
+        expect(find.byType(VideoEditorColorRow), findsOneWidget);
+        expect(find.text(l10n.collabRoomPartLengthLabel), findsNothing);
+      });
+
+      testWidgets('the part length instead of layouts for the host in series', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _author),
+            layout: SplitScreenLayoutPreset.sideBySide,
+            pickedArrangement: CollabRoomArrangement.series,
+          ),
+        );
+        expect(find.text(l10n.collabRoomPickLayout), findsNothing);
+        expect(find.byType(SplitScreenPresetTile), findsNothing);
+        await scrollTo(tester, l10n.collabRoomPartLengthLabel);
+        expect(find.text(l10n.collabRoomSwapOrderHint), findsOneWidget);
+        expect(find.text(l10n.videoEditorLayoutGapLabel), findsNothing);
+        expect(find.byType(VideoEditorColorRow), findsNothing);
+        // Two people share the post length, three seconds each by default.
+        expect(find.text(l10n.libraryClipDuration('3.0')), findsOneWidget);
+        // One frame per part, numbered in the order they play.
+        expect(find.text('1'), findsOneWidget);
+        expect(find.text('2'), findsOneWidget);
+      });
+
+      testWidgets('no lobby settings for a member', (tester) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _sam),
+            layout: SplitScreenLayoutPreset.sideBySide,
+          ),
+        );
+        expect(find.text(l10n.collabRoomArrangementSeries), findsNothing);
+        expect(find.text(l10n.videoEditorLayoutGapLabel), findsNothing);
+        expect(find.text(l10n.collabRoomPartLengthLabel), findsNothing);
+      });
+
+      testWidgets('how long a part runs while filming in series', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(
+              owner: _sam,
+              phase: CollabRoomPhase.recording,
+              layout: SplitScreenLayoutPreset.sideBySide.name,
+              arrangement: CollabRoomArrangement.series,
+              partLength: const Duration(milliseconds: 2500),
+            ),
+          ),
+        );
+        expect(find.text(l10n.collabRoomFilmSeriesHint('2.5')), findsOneWidget);
+        expect(find.text(l10n.collabRoomFilmHint), findsNothing);
       });
 
       testWidgets('an invite waiting for an answer', (tester) async {
@@ -434,6 +520,44 @@ void main() {
         await tester.tap(find.text(l10n.collabRoomInviteAgain));
 
         verify(() => cubit.reinvite(_sam)).called(1);
+      });
+
+      testWidgets('picking one after another asks the cubit', (tester) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _author),
+            layout: SplitScreenLayoutPreset.sideBySide,
+          ),
+        );
+        await tester.tap(find.text(l10n.collabRoomArrangementSeries));
+        verify(
+          () => cubit.arrangementPicked(CollabRoomArrangement.series),
+        ).called(1);
+      });
+
+      testWidgets('picking a gap colour asks the cubit', (tester) async {
+        await pump(
+          tester,
+          CollabRoomState(
+            status: CollabRoomStatus.ready,
+            room: _room(owner: _author),
+            layout: SplitScreenLayoutPreset.sideBySide,
+          ),
+        );
+        await scrollUntilTappable(
+          tester,
+          find.byType(VideoEditorColorRow),
+          200,
+          scrollable: roomList(),
+        );
+        tester
+            .widget<VideoEditorColorRow>(find.byType(VideoEditorColorRow))
+            .onSelected(const Color(0xFF27C58B));
+        verify(
+          () => cubit.borderColorChanged(const Color(0xFF27C58B)),
+        ).called(1);
       });
 
       testWidgets('starting asks the cubit to start', (tester) async {

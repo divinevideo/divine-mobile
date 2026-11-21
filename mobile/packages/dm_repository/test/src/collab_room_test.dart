@@ -36,6 +36,10 @@ CollabRoomSnapshot snapshot({
   String? soundPubkey,
   String? videoAddress,
   String? callKey,
+  double? gap,
+  int? borderColor,
+  CollabRoomArrangement arrangement = CollabRoomArrangement.sideBySide,
+  Duration? partLength,
 }) => CollabRoomSnapshot(
   revision: revision,
   phase: phase,
@@ -54,6 +58,10 @@ CollabRoomSnapshot snapshot({
   soundPubkey: soundPubkey,
   videoAddress: videoAddress,
   callKey: callKey,
+  gap: gap,
+  borderColor: borderColor,
+  arrangement: arrangement,
+  partLength: partLength,
 );
 
 DmMessage roomMessage({
@@ -179,6 +187,10 @@ void main() {
         soundPubkey: sam,
         videoAddress: '34236:$author:d',
         callKey: 'f' * 64,
+        gap: 0.035,
+        borderColor: 0x27c58b,
+        arrangement: CollabRoomArrangement.series,
+        partLength: const Duration(milliseconds: 2500),
       );
       expect(CollabRoomSnapshot.decode(original.encode()), original);
     });
@@ -188,6 +200,36 @@ void main() {
       expect(encoded, isNot(contains('layout')));
       expect(encoded, isNot(contains('parts')));
       expect(encoded, isNot(contains('sound')));
+      expect(encoded, isNot(contains('gap')));
+      expect(encoded, isNot(contains('border')));
+      expect(encoded, isNot(contains('arrange')));
+      expect(encoded, isNot(contains('partMs')));
+    });
+
+    test('reads a snapshot from before gaps and series as side by side', () {
+      final decoded = CollabRoomSnapshot.decode(
+        '{"rev":3,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+        '"aspect":"vertical"}',
+      );
+      expect(decoded, isNotNull);
+      expect(decoded!.gap, isNull);
+      expect(decoded.borderColor, isNull);
+      expect(decoded.arrangement, CollabRoomArrangement.sideBySide);
+      expect(decoded.partLength, isNull);
+    });
+
+    test('writes the border colour as six hex digits', () {
+      final encoded = snapshot(borderColor: 0x0000ff).encode();
+      expect(encoded, contains('"border":"0000ff"'));
+      expect(CollabRoomSnapshot.decode(encoded)?.borderColor, 0x0000ff);
+    });
+
+    test('reads a whole-number gap', () {
+      final decoded = CollabRoomSnapshot.decode(
+        '{"rev":3,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+        '"aspect":"vertical","gap":0}',
+      );
+      expect(decoded?.gap, 0.0);
     });
 
     for (final (name, json) in [
@@ -271,6 +313,51 @@ void main() {
         'a malformed sound pubkey',
         '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
             '"aspect":"vertical","sound":"x"}',
+      ),
+      (
+        'a gap that is not a number',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","gap":"wide"}',
+      ),
+      (
+        'a negative gap',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","gap":-0.01}',
+      ),
+      (
+        'a gap wider than the frame',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","gap":1.5}',
+      ),
+      (
+        'a border colour that is not hex',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","border":"green"}',
+      ),
+      (
+        'a border colour with alpha',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","border":"ff27c58b"}',
+      ),
+      (
+        'a border colour as a number',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","border":2606475}',
+      ),
+      (
+        'an unknown arrangement',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","arrange":"stacked"}',
+      ),
+      (
+        'a part length of zero',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","partMs":0}',
+      ),
+      (
+        'a part length that is not whole milliseconds',
+        '{"rev":0,"phase":"lobby","members":[{"p":"$author","s":"joined"}],'
+            '"aspect":"vertical","partMs":1.5}',
       ),
     ]) {
       test('rejects $name', () {
@@ -1262,6 +1349,41 @@ void main() {
       expect(next.callKey, '1' * 64);
       expect(next.members, room.members);
       expect(next.parts.map((p) => p.pubkey), [sam]);
+    });
+
+    test('carries the gap, arrangement and part length forward', () {
+      final room = foldCollabRooms([
+        roomMessage(
+          from: author,
+          to: sam,
+          type: CollabRoomMessageType.invite,
+          state: snapshot(
+            gap: 0.02,
+            borderColor: 0xf9f7f6,
+            arrangement: CollabRoomArrangement.series,
+            partLength: const Duration(seconds: 2),
+          ),
+        ),
+      ], ownerPubkey: author).single;
+      expect(room.arrangement, CollabRoomArrangement.series);
+
+      final kept = room.toSnapshot(revision: 1);
+      expect(kept.gap, 0.02);
+      expect(kept.borderColor, 0xf9f7f6);
+      expect(kept.arrangement, CollabRoomArrangement.series);
+      expect(kept.partLength, const Duration(seconds: 2));
+
+      final changed = room.toSnapshot(
+        revision: 2,
+        gap: 0.05,
+        borderColor: 0x000000,
+        arrangement: CollabRoomArrangement.sideBySide,
+        partLength: const Duration(seconds: 3),
+      );
+      expect(changed.gap, 0.05);
+      expect(changed.borderColor, 0x000000);
+      expect(changed.arrangement, CollabRoomArrangement.sideBySide);
+      expect(changed.partLength, const Duration(seconds: 3));
     });
 
     test('keeps a left member out of the published parts', () {

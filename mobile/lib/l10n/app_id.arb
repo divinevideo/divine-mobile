@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "Kameramu tidak bisa dinyalakan.",
   "collabRoomCallMuted": "Dibisukan",
   "collabRoomSwapSeatHint": "Ketuk dua tempat di tata letak untuk menukarnya.",
-  "collabRoomSwapSeatSemanticLabel": "Tukar tempat ini"
+  "collabRoomSwapSeatSemanticLabel": "Tukar tempat ini",
+  "collabRoomArrangementSideBySide": "Berdampingan",
+  "collabRoomArrangementSeries": "Berurutan",
+  "collabRoomPartLengthLabel": "Tiap bagian",
+  "collabRoomSwapOrderHint": "Ketuk dua bagian untuk menukar urutannya.",
+  "collabRoomFilmSeriesHint": "Semua merekam bagiannya sendiri, maksimal {seconds} dtk. Bagian-bagiannya diputar berurutan.",
+  "collabRoomSeriesReadyHint": "Semua bagian sudah masuk. Satukan sekarang!"
 }

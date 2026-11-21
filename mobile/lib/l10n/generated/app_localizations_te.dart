@@ -17124,4 +17124,26 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'ఈ స్థానాన్ని మార్చండి';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'పక్కపక్కనే';
+
+  @override
+  String get collabRoomArrangementSeries => 'ఒకదాని తర్వాత ఒకటి';
+
+  @override
+  String get collabRoomPartLengthLabel => 'ప్రతి భాగం';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'క్రమాన్ని మార్చడానికి రెండు భాగాలను తాకండి.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'ప్రతి ఒక్కరూ తమ భాగాన్ని $seconds సె. వరకు చిత్రీకరిస్తారు. భాగాలు ఒకదాని తర్వాత ఒకటి ప్లే అవుతాయి.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'అన్ని భాగాలు వచ్చాయి. వాటిని కలపండి!';
 }

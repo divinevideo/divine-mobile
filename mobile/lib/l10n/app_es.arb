@@ -6545,5 +6545,11 @@
   "collabRoomCallCameraFailed": "No se pudo prender tu cámara.",
   "collabRoomCallMuted": "Silenciado",
   "collabRoomSwapSeatHint": "Tocá dos lugares del diseño para intercambiarlos.",
-  "collabRoomSwapSeatSemanticLabel": "Intercambiar este lugar"
+  "collabRoomSwapSeatSemanticLabel": "Intercambiar este lugar",
+  "collabRoomArrangementSideBySide": "Lado a lado",
+  "collabRoomArrangementSeries": "Una tras otra",
+  "collabRoomPartLengthLabel": "Cada parte",
+  "collabRoomSwapOrderHint": "Tocá dos partes para cambiar el orden.",
+  "collabRoomFilmSeriesHint": "Cada persona filma su propia parte, de hasta {seconds} s. Las partes se reproducen una tras otra.",
+  "collabRoomSeriesReadyHint": "Ya están todas las partes. ¡Armá el video!"
 }

@@ -137,6 +137,8 @@ void main() {
     late StreamController<CollabRoom?> rooms;
     late List<CollabRoomSnapshot> published;
     late List<List<CollabRoomComposeCell>> composed;
+    late List<Color> composedBackgrounds;
+    late List<List<CollabRoomSeriesPart>> composedSeries;
 
     setUpAll(() {
       registerFallbackValue(_lobby);
@@ -149,6 +151,8 @@ void main() {
       rooms = StreamController<CollabRoom?>();
       published = [];
       composed = [];
+      composedBackgrounds = [];
+      composedSeries = [];
       when(() => service.watchRoom(_roomId)).thenAnswer((_) => rooms.stream);
       when(() => service.publish(any(), any())).thenAnswer((invocation) async {
         published.add(invocation.positionalArguments[1] as CollabRoomSnapshot);
@@ -182,11 +186,29 @@ void main() {
       syncRetryDelay: syncRetryDelay,
       thumbnailer: (path) async => '$path.jpg',
       composer:
-          ({required cells, required aspectRatio, required taskId}) async {
+          ({
+            required cells,
+            required aspectRatio,
+            required backgroundColor,
+            required taskId,
+          }) async {
             composed.add(cells);
+            composedBackgrounds.add(backgroundColor);
             return DivineVideoClip(
               id: 'composed',
               video: EditorVideo.file(File('/composed.mp4')),
+              duration: const Duration(seconds: 6),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: aspectRatio,
+              originalAspectRatio: aspectRatio.value,
+            );
+          },
+      seriesComposer:
+          ({required parts, required aspectRatio, required taskId}) async {
+            composedSeries.add(parts);
+            return DivineVideoClip(
+              id: 'series',
+              video: EditorVideo.file(File('/series.mp4')),
               duration: const Duration(seconds: 6),
               recordedAt: DateTime(2026),
               targetAspectRatio: aspectRatio,
@@ -385,6 +407,47 @@ void main() {
           ]);
           expect(cubit.state.actionStatus, CollabRoomActionStatus.idle);
           expect(cubit.state.action, CollabRoomAction.start);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        "fixes the host's settings and the part length in series",
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          cubit
+            ..gapChanged(0.03)
+            ..borderColorChanged(const Color(0xFF000000))
+            ..arrangementPicked(CollabRoomArrangement.series);
+          await cubit.start();
+        },
+        verify: (_) {
+          final snapshot = published.last;
+          expect(snapshot.phase, CollabRoomPhase.recording);
+          expect(snapshot.gap, 0.03);
+          expect(snapshot.borderColor, 0x000000);
+          expect(snapshot.arrangement, CollabRoomArrangement.series);
+          // Two people film: the default length fits them.
+          expect(snapshot.partLength, collabRoomDefaultPartLength);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'leaves the part length open side by side',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          await cubit.start();
+        },
+        verify: (_) {
+          expect(
+            published.single.arrangement,
+            CollabRoomArrangement.sideBySide,
+          );
+          expect(published.single.partLength, isNull);
+          expect(published.single.gap, isNull);
         },
       );
 
@@ -732,6 +795,152 @@ void main() {
       );
     });
 
+    group('lobby settings', () {
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        "shows the host's picks at once and publishes them together",
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          cubit
+            ..gapChanged(0.0412)
+            ..arrangementPicked(CollabRoomArrangement.series)
+            ..partLengthChanged(const Duration(milliseconds: 2460));
+          expect(cubit.state.gap, 0.041);
+          expect(cubit.state.inSeries, isTrue);
+          expect(cubit.state.partLength, const Duration(milliseconds: 2500));
+          expect(published, isEmpty);
+          await pumpEventQueue();
+        },
+        verify: (_) {
+          final snapshot = published.single;
+          expect(snapshot.phase, CollabRoomPhase.lobby);
+          expect(snapshot.gap, 0.041);
+          expect(snapshot.arrangement, CollabRoomArrangement.series);
+          expect(snapshot.partLength, const Duration(milliseconds: 2500));
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'publishes the gap colour, always opaque',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          cubit.borderColorChanged(const Color(0x8027C58B));
+          expect(cubit.state.borderColor, const Color(0xFF27C58B));
+          await pumpEventQueue();
+        },
+        verify: (_) => expect(published.single.borderColor, 0x27C58B),
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'keeps the gap and part length within what the room can show',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby));
+          await pumpEventQueue();
+          cubit
+            ..gapChanged(1)
+            ..partLengthChanged(const Duration(seconds: 6));
+        },
+        verify: (cubit) {
+          expect(cubit.state.gap, SplitScreenLayoutGeometry.maxGap);
+          // Two people share the post length.
+          expect(cubit.state.partLength, collabRoomMaxPartLength(2));
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'publishes nothing when the host changes nothing',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 1,
+                phase: CollabRoomPhase.lobby,
+                layout: SplitScreenLayoutPreset.sideBySide.name,
+                members: _lobby.members,
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          cubit.arrangementPicked(CollabRoomArrangement.sideBySide);
+          await pumpEventQueue();
+        },
+        verify: (_) => expect(published, isEmpty),
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'takes no settings from a member',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_lobby, owner: _sam));
+          await pumpEventQueue();
+          cubit
+            ..gapChanged(0.05)
+            ..arrangementPicked(CollabRoomArrangement.series)
+            ..partLengthChanged(const Duration(seconds: 2));
+          await pumpEventQueue();
+        },
+        verify: (cubit) {
+          expect(published, isEmpty);
+          expect(cubit.state.gap, collabRoomCellGap);
+          expect(cubit.state.borderColor, collabRoomBorderColor);
+          expect(cubit.state.inSeries, isFalse);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        "shows a member the host's settings",
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.lobby,
+                members: [
+                  _member(_author, .joined),
+                  _member(_sam, .joined),
+                ],
+                gap: 0.06,
+                borderColor: 0xF9F7F6,
+                arrangement: CollabRoomArrangement.series,
+                partLength: const Duration(seconds: 2),
+              ),
+              owner: _sam,
+            ),
+          );
+          await pumpEventQueue();
+        },
+        verify: (cubit) {
+          expect(cubit.state.gap, 0.06);
+          expect(cubit.state.borderColor, const Color(0xFFF9F7F6));
+          expect(cubit.state.inSeries, isTrue);
+          expect(cubit.state.partLength, const Duration(seconds: 2));
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'takes no settings once filming started',
+        build: build,
+        act: (cubit) async {
+          rooms.add(_room(_recording));
+          await pumpEventQueue();
+          cubit
+            ..gapChanged(0.05)
+            ..arrangementPicked(CollabRoomArrangement.series);
+          await pumpEventQueue();
+        },
+        verify: (cubit) {
+          expect(published, isEmpty);
+          expect(cubit.state.inSeries, isFalse);
+        },
+      );
+    });
+
     group('layoutPicked', () {
       blocTest<CollabRoomCubit, CollabRoomState>(
         'publishes the last lobby pick once, after the host stops picking',
@@ -814,6 +1023,113 @@ void main() {
           await cubit.removeMember(_author);
         },
         verify: (_) => expect(published, isEmpty),
+      );
+    });
+
+    group('filming in series', () {
+      final layoutForThree = collabRoomLayoutsFor(3).first;
+      final seriesForThree = CollabRoomSnapshot(
+        revision: 2,
+        phase: CollabRoomPhase.recording,
+        layout: layoutForThree.name,
+        members: [
+          _member(_author, .joined, 0),
+          _member(_sam, .joined, 1),
+          _member(_kai, .joined, 2),
+        ],
+        arrangement: CollabRoomArrangement.series,
+        partLength: const Duration(milliseconds: 2100),
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'closes the seat of someone who left, with no layout to pick',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              seriesForThree,
+              messages: [
+                _message(
+                  from: _kai,
+                  to: _author,
+                  type: CollabRoomMessageType.leave,
+                  createdAt: 3,
+                ),
+              ],
+            ),
+          );
+          await pumpEventQueue();
+        },
+        verify: (cubit) {
+          final snapshot = published.single;
+          expect(snapshot.layout, collabRoomLayoutsFor(2).first.name);
+          expect(cubit.state.partLength, const Duration(milliseconds: 2100));
+          expect(snapshot.members, [
+            _member(_author, .joined, 0),
+            _member(_sam, .joined, 1),
+            _member(_kai, .left),
+          ]);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'does not invite a third person into a three-second series',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 3,
+                phase: CollabRoomPhase.recording,
+                layout: collabRoomLayoutsFor(2).first.name,
+                members: [
+                  _member(_author, .joined, 0),
+                  _member(_sam, .joined, 1),
+                  _member(_kai, .left),
+                ],
+                arrangement: CollabRoomArrangement.series,
+                partLength: const Duration(seconds: 3),
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.reinvite(_kai);
+        },
+        verify: (cubit) {
+          expect(cubit.state.room?.canReinviteAtPartLength, isFalse);
+          verifyNever(() => service.reinvite(any(), any(), any()));
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'leaves the layout to the host side by side',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.recording,
+                layout: layoutForThree.name,
+                members: seriesForThree.members,
+              ),
+              messages: [
+                _message(
+                  from: _kai,
+                  to: _author,
+                  type: CollabRoomMessageType.leave,
+                  createdAt: 3,
+                ),
+              ],
+            ),
+          );
+          await pumpEventQueue();
+        },
+        verify: (cubit) {
+          // Only the news goes out; the host picks the next layout.
+          expect(published.single.layout, layoutForThree.name);
+          expect(cubit.state.layoutFits, isFalse);
+        },
       );
     });
 
@@ -977,6 +1293,105 @@ void main() {
 
     group('compose', () {
       blocTest<CollabRoomCubit, CollabRoomState>(
+        "spaces the parts by the host's gap, in the host's colour",
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.recording,
+                layout: _recording.layout,
+                members: _recording.members,
+                parts: _recording.parts,
+                gap: 0.05,
+                borderColor: 0x27C58B,
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.compose();
+        },
+        verify: (_) {
+          expect(composedBackgrounds.single, const Color(0xFF27C58B));
+          expect(
+            composed.single.map((cell) => cell.rect),
+            SplitScreenLayoutPreset.sideBySide.cellRects(
+              aspectRatio: 9 / 16,
+              gap: 0.05,
+            ),
+          );
+          expect(composedSeries, isEmpty);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        'joins the parts one after another in seat order',
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.recording,
+                layout: _recording.layout,
+                // Sam goes first.
+                members: [
+                  _member(_author, .joined, 1),
+                  _member(_sam, .joined, 0),
+                  _member(_kai, .removed),
+                ],
+                parts: _recording.parts,
+                arrangement: CollabRoomArrangement.series,
+                partLength: const Duration(seconds: 2),
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.compose();
+        },
+        verify: (cubit) {
+          expect(composed, isEmpty);
+          expect(cubit.state.composeStatus, CollabRoomComposeStatus.done);
+          expect(cubit.state.composedClip?.id, 'series');
+          final parts = composedSeries.single;
+          expect(parts.map((part) => part.file.path), [
+            '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4',
+            '/parts/3333333333333333333333333333333333333333333333333333333333333333.mp4',
+          ]);
+          expect(
+            parts.map((part) => part.length),
+            everyElement(const Duration(seconds: 2)),
+          );
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
+        "keeps every part's own sound in series",
+        build: build,
+        act: (cubit) async {
+          rooms.add(
+            _room(
+              CollabRoomSnapshot(
+                revision: 2,
+                phase: CollabRoomPhase.recording,
+                layout: _recording.layout,
+                members: _recording.members,
+                parts: _recording.parts,
+                arrangement: CollabRoomArrangement.series,
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          await cubit.soundPicked(_sam);
+        },
+        verify: (cubit) {
+          expect(published, isEmpty);
+          expect(cubit.state.soundPubkey, isNull);
+        },
+      );
+
+      blocTest<CollabRoomCubit, CollabRoomState>(
         'puts the parts in their cells with the picked sound',
         build: build,
         act: (cubit) async {
@@ -996,6 +1411,7 @@ void main() {
             '/parts/2222222222222222222222222222222222222222222222222222222222222222.mp4',
           ]);
           expect(cells.map((c) => c.withSound), [false, true]);
+          expect(composedBackgrounds.single, collabRoomBorderColor);
           expect(cells.first.rect.left, lessThan(cells.last.rect.left));
           expect(cells.first.rect, isA<Rect>());
         },
@@ -1133,6 +1549,7 @@ void main() {
           composer: ({
             required cells,
             required aspectRatio,
+            required backgroundColor,
             required taskId,
           }) async => null,
         ),

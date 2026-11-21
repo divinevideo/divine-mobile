@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_audio_progress_bar.dart';
 import 'package:pro_video_editor/core/models/video/editor_video_model.dart';
 
@@ -83,6 +85,7 @@ void main() {
       SoundWaveformState? waveformState,
       List<DivineVideoClip>? clips,
       Duration activeRecordingDuration = Duration.zero,
+      Duration durationLimit = VideoEditorConstants.maxDuration,
     }) {
       when(
         () => mockBloc.state,
@@ -100,6 +103,7 @@ void main() {
             () => _TestClipManagerNotifier(
               clips: clips ?? [],
               activeRecordingDuration: activeRecordingDuration,
+              durationLimit: durationLimit,
             ),
           ),
         ],
@@ -323,6 +327,62 @@ void main() {
       });
     });
 
+    group('Recording limit', () {
+      StereoWaveformPainter painter(WidgetTester tester) =>
+          tester
+                  .widget<CustomPaint>(
+                    find.byWidgetPredicate(
+                      (widget) =>
+                          widget is CustomPaint &&
+                          widget.foregroundPainter is StereoWaveformPainter,
+                    ),
+                  )
+                  .foregroundPainter!
+              as StereoWaveformPainter;
+
+      testWidgets('spans the post length outside a Together part', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            selectedSound: _createTestAudioEvent(),
+            waveformState: SoundWaveformLoaded(
+              leftChannel: testWaveformData,
+              duration: const Duration(seconds: 10),
+            ),
+            activeRecordingDuration: const Duration(milliseconds: 1050),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(painter(tester).maxDuration, VideoEditorConstants.maxDuration);
+        expect(painter(tester).progress, closeTo(1050 / 6300, 1e-9));
+      });
+
+      testWidgets("spans a series part's length", (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            selectedSound: _createTestAudioEvent(),
+            waveformState: SoundWaveformLoaded(
+              leftChannel: testWaveformData,
+              duration: const Duration(seconds: 10),
+            ),
+            activeRecordingDuration: const Duration(milliseconds: 1050),
+            durationLimit: const Duration(milliseconds: 2100),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          painter(tester).maxDuration,
+          const Duration(milliseconds: 2100),
+        );
+        expect(painter(tester).progress, closeTo(0.5, 1e-9));
+      });
+    });
+
     group('Animation', () {
       testWidgets('uses AnimatedSwitcher for transitions', (tester) async {
         await tester.pumpWidget(
@@ -379,17 +439,20 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
   _TestClipManagerNotifier({
     required this.clips,
     required this.activeRecordingDuration,
+    required this.durationLimit,
   });
 
   @override
   final List<DivineVideoClip> clips;
   final Duration activeRecordingDuration;
+  final Duration durationLimit;
 
   @override
   ClipManagerState build() {
     return ClipManagerState(
       clips: clips,
       activeRecordingDuration: activeRecordingDuration,
+      durationLimit: durationLimit,
     );
   }
 }

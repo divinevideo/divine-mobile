@@ -28010,6 +28010,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap this place'**
   String get collabRoomSwapSeatSemanticLabel;
+
+  /// Choice in a Together room's lobby, for the host: every person's part plays at the same time, each in its own cell of a split screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Side by side'**
+  String get collabRoomArrangementSideBySide;
+
+  /// Choice in a Together room's lobby, for the host: the parts play one after another, each filling the whole frame.
+  ///
+  /// In en, this message translates to:
+  /// **'One after another'**
+  String get collabRoomArrangementSeries;
+
+  /// Label of the slider that sets how long each person's part plays when a Together room's parts play one after another.
+  ///
+  /// In en, this message translates to:
+  /// **'Each part'**
+  String get collabRoomPartLengthLabel;
+
+  /// Hint in a Together room's lobby when the parts play one after another: the host taps two parts to swap the order they play in.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap two parts to swap who goes when.'**
+  String get collabRoomSwapOrderHint;
+
+  /// Hint in a Together room while everyone films, when the parts play one after another. {seconds} is the longest a part can run, with one decimal, like 2.5.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone films their own part, up to {seconds}s. They play one after another.'**
+  String collabRoomFilmSeriesHint(String seconds);
+
+  /// Hint for the host of a Together room once every part is in and the parts play one after another; the button below puts the video together.
+  ///
+  /// In en, this message translates to:
+  /// **'All parts are in. Put it together!'**
+  String get collabRoomSeriesReadyHint;
 }
 
 class _AppLocalizationsDelegate

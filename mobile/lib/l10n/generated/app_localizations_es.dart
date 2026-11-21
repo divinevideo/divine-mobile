@@ -16944,4 +16944,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Intercambiar este lugar';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Lado a lado';
+
+  @override
+  String get collabRoomArrangementSeries => 'Una tras otra';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Cada parte';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Tocá dos partes para cambiar el orden.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Cada persona filma su propia parte, de hasta $seconds s. Las partes se reproducen una tras otra.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Ya están todas las partes. ¡Armá el video!';
 }

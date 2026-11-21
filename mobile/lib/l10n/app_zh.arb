@@ -7846,5 +7846,11 @@
   "collabRoomCallCameraFailed": "无法打开你的摄像头。",
   "collabRoomCallMuted": "已静音",
   "collabRoomSwapSeatHint": "点按布局中的两个位置即可交换。",
-  "collabRoomSwapSeatSemanticLabel": "交换这个位置"
+  "collabRoomSwapSeatSemanticLabel": "交换这个位置",
+  "collabRoomArrangementSideBySide": "左右并排",
+  "collabRoomArrangementSeries": "依次播放",
+  "collabRoomPartLengthLabel": "每段时长",
+  "collabRoomSwapOrderHint": "点按两个片段即可交换顺序。",
+  "collabRoomFilmSeriesHint": "每个人拍自己的部分，最长 {seconds} 秒。各部分依次播放。",
+  "collabRoomSeriesReadyHint": "所有部分都到齐了。合成视频吧！"
 }

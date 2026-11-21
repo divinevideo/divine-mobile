@@ -7846,5 +7846,11 @@
   "collabRoomCallCameraFailed": "Không bật được camera của bạn.",
   "collabRoomCallMuted": "Đã tắt tiếng",
   "collabRoomSwapSeatHint": "Chạm vào hai vị trí trong bố cục để đổi chỗ.",
-  "collabRoomSwapSeatSemanticLabel": "Đổi vị trí này"
+  "collabRoomSwapSeatSemanticLabel": "Đổi vị trí này",
+  "collabRoomArrangementSideBySide": "Cạnh nhau",
+  "collabRoomArrangementSeries": "Lần lượt",
+  "collabRoomPartLengthLabel": "Mỗi phần",
+  "collabRoomSwapOrderHint": "Chạm vào hai phần để đổi thứ tự.",
+  "collabRoomFilmSeriesHint": "Mỗi người quay phần của mình, tối đa {seconds} giây. Các phần phát lần lượt.",
+  "collabRoomSeriesReadyHint": "Đã có đủ các phần. Ghép lại thôi!"
 }

@@ -16744,4 +16744,26 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'Tukar tempat ini';
+
+  @override
+  String get collabRoomArrangementSideBySide => 'Sebelah-menyebelah';
+
+  @override
+  String get collabRoomArrangementSeries => 'Satu demi satu';
+
+  @override
+  String get collabRoomPartLengthLabel => 'Setiap bahagian';
+
+  @override
+  String get collabRoomSwapOrderHint =>
+      'Ketik dua bahagian untuk menukar susunannya.';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'Semua orang merakam bahagian sendiri, sehingga $seconds saat. Bahagian dimainkan satu demi satu.';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint =>
+      'Semua bahagian sudah masuk. Gabungkan sekarang!';
 }

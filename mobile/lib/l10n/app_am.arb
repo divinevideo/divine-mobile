@@ -6598,5 +6598,11 @@
   "collabRoomCallCameraFailed": "ካሜራዎን ማብራት አልተቻለም።",
   "collabRoomCallMuted": "ድምፅ ጠፍቷል",
   "collabRoomSwapSeatHint": "ቦታዎቹን ለመቀያየር በአቀማመጡ ላይ ሁለት ቦታዎችን ይንኩ።",
-  "collabRoomSwapSeatSemanticLabel": "ይህን ቦታ ይቀይሩ"
+  "collabRoomSwapSeatSemanticLabel": "ይህን ቦታ ይቀይሩ",
+  "collabRoomArrangementSideBySide": "ጎን ለጎን",
+  "collabRoomArrangementSeries": "አንዱ ከሌላው በኋላ",
+  "collabRoomPartLengthLabel": "እያንዳንዱ ክፍል",
+  "collabRoomSwapOrderHint": "ቅደም ተከተሉን ለመቀያየር ሁለት ክፍሎችን ይንኩ።",
+  "collabRoomFilmSeriesHint": "እያንዳንዱ ሰው የራሱን ክፍል እስከ {seconds} ሰከንድ ይቀርጻል። ክፍሎቹ አንዱ ከሌላው በኋላ ይጫወታሉ።",
+  "collabRoomSeriesReadyHint": "ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!"
 }

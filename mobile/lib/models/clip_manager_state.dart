@@ -49,6 +49,7 @@ class ClipManagerState {
     this.mergeOutputPath,
     this.pendingDeletion,
     this.libraryRevision = 0,
+    this.durationLimit = VideoEditorConstants.maxDuration,
   });
 
   /// List of all recorded clips in order.
@@ -80,6 +81,11 @@ class ClipManagerState {
   /// Current duration of the active recording in progress.
   final Duration activeRecordingDuration;
 
+  /// The longest the clips may run together: the video's
+  /// [VideoEditorConstants.maxDuration], or the length of a room part filmed
+  /// in series.
+  final Duration durationLimit;
+
   /// Cached merge-render output path.
   ///
   /// Set after clips are concatenated into a preview video. Cleared
@@ -96,11 +102,11 @@ class ClipManagerState {
     return clips.fold(Duration.zero, (sum, clip) => sum + clip.budgetDuration);
   }
 
-  /// Remaining recording time available before reaching max duration.
+  /// Remaining recording time available before reaching [durationLimit].
   ///
-  /// Returns zero if max duration has been reached or exceeded.
+  /// Returns zero if the limit has been reached or exceeded.
   Duration get remainingDuration {
-    final remaining = VideoEditorConstants.maxDuration - totalDuration;
+    final remaining = durationLimit - totalDuration;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -159,6 +165,7 @@ class ClipManagerState {
     ClipPendingDeletion? pendingDeletion,
     bool clearPendingDeletion = false,
     int? libraryRevision,
+    Duration? durationLimit,
   }) {
     return ClipManagerState(
       clips: clips ?? this.clips,
@@ -181,6 +188,7 @@ class ClipManagerState {
           ? null
           : (pendingDeletion ?? this.pendingDeletion),
       libraryRevision: libraryRevision ?? this.libraryRevision,
+      durationLimit: durationLimit ?? this.durationLimit,
     );
   }
 }

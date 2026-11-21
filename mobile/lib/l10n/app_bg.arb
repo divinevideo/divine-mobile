@@ -6662,5 +6662,11 @@
   "collabRoomCallCameraFailed": "Камерата не можа да се включи.",
   "collabRoomCallMuted": "Заглушен",
   "collabRoomSwapSeatHint": "Докосни две места в оформлението, за да ги размениш.",
-  "collabRoomSwapSeatSemanticLabel": "Размени това място"
+  "collabRoomSwapSeatSemanticLabel": "Размени това място",
+  "collabRoomArrangementSideBySide": "Един до друг",
+  "collabRoomArrangementSeries": "Един след друг",
+  "collabRoomPartLengthLabel": "Всяка част",
+  "collabRoomSwapOrderHint": "Докосни две части, за да размениш реда им.",
+  "collabRoomFilmSeriesHint": "Всеки заснема своята част, до {seconds} сек. Частите вървят една след друга.",
+  "collabRoomSeriesReadyHint": "Всички части са тук. Сглоби ги!"
 }

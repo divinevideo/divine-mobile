@@ -6091,5 +6091,11 @@
   "collabRoomCallCameraFailed": "카메라를 켜지 못했어요.",
   "collabRoomCallMuted": "음소거됨",
   "collabRoomSwapSeatHint": "레이아웃에서 두 자리를 탭하면 서로 바뀌어요.",
-  "collabRoomSwapSeatSemanticLabel": "이 자리 바꾸기"
+  "collabRoomSwapSeatSemanticLabel": "이 자리 바꾸기",
+  "collabRoomArrangementSideBySide": "좌우 배치",
+  "collabRoomArrangementSeries": "차례대로",
+  "collabRoomPartLengthLabel": "파트 길이",
+  "collabRoomSwapOrderHint": "두 파트를 탭하면 순서가 바뀌어요.",
+  "collabRoomFilmSeriesHint": "모두 자기 파트를 최대 {seconds}초까지 찍어요. 파트는 차례대로 재생돼요.",
+  "collabRoomSeriesReadyHint": "모든 파트가 모였어요. 합쳐 보세요!"
 }

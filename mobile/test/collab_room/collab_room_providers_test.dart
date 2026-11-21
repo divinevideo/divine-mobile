@@ -28,6 +28,7 @@ void main() {
               cellShape: SplitScreenCellShape.oval,
               me: _me,
               callKey: _callKey,
+              partLength: Duration(seconds: 2),
             ),
           );
       expect(container.read(collabRoomPartProvider)!.isActive, isTrue);
@@ -39,6 +40,7 @@ void main() {
       expect(part.roomId, 'room');
       expect(part.cellShape, SplitScreenCellShape.oval);
       expect(part.callKey, _callKey);
+      expect(part.partLength, const Duration(seconds: 2));
     });
   });
 

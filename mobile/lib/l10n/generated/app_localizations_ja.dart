@@ -15960,4 +15960,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collabRoomSwapSeatSemanticLabel => 'この場所を入れ替える';
+
+  @override
+  String get collabRoomArrangementSideBySide => '左右に並べる';
+
+  @override
+  String get collabRoomArrangementSeries => '順番につなぐ';
+
+  @override
+  String get collabRoomPartLengthLabel => '各パートの長さ';
+
+  @override
+  String get collabRoomSwapOrderHint => '2つのパートをタップすると順番が入れ替わります。';
+
+  @override
+  String collabRoomFilmSeriesHint(String seconds) {
+    return 'それぞれが自分のパートを最大$seconds秒で撮ります。パートは順番に再生されます。';
+  }
+
+  @override
+  String get collabRoomSeriesReadyHint => '全員のパートがそろいました。つなげましょう！';
 }
