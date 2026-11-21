@@ -171,6 +171,51 @@ void main() {
       });
     }
 
+    test(
+      'drops unsafe effective timestamps without losing neighboring clips',
+      () {
+        Map<String, Object> clip(String id, List<List<String>> tags) => {
+          'id': id,
+          'pubkey': _issuer,
+          'title': 'Synthetic clip',
+          'thumbnail': '',
+          'created_at': 1700000000,
+          'kind': 34236,
+          'tags': tags,
+          'moderation_labels': <String>[],
+          'verified_archive': false,
+          'archive_provenance_available': true,
+        };
+        final safeId = 'b' * 64;
+        final result = parseBadgeDiscoveryResponse({
+          'badges': [
+            {
+              'definition': _badge,
+              'holder_count': 1,
+              'follower_count': 0,
+              'videos': [
+                clip('a' * 64, [
+                  ['published_at', '8640000000001'],
+                ]),
+                clip(safeId, [
+                  ['published_at', '8640000000001'],
+                  ['published_at', '1700000001'],
+                ]),
+                clip('c' * 64, [
+                  ['published_at', '-8640000000001'],
+                ]),
+              ],
+            },
+          ],
+        });
+        expect(result.single.videos.single.id, safeId);
+        expect(result.single.videos.single.tags, [
+          ['published_at', '8640000000001'],
+          ['published_at', '1700000001'],
+        ]);
+      },
+    );
+
     test('a malformed indexed payload is a typed failure', () async {
       final transport = MockClient(
         (_) async => http.Response('{"badges":[7]}', 200),
