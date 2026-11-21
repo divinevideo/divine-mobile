@@ -4623,6 +4623,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Przekaźnik nie przyjął zmiany. Spróbuj za chwilę.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Ten film zmienił się na innym urządzeniu i ma teraz za dużo tagów lub osób współtworzących. Otwórz go ponownie i usuń część.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Nie udało się zaktualizować tego filmu. Spróbuj ponownie.';
 

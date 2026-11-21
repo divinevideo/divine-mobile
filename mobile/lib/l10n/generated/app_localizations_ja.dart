@@ -4206,6 +4206,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'リレーが更新を受け付けなかった。少ししてからもう一回試してみて。';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'この動画は別のデバイスで変更され、タグまたはコラボレーターが多すぎます。もう一度開いて、いくつか削除してください。';
+
+  @override
   String get videoUpdateErrorGeneric => 'この動画を更新できなかった。もう一回試してみて。';
 
   @override

@@ -1540,6 +1540,7 @@
   "videoUpdateErrorNoPlayableVideo": "هذا الفيديو ليس له مصدر قابل للتشغيل، لذا لا يمكن تعديله.",
   "videoUpdateErrorCouldNotSign": "تعذّر توقيع التحديث. حاول مرّة أخرى.",
   "videoUpdateErrorPublishRejected": "لم يقبل الريلاي التحديث. حاول مرّة أخرى بعد قليل.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "تغيّر هذا الفيديو على جهاز آخر وأصبح فيه عدد كبير جدًا من الوسوم أو المتعاونين. يُرجى فتحه مجددًا وحذف بعضها.",
   "videoUpdateErrorGeneric": "تعذّر تحديث هذا الفيديو. حاول مرّة أخرى.",
   "shareMenuDeleteVideoQuestion": "حذف الفيديو؟",
   "shareMenuDeleteCleanupInProgress": "جارٍ إزالة الفيديو…",

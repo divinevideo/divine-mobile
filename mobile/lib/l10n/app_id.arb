@@ -1547,6 +1547,7 @@
   "videoUpdateErrorNoPlayableVideo": "Video ini tidak punya sumber yang bisa diputar, jadi tidak bisa diedit.",
   "videoUpdateErrorCouldNotSign": "Gagal menandatangani pembaruan. Coba lagi.",
   "videoUpdateErrorPublishRejected": "Relay tidak menerima pembaruan. Coba lagi sebentar lagi.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Video ini diubah di perangkat lain dan sekarang punya terlalu banyak tag atau kolaborator. Buka lagi dan hapus beberapa.",
   "videoUpdateErrorGeneric": "Gagal memperbarui video ini. Coba lagi.",
   "shareMenuDeleteVideoQuestion": "Hapus Video?",
   "shareMenuDeleteCleanupInProgress": "Menghapus video…",

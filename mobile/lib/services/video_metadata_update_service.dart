@@ -367,7 +367,7 @@ class VideoMetadataUpdateService {
         if (collaboratorPubkeys.difference(existingCollaborators).isNotEmpty) {
           // Do not silently discard either device's collaborator choices.
           throw const _VideoUpdateException(
-            VideoMetadataUpdateError.generic,
+            VideoMetadataUpdateError.concurrentEditsOverLimit,
             'Concurrent edits exceed the collaborator limit',
           );
         }
@@ -380,7 +380,7 @@ class VideoMetadataUpdateService {
           .toSet();
       if (mergedHashtags.length > HashtagExtractor.maxHashtagsPerVideo) {
         throw const _VideoUpdateException(
-          VideoMetadataUpdateError.generic,
+          VideoMetadataUpdateError.concurrentEditsOverLimit,
           'Concurrent edits exceed the hashtag limit',
         );
       }
