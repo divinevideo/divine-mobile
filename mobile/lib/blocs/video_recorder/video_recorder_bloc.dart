@@ -854,7 +854,7 @@ class VideoRecorderBloc
       if (!resumed || revision != _lifecycleRevision || _isClosing) return;
       // A camera that does not come back would leave a black preview. Show
       // the initialization error instead; the next initialize (leaving and
-      // and returning from a non-recording tab, or reopening) recovers.
+      // returning from a non-recording tab, or reopening) recovers.
       emit(
         state.copyWith(
           isCameraInitialized: false,
