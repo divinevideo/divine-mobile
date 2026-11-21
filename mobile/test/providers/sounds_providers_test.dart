@@ -2,6 +2,7 @@
 // ABOUTME: Verifies SoundsRepository provider, trending sounds, and selected sound state
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
@@ -10,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -27,6 +30,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:sounds_repository/sounds_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 // Mock classes
@@ -1073,6 +1077,65 @@ void main() {
           () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
         );
       });
+    });
+
+    group('soundSearchPagesProvider with Funnelcake failing a later page', () {
+      // The client's exceptions name the request's URL, and a search URL
+      // holds the words typed. A page that fails after the first must not
+      // put them in the captured logs.
+      const query = 'rainy lullaby';
+
+      for (final (name, failLater)
+          in <(String, Future<http.Response> Function())>[
+            ('an error status', () async => http.Response('down', 503)),
+            ('a timeout', () async => throw TimeoutException('slow')),
+          ]) {
+        test('keeps the query out of the logs after $name', () async {
+          var requests = 0;
+          final client = FunnelcakeApiClient(
+            baseUrl: 'https://api.example',
+            retryBaseDelay: Duration.zero,
+            httpClient: MockClient((request) async {
+              if (requests++ > 0) return failLater();
+              return http.Response(
+                jsonEncode({
+                  'data': <Object>[],
+                  'pagination': {'next_cursor': 'o:50', 'has_more': true},
+                }),
+                200,
+              );
+            }),
+          );
+          final repository = SoundsRepository(
+            nostrClient: MockNostrClient(),
+            funnelcakeApiClient: client,
+          );
+          addTearDown(repository.dispose);
+          final container = ProviderContainer(
+            overrides: [soundsRepositoryProvider.overrideWithValue(repository)],
+          );
+          addTearDown(container.dispose);
+          final provider = soundSearchPagesProvider(query);
+          final subscription = container.listen(provider, (_, _) {});
+          addTearDown(subscription.close);
+          final logsBefore =
+              (await LogCaptureService().getAllLogsAsText()).length;
+
+          expect((await container.read(provider.future)).hasMore, isTrue);
+          await container.read(provider.notifier).loadMore();
+
+          expect(container.read(provider).requireValue.hasMore, isFalse);
+          expect(requests, greaterThan(1));
+          final logs = (await LogCaptureService().getAllLogsAsText()).skip(
+            logsBefore,
+          );
+          expect(
+            logs.where((line) => line.contains('Could not load more sounds')),
+            isNotEmpty,
+          );
+          expect(logs.where((line) => line.contains('rainy')), isEmpty);
+        });
+      }
     });
 
     group('soundSearchPagesProvider', () {

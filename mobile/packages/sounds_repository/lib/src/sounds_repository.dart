@@ -21,6 +21,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:sounds_repository/src/sound_library_api_client.dart';
+import 'package:sounds_repository/src/sound_search_page_exception.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The sounds being picked up right now, the most trending first, with the
@@ -850,9 +851,7 @@ class SoundsRepository {
       try {
         return await _newestIndexPage(client, kind: kind, authors: authors);
       } on Exception catch (e) {
-        final reason = e is FunnelcakeApiException
-            ? 'status ${e.statusCode}'
-            : '${e.runtimeType}';
+        final reason = _failureReason(e);
         Log.warning(
           'Funnelcake could not list sounds ($reason), listing the relays',
           name: 'SoundsRepository',
@@ -965,6 +964,13 @@ class SoundsRepository {
     return authors.toList();
   }
 
+  /// Why a Funnelcake request failed, for a log: its status code, or the
+  /// type of the error. Not the exception itself, whose URL would put a
+  /// search query in the logs.
+  static String _failureReason(Exception e) => e is FunnelcakeApiException
+      ? 'status ${e.statusCode}'
+      : '${e.runtimeType}';
+
   /// Sounds matching [query], a page at a time.
   ///
   /// Funnelcake's sound search answers when it can. It finds sounds despite
@@ -998,7 +1004,10 @@ class SoundsRepository {
   /// and the sounds found are cached like any other fetch.
   ///
   /// Throws a [FunnelcakeNotConfiguredException] for a [cursor] without a
-  /// Funnelcake client: only Funnelcake hands out cursors.
+  /// Funnelcake client: only Funnelcake hands out cursors. A page for a
+  /// [cursor] that fails with an [Exception] throws a
+  /// [SoundSearchPageException] that names only why, since the request's own
+  /// exceptions carry its URL and with it the query.
   Future<SoundSearchResults> searchSounds(
     String query, {
     SoundKind? kind,
@@ -1020,14 +1029,18 @@ class SoundsRepository {
     final client = _funnelcakeApiClient;
     if (cursor != null) {
       if (client == null) throw const FunnelcakeNotConfiguredException();
-      return _searchFunnelcake(
-        client,
-        terms,
-        kind: kind,
-        authors: authors,
-        limit: limit,
-        cursor: cursor,
-      );
+      try {
+        return await _searchFunnelcake(
+          client,
+          terms,
+          kind: kind,
+          authors: authors,
+          limit: limit,
+          cursor: cursor,
+        );
+      } on Exception catch (e) {
+        throw SoundSearchPageException(_failureReason(e));
+      }
     }
     if (client != null && client.isAvailable) {
       try {
@@ -1039,10 +1052,7 @@ class SoundsRepository {
           limit: limit,
         );
       } on Exception catch (e) {
-        // Not the exception itself: its URL would put the query in the logs.
-        final reason = e is FunnelcakeApiException
-            ? 'status ${e.statusCode}'
-            : '${e.runtimeType}';
+        final reason = _failureReason(e);
         Log.warning(
           'Funnelcake could not search sounds ($reason), searching the relays',
           name: 'SoundsRepository',

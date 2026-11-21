@@ -1132,21 +1132,44 @@ void main() {
           ).called(1);
         });
 
-        test('throws what a later page throws, without the relays', () async {
-          failSearch(
+        for (final (name, failure, reason) in <(String, Exception, String)>[
+          (
+            'an error status',
             const FunnelcakeApiException(
               message: 'unavailable',
               statusCode: 503,
-              url: 'https://example.com',
+              url: 'https://example.com/api/v2/search/sounds?q=wind',
             ),
-          );
+            'status 503',
+          ),
+          (
+            'a timeout',
+            const FunnelcakeTimeoutException(
+              'https://example.com/api/v2/search/sounds?q=wind',
+            ),
+            'FunnelcakeTimeoutException',
+          ),
+        ]) {
+          test('throws for a later page that fails with $name, naming only '
+              'why, without the relays', () async {
+            failSearch(failure);
 
-          await expectLater(
-            searching.searchSounds('wind', cursor: '50'),
-            throwsA(isA<FunnelcakeApiException>()),
-          );
-          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
-        });
+            final error = await searching
+                .searchSounds('wind', cursor: '50')
+                .then<Object?>((_) => null, onError: (Object e) => e);
+
+            expect(
+              error,
+              isA<SoundSearchPageException>().having(
+                (e) => e.reason,
+                'reason',
+                reason,
+              ),
+            );
+            expect('$error', isNot(contains('wind')));
+            verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+          });
+        }
 
         test('throws for a later page without a Funnelcake client', () async {
           await expectLater(
