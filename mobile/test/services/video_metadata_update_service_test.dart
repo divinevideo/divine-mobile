@@ -11,6 +11,7 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:characters/characters.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
@@ -995,6 +996,68 @@ void main() {
 
           expect(result, isA<VideoUpdateFailure>());
           verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+        },
+      );
+
+      test('refuses two ten-tag edits whose union exceeds the limit', () async {
+        final shared = [for (var i = 0; i < 9; i++) 'shared$i'];
+        final opened = _testVideo(
+          extraTags: [
+            for (final tag in shared) ['t', tag],
+          ],
+        );
+        relaysHold(
+          newerRevision(
+            extraTags: [
+              for (final tag in [...shared, 'remotetenth']) ['t', tag],
+            ],
+          ),
+        );
+        final localTags = {...shared, 'localtenth'};
+        expect(localTags, hasLength(HashtagExtractor.maxHashtagsPerVideo));
+
+        final result = await service.updateVideo(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(tags: localTags),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateFailure>());
+        verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+      });
+
+      test(
+        'publishes a merge that lands exactly on the hashtag limit',
+        () async {
+          final shared = [for (var i = 0; i < 8; i++) 'shared$i'];
+          final opened = _testVideo(
+            extraTags: [
+              for (final tag in shared) ['t', tag],
+            ],
+          );
+          relaysHold(
+            newerRevision(
+              extraTags: [
+                for (final tag in [...shared, 'remoteninth']) ['t', tag],
+              ],
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(
+              opened,
+            ).copyWith(tags: {...shared, 'localninth'}),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where((tag) => tag.first == 't').map((tag) => tag[1]),
+            unorderedEquals([...shared, 'remoteninth', 'localninth']),
+          );
         },
       );
 

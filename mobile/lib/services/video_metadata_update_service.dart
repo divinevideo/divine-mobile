@@ -371,6 +371,18 @@ class VideoMetadataUpdateService {
           );
         }
       }
+      // The merged set only passes the limit when this edit added a tag the
+      // newest revision lacks, and publishing would drop it silently.
+      final mergedHashtags = edits.tags
+          .map(HashtagExtractor.normalizeVideoHashtag)
+          .whereType<String>()
+          .toSet();
+      if (mergedHashtags.length > HashtagExtractor.maxHashtagsPerVideo) {
+        throw const _VideoUpdateException(
+          VideoMetadataUpdateError.generic,
+          'Concurrent edits exceed the hashtag limit',
+        );
+      }
       bool isPromotedMentionPTag(List<String> tag) {
         if (tag.length < 4 ||
             tag.first != 'p' ||
