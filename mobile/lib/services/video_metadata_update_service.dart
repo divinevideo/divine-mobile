@@ -295,8 +295,10 @@ class VideoMetadataUpdateService {
     VideoEvent? editorBaseline,
     File? newThumbnailFile,
   }) async {
+    final owner = originalVideo.pubkey;
+    bool ownsEdit() => _authService.currentPublicKeyHex == owner;
     try {
-      if (!_authService.isAuthenticated) {
+      if (!_authService.isAuthenticated || !ownsEdit()) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.notAuthenticated,
           'User not authenticated',
@@ -309,6 +311,11 @@ class VideoMetadataUpdateService {
         logName: 'VideoMetadataUpdateService',
       );
       if (latest == null) return const VideoUpdateOriginalUnavailable();
+      if (!ownsEdit()) {
+        return const VideoUpdateFailure(
+          VideoMetadataUpdateError.notAuthenticated,
+        );
+      }
 
       String? uploadedThumbnailUrl;
       if (newThumbnailFile != null) {
@@ -318,7 +325,7 @@ class VideoMetadataUpdateService {
         _imetaTagsForEdit(latest.tags, fallback: beforeUpload);
         final uploadResult = await _blossomService.uploadImage(
           imageFile: newThumbnailFile,
-          nostrPubkey: _authService.currentPublicKeyHex ?? '',
+          nostrPubkey: owner,
         );
         if (uploadResult.success && uploadResult.cdnUrl != null) {
           uploadedThumbnailUrl = uploadResult.cdnUrl;
@@ -536,6 +543,11 @@ class VideoMetadataUpdateService {
 
       // Use raw Nostr created_at, not the stable NIP-71 published_at value
       // exposed through VideoEvent.createdAt, so relays accept replacements.
+      if (!ownsEdit()) {
+        return const VideoUpdateFailure(
+          VideoMetadataUpdateError.notAuthenticated,
+        );
+      }
       final event = await _authService.createAndSignEvent(
         kind: latest.kind,
         content: content,
@@ -543,7 +555,7 @@ class VideoMetadataUpdateService {
         createdAt: nextReplacementCreatedAtAfter(latest.createdAt),
       );
 
-      if (event == null) {
+      if (event == null || event.pubkey != owner || !ownsEdit()) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.couldNotSign,
           'Failed to create updated event',
@@ -561,12 +573,17 @@ class VideoMetadataUpdateService {
         );
       }
 
-      _personalEventCache.cacheUserEvent(event);
-
       final updatedVideoEvent = VideoEvent.fromNostrEvent(
         event,
         permissive: true,
       );
+      if (!ownsEdit()) {
+        return VideoUpdateSuccess(
+          updatedEvent: updatedVideoEvent,
+          inviteFailureCount: 0,
+        );
+      }
+      _personalEventCache.cacheUserEvent(event);
       _videoEventService.updateVideoEvent(updatedVideoEvent);
 
       final inviteFailureCount = await _sendCollaboratorInvites(

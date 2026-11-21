@@ -144,6 +144,9 @@ class SubtitleRepository {
     final vtt = SubtitleService.generateVtt(cues);
     final bytes = Uint8List.fromList(utf8.encode(vtt));
 
+    if (_authService.currentPublicKeyHex != signedIn) {
+      throw SubtitleEditException('Account changed before subtitle upload');
+    }
     final upload = await _blossom.uploadSubtitleVtt(bytes: bytes);
     final blossomUrl = upload.url;
     if (!upload.success || blossomUrl == null) {
@@ -172,12 +175,14 @@ class SubtitleRepository {
       throw SubtitleEditException('Video republish failed');
     }
 
-    final published = await _publisher.publishSubtitleEvent(
-      video: updatedVideo,
-      vttContent: vtt,
-      blossomUrl: blossomUrl,
-      lang: trackLang,
-    );
+    final published = _authService.currentPublicKeyHex != signedIn
+        ? null
+        : await _publisher.publishSubtitleEvent(
+            video: updatedVideo,
+            vttContent: vtt,
+            blossomUrl: blossomUrl,
+            lang: trackLang,
+          );
     if (published == null) {
       throw SubtitleEditException(
         'Republished video ${updatedVideo.id}, but its subtitle event was not '
