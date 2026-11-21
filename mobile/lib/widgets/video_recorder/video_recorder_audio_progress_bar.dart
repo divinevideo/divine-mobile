@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
@@ -142,16 +141,20 @@ class _AudioWaveformProgress extends ConsumerWidget {
   final Float32List? rightChannel;
   final Duration audioDuration;
 
-  /// Maximum allowed recording duration.
-  static const Duration _maxDuration = VideoEditorConstants.maxDuration;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(
       clipManagerProvider.select(
-        (s) => (clips: s.clips, activeRecording: s.activeRecordingDuration),
+        (s) => (
+          clips: s.clips,
+          activeRecording: s.activeRecordingDuration,
+          // The post length, or a series part's length in a Together room:
+          // the stretch of the sound the take will use.
+          maxDuration: s.durationLimit,
+        ),
       ),
     );
+    final maxDuration = state.maxDuration;
     final startOffset =
         ref.watch(
           videoEditorProvider.select((s) => s.selectedSound?.startOffset),
@@ -168,7 +171,7 @@ class _AudioWaveformProgress extends ConsumerWidget {
     // Calculate progress as ratio of recorded to max duration
     final progress =
         recordedDuration.inMilliseconds /
-        _maxDuration.inMilliseconds.clamp(1, double.infinity);
+        maxDuration.inMilliseconds.clamp(1, double.infinity);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -190,7 +193,7 @@ class _AudioWaveformProgress extends ConsumerWidget {
               inactiveColor: VineTheme.whiteText.withValues(alpha: 0.32),
               activeBackgroundColor: VineTheme.scrim15,
               audioDuration: audioDuration,
-              maxDuration: _maxDuration,
+              maxDuration: maxDuration,
               heightFactor: heightFactor,
               startOffset: startOffset,
             ),
