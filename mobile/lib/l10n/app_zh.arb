@@ -7278,6 +7278,8 @@
   "updateUrgentTitle": "你缺少重要修复",
   "updateNotNow": "暂不",
   "updateAction": "更新",
+  "announcementViewContest": "查看比赛",
+  "featuredFeedUnavailable": "此精选动态已不可用。",
   "updateNewIn": "{version} 新增内容：",
   "settingsUpdateAvailable": "有可用更新",
   "soundUploadChooseFile": "选择音频文件",

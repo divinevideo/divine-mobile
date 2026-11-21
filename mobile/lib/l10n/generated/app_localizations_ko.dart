@@ -14699,6 +14699,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateAction => '업데이트';
 
   @override
+  String get announcementViewContest => '콘테스트 보기';
+
+  @override
+  String get featuredFeedUnavailable => '이 추천 피드는 더 이상 이용할 수 없어요.';
+
+  @override
   String updateNewIn(String version) {
     return '$version의 새로운 기능:';
   }

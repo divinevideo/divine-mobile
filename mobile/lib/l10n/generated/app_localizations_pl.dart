@@ -15725,6 +15725,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get updateAction => 'Aktualizuj';
 
   @override
+  String get announcementViewContest => 'Zobacz konkurs';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Ten polecany kanał nie jest już dostępny.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nowości w wersji $version:';
   }

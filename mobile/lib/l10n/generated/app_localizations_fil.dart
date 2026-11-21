@@ -15542,6 +15542,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get updateAction => 'I-update';
 
   @override
+  String get announcementViewContest => 'Tingnan ang contest';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Hindi na available ang featured feed na ito.';
+
+  @override
   String updateNewIn(String version) {
     return 'Bago sa $version:';
   }

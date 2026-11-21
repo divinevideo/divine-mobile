@@ -15297,6 +15297,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get updateAction => 'Perbarui';
 
   @override
+  String get announcementViewContest => 'Lihat kontes';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Feed unggulan ini sudah tidak tersedia.';
+
+  @override
   String updateNewIn(String version) {
     return 'Yang baru di $version:';
   }

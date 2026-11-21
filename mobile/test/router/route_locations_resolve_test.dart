@@ -116,6 +116,9 @@ final _locations = <String, List<String>>{
     RoutePaths.curatedListByAuthorFor(pubkey: _pubkeyHex, listId: _listId),
   ],
   'curatedListFeedForId': [RoutePaths.curatedListFeedForId(_listId)],
+  'exploreFeaturedCampaign': [
+    RoutePaths.exploreFeaturedCampaign('ft_a1b2c3d4'),
+  ],
   'exploreForIndex': [
     RoutePaths.exploreForIndex(null),
     RoutePaths.exploreForIndex(3),

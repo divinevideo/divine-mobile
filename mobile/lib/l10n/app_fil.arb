@@ -4998,6 +4998,8 @@
   "updateUrgentTitle": "May mahahalagang pag-aayos na wala ka pa",
   "updateNotNow": "Hindi ngayon",
   "updateAction": "I-update",
+  "announcementViewContest": "Tingnan ang contest",
+  "featuredFeedUnavailable": "Hindi na available ang featured feed na ito.",
   "updateNewIn": "Bago sa {version}:",
   "settingsUpdateAvailable": "May update",
   "soundUploadChooseFile": "Pumili ng audio file",

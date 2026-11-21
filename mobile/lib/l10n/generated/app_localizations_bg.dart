@@ -15552,6 +15552,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get updateAction => 'Актуализиране';
 
   @override
+  String get announcementViewContest => 'Виж конкурса';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Тази избрана емисия вече не е достъпна.';
+
+  @override
   String updateNewIn(String version) {
     return 'Ново във версия $version:';
   }

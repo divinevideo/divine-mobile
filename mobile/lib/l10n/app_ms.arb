@@ -7278,6 +7278,8 @@
   "updateUrgentTitle": "Anda kehilangan pembaikan penting",
   "updateNotNow": "Bukan sekarang",
   "updateAction": "Kemas kini",
+  "announcementViewContest": "Lihat pertandingan",
+  "featuredFeedUnavailable": "Suapan pilihan ini tidak lagi tersedia.",
   "updateNewIn": "Baharu dalam {version}:",
   "settingsUpdateAvailable": "Kemas kini tersedia",
   "soundUploadChooseFile": "Pilih fail audio",

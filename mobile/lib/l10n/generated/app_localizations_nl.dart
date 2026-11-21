@@ -15487,6 +15487,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get updateAction => 'Bijwerken';
 
   @override
+  String get announcementViewContest => 'Wedstrijd bekijken';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Deze uitgelichte feed is niet meer beschikbaar.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nieuw in $version:';
   }

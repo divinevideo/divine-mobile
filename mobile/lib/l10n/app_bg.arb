@@ -6085,6 +6085,8 @@
   "updateUrgentTitle": "Пропускаш важни поправки",
   "updateNotNow": "Не сега",
   "updateAction": "Актуализиране",
+  "announcementViewContest": "Виж конкурса",
+  "featuredFeedUnavailable": "Тази избрана емисия вече не е достъпна.",
   "updateNewIn": "Ново във версия {version}:",
   "settingsUpdateAvailable": "Налична е актуализация",
   "soundUploadChooseFile": "Избери аудиофайл",

@@ -12514,6 +12514,10 @@
   "updateUrgentTitle": "You're missing important fixes",
   "updateNotNow": "Not now",
   "updateAction": "Update",
+  "announcementViewContest": "View contest",
+  "@announcementViewContest": {"description": "Button opening an official contest after its native announcement description."},
+  "featuredFeedUnavailable": "This featured feed is no longer available.",
+  "@featuredFeedUnavailable": {"description": "Safe destination when a campaign points to a missing, ended, or disabled featured feed."},
   "updateNewIn": "New in {version}:",
   "@updateNewIn": {
     "description": "Heading before highlights for an available app update.",

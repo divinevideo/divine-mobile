@@ -14503,6 +14503,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateAction => '更新';
 
   @override
+  String get announcementViewContest => '查看比赛';
+
+  @override
+  String get featuredFeedUnavailable => '此精选动态已不可用。';
+
+  @override
   String updateNewIn(String version) {
     return '$version 新增内容：';
   }

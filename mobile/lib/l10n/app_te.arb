@@ -8940,6 +8940,8 @@
   "updateUrgentTitle": "మీకు ముఖ్యమైన పరిష్కారాలు అందడం లేదు",
   "updateNotNow": "ఇప్పుడు వద్దు",
   "updateAction": "అప్‌డేట్ చేయండి",
+  "announcementViewContest": "పోటీని చూడండి",
+  "featuredFeedUnavailable": "ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.",
   "updateNewIn": "{version}లో కొత్తవి:",
   "settingsUpdateAvailable": "అప్‌డేట్ అందుబాటులో ఉంది",
   "soundUploadChooseFile": "ఆడియో ఫైల్‌ను ఎంచుకోండి",

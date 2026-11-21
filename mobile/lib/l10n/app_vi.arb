@@ -7278,6 +7278,8 @@
   "updateUrgentTitle": "Bạn đang thiếu các bản sửa lỗi quan trọng",
   "updateNotNow": "Để sau",
   "updateAction": "Cập nhật",
+  "announcementViewContest": "Xem cuộc thi",
+  "featuredFeedUnavailable": "Bảng tin nổi bật này không còn khả dụng.",
   "updateNewIn": "Điểm mới trong {version}:",
   "settingsUpdateAvailable": "Có bản cập nhật",
   "soundUploadChooseFile": "Chọn tệp âm thanh",

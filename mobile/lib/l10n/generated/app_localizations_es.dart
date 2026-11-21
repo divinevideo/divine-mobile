@@ -15588,6 +15588,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updateAction => 'Actualizar';
 
   @override
+  String get announcementViewContest => 'Ver concurso';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Este feed destacado ya no está disponible.';
+
+  @override
   String updateNewIn(String version) {
     return 'Novedades de $version:';
   }

@@ -5968,6 +5968,8 @@
   "updateUrgentTitle": "Îți lipsesc remedieri importante",
   "updateNotNow": "Nu acum",
   "updateAction": "Actualizează",
+  "announcementViewContest": "Vezi concursul",
+  "featuredFeedUnavailable": "Acest flux recomandat nu mai este disponibil.",
   "updateNewIn": "Noutăți în {version}:",
   "settingsUpdateAvailable": "Actualizare disponibilă",
   "soundUploadChooseFile": "Alege un fișier audio",

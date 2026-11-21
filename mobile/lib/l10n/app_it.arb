@@ -5968,6 +5968,8 @@
   "updateUrgentTitle": "Ti mancano correzioni importanti",
   "updateNotNow": "Non ora",
   "updateAction": "Aggiorna",
+  "announcementViewContest": "Vedi il concorso",
+  "featuredFeedUnavailable": "Questo feed in evidenza non è più disponibile.",
   "updateNewIn": "Novità nella versione {version}:",
   "settingsUpdateAvailable": "Aggiornamento disponibile",
   "soundUploadChooseFile": "Scegli un file audio",

@@ -5968,6 +5968,8 @@
   "updateUrgentTitle": "Brakuje Ci ważnych poprawek",
   "updateNotNow": "Nie teraz",
   "updateAction": "Aktualizuj",
+  "announcementViewContest": "Zobacz konkurs",
+  "featuredFeedUnavailable": "Ten polecany kanał nie jest już dostępny.",
   "updateNewIn": "Nowości w wersji {version}:",
   "settingsUpdateAvailable": "Dostępna aktualizacja",
   "soundUploadChooseFile": "Wybierz plik audio",

@@ -5968,6 +5968,8 @@
   "updateUrgentTitle": "Je mist belangrijke oplossingen",
   "updateNotNow": "Niet nu",
   "updateAction": "Bijwerken",
+  "announcementViewContest": "Wedstrijd bekijken",
+  "featuredFeedUnavailable": "Deze uitgelichte feed is niet meer beschikbaar.",
   "updateNewIn": "Nieuw in {version}:",
   "settingsUpdateAvailable": "Update beschikbaar",
   "soundUploadChooseFile": "Audiobestand kiezen",
