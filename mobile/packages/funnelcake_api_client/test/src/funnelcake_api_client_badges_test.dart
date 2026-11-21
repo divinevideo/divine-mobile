@@ -78,7 +78,7 @@ void main() {
       expect(clip.archiveProvenanceAvailable, isTrue);
     });
 
-    test('hands off to relay fallback after one failed request', () async {
+    test('reports the HTTP error after one request', () async {
       var calls = 0;
       final transport = MockClient((_) async {
         calls++;
@@ -98,6 +98,78 @@ void main() {
       );
       expect(calls, 1);
     });
+
+    test('transport failures preserve their cause and stack', () async {
+      final original = StateError('transport failed');
+      final originalStack = StackTrace.fromString('transport-boundary');
+      final transport = MockClient(
+        (_) async => Error.throwWithStackTrace(original, originalStack),
+      );
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(client.dispose);
+      addTearDown(transport.close);
+      try {
+        await client.getBadgeDiscovery();
+        fail('expected transport failure');
+      } catch (error, stackTrace) {
+        expect(
+          error,
+          isA<FunnelcakeException>()
+              .having(
+                (e) => e.message,
+                'message',
+                'Failed to fetch badge discovery',
+              )
+              .having((e) => e.cause, 'cause', same(original)),
+        );
+        expect(stackTrace.toString(), contains('transport-boundary'));
+      }
+    });
+
+    for (final timestamp in [-1, 8640000000001]) {
+      test('rejects unrepresentable preview timestamp $timestamp', () async {
+        final transport = MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'badges': [
+                {
+                  'definition': _badge,
+                  'holder_count': 1,
+                  'follower_count': 0,
+                  'videos': [
+                    {
+                      'id': 'a' * 64,
+                      'pubkey': _issuer,
+                      'created_at': timestamp,
+                    },
+                  ],
+                },
+              ],
+            }),
+            200,
+          ),
+        );
+        final client = FunnelcakeApiClient(
+          baseUrl: 'https://api.example.com',
+          httpClient: transport,
+        );
+        addTearDown(client.dispose);
+        addTearDown(transport.close);
+        await expectLater(
+          client.getBadgeDiscovery(),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.cause.toString(),
+              'cause',
+              contains('Invalid badge preview timestamp'),
+            ),
+          ),
+        );
+      });
+    }
 
     test('a malformed indexed payload is a typed failure', () async {
       final transport = MockClient(

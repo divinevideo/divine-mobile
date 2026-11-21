@@ -553,7 +553,8 @@ class BadgeRepository {
   static const _detailDefinitionLimit = 32;
 
   /// Keep one publisher from filling the displayed community gallery.
-  static const _discoveryDefinitionsPerIssuer = 3;
+  static const int _discoveryDefinitionsPerIssuer =
+      badgeDiscoveryDefinitionsPerIssuer;
 
   /// Per-filter deletion limit; a read that fills it is incomplete.
   static const _discoveryDeletionLimit = 1000;
@@ -564,17 +565,55 @@ class BadgeRepository {
   /// Most accepted holders one community preview shows.
   static const holderPreviewLimit = 3;
 
-  /// Reads the active indexed first page in server rank order.
-  ///
-  /// The trusted API verifies definitions and applies public deletion and
-  /// moderation state. Viewer-specific visibility is checked on-device.
-  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery() async {
+  static const _indexedDiscoveryTimeout = Duration(milliseconds: 750);
+  bool _indexedDiscoveryNotFound = false;
+
+  /// Prefers the ranked index, falling back to verified relay discovery when
+  /// unavailable or empty before viewer filtering. A 404 is cached for this
+  /// repository session so refreshes do not repeatedly wait on an absent route.
+  Future<List<IndexedBadgeDiscovery>> loadIndexedDiscovery({
+    bool Function()? isActive,
+  }) async {
+    if (_disposed || !(isActive?.call() ?? true)) return const [];
+    List<IndexedBadgeCard>? cards;
     final api = _funnelcakeApiClient;
-    if (api == null) throw const FunnelcakeNotConfiguredException();
-    final cards = await api.getBadgeDiscovery().timeout(
-      const Duration(milliseconds: 750),
-    );
-    if (_disposed) return const [];
+    if (api != null && !_indexedDiscoveryNotFound) {
+      try {
+        cards = await api.getBadgeDiscovery().timeout(_indexedDiscoveryTimeout);
+      } on FunnelcakeNotConfiguredException {
+        // Relay-only environments intentionally have no index.
+      } on FunnelcakeApiException catch (error, stackTrace) {
+        if (error.statusCode == 404) {
+          _indexedDiscoveryNotFound = true;
+          Log.info(
+            'Badge discovery index ${error.url} returned 404; using relays',
+            name: 'BadgeRepository',
+            category: LogCategory.system,
+          );
+        } else {
+          Log.warning(
+            'Badge discovery index unavailable; using relays',
+            name: 'BadgeRepository',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        }
+      } on Exception catch (error, stackTrace) {
+        Log.warning(
+          'Badge discovery index unavailable; using relays',
+          name: 'BadgeRepository',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    if (_disposed || !(isActive?.call() ?? true)) return const [];
+    if (cards == null || cards.isEmpty) {
+      return [
+        for (final definition in await loadPublicDefinitions())
+          (definition: definition, videos: const <BadgeVideoPreview>[]),
+      ];
+    }
     final result = <IndexedBadgeDiscovery>[];
     final seen = <String>{};
     final counts = <String, int>{};
@@ -586,7 +625,11 @@ class BadgeRepository {
           !isBadgePubkey(event.pubkey) ||
           !event.isValid ||
           !_badgeSignaturePattern.hasMatch(event.sig)) {
-        throw const FormatException('Invalid indexed badge definition');
+        Log.warning(
+          'Skipping invalid indexed badge ${event.id} from ${pubkeyForLogs(event.pubkey)}',
+          name: 'BadgeRepository',
+        );
+        continue;
       }
       if ((_isHiddenPubkey?.call(event.pubkey) ?? false) ||
           !seen.add(definition.coordinate)) {
@@ -631,6 +674,16 @@ class BadgeRepository {
   /// and a deletion read was inconclusive, the caller must retry.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() =>
       _loadRelayDiscovery();
+
+  /// Appends federated discoveries under the same issuer cap as the index.
+  List<Nip58BadgeDefinition> mergeDiscoveryDefinitions(
+    List<Nip58BadgeDefinition> primary,
+    List<Nip58BadgeDefinition> federated,
+  ) => mergeBadgeDiscoveryDefinitions(
+    primary,
+    federated,
+    pinnedIssuers: _discoveryIssuerPubkeys.toSet(),
+  );
 
   /// Supplement the indexed page with definitions on configured external relays.
   Future<List<Nip58BadgeDefinition>> loadFederatedDiscovery() {

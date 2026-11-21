@@ -163,7 +163,128 @@ void main() {
   });
   tearDown(() => repository.dispose());
 
+  group('mergeBadgeDiscoveryDefinitions', () {
+    test('keeps ranked order, deduplicates, and caps across sources', () {
+      Nip58BadgeDefinition badge(String key, String identifier) =>
+          Nip58BadgeParser.parseDefinition(
+            definition(key, identifier: identifier),
+          )!;
+      final primary = [badge(key1, 'ranked'), badge(key2, 'official')];
+      final external = [
+        primary.first,
+        for (var i = 0; i < 4; i++) badge(key1, 'external-$i'),
+        for (var i = 0; i < 4; i++) badge(key2, 'official-$i'),
+      ];
+      final merged = mergeBadgeDiscoveryDefinitions(
+        primary,
+        external,
+        pinnedIssuers: {issuer2},
+      );
+      expect(
+        repository
+            .mergeDiscoveryDefinitions(primary, external)
+            .where((d) => d.event.pubkey == issuer2),
+        hasLength(3),
+      );
+      expect(merged.take(2), primary);
+      expect(merged.where((d) => d.event.pubkey == issuer1), hasLength(3));
+      expect(merged.where((d) => d.event.pubkey == issuer2), hasLength(5));
+      expect(mergeBadgeDiscoveryDefinitions(primary, []), same(primary));
+    });
+  });
+
   group('loadIndexedDiscovery', () {
+    test('a retired caller does not start relay fallback', () async {
+      final pending = Completer<List<IndexedBadgeCard>>();
+      when(api.getBadgeDiscovery).thenAnswer((_) => pending.future);
+      var active = true;
+      final load = repository.loadIndexedDiscovery(isActive: () => active);
+      active = false;
+      pending.complete([]);
+      expect(await load, isEmpty);
+      expect(requests, isEmpty);
+    });
+
+    test('an empty raw page falls back to primary relay definitions', () async {
+      final badge = definition(key1);
+      events = [badge];
+      when(api.getBadgeDiscovery).thenAnswer((_) async => []);
+      final cards = await repository.loadIndexedDiscovery();
+      expect(cards.map((card) => card.definition.event.id), [badge.id]);
+      expect(requests, isNotEmpty);
+    });
+
+    test('404 is logged and cached for subsequent relay refreshes', () async {
+      events = [definition(key1)];
+      when(api.getBadgeDiscovery).thenThrow(
+        const FunnelcakeApiException(
+          message: 'not found',
+          statusCode: 404,
+          url: 'https://api.example/api/badges/discovery',
+        ),
+      );
+      expect(await repository.loadIndexedDiscovery(), hasLength(1));
+      expect(await repository.loadIndexedDiscovery(), hasLength(1));
+      verify(api.getBadgeDiscovery).called(1);
+      expect(
+        LogCaptureService().getRecentLogs().map((entry) => entry.message),
+        contains(
+          contains('https://api.example/api/badges/discovery returned 404'),
+        ),
+      );
+    });
+
+    for (final error in <Exception>[
+      const FunnelcakeApiException(message: 'server', statusCode: 503),
+      TimeoutException('index deadline'),
+      const FormatException('malformed page'),
+      const FunnelcakeNotConfiguredException(),
+    ]) {
+      test('first-load $error uses verified relay cards', () async {
+        final badge = definition(key1);
+        events = [badge];
+        when(api.getBadgeDiscovery).thenThrow(error);
+        expect(
+          (await repository.loadIndexedDiscovery()).single.definition.event.id,
+          badge.id,
+        );
+        if (error is! FunnelcakeNotConfiguredException) {
+          expect(
+            LogCaptureService().getRecentLogs().any(
+              (entry) =>
+                  entry.message ==
+                      'Badge discovery index unavailable; using relays' &&
+                  entry.error.toString().contains(error.toString()) &&
+                  entry.stackTrace != null,
+            ),
+            isTrue,
+          );
+        }
+      });
+    }
+
+    test('one invalid definition does not drop valid neighbors', () async {
+      final invalid = definition(key1)..sig = '';
+      final valid = definition(key2);
+      when(api.getBadgeDiscovery).thenAnswer(
+        (_) async => [
+          for (final event in [invalid, valid])
+            (
+              definition: event,
+              holderCount: 0,
+              followerCount: 0,
+              videos: <BadgeVideoPreview>[],
+            ),
+        ],
+      );
+      final cards = await repository.loadIndexedDiscovery();
+      expect(cards.single.definition.event.id, valid.id);
+      expect(
+        LogCaptureService().getRecentLogs().map((e) => e.message),
+        contains(contains(invalid.id)),
+      );
+    });
+
     test(
       'uses server order without relay reads and hides blocked videos',
       () async {
@@ -261,7 +382,7 @@ void main() {
       },
     );
 
-    test('rejects corrupt signed data and filters hidden issuers', () async {
+    test('skips corrupt signed data and filters hidden issuers', () async {
       final hiddenBadge = definition(key1);
       hidden.add(issuer1);
       when(api.getBadgeDiscovery).thenAnswer(
@@ -275,11 +396,9 @@ void main() {
         ],
       );
       expect(await repository.loadIndexedDiscovery(), isEmpty);
+      expect(requests, isEmpty);
       hiddenBadge.sig = '';
-      await expectLater(
-        repository.loadIndexedDiscovery(),
-        throwsFormatException,
-      );
+      expect(await repository.loadIndexedDiscovery(), isEmpty);
     });
 
     test('a result arriving after disposal is discarded', () async {
