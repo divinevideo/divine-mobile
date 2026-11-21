@@ -12,6 +12,7 @@ dependencies:
   divine_video_player: any
   flutter:
     sdk: flutter
+  http: ^1.5.0
   media_cache: any
   models: any
   unified_logger: any

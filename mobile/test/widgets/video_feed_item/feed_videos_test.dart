@@ -1176,6 +1176,42 @@ void main() {
       expect(feed().preferB2Original, isFalse);
     });
 
+    testWidgets('server Bunny flag rolls back and gives B2 precedence', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final flags = FeatureFlagService(
+        await SharedPreferences.getInstance(),
+        const BuildConfiguration(),
+        canOverrideInternalFlags: () => true,
+      );
+      await flags.initialize();
+      addTearDown(flags.dispose);
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        additionalOverrides: [
+          featureFlagServiceProvider.overrideWithValue(flags),
+        ],
+      );
+      InfiniteVideoFeed feed() => tester.widget(find.byType(InfiniteVideoFeed));
+      expect(feed().bunnyPlaybackSelector, isNull);
+      await flags.setFlag(FeatureFlag.bunnyPlayback, true);
+      await tester.pump();
+      final selector = feed().bunnyPlaybackSelector;
+      expect(selector, isNotNull);
+      await flags.setFlag(FeatureFlag.debugTools, false);
+      await tester.pump();
+      expect(feed().bunnyPlaybackSelector, selector);
+      await flags.setFlag(FeatureFlag.b2PlaybackCanary, true);
+      await tester.pump();
+      expect(feed().bunnyPlaybackSelector, isNull);
+      await flags.setFlag(FeatureFlag.b2PlaybackCanary, false);
+      await flags.setFlag(FeatureFlag.bunnyPlayback, false);
+      await tester.pump();
+      expect(feed().bunnyPlaybackSelector, isNull);
+    });
+
     testWidgets('Bunny exposes configured paths only while opted in', (
       tester,
     ) async {

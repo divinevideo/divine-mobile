@@ -210,3 +210,28 @@ attempted. A Bunny 401, 403, or 404 must stop playback. An authenticated
 age-verification retry must open the canonical host and never send its viewer
 authorization to Bunny. Turning the flag off rebuilds playback from canonical
 sources without waiting for DNS.
+
+### Server-selected Bunny playback
+
+`bunnyPlayback` is an internal flag, off by default. Enable it per device in
+Developer Mode, or use `--dart-define=FF_BUNNY_PLAYBACK=true` in a test build.
+Android and iOS feeds query the canonical media service for each public parent;
+the server controls readiness, market and cohort selection. This includes exact
+original, 720p/480p MP4 and HLS master paths, without changing rendition order.
+The existing `bunnyPlaybackCanary` additionally accepts those exact HLS master
+and 480p paths through `BUNNY_PLAYBACK_PATHS` for isolated fixtures. B2 canary
+selection takes precedence. Authenticated retries remain canonical.
+
+Selection requests have a one-second deadline, at most eight concurrent parents,
+256 cached parents and 30-second expiry. Transport/configuration failures keep
+canonical playback. A policy denial remains terminal, including when event-key
+video bytes are cached. Bunny network/timeout/503 failures can use the matching
+canonical source; 401/403/404 and unknown failures stop. HLS children inherit the
+native host-wide cache bypass and carry no viewer credentials.
+
+Turning the flag off rebuilds live and queued sources and ignores late selection
+responses. Disk prefetch is suspended while server selection is active. Uploads
+continue through the canonical upload flow, and signed post URLs remain canonical;
+a newly published video can select Bunny after server enrollment is verified.
+Deploy the selection endpoint and verified publisher before testing this flag.
+There is no visual change outside the developer flag entry.

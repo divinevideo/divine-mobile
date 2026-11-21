@@ -110,7 +110,9 @@ const bunnyPlaybackHost = 'media-bunny.divine.video';
 bool isBunnyPlaybackSource(String source) =>
     Uri.tryParse(source)?.host == bunnyPlaybackHost;
 
-final _bunnyProgressivePath = RegExp(r'^/[a-f0-9]{64}(/720p\.mp4)?$');
+final _bunnyProgressivePath = RegExp(
+  r'^/[a-f0-9]{64}(/(720p|480p)\.mp4|/hls/master\.m3u8)?$',
+);
 
 /// Returns a path only for exact, unsigned HTTPS media URLs on the canonical
 /// host. Reconstructing the URL excludes queries, credentials and port aliases.
@@ -122,7 +124,7 @@ String? unsignedCanonicalMediaPath(String? source) {
       : null;
 }
 
-/// Returns the exact canonical path for an original or a 720p progressive MP4.
+/// Returns the canonical path for an original, progressive MP4 or HLS master.
 String? bunnyProgressivePath(String? source) {
   final path = unsignedCanonicalMediaPath(source);
   return path != null && _bunnyProgressivePath.hasMatch(path) ? path : null;

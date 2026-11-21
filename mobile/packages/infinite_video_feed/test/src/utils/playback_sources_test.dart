@@ -57,6 +57,39 @@ void main() {
         );
       });
 
+      test('inserts HLS master and 480p at their existing positions', () {
+        const hlsPath = '$rawPath/hls/master.m3u8';
+        const lowPath = '$rawPath/480p.mp4';
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _rawUrl),
+            urlResolver: (_) => 'https://media.divine.video$lowPath',
+            bunnyPlaybackPaths: const {lowPath, hlsPath},
+          ),
+          [
+            '$bunny$lowPath',
+            'https://media.divine.video$lowPath',
+            '$bunny$hlsPath',
+            _hlsUrl,
+            _rawUrl,
+          ],
+        );
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: _hlsUrl),
+            bunnyPlaybackPaths: const {hlsPath},
+          ).first,
+          '$bunny$hlsPath',
+        );
+        expect(
+          resolvePlaybackSources(
+            _makeVideo(videoUrl: '$_rawUrl/hls/stream_720p.m3u8'),
+            bunnyPlaybackPaths: const {'$rawPath/hls/stream_720p.m3u8'},
+          ),
+          isNot(contains(startsWith(bunny))),
+        );
+      });
+
       test('excludes signed and third-party source URLs', () {
         for (final original in [
           '$_rawUrl?token=test',

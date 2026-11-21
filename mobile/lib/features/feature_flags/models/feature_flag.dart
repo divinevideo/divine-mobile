@@ -91,6 +91,12 @@ enum FeatureFlag {
         'Internal per-device test; off restores canonical playback.',
     audience: FeatureFlagAudience.internal,
   ),
+  bunnyPlayback(
+    'Bunny Playback',
+    'Use Bunny for public videos selected by the server, including HLS. '
+        'Turn off to restore canonical playback.',
+    audience: FeatureFlagAudience.internal,
+  ),
   bunnyPlaybackCanary(
     'Bunny Playback Canary',
     'Try Bunny for verified public videos on this test device.',

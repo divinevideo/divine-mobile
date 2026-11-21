@@ -28,6 +28,7 @@ import 'package:openvine/models/view_traffic_source.dart'
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/bunny_playback_provider.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/playback_telemetry_provider.dart';
@@ -392,6 +393,16 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     final preferBunny = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.bunnyPlaybackCanary),
     );
+    final serverBunnyEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.bunnyPlayback),
+    );
+    final bunnySelector = serverBunnyEnabled
+        ? ref.watch(bunnyPlaybackSelectorProvider)
+        : null;
+    final nativeBunny =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final isFeedActive =
@@ -479,11 +490,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         cache: ref.read(mediaCacheProvider),
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
         preferB2Original: preferB2Original,
-        bunnyPlaybackPaths:
-            preferBunny &&
-                !kIsWeb &&
-                (defaultTargetPlatform == TargetPlatform.android ||
-                    defaultTargetPlatform == TargetPlatform.iOS)
+        bunnyPlaybackSelector: nativeBunny && !preferB2Original
+            ? bunnySelector?.select
+            : null,
+        bunnyPlaybackPaths: preferBunny && nativeBunny
             ? _bunnyPlaybackPaths
             : const {},
         initialIndex: widget.currentIndex,

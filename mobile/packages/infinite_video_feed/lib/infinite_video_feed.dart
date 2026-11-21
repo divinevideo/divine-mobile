@@ -6,6 +6,7 @@ export 'src/models/feed_first_frame_metric.dart';
 export 'src/models/feed_playback_telemetry.dart';
 export 'src/models/video_error_type.dart';
 export 'src/models/video_retry_result.dart';
+export 'src/services/bunny_playback_selector.dart';
 export 'src/utils/canonical_divine_url.dart'
     show b2OriginalPlaybackUrl, b2PlaybackHost, orderedUniqueSources;
 export 'src/utils/playback_sources.dart' show resolvePlaybackSources;

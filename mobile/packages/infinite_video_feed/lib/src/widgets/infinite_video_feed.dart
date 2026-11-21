@@ -53,6 +53,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.urlResolver,
     this.preferB2Original = false,
     this.bunnyPlaybackPaths = const {},
+    this.bunnyPlaybackSelector,
     this.loadingBuilder,
     this.errorBuilder,
     this.overlayBuilder,
@@ -127,9 +128,12 @@ class InfiniteVideoFeed extends StatefulWidget {
   /// Switching this off rebuilds subsequent playback with canonical sources.
   final bool preferB2Original;
 
-  /// Verified progressive MP4 paths for the Bunny canary on this test device.
+  /// Verified original, progressive MP4 and HLS master paths for this device.
   /// An empty set disables the canary.
   final Set<String> bunnyPlaybackPaths;
+
+  /// Fetches the server-selected public playback inventory. Null disables it.
+  final Future<Set<String>> Function(VideoEvent video)? bunnyPlaybackSelector;
 
   /// Builder for the loading state shown while a video initializes.
   final LoadingBuilder? loadingBuilder;
@@ -620,6 +624,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       oldWidget.bunnyPlaybackPaths,
     );
     final routingChanged =
+        widget.bunnyPlaybackSelector != oldWidget.bunnyPlaybackSelector ||
         bunnyPathsChanged ||
         widget.preferB2Original != oldWidget.preferB2Original;
     if (widget.videos == oldWidget.videos && !routingChanged) {
@@ -775,6 +780,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
     _controllers.clear();
     _controllerInitGenerations.clear();
+    _selectedBunnyPaths.clear();
     super.dispose();
   }
 
@@ -993,6 +999,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.start(index, controller);
   }
 
+  final _selectedBunnyPaths = <int, Set<String>>{};
+
   bool _hasViewerHeaders(int? index) =>
       _httpHeadersByIndex[index]?.isNotEmpty ?? false;
 
@@ -1003,7 +1011,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         preferB2Original: widget.preferB2Original,
         bunnyPlaybackPaths: _hasViewerHeaders(index)
             ? const {}
-            : widget.bunnyPlaybackPaths,
+            : {...widget.bunnyPlaybackPaths, ...?_selectedBunnyPaths[index]},
         derivativeFailureCache: _derivativeFailures,
       );
 
@@ -1075,9 +1083,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _telemetryLoads[index] = load;
     }
     _firstFrameTimerFor(index)?.attachLoad(load);
-    final bypassesCache =
-        widget.bunnyPlaybackPaths.isNotEmpty &&
-        _playbackSources(widget.videos[index], index: index).any(
+    final bypassesCache = _playbackSources(widget.videos[index], index: index)
+        .any(
           isBunnyPlaybackSource,
         );
     return {
@@ -1262,6 +1269,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       videos: widget.videos,
       resolveUrls: (video) {
         final sources = _playbackSources(video);
+        if (widget.bunnyPlaybackSelector != null && !widget.preferB2Original) {
+          return const [];
+        }
         // Event-key disk bytes can mask the Bunny attempt or its policy denial.
         if (sources.any(isBunnyPlaybackSource)) return const [];
         return sources
@@ -1312,6 +1322,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
     _controllers.clear();
     _controllerInitGenerations.clear();
+    _selectedBunnyPaths.clear();
   }
 
   // coverage:ignore-start
@@ -1336,6 +1347,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _httpHeadersByIndex.remove(index);
     _sources.remove(index);
     _controllerInitGenerations.remove(index);
+    _selectedBunnyPaths.remove(index);
     unawaited(_controllers.remove(index)?.dispose());
     _rebuildPage(index);
   }
@@ -1353,20 +1365,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final initGeneration = (_controllerInitGenerations[index] ?? 0) + 1;
     _controllerInitGenerations[index] = initGeneration;
 
-    final playbackSources = _playbackSources(video, index: index);
-    final usesBunny = playbackSources.any(isBunnyPlaybackSource);
-    final cachedFile =
-        skipCache ||
-            _hasViewerHeaders(index) ||
-            _bypassesDiskCache(playbackSources)
-        ? null
-        : widget.cache.getCachedFileSync(video.id);
-    final fromCache = cachedFile != null;
-
-    _log(
-      'Init player index $index (${video.id}) — '
-      '${fromCache ? 'from cache' : 'from network'}',
-    );
+    var playbackSources = _playbackSources(video, index: index);
+    var usesBunny = playbackSources.any(isBunnyPlaybackSource);
 
     // Render through Android's `SurfaceProducer` (ImageReader-backed, the
     // controller's default), not the legacy `SurfaceTextureEntry` this feed
@@ -1422,6 +1422,29 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
 
     try {
+      final selector = widget.bunnyPlaybackSelector;
+      if (selector != null &&
+          !widget.preferB2Original &&
+          !_hasViewerHeaders(index) &&
+          bunnyProgressivePath(video.videoUrl) != null &&
+          unsignedCanonicalMediaPath(_resolveUrl(video)) != null) {
+        final paths = await selector(video);
+        if (!guardInitOwnership('Bunny selection')) return false;
+        _selectedBunnyPaths[index] = paths;
+      }
+      playbackSources = _playbackSources(video, index: index);
+      usesBunny = playbackSources.any(isBunnyPlaybackSource);
+      final cachedFile =
+          skipCache ||
+              _hasViewerHeaders(index) ||
+              _bypassesDiskCache(playbackSources)
+          ? null
+          : widget.cache.getCachedFileSync(video.id);
+      final fromCache = cachedFile != null;
+      _log(
+        'Init player index $index (${video.id}) — '
+        '${fromCache ? 'from cache' : 'from network'}',
+      );
       await controller.initialize();
       if (!guardInitOwnership('initialize')) return false;
       unawaited(_networkSubscriptions.remove(index)?.cancel());
