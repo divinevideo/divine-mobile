@@ -73,6 +73,12 @@ int? mergeNullableEngagementMax(int? primary, int? secondary) {
   return math.max(primary ?? 0, secondary ?? 0);
 }
 
+/// Whether [candidate] wins over [previous] at their shared address per NIP-01.
+bool isNewerVideoRevision(VideoEvent candidate, VideoEvent previous) =>
+    candidate.nostrCreatedAt > previous.nostrCreatedAt ||
+    (candidate.nostrCreatedAt == previous.nostrCreatedAt &&
+        candidate.id.compareTo(previous.id) < 0);
+
 /// [republished] as it should replace [existing] in a feed or cache after
 /// its owner republished the video (an edit, new subtitles, a sound).
 ///

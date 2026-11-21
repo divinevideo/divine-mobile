@@ -26,6 +26,32 @@ HomeFeedResult _page(List<int> ids, {String? cursor = 'next'}) =>
 
 void main() {
   group('ClassicFeedSession', () {
+    test('keeps the active slot and filters a republished Classic', () async {
+      final original = _video(1).copyWith(addressableDTag: 'classic');
+      final next = _video(2);
+      final edited = original.copyWith(id: _id(3), eventCreatedAt: 2);
+      final hidden = edited.copyWith(id: _id(4), eventCreatedAt: 3);
+      final session = ClassicFeedSession(
+        initialVideos: [original, next],
+        filter: (videos) =>
+            videos.where((video) => video.id != hidden.id).toList(),
+        loadPage: (_) async => _page([]),
+      );
+      addTearDown(session.dispose);
+
+      session
+        ..activate(1)
+        ..replaceVideoRevision(edited)
+        ..replaceVideoRevision(original)
+        ..replaceVideoRevision(edited.copyWith(id: _id(5)));
+      expect(session.state.videos, [edited, next]);
+      expect(session.state.currentIndex, 1);
+
+      session.replaceVideoRevision(hidden);
+      expect(session.state.videos, [next]);
+      expect(session.state.currentIndex, 0);
+    });
+
     test(
       'one-shot sweep filters preserve identity and allow later recovery',
       () async {

@@ -76,7 +76,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Stream<void>? badgeSubscriptionChanges,
     Stream<String>? removedIdsStream,
     Stream<VideoEvent>? replacedVideosStream,
-    // Rebind only deletion notifications/policy when a same-account service
+    // Rebind video update notifications and policy when a same-account service
     // rebuild replaces the repository. Do not reset feed or playback state.
     Stream<VideosRepository>? removalRepositoryStream,
   }) : _videosRepository = videosRepository,
@@ -2429,10 +2429,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final republished = event.video;
     final address = republished.addressableId;
     if (address == null) return;
+    _classicSession?.replaceVideoRevision(republished);
     final index = state.videos.indexWhere(
       (video) =>
           video.addressableId == address &&
-          _isNewerRevision(republished, than: video),
+          isNewerVideoRevision(republished, video),
     );
     if (index == -1) return;
 
@@ -2468,16 +2469,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       );
     }
   }
-
-  /// Whether [candidate] replaces [than] at their shared address: a later
-  /// `created_at`, or the lower event id on a tie, as NIP-01 keeps.
-  static bool _isNewerRevision(
-    VideoEvent candidate, {
-    required VideoEvent than,
-  }) =>
-      candidate.nostrCreatedAt > than.nostrCreatedAt ||
-      (candidate.nostrCreatedAt == than.nostrCreatedAt &&
-          candidate.id.compareTo(than.id) < 0);
 
   /// Batch-fetch creator profiles for the given videos in the background.
   ///
