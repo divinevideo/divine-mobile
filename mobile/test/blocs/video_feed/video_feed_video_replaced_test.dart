@@ -252,6 +252,40 @@ void main() {
       expect(cache.saved?.map((video) => video.id).toList(), ['3' * 64]);
     });
 
+    test('keeps the republished Classic when the viewer swipes', () async {
+      final original = _revision('1');
+      final next = _revision('2', dTag: 'other');
+      final edited = _revision('3', createdAt: 1700000500, title: 'Edited');
+      final session = ClassicFeedSession(
+        initialVideos: [original, next],
+        loadPage: (_) async => const HomeFeedResult(videos: [], hasMore: false),
+      );
+      final bloc =
+          VideoFeedBloc(
+            videosRepository: videos,
+            replacedVideosStream: replacements.stream,
+            followRepository: _MockFollowRepository(),
+            curatedListRepository: _MockCuratedListRepository(),
+            classicSession: session,
+          )..emit(
+            VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: const VideoFeedSource.classic(),
+              videos: [original, next],
+            ),
+          );
+      addTearDown(bloc.close);
+
+      replacements.add(edited);
+      await pumpEventQueue();
+      expect(bloc.state.videos.first.id, edited.id);
+
+      bloc.add(const VideoFeedActiveIndexChanged(1));
+      await pumpEventQueue();
+      expect(bloc.state.currentIndex, 1);
+      expect(bloc.state.videos.map((video) => video.id), [edited.id, next.id]);
+    });
+
     // NIP-01 keeps the lower id when two revisions share a created_at.
     feedBlocTest(
       'takes an announced revision with the same timestamp and a lower id',
