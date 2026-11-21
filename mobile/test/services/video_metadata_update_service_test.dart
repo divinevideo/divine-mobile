@@ -1287,6 +1287,34 @@ void main() {
         expect(capturedTags, contains(equals(['title', 'Edited title'])));
       });
 
+      test(
+        'keeps the newest signed summary when editing only the title',
+        () async {
+          const summary = ['summary', 'Separate summary from another client'];
+          relaysHold(
+            newerRevision(
+              content: 'Caption from the other device',
+              extraTags: const [summary],
+            ),
+          );
+          final opened = _testVideo();
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(
+              opened,
+            ).copyWith(title: 'Edited title'),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['title', 'Edited title'])));
+          expect(capturedTags.where((tag) => tag.first == 'summary'), [
+            summary,
+          ]);
+        },
+      );
+
       test('applies only the fields changed in this edit', () async {
         relaysHold(newerRevision(title: 'Title from the other device'));
         final opened = _testVideo();

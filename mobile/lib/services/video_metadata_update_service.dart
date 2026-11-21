@@ -341,11 +341,12 @@ class VideoMetadataUpdateService {
       }
 
       final video = VideoEvent.fromNostrEvent(latest, permissive: true);
+      final latestEditorState = editorStateFromPublishedVideo(video);
       // A REST row can omit signed tags even when its event ID matches.
       final edits = _rebaseEdits(
         editorState,
         opened: editorStateFromPublishedVideo(editorBaseline ?? originalVideo),
-        latest: editorStateFromPublishedVideo(video),
+        latest: latestEditorState,
       );
       // A republish is Divine's own publish: the signer stamps attribution
       // from the current preference (#8176).
@@ -421,9 +422,15 @@ class VideoMetadataUpdateService {
       // videos.
       tags.add(['title', edits.title.trim()]);
 
-      // Credited like the content, for clients that show the summary.
+      // Other clients can publish a summary distinct from the caption.
+      final signedSummaries = originalTags
+          .where((tag) => tag.firstOrNull == 'summary')
+          .toList();
       final summary = edits.description.trim();
-      if (summary.isNotEmpty) {
+      if (edits.description == latestEditorState.description &&
+          signedSummaries.isNotEmpty) {
+        tags.addAll(signedSummaries);
+      } else if (summary.isNotEmpty) {
         tags.add([
           'summary',
           withSoundCreditLines(
