@@ -220,5 +220,55 @@ void main() {
         expect(container.read(provider), isEmpty);
       },
     );
+
+    BadgeVideoPreview clipBy(String pubkey, {int kind = 34236}) => (
+      id: 'a' * 64,
+      pubkey: pubkey,
+      title: 'Clip',
+      thumbnail: '',
+      createdAt: 1700000000,
+      kind: kind,
+      moderationLabels: const <String>[],
+      verifiedArchive: false,
+      archiveProvenanceAvailable: true,
+      tags: const [
+        ['d', 'clip'],
+        ['url', 'https://example.com/video.mp4'],
+      ],
+    );
+
+    test('drops a clip whose author has vanished', () {
+      final vanished = clipBy('b' * 64);
+      final present = clipBy('c' * 64);
+      final container = ProviderContainer(
+        overrides: [
+          profileVanishedProvider(vanished.pubkey).overrideWithValue(true),
+          profileVanishedProvider(present.pubkey).overrideWithValue(false),
+          curatedListThumbnailFilterProvider.overrideWith(
+            (ref) =>
+                (_) => false,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(container.read(visibleBadgeClipsProvider([vanished, present])), [
+        present,
+      ]);
+    });
+
+    test('drops a clip that is not a video kind', () {
+      final note = clipBy('b' * 64, kind: EventKind.textNote);
+      final container = ProviderContainer(
+        overrides: [
+          profileVanishedProvider(note.pubkey).overrideWithValue(false),
+          curatedListThumbnailFilterProvider.overrideWith(
+            (ref) =>
+                (_) => false,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(container.read(visibleBadgeClipsProvider([note])), isEmpty);
+    });
   });
 }
