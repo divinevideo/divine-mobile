@@ -319,6 +319,88 @@ void main() {
       }
     });
 
+    testWidgets(
+      'a late selection result does not reach a retry after rollback',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install();
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        final videos = [_makeVideo('current', videoUrl: raw)];
+        final response = Completer<Set<String>>();
+        Future<Set<String>> select(VideoEvent _) => response.future;
+        Future<void> mount({required bool enabled}) async {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: videos,
+                cache: cache,
+                urlResolver: (_) => canonical,
+                bunnyPlaybackSelector: enabled ? select : null,
+                keepNextAlive: false,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+        }
+
+        try {
+          await mount(enabled: true);
+          await mount(enabled: false);
+          response.complete({path});
+          await tester.pump();
+          await tester.pump();
+          harness.clipsHandedToPlayer.clear();
+
+          unawaited(key.currentState!.retryAt(0));
+          await tester.pump();
+          await tester.pump();
+
+          final uris = harness.clipsHandedToPlayer.map((clip) => clip['uri']);
+          expect(uris, isNotEmpty);
+          expect(uris, everyElement(canonical));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    testWidgets('server selection suspends disk prefetch', (tester) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install();
+      final videos = List.generate(
+        4,
+        (i) => _makeVideo('v$i', videoUrl: 'https://example.com/v$i.mp4'),
+      );
+
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: videos,
+              cache: cache,
+              bunnyPlaybackSelector: (_) async => const {},
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
+        );
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets('server policy denial blocks cached playback', (tester) async {
       DivineVideoPlayerController.resetIdCounterForTesting();
       final harness = _NativePlayerHarness(tester);
