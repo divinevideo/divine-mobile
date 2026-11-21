@@ -72,6 +72,8 @@ class BuildConfiguration {
         // flag gates the picker that starts a group and filing a room someone
         // else starts as a room.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
+      case FeatureFlag.bunnyPlayback:
+        return const bool.fromEnvironment('FF_BUNNY_PLAYBACK');
       case FeatureFlag.b2PlaybackCanary:
       case FeatureFlag.bunnyPlaybackCanary:
         // A device-local developer opt-in, never enabled for an entire build.
@@ -132,6 +134,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
       case FeatureFlag.groupMessages:
         return 'FF_GROUP_MESSAGES';
+      case FeatureFlag.bunnyPlayback:
+        return 'FF_BUNNY_PLAYBACK';
       case FeatureFlag.b2PlaybackCanary:
         return 'FF_B2_PLAYBACK_CANARY';
       case FeatureFlag.bunnyPlaybackCanary:
