@@ -69,5 +69,20 @@ void main() {
       expect(prefs.containsKey('broken_video_urls'), isFalse);
       expect(prefs.containsKey('broken_video_timestamps'), isFalse);
     });
+
+    test('announces each newly marked id once, as it is marked', () async {
+      final tracker = BrokenVideoTracker();
+      await tracker.initialize();
+      final announced = tracker.markedVideoIds.take(2).toList();
+
+      await tracker.markVideoBroken('first', 'test');
+      await tracker.markVideoBroken('first', 'test');
+      await tracker.markVideoBroken('second', 'test');
+
+      expect(
+        await announced.timeout(const Duration(seconds: 5)),
+        ['first', 'second'],
+      );
+    });
   });
 }

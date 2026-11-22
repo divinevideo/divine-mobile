@@ -1,6 +1,7 @@
 // ABOUTME: Service for tracking and persisting broken video URLs
 // ABOUTME: Prevents repeated display of videos with non-functional URLs
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,8 @@ class BrokenVideoTracker {
   final String _timestampKey;
   late SharedPreferences _prefs;
   Set<String> _brokenVideoIds = {};
+  final StreamController<String> _markedVideoIdsController =
+      StreamController<String>.broadcast();
   Map<String, DateTime> _brokenTimestamps = {};
 
   static String _scopedKey(String baseKey, String? ownerPubkey) {
@@ -134,6 +137,7 @@ class BrokenVideoTracker {
     if (!_brokenVideoIds.contains(videoId)) {
       _brokenVideoIds.add(videoId);
       _brokenTimestamps[videoId] = DateTime.now();
+      _markedVideoIdsController.add(videoId);
 
       await _saveBrokenVideos();
 
@@ -144,6 +148,9 @@ class BrokenVideoTracker {
       );
     }
   }
+
+  /// Each id as it is newly marked, so a feed already showing it can drop it.
+  Stream<String> get markedVideoIds => _markedVideoIdsController.stream;
 
   /// Check if a video is known to be broken
   bool isVideoBroken(String videoId) {

@@ -29,6 +29,11 @@ void main() {
         final guards = [_MockGuard(), _MockGuard()];
         when(() => trackers[0].isVideoBroken(_videoId)).thenReturn(true);
         when(() => trackers[1].isVideoBroken(_videoId)).thenReturn(false);
+        for (final tracker in trackers) {
+          when(
+            () => tracker.markedVideoIds,
+          ).thenAnswer((_) => const Stream<String>.empty());
+        }
         for (final (index, guard) in guards.indexed) {
           when(
             () => guard.isConfirmedUnavailable(

@@ -1,6 +1,8 @@
 // ABOUTME: Tests FeedUnavailabilityGate — fails closed until its per-identity
 // ABOUTME: tracker and guard attach, then answers from whichever is current.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
@@ -23,6 +25,9 @@ void main() {
     setUp(() {
       gate = FeedUnavailabilityGate();
       tracker = _MockTracker();
+      when(
+        () => tracker.markedVideoIds,
+      ).thenAnswer((_) => const Stream<String>.empty());
       guard = _MockGuard();
     });
 
@@ -40,6 +45,35 @@ void main() {
         // An identity change detaches the old tracker until the new resolves.
         gate.attachTracker(null);
         expect(gate.isVideoBroken(_videoId), isFalse);
+      });
+    });
+
+    group('markedVideoIds', () {
+      test('forwards marks only from the currently attached tracker', () async {
+        final first = StreamController<String>.broadcast();
+        final second = StreamController<String>.broadcast();
+        addTearDown(first.close);
+        addTearDown(second.close);
+        final next = _MockTracker();
+        when(() => tracker.markedVideoIds).thenAnswer((_) => first.stream);
+        when(() => next.markedVideoIds).thenAnswer((_) => second.stream);
+        final forwarded = <String>[];
+        final subscription = gate.markedVideoIds.listen(forwarded.add);
+        addTearDown(subscription.cancel);
+
+        gate.attachTracker(tracker);
+        first.add('first-account');
+        await pumpEventQueue();
+        // An identity change replaces the tracker.
+        gate.attachTracker(next);
+        first.add('previous-account');
+        second.add('second-account');
+        await pumpEventQueue();
+        gate.attachTracker(null);
+        second.add('detached');
+        await pumpEventQueue();
+
+        expect(forwarded, ['first-account', 'second-account']);
       });
     });
 
