@@ -1341,6 +1341,14 @@ class RelayPool {
         _armQuerySettleWindow(subId);
         return;
       }
+      // Nor is a relay whose frames for this query are still queued behind a
+      // signature check: it answered in time, and its EOSE waits behind those
+      // frames, so completing here would drop events it sent while the window
+      // was open (#11048). The caller's deadline still ends the query.
+      if (_queryHasFramesInFlight(subId)) {
+        _armQuerySettleWindow(subId);
+        return;
+      }
       log(
         'Query $subId settled without ${_queryStragglers(subId)} — '
         'completing on the relays that answered',
@@ -1355,6 +1363,11 @@ class RelayPool {
     ..._tempRelaysSnapshot(),
     ..._cacheRelaysSnapshot(),
   ].any((r) => r.checkQuery(subId) && _hasLiveAuthHandshake(r));
+
+  /// Whether a relay's frames for [subId] are still waiting in, or being
+  /// handled by, its [_orderedFrameTails] chain.
+  bool _queryHasFramesInFlight(String subId) =>
+      _orderedFrameTails.keys.any((key) => key.$2 == subId);
 
   /// Restarts an armed settle window for [subId] because a relay is still
   /// streaming its result set.

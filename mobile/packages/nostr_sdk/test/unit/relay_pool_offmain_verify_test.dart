@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
@@ -236,6 +237,137 @@ void main() {
       await relay.deliver(['EVENT', 'sub', live.toJson()]);
       expect(worker.calls, 1);
       expect(delivered.map((e) => e.content), ['live']);
+    });
+  });
+
+  group('RelayPool event still verifying when its read ends (#11048)', () {
+    const filter = <String, dynamic>{
+      'kinds': [EventKind.textNote],
+    };
+
+    late Event held;
+    late Event prompt;
+
+    setUpAll(() async {
+      held = await _signedEvent('held');
+      prompt = await _signedEvent('prompt');
+    });
+
+    late List<RelayDiagnostic> diagnostics;
+    late Completer<bool> gate;
+    late _FakeVerifyWorker worker;
+    late Nostr nostr;
+
+    /// Adds [relays] to a pool whose verify of [held] waits for [gate], like
+    /// a busy verify isolate; every other event verifies at once.
+    void startPool(FakeAsync async, List<_FakeRelay> relays) {
+      diagnostics = [];
+      gate = Completer<bool>();
+      worker = _FakeVerifyWorker(
+        (json) async => json['id'] == held.id ? await gate.future : true,
+      );
+      nostr = Nostr(
+        LocalNostrSigner(generatePrivateKey()),
+        [],
+        (url) => RelayBase(url, RelayStatus(url)),
+        diagnosticsSink: diagnostics.add,
+      )..relayPool.eventVerifyWorker = worker;
+      for (final relay in relays) {
+        unawaited(nostr.relayPool.add(relay));
+      }
+      async.flushMicrotasks();
+    }
+
+    /// Starts a read of [filter] under [id], handing its result to [onResult].
+    void startRead(
+      String id,
+      Duration timeout,
+      void Function(QueryResult) onResult,
+    ) {
+      unawaited(
+        nostr.readEvents([filter], id: id, timeout: timeout).then(onResult),
+      );
+    }
+
+    List<RelayDiagnostic> diagnosticsNaming(Event event) =>
+        diagnostics.where((d) => d.message.contains(event.id)).toList();
+
+    test('keeps a read open past the settle window while a relay that owes '
+        'it is still verifying its event', () {
+      fakeAsync((async) {
+        final relayA = _FakeRelay('wss://relay.a');
+        final relayB = _FakeRelay('wss://relay.b');
+        startPool(async, [relayA, relayB]);
+        QueryResult? result;
+        startRead('settle-1', const Duration(seconds: 10), (r) => result = r);
+        async.flushMicrotasks();
+
+        // A answers with nothing, so the settle window now bounds B.
+        unawaited(relayA.deliver(['EOSE', 'settle-1']));
+        async.flushMicrotasks();
+        unawaited(relayB.deliver(['EVENT', 'settle-1', held.toJson()]));
+        async
+          ..flushMicrotasks()
+          ..elapse(RelayPool.querySettleWindow * 2);
+        expect(result, isNull, reason: "B's event is still being verified");
+
+        gate.complete(true);
+        async.flushMicrotasks();
+        unawaited(relayB.deliver(['EOSE', 'settle-1']));
+        async.flushMicrotasks();
+
+        expect(result, isNotNull);
+        expect(result!.events.map((e) => e.id), [held.id]);
+        expect(diagnosticsNaming(held), isEmpty);
+      });
+    });
+
+    test('completes on the relays that answered when the other relay sends '
+        'nothing within the settle window', () {
+      fakeAsync((async) {
+        final relayA = _FakeRelay('wss://relay.a');
+        final relayB = _FakeRelay('wss://relay.b');
+        startPool(async, [relayA, relayB]);
+        QueryResult? result;
+        startRead('settle-1', const Duration(seconds: 10), (r) => result = r);
+        async.flushMicrotasks();
+
+        unawaited(relayA.deliver(['EVENT', 'settle-1', prompt.toJson()]));
+        unawaited(relayA.deliver(['EOSE', 'settle-1']));
+        async
+          ..flushMicrotasks()
+          ..elapse(RelayPool.querySettleWindow * 2);
+
+        expect(result, isNotNull, reason: 'B sent nothing in the window');
+        expect(result!.events.map((e) => e.id), [prompt.id]);
+      });
+    });
+
+    test('still ends the read at its deadline while a relay is verifying its '
+        'event', () {
+      fakeAsync((async) {
+        final relayA = _FakeRelay('wss://relay.a');
+        final relayB = _FakeRelay('wss://relay.b');
+        startPool(async, [relayA, relayB]);
+        QueryResult? result;
+        startRead('settle-1', const Duration(seconds: 10), (r) => result = r);
+        async.flushMicrotasks();
+
+        unawaited(relayA.deliver(['EOSE', 'settle-1']));
+        async.flushMicrotasks();
+        unawaited(relayB.deliver(['EVENT', 'settle-1', held.toJson()]));
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(milliseconds: 9500));
+        expect(result, isNull, reason: "B's event is still being verified");
+
+        async.elapse(const Duration(seconds: 1));
+        expect(result, isNotNull, reason: 'the deadline still ends the read');
+
+        gate.complete(true);
+        async.flushMicrotasks();
+        expect(result!.events, isEmpty);
+      });
     });
   });
 }
