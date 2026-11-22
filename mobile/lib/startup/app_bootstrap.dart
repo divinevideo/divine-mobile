@@ -602,16 +602,15 @@ Future<void> startOpenVineApp({
     isSuppressed: databaseCorruptionService.echoesReportedCorruption,
   );
 
-  const dbKeyAccessibilityUpgradedPrefKey =
-      'db_cipher_key_accessibility_upgraded_v1';
-
   // A reset or salvage empties Drift tables while SharedPreferences survives,
   // so the sync markers describing those tables must go too: the DM drain
   // (#5304), and the follower seed, which would otherwise skip an empty table.
   Future<void> clearSyncStateAfterDatabaseReset() async {
     await DmSyncState(sharedPreferences).clearAll();
     await MyFollowersSyncState().clearAll();
-    await sharedPreferences.remove(dbKeyAccessibilityUpgradedPrefKey);
+    await sharedPreferences.remove(
+      DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
+    );
   }
 
   // Resets preserve a backup by default because encrypted backups stay readable
@@ -670,11 +669,13 @@ Future<void> startOpenVineApp({
         clearPendingCorruptionRecovery:
             databaseCorruptionService.clearPendingRecovery,
         hasCompletedAccessibilityUpgrade: () async =>
-            sharedPreferences.getBool(dbKeyAccessibilityUpgradedPrefKey) ??
+            sharedPreferences.getBool(
+              DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
+            ) ??
             false,
         markAccessibilityUpgradeCompleted: () async {
           await sharedPreferences.setBool(
-            dbKeyAccessibilityUpgradedPrefKey,
+            DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
             true,
           );
         },
