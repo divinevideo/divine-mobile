@@ -224,7 +224,8 @@ def execute_plan(plan, state, snapshot, store, provider):
         if old and old["status"] not in {"deferred", "acknowledged"}:
             continue
         scope = "android-distribution" if action["kind"] == "android-distribution" else action["platform"]
-        if state.get("holds", {}).get(scope) is not None:
+        if (state.get("holds", {}).get(scope) is not None
+                or (scope == "android-distribution" and state.get("holds", {}).get("android") is not None)):
             continue
         try:
             if hasattr(provider, "prepare_action"):
@@ -234,6 +235,10 @@ def execute_plan(plan, state, snapshot, store, provider):
         except ProviderError as error:
             plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
             plan["actions"].remove(raw)
+            continue
+        if scope == "android-distribution" and any(
+            state.get("holds", {}).get(channel) is not None for channel in ("android", scope)
+        ):
             continue
         state.setdefault("operations", {})[key] = {
             # Notes already live in the immutable source/artifact ledger. Keep

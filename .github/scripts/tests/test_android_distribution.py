@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -232,6 +233,37 @@ class OriginalDownloadsTest(unittest.TestCase):
         self.assertEqual(self.github.calls, [])
         self.assertEqual(self.github.record["body"], "Previously reviewed release notes")
 
+    def test_conflicting_draft_or_unexpected_apk_never_reaches_stable_publication(self):
+        for conflict in ("notes", "draft-apk", "stable-apk"):
+            publisher, env = self.approved_fixture()
+            publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                       download=self.download, now=2000000010)
+            self.github.record["draft"] = conflict != "stable-apk"
+            if conflict == "notes":
+                self.github.record["body"] = "Different reviewed draft notes"
+            else:
+                self.github.record["assets"].append({"name": "alternate-arm64-release.apk",
+                                                     "digest": "sha256:" + "d" * 64})
+            self.github.calls.clear()
+            with self.subTest(conflict=conflict), self.assertRaises(ProviderError):
+                publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                           download=self.download, now=2000000010)
+            self.assertEqual(self.github.calls, [])
+
+    def test_matching_partial_draft_resumes_without_replacing_its_original_asset(self):
+        publisher, env = self.approved_fixture()
+        publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                   download=self.download, now=2000000010)
+        self.github.record["draft"] = True
+        self.github.record["assets"] = self.github.record["assets"][:1]
+        original = copy.deepcopy(self.github.record["assets"][0])
+        self.github.calls.clear()
+        publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                   download=self.download, now=2000000010)
+        self.assertFalse(self.github.record["draft"])
+        self.assertEqual(self.github.record["assets"][0], original)
+        self.assertEqual(len(self.github.record["assets"]), 2)
+
     def test_signed_artifact_urls_require_the_provider_origin(self):
         publisher, env = self.approved_fixture()
         for url in ("http://api.codemagic.io/file", "https://other.invalid/file",
@@ -360,6 +392,23 @@ class ScheduledApkBuildTest(unittest.TestCase):
                 if latest == "1.0.1":
                     self.assertIn("Publishing 1.0.1 to Zapstore", result.stdout)
 
+    def test_automated_signer_matches_only_the_authorized_arm64_filename(self):
+        preparation = self.signing_script().split('cd "$CM_BUILD_DIR"', 1)[1].split(
+            '"$ZSP_BIN" publish --check', 1)[0]
+        inspect = 'ruby -ryaml -rjson -e \'puts JSON.generate(YAML.safe_load_file(ARGV[0]))\' "$ZAPSTORE_CONFIG"'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "zapstore.yaml").write_text('match: ".*arm64.*\\\\.apk$"\n')
+            result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + preparation + inspect],
+                cwd=root, env={"PATH": os.environ["PATH"], "CM_BUILD_DIR": str(root),
+                               "TAG": "1.0.1", "APPROVED_BUILD_NUMBER": "123"},
+                capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            pattern = json.loads(result.stdout)["match"]
+            self.assertIsNotNone(re.search(pattern, "app-arm64-v8a-release.apk"))
+            self.assertIsNone(re.search(pattern, "alternate-arm64-release.apk"))
+            self.assertIsNone(re.search(pattern, "prefix-app-arm64-v8a-release.apk"))
+
     def test_original_scheduled_build_produces_apks_with_allocated_number(self):
         config = json.loads(subprocess.check_output(
             ["ruby", "-ryaml", "-rjson", "-e",
@@ -464,6 +513,38 @@ class DistributionJournalTest(unittest.TestCase):
         self.assertEqual(operation["result"]["build_id"], "signing-job")
         self.assertNotIn("last_build_started", state)
         self.assertNotIn("app_store_submissions", state)
+
+    def test_play_failure_in_the_same_tick_stops_later_distribution(self):
+        from test_release_train_runner import Store
+        snap = approved_snapshot()
+        snap["android"]["internal"] = [{"number": 124, "version": "1.0.2",
+                                        "sha": "b" * 40, "ci_verified": True}]
+        state = {"play_publication": {"version": 1, "internal_periods": {"124": {"completed": True}}}}
+        plan = plan_tick(snap, state, {"ios": "off", "android": "production"})
+        self.assertEqual([a["kind"] for a in plan["actions"]], ["play-production", "android-distribution"])
+        executed = []
+        class Provider:
+            def execute(self, action, current, snapshot):
+                executed.append(action["kind"])
+                if action["kind"] == "play-production":
+                    raise ProviderError("Promotion failed")
+                return {"build_id": "signing-job"}
+        execute_plan(plan, state, snap, Store(), Provider())
+        self.assertEqual(executed, ["play-production"])
+        self.assertEqual(state["holds"]["android"], "play-production:android:124")
+
+    def test_hold_raised_during_preparation_stops_dispatch_too(self):
+        from test_release_train_runner import Store
+        state, executed = {}, []
+        class Provider:
+            def prepare_action(self, action, snapshot):
+                state.setdefault("holds", {})["android"] = "observed-store-hold"
+            def execute(self, action, current, snapshot):
+                executed.append(action["kind"])
+                return {"build_id": "signing-job"}
+        execute_plan({"actions": [self.action()]}, state, approved_snapshot(), Store(), Provider())
+        self.assertEqual(executed, [])
+        self.assertFalse(state.get("operations"))
 
     def test_unknown_dispatch_is_held_separately_and_never_blindly_retried(self):
         state = self.state("ambiguous")

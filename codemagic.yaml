@@ -608,6 +608,9 @@ definitions:
         ruby -ryaml -e '
           config = YAML.safe_load(File.read(ARGV.fetch(0)))
           config["release_filter"] = "^#{Regexp.escape(ARGV.fetch(1))}$"
+          unless ENV.fetch("APPROVED_BUILD_NUMBER", "").empty?
+            config["match"] = "^#{Regexp.escape("app-arm64-v8a-release.apk")}$"
+          end
           File.write(ARGV.fetch(2), YAML.dump(config))
         ' zapstore.yaml "$TAG" "$ZAPSTORE_CONFIG"
         # --check proves the arm64 asset resolves before anything is signed.

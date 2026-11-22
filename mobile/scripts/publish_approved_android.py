@@ -74,15 +74,23 @@ def github_notes(build, bundle):
             f"Changes since Android {bundle['baseline']['version']}.\n")
 
 
-def verify_release(github, build, record, body):
+def verify_release(github, build, record, body, *, allow_partial=False):
     saved = github.get_release(build["version"])
     expected_body = body.rstrip() + f"\n\nBuild source: `{build['sha']}`.\n"
-    if (not saved or saved.get("draft") or saved.get("prerelease")
-            or github.tag_commit(build["version"]) != build["sha"]
+    commit = github.tag_commit(build["version"])
+    partial = bool(saved and saved.get("draft") and allow_partial)
+    source_matches = commit == build["sha"] or (
+        partial and commit is None and saved.get("target_commitish") == build["sha"])
+    if (not saved or (saved.get("draft") and not partial) or saved.get("prerelease")
+            or not source_matches
             or saved.get("body", "").replace("\r\n", "\n").strip() != expected_body.strip()):
         raise ProviderError("Stable GitHub release identity or notes could not be verified")
     assets = {a["name"]: a.get("digest") for a in saved.get("assets", [])}
-    if any(assets.get(a["name"]) != "sha256:" + a["sha256"] for a in record["apks"]):
+    expected = {a["name"]: "sha256:" + a["sha256"] for a in record["apks"]}
+    if any(name.lower().endswith(".apk") and name not in expected for name in assets):
+        raise ProviderError("GitHub release contains an unexpected APK")
+    if any((name in assets or not partial) and assets.get(name) != value
+           for name, value in expected.items()):
         raise ProviderError("Stable GitHub APK hashes differ from original candidate")
 
 
@@ -112,9 +120,9 @@ def publish_approved(env, ledger, cm, github, *, download=download_artifact, now
         raise ProviderError("Original Android source provenance is incomplete")
     body = github_notes(build, bundle)
     existing = github.get_release(build["version"])
-    if existing and not existing.get("draft") and not existing.get("prerelease"):
-        verify_release(github, build, record, body)
-    else:
+    if existing:
+        verify_release(github, build, record, body, allow_partial=bool(existing.get("draft")))
+    if not existing or existing.get("draft"):
         provider = cm("GET", "/builds/" + record["build_id"])["data"]
         if (provider.get("id") != record["build_id"] or provider.get("status") != "finished"
                 or (provider.get("commit") or {}).get("hash") != build["sha"]):
