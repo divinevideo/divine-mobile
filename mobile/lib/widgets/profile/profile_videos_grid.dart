@@ -615,6 +615,7 @@ class _VideoGridTile extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             VideoTileThumbnailBoundary(
+              key: ValueKey(videoEvent.id),
               child: ProfileTabThumbnail(
                 thumbnailUrl: videoEvent.thumbnailUrl,
                 blurhash: videoEvent.blurhash,

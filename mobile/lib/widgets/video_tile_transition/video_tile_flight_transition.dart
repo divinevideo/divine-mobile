@@ -254,7 +254,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     // Preserve the live warning rather than copying uncomposited pixels.
     // Keep that choice when an interactive drag becomes a normal pop.
     _closingFlightBlocked |= _hasSafetyOverlay;
-    if (_closingFlightBlocked) return;
+    if (_closingFlightBlocked || widget.origin.rect == null) return;
     _picture?.dispose();
     _picture = widget.origin.readImage();
     if (!wasLanded || !_framesReadable) return;
@@ -398,15 +398,10 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
       builder: (context, page) {
         final progress = _dragged ? widget.animation.value : _motion.value;
         final screen = Offset.zero & MediaQuery.sizeOf(context);
-        final from =
-            widget.origin.rect ??
-            Rect.fromCenter(
-              center: screen.center,
-              width: screen.width / 3,
-              height: screen.height / 3,
-            );
+        final originRect = widget.origin.rect;
         final landing = _landing(screen);
         final media = landing.media.outerRect;
+        final from = originRect ?? media;
         final rect = Rect.lerp(from, media, progress)!;
         final borderRadius = BorderRadius.lerp(
           widget.origin.borderRadius,
@@ -431,6 +426,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         // A drag back starts from the landed page, before the animation
         // reports it is moving.
         final flying =
+            originRect != null &&
             !_closingFlightBlocked &&
             !_hasSafetyOverlay &&
             (picture != null || frame != null) &&

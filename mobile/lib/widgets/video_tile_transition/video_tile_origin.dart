@@ -13,7 +13,8 @@ import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 /// Marks the thumbnail a fullscreen player grows out of.
 ///
 /// [VideoTileOrigin.capture] looks for this widget under the tapped tile, and
-/// takes the tile's image and bounds from it.
+/// takes the tile's image and bounds from it. Key by video ID in a live grid
+/// so replacing a tile detaches its old capture.
 class VideoTileThumbnailBoundary extends StatelessWidget {
   /// Wraps [child], the tile's thumbnail.
   const VideoTileThumbnailBoundary({required this.child, super.key});

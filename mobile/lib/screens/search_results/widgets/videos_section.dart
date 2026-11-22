@@ -219,6 +219,7 @@ class SearchVideoTile extends StatelessWidget {
           child: Stack(
             children: [
               VideoTileThumbnailBoundary(
+                key: ValueKey(video.id),
                 child: VideoThumbnailWidget(video: video),
               ),
               Positioned(

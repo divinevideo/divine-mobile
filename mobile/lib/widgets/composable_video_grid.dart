@@ -471,6 +471,7 @@ class _VideoItem extends StatelessWidget {
               )
             else
               VideoTileThumbnailBoundary(
+                key: ValueKey(video.id),
                 child: _VideoThumbnail(video: video),
               ),
             Positioned(

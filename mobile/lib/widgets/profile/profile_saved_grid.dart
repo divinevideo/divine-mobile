@@ -247,6 +247,7 @@ class _SavedGridTile extends ConsumerWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
           child: VideoTileThumbnailBoundary(
+            key: ValueKey(videoEvent.id),
             child: ProfileTabThumbnail(
               thumbnailUrl: videoEvent.thumbnailUrl,
               blurhash: videoEvent.blurhash,

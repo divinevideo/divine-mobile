@@ -309,6 +309,7 @@ class _Harness extends StatelessWidget {
             ?placedTile,
             if (animation != null && origin != null)
               Positioned.fill(
+                key: const ValueKey('flight'),
                 child: VideoTileFlightTransition(
                   animation: animation,
                   origin: origin,
@@ -1357,26 +1358,36 @@ void main() {
         tester,
       ) async {
         final origin = await pumpTile(tester);
-        controller.value = 1;
-        await tester.pumpWidget(
-          _Harness(
-            image: image,
-            showTile: false,
-            animation: controller,
-            origin: origin,
-          ),
+        controller.forward();
+        Widget harness({required bool showTile}) => _Harness(
+          image: image,
+          showTile: showTile,
+          animation: controller,
+          origin: origin,
+          pageDrawsVideo: true,
         );
-        expect(origin.rect, isNull);
+        await tester.pumpWidget(harness(showTile: true));
+        await tester.pumpAndSettle();
+        expect(_pageHasLanded(tester), isTrue);
 
+        final snapshot = find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint &&
+              widget.painter is VideoTilePageSnapshotPainter,
+        );
         controller.reverse();
         await tester.pump();
-        // Nothing to read from a tile that is gone, so no picture flies.
+        expect(snapshot, findsOneWidget);
+
+        await tester.pumpWidget(harness(showTile: false));
+        expect(origin.rect, isNull);
         expect(_picture, findsNothing);
+        expect(snapshot, findsNothing);
 
         await tester.pump(VideoTileFlightTransition.closeDuration);
         expect(_pageOpacity(tester), equals(0));
         await tester.pumpAndSettle();
-      });
+      }, variant: _readsFrames);
     });
 
     group('closing from the player', () {

@@ -767,6 +767,7 @@ class _BadgeVideoGrid extends ConsumerWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: VideoTileThumbnailBoundary(
+                                key: ValueKey(video.id),
                                 child: VideoThumbnailWidget(video: video),
                               ),
                             ),
