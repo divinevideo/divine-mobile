@@ -267,18 +267,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
             proxyHTTPFailureLock.withLock { proxyHTTPFailure = nil }
             if let downloadTask = download {
                 download = nil
-                CachingAssetLoaderSessionRouter.shared.unregister(
-                    taskIdentifier: downloadTask.taskIdentifier,
-                    keepsDownload: keepsDownload
-                )
-                downloadTask.cancel()
+                cancelTask(downloadTask)
             }
-            for (id, task) in proxiedTasks {
-                CachingAssetLoaderSessionRouter.shared.unregister(
-                    taskIdentifier: id,
-                    keepsDownload: keepsDownload
-                )
-                task.cancel()
+            for task in proxiedTasks.values {
+                cancelTask(task)
             }
             proxiedTasks.removeAll()
             let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
@@ -314,12 +306,20 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
         pending.removeAll { $0 === loadingRequest }
         for (id, request) in proxied where request === loadingRequest {
             proxied[id] = nil
-            CachingAssetLoaderSessionRouter.shared.unregister(
-                taskIdentifier: id,
-                keepsDownload: keepsDownload
-            )
-            proxiedTasks.removeValue(forKey: id)?.cancel()
+            if let task = proxiedTasks.removeValue(forKey: id) {
+                cancelTask(task)
+            }
         }
+    }
+
+    private func cancelTask(_ task: URLSessionTask) {
+        // The router stops forwarding callbacks as soon as we unregister.
+        observations.removeValue(forKey: task.taskIdentifier)?.finish(outcome: "cancelled")
+        CachingAssetLoaderSessionRouter.shared.unregister(
+            taskIdentifier: task.taskIdentifier,
+            keepsDownload: keepsDownload
+        )
+        task.cancel()
     }
 
     // MARK: - Routed URLSessionDataDelegate handlers
