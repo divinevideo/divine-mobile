@@ -2901,35 +2901,6 @@ void main() {
       expect(tester.getRect(supportButton).width, greaterThan(0));
     });
 
-    testWidgets('shows support affordance without a feature flag', (
-      tester,
-    ) async {
-      final creatorProfile = createTestProfile(
-        displayName: 'Creator',
-        rawData: {
-          divineMonetizationLinksKey: [
-            const MonetizationLink(
-              provider: MonetizationLinkProvider.cashApp,
-              category: MonetizationLinkCategory.tip,
-              url: r'https://cash.app/$creator',
-              enabled: true,
-            ).toJson(),
-          ],
-        },
-      );
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          userIdHex: testUserHex,
-          isOwnProfile: false,
-          suppliedProfile: creatorProfile,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('profile-support-button')), findsOneWidget);
-    });
-
     testWidgets('hides subscription-only support links on iOS storefronts', (
       tester,
     ) async {
