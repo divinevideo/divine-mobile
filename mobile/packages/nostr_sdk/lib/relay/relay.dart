@@ -469,18 +469,11 @@ abstract class Relay {
   /// Whether a COUNT sent to this relay is still waiting for its answer.
   bool get hasPendingCountQueries => _countQueries.isNotEmpty;
 
-  /// Whether this relay is known not to support NIP-45 COUNT, so asking it
-  /// would only hold a count until its deadline.
+  /// Whether this relay was skipped after an unknown-command notice.
   ///
-  /// It is known when the relay replied to a COUNT that it does not know the
-  /// command, or when its NIP-11 document lists its NIPs without 45. A relay
-  /// whose document never arrived, or lists no NIPs, is still asked.
-  bool get countUnsupported {
-    if (_answeredCountWithUnknownCommand) return true;
-    final nips = info?.nips;
-    if (nips == null || nips.isEmpty) return false;
-    return !nips.any((nip) => '$nip' == '45');
-  }
+  /// Some relays answer COUNT despite omitting NIP-45 from their NIP-11
+  /// documents, so an omission alone never disqualifies a relay.
+  bool get countUnsupported => _answeredCountWithUnknownCommand;
 
   /// Records that this relay replied to a COUNT that it does not know the
   /// command, and ends every COUNT waiting on it with

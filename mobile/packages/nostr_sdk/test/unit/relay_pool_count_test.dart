@@ -235,7 +235,7 @@ void main() {
     }
 
     RelayInfo nip11Listing(List<int> nips) =>
-        RelayInfo('', '', '', '', nips, 'strfry', '1.0.3');
+        RelayInfo('', '', '', '', nips, '', '');
 
     Future<CountResponse> count({String id = countId}) => nostr.relayPool.count(
       filters,
@@ -322,23 +322,9 @@ void main() {
       expect((await result).count, equals(42));
     });
 
-    test(
-      'does not ask a relay whose NIP-11 document leaves out NIP-45',
-      () async {
-        legacyRelay.info = nip11Listing([1, 2, 9, 11]);
-        await addRelays();
-
-        final result = count();
-        await pumpEventQueue();
-
-        expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
-        answerCount(countingFactory.lastChannel!, 42);
-        expect((await result).count, equals(42));
-      },
-    );
-
     for (final (description, nips) in [
       ('lists NIP-45', [1, 11, 45]),
+      ('omits NIP-45', [1, 11]),
       ('lists no NIPs', <int>[]),
     ]) {
       test('still asks a relay whose NIP-11 document $description', () async {
@@ -350,29 +336,30 @@ void main() {
 
         expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
         answerCount(countingFactory.lastChannel!, 42);
-        answerCount(legacyFactory.lastChannel!, 7);
-        expect((await result).count, equals(42));
+        answerCount(legacyFactory.lastChannel!, 99);
+        expect((await result).count, equals(99));
       });
     }
 
-    test('reports COUNT as unsupported, without sending it, when no relay '
-        'supports it', () async {
-      countingRelay.info = nip11Listing([1, 11]);
-      legacyRelay.info = nip11Listing([1, 11]);
+    test('skips every relay after each has rejected COUNT', () async {
       await addRelays();
 
-      await expectLater(
-        count(),
-        throwsA(
-          allOf(
-            isA<CountNotSupportedException>(),
-            isNot(isA<CountNotSentException>()),
-          ),
+      final isUnsupported = throwsA(
+        allOf(
+          isA<CountNotSupportedException>(),
+          isNot(isA<CountNotSentException>()),
         ),
       );
 
-      expect(countFramesOn(countingFactory.lastChannel!), isEmpty);
-      expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+      final first = expectLater(count(), isUnsupported);
+      await pumpEventQueue();
+      sendNotice(countingFactory.lastChannel!, unknownCommandNotice);
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      await first;
+
+      await expectLater(count(id: 'count-9009-again'), isUnsupported);
+      expect(countFramesOn(countingFactory.lastChannel!), hasLength(1));
+      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
     });
 
     test('answers once both relays have, when both support COUNT', () async {
