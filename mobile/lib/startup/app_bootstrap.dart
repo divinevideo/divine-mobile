@@ -515,18 +515,20 @@ Future<void> startOpenVineApp({
   // Initialize SharedPreferences and PackageInfo concurrently since they read
   // independent platform stores.
   startupPerformance.startPhase('shared_preferences');
-  final sharedPreferencesFuture = SharedPreferences.getInstance().whenComplete(
-    () => startupPerformance.completePhase('shared_preferences'),
-  );
-  final packageInfoFuture = PackageInfo.fromPlatform();
-  final sharedPreferences = await sharedPreferencesFuture;
-
-  // On the web every UI language but English is downloaded on demand. Fetch
-  // the one the UI will render in before any context-less service can capture
-  // strings through currentAppL10n; a no-op on native builds.
-  await preloadAppUiLocalizations(sharedPreferences);
-
-  final packageInfo = await packageInfoFuture;
+  final sharedPreferencesFuture = SharedPreferences.getInstance()
+      .whenComplete(
+        () => startupPerformance.completePhase('shared_preferences'),
+      )
+      .then((preferences) async {
+        // Load the selected web language before context-less services can
+        // capture strings through currentAppL10n.
+        await preloadAppUiLocalizations(preferences);
+        return preferences;
+      });
+  final (sharedPreferences, packageInfo) = await (
+    sharedPreferencesFuture,
+    PackageInfo.fromPlatform(),
+  ).wait;
 
   // This must precede database bootstrap. That bootstrap can render its own
   // failure app and return early; the failure app still needs the updater so a
