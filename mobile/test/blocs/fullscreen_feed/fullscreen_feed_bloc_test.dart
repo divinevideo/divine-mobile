@@ -1388,8 +1388,9 @@ void main() {
       });
 
       test('stops paginating once the source videos stream ends', () async {
+        var loadMoreCalls = 0;
         final bloc = createBloc(
-          onLoadMore: () {},
+          onLoadMore: () => loadMoreCalls++,
           hasMoreStream: hasMoreController.stream,
         );
         addTearDown(bloc.close);
@@ -1410,6 +1411,17 @@ void main() {
         expect(bloc.state.isLoadingMore, isFalse);
         expect(bloc.state.status, equals(FullscreenFeedStatus.ready));
         expect(bloc.state.videos.map((video) => video.id), equals(['video1']));
+
+        // The independent hasMore stream can still deliver a buffered value.
+        hasMoreController.add(true);
+        await pumpEventQueue();
+        expect(bloc.state.canLoadMore, isFalse);
+
+        // A load request queued by the UI before observing the end is stale.
+        bloc.add(const FullscreenFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(loadMoreCalls, equals(1));
+        expect(bloc.state.isLoadingMore, isFalse);
       });
     });
 

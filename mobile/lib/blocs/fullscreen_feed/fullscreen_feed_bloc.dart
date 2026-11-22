@@ -174,6 +174,7 @@ class FullscreenFeedBloc
   final FeedTuningRepository? _feedTuningRepository;
   final void Function(ClassicFeedFeedback)? _recommendationFeedback;
   StreamSubscription<bool>? _hasMoreSubscription;
+  bool _paginationEnded = false;
   StreamSubscription<String>? _removedIdsSubscription;
   int _tuningActionSequence = 0;
 
@@ -271,6 +272,7 @@ class FullscreenFeedBloc
       // when the source bloc closed under this route. Nothing can report a
       // next page any more, so stop asking for one.
       onDone: () {
+        _paginationEnded = true;
         if (!isClosed) add(const FullscreenFeedHasMoreChanged(false));
       },
     );
@@ -365,6 +367,7 @@ class FullscreenFeedBloc
     // page replacing its VideoSearchBloc, so pagination ends too. `isDone`
     // covers a route that is going away.
     if (!emit.isDone) {
+      _paginationEnded = true;
       final terminalEmpty =
           state.videos.isEmpty &&
           state.status != FullscreenFeedStatus.emptyAfterRemoval;
@@ -437,10 +440,12 @@ class FullscreenFeedBloc
     FullscreenFeedHasMoreChanged event,
     Emitter<FullscreenFeedState> emit,
   ) {
+    // Either stream can end while the other still has messages queued.
+    final hasMore = event.hasMore && !_paginationEnded;
     emit(
       state.copyWith(
-        canLoadMore: event.hasMore,
-        isLoadingMore: state.isLoadingMore && event.hasMore,
+        canLoadMore: hasMore,
+        isLoadingMore: state.isLoadingMore && hasMore,
       ),
     );
   }
@@ -451,7 +456,7 @@ class FullscreenFeedBloc
     Emitter<FullscreenFeedState> emit,
   ) {
     final onLoadMore = _onLoadMore;
-    if (onLoadMore == null || state.isLoadingMore) return;
+    if (onLoadMore == null || _paginationEnded || state.isLoadingMore) return;
 
     Log.debug(
       'FullscreenFeedBloc: Load more requested',
