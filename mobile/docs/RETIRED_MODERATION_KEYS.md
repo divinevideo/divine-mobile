@@ -179,7 +179,9 @@ The client half is small and belongs in one PR:
    key regardless of custody. Custody also decides branding: for `archived`
    and `compromised` the app withdraws Divine's name and wordmark from the old
    key's threads, which read as a "Former moderation account"; for
-   `unrecovered` and `destroyed` they keep it (#9963).
+   `unrecovered` and `destroyed` they keep it (#9963). Before recording
+   `archived` or `compromised`, see the `divinevideo/divine-mobile#9986`
+   entry under [Open items](#open-items).
 6. Note that a rotation forks `conversation_id` on the service side, so the
    outgoing key's rows become a disjoint set that the admin UI's pubkey lookup
    can no longer reach. `divinevideo/divine-mobile#7850` is closed, but the
@@ -284,7 +286,9 @@ Custody also decides how the app presents a retired key; see
   the first to show both, so before such an entry lands, settle #9986 or fall
   back to English in every locale nobody has reviewed. That fallback covers
   the label's translations only: whether the notice should name Divine for
-  such a key stays open in #9986.
+  such a key stays open in #9986. `mobile/test/config/official_accounts_test.dart`
+  fails while a key someone can still sign as is registered and any locale
+  nobody has reviewed still renders its own translation of the label.
 
 Settled, kept here because the register used to cite these as open:
 
