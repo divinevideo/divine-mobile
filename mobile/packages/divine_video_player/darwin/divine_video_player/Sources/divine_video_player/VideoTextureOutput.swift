@@ -86,8 +86,11 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// can't collapse or extend the window.
     private var forceRefreshDeadline: CFTimeInterval = 0
 
-    // A paused composition can produce its sought frame after the force window.
+    // Allow a slow paused seek to settle without polling at display rate forever.
+    private var pausedSeekFastPollDeadline: CFTimeInterval = 0
+    private var pausedSeekPollTimer: Timer?
     private static let pausedSeekSettleInterval: CFTimeInterval = 0.6
+    private static let pausedSeekProbeInterval: TimeInterval = 0.25
 
     /// Failed `copyPixelBuffer` ticks within the current force window.
     /// Non-zero at expiry means the compositor is stuck at this time.
@@ -320,6 +323,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         pausedFramePull.hold(at: seekTime)
         pausedRedelivery.reset()
         forceRefreshDeadline = CACurrentMediaTime() + 0.6
+        pausedSeekFastPollDeadline = forceRefreshDeadline + Self.pausedSeekSettleInterval
         forceWindowFailCount = 0
         forceWindowIsRetry = isRetry
         resumeFrameDriverIfNeeded()
@@ -418,6 +422,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// suspension. Must be called on the main thread.
     func suspendFrameDelivery() {
         isFrameDeliveryEnabled = false
+        stopPausedSeekPolling()
         pauseFrameDriver()
     }
 
@@ -447,6 +452,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         isDisposed = true
         isFrameDeliveryEnabled = false
         frameEffects.dispose()
+        stopPausedSeekPolling()
         stopFrameDriver()
         itemStatusObservation?.invalidate()
         itemStatusObservation = nil
@@ -502,14 +508,6 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         displayLink?.isPaused = true
     }
 
-    private func resumeFrameDriverIfNeeded() {
-        guard !isDisposed, isFrameDeliveryEnabled else { return }
-        if displayLink == nil && player != nil {
-            startFrameDriver()
-        }
-        displayLink?.isPaused = false
-    }
-
     private func stopFrameDriver() {
         displayLink?.invalidate()
         displayLink = nil
@@ -535,16 +533,37 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         stopFrameDriver()
     }
 
-    private func resumeFrameDriverIfNeeded() {
-        guard !isDisposed, isFrameDeliveryEnabled, player != nil else { return }
-        startFrameDriver()
-    }
-
     private func stopFrameDriver() {
         pollTimer?.invalidate()
         pollTimer = nil
     }
     #endif
+
+    private func resumeFrameDriverIfNeeded() {
+        guard !isDisposed, isFrameDeliveryEnabled, player != nil else { return }
+        stopPausedSeekPolling()
+        startFrameDriver()
+        #if os(iOS)
+        displayLink?.isPaused = false
+        #endif
+    }
+
+    private func schedulePausedSeekPoll() {
+        guard pausedSeekPollTimer == nil else { return }
+        let timer = Timer(timeInterval: Self.pausedSeekProbeInterval, repeats: false) {
+            [weak self] _ in
+            guard let self else { return }
+            self.pausedSeekPollTimer = nil
+            self.pullAndDeliverFrame()
+        }
+        pausedSeekPollTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func stopPausedSeekPolling() {
+        pausedSeekPollTimer?.invalidate()
+        pausedSeekPollTimer = nil
+    }
 
     /// Switches the frame effects to `configs` and, when the list changed,
     /// redraws the frame on screen with them, so a paused preview shows the
@@ -598,9 +617,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             frameAt: frameTime, playing: (player?.rate ?? 0) != 0)
         else { return false }
         mediaDataRearmCount = 0
-        if !pausedFramePull.isAwaitingTargetFrame {
-            finishRefresh()
-        }
+        finishRefresh()
         // What was drawn before this frame, so read ahead of the updates below.
         let drawnUs = lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil
         let drawTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime, drawnUs: drawnUs)
@@ -641,17 +658,27 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
               let output = videoOutput,
               let player else { return }
 
+        guard player.currentItem != nil else {
+            pauseFrameDriver()
+            return
+        }
+
         let itemTime = pausedFramePull.time(
             playing: player.rate != 0, clock: player.currentTime())
 
         let now = CACurrentMediaTime()
         let withinForceWindow = now < forceRefreshDeadline
         defer {
-            let waitingForSeek = pausedFramePull.isAwaitingTargetFrame
-                && now < forceRefreshDeadline + Self.pausedSeekSettleInterval
             if player.timeControlStatus == .paused && hasDeliveredFirstFrame
-                && !frameEffects.isActive && !waitingForSeek {
-                pauseFrameDriver()
+                && !frameEffects.isActive {
+                let cadence = pausedFramePull.pollingCadence(
+                    at: now, fastUntil: pausedSeekFastPollDeadline)
+                if cadence != .displayRate {
+                    pauseFrameDriver()
+                    if cadence == .seekProbe {
+                        schedulePausedSeekPoll()
+                    }
+                }
             }
         }
 
