@@ -79,11 +79,6 @@ class StalePlaybackDetector {
     _timer = Timer.periodic(interval, (_) {
       final state = controller.state;
 
-      if (!state.isPlaying) {
-        _pauseHeartbeatTimer();
-        return;
-      }
-
       if (_graceHeartbeats > 0) {
         _graceHeartbeats--;
         _lastPositionMs = state.position.inMilliseconds;

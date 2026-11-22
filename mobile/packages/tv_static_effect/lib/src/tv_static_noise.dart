@@ -87,6 +87,9 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
       if (widget.shaderLoader != null) {
         _createPainter = await widget.shaderLoader!();
       } else {
+        // coverage:ignore-start
+        // FragmentProgram.fromAsset requires a GPU shader bundle unavailable in
+        // headless widget tests; tests inject [widget.shaderLoader] instead.
         final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
         final shader = program.fragmentShader();
         if (!mounted) {
@@ -105,6 +108,7 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
               time: time,
               opacity: opacity,
             );
+        // coverage:ignore-end
       }
       if (mounted) {
         setState(() => _loaded = true);

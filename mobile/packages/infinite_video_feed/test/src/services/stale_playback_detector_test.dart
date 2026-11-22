@@ -293,6 +293,22 @@ void main() {
           det.disposeAll();
         });
       });
+
+      test('starts heartbeat timer immediately when already playing', () {
+        fakeAsync((async) {
+          final controller = FakeController()
+            ..pushState(
+              const DivineVideoPlayerState(
+                status: PlaybackStatus.playing,
+                position: Duration(milliseconds: 500),
+              ),
+            );
+          final det = _makeDetector()..start(0, controller);
+
+          expect(async.periodicTimerCount, equals(1));
+          det.disposeAll();
+        });
+      });
     });
   });
 }
