@@ -14,6 +14,8 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/config/adaptive_classics.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -318,6 +320,45 @@ void main() {
   });
 
   group('VideoFeedPage account and repository identity', () {
+    testWidgets(
+      'seen-filter toggles replace Home while unrelated flags retain it',
+      (
+        tester,
+      ) async {
+        final home = await _mountSafetyPolicyHome(tester);
+        final flags = home.container.read(featureFlagServiceProvider);
+        await flags.setFlag(FeatureFlag.debugTools, false);
+        await tester.pumpAndSettle();
+        expect(
+          tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
+          same(home.originalFeed),
+        );
+
+        var previousFeed = home.originalFeed;
+        for (final enabled in [false, true]) {
+          await flags.setFlag(FeatureFlag.clientSeenFiltering, enabled);
+          await tester.pumpAndSettle();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+          final feed = tester
+              .element(find.byType(VideoFeedView))
+              .read<VideoFeedBloc>();
+          expect(previousFeed.isClosed, isTrue);
+          expect(feed, isNot(same(previousFeed)));
+          expect(feed.state.status, VideoFeedStatus.success);
+          expect(feed.state.source, const VideoFeedSource.forYou());
+          expect(
+            home.preferences.getString('selected_feed_mode_$_policyViewer'),
+            'forYou',
+          );
+          previousFeed = feed;
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
     testWidgets('wires repository deletion notifications to the Home bloc', (
       tester,
     ) async {

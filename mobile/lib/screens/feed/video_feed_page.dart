@@ -88,6 +88,9 @@ class VideoFeedPage extends ConsumerWidget {
     final provenanceFilterVersion = ref.watch(
       videoProvenanceFilterVersionProvider,
     );
+    final seenFilteringEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
+    );
     final videosRepository = ref.watch(videosRepositoryProvider);
     final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
@@ -117,6 +120,9 @@ class VideoFeedPage extends ConsumerWidget {
       child: MultiBlocProvider(
         key: ValueKey((
           'video-feed',
+          // Home captures its loader at construction. Replace it when this
+          // filter changes so loads use the repository with the new policy.
+          seenFilteringEnabled,
           hashtagRepository,
           badgeRepository,
           showDivineHostedOnly,
