@@ -929,14 +929,13 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   @override
   Future<void> close() async {
-    // Nothing is awaited before super.close(), which flips isClosed at once:
-    // a page that lands during an earlier await would open a watch past
-    // these cancels (#9689).
+    // Cancelling a watch closes its relay subscription. Nothing is awaited
+    // before super.close(), which flips isClosed at once: a page that lands
+    // during an earlier await would open a watch past these cancels (#9689).
     final cancels = [
       _commentStreamSubscription?.cancel(),
       _commentDeletionSubscription?.cancel(),
       _viewerBlocksSubscription?.cancel(),
-      _commentsRepository.stopWatchingComments(),
     ];
     await Future.wait([super.close(), ...cancels.nonNulls]);
   }

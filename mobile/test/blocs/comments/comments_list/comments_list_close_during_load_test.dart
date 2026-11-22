@@ -105,7 +105,6 @@ void main() {
         when(watchCommentDeletions)
             .thenAnswer((_) => const Stream<CommentDeletion>.empty());
         when(findAuthorDeletedComments).thenAnswer((_) async => <String>{});
-        when(repository.stopWatchingComments).thenAnswer((_) async {});
       });
 
       test(

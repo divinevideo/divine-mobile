@@ -27,7 +27,6 @@ void main() {
       final firstCancelGate = Completer<void>();
       var cancelCalls = 0;
 
-      when(repo.stopWatchingComments).thenAnswer((_) async {});
       when(
         () => repo.loadComments(
           rootEventId: any(named: 'rootEventId'),
@@ -118,7 +117,6 @@ void main() {
       final firstCancelGate = Completer<void>();
       var cancelCalls = 0;
 
-      when(repo.stopWatchingComments).thenAnswer((_) async {});
       when(
         () => repo.loadComments(
           rootEventId: any(named: 'rootEventId'),

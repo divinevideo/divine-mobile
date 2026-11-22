@@ -3944,9 +3944,6 @@ void main() {
         expect(find.text(topComment.content), findsOneWidget);
         // Hold the sheet's own load, so its pending focus stays observable.
         stubLoadComments((_) => Completer<CommentThread>().future);
-        when(
-          () => commentsRepository.stopWatchingComments(),
-        ).thenAnswer((_) async {});
 
         await tester.tap(find.text(topComment.content));
         await tester.pump();

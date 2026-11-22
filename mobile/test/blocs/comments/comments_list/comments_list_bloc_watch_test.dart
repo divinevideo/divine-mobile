@@ -71,7 +71,6 @@ void main() {
       when(
         () => repository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(() => repository.stopWatchingComments()).thenAnswer((_) async {});
     });
 
     tearDown(() => watch.close());

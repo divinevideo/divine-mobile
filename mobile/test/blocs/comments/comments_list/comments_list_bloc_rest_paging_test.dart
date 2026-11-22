@@ -92,9 +92,6 @@ void main() {
       when(
         () => commentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(
-        () => commentsRepository.stopWatchingComments(),
-      ).thenAnswer((_) async {});
     });
 
     setUpAll(() {

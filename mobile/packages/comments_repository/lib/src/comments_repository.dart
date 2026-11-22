@@ -167,11 +167,9 @@ class CommentsRepository {
   /// [_maxRememberedDeletionRequests] comments, oldest forgotten first.
   final Map<String, Set<String>> _deletionRequesters = {};
 
-  /// Subscription ID for the active comment watch, if any.
-  String? _watchSubscriptionId;
-
-  /// Subscription ID for the active comment-deletion watch, if any.
-  String? _deletionWatchSubscriptionId;
+  /// Characters in the token that gives each watch a subscription id of its
+  /// own.
+  static const _watchTokenLength = 8;
 
   /// How far before now the live deletion watch starts, so a request published
   /// while the first page was loading is still seen.
@@ -1071,7 +1069,8 @@ class CommentsRepository {
   /// - [includeVideoReplies]: Whether Kind 34236 video replies are watched too
   ///
   /// Returns a [Stream<Comment>] that emits new comments as they arrive.
-  /// Call [stopWatchingComments] to close the subscription.
+  /// Each call opens a relay subscription of its own, which cancelling the
+  /// stream's subscription closes.
   ///
   /// Throws [WatchCommentsFailedException] if the subscription fails.
   Stream<Comment> watchComments({
@@ -1107,14 +1106,9 @@ class CommentsRepository {
           ),
       ];
 
-      _watchSubscriptionId = scopedSubscriptionId(
-        'comments_watch',
-        rootEventId,
-      );
-
       final eventStream = _nostrClient.subscribe(
         filters,
-        subscriptionId: _watchSubscriptionId,
+        subscriptionId: _watchSubscriptionId('comments_watch', rootEventId),
         onEose: onEose,
       );
 
@@ -1153,7 +1147,8 @@ class CommentsRepository {
   /// without a `k` tag is not seen here; [findAuthorDeletedComments] still
   /// finds it.
   ///
-  /// Call [stopWatchingComments] to close the subscription.
+  /// Each call opens a relay subscription of its own, which cancelling the
+  /// stream's subscription closes.
   ///
   /// Throws [WatchCommentsFailedException] if the subscription fails.
   Stream<CommentDeletion> watchCommentDeletions({
@@ -1162,10 +1157,6 @@ class CommentsRepository {
   }) {
     try {
       final since = _now().subtract(_liveDeletionLookback);
-      _deletionWatchSubscriptionId = scopedSubscriptionId(
-        'comment_deletions_watch',
-        rootEventId,
-      );
       return _nostrClient
           .subscribe(
             [
@@ -1178,7 +1169,10 @@ class CommentsRepository {
                 since: since.millisecondsSinceEpoch ~/ 1000,
               ),
             ],
-            subscriptionId: _deletionWatchSubscriptionId,
+            subscriptionId: _watchSubscriptionId(
+              'comment_deletions_watch',
+              rootEventId,
+            ),
             handleDeletionRequests: false,
           )
           .where((event) => event.kind == _deletionKind)
@@ -1198,6 +1192,23 @@ class CommentsRepository {
         'Failed to watch comment deletions: $e',
       );
     }
+  }
+
+  /// A subscription id of its own for one watch of [rootEventId].
+  ///
+  /// The client hands a second caller of an open id the same subscription,
+  /// without its stored events or EOSE, and closing it ends it for both
+  /// (#9690).
+  static String _watchSubscriptionId(String prefix, String rootEventId) {
+    final id =
+        '${scopedSubscriptionId(prefix, rootEventId)}_'
+        '${StringUtil.rndSecureNameStr(_watchTokenLength)}';
+    assert(
+      id.length <= nip01MaxSubscriptionIdLength,
+      'Subscription id "$id" is ${id.length} characters, over NIP-01\'s '
+      '$nip01MaxSubscriptionIdLength',
+    );
+    return id;
   }
 
   CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
@@ -1221,23 +1232,6 @@ class CommentsRepository {
       _deletedCommentIds.contains(commentId) ||
       (_deletionRequesters[commentId]?.contains(authorPubkey.toLowerCase()) ??
           false);
-
-  /// Stops watching for new comments and comment deletions.
-  ///
-  /// Closes the persistent Nostr subscriptions opened by [watchComments] and
-  /// [watchCommentDeletions].
-  Future<void> stopWatchingComments() async {
-    final id = _watchSubscriptionId;
-    if (id != null) {
-      await _nostrClient.unsubscribe(id);
-      _watchSubscriptionId = null;
-    }
-    final deletionId = _deletionWatchSubscriptionId;
-    if (deletionId != null) {
-      await _nostrClient.unsubscribe(deletionId);
-      _deletionWatchSubscriptionId = null;
-    }
-  }
 
   /// Loads comments authored by a specific user across all videos.
   ///

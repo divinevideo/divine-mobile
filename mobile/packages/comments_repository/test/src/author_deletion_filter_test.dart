@@ -571,7 +571,6 @@ void main() {
               invocation.namedArguments[#handleDeletionRequests] as bool?;
           return relayStream.stream;
         });
-        when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
         repository = CommentsRepository(
           nostrClient: nostrClient,
           clock: () => DateTime.fromMillisecondsSinceEpoch(nowMillis),
@@ -655,15 +654,6 @@ void main() {
         await pumpEventQueue();
 
         expect(received, isEmpty);
-      });
-
-      test('stopWatchingComments closes the deletion subscription', () async {
-        repository.watchCommentDeletions(rootEventId: rootEventId);
-        expect(subscribedId, isNotNull);
-
-        await repository.stopWatchingComments();
-
-        verify(() => nostrClient.unsubscribe(subscribedId!)).called(1);
       });
     });
 

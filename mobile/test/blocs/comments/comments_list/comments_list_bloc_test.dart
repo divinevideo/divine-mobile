@@ -51,9 +51,6 @@ void main() {
       when(
         () => mockCommentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(
-        () => mockCommentsRepository.stopWatchingComments(),
-      ).thenAnswer((_) async {});
     });
 
     Comment makeComment(
@@ -1268,7 +1265,18 @@ void main() {
         await bloc.close();
       });
 
-      test('stopWatchingComments is awaited in close()', () async {
+      test('stops watching comments when closed', () async {
+        final comments = StreamController<Comment>.broadcast();
+        addTearDown(comments.close);
+        when(
+          () => mockCommentsRepository.watchComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            since: any(named: 'since'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => comments.stream);
         when(
           () => mockCommentsRepository.loadComments(
             rootEventId: any(named: 'rootEventId'),
@@ -1278,13 +1286,13 @@ void main() {
           ),
         ).thenAnswer((_) async => CommentThread.empty(validId('root')));
 
-        final bloc = createBloc();
-        bloc.add(const CommentsLoadRequested());
+        final bloc = createBloc()..add(const CommentsLoadRequested());
         await pumpEventQueue();
+        expect(comments.hasListener, isTrue);
 
         await bloc.close();
 
-        verify(() => mockCommentsRepository.stopWatchingComments()).called(1);
+        expect(comments.hasListener, isFalse);
       });
 
       test(
