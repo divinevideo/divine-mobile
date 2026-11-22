@@ -3,6 +3,7 @@
 //
 // USAGE: dart run scripts/generate_seed_data.dart
 
+// A command-line script run by hand; printing is how it reports progress.
 // ignore_for_file: avoid_print
 
 import 'dart:convert';

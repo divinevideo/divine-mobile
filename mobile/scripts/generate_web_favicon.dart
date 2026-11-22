@@ -7,6 +7,7 @@
 // has no separate favicon setting and writes the maskable icons with no safe
 // zone padding, so this script has to run second to win.
 
+// A command-line script run by hand; printing is how it reports what it wrote.
 // ignore_for_file: avoid_print
 
 import 'dart:io';
