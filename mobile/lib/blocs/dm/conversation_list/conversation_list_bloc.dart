@@ -149,10 +149,10 @@ class ConversationListBloc
     // live subscription's first-open window (limit:50) only persists the
     // most-recent conversations; this idempotent, one-time, background
     // drain backfills the rest so the list is complete. Triggered here, when
-    // Messages first opens (only the Messages pane reads this bloc, #11020),
-    // because relay discovery has reliably finished by then — fetching
-    // against the full relay pool, not the divine-only pool present at cold
-    // start. See #4953.
+    // the inbox's Messages tab first opens (InboxPage provides this bloc
+    // lazily, #11020) or the message requests page opens, because relay
+    // discovery has reliably finished by then — fetching against the full
+    // relay pool, not the divine-only pool present at cold start. See #4953.
     unawaited(_dmRepository.backfillHistoryIfNeeded());
 
     // Replay any gift wraps that failed decryption on a previous pass (e.g.

@@ -68,17 +68,16 @@ class _InboxViewState extends ConsumerState<InboxView>
   /// Whether the Messages tab UI has been opened at least once. Until then
   /// the Messages pane, the only reader of `ConversationListBloc`, stays out
   /// of the animated stack. `InboxPage` provides that bloc lazily, so the bloc
-  /// and the DM history restore its start event runs begin when Messages
-  /// first opens, not when the inbox does (#11020). Opening a chat starts the
-  /// restore too, from `ConversationBloc`. After the first open the pane stays
+  /// is created, and the DM history restore starts, when Messages first opens,
+  /// not when the inbox does (#11020). A chat and the message requests page
+  /// start the restore on their own too. After the first open the pane stays
   /// mounted so later switches preserve UI state. Notifications is the
   /// default tab and is always mounted.
   bool _messagesActivated = false;
 
   /// Pubkey the current tab state belongs to. When the signed-in identity
   /// changes we collapse back to Notifications and re-arm lazy Messages UI
-  /// activation, so the new account's conversation list, and its history
-  /// restore, wait until its Messages tab is opened.
+  /// activation.
   String? _activePubkey;
   bool _pubkeyObserved = false;
 
@@ -370,14 +369,11 @@ class _PeerLabelSyncState extends State<_PeerLabelSync> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Forwards the profile repository and blocklist changes to
-/// `ConversationListBloc`.
-///
-/// It sits inside the Messages subtree for the reason [_PeerLabelSync] does:
-/// the bloc's start event runs the DM history restore, so a read anywhere
-/// higher would start the restore before Messages opens (#11020). Changes
-/// that land earlier need no forwarding: the bloc takes the profile
-/// repository when it is created and reads the blocklist as it loads.
+/// Forwards profile repository and blocklist changes to
+/// `ConversationListBloc`. It lives inside the Messages pane, like
+/// [_PeerLabelSync], so it never creates the bloc, and starts the DM history
+/// restore, before Messages opens (#11020). Earlier changes need no
+/// forwarding: the bloc reads both when it starts.
 class _ConversationListSync extends ConsumerWidget {
   const _ConversationListSync({required this.child});
 

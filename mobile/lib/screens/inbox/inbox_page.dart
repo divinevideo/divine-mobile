@@ -54,7 +54,7 @@ class InboxPage extends ConsumerWidget {
       // instances are owner-scoped; only the ready one gets credentials and
       // starts listening. A
       // BlocProvider factory runs once and captures whichever instance was
-      // current at mount; if the inbox is opened during the not-ready
+      // current when it ran; if Messages first opens during the not-ready
       // window the ConversationListBloc stays wired to that owner-scoped but
       // non-listening repository, so it misses later ingestion. Re-key on the captured
       // repositories' identities so the blocs are rebuilt bound to the
@@ -138,9 +138,7 @@ class InboxPage extends ConsumerWidget {
 /// subtree with it.
 ///
 /// The conversation list's late dependencies are forwarded from inside the
-/// Messages pane instead (`_ConversationListSync` in inbox_view.dart):
-/// reading that bloc here would create it, and start the DM history restore,
-/// before Messages opens (#11020).
+/// Messages pane instead, by `_ConversationListSync` (#11020).
 class _InboxRepositorySync extends ConsumerWidget {
   const _InboxRepositorySync({required this.child});
 
