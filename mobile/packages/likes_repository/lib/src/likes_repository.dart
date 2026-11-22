@@ -3642,6 +3642,7 @@ class LikesRepository {
   ///
   /// Safe to call multiple times (idempotent).
   Future<void> initialize() {
+    if (_isDisposed) return Future.value();
     final inFlight = _startupReconciliationFuture;
     if (inFlight != null) return inFlight;
     if (_isInitialized) return Future.value();
@@ -3682,6 +3683,7 @@ class LikesRepository {
     }
 
     final pubkey = await _currentUserPubkey();
+    if (_isDisposed) return;
     if (pubkey != null) {
       _subscribeToReactions(pubkey);
     }

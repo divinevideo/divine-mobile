@@ -1106,7 +1106,7 @@ class RepostsRepository {
   ///
   /// Safe to call multiple times (idempotent).
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isDisposed || _isInitialized) return;
 
     // Load from local storage first for immediate UI display. Best-effort:
     // throwing here would skip _subscribeToReposts below, so an unreadable
@@ -1127,6 +1127,7 @@ class RepostsRepository {
     }
 
     final pubkey = await _currentUserPubkey();
+    if (_isDisposed) return;
     if (pubkey != null) {
       _subscribeToReposts(pubkey);
     }

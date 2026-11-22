@@ -3302,6 +3302,34 @@ void main() {
     });
 
     group('dispose', () {
+      test(
+        'does not open a subscription after disposal during startup',
+        () async {
+          final read =
+              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(that: isNewestRead),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) => read.future);
+          final initialized = repository.initialize();
+
+          await repository.dispose();
+          read.complete((events: <Event>[], timedOut: false, noRelays: false));
+          await initialized;
+
+          verifyNever(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          );
+        },
+      );
+
       test('closes resources without error', () async {
         await repository.initialize();
 

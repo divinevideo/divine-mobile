@@ -209,6 +209,7 @@ class SoundsRepository {
   String? _subscriptionId;
 
   bool _isInitialized = false;
+  bool _isDisposed = false;
 
   /// Whether the repository has been initialized
   bool get isInitialized => _isInitialized;
@@ -233,7 +234,7 @@ class SoundsRepository {
   ///
   /// Call this before using the repository to ensure sounds are loaded.
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isDisposed || _isInitialized) return;
 
     Log.debug(
       'Initializing SoundsRepository',
@@ -244,6 +245,7 @@ class SoundsRepository {
     try {
       // Fetch initial trending sounds
       await fetchTrendingSounds();
+      if (_isDisposed) return;
 
       // Subscribe for real-time updates
       _subscribeToAudioEvents();
@@ -266,6 +268,7 @@ class SoundsRepository {
 
   /// Dispose resources
   Future<void> dispose() async {
+    _isDisposed = true;
     await _subscription?.cancel();
     if (_subscriptionId != null) {
       await _nostrClient.unsubscribe(_subscriptionId!);

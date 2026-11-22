@@ -43,6 +43,29 @@ void main() {
 
     group('initialize', () {
       test(
+        'does not open a subscription after disposal during key resolution',
+        () {
+          fakeAsync((async) {
+            firstError = const RelaySubscriptionRefusedException(
+              'rate-limited: slow down',
+            );
+            final key = Completer<String?>();
+            when(client.resolvePublicKey).thenAnswer((_) => key.future);
+            final repository = RepostsRepository(nostrClient: client);
+
+            unawaited(repository.initialize());
+            async.flushMicrotasks();
+            verify(client.resolvePublicKey).called(1);
+            repository.dispose();
+            key.complete(_pubkey);
+            async.elapse(const Duration(minutes: 2));
+
+            expect(subscribes, 0);
+          });
+        },
+      );
+
+      test(
         'reopens the live reposts subscription after every relay refuses it',
         () {
           fakeAsync((async) {
