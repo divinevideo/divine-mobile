@@ -460,9 +460,11 @@ test-backed.
    - `CONFIRM_PATCH` = `YES` (defaults to `NO`; the build aborts otherwise)
    - `RELEASE_VERSION` = the exact release string, e.g. `1.0.9+247`
    - iOS only: `XCODE_VERSION` = the Xcode version in the original release
-     build log. New builds use Xcode 27.2 and record its build ID in provenance,
-     so patch verification rejects a different build ID. For older releases,
-     select the original version from the log, for example `26.5`.
+     build log; it defaults to the version `ios-build` pins. Releases recorded
+     with an Xcode build ID in provenance reject a patch built with any other.
+     Older releases carry none: verification prints a NOTE and accepts
+     whatever you select, so read the version from the release log yourself,
+     for example `26.5`.
    - `PATCH_BRANCH` = `shorebird-patch/<platform>/<RELEASE_VERSION>`
    - `RELEASE_COMMIT` = optional source assertion; normally leave it empty
    - `DEFAULT_ENV` = **the same value the release was built with**
@@ -674,6 +676,12 @@ unpatchable — the record is create-only and must not be rewritten to match.
 Sequence an upgrade as: merge the pin bump, cut a **new** store release under
 the new pin, and patch only releases recorded under it. Never upgrade while a
 shipped release is the only thing standing between production and a hot fix.
+
+**Retiring an Xcode image strands iOS releases recorded under it.** Provenance
+records the Xcode build ID an iOS release was archived with, and patch
+verification rejects any other build. Once Codemagic stops offering that
+Xcode version, the release can no longer be patched; cut a new store release
+under a supported Xcode before relying on a patch.
 
 Then `shorebird login`. You need access to the Divine organization; membership
 is managed in the Shorebird console.
