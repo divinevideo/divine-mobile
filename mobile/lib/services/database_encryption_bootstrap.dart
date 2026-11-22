@@ -438,10 +438,12 @@ class DatabaseEncryptionBootstrap {
   /// A key written before #9343 sits under `unlocked`, which the Keychain
   /// refuses whenever the device is locked (#9343). The plugin cannot report
   /// which class an existing item carries and its `read` does not filter on
-  /// one, so there is nothing to test — the rewrite is simply repeated. It is
-  /// idempotent: the plugin's iOS write puts the accessibility into its
-  /// `SecItemUpdate` query, so an item already under the current class updates
-  /// in place, and only a mismatched one takes the delete-and-re-add path.
+  /// one, so there is nothing to test. The rewrite is repeated on each launch
+  /// until it succeeds once; a persisted marker then skips it, and a database
+  /// reset clears that marker. It is idempotent: the plugin's iOS write puts
+  /// the accessibility into its `SecItemUpdate` query, so an item already
+  /// under the current class updates in place, and only a mismatched one takes
+  /// the delete-and-re-add path.
   ///
   /// Rewriting in place, rather than moving the key to a new slot, is what
   /// keeps a rollback non-destructive — see [dbCipherKeyStorageKey].

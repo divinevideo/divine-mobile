@@ -255,8 +255,10 @@ Future<void> startOpenVineApp({
         await DivineVideoPlayerController.configureCache(maxSizeBytes: bytes);
       },
     ),
-    // Dispose any zombie native players from a previous Dart VM (e.g. hot
-    // restart). In release builds the OS always starts a fresh process.
+    // Dispose any zombie native players from a previous Dart VM. Only a hot
+    // restart (debug) keeps them: when Android destroys the engine and later
+    // reruns main() in the same process, the plugin's onDetachedFromEngine
+    // has already disposed the UI engine's players.
     disposeVideoPlayersForStartup(
       skip: !hasNativeVideoPlayer || kReleaseMode,
       disposeAll: DivineVideoPlayerController.disposeAll,
