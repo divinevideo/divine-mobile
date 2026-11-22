@@ -488,23 +488,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'ఆడియో ఇన్‌పుట్ పరికరం';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'ఆటో (సిఫార్సు చేయబడింది)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'ఉత్తమ మైక్రోఫోన్‌ను స్వయంచాలకంగా ఎంపిక చేస్తుంది';
-
-  @override
-  String get contentPreferencesSelectAudioInput =>
-      'ఆడియో ఇన్‌పుట్‌ని ఎంచుకోండి';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'తెలియని మైక్రోఫోన్';
-
-  @override
   String get contentFiltersAdultContent => 'పెద్దల కంటెంట్';
 
   @override

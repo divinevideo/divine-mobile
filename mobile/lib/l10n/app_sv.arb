@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Ljudingångsenhet",
-  "contentPreferencesAutoRecommended": "Auto (rekommenderas)",
-  "contentPreferencesAutoSelectsBest": "Väljer automatiskt den bästa mikrofonen",
-  "contentPreferencesSelectAudioInput": "Välj ljudingång",
-  "contentPreferencesUnknownMicrophone": "Okänd mikrofon",
   "profileBlockedAccountNotAvailable": "Det här kontot är inte tillgängligt",
   "profileInvalidId": "Ogiltigt profil-ID",
   "profileShareText": "Kolla in {displayName} på Divine!\n\n{url}",

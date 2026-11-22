@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "جهاز إدخال الصوت",
-  "contentPreferencesAutoRecommended": "تلقائي (موصى به)",
-  "contentPreferencesAutoSelectsBest": "يختار تلقائيًا أفضل ميكروفون",
-  "contentPreferencesSelectAudioInput": "حدد إدخال الصوت",
-  "contentPreferencesUnknownMicrophone": "ميكروفون غير معروف",
   "profileBlockedAccountNotAvailable": "هذا الحساب غير متاح",
   "profileInvalidId": "معرّف الملف الشخصي غير صالح",
   "profileShareText": "شاهد {displayName} على Divine!\n\n{url}",

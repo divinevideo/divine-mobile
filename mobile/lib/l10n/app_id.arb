@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Perangkat Masukan Audio",
-  "contentPreferencesAutoRecommended": "Otomatis (direkomendasikan)",
-  "contentPreferencesAutoSelectsBest": "Pilih mikrofon terbaik secara otomatis",
-  "contentPreferencesSelectAudioInput": "Pilih Masukan Audio",
-  "contentPreferencesUnknownMicrophone": "Mikrofon Tidak Dikenal",
   "profileBlockedAccountNotAvailable": "Akun ini tidak tersedia",
   "profileInvalidId": "ID profil tidak valid",
   "profileShareText": "Lihat {displayName} di Divine!\n\n{url}",

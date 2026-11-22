@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Dispozitiv de intrare audio",
-  "contentPreferencesAutoRecommended": "Automat (recomandat)",
-  "contentPreferencesAutoSelectsBest": "Alege automat cel mai bun microfon",
-  "contentPreferencesSelectAudioInput": "Alege intrarea audio",
-  "contentPreferencesUnknownMicrophone": "Microfon necunoscut",
   "profileBlockedAccountNotAvailable": "Acest cont nu e disponibil",
   "profileInvalidId": "ID de profil invalid",
   "profileShareText": "Aruncă o privire la {displayName} pe Divine!\n\n{url}",

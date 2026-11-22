@@ -363,11 +363,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "ఆడియో ఇన్‌పుట్ పరికరం",
-  "contentPreferencesAutoRecommended": "ఆటో (సిఫార్సు చేయబడింది)",
-  "contentPreferencesAutoSelectsBest": "ఉత్తమ మైక్రోఫోన్‌ను స్వయంచాలకంగా ఎంపిక చేస్తుంది",
-  "contentPreferencesSelectAudioInput": "ఆడియో ఇన్‌పుట్‌ని ఎంచుకోండి",
-  "contentPreferencesUnknownMicrophone": "తెలియని మైక్రోఫోన్",
   "contentFiltersAdultContent": "పెద్దల కంటెంట్",
   "contentFiltersViolenceGore": "హింస & గోరే",
   "contentFiltersSubstances": "పదార్థాలు",

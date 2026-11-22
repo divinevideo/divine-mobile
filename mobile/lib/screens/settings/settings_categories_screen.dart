@@ -124,8 +124,6 @@ class CreatingSettingsScreen extends ConsumerWidget {
           const MirrorFrontCameraSetting(),
           const MusicModeSetting(),
         ],
-        if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
-          const AudioDeviceSetting(),
         const AudioSharingSetting(),
         // Stored in the account's kind 0, so it needs a signed-in account.
         if (isAuthenticated) const RemixSetting(),

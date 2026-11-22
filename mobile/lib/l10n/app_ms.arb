@@ -249,11 +249,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Peranti Input Audio",
-  "contentPreferencesAutoRecommended": "Auto (disyorkan)",
-  "contentPreferencesAutoSelectsBest": "Memilih mikrofon terbaik secara automatik",
-  "contentPreferencesSelectAudioInput": "Pilih Input Audio",
-  "contentPreferencesUnknownMicrophone": "Mikrofon Tidak Diketahui",
   "contentFiltersAdultContent": "KANDUNGAN DEWASA",
   "contentFiltersViolenceGore": "KEGANASAN & KEKEJAMAN",
   "contentFiltersSubstances": "BAHAN TERKAWAL",

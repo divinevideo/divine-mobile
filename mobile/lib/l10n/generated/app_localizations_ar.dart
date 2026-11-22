@@ -469,22 +469,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'جهاز إدخال الصوت';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'تلقائي (موصى به)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'يختار تلقائيًا أفضل ميكروفون';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'حدد إدخال الصوت';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'ميكروفون غير معروف';
-
-  @override
   String get contentFiltersAdultContent => 'محتوى للبالغين';
 
   @override

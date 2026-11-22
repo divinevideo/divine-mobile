@@ -829,36 +829,6 @@ abstract class AppLocalizations {
   /// **'Done ({count} selected)'**
   String contentPreferencesDoneCount(int count);
 
-  /// No description provided for @contentPreferencesAudioInputDevice.
-  ///
-  /// In en, this message translates to:
-  /// **'Audio Input Device'**
-  String get contentPreferencesAudioInputDevice;
-
-  /// No description provided for @contentPreferencesAutoRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto (recommended)'**
-  String get contentPreferencesAutoRecommended;
-
-  /// No description provided for @contentPreferencesAutoSelectsBest.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatically selects the best microphone'**
-  String get contentPreferencesAutoSelectsBest;
-
-  /// No description provided for @contentPreferencesSelectAudioInput.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Audio Input'**
-  String get contentPreferencesSelectAudioInput;
-
-  /// No description provided for @contentPreferencesUnknownMicrophone.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown Microphone'**
-  String get contentPreferencesUnknownMicrophone;
-
   /// No description provided for @contentFiltersAdultContent.
   ///
   /// In en, this message translates to:
