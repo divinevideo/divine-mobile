@@ -342,7 +342,7 @@ void main() {
             // Android reports state every 200 ms, faster than the heartbeat,
             // so each update must not restart the periodic timer.
             const updateEvery = Duration(milliseconds: 200);
-            final ticksNeeded =
+            const ticksNeeded =
                 StalePlaybackDetector.graceAfterPlay +
                 StalePlaybackDetector.heartbeatThreshold +
                 1;
