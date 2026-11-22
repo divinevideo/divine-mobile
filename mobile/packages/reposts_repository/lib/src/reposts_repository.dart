@@ -154,7 +154,7 @@ class RepostsRepository {
   bool _isDisposed = false;
 
   /// Real-time sync subscription for cross-device synchronization.
-  StreamSubscription<Event>? _repostSubscription;
+  RefusalRetryingSubscription? _repostSubscription;
   String? _repostSubscriptionId;
 
   /// Emits the current set of reposted addressable IDs.
@@ -1141,25 +1141,32 @@ class RepostsRepository {
   /// updates the local cache.
   void _subscribeToReposts(String currentUserPubkey) {
     // Use a deterministic subscription ID so we can unsubscribe later
-    _repostSubscriptionId = scopedSubscriptionId(
+    final subscriptionId = _repostSubscriptionId = scopedSubscriptionId(
       'reposts_repo_reposts',
       currentUserPubkey,
     );
 
-    final eventStream = _nostrClient.subscribe([
-      Filter(
-        authors: [currentUserPubkey],
-        kinds: const [EventKind.genericRepost],
-        limit: 1,
+    // A pending reopen of an earlier subscription would outlive dispose.
+    unawaited(_repostSubscription?.cancel());
+    _repostSubscription = RefusalRetryingSubscription(
+      open: () => _nostrClient.subscribe([
+        Filter(
+          authors: [currentUserPubkey],
+          kinds: const [EventKind.genericRepost],
+          limit: 1,
+        ),
+      ], subscriptionId: subscriptionId),
+      onEvent: _processIncomingRepost,
+      onRefused: (reasonCategory, retryIn) => Log.warning(
+        'Every relay refused the live reposts subscription '
+        '(reason=$reasonCategory); retrying in ${retryIn.inSeconds}s',
+        name: 'RepostsRepository',
       ),
-    ], subscriptionId: _repostSubscriptionId);
-
-    _repostSubscription = eventStream.listen(
-      _processIncomingRepost,
-      onError: (Object error) {
-        // Subscription errors are non-fatal; log and continue
-      },
-    );
+      onError: (error) => Log.warning(
+        'Live reposts subscription ended: $error',
+        name: 'RepostsRepository',
+      ),
+    )..start();
   }
 
   /// Process an incoming Kind 16 repost event from the subscription.

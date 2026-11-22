@@ -355,7 +355,7 @@ class LikesRepository {
   bool _isDisposed = false;
 
   /// Real-time sync subscription for cross-device synchronization.
-  StreamSubscription<Event>? _reactionSubscription;
+  RefusalRetryingSubscription? _reactionSubscription;
   String? _reactionSubscriptionId;
 
   /// Writes [record] into [_likeRecords] and, when its
@@ -3708,25 +3708,32 @@ class LikesRepository {
   /// updates the local cache.
   void _subscribeToReactions(String currentUserPubkey) {
     // Use a deterministic subscription ID so we can unsubscribe later
-    _reactionSubscriptionId = scopedSubscriptionId(
+    final subscriptionId = _reactionSubscriptionId = scopedSubscriptionId(
       'likes_repo_reactions',
       currentUserPubkey,
     );
 
-    final eventStream = _nostrClient.subscribe([
-      Filter(
-        authors: [currentUserPubkey],
-        kinds: const [EventKind.reaction],
-        limit: 1,
+    // A pending reopen of an earlier subscription would outlive dispose.
+    unawaited(_reactionSubscription?.cancel());
+    _reactionSubscription = RefusalRetryingSubscription(
+      open: () => _nostrClient.subscribe([
+        Filter(
+          authors: [currentUserPubkey],
+          kinds: const [EventKind.reaction],
+          limit: 1,
+        ),
+      ], subscriptionId: subscriptionId),
+      onEvent: _processIncomingReaction,
+      onRefused: (reasonCategory, retryIn) => Log.warning(
+        'Every relay refused the live reactions subscription '
+        '(reason=$reasonCategory); retrying in ${retryIn.inSeconds}s',
+        name: 'LikesRepository',
       ),
-    ], subscriptionId: _reactionSubscriptionId);
-
-    _reactionSubscription = eventStream.listen(
-      _processIncomingReaction,
-      onError: (Object error) {
-        // Subscription errors are non-fatal; log and continue
-      },
-    );
+      onError: (error) => Log.warning(
+        'Live reactions subscription ended: $error',
+        name: 'LikesRepository',
+      ),
+    )..start();
   }
 
   /// Process an incoming Kind 7 reaction event from the subscription.
