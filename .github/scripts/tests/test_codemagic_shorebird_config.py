@@ -94,9 +94,41 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
         native = self.mobile_ci_contents.split("  ios-native-tests:\n", 1)[1]
         self.assertIn("    runs-on: xcode-27\n", native.split("    steps:", 1)[0])
+
+    def test_archive_sdk_guard_accepts_only_the_ios_27_device_sdk(self) -> None:
         build = self._definition_block("build_ios")
-        self.assertIn("Print :DTSDKName", build)
-        self.assertIn("Runner.xcarchive/Products/Applications/Runner.app", build)
+        guard = "APP_PATH=" + build.split("        APP_PATH=", 1)[1]
+        guard = guard.split("        esac\n", 1)[0] + "        esac\n"
+        with tempfile.TemporaryDirectory() as directory:
+            # The release runs on macOS; configuration CI runs on Linux, so a
+            # stub answers for PlistBuddy and the guard's own case runs as is.
+            plist_buddy = Path(directory) / "PlistBuddy"
+            plist_buddy.write_text(
+                "#!/bin/sh\n"
+                '[ "$1" = -c ] && [ "$2" = "Print :DTSDKName" ] || exit 1\n'
+                'printf "%s\\n" "$SDK_NAME"\n'
+            )
+            plist_buddy.chmod(0o755)
+            guard = guard.replace("/usr/libexec/PlistBuddy", shlex.quote(str(plist_buddy)))
+            for sdk, accepted in (
+                ("iphoneos27.2", True),
+                ("iphoneos26.5", False),
+                ("iphonesimulator27.2", False),
+                ("iphoneos270.0", False),
+            ):
+                with self.subTest(sdk=sdk):
+                    result = subprocess.run(
+                        ["bash", "-c", "set -euo pipefail\n" + guard],
+                        env={"PATH": os.environ["PATH"], "SDK_NAME": sdk},
+                        check=False,
+                        text=True,
+                        capture_output=True,
+                    )
+                    if accepted:
+                        self.assertEqual(0, result.returncode, result.stderr)
+                    else:
+                        self.assertNotEqual(0, result.returncode)
+                        self.assertIn("expected the iOS 27 SDK", result.stderr)
 
     def test_ios_patch_can_select_the_release_xcode(self) -> None:
         workflow = self._resolved_config()["workflows"]["ios-patch"]
