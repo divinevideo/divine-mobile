@@ -349,8 +349,9 @@ void main() {
       /// returns the language the republish was given.
       Future<String?> savedLanguage(
         VideoEvent video,
-        List<List<String>> tracks,
-      ) async {
+        List<List<String>> tracks, {
+        String? loadedRef,
+      }) async {
         when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
           (_) async => LatestVideoRevisionFound(
             Event('a' * 64, 34236, [
@@ -385,7 +386,11 @@ void main() {
           ),
         ).thenAnswer((_) async => '39307:pk1:subtitles:my-vine-id');
 
-        await repo.publishEditedSubtitles(video: video, cues: _cues);
+        await repo.publishEditedSubtitles(
+          video: video,
+          cues: _cues,
+          loadedRef: loadedRef,
+        );
 
         return verify(
               () => publisher.republishWithSubtitles(
@@ -397,6 +402,36 @@ void main() {
             ).captured.single
             as String?;
       }
+
+      group('when the editor loaded a fallback track', () {
+        const spanish = 'https://media.divine.video/spanish.vtt';
+        const english = 'https://media.divine.video/english.vtt';
+        final openedInSpanish = _video.copyWith(
+          textTrackRef: spanish,
+          textTrackLang: 'es',
+        );
+
+        test('saves it in its own language', () async {
+          expect(
+            await savedLanguage(openedInSpanish, [
+              track(spanish, 'captions', 'es'),
+              track(english, 'captions', 'en'),
+            ], loadedRef: english),
+            'en',
+          );
+        });
+
+        test('saves an unnamed one as English, not as the first '
+            "track's language", () async {
+          expect(
+            await savedLanguage(openedInSpanish, [
+              track(spanish, 'captions', 'es'),
+              track(english, 'captions', ''),
+            ], loadedRef: english),
+            'en',
+          );
+        });
+      });
 
       // A save whose subtitle event failed, or an edit on another device,
       // replaced the track the copy in hand names.

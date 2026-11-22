@@ -90,6 +90,9 @@ class SubtitleRepository {
   ///
   /// [lang] defaults to the language the subtitles are already tagged with,
   /// so an edit keeps it; untagged subtitles are published as English.
+  /// [loadedRef] is the track the editor loaded, as [loadCues] reported it:
+  /// when the first track was missing it can be another language's, and
+  /// that track is the one the edit replaces.
   ///
   /// The 39307 address serves the captions of every revision of [video], so
   /// it is replaced only after the video republish succeeds: a republish that
@@ -117,6 +120,7 @@ class SubtitleRepository {
     required VideoEvent video,
     required List<SubtitleCue> cues,
     String? lang,
+    String? loadedRef,
   }) async {
     final signedIn = _authService.currentPublicKeyHex;
     if (signedIn == null) {
@@ -141,7 +145,10 @@ class SubtitleRepository {
       throw SubtitleEditException('Newest revision of the video unavailable');
     }
 
-    final trackLang = lang ?? _editedTrackLanguage(video, newest.tags) ?? 'en';
+    final trackLang =
+        lang ??
+        _editedTrackLanguage(video, newest.tags, loadedRef: loadedRef) ??
+        'en';
     final vtt = SubtitleService.generateVtt(cues);
     final bytes = Uint8List.fromList(utf8.encode(vtt));
 
@@ -195,19 +202,24 @@ class SubtitleRepository {
 
   static String? _editedTrackLanguage(
     VideoEvent video,
-    List<List<String>> newestTags,
-  ) {
+    List<List<String>> newestTags, {
+    String? loadedRef,
+  }) {
     // The playback model keeps only the base language, and a copy restored
     // from a cache has no raw tags. Editing needs the full language of the
     // selected reference to replace that track, so read it from the newest
     // revision. A save or another device can have replaced that track since
     // the copy was opened: then the copy's own tags name it, or else the
     // newest revision's only caption track in that base language is it.
-    final ref = video.textTrackRef;
+    final ref = loadedRef ?? video.textTrackRef;
+    final isFirstTrack = ref == video.textTrackRef;
     final newest = _trackLanguageAt(newestTags, ref);
-    if (newest != null) return newest.isEmpty ? video.textTrackLang : newest;
+    if (newest != null && newest.isNotEmpty) return newest;
+    if (newest != null && isFirstTrack) return video.textTrackLang;
     final opened = _trackLanguageAt(video.nostrEventTags, ref);
     if (opened != null && opened.isNotEmpty) return opened;
+    // The model's language describes only the first track.
+    if (!isFirstTrack) return null;
     final baseLanguage = video.textTrackLang?.toLowerCase();
     final sameBase = {
       for (final tag in newestTags)

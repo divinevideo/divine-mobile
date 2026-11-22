@@ -6,8 +6,13 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+class _MockNostr extends Mock implements NostrClient {}
 
 class _FakeClient extends http.BaseClient {
   _FakeClient(this.handler);
@@ -242,6 +247,45 @@ void main() {
         null,
       ]);
       expect(requests[1].host, 'example.com');
+      expect(result.ref, isNull);
+    });
+
+    test('names the fallback ref that served the cues', () async {
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient(
+          (request) async => request.url.path.endsWith('es.vtt')
+              ? http.Response('', 404)
+              : http.Response(_vtt, 200),
+        ),
+        nostrClient: null,
+        delay: (_) async {},
+        textTrackRefs: const [
+          'https://example.com/es.vtt',
+          'https://example.com/en.vtt',
+        ],
+      );
+
+      expect(result.cues.single.text, 'hello');
+      expect(result.ref, 'https://example.com/en.vtt');
+    });
+
+    test('names the subtitle event address that served the cues', () async {
+      final address = '39307:${'a' * 64}:subtitles:clip';
+      registerFallbackValue(<Filter>[]);
+      final nostr = _MockNostr();
+      when(
+        () => nostr.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
+      ).thenAnswer((_) async => [Event('a' * 64, 39307, const [], _vtt)]);
+
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient((_) async => http.Response('', 404)),
+        nostrClient: nostr,
+        delay: (_) async {},
+        textTrackRefs: [address],
+      );
+
+      expect(result.cues.single.text, 'hello');
+      expect(result.ref, address);
     });
 
     test('decodes HTTP ref VTT as UTF-8 without a charset', () async {

@@ -55,6 +55,7 @@ class SubtitleFetchResult {
     this.status, {
     this.cues = const [],
     this.isMachineTranslated = false,
+    this.ref,
   });
 
   /// Classifies a [body] a source served as a subtitle track:
@@ -89,6 +90,19 @@ class SubtitleFetchResult {
 
   /// True only for a response verified against the translation contract.
   final bool isMachineTranslated;
+
+  /// The `text-track` reference that served [cues], or null when they came
+  /// from embedded content or a generated track. It can be a fallback track
+  /// in another language than the video's first one.
+  final String? ref;
+
+  /// This result, as served by the `text-track` reference [ref].
+  SubtitleFetchResult servedBy(String ref) => SubtitleFetchResult(
+    status,
+    cues: cues,
+    isMachineTranslated: isMachineTranslated,
+    ref: ref,
+  );
 }
 
 Duration _parseRetryAfter(Map<String, String> headers) {
@@ -351,14 +365,14 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     final httpUrl = _parseHttpSubtitleUrl(ref);
     if (httpUrl != null) {
       final cues = accept(await _fetchHttp(httpClient, httpUrl, warn: warn));
-      if (cues != null) return cues;
+      if (cues != null) return cues.servedBy(ref);
       continue;
     }
 
     if (nostrClient != null) {
       try {
         final cues = accept(await _fetchRelay(nostrClient, ref));
-        if (cues != null) return cues;
+        if (cues != null) return cues.servedBy(ref);
       } catch (e) {
         warn('Relay VTT fetch failed for $ref: $e');
       }

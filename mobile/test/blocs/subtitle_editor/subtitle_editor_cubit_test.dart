@@ -180,6 +180,55 @@ void main() {
       },
     );
 
+    group('loaded track', () {
+      const fallbackRef = 'https://media.divine.video/english.vtt';
+      const fallbackResult = SubtitleFetchResult(
+        SubtitleFetchStatus.available,
+        cues: [SubtitleCue(start: 0, end: 1000, text: 'a')],
+        ref: fallbackRef,
+      );
+
+      test('save edits the track the cues were loaded from', () async {
+        when(
+          () => repo.loadCues(any()),
+        ).thenAnswer((_) async => fallbackResult);
+        when(
+          () => repo.publishEditedSubtitles(
+            video: any(named: 'video'),
+            cues: any(named: 'cues'),
+            loadedRef: any(named: 'loadedRef'),
+          ),
+        ).thenAnswer((_) async => _updatedVideo);
+        final cubit = SubtitleEditorCubit(repository: repo, video: _video);
+        addTearDown(cubit.close);
+
+        await cubit.load();
+        await cubit.save();
+
+        verify(
+          () => repo.publishEditedSubtitles(
+            video: any(named: 'video'),
+            cues: any(named: 'cues'),
+            loadedRef: fallbackRef,
+          ),
+        ).called(1);
+      });
+
+      test('a reload from embedded cues forgets the earlier track', () async {
+        var result = fallbackResult;
+        when(() => repo.loadCues(any())).thenAnswer((_) async => result);
+        final cubit = SubtitleEditorCubit(repository: repo, video: _video);
+        addTearDown(cubit.close);
+
+        await cubit.load();
+        expect(cubit.state.loadedTrackRef, fallbackRef);
+        result = _availableResult;
+        await cubit.load();
+
+        expect(cubit.state.loadedTrackRef, isNull);
+      });
+    });
+
     blocTest<SubtitleEditorCubit, SubtitleEditorState>(
       'save success -> saving then success',
       setUp: () {
