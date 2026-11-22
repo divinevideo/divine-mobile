@@ -1796,6 +1796,128 @@ void main() {
         );
       });
 
+      test('keeps a warning label the editor has no option for', () async {
+        final video = _testVideo(
+          extraTags: const [
+            ['content-warning', 'needles'],
+            ['L', 'content-warning'],
+            ['l', 'needles', 'content-warning'],
+          ],
+        );
+
+        final result = await updateFromRelay(
+          originalVideo: video,
+          editorState: VideoEditorProviderState(title: 'Retitled'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags, contains(equals(['content-warning', 'needles'])));
+        expect(capturedTags, contains(equals(['L', 'content-warning'])));
+        expect(
+          capturedTags,
+          contains(equals(['l', 'needles', 'content-warning'])),
+        );
+      });
+
+      test(
+        'keeps an unknown warning label when the user removes a known one',
+        () async {
+          final video = _testVideo(
+            extraTags: const [
+              ['content-warning', 'nudity'],
+              ['L', 'content-warning'],
+              ['l', 'nudity', 'content-warning'],
+              ['l', 'needles', 'content-warning'],
+            ],
+          );
+
+          final result = await updateFromRelay(
+            originalVideo: video,
+            editorState: VideoEditorProviderState(),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where(
+              (t) => t.isNotEmpty && t.first == 'content-warning',
+            ),
+            equals([
+              ['content-warning', 'needles'],
+            ]),
+          );
+          expect(capturedTags, contains(equals(['L', 'content-warning'])));
+          expect(
+            capturedTags.where(
+              (t) => t.length >= 3 && t[0] == 'l' && t[2] == 'content-warning',
+            ),
+            equals([
+              ['l', 'needles', 'content-warning'],
+            ]),
+          );
+        },
+      );
+
+      test('keeps a content warning that names no reason', () async {
+        final video = _testVideo(
+          extraTags: const [
+            ['content-warning'],
+          ],
+        );
+
+        final result = await updateFromRelay(
+          originalVideo: video,
+          editorState: VideoEditorProviderState(title: 'Retitled'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags.where(
+            (t) => t.isNotEmpty && t.first == 'content-warning',
+          ),
+          equals([
+            ['content-warning'],
+          ]),
+        );
+        expect(
+          capturedTags,
+          isNot(contains(equals(['L', 'content-warning']))),
+        );
+      });
+
+      test(
+        'keeps a blank warning reason as a warning with no reason',
+        () async {
+          final video = _testVideo(
+            extraTags: const [
+              ['content-warning', ' '],
+            ],
+          );
+
+          final result = await updateFromRelay(
+            originalVideo: video,
+            editorState: VideoEditorProviderState(title: 'Retitled'),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where(
+              (t) => t.isNotEmpty && t.first == 'content-warning',
+            ),
+            equals([
+              ['content-warning'],
+            ]),
+          );
+          expect(
+            capturedTags.where((t) => t.isNotEmpty && t.first == 'l'),
+            isEmpty,
+          );
+        },
+      );
+
       test('replaces collaborator p-tags but keeps mention p-tags', () async {
         const removedCollaborator =
             '7777777777777777777777777777777777777777777777777777777777777777';

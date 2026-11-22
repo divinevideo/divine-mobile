@@ -17,6 +17,7 @@ import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
 import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/published_video_editor_seed.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -94,6 +95,13 @@ const _editRebuiltTagNames = {
   'allow_audio_reuse',
   'allow_video_reuse',
 };
+
+/// Whether [tag] is a NIP-36 warning that names no reason. The editor has no
+/// label for one, so an edit keeps it rather than unmarking the video.
+bool _isReasonlessContentWarning(List<String> tag) =>
+    tag.isNotEmpty &&
+    tag.first == 'content-warning' &&
+    (tag.length < 2 || tag[1].trim().isEmpty);
 
 /// Whether [tag] is rebuilt by the edit flow instead of copied verbatim.
 ///
@@ -453,14 +461,25 @@ class VideoMetadataUpdateService {
         tags.add(['t', hashtag]);
       }
 
-      // Mirror the NIP-36 / NIP-32 tag group written at original publish.
-      if (edits.contentWarnings.isNotEmpty) {
+      // Mirror the NIP-36 / NIP-32 tag group written at original publish. A
+      // warning another app added stays even when the editor has no label for
+      // it: dropping it on an unrelated edit is the unsafe direction.
+      final warnings = {
+        for (final label in edits.contentWarnings) label.value,
+        ...video.contentWarningLabels.where(
+          (label) =>
+              label.trim().isNotEmpty && ContentLabel.fromValue(label) == null,
+        ),
+      };
+      if (warnings.isNotEmpty) {
         tags
-          ..add(['content-warning', edits.contentWarnings.first.value])
+          ..add(['content-warning', warnings.first])
           ..add(['L', 'content-warning']);
-        for (final label in edits.contentWarnings) {
-          tags.add(['l', label.value, 'content-warning']);
+        for (final warning in warnings) {
+          tags.add(['l', warning, 'content-warning']);
         }
+      } else if (originalTags.any(_isReasonlessContentWarning)) {
+        tags.add(['content-warning']);
       }
 
       if (video.publishedAt != null) {
