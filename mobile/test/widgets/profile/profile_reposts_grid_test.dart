@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
@@ -343,12 +344,17 @@ void main() {
         await tester.tap(find.byType(GestureDetector).first);
         await tester.pumpAndSettle();
 
-        verify(
-          () => mockGoRouter.push<void>(
-            any(),
-            extra: any(named: 'extra'),
-          ),
-        ).called(1);
+        final args =
+            verify(
+                  () => mockGoRouter.push<void>(
+                    any(),
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as PooledFullscreenVideoFeedArgs;
+        addTearDown(() => args.tileOrigin?.takeImage()?.dispose());
+        expect(args.initialVideoId, videos.first.id);
+        expect(args.tileOrigin?.videoId, videos.first.id);
       });
     });
 
