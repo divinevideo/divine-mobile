@@ -50,6 +50,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
@@ -231,7 +232,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(), // Only non-broken videos
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -265,7 +266,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos, // All 3 videos including broken one
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -290,7 +291,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: const [],
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
                 emptyBuilder: () => const Text('No videos available'),
               ),
             ),
@@ -317,7 +318,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: const [],
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
                 onRefresh: () async {
                   refreshCount++;
                 },
@@ -356,7 +357,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: const [],
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
                 onRefresh: () async {
                   refreshCount++;
                 },
@@ -378,11 +379,51 @@ void main() {
       expect(refreshCount, 1);
     });
 
+    testWidgets('opens a tile without its origin under reduced motion', (
+      tester,
+    ) async {
+      int? tappedIndex;
+      VideoTileOrigin? tappedOrigin;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: ComposableVideoGrid(
+                videos: testVideos.take(2).toList(),
+                onVideoTap: (videos, index, captureOrigin) {
+                  tappedIndex = index;
+                  tappedOrigin = captureOrigin();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(GestureDetector).at(1));
+      await tester.pump();
+
+      // The video still opens, but with no tile for the player to grow out
+      // of, so the route keeps its plain page transition.
+      expect(tappedIndex, equals(1));
+      expect(tappedOrigin, isNull);
+    });
+
     testWidgets('calls onVideoTap with correct params when tile tapped', (
       tester,
     ) async {
       List<VideoEvent>? tappedVideos;
       int? tappedIndex;
+      VideoTileOrigin? tappedOrigin;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -393,9 +434,10 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
-                onVideoTap: (videos, index) {
+                onVideoTap: (videos, index, captureOrigin) {
                   tappedVideos = videos;
                   tappedIndex = index;
+                  tappedOrigin = captureOrigin();
                 },
               ),
             ),
@@ -412,6 +454,16 @@ void main() {
       expect(tappedIndex, equals(1));
       expect(tappedVideos, isNotNull);
       expect(tappedVideos!.length, equals(2));
+      // The player grows out of the tapped tile's thumbnail.
+      expect(
+        tappedOrigin?.rect,
+        equals(tester.getRect(find.byType(VideoTileThumbnailBoundary).at(1))),
+      );
+      // ...and its scrim out of the tile's.
+      expect(
+        tappedOrigin?.scrimRect,
+        equals(tester.getRect(find.byType(VideoTileScrimBoundary).at(1))),
+      );
     });
 
     testWidgets('uses correct grid parameters', (tester) async {
@@ -424,7 +476,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
                 crossAxisCount: 3,
               ),
             ),
@@ -454,7 +506,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: [testVideos.first],
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -501,7 +553,7 @@ void main() {
                 home: Scaffold(
                   body: ComposableVideoGrid(
                     videos: [video],
-                    onVideoTap: (videos, index) {},
+                    onVideoTap: (videos, index, _) {},
                   ),
                 ),
               ),
@@ -579,7 +631,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: [video],
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -684,7 +736,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: [video],
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -756,7 +808,7 @@ void main() {
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
                 selectedVideoIds: selectedVideoIds,
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -779,6 +831,35 @@ void main() {
             (widget.decoration! as BoxDecoration).color ==
                 VineTheme.whiteText.withValues(alpha: 0.25),
       );
+
+      testWidgets('passes no tile origin, since a tap toggles the tile', (
+        tester,
+      ) async {
+        final origins = <VideoTileOrigin?>[];
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _gridOverrides(mockTracker),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: ComposableVideoGrid(
+                  videos: testVideos.take(2).toList(),
+                  selectedVideoIds: const {'video1'},
+                  onVideoTap: (videos, index, captureOrigin) =>
+                      origins.add(captureOrigin()),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(GestureDetector).at(1));
+        await tester.pump();
+
+        expect(origins, equals([null]));
+      });
 
       testWidgets('marks only the selected tile with the filled badge', (
         tester,
@@ -850,7 +931,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: testVideos.take(2).toList(),
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -917,7 +998,7 @@ void main() {
                   videos: testVideos,
                   useMasonryLayout: true,
                   topOuterRadius: 32,
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -969,7 +1050,7 @@ void main() {
                     videos: testVideos,
                     useMasonryLayout: true,
                     topOuterRadius: 32,
-                    onVideoTap: (videos, index) {},
+                    onVideoTap: (videos, index, _) {},
                   ),
                 ),
               ),
@@ -1006,6 +1087,52 @@ void main() {
         );
       });
 
+      testWidgets('grows the player out of the tile with its own corners', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        VideoTileOrigin? origin;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _gridOverrides(mockTracker),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Scaffold(
+                  body: ComposableVideoGrid(
+                    videos: testVideos,
+                    useMasonryLayout: true,
+                    topOuterRadius: 32,
+                    onVideoTap: (videos, index, captureOrigin) =>
+                        origin = captureOrigin(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(VideoTileThumbnailBoundary).first);
+        await tester.pump();
+
+        // Tile 0 paints on the right under RTL, its enlarged corner with it.
+        expect(
+          origin?.borderRadius,
+          const BorderRadius.only(
+            topRight: Radius.circular(32),
+            topLeft: Radius.circular(4),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(4),
+          ),
+        );
+      });
+
       testWidgets('keeps every corner small when not set', (tester) async {
         await tester.pumpWidget(
           ProviderScope(
@@ -1017,7 +1144,7 @@ void main() {
                 body: ComposableVideoGrid(
                   videos: testVideos.take(2).toList(),
                   useMasonryLayout: true,
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -1057,7 +1184,7 @@ void main() {
                   home: Scaffold(
                     body: ComposableVideoGrid(
                       videos: testVideos.take(2).toList(),
-                      onVideoTap: (videos, index) {},
+                      onVideoTap: (videos, index, _) {},
                     ),
                   ),
                 ),
@@ -1101,7 +1228,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -1144,7 +1271,7 @@ void main() {
                   headerSlivers: const [
                     SliverToBoxAdapter(child: Text('HEADER')),
                   ],
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -1169,7 +1296,7 @@ void main() {
                   headerSlivers: const [
                     SliverToBoxAdapter(child: Text('HEADER')),
                   ],
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                   emptyBuilder: () => const Text('EMPTY'),
                 ),
               ),
@@ -1203,7 +1330,7 @@ void main() {
                 topOuterRadius: topOuterRadius,
                 emptyBuilder: emptyBuilder,
                 headerSlivers: headerSlivers,
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
               ),
             ),
           ),
@@ -1292,7 +1419,7 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: const [],
-                onVideoTap: (videos, index) {},
+                onVideoTap: (videos, index, _) {},
                 isLoadingMore: isLoadingMore,
                 hasMoreContent: hasMoreContent,
                 onLoadMore: onLoadMore,
@@ -1412,7 +1539,7 @@ void main() {
                 body: ComposableVideoGrid(
                   videos: [video],
                   selectedVideoIds: selectedVideoIds,
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                 ),
               ),
             ),
@@ -1478,7 +1605,7 @@ void main() {
                   home: Scaffold(
                     body: ComposableVideoGrid(
                       videos: [videoBy(_ownPubkey)],
-                      onVideoTap: (_, _) {},
+                      onVideoTap: (_, _, _) {},
                     ),
                   ),
                 ),
@@ -1491,9 +1618,9 @@ void main() {
             tracker.complete(mockTracker);
             await tester.pumpAndSettle();
             expect(
-              tileNode(tester)
-                  .getSemanticsData()
-                  .hasAction(SemanticsAction.longPress),
+              tileNode(
+                tester,
+              ).getSemanticsData().hasAction(SemanticsAction.longPress),
               isTrue,
             );
           } finally {
@@ -1663,7 +1790,7 @@ void main() {
               home: Scaffold(
                 body: ComposableVideoGrid(
                   videos: const [],
-                  onVideoTap: (videos, index) {},
+                  onVideoTap: (videos, index, _) {},
                   emptyBuilder: () => const Text('No videos available'),
                 ),
               ),

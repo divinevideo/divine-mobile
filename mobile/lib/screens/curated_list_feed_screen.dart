@@ -753,7 +753,7 @@ class _ListBody extends ConsumerWidget {
             topOuterRadius: VineTheme.shellInnerCornerRadius,
             backgroundColor: context.vineColors.surfaceContainerHigh,
             selectedVideoIds: selectedVideoIds,
-            onVideoTap: (videoList, index) => cubit.togglePost(
+            onVideoTap: (videoList, index, _) => cubit.togglePost(
               videoList[index].id,
               videoAddress: videoList[index].addressableId,
             ),
@@ -774,7 +774,7 @@ class _ListBody extends ConsumerWidget {
         topOuterRadius: VineTheme.shellInnerCornerRadius,
         backgroundColor: context.vineColors.surfaceContainerHigh,
         headerSlivers: [SliverToBoxAdapter(child: header)],
-        onVideoTap: onVideoTap,
+        onVideoTap: (videoList, index, _) => onVideoTap(videoList, index),
         onRefresh: () async => onRefresh(),
         emptyBuilder: () {
           // hasError rather than an AsyncError match: while the provider

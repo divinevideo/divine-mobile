@@ -203,9 +203,8 @@ List<Rect> letterboxBands(Rect video, Size box) {
 
 /// The rect a video of [aspectRatio] occupies when `BoxFit.contain`-fitted and
 /// centered in [box] — mirrors the player's `FittedBox(fit: contain)`. Locates
-/// the letterbox bars the blurred fill covers. Exposed for testing the
-/// letterbox geometry, which is the seam-risk load-bearing logic.
-@visibleForTesting
+/// the letterbox bars the blurred fill covers, and the frame a grid tile's
+/// picture flies to when it opens the video.
 Rect letterboxVideoRect(double aspectRatio, Size box) {
   final boxAspect = box.width / box.height;
   final double width;
@@ -245,3 +244,18 @@ bool videoCoversFeedViewport({
   required double? aspectRatio,
   required bool shouldPortraitExpand,
 }) => shouldPortraitExpand && aspectRatio != null && aspectRatio != 1.0;
+
+/// The aspect ratio the fullscreen feed letterboxes a [width] by [height]
+/// video at, or null when the video fills the screen: it is cropped to cover
+/// it, or its dimensions are unknown.
+///
+/// The fullscreen feed expands portrait videos, so only a square video is
+/// letterboxed.
+double? fullscreenFeedLetterboxAspectRatio(int? width, int? height) {
+  final aspectRatio = backdropAspectRatio(width, height);
+  final covers = videoCoversFeedViewport(
+    aspectRatio: aspectRatio,
+    shouldPortraitExpand: true,
+  );
+  return covers ? null : aspectRatio;
+}

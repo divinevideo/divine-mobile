@@ -160,7 +160,7 @@ class BadgeVideosView extends ConsumerWidget {
             emptyBuilder: () => Center(
               child: Text(context.l10n.exploreNoVideosAvailable),
             ),
-            onVideoTap: (videos, index) => unawaited(
+            onVideoTap: (videos, index, _) => unawaited(
               PooledFullscreenVideoFeedRouteData(
                 video: videos[index].id,
                 $extra: PooledFullscreenVideoFeedArgs(

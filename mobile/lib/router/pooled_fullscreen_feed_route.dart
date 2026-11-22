@@ -9,6 +9,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Redirect target for the fullscreen video feed route.
@@ -41,6 +42,13 @@ String? fullscreenFeedRedirect(Object? extra, {String? fallbackVideoId}) {
   }
   return VideoFeedPage.pathForIndex(0);
 }
+
+/// The grid tile the fullscreen feed in [extra] was opened from, if any.
+VideoTileOrigin? fullscreenFeedTileOrigin(Object? extra) => switch (extra) {
+  PooledFullscreenVideoFeedArgs(:final tileOrigin) => tileOrigin,
+  ProfilePooledFullscreenVideoFeedArgs(:final tileOrigin) => tileOrigin,
+  _ => null,
+};
 
 /// Builds the fullscreen video feed for the matched route, resolving the
 /// in-memory `extra` args. The URL identity is also handled here because route
