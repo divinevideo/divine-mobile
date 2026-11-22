@@ -24,8 +24,6 @@ export 'nip19/nip19.dart';
 export 'nip19/pubkey_for_logs.dart';
 export 'nip19/pubkeys_equal.dart';
 export 'nip23/long_form_info.dart';
-export 'nip29/group_identifier.dart';
-export 'nip29/nip29.dart';
 export 'nip44/nip44_v2.dart';
 export 'nip46/nostr_connect_session.dart';
 export 'nip46/nostr_remote_signer.dart';
