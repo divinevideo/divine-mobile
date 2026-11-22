@@ -415,6 +415,27 @@ void main() {
 }
 ```
 
+### Pubkey Fixtures Must Be Points on the Curve
+About half of all 64-character hex values are no point on secp256k1, so no
+account can own them, and `normalizePublicIdentifier` rejects them (#8706).
+That includes the familiar repeated-character fixtures: `'b' * 64`,
+`'c' * 64`, `'f' * 64`, `'1' * 64` and `'0' * 64` are off the curve, while
+`'a' * 64`, `'d' * 64`, `'e' * 64`, `'2' * 64` and `'3' * 64` are on it.
+Hand-typed hex is no safer. Take a pubkey fixture from
+`test/helpers/test_pubkeys.dart`: its constants are all on the curve, and
+`testPubkeyFromSeed(n)` derives as many distinct ones as a test needs. Check
+any other literal with `pubkeyIsOnCurve` from `nostr_sdk`. Event ids and other
+hashes are not points, so any hex works for them.
+
+```dart
+// Good
+final alice = testPubkeyFromSeed(1);
+final bob = testPubkeyFromSeed(2);
+
+// Bad - well-formed but no point on the curve; a link to it is rejected
+const bob = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+```
+
 ### Use Private Mocks
 Avoid shared mocks between files:
 
