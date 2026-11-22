@@ -168,7 +168,7 @@ class RelayPool {
   static const _inconclusiveAuthRejections = {'rate-limited', 'invalid'};
 
   /// What strfry before 1.1 says, in a NOTICE, when it gets a COUNT.
-  static const _unknownCommandNotice = 'unknown cmd';
+  static const _unknownCommandNotice = 'ERROR: bad msg: unknown cmd';
 
   /// Relay url -> queries in [_queriesParkedForAuth] that the relay ended with
   /// an `auth`-hinted `EOSE` rather than `CLOSED`, so their subscription is
@@ -2629,11 +2629,8 @@ class RelayPool {
         relay.url,
         'Relay NOTICE: ${relayNoticeForDiagnostics(message)}',
       );
-      // strfry before 1.1 answers a COUNT with this NOTICE. It names no
-      // subscription, so it ends every COUNT waiting on the relay.
-      if (message.contains(_unknownCommandNotice) &&
-          relay.hasPendingCountQueries) {
-        relay.markCountUnsupported(message);
+      if (message == _unknownCommandNotice) {
+        relay.handleCountUnknownCommandNotice(message);
       }
 
       if (onNotice != null) {
@@ -4229,13 +4226,13 @@ class RelayPool {
   /// not be written is dropped, not queued: replayed on the next connection,
   /// its answer would reach nobody.
   ///
-  /// A relay known not to support COUNT ([Relay.countUnsupported]) is not
-  /// asked, so it cannot hold the answer until the deadline.
+  /// A relay skipped after an unknown-command notice ([Relay.countUnsupported])
+  /// cannot hold another count until the deadline.
   ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered
   /// in time, whether by timing out, refusing with CLOSED or replying that
-  /// they do not know COUNT, or when every relay is known not to support it.
+  /// they do not know COUNT, or when all readable relays were already skipped.
   ///
   /// Parameters:
   /// - [filters]: The filters to count events for (same format as REQ)

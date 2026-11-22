@@ -48,7 +48,8 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
-  bool _answeredCountWithUnknownCommand = false;
+  // Null until the relay answers COUNT or appears to reject the command.
+  bool? _supportsCount;
 
   Relay(this.url, this.relayStatus, {this.diagnosticsSink});
 
@@ -457,7 +458,9 @@ abstract class Relay {
   /// Complete a COUNT query with the response
   void completeCountQuery(String id, CountResponse response) {
     final completer = _countQueries.remove(id);
-    completer?.complete(response);
+    if (completer == null) return;
+    _supportsCount = true;
+    completer.complete(response);
   }
 
   /// Complete a COUNT query with an error (e.g., CLOSED response)
@@ -466,21 +469,22 @@ abstract class Relay {
     completer?.completeError(CountNotSupportedException(reason));
   }
 
-  /// Whether a COUNT sent to this relay is still waiting for its answer.
-  bool get hasPendingCountQueries => _countQueries.isNotEmpty;
-
-  /// Whether this relay was skipped after an unknown-command notice.
+  /// Whether to skip COUNT after the relay appears to reject the command.
   ///
   /// Some relays answer COUNT despite omitting NIP-45 from their NIP-11
   /// documents, so an omission alone never disqualifies a relay.
-  bool get countUnsupported => _answeredCountWithUnknownCommand;
+  bool get countUnsupported => _supportsCount == false;
 
-  /// Records that this relay replied to a COUNT that it does not know the
-  /// command, and ends every COUNT waiting on it with
-  /// [CountNotSupportedException]. The relay is not asked again while this
-  /// object lives.
-  void markCountUnsupported(String reason) {
-    _answeredCountWithUnknownCommand = true;
+  /// Treats an unscoped unknown-command notice as a COUNT refusal only when
+  /// a COUNT is pending and there is no evidence that this relay supports it.
+  void handleCountUnknownCommandNotice(String reason) {
+    if (_countQueries.isEmpty ||
+        _supportsCount == true ||
+        info?.nips.any((nip) => nip == 45 || nip == '45') == true) {
+      return;
+    }
+
+    _supportsCount = false;
     final pending = _countQueries.values.toList();
     _countQueries.clear();
     for (final completer in pending) {

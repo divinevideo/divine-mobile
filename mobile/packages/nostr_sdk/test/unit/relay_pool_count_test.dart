@@ -300,10 +300,44 @@ void main() {
       await pumpEventQueue();
 
       answerCount(countingFactory.lastChannel!, 42);
-      sendNotice(legacyFactory.lastChannel!, 'rate-limited: slow down');
+      sendNotice(
+        legacyFactory.lastChannel!,
+        'rate-limited: too many unknown cmd errors',
+      );
       await pumpEventQueue();
       answerCount(legacyFactory.lastChannel!, 99);
 
+      expect((await result).count, equals(99));
+    });
+
+    test('keeps waiting after an unknown-command notice from a relay '
+        'that already answered COUNT', () async {
+      await addRelays();
+      final first = count();
+      await pumpEventQueue();
+      answerCount(countingFactory.lastChannel!, 42);
+      answerCount(legacyFactory.lastChannel!, 99);
+      expect((await first).count, equals(99));
+
+      final second = count(id: 'count-9009-again');
+      await pumpEventQueue();
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      await pumpEventQueue();
+      answerCount(legacyFactory.lastChannel!, 99);
+      expect((await second).count, equals(99));
+    });
+
+    test('keeps waiting after an unknown-command notice from a relay '
+        'that advertises NIP-45', () async {
+      legacyRelay.info = nip11Listing([1, 11, 45]);
+      await addRelays();
+      final result = count();
+      await pumpEventQueue();
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      await pumpEventQueue();
+      answerCount(legacyFactory.lastChannel!, 99);
       expect((await result).count, equals(99));
     });
 
