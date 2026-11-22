@@ -133,7 +133,8 @@ void main() {
       );
 
       test(
-        'treats the same rejection from another relay as transient',
+        'treats the same rejection from another relay as a refusal, not an '
+        'account restriction',
         () async {
           stubWebSocket(
             (event) => _rejected(event, 'blocked: pubkey is suspended'),
@@ -145,7 +146,7 @@ void main() {
 
           final outcome = await publisher.publishViaWebSocket(_signedEvent());
 
-          expect(outcome, EventPublishOutcome.transientFailure);
+          expect(outcome, EventPublishOutcome.rejected);
         },
       );
 
@@ -259,6 +260,34 @@ void main() {
           expect(attempts, 3);
           expect(outcome, EventPublishOutcome.transientFailure);
           expect(async.pendingTimers, isEmpty);
+        });
+      });
+
+      test('an invalid: refusal from every relay ends the ladder', () {
+        fakeAsync((async) {
+          var attempts = 0;
+          when(
+            () => nostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            attempts++;
+            return _rejected(
+              invocation.positionalArguments.first as Event,
+              'invalid: video missing thumbnail',
+            );
+          });
+          final publisher = SignedEventRelayPublisher(nostrClient: nostrClient);
+          EventPublishOutcome? outcome;
+
+          unawaited(
+            publisher.publish(_signedEvent()).then((value) => outcome = value),
+          );
+          async.elapse(const Duration(minutes: 1));
+
+          expect(attempts, 1);
+          expect(outcome, EventPublishOutcome.rejected);
         });
       });
 
@@ -602,6 +631,108 @@ void main() {
 
           expect(outcome, EventPublishOutcome.published);
           verify(() => eventApiClient.publishEvent(event)).called(1);
+        });
+      });
+
+      group('rejection retry policy', () {
+        for (final reason in const [
+          'invalid: video missing thumbnail',
+          'blocked: content too long (70000 > 65536 bytes)',
+        ]) {
+          test('"$reason" from every relay ends the ladder after one '
+              'attempt', () {
+            fakeAsync((async) {
+              var restAttempts = 0;
+              when(() => eventApiClient.publishEvent(any())).thenAnswer((
+                _,
+              ) async {
+                restAttempts++;
+                return EventApiRejected(statusCode: 422, reason: reason);
+              });
+              stubWebSocket((event) => _rejected(event, reason));
+              EventPublishOutcome? outcome;
+
+              unawaited(
+                publisher
+                    .publish(_signedEvent())
+                    .then((value) => outcome = value),
+              );
+              async.elapse(const Duration(minutes: 1));
+
+              expect(restAttempts, 1);
+              expect(outcome, EventPublishOutcome.rejected);
+              verifyNever(
+                () => nostrClient.queryEvents(
+                  any(),
+                  useCache: any(named: 'useCache'),
+                ),
+              );
+            });
+          });
+        }
+
+        for (final reason in const [
+          'invalid: created_at 1795315535 is more than 60s in the future',
+          'rate-limited: too many events from this pubkey, slow down',
+          'error: server overloaded, try again later',
+        ]) {
+          test('"$reason" is still retried', () {
+            fakeAsync((async) {
+              var restAttempts = 0;
+              when(() => eventApiClient.publishEvent(any())).thenAnswer((
+                _,
+              ) async {
+                restAttempts++;
+                return const EventApiTransientFailure('timeout');
+              });
+              stubWebSocket((event) => _rejected(event, reason));
+              EventPublishOutcome? outcome;
+
+              unawaited(
+                publisher
+                    .publish(_signedEvent())
+                    .then((value) => outcome = value),
+              );
+              async.elapse(const Duration(minutes: 1));
+
+              expect(restAttempts, 3);
+              expect(outcome, EventPublishOutcome.transientFailure);
+            });
+          });
+        }
+
+        test('a refusal is still retried while another relay stays '
+            'silent', () {
+          fakeAsync((async) {
+            var restAttempts = 0;
+            when(() => eventApiClient.publishEvent(any())).thenAnswer((
+              _,
+            ) async {
+              restAttempts++;
+              return const EventApiTransientFailure('timeout');
+            });
+            stubWebSocket(
+              (event) => PublishOutcome(
+                eventId: event.id,
+                acceptedBy: const [],
+                rejectedBy: const {
+                  _relayUrl: 'invalid: video missing thumbnail',
+                },
+                noResponseFrom: const ['wss://silent.example'],
+              ),
+            );
+            EventPublishOutcome? outcome;
+
+            unawaited(
+              publisher
+                  .publish(_signedEvent())
+                  .then((value) => outcome = value),
+            );
+            async.elapse(const Duration(minutes: 1));
+
+            expect(restAttempts, 3);
+            expect(outcome, EventPublishOutcome.transientFailure);
+          });
         });
       });
     });

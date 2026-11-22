@@ -95,10 +95,23 @@ Duration outerPublishTimeoutFor(int relayCount) {
 
 /// Result categories for a signed-event publish attempt.
 ///
-/// Separates publish success from retryable transport failures. Account
-/// restrictions are not an outcome: they surface as
-/// [AccountRestrictedPublishException] so callers cannot retry past them.
-enum EventPublishOutcome { published, transientFailure }
+/// Separates publish success from retryable failures and from refusals that
+/// sending the same signed event again cannot change. Account restrictions
+/// are not an outcome: they surface as [AccountRestrictedPublishException]
+/// so callers cannot retry past them.
+enum EventPublishOutcome {
+  /// At least one relay accepted the event.
+  published,
+
+  /// No relay accepted it, and a later attempt might: a timeout, silence,
+  /// an unreachable relay, or a refusal such as `error:` or `rate-limited:`.
+  transientFailure,
+
+  /// Every relay that was asked refused the event with `invalid:` or
+  /// `blocked:`, other than a refusal about its time, which can clear as
+  /// clocks converge (#9306).
+  rejected,
+}
 
 enum _RelayPresence { found, notFound, unknown }
 
@@ -110,7 +123,8 @@ enum _RelayPresence { found, notFound, unknown }
 ///   single-shot path for audio, subtitle, sound-sharing and video-metadata
 ///   edit events, whose callers keep their own failure handling.
 /// * [publish] — the video-event strategy: up to three attempts with a 2s/4s
-///   backoff, all sending the same signed event. With an [EventApiClient]
+///   backoff, all sending the same signed event, ending early on a refusal
+///   that sending it again cannot change. With an [EventApiClient]
 ///   wired, as the app always does, each attempt is REST first with an
 ///   OK-aware WebSocket fallback, and a relay-presence check before each
 ///   retry skips the re-send when a relay already serves the event. Without
@@ -171,9 +185,12 @@ class SignedEventRelayPublisher {
   ///    falls back to a WebSocket publish that waits for relay `OK` frames.
   /// 3. Before each retry, re-check relay presence so a false-negative
   ///    WebSocket `OK` does not produce a duplicate publish.
+  /// 4. Stop with [EventPublishOutcome.rejected] after an attempt in which
+  ///    every relay refused the event in a way a resend cannot change (see
+  ///    [EventPublishOutcome.rejected]).
   ///
-  /// When no [EventApiClient] is configured, the legacy WebSocket-only
-  /// retry path is used unchanged.
+  /// When no [EventApiClient] is configured, the WebSocket-only retry path
+  /// is used, with the same early stop.
   ///
   /// The same signed [event] is reused across all attempts — no event is
   /// re-signed per retry, so relays deduplicate by id.
@@ -221,7 +238,8 @@ class SignedEventRelayPublisher {
       final outcome = await _publishViaRestThenWebSocket(apiClient, event);
       switch (outcome) {
         case EventPublishOutcome.published:
-          return EventPublishOutcome.published;
+        case EventPublishOutcome.rejected:
+          return outcome;
         case EventPublishOutcome.transientFailure:
           await _backoffAfterFailedAttempt(attempt);
       }
@@ -243,10 +261,12 @@ class SignedEventRelayPublisher {
   /// success used to mark rejected videos as published while they were
   /// silently dropped relay-side.
   ///
-  /// **Failure contract** (returns [EventPublishOutcome.transientFailure]):
-  /// timeouts, ordinary relay rejection/no response, and inner exceptions.
-  /// Video publication retries those outcomes with relay-presence recovery;
-  /// single-shot callers retain their own failure handling.
+  /// **Failure contract**: [EventPublishOutcome.rejected] when every relay
+  /// refused the event with `invalid:` or `blocked:` (other than a refusal
+  /// about its time); [EventPublishOutcome.transientFailure] for timeouts,
+  /// silence, other refusals and inner exceptions. Video publication retries
+  /// only the transient ones; single-shot callers retain their own failure
+  /// handling.
   ///
   /// **Sentinel-return contract** (audits #3593 / #4592): transport and domain
   /// failures intentionally remain outcomes rather than exceptions because all
@@ -368,14 +388,19 @@ class SignedEventRelayPublisher {
         );
       }
       final failureReason = publishOutcome?.summary ?? 'timeout';
+      final refusedForGood =
+          publishOutcome != null && _refusedForGood(publishOutcome);
       Log.error(
         '❌ Event publish failed for ${event.id}: $failureReason '
         '(configured=${_nostrClient.configuredRelayCount}, '
-        'connected=${_nostrClient.connectedRelayCount})',
+        'connected=${_nostrClient.connectedRelayCount}, '
+        'retryable=${!refusedForGood})',
         name: _logName,
         category: LogCategory.video,
       );
-      return EventPublishOutcome.transientFailure;
+      return refusedForGood
+          ? EventPublishOutcome.rejected
+          : EventPublishOutcome.transientFailure;
     } on AccountRestrictedPublishException {
       rethrow;
     } catch (e) {
@@ -533,11 +558,36 @@ class SignedEventRelayPublisher {
         }
         return EventPublishOutcome.published;
       }
+      if (outcome == EventPublishOutcome.rejected) return outcome;
 
       await _backoffAfterFailedAttempt(attempt);
     }
     return EventPublishOutcome.transientFailure;
   }
+
+  /// Whether every relay asked refused the event in a way that sending the
+  /// same signed event again cannot change. One silent or unreachable relay
+  /// keeps the attempt retryable: it may still accept.
+  static bool _refusedForGood(PublishOutcome outcome) =>
+      outcome.acceptedBy.isEmpty &&
+      outcome.noResponseFrom.isEmpty &&
+      outcome.unreachableTargets.isEmpty &&
+      outcome.rejectedBy.isNotEmpty &&
+      outcome.rejectedBy.values.every(_isFinalRefusal);
+
+  /// `invalid:` and `blocked:` are final for a given signed event, except an
+  /// `invalid:` about the event's time, which can clear as clocks converge.
+  static bool _isFinalRefusal(String reason) {
+    final normalized = reason.trim().toLowerCase();
+    return normalized.startsWith('blocked:') ||
+        (normalized.startsWith('invalid:') &&
+            !_timeRefusalMarkers.any(normalized.contains));
+  }
+
+  /// Wording a relay uses when it refuses an event for its `created_at`:
+  /// funnelcake's "created_at … in the future" and NIP-01's example
+  /// "event creation date is too far off".
+  static const _timeRefusalMarkers = ['created_at', 'creation date'];
 
   /// Waits out the 2s/4s backoff after a failed [attempt], or logs the
   /// exhausted ladder when it was the last one.

@@ -380,7 +380,8 @@ void main() {
       );
     });
 
-    test('an untrusted WebSocket restriction is not authoritative', () async {
+    test('an untrusted WebSocket restriction is not authoritative, but its '
+        'refusal is final for this event', () async {
       final signedEvent = createSignedEvent();
       stubSigning(signedEvent);
       stubRest(const EventApiTransientFailure('http_503'));
@@ -394,20 +395,17 @@ void main() {
           noResponseFrom: const [],
         ),
       );
-      when(
-        () => mockNostrClient.queryEvents(
-          any(),
-          useCache: any(named: 'useCache'),
-        ),
-      ).thenAnswer((_) async => [signedEvent]);
 
+      // Returning false rather than throwing AccountRestrictedPublishException
+      // is the "not authoritative" half: no Account status for this relay.
       expect(
         await publisher.publishDirectUpload(
           createUpload(),
           allowVideoReuse: false,
         ),
-        isTrue,
+        isFalse,
       );
+      verify(() => mockEventApiClient.publishEvent(signedEvent)).called(1);
       verify(
         () => mockNostrClient.publishEventAwaitOk(
           signedEvent,
