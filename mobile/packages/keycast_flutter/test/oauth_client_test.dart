@@ -373,6 +373,90 @@ void main() {
         expect(verifier, isNotEmpty);
       });
 
+      test('omits instant_access unless asked for', () async {
+        Map<String, dynamic>? sentBody;
+        final mockClient = MockClient((request) async {
+          sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'pubkey': 'abc123pubkey',
+              'verification_required': true,
+              'device_code': 'device_code_123',
+            }),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(sentBody, isNot(contains('instant_access')));
+      });
+
+      test(
+        'sends instant_access and returns the authorization code when granted',
+        () async {
+          Map<String, dynamic>? sentBody;
+          final mockClient = MockClient((request) async {
+            sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'pubkey': 'abc123pubkey',
+                'verification_required': false,
+                'email': 'test@example.com',
+                'code': 'auth_code_123',
+              }),
+              200,
+            );
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final (result, _) = await oauth.headlessRegister(
+            email: 'test@example.com',
+            password: 'password123',
+            instantAccess: true,
+          );
+
+          expect(sentBody?['instant_access'], isTrue);
+          expect(result.isInstantAccess, isTrue);
+          expect(result.code, equals('auth_code_123'));
+          expect(result.deviceCode, isNull);
+        },
+      );
+
+      test(
+        'falls back to the device-code flow when instant access is not granted',
+        () async {
+          final mockClient = MockClient((request) async {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'pubkey': 'abc123pubkey',
+                'verification_required': true,
+                'device_code': 'device_code_123',
+              }),
+              200,
+            );
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final (result, _) = await oauth.headlessRegister(
+            email: 'test@example.com',
+            password: 'password123',
+            instantAccess: true,
+          );
+
+          expect(result.isInstantAccess, isFalse);
+          expect(result.code, isNull);
+          expect(result.deviceCode, equals('device_code_123'));
+        },
+      );
+
       test('returns success result on 201 response', () async {
         final mockClient = MockClient((request) async {
           return http.Response(
@@ -1367,6 +1451,42 @@ void main() {
         final result = await oauth.resendVerification('test@example.com');
 
         expect(result.success, isFalse);
+      });
+    });
+
+    group('resendVerificationForAccount', () {
+      test('authenticates with the bearer token instead of an email', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/api/auth/resend-verification');
+          expect(request.headers['Authorization'], 'Bearer session_token');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, isNot(contains('email')));
+          return http.Response(
+            jsonEncode({'success': true, 'message': 'Sent'}),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.resendVerificationForAccount(
+          'session_token',
+        );
+
+        expect(result.success, isTrue);
+      });
+
+      test('returns a server failure on 5xx', () async {
+        final mockClient = MockClient(
+          (request) async => http.Response('boom', 503),
+        );
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.resendVerificationForAccount(
+          'session_token',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, equals(ResendVerificationError.server));
       });
     });
 
