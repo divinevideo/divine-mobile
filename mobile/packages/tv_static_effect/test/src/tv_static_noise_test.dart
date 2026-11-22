@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -194,6 +195,80 @@ void main() {
         await tester.pumpWidget(const SizedBox());
       },
     );
+
+    group('shader lifetime', () {
+      // Loaded by the package-relative key: the package-qualified key the
+      // widget uses only resolves in an app that depends on this package.
+      Future<ui.FragmentShader> loadShader(WidgetTester tester) async {
+        final program = await tester.runAsync(
+          () => ui.FragmentProgram.fromAsset('shaders/tv_static.frag'),
+        );
+        return program!.fragmentShader();
+      }
+
+      testWidgets('disposes its shader when unmounted', (tester) async {
+        final shader = await loadShader(tester);
+
+        await tester.pumpWidget(
+          TvStaticNoise(fragmentShaderLoader: () async => shader),
+        );
+        await tester.pump();
+        expect(find.byType(CustomPaint), findsOneWidget);
+        expect(shader.debugDisposed, isFalse);
+
+        await tester.pumpWidget(const SizedBox());
+
+        expect(shader.debugDisposed, isTrue);
+      });
+
+      testWidgets('disposes a shader that finishes loading after unmount', (
+        tester,
+      ) async {
+        final shader = await loadShader(tester);
+        final completer = Completer<ui.FragmentShader>();
+
+        await tester.pumpWidget(
+          TvStaticNoise(fragmentShaderLoader: () => completer.future),
+        );
+        await tester.pumpWidget(const SizedBox());
+
+        completer.complete(shader);
+        await tester.pump();
+
+        expect(shader.debugDisposed, isTrue);
+      });
+
+      testWidgets('paints successive frames with the one shader it loaded', (
+        tester,
+      ) async {
+        final shader = await loadShader(tester);
+        var loads = 0;
+
+        await tester.pumpWidget(
+          TvStaticNoise(
+            fragmentShaderLoader: () async {
+              loads++;
+              return shader;
+            },
+          ),
+        );
+        await tester.pump();
+        final firstPainter = tester
+            .widget<CustomPaint>(find.byType(CustomPaint))
+            .painter;
+
+        await tester.pump(const Duration(seconds: 1));
+        final laterPainter = tester
+            .widget<CustomPaint>(find.byType(CustomPaint))
+            .painter;
+
+        expect(laterPainter, isNot(same(firstPainter)));
+        expect(loads, equals(1));
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(const SizedBox());
+      });
+    });
 
     group('asserts opacity', () {
       test('throws AssertionError when opacity is negative', () {

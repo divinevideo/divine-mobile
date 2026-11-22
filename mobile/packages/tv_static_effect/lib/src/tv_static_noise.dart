@@ -18,6 +18,10 @@ typedef PainterFactory =
 @visibleForTesting
 typedef ShaderLoader = Future<PainterFactory> Function();
 
+/// A function that asynchronously creates the noise [ui.FragmentShader].
+@visibleForTesting
+typedef FragmentShaderLoader = Future<ui.FragmentShader> Function();
+
 /// Renders an animated TV static / snow noise effect using a fragment shader.
 ///
 /// The effect resembles an old CRT television with no signal.
@@ -29,6 +33,7 @@ class TvStaticNoise extends StatefulWidget {
     super.key,
     this.opacity = defaultOpacity,
     @visibleForTesting this.shaderLoader,
+    @visibleForTesting this.fragmentShaderLoader,
   }) : assert(
          opacity >= 0.0 && opacity <= 1.0,
          'opacity must be between 0.0 and 1.0',
@@ -42,6 +47,11 @@ class TvStaticNoise extends StatefulWidget {
 
   /// Optional shader loader override for testing.
   final ShaderLoader? shaderLoader;
+
+  /// Optional override for the fragment shader the default painter draws
+  /// with, so tests can observe its lifetime. Ignored when [shaderLoader] is
+  /// set.
+  final FragmentShaderLoader? fragmentShaderLoader;
 
   @override
   State<TvStaticNoise> createState() => _TvStaticNoiseState();
@@ -87,28 +97,24 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
       if (widget.shaderLoader != null) {
         _createPainter = await widget.shaderLoader!();
       } else {
-        // coverage:ignore-start
-        // FragmentProgram.fromAsset requires a GPU shader bundle unavailable in
-        // headless widget tests; tests inject [widget.shaderLoader] instead.
-        final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
-        final shader = program.fragmentShader();
+        final loadShader =
+            widget.fragmentShaderLoader ?? _loadAssetFragmentShader;
+        final shader = await loadShader();
         if (!mounted) {
           shader.dispose();
           return;
         }
         _ownedShader = shader;
         final paint = Paint();
-        // Reuse a single FragmentShader across frames rather than allocating
-        // and leaking a new GPU shader on every 12-fps tick.
-        // ignore: avoid_types_on_closure_parameters
-        _createPainter = ({required double time, required double opacity}) =>
+        // One shader for the widget's lifetime, disposed in [dispose];
+        // painters only set its uniforms.
+        _createPainter = ({required time, required opacity}) =>
             _TvStaticPainter(
               shader: shader,
               paint: paint,
               time: time,
               opacity: opacity,
             );
-        // coverage:ignore-end
       }
       if (mounted) {
         setState(() => _loaded = true);
@@ -155,10 +161,17 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   }
 }
 
-// coverage:ignore-start
-
 /// Asset path for the TV static fragment shader.
 const _shaderAssetPath = 'packages/tv_static_effect/shaders/tv_static.frag';
+
+// coverage:ignore-start
+
+// The package-qualified asset key resolves only in an app that depends on this
+// package, so this package's tests inject [TvStaticNoise.fragmentShaderLoader].
+Future<ui.FragmentShader> _loadAssetFragmentShader() async {
+  final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
+  return program.fragmentShader();
+}
 
 class _TvStaticPainter extends CustomPainter {
   _TvStaticPainter({
