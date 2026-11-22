@@ -212,6 +212,25 @@ def last_operation_started(state, kind):
     )
 
 
+def is_public_beta_release(action):
+    return action["kind"] == "public-beta" or (
+        action["kind"] == "attach-beta-groups"
+        and not action["build"].get("public")
+    )
+
+
+def last_public_beta_release(state):
+    """Completion or recovery observation bounds the actual public attachment."""
+    return max(
+        (
+            max(o.get("started_at", 0), o.get("cadence_at", 0))
+            for o in state.get("operations", {}).values()
+            if is_public_beta_release(o["action"])
+        ),
+        default=0,
+    )
+
+
 def plan_tick(snapshot, state, levels):
     actions = []
     reasons = []
@@ -308,19 +327,12 @@ def plan_tick(snapshot, state, levels):
         if platform == "ios" and level in {"testflight", "app-store"}:
             builds = data.get("builds", [])
             dates = data.get("submissions", [])
-            first_attachments = (
-                o.get("started_at", 0)
-                for o in state.get("operations", {}).values()
-                if o["action"]["kind"] == "attach-beta-groups"
-                and not o["action"]["build"].get("public")
-            )
             budget = (
                 len([d for d in dates if now - d < DAY]) < TESTFLIGHT_DAILY_LIMIT
                 and now
                 - max(
                     max(dates, default=0),
-                    last_operation_started(state, "public-beta"),
-                    max(first_attachments, default=0),
+                    last_public_beta_release(state),
                 )
                 >= TESTFLIGHT_INTERVAL
             )

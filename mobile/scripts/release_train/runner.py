@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
 import shutil
@@ -25,6 +26,7 @@ from release_train.coordinator import (
     affects_app,
     consume_version_acknowledgements,
     current_acknowledgements,
+    is_public_beta_release,
     observe,
     plan_tick,
     version_ack_key,
@@ -128,7 +130,12 @@ def reconcile_operations(state, snapshot):
             elif operation["status"] in {"started", "ambiguous"}:
                 state.setdefault("holds", {})[platform] = key
         elif operation["status"] in {"started", "ambiguous", "deferred"} or (
-            kind == "app-store" and operation["status"] == "acknowledged"
+            (kind == "app-store" or is_public_beta_release(action))
+            and operation["status"] == "acknowledged"
+        ) or (
+            is_public_beta_release(action)
+            and operation["status"] == "done"
+            and "cadence_at" not in operation
         ):
             build = action.get("build", action)
             observed = False
@@ -140,6 +147,14 @@ def reconcile_operations(state, snapshot):
                 ]
                 if matches:
                     current = matches[0]
+                    if is_public_beta_release(action) and current.get("public"):
+                        confirmed_at = operation.setdefault(
+                            "public_observed_at",
+                            snapshot["ios"].get("observed_at", snapshot["now"]),
+                        )
+                        operation["cadence_at"] = max(
+                            operation.get("cadence_at", 0), confirmed_at
+                        )
                     observed = current.get("public_complete", current.get("public"))
                     if not observed and (
                         current.get("groups")
@@ -152,6 +167,11 @@ def reconcile_operations(state, snapshot):
                         }
                     ):
                         operation["status"] = "deferred"
+                        if is_public_beta_release(action):
+                            operation.setdefault(
+                                "cadence_at",
+                                snapshot["ios"].get("observed_at", snapshot["now"]),
+                            )
                         if state.get("holds", {}).get(platform) == key:
                             state["holds"].pop(platform)
             elif kind == "app-store":
@@ -206,6 +226,11 @@ def reconcile_operations(state, snapshot):
                     for b in snapshot.get("android", {}).get(track, [])
                 )
             if observed:
+                if is_public_beta_release(action):
+                    operation.setdefault(
+                        "cadence_at",
+                        snapshot["ios"].get("observed_at", snapshot["now"]),
+                    )
                 if kind == "app-store":
                     consume_version_acknowledgements(state, {v["id"] for v in matching})
                 operation["status"] = "done"
@@ -242,12 +267,15 @@ def execute_plan(plan, state, snapshot, store, provider):
             state.get("holds", {}).get(channel) is not None for channel in ("android", scope)
         ):
             continue
-        state.setdefault("operations", {})[key] = {
+        operation = state.setdefault("operations", {})[key] = {
             # Notes already live in the immutable source/artifact ledger. Keep
             # only operation identity here, not another full copy on every save.
             "action": {name: value for name, value in action.items() if name != "release_notes"},
             "status": "started",
-            "started_at": snapshot.get("now", int(time.time())),
+            "started_at": (
+                int(time.time()) if is_public_beta_release(action)
+                else snapshot.get("now", int(time.time()))
+            ),
         }
         if action["kind"] == "build":
             state.setdefault("attempts", {}).setdefault(action["platform"], {})[
@@ -283,6 +311,12 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["error"] = str(error)
             state["operations"][key]["status"] = "ambiguous"
             state.setdefault("holds", {})[scope] = key
+        if (
+            is_public_beta_release(action)
+            and state.get("operations", {}).get(key) is operation
+        ):
+            # A request's duration can vary; its return is the safe clock bound.
+            operation["cadence_at"] = math.ceil(time.time())
         store.save(state)
 
 
@@ -878,7 +912,7 @@ class Runtime:
                             "TestFlight groups must preserve the four existing external audiences"
                         )
                     snapshot["ios"] = self.apple_snapshot()
-                    snapshot["ios"]["observed_at"] = int(time.time())
+                    snapshot["ios"]["observed_at"] = math.ceil(time.time())
                 else:
                     self.play = Play(
                         play_token(self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])

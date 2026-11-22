@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import release_train_fakes  # noqa: F401 - scripts import path
 from release_train.coordinator import PLAY_PUBLICATION_VERSION, observe, plan_tick
-from release_train.runner import Runtime, execute_plan
+from release_train.runner import Runtime, execute_plan, reconcile_operations
 from test_release_train_coordinator import NOW, build, snapshot
 from test_release_train_runner import Store
 
@@ -108,7 +108,8 @@ class ReleaseCadenceTest(unittest.TestCase):
                 return {}
 
         store = Store()
-        execute_plan(plan, state, s, store, Attached())
+        with patch("release_train.runner.time.time", return_value=NOW):
+            execute_plan(plan, state, s, store, Attached())
         state = store.saves[-1]
         first.update(public=True, public_complete=True)
         for elapsed in [12 * HOUR - 1, 12 * HOUR]:
@@ -141,6 +142,168 @@ class ReleaseCadenceTest(unittest.TestCase):
             [a["kind"] for a in plan_tick(s, state, {"ios": "testflight"})["actions"]],
             ["public-beta"],
         )
+
+    def test_approved_beta_spacing_uses_actual_execution_with_variable_delays(self):
+        state = {}
+        store = Store()
+        published = []
+        released_at = []
+        clock = [NOW]
+
+        class DelayedProvider:
+            def execute(self, action, state, snapshot):
+                clock[0] += 30
+                released_at.append(clock[0])
+                return {}
+
+        for number, elapsed, preparation in [(10, 0, 90), (11, 12 * HOUR, 30), (12, DAY, 0)]:
+            s = self.public_snapshot()
+            s["now"] = NOW + elapsed
+            current = build() | {
+                "id": str(number), "number": number,
+                "public": False, "external": "BETA_APPROVED",
+            }
+            s["ios"]["builds"] = published + [current]
+            clock[0] = s["now"] + preparation
+            plan = plan_tick(s, state, {"ios": "testflight"})
+            with patch("release_train.runner.time.time", side_effect=lambda: clock[0]):
+                execute_plan(plan, state, s, store, DelayedProvider())
+            if plan["actions"]:
+                current.update(public=True, public_complete=True)
+                published.append(current)
+
+        self.assertEqual(released_at, [NOW + 120, NOW + DAY + 30])
+        self.assertTrue(all(b - a >= 12 * HOUR for a, b in zip(released_at, released_at[1:])))
+        for end in released_at:
+            self.assertLessEqual(sum(0 <= end - stamp < DAY for stamp in released_at), 2)
+
+    def test_first_public_attachment_records_completion_after_the_mutation(self):
+        s = self.public_snapshot()
+        state = {"operations": {"prior": operation("public-beta", NOW - DAY)}}
+        clock = [NOW]
+        store = Store()
+
+        class DelayedAttachment:
+            def prepare_action(self, action, snapshot):
+                clock[0] += 60
+
+            def execute(self, action, state, snapshot):
+                clock[0] += 120
+                return {}
+
+        plan = plan_tick(s, state, {"ios": "testflight"})
+        with patch("release_train.runner.time.time", side_effect=lambda: clock[0]):
+            execute_plan(plan, state, s, store, DelayedAttachment())
+        saved = store.saves[-1]
+        recovered = saved["operations"]["attach-beta-groups:ios:10"]
+        self.assertEqual(recovered.get("cadence_at"), NOW + 180)
+        self.assertEqual(store.saves[-2]["operations"]["attach-beta-groups:ios:10"]["status"], "started")
+        s["ios"]["builds"] = [build() | {"id": "11", "number": 11, "public": False}]
+        for elapsed in [12 * HOUR + 179, 12 * HOUR + 180]:
+            with self.subTest(elapsed=elapsed):
+                s["now"] = NOW + elapsed
+                self.assertEqual(
+                    bool(plan_tick(s, saved, {"ios": "testflight"})["actions"]),
+                    elapsed == 12 * HOUR + 180,
+                )
+
+    def test_completion_clocks_round_up_subsecond_boundaries(self):
+        state = {}
+        action = {"kind": "public-beta", "platform": "ios", "build": build()}
+
+        class Completed:
+            def execute(self, action, state, snapshot):
+                return {}
+
+        with patch("release_train.runner.time.time", return_value=NOW + 0.75):
+            execute_plan({"actions": [action]}, state, {"now": NOW}, Store(), Completed())
+        self.assertEqual(state["operations"]["public-beta:ios:10"]["cadence_at"], NOW + 1)
+
+    def test_interrupted_publication_uses_first_observed_public_clock(self):
+        for kind in ["public-beta", "attach-beta-groups"]:
+            for complete in [False, True]:
+                with self.subTest(kind=kind, complete=complete):
+                    s = self.public_snapshot()
+                    first = s["ios"]["builds"][0]
+                    action = {"kind": kind, "platform": "ios", "build": first}
+                    clock = [NOW]
+                    store = Store()
+
+                    class Interrupted:
+                        def execute(self, action, state, snapshot):
+                            clock[0] += 120
+                            raise KeyboardInterrupt("process stopped after accepted attachment")
+
+                    with patch("release_train.runner.time.time", side_effect=lambda: clock[0]):
+                        with self.assertRaises(KeyboardInterrupt):
+                            execute_plan({"actions": [action]}, {}, s, store, Interrupted())
+                    saved = store.saves[-1]
+                    key = kind + ":ios:10"
+                    self.assertEqual(saved["operations"][key]["status"], "started")
+                    observed_at = NOW + HOUR + 60
+                    first.update(public=True, public_complete=complete, groups=["public"])
+                    s["ios"]["builds"].append(build() | {
+                        "id": "11", "number": 11, "public": False,
+                    })
+                    s["now"] = NOW + HOUR
+                    s["ios"]["observed_at"] = observed_at
+                    reconcile_operations(saved, s)
+                    self.assertEqual(saved["operations"][key].get("cadence_at"), observed_at)
+
+                    # Missing audiences remain resumable without restarting this clock.
+                    for elapsed in [12 * HOUR - 1, 12 * HOUR]:
+                        s["now"] = observed_at + elapsed
+                        s["ios"]["observed_at"] = s["now"]
+                        reconcile_operations(saved, s)
+                        actions = plan_tick(s, saved, {"ios": "testflight"})["actions"]
+                        self.assertEqual(
+                            [a["kind"] for a in actions],
+                            ([] if complete else ["attach-beta-groups"])
+                            + (["public-beta"] if elapsed == 12 * HOUR else []),
+                        )
+
+    def test_legacy_completed_beta_is_conservatively_observed_once(self):
+        s = self.public_snapshot()
+        s["ios"]["builds"].insert(0, build())
+        s["ios"]["builds"][1].update(id="11", number=11)
+        s["ios"]["observed_at"] = NOW + 60
+        state = {"operations": {"prior": operation("public-beta", NOW - DAY)}}
+        reconcile_operations(state, s)
+        self.assertFalse(plan_tick(s, state, {"ios": "testflight"})["actions"])
+        for elapsed in [12 * HOUR - 1, 12 * HOUR]:
+            s["now"] = NOW + 60 + elapsed
+            s["ios"]["observed_at"] = s["now"]
+            reconcile_operations(state, s)
+            self.assertEqual(
+                bool(plan_tick(s, state, {"ios": "testflight"})["actions"]),
+                elapsed == 12 * HOUR,
+            )
+
+    def test_later_public_observation_advances_an_unconfirmed_recovery_clock(self):
+        s = self.public_snapshot()
+        first = s["ios"]["builds"][0]
+        first["external"] = "BETA_APPROVED"
+        s["ios"]["builds"].append(build() | {
+            "id": "11", "number": 11, "public": False,
+        })
+        state = {"operations": {"prior": operation("public-beta", NOW - DAY, "ambiguous")}}
+        s["ios"]["observed_at"] = NOW + 60
+        reconcile_operations(state, s)
+        self.assertEqual(state["operations"]["prior"]["cadence_at"], NOW + 60)
+
+        first.update(public=True, groups=["public"], public_complete=False)
+        confirmed_at = NOW + HOUR + 60
+        s["ios"]["observed_at"] = confirmed_at
+        reconcile_operations(state, s)
+        self.assertEqual(state["operations"]["prior"]["cadence_at"], confirmed_at)
+        for elapsed in [12 * HOUR - 1, 12 * HOUR]:
+            s["now"] = confirmed_at + elapsed
+            s["ios"]["observed_at"] = s["now"]
+            reconcile_operations(state, s)
+            self.assertEqual(
+                [a["kind"] for a in plan_tick(s, state, {"ios": "testflight"})["actions"]],
+                ["attach-beta-groups"] + (["public-beta"] if elapsed == 12 * HOUR else []),
+            )
 
     def test_app_store_waits_48_hours_for_provider_state_and_journal(self):
         for source in ["review", "version", "saved", "journal", "publication"]:
@@ -237,7 +400,7 @@ class ReleaseCadenceTest(unittest.TestCase):
         }]
 
         def apple_read():
-            clock[0] += HOUR
+            clock[0] += HOUR + 0.25
             return ios
 
         runtime.apple_snapshot = apple_read
@@ -247,14 +410,14 @@ class ReleaseCadenceTest(unittest.TestCase):
             s = runtime.snapshot({}, {"ios": "app-store", "android": "off"})
 
         self.assertEqual(s["now"], NOW)
-        self.assertEqual(s["ios"].get("observed_at"), NOW + HOUR)
+        self.assertEqual(s["ios"].get("observed_at"), NOW + HOUR + 1)
         state = observe(s, {})
-        self.assertEqual(state["last_app_store_publication"], NOW + HOUR)
+        self.assertEqual(state["last_app_store_publication"], NOW + HOUR + 1)
         s["changes"] = {"ios": False, "android": False}
-        for elapsed in [2 * DAY, HOUR + 2 * DAY - 1, HOUR + 2 * DAY]:
+        for elapsed in [2 * DAY, HOUR + 2 * DAY, HOUR + 2 * DAY + 1]:
             with self.subTest(elapsed=elapsed):
                 s["now"] = NOW + elapsed
                 self.assertEqual(
                     [a["kind"] for a in plan_tick(s, state, {"ios": "app-store"})["actions"]],
-                    ["app-store"] if elapsed == HOUR + 2 * DAY else [],
+                    ["app-store"] if elapsed == HOUR + 2 * DAY + 1 else [],
                 )
