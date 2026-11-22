@@ -3973,6 +3973,9 @@ void main() {
         () async {
           final publications = <RemoteRecorderState?>[];
           final previewResumed = Completer<void>();
+          when(() => clipManager.durationLimit).thenReturn(
+            const Duration(milliseconds: 6300),
+          );
           when(() => clipManager.activeRecordingDuration).thenReturn(
             Duration.zero,
           );

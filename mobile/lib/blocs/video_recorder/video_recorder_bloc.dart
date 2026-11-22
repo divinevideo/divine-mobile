@@ -532,7 +532,7 @@ class VideoRecorderBloc
       final isShutterActive =
           recorder.showsActiveRecording || recorder.isIntervalCaptureRunning;
       final totalDuration = clipManager.totalDuration;
-      const budget = VideoEditorConstants.maxDuration;
+      final budget = clipManager.durationLimit;
       final canStart =
           recorder.canRecord &&
           recorder.recordingState == VideoRecorderState.idle &&

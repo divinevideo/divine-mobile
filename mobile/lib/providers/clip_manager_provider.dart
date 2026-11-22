@@ -198,6 +198,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     ]);
   }
 
+  /// The recording duration limit for the current session.
+  Duration get durationLimit => state.durationLimit;
+
   /// Calculates the remaining recording time available.
   ///
   /// Returns the difference between [ClipManagerState.durationLimit] and
