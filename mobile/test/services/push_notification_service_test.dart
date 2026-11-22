@@ -702,6 +702,97 @@ void main() {
         );
         service.dispose();
       });
+
+      // Kind 3079 is a regular kind, so a re-signed retry of a registration
+      // the relay already stored leaves a second one beside it (#8380).
+      group('after an attempt no relay confirmed', () {
+        late List<Event> published;
+        late List<PublishOutcome Function(Event)> outcomes;
+        late _MockEvent firstEvent;
+        late _MockEvent secondEvent;
+
+        setUp(() {
+          firstEvent = _MockEvent();
+          secondEvent = _MockEvent();
+          when(() => firstEvent.id).thenReturn('first-registration-event-id');
+          when(
+            () => secondEvent.id,
+          ).thenReturn('second-registration-event-id');
+          final signed = <Event>[firstEvent, secondEvent];
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: PushNotificationService.pushRegistrationKind,
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => signed.removeAt(0));
+          published = [];
+          outcomes = [];
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final event = invocation.positionalArguments.single as Event;
+            published.add(event);
+            return outcomes.removeAt(0)(event);
+          });
+        });
+
+        PublishOutcome silent(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: const [],
+          rejectedBy: const {},
+          noResponseFrom: [testEnvironment.relayUrl],
+        );
+
+        PublishOutcome accepted(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: [testEnvironment.relayUrl],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        );
+
+        test(
+          're-sends the same signed registration on the next attempt',
+          () async {
+            outcomes = [silent, accepted];
+            final service = buildService();
+
+            expect(
+              await service.register(testPubkey),
+              PushRegistrationResult.uncertainFailure,
+            );
+            expect(
+              await service.register(testPubkey),
+              PushRegistrationResult.published,
+            );
+
+            expect(published, [same(firstEvent), same(firstEvent)]);
+            verify(
+              () => mockAuthService.createAndSignEvent(
+                kind: PushNotificationService.pushRegistrationKind,
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            ).called(1);
+            service.dispose();
+          },
+        );
+
+        test('signs a new registration for a refreshed token', () async {
+          outcomes = [silent, accepted];
+          final service = buildService();
+
+          await service.register(testPubkey);
+          await service.registerToken(testPubkey, 'fcm-refreshed-token');
+
+          expect(published, [same(firstEvent), same(secondEvent)]);
+          service.dispose();
+        });
+      });
     });
 
     group('deregister', () {
@@ -1283,6 +1374,139 @@ void main() {
           service.dispose();
         },
       );
+
+      // Kind 3083 is a regular kind: every distinct signed event a relay
+      // stores stays stored, so re-signing a retry leaves duplicates (#8380).
+      group('after an attempt no relay confirmed', () {
+        late List<Event> published;
+        late List<PublishOutcome Function(Event)> outcomes;
+        late _MockEvent firstEvent;
+        late _MockEvent secondEvent;
+
+        setUp(() {
+          firstEvent = _MockEvent();
+          secondEvent = _MockEvent();
+          when(() => firstEvent.id).thenReturn('first-preferences-event-id');
+          when(() => secondEvent.id).thenReturn('second-preferences-event-id');
+          final signed = <Event>[firstEvent, secondEvent];
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: PushNotificationService.pushPreferencesKind,
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => signed.removeAt(0));
+          published = [];
+          outcomes = [];
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final event = invocation.positionalArguments.single as Event;
+            published.add(event);
+            return outcomes.removeAt(0)(event);
+          });
+        });
+
+        PublishOutcome silent(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: const [],
+          rejectedBy: const {},
+          noResponseFrom: [testEnvironment.relayUrl],
+        );
+
+        PublishOutcome accepted(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: [testEnvironment.relayUrl],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        );
+
+        test(
+          're-sends the same signed event instead of signing a new one',
+          () async {
+            const prefs = NotificationPreferences(commentsEnabled: false);
+            outcomes = [silent, accepted];
+            final service = buildService();
+
+            expect(await service.updatePreferences(prefs), isFalse);
+            expect(await service.updatePreferences(prefs), isTrue);
+
+            expect(published, [same(firstEvent), same(firstEvent)]);
+            verify(
+              () => mockAuthService.createAndSignEvent(
+                kind: PushNotificationService.pushPreferencesKind,
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            ).called(1);
+            service.dispose();
+          },
+        );
+
+        test('signs a new event when the preferences changed since', () async {
+          outcomes = [silent, accepted];
+          final service = buildService();
+
+          await service.updatePreferences(
+            const NotificationPreferences(commentsEnabled: false),
+          );
+          await service.updatePreferences(
+            const NotificationPreferences(likesEnabled: false),
+          );
+
+          expect(published, [same(firstEvent), same(secondEvent)]);
+          service.dispose();
+        });
+
+        test(
+          'signs a new event after the relay refused the kept one',
+          () async {
+            const prefs = NotificationPreferences(commentsEnabled: false);
+            outcomes = [
+              (event) => PublishOutcome(
+                eventId: event.id,
+                acceptedBy: const [],
+                rejectedBy: {
+                  testEnvironment.relayUrl: 'invalid: created_at too old',
+                },
+                noResponseFrom: const [],
+              ),
+              accepted,
+            ];
+            final service = buildService();
+
+            await service.updatePreferences(prefs);
+            await service.updatePreferences(prefs);
+
+            expect(published, [same(firstEvent), same(secondEvent)]);
+            service.dispose();
+          },
+        );
+
+        test('signs a new event when the signed-in account changed', () async {
+          const prefs = NotificationPreferences(commentsEnabled: false);
+          const otherPubkey =
+              '0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba';
+          outcomes = [silent, accepted];
+          final service = buildService();
+
+          await service.updatePreferences(prefs);
+          when(() => mockAuthService.currentIdentity).thenReturn(
+            BunkerNostrIdentity(
+              pubkey: otherPubkey,
+              remoteSigner: mockNostrSigner,
+            ),
+          );
+          await service.updatePreferences(prefs);
+
+          expect(published, [same(firstEvent), same(secondEvent)]);
+          service.dispose();
+        });
+      });
     });
 
     group('handleForegroundMessage', () {
