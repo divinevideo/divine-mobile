@@ -635,6 +635,31 @@ void main() {
       });
 
       group('rejection retry policy', () {
+        test('retries a REST timeout even when WebSocket relays refuse', () {
+          fakeAsync((async) {
+            var restAttempts = 0;
+            when(() => eventApiClient.publishEvent(any()))
+                .thenAnswer((call) async {
+                  final event = call.positionalArguments.single as Event;
+                  return ++restAttempts == 1
+                      ? const EventApiTransientFailure('timeout')
+                      : EventApiAccepted(event.id);
+                });
+            stubWebSocket((event) => _rejected(event, 'blocked: policy'));
+            EventPublishOutcome? outcome;
+
+            unawaited(
+              publisher
+                  .publish(_signedEvent())
+                  .then((value) => outcome = value),
+            );
+            async.elapse(const Duration(minutes: 1));
+
+            expect(restAttempts, 2);
+            expect(outcome, EventPublishOutcome.published);
+          });
+        });
+
         for (final reason in const [
           'invalid: video missing thumbnail',
           'blocked: content too long (70000 > 65536 bytes)',

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
@@ -381,10 +382,15 @@ void main() {
     });
 
     test('an untrusted WebSocket restriction is not authoritative, but its '
-        'refusal is final for this event', () async {
+        'refusal is final when REST also gives a permanent refusal', () async {
       final signedEvent = createSignedEvent();
       stubSigning(signedEvent);
-      stubRest(const EventApiTransientFailure('http_503'));
+      stubRest(
+        const EventApiRejected(
+          statusCode: 422,
+          reason: 'invalid: video missing thumbnail',
+        ),
+      );
       stubWebSocket(
         PublishOutcome(
           eventId: signedEvent.id,
@@ -654,6 +660,53 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         );
+      });
+
+      test('recovers a scheduled copy that becomes visible before retry', () {
+        fakeAsync((async) {
+          final scheduled = createSignedEvent();
+          var restAttempts = 0;
+          when(() => mockEventApiClient.publishEvent(any()))
+              .thenAnswer((_) async {
+                restAttempts++;
+                return const EventApiTransientFailure('timeout');
+              });
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => PublishOutcome(
+              eventId: scheduled.id,
+              acceptedBy: const [],
+              rejectedBy: const {},
+              noResponseFrom: const ['wss://relay.example'],
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).thenAnswer((call) async {
+            final filters = call.positionalArguments.single as List<Filter>;
+            return restAttempts > 0 &&
+                    filters.any((filter) => filter.d?.isNotEmpty ?? false)
+                ? [olderRevision()]
+                : <Event>[];
+          });
+          EventPublishOutcome? outcome;
+          unawaited(
+            publisher
+                .broadcastScheduledEvent(scheduled)
+                .then((value) => outcome = value),
+          );
+          async.elapse(const Duration(minutes: 1));
+
+          expect(outcome, EventPublishOutcome.published);
+          expect(restAttempts, 1);
+        });
       });
     });
   });

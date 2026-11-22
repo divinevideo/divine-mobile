@@ -185,9 +185,8 @@ class SignedEventRelayPublisher {
   ///    falls back to a WebSocket publish that waits for relay `OK` frames.
   /// 3. Before each retry, re-check relay presence so a false-negative
   ///    WebSocket `OK` does not produce a duplicate publish.
-  /// 4. Stop with [EventPublishOutcome.rejected] after an attempt in which
-  ///    every relay refused the event in a way a resend cannot change (see
-  ///    [EventPublishOutcome.rejected]).
+  /// 4. Stop with [EventPublishOutcome.rejected] when both REST and every
+  ///    WebSocket relay refused the event in a way a resend cannot change.
   ///
   /// When no [EventApiClient] is configured, the WebSocket-only retry path
   /// is used, with the same early stop.
@@ -205,26 +204,29 @@ class SignedEventRelayPublisher {
   Future<EventPublishOutcome> publish(
     Event event, {
     bool isRetry = false,
+  }) => _publish(event, isRetry: isRetry);
+
+  /// Recovers a scheduled post by address as well as by id. Its scheduled
+  /// and re-dated copies share the same content, but can have different ids.
+  Future<EventPublishOutcome> publishScheduled(Event event) =>
+      _publish(event, isRetry: true, matchAddress: true);
+
+  Future<EventPublishOutcome> _publish(
+    Event event, {
+    required bool isRetry,
+    bool matchAddress = false,
   }) async {
     final apiClient = _eventApiClient;
     if (apiClient == null) {
-      return _publishWithWebSocketRetries(event);
-    }
-
-    if (isRetry && await _relayPresence(event) == _RelayPresence.found) {
-      Log.info(
-        '♻️ Recovered already-published video event ${event.id} from relays; '
-        'skipping re-publish',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return EventPublishOutcome.published;
+      return _publishWithWebSocketRetries(event, matchAddress: matchAddress);
     }
 
     for (var attempt = 1; attempt <= _maxPublishAttempts; attempt++) {
       // A lost OK on a prior attempt can leave the event already stored on
       // a relay; re-check before re-broadcasting to avoid duplicates.
-      if (attempt > 1 && await _relayPresence(event) == _RelayPresence.found) {
+      if ((isRetry || attempt > 1) &&
+          await _relayPresence(event, matchAddress: matchAddress) ==
+              _RelayPresence.found) {
         Log.info(
           '♻️ Event ${event.id} found on relay before retry $attempt; '
           'marking published',
@@ -244,7 +246,8 @@ class SignedEventRelayPublisher {
           await _backoffAfterFailedAttempt(attempt);
       }
     }
-    if (await _relayPresence(event) == _RelayPresence.found) {
+    if (await _relayPresence(event, matchAddress: matchAddress) ==
+        _RelayPresence.found) {
       return EventPublishOutcome.published;
     }
     return EventPublishOutcome.transientFailure;
@@ -530,7 +533,11 @@ class SignedEventRelayPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return publishViaWebSocket(event);
+        final outcome = await publishViaWebSocket(event);
+        return outcome == EventPublishOutcome.rejected &&
+                !_isFinalRefusal(reason)
+            ? EventPublishOutcome.transientFailure
+            : outcome;
       case EventApiTransientFailure(:final reason):
         Log.warning(
           '⚠️ REST publish transient failure for ${event.id} ($reason); '
@@ -538,14 +545,28 @@ class SignedEventRelayPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return publishViaWebSocket(event);
+        // The REST endpoint can still accept a retry, or it may already
+        // have stored the event before timing out. WebSocket refusals do
+        // not settle the REST leg.
+        final outcome = await publishViaWebSocket(event);
+        return outcome == EventPublishOutcome.rejected
+            ? EventPublishOutcome.transientFailure
+            : outcome;
     }
   }
 
   /// Legacy WebSocket-only publish with the original 3-attempt, 2s/4s backoff
   /// retry loop. Used only when no [EventApiClient] is configured.
-  Future<EventPublishOutcome> _publishWithWebSocketRetries(Event event) async {
+  Future<EventPublishOutcome> _publishWithWebSocketRetries(
+    Event event, {
+    required bool matchAddress,
+  }) async {
     for (var attempt = 1; attempt <= _maxPublishAttempts; attempt++) {
+      if (matchAddress &&
+          await _relayPresence(event, matchAddress: true) ==
+              _RelayPresence.found) {
+        return EventPublishOutcome.published;
+      }
       _throwIfDisposed(attempt);
       final outcome = await publishViaWebSocket(event);
       if (outcome == EventPublishOutcome.published) {
@@ -612,14 +633,32 @@ class SignedEventRelayPublisher {
     }
   }
 
-  /// Checks whether [event] itself is already retrievable from the configured
-  /// relays, by its id.
-  Future<_RelayPresence> _relayPresence(Event event) async {
+  /// Checks whether [event] itself is retrievable from the configured relays,
+  /// or an equivalent re-dated copy when [matchAddress] is set.
+  Future<_RelayPresence> _relayPresence(
+    Event event, {
+    required bool matchAddress,
+  }) async {
     try {
+      final dTag = matchAddress ? event.dTagValue : '';
       final found = await _nostrClient.queryEvents([
         Filter(ids: [event.id], limit: 1),
+        if (dTag.isNotEmpty)
+          Filter(
+            authors: [event.pubkey],
+            kinds: [event.kind],
+            d: [dTag],
+            limit: 1,
+          ),
       ], useCache: false);
-      return found.any((candidate) => candidate.id == event.id)
+      return found.any(
+            (candidate) =>
+                candidate.id == event.id ||
+                (dTag.isNotEmpty &&
+                    candidate.pubkey == event.pubkey &&
+                    candidate.kind == event.kind &&
+                    candidate.dTagValue == dTag),
+          )
           ? _RelayPresence.found
           : _RelayPresence.notFound;
     } catch (e) {

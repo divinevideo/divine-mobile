@@ -11,7 +11,6 @@ import 'package:models/models.dart'
     hide NIP71VideoKinds, PendingUpload, UploadStatus;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -803,36 +802,8 @@ class VideoEventPublisher {
   /// upload ladder, where an older revision can lack what the new one
   /// carries (#9306). A failed address read only means the broadcast goes
   /// ahead.
-  Future<EventPublishOutcome> broadcastScheduledEvent(Event event) async {
-    final dTag = event.dTagValue;
-    if (dTag.isNotEmpty) {
-      var live = const <Event>[];
-      try {
-        live = await _nostrService.queryEvents([
-          Filter(
-            authors: [event.pubkey],
-            kinds: [event.kind],
-            d: [dTag],
-            limit: 1,
-          ),
-        ], useCache: false);
-      } catch (e) {
-        Log.warning(
-          'Address lookup failed for scheduled event ${event.id}: $e',
-          name: _logName,
-          category: LogCategory.video,
-        );
-      }
-      final alreadyLive = live.any(
-        (candidate) =>
-            candidate.pubkey == event.pubkey &&
-            candidate.kind == event.kind &&
-            candidate.dTagValue == dTag,
-      );
-      if (alreadyLive) return EventPublishOutcome.published;
-    }
-    return _relayPublisher.publish(event, isRetry: true);
-  }
+  Future<EventPublishOutcome> broadcastScheduledEvent(Event event) =>
+      _relayPublisher.publishScheduled(event);
 
   /// Runs the confirmed-publish side effects for a scheduled [event] the
   /// relay (or this app, in its stead) has just published (#3538).
