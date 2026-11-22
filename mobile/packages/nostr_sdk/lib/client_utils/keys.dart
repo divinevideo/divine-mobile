@@ -26,6 +26,30 @@ bool keyIsValid(String key) {
   return (isHexadecimal(key) && key.length == 64);
 }
 
+final BigInt _fieldPrime = BigInt.parse(
+  'fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f',
+  radix: 16,
+);
+
+/// Whether [publicKey] is the x coordinate of a point on secp256k1.
+///
+/// [keyIsValid] checks only shape, and about half of all 32-byte values have
+/// no point on the curve, so no event can be signed by them and no NIP-44
+/// conversation key derived for them. This is BIP-340 `lift_x` without
+/// computing the point. Do not use it on private keys, which are scalars.
+bool pubkeyIsOnCurve(String publicKey) {
+  if (!keyIsValid(publicKey)) return false;
+  final x = BigInt.parse(publicKey, radix: 16);
+  if (x >= _fieldPrime) return false;
+  final ySquared =
+      (x.modPow(BigInt.from(3), _fieldPrime) + BigInt.from(7)) % _fieldPrime;
+  final y = ySquared.modPow(
+    (_fieldPrime + BigInt.one) ~/ BigInt.from(4),
+    _fieldPrime,
+  );
+  return y.modPow(BigInt.two, _fieldPrime) == ySquared;
+}
+
 String getRandomHexString([int byteLength = 32]) {
   final Random random = Random.secure();
   var bytes = List<int>.generate(byteLength, (i) => random.nextInt(256));
