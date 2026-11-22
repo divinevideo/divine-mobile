@@ -498,9 +498,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             // Short-form clips are 30-60 fps; capping below 120 Hz ProMotion
             // avoids redundant main-thread pixel-buffer polls on every vsync.
             link.preferredFrameRateRange = CAFrameRateRange(
-                minimum: 15,
+                minimum: 30,
                 maximum: 60,
-                preferred: 30
+                preferred: 60
             )
         }
         link.add(to: .main, forMode: .common)
