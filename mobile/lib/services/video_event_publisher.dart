@@ -36,6 +36,7 @@ import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
+import 'package:openvine/utils/sound_reuse_source.dart';
 import 'package:poll_repository/poll_repository.dart' show Poll, PollKind;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -1074,6 +1075,14 @@ class VideoEventPublisher {
     if (latest == null) {
       throw const SoundReusePublicationException(
         'Newest revision of the source video unavailable',
+      );
+    }
+    final current = VideoEvent.fromNostrEvent(latest, permissive: true);
+    if (!soundReuseSourceUnchanged(existingEvent, current, audioEventId) ||
+        auth.currentPublicKeyHex != owner ||
+        isOperationCurrent?.call() == false) {
+      throw const SoundReusePublicationException(
+        'Source video or account changed during sound approval',
       );
     }
     final originalTags = Nip89ClientTag.withoutClientTag(latest.tags);

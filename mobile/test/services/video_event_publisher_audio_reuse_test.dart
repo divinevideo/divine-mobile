@@ -266,6 +266,30 @@ void main() {
       );
     });
 
+    test('keeps a different sound linked by a newer revision', () async {
+      final publisher = publisherWith(
+        LatestVideoRevisionFound(
+          revision(
+            id: 'd' * 64,
+            createdAt: 4102444800,
+            content: 'Newer description',
+            extraTags: [
+              ['e', 'f' * 64, '', 'audio'],
+            ],
+          ),
+        ),
+      );
+      await expectLater(
+        publisher.republishWithAudioReuse(
+          existingEvent: opened,
+          audioEventId: audio,
+          audioRelayHint: 'wss://relay.divine.video',
+        ),
+        throwsA(isA<SoundReusePublicationException>()),
+      );
+      expect(signed, isNull);
+    });
+
     for (final (name, answer) in [
       ('cannot tell', const LatestVideoRevisionUnknown()),
       ('hold none', const LatestVideoRevisionAbsent()),
