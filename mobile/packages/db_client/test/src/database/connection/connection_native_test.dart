@@ -1688,6 +1688,35 @@ void main() {
       );
     });
 
+    test('openEncryptedConnection configures WAL journal mode and NORMAL '
+        'synchronous pragmas', () async {
+      final tempRoot = Directory.systemTemp.createTempSync(
+        'db_client_wal_pragma_test_',
+      );
+      addTearDown(() {
+        if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+      });
+      final dbPath = p.join(tempRoot.path, 'encrypted_wal.db');
+
+      final db = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+      );
+      addTearDown(db.close);
+
+      final journalMode = await db
+          .customSelect('PRAGMA journal_mode;')
+          .getSingle();
+      final synchronous = await db
+          .customSelect('PRAGMA synchronous;')
+          .getSingle();
+
+      expect(
+        journalMode.read<String>('journal_mode').toLowerCase(),
+        equals('wal'),
+      );
+      expect(synchronous.read<int>('synchronous'), equals(1));
+    });
+
     test(
       'expires a preserved copy the retention window has outlived',
       () async {

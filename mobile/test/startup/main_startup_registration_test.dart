@@ -231,6 +231,19 @@ void main() {
       expect(registration?.optional, isTrue);
     });
 
+    test('runs draft audio migration as optional deferred startup work', () {
+      final container = _containerWithStartupPerformance();
+      addTearDown(container.dispose);
+
+      final coordinator = app.createStartupCoordinatorForTesting(container);
+      final registration = coordinator.serviceRegistrationForTesting(
+        'DraftAudioMigration',
+      );
+
+      expect(registration?.phase, StartupPhase.deferred);
+      expect(registration?.optional, isTrue);
+    });
+
     testWidgets(
       'VideoCacheManifest refreshes the live account container when an '
       'account switch finishes before the detached sweep',

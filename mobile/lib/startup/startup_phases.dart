@@ -52,17 +52,6 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Relocate imported audio that older builds stored under whichever draft
-  // was open at the time. A track saved to My Sounds outlives that draft, so
-  // no draft owns it (#8024). Best-effort and idempotent; transient failures
-  // are retried on the next launch.
-  await migrateDraftOwnedAudioImports();
-  Log.info(
-    '[INIT] ✅ Imported-audio storage checked',
-    name: 'Main',
-    category: LogCategory.system,
-  );
-
   // Initialize auth service
   // NOTE: NostrService (relay connections) is initialized lazily in AuthService
   // when user actually authenticates, to avoid blocking startup for unauthenticated users
@@ -224,6 +213,18 @@ Future<void> sweepC2paDebris() async {
     getTemporaryDirectory(),
   ]);
   directories.forEach(C2paDebrisJanitor.deleteStaleDebris);
+}
+
+/// Relocates imported audio that older builds stored under whichever draft
+/// was open at the time (#8024). Runs in the deferred startup phase so
+/// filesystem traversal never delays initial auth/feed startup.
+Future<void> migrateDraftOwnedAudioImportsOnStartup() async {
+  await migrateDraftOwnedAudioImports();
+  Log.info(
+    '[INIT] ✅ Imported-audio storage checked',
+    name: 'Main',
+    category: LogCategory.system,
+  );
 }
 
 Future<void> initializeSeedDataPreload(

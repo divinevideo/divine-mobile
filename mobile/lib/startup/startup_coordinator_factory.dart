@@ -246,6 +246,13 @@ StartupCoordinator createStartupCoordinator(
 
   if (!kIsWeb) {
     coordinator.registerService(
+      name: 'DraftAudioMigration',
+      phase: StartupPhase.deferred,
+      initialize: migrateDraftOwnedAudioImportsOnStartup,
+      optional: true,
+    );
+
+    coordinator.registerService(
       name: 'C2paDebrisSweep',
       phase: StartupPhase.deferred,
       initialize: sweepC2paDebris,

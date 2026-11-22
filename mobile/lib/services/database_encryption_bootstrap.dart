@@ -70,6 +70,8 @@ class DatabaseEncryptionBootstrap {
     persistRecoveryOutcome,
     Future<bool> Function()? hasPendingCorruptionRecovery,
     Future<void> Function()? clearPendingCorruptionRecovery,
+    Future<bool> Function()? hasCompletedAccessibilityUpgrade,
+    Future<void> Function()? markAccessibilityUpgradeCompleted,
   }) : _secureStorage = secureStorage,
        _isProtectedDataAvailable =
            isProtectedDataAvailable ??
@@ -80,6 +82,10 @@ class DatabaseEncryptionBootstrap {
            hasPendingCorruptionRecovery ?? (() async => false),
        _clearPendingCorruptionRecovery =
            clearPendingCorruptionRecovery ?? (() async {}),
+       _hasCompletedAccessibilityUpgrade =
+           hasCompletedAccessibilityUpgrade ?? (() async => false),
+       _markAccessibilityUpgradeCompleted =
+           markAccessibilityUpgradeCompleted ?? (() async {}),
        _ensureRuntime = ensureRuntime ?? ensureSqlCipherRuntime,
        _isCipherAvailable = isCipherAvailable ?? isSqlCipherAvailable,
        _migrate =
@@ -154,6 +160,12 @@ class DatabaseEncryptionBootstrap {
   /// by recovering, or by proving there is nothing to recover. Called on every
   /// non-throwing path so a stuck flag cannot force a salvage every launch.
   final Future<void> Function() _clearPendingCorruptionRecovery;
+
+  /// Persisted marker indicating that [_upgradeKeyAccessibility] has already
+  /// succeeded on this install, avoiding five sequential Keychain IPC calls
+  /// on every subsequent cold launch.
+  final Future<bool> Function() _hasCompletedAccessibilityUpgrade;
+  final Future<void> Function() _markAccessibilityUpgradeCompleted;
 
   /// Records a startup DB recovery (salvage or wipe) as a non-fatal so the
   /// corruption rate — and a device recovering on every launch — is observable
@@ -443,6 +455,7 @@ class DatabaseEncryptionBootstrap {
   /// so a rollback during an interrupted rewrite remains unsupported until a
   /// successful launch of this build restores it.
   Future<void> _upgradeKeyAccessibility(String key) async {
+    if (await _hasCompletedAccessibilityUpgrade()) return;
     if (await _isProtectedDataAvailable() != true) return;
     try {
       await _secureStorage.write(
@@ -468,6 +481,15 @@ class DatabaseEncryptionBootstrap {
       return;
     }
     await _restorePrimaryKey(key);
+    try {
+      await _markAccessibilityUpgradeCompleted();
+    } on Object catch (error) {
+      Log.warning(
+        'Could not persist DB cipher key accessibility upgrade marker '
+        '(non-fatal): $error',
+        name: _logName,
+      );
+    }
   }
 
   /// Leaves the recovery copy intact until the primary has been verified.
