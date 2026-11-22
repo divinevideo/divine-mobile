@@ -55,6 +55,11 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
     with GridPrefetchMixin, ScrollPaginationMixin {
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
+
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   List<VideoEvent>? _lastPrefetchedVideos;
 
   @override
@@ -142,11 +147,12 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
       builder: (context, state) {
         if (state.status == ProfileCollabVideosStatus.initial ||
             state.status == ProfileCollabVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         if (state.status == ProfileCollabVideosStatus.failure) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingCollabs,
           );
         }
@@ -155,6 +161,7 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
 
         if (collabVideos.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoCollabsTitle,
             subtitle: widget.isOwnProfile
                 ? context.l10n.profileCollabsOwnEmpty
@@ -166,6 +173,7 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
         _prefetchIfNeeded(collabVideos);
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             SliverPadding(

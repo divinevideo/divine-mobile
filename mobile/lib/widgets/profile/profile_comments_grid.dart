@@ -40,6 +40,10 @@ class _ProfileCommentsGridState extends State<ProfileCommentsGrid>
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -79,17 +83,19 @@ class _ProfileCommentsGridState extends State<ProfileCommentsGrid>
       builder: (context, state) {
         if (state.status == ProfileCommentsStatus.initial ||
             state.status == ProfileCommentsStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         if (state.status == ProfileCommentsStatus.failure) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingComments,
           );
         }
 
         if (state.videoReplies.isEmpty && state.textComments.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: widget.isOwnProfile
                 ? context.l10n.profileNoCommentsOwnTitle
                 : context.l10n.profileNoCommentsOtherTitle,
@@ -100,6 +106,7 @@ class _ProfileCommentsGridState extends State<ProfileCommentsGrid>
         }
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             if (state.videoReplies.isNotEmpty) ...[

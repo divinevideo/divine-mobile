@@ -17,6 +17,7 @@ class ProfileTabEmptyState extends StatelessWidget {
     this.action,
     this.padding = const EdgeInsets.fromLTRB(48, 64, 48, 48),
     this.physics = const ClampingScrollPhysics(),
+    this.scrollViewKey,
     super.key,
   });
 
@@ -39,8 +40,14 @@ class ProfileTabEmptyState extends StatelessWidget {
   /// an empty tab can still be overscrolled far enough to trigger it.
   final ScrollPhysics physics;
 
+  /// Key for the wrapping [CustomScrollView].
+  ///
+  /// See [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey? scrollViewKey;
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
+    key: scrollViewKey,
     physics: physics,
     slivers: [
       SliverFillRemaining(

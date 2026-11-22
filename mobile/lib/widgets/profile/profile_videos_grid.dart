@@ -148,6 +148,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileVideosGridSkeleton.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -395,13 +399,17 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
 
     if (allVideos.isEmpty) {
       if (widget.isLoading) {
-        return const ProfileVideosGridSkeleton();
+        return ProfileVideosGridSkeleton(scrollViewKey: _scrollViewKey);
       }
       if (feedState.status == ProfileFeedStatus.failure) {
-        return ProfileVideosLoadFailed(isOwnProfile: isOwnProfile);
+        return ProfileVideosLoadFailed(
+          isOwnProfile: isOwnProfile,
+          scrollViewKey: _scrollViewKey,
+        );
       }
       if (!isOwnProfile || feedState.unavailablePinnedCoordinates.isEmpty) {
         return ProfileTabEmptyState(
+          scrollViewKey: _scrollViewKey,
           title: context.l10n.profileNoVideosTitle,
           subtitle: isOwnProfile
               ? context.l10n.profileNoVideosOwnSubtitle
@@ -424,6 +432,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         : const <PendingCollaboratorInviteGroup>[];
 
     return CustomScrollView(
+      key: _scrollViewKey,
       physics: const ClampingScrollPhysics(),
       slivers: [
         if (pendingInviteGroups.isNotEmpty)
