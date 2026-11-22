@@ -61,14 +61,16 @@ class HomeFeedResumeManager {
   /// videos that can be served immediately (empty when nothing is usable).
   ///
   /// The window already starts at the resume position — already-watched videos
-  /// were dropped on write — so the caller serves it at index 0.
+  /// were dropped on write — so the caller serves it at index 0. Recheck the
+  /// current seen policy because the window may predate a flag change or a
+  /// later view elsewhere in the app.
   Future<List<VideoEvent>> readServeableWindow({
     required String? pubkey,
     required String mode,
   }) async {
     final cached = await _cache.readVideos(pubkey: pubkey, mode: mode);
     if (cached == null || cached.isEmpty) return const [];
-    final filtered = _videosRepository.applyContentPreferences(cached);
+    final filtered = await _videosRepository.applyHomeFeedPreferences(cached);
     return filtered.where((v) => v.videoUrl != null).toList();
   }
 

@@ -16,7 +16,14 @@ import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/feed_bloc_test_helper.dart';
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockVideosRepository extends Mock implements VideosRepository {
+  // These bloc tests supply content policy through the existing stub and
+  // have no seen-history service. Cache reads use that same supplied policy.
+  @override
+  Future<List<VideoEvent>> applyHomeFeedPreferences(
+    List<VideoEvent> videos,
+  ) async => applyContentPreferences(videos);
+}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
