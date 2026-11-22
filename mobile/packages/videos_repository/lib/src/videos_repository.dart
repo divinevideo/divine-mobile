@@ -687,13 +687,12 @@ class VideosRepository {
     List<VideoEvent> videos, {
     bool replaceInteractionCounts = false,
   }) async {
-    if (videos.isEmpty ||
-        _funnelcakeApiClient == null ||
-        !_funnelcakeApiClient.isAvailable) {
+    final client = _funnelcakeApiClient;
+    if (videos.isEmpty || client == null || !client.isAvailable) {
       return videos;
     }
 
-    final videosNeedingStats = videos
+    final ids = videos
         .where(
           (video) =>
               video.id.isNotEmpty &&
@@ -710,72 +709,71 @@ class VideosRepository {
                   video.nostrCommentCount == null ||
                   video.nostrRepostCount == null),
         )
+        .map((video) => video.id)
         .toList();
-    if (videosNeedingStats.isEmpty) return videos;
+    if (ids.isEmpty) return videos;
 
+    // A failed chunk must leave the other chunks' counts available.
+    const batchSize = 100;
+    final responses = await Future.wait([
+      for (var start = 0; start < ids.length; start += batchSize)
+        _fetchFeedBulkStatsChunk(
+          client,
+          ids.sublist(start, min(start + batchSize, ids.length)),
+        ),
+    ]);
+    final statsById = {for (final stats in responses) ...stats};
+
+    if (statsById.isEmpty) return videos;
+
+    return videos.map((video) {
+      final stats = statsById[video.id];
+      if (stats == null) return video;
+
+      return video.copyWith(
+        // Only the archival embedded_loops may seed originalLoops; the
+        // live computed stats.loops would clobber the Vine-era count and
+        // double-count against the views tag in totalLoops.
+        originalLoops: stats.embeddedLoops ?? video.originalLoops,
+        originalLikes: video.originalLikes,
+        originalComments: video.originalComments,
+        originalReposts: video.originalReposts,
+        // Bulk stats are live Nostr engagement counts. Keep archival import
+        // tags in original* and fill only the live fields so display seeds
+        // can add the two sources without double-counting.
+        nostrLikeCount: replaceInteractionCounts
+            ? stats.reactions
+            : video.nostrLikeCount ?? stats.reactions,
+        nostrCommentCount: replaceInteractionCounts
+            ? stats.comments
+            : video.nostrCommentCount ?? stats.comments,
+        nostrRepostCount: replaceInteractionCounts
+            ? stats.reposts
+            : video.nostrRepostCount ?? stats.reposts,
+        rawTags: video.rawTags['views'] == null && stats.views != null
+            ? {...video.rawTags, 'views': stats.views.toString()}
+            : video.rawTags,
+      );
+    }).toList();
+  }
+
+  Future<Map<String, BulkVideoStatsEntry>> _fetchFeedBulkStatsChunk(
+    FunnelcakeApiClient client,
+    List<String> eventIds,
+  ) async {
     try {
-      final statsById = <String, BulkVideoStatsEntry>{};
-      final chunks = <List<String>>[
-        for (var i = 0; i < videosNeedingStats.length; i += 100)
-          videosNeedingStats
-              .sublist(
-                i,
-                i + 100 > videosNeedingStats.length
-                    ? videosNeedingStats.length
-                    : i + 100,
-              )
-              .map((video) => video.id)
-              .toList(),
-      ];
-      final responses = await Future.wait([
-        for (final chunk in chunks)
-          _funnelcakeApiClient.getBulkVideoStats(chunk),
-      ]);
-      for (final response in responses) {
-        statsById.addAll(response.stats);
-      }
-
-      if (statsById.isEmpty) return videos;
-
-      return videos.map((video) {
-        final stats = statsById[video.id];
-        if (stats == null) return video;
-
-        return video.copyWith(
-          // Only the archival embedded_loops may seed originalLoops; the
-          // live computed stats.loops would clobber the Vine-era count and
-          // double-count against the views tag in totalLoops.
-          originalLoops: stats.embeddedLoops ?? video.originalLoops,
-          originalLikes: video.originalLikes,
-          originalComments: video.originalComments,
-          originalReposts: video.originalReposts,
-          // Bulk stats are live Nostr engagement counts. Keep archival import
-          // tags in original* and fill only the live fields so display seeds
-          // can add the two sources without double-counting.
-          nostrLikeCount: replaceInteractionCounts
-              ? stats.reactions
-              : video.nostrLikeCount ?? stats.reactions,
-          nostrCommentCount: replaceInteractionCounts
-              ? stats.comments
-              : video.nostrCommentCount ?? stats.comments,
-          nostrRepostCount: replaceInteractionCounts
-              ? stats.reposts
-              : video.nostrRepostCount ?? stats.reposts,
-          rawTags: video.rawTags['views'] == null && stats.views != null
-              ? {...video.rawTags, 'views': stats.views.toString()}
-              : video.rawTags,
-        );
-      }).toList();
+      final response = await client.getBulkVideoStats(eventIds);
+      return response.stats;
     } on Object catch (e, stackTrace) {
       // An account switch disposes the client under a load still in flight
       // (#10291); that failure is expected, not a fault worth an error.
-      if (_funnelcakeApiClient.isDisposed) {
+      if (client.isDisposed) {
         Log.debug(
           'Failed to hydrate home feed videos with bulk stats: $e',
           name: 'VideosRepository',
           category: LogCategory.video,
         );
-        return videos;
+        return const {};
       }
       Log.error(
         'Failed to hydrate home feed videos with bulk stats',
@@ -784,7 +782,7 @@ class VideosRepository {
         error: e,
         stackTrace: stackTrace,
       );
-      return videos;
+      return const {};
     }
   }
 

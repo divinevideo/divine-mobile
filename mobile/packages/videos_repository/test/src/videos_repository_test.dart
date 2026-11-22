@@ -3208,86 +3208,100 @@ void main() {
           },
         );
 
-        test('hydrates large API results in parallel batches', () async {
-          final firstBatchDone = Completer<void>();
-          addTearDown(() {
-            if (!firstBatchDone.isCompleted) firstBatchDone.complete();
-          });
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.getHomeFeed(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          ).thenAnswer(
-            (_) async => HomeFeedResponse(
-              videos: List.generate(
-                101,
-                (index) => _createVideoStats(
-                  id: 'event-$index',
-                  pubkey: 'followed-user',
-                  dTag: 'dtag-$index',
-                  videoUrl: 'https://example.com/video-$index.mp4',
-                  loops: 0,
+        for (final failSecondBatch in [false, true]) {
+          test(
+            failSecondBatch
+                ? 'keeps stats from successful batches when a parallel batch fails'
+                : 'hydrates large API results in parallel batches',
+            () async {
+              final firstBatchDone = Completer<void>();
+              addTearDown(() {
+                if (!firstBatchDone.isCompleted) firstBatchDone.complete();
+              });
+              when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+              when(
+                () => mockFunnelcakeClient.getHomeFeed(
+                  pubkey: any(named: 'pubkey'),
+                  limit: any(named: 'limit'),
+                  before: any(named: 'before'),
                 ),
-              ),
-            ),
-          );
-          when(() => mockFunnelcakeClient.getBulkVideoStats(any())).thenAnswer((
-            invocation,
-          ) async {
-            final ids = invocation.positionalArguments.single as List<String>;
-            if (ids.contains('event-0')) await firstBatchDone.future;
-            return BulkVideoStatsResponse(
-              stats: {
-                for (final id in ids)
-                  id: BulkVideoStatsEntry(
-                    eventId: id,
-                    reactions: 0,
-                    comments: 0,
-                    reposts: 0,
-                    views: int.parse(id.split('-').last) + 1,
+              ).thenAnswer(
+                (_) async => HomeFeedResponse(
+                  videos: List.generate(
+                    101,
+                    (index) => _createVideoStats(
+                      id: 'event-$index',
+                      pubkey: 'followed-user',
+                      dTag: 'dtag-$index',
+                      videoUrl: 'https://example.com/video-$index.mp4',
+                      loops: 0,
+                    ),
                   ),
-              },
-            );
-          });
+                ),
+              );
+              when(
+                () => mockFunnelcakeClient.getBulkVideoStats(any()),
+              ).thenAnswer((
+                invocation,
+              ) async {
+                final ids =
+                    invocation.positionalArguments.single as List<String>;
+                if (ids.contains('event-0')) {
+                  await firstBatchDone.future;
+                } else if (failSecondBatch) {
+                  throw const FunnelcakeException('bulk stats unavailable');
+                }
+                return BulkVideoStatsResponse(
+                  stats: {
+                    for (final id in ids)
+                      id: BulkVideoStatsEntry(
+                        eventId: id,
+                        reactions: 0,
+                        comments: 0,
+                        reposts: 0,
+                        views: int.parse(id.split('-').last) + 1,
+                      ),
+                  },
+                );
+              });
 
-          final repositoryWithApi = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
+              final repositoryWithApi = VideosRepository(
+                nostrClient: mockNostrClient,
+                funnelcakeApiClient: mockFunnelcakeClient,
+              );
 
-          final load = repositoryWithApi.getHomeFeedVideos(
-            authors: ['followed-user'],
-            userPubkey: 'my-pubkey',
-            limit: 101,
-          );
-          await pumpEventQueue();
-          final captured = verify(
-            () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
-          ).captured;
-          expect(captured, hasLength(2));
-          expect(captured.first as List<String>, hasLength(100));
-          expect(captured.last as List<String>, ['event-100']);
-          firstBatchDone.complete();
+              final load = repositoryWithApi.getHomeFeedVideos(
+                authors: ['followed-user'],
+                userPubkey: 'my-pubkey',
+                limit: 101,
+              );
+              await pumpEventQueue();
+              final captured = verify(
+                () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
+              ).captured;
+              expect(captured, hasLength(2));
+              expect(captured.first as List<String>, hasLength(100));
+              expect(captured.last as List<String>, ['event-100']);
+              firstBatchDone.complete();
 
-          final result = await load;
-          expect(result.videos, hasLength(101));
-          final firstVideo = result.videos.firstWhere(
-            (video) => video.id == 'event-0',
+              final result = await load;
+              expect(result.videos, hasLength(101));
+              final firstVideo = result.videos.firstWhere(
+                (video) => video.id == 'event-0',
+              );
+              final lastVideo = result.videos.firstWhere(
+                (video) => video.id == 'event-100',
+              );
+              expect(firstVideo.totalLoops, equals(1));
+              expect(lastVideo.totalLoops, failSecondBatch ? 0 : 101);
+              expect(
+                captured.expand((ids) => ids as List<String>),
+                containsAll(['event-0', 'event-100']),
+              );
+              verifyNever(() => mockNostrClient.queryEvents(any()));
+            },
           );
-          final lastVideo = result.videos.firstWhere(
-            (video) => video.id == 'event-100',
-          );
-          expect(firstVideo.totalLoops, equals(1));
-          expect(lastVideo.totalLoops, equals(101));
-          expect(
-            captured.expand((ids) => ids as List<String>),
-            containsAll(['event-0', 'event-100']),
-          );
-          verifyNever(() => mockNostrClient.queryEvents(any()));
-        });
+        }
 
         test(
           'skips bulk stats when a Vine row already has its archive and views',
