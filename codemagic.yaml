@@ -421,11 +421,10 @@ definitions:
       name: Build Android APK
       script: |
         set -euo pipefail
-        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
-          echo 'Scheduled Android builds skip direct APKs.'
-          exit 0
-        fi
         . build/shorebird/android_release.env
+        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
+          PROJECT_BUILD_NUMBER=$SHOREBIRD_BUILD_NUMBER
+        fi
         # Deliberately NOT a Shorebird release. Shorebird has no
         # --split-per-abi; its Android artifact is either an AAB or one
         # universal APK. These per-ABI APKs go to Zapstore / direct download,
@@ -560,12 +559,23 @@ definitions:
           echo "Skipping Zapstore: beta builds are distributed through GitHub only"
           exit 0
         fi
-        VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+        if [ "${ANDROID_DISTRIBUTION_COMPLETE:-false}" = true ]; then
+          echo 'This exact Android distribution already has a verified publication receipt.'
+          if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+            printf '%s\n%s\n' "$ANDROID_DISTRIBUTION_VERSION" "$CM_BUILD_ID" > build/distribution/zapstore-succeeded
+          fi
+          exit 0
+        fi
+        VERSION="${ANDROID_DISTRIBUTION_VERSION:-$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')}"
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo 'Invalid Zapstore release version.'
+          exit 1
+        fi
         TAG="$VERSION"
         # zsp fetches the newest GitHub release it can download an APK from,
         # so a stale or missing release would publish someone else's APK under
         # this signing key. Only publish when the newest release is the one
-        # this build just cut. Drafts and betas are excluded, matching zsp.
+        # this job selected. Drafts and betas are excluded, matching zsp.
         REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
           --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')
         if [ "$REMOTE_TAG" != "$TAG" ]; then
@@ -598,6 +608,9 @@ definitions:
         ruby -ryaml -e '
           config = YAML.safe_load(File.read(ARGV.fetch(0)))
           config["release_filter"] = "^#{Regexp.escape(ARGV.fetch(1))}$"
+          unless ENV.fetch("APPROVED_BUILD_NUMBER", "").empty?
+            config["match"] = "^#{Regexp.escape("app-arm64-v8a-release.apk")}$"
+          end
           File.write(ARGV.fetch(2), YAML.dump(config))
         ' zapstore.yaml "$TAG" "$ZAPSTORE_CONFIG"
         # --check proves the arm64 asset resolves before anything is signed.
@@ -609,6 +622,9 @@ definitions:
         SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
           "$ZSP_BIN" publish "$ZAPSTORE_CONFIG" --quiet --skip-preview \
           --skip-certificate-linking
+        if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+          printf '%s\n%s\n' "$TAG" "$CM_BUILD_ID" > "$CM_BUILD_DIR/mobile/build/distribution/zapstore-succeeded"
+        fi
     - &build_ios
       name: Build and sign iOS (Shorebird release)
       script: |
@@ -1192,7 +1208,8 @@ workflows:
       - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
   # Publish a promoted GitHub release with the existing Codemagic signer.
-  # No APK rebuild, GitHub upload, or Play submission runs in this workflow.
+  # Automated approval inputs first publish the retained APKs to GitHub.
+  # This workflow never rebuilds APKs or submits to Play.
   zapstore-publish:
     name: Publish existing release to Zapstore
     working_directory: mobile
@@ -1206,7 +1223,7 @@ workflows:
         options:
           - "YES"
       RELEASE_CHANNEL:
-        description: Publish only the existing stable GitHub release matching mobile/pubspec.yaml.
+        description: Publish only the exact stable GitHub release selected for this job.
         type: choice
         default: PRODUCTION
         options:
@@ -1215,6 +1232,7 @@ workflows:
       groups:
         - github_credentials
         - zapstore_credentials
+        - store_release_credentials
     triggering:
       events: []
     scripts:
@@ -1225,7 +1243,11 @@ workflows:
             echo "ERROR: Zapstore publication must run from main."
             exit 1
           fi
+      - name: Publish approved Android downloads to GitHub
+        script: python3 scripts/publish_approved_android.py
       - *publish_zapstore
+      - name: Record verified Android distribution
+        script: python3 scripts/publish_approved_android.py record
 
   # Patch workflows ship a Dart-only fix to an already-released build over the
   # air. They publish to Shorebird, not to Play or the App Store, and are

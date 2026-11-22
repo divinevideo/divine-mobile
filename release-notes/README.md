@@ -102,6 +102,38 @@ is not permission to rebuild or replace its existing downloads.
 
 ## Choose the Codemagic channel
 
+### Automated Android GitHub and Zapstore publication
+
+Scheduled Android candidates now retain the original ARM APKs, their SHA-256
+hashes and the validated source-bound notes during the original build. The
+coordinator waits for that exact candidate to be observed as **published on
+Google Play production**, with complete lifecycle reads, completed provenance
+and successful source CI. Drafts, submissions awaiting review, internal-only
+builds and rejected or unknown release state do not qualify.
+
+The existing `zapstore-publish` workflow then publishes those original APKs as
+a stable GitHub release before signing that exact release for Zapstore. It
+reuses the retained English Android notes and identifies their original store
+baseline. It does not claim that iOS or macOS is available. This automatic path
+waits for Play availability; the independent manual channel policy below is
+unchanged.
+
+Distribution is journaled separately from native build and store submission
+budgets. A lost dispatch response is reconciled by its exact provider label;
+it never triggers a blind second signing job. Confirmed failed jobs can retry
+the same files up to three attempts, after which distribution is held for
+investigation. An unknown result or a finished job without its exact completion
+receipt also holds distribution. No retry rebuilds APKs or replaces release
+assets, notes or tag targets. Existing store rejection holds remain in force.
+
+Older candidates without retained APK evidence are not automatically backfilled.
+Manual candidates retain their existing direct-download numbering and remain on
+the manual publication path; they do not produce scheduled download evidence.
+Their absence is reported rather than repaired with rebuilt files. Dry runs
+show the proposed handoff without generating an approval record, dispatching a
+job, publishing a release or signing anything. Lowering the Android release
+level below `production` stops new automatic distribution.
+
 `PUBLISH_TO_GITHUB=YES` enables GitHub publishing. It remains off by default.
 The iOS, Android, and macOS build workflows expose `RELEASE_CHANNEL`:
 
