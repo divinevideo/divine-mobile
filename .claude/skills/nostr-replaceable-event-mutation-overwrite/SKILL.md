@@ -112,10 +112,10 @@ if (read.timedOut || read.noRelays) {
   `possiblyCapped`. A list stored in one replaceable event only needs the newest revision.
 - A settled read can spend the whole timeout waiting for a silent relay. The follow
   repository uses three seconds and withholds the publish if the read expires.
-- Worked examples: `_refreshCurrentUserContactList` in `follow_repository.dart`,
-  `_readAuthoritative` in `profile_pins_repository.dart`, and `_publishForPubkey` in
-  `relay_list_repository.dart`. divinevideo/divine-mobile#8258 lists every fixed site with
-  the tests that fail if its refusal is removed.
+- Examples of checking the settlement flags: `_refreshCurrentUserContactList` in
+  `follow_repository.dart`, `_readAuthoritative` in `profile_pins_repository.dart`, and
+  `_publishForPubkey` in `relay_list_repository.dart`. These callers use their existing relay
+  scopes. divinevideo/divine-mobile#8258 lists the tests that fail if the checks are removed.
 
 ### 5. Apply to Both Directions
 
