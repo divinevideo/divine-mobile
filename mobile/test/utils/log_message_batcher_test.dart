@@ -133,7 +133,29 @@ void main() {
       });
     });
 
-    test('flushing pending messages keeps the interval armed', () {
+    test('re-arms timed flushing after a timer-driven flush', () {
+      fakeAsync((async) {
+        batcher.initialize();
+        batcher.tryBatchMessage(
+          '[EXTERNAL-EVENT] Event abc matches subscription feed',
+          level: LogLevel.debug,
+          category: LogCategory.relay,
+        );
+        async.elapse(const Duration(seconds: 10));
+        expect(logCapture.getRecentLogs(), hasLength(1));
+
+        batcher.tryBatchMessage(
+          '[EXTERNAL-EVENT] Event def matches subscription feed',
+          level: LogLevel.debug,
+          category: LogCategory.relay,
+        );
+        async.elapse(const Duration(seconds: 10));
+
+        expect(logCapture.getRecentLogs(), hasLength(2));
+      });
+    });
+
+    test('re-arms timed flushing after a manual flush', () {
       fakeAsync((async) {
         batcher.initialize();
         batcher.tryBatchMessage(
