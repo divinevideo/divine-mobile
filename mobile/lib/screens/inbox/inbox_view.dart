@@ -65,18 +65,20 @@ class _InboxViewState extends ConsumerState<InboxView>
   /// Currently selected tab.
   InboxTab _selectedTab = InboxTab.notifications;
 
-  /// Whether the Messages tab UI has been opened at least once. The
-  /// `ConversationListBloc` is provided by `InboxPage` and starts immediately
-  /// so DM backfill and streams can warm the tab before it is visible; this flag
-  /// only keeps the Messages pane out of the animated stack until first open.
-  /// After that first open, the pane stays mounted so later switches preserve
-  /// UI state. Notifications is the default tab and is always mounted.
+  /// Whether the Messages tab UI has been opened at least once. Until then
+  /// the Messages pane, the only reader of `ConversationListBloc`, stays out
+  /// of the animated stack. `InboxPage` provides that bloc lazily, so the bloc
+  /// and the DM history restore its start event runs begin when Messages
+  /// first opens, not when the inbox does (#11020). Opening a chat starts the
+  /// restore too, from `ConversationBloc`. After the first open the pane stays
+  /// mounted so later switches preserve UI state. Notifications is the
+  /// default tab and is always mounted.
   bool _messagesActivated = false;
 
   /// Pubkey the current tab state belongs to. When the signed-in identity
   /// changes we collapse back to Notifications and re-arm lazy Messages UI
-  /// activation. The account-scoped DM bloc still starts from `InboxPage` so
-  /// Messages can be ready by the time the user opens it.
+  /// activation, so the new account's conversation list, and its history
+  /// restore, wait until its Messages tab is opened.
   String? _activePubkey;
   bool _pubkeyObserved = false;
 
@@ -131,15 +133,6 @@ class _InboxViewState extends ConsumerState<InboxView>
     // Rebuild the inbox surfaces when auth identity changes so per-screen UI
     // state does not linger across account switches.
     ref.watch(currentAuthStateProvider);
-
-    // Re-filter conversation list when blocklist changes.
-    ref.listen(blocklistVersionProvider, (previous, current) {
-      if (previous != null && current > previous) {
-        context.read<ConversationListBloc>().add(
-          const ConversationListBlocklistChanged(),
-        );
-      }
-    });
 
     // Watch unread counts for both segments. Without a Messages-side badge
     // users had no signal that a still-lit bottom-nav inbox dot was caused
@@ -377,6 +370,37 @@ class _PeerLabelSyncState extends State<_PeerLabelSync> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Forwards the profile repository and blocklist changes to
+/// `ConversationListBloc`.
+///
+/// It sits inside the Messages subtree for the reason [_PeerLabelSync] does:
+/// the bloc's start event runs the DM history restore, so a read anywhere
+/// higher would start the restore before Messages opens (#11020). Changes
+/// that land earlier need no forwarding: the bloc takes the profile
+/// repository when it is created and reads the blocklist as it loads.
+class _ConversationListSync extends ConsumerWidget {
+  const _ConversationListSync({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(profileRepositoryProvider, (_, repository) {
+      context.read<ConversationListBloc>().add(
+        ConversationListProfileRepositoryChanged(repository),
+      );
+    });
+    ref.listen(blocklistVersionProvider, (previous, current) {
+      if (previous != null && current > previous) {
+        context.read<ConversationListBloc>().add(
+          const ConversationListBlocklistChanged(),
+        );
+      }
+    });
+    return child;
+  }
+}
+
 /// Content for the Messages tab: following bar + conversation list or
 /// empty state, with a FAB for composing new messages.
 class _MessagesContent extends ConsumerWidget {
@@ -414,8 +438,10 @@ class _MessagesContent extends ConsumerWidget {
       },
       child: Stack(
         children: [
-          _PeerLabelSync(
-            child: _MessagesScrollView(currentUserPubkey: currentPubkey),
+          _ConversationListSync(
+            child: _PeerLabelSync(
+              child: _MessagesScrollView(currentUserPubkey: currentPubkey),
+            ),
           ),
           // FAB positioned bottom-right
           PositionedDirectional(
