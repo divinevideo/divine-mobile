@@ -1448,8 +1448,9 @@ class ProfileRepository implements ProfileReader {
       if (requireRawKind0) {
         // A raw read can seed a republish, so it waits for every connected
         // relay to settle and reports whether each did: an empty answer from
-        // a relay that stayed silent, refused, or was never asked proves
-        // nothing about the copy a publish would replace.
+        // a relay that stayed silent or refused proves nothing about the copy
+        // a publish would replace. A relay that never took the REQ is not
+        // counted, so the read can look conclusive without it (#11317).
         final read = await _nostrClient.queryEventsDetailed(
           [
             Filter(kinds: [0], authors: [pubkey], limit: 1),
