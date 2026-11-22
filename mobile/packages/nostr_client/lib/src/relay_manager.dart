@@ -758,13 +758,12 @@ class RelayManager {
     return success;
   }
 
-  /// Suspends all active relay sockets and pauses periodic status polling
-  /// without removing configured relays.
+  /// Closes every configured relay's socket and pauses status polling,
+  /// keeping the configured relays.
   ///
-  /// Used when the app stays backgrounded past its grace period so idle
-  /// WebSocket keepalive timers and status polling do not wake the CPU or
-  /// radio. Calling [forceReconnectAll] or [retryDisconnectedRelays] on resume
-  /// restores both connections and polling.
+  /// [forceReconnectAll] and [retryDisconnectedRelays] restore both, so a
+  /// caller that reconnects for its own work, such as a publish that finds no
+  /// connected relay, also ends the suspension.
   void suspendConnections() {
     if (_disposed) return;
     _log('Suspending relay connections for background');
@@ -777,7 +776,8 @@ class RelayManager {
     _notifyStatusChange();
   }
 
-  /// Pauses the 5-second periodic status polling timer.
+  /// Pauses periodic status polling until [resumeStatusPolling] or a
+  /// reconnect.
   void pauseStatusPolling() {
     _statusPollTimer?.cancel();
     _statusPollTimer = null;

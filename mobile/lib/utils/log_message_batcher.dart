@@ -1,5 +1,5 @@
 // ABOUTME: Utility for batching and deduplicating repetitive log messages to reduce console noise
-// ABOUTME: Groups similar messages and periodically outputs summaries instead of individual logs
+// ABOUTME: Groups similar messages and outputs summaries instead of individual logs
 
 import 'dart:async';
 import 'dart:collection';
@@ -18,7 +18,7 @@ class LogMessageBatcher {
   /// Map of message patterns to their batch info
   final Map<String, _BatchInfo> _batchedMessages = {};
 
-  /// Timer for periodic batch flushing
+  /// One-shot flush timer, armed by the first queued message.
   Timer? _flushTimer;
 
   /// Duration to wait before flushing batched messages
@@ -30,10 +30,9 @@ class LogMessageBatcher {
   /// Whether deferred timed flushing has been enabled via [initialize].
   bool _initialized = false;
 
-  /// Initialize the batcher so queued messages flush after [_flushInterval].
-  ///
-  /// The flush timer is armed lazily only when a batchable message arrives,
-  /// avoiding idle 10-second wakeups when no batchable logs are emitted.
+  /// Enables timed flushing: queued messages are summarized one flush
+  /// interval after the first of them arrives, and no timer runs while
+  /// nothing is queued.
   void initialize() {
     _initialized = true;
     if (_batchedMessages.isNotEmpty) {

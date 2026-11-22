@@ -19,10 +19,12 @@ HttpClient createSecureWebSocketHttpClient() {
   return httpClient;
 }
 
-/// Keepalive RFC 6455 ping interval for non-web relay WebSockets.
+/// RFC 6455 ping interval for non-web relay WebSockets.
 ///
-/// Prevents healthy idle sockets from tripping idle-disconnect self-heal loops
-/// and keeps NAT/carrier mappings alive without application-level polling.
+/// dart:io closes a socket whose pong does not arrive within one interval, so
+/// a dead link is noticed sooner, and the pings keep NAT and carrier mappings
+/// open. Pongs never reach the stream, so they do not reset the idle timer in
+/// `WebSocketConnectionManager`.
 const Duration kRelayWebSocketPingInterval = Duration(seconds: 30);
 
 /// Creates a WebSocket channel for non-web platforms.

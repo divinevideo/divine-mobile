@@ -32,8 +32,9 @@ import 'package:unified_logger/unified_logger.dart';
 class AppLifecycleHandler extends ConsumerStatefulWidget {
   const AppLifecycleHandler({required this.child, super.key});
 
-  /// Grace period before backgrounding suspends idle relay WebSockets so brief
-  /// app switches or in-flight publishes are not interrupted.
+  /// How long the app stays backgrounded before every relay socket is closed.
+  /// A shorter app switch keeps its connections; a publish still waiting for
+  /// its OK when the grace ends loses its socket.
   @visibleForTesting
   static const Duration backgroundRelaySuspendGrace = Duration(seconds: 20);
 
@@ -141,8 +142,8 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
     _relaySuspendTimer?.cancel();
     _relaySuspendTimer = null;
     WidgetsBinding.instance.removeObserver(this);
-    // This widget is account-scoped while the batcher is device-scoped. Flush
-    // pending summaries without cancelling the timer on account swaps.
+    // Account-scoped widget, device-scoped batcher: flush rather than dispose,
+    // so timed batching survives an account swap.
     _logMessageBatcher.flush();
     super.dispose();
   }

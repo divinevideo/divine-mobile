@@ -43,9 +43,10 @@ class BlurredVideoBackdrop extends StatelessWidget {
     this.videoAspectRatio,
   });
 
-  /// Upper bound on decoded pixel dimensions for the sigma-30 blurred poster
-  /// fallback. Heavy gaussian blur destroys high-frequency detail, so decoding
-  /// a tiny thumbnail saves GPU memory and raster cost with identical output.
+  /// Largest decoded width or height for the blurred poster fallback. The
+  /// heavy blur removes the detail a larger decode would carry, so this saves
+  /// decode time and image memory with no visible difference. The blur's own
+  /// raster cost scales with the widget, not the image.
   static const int maxBlurredPosterDecodePx = 96;
 
   final String? url;

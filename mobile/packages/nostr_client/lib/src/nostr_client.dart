@@ -2427,8 +2427,9 @@ class NostrClient {
   Future<ForceReconnectOutcome> forceReconnectAll() =>
       _relayManager.forceReconnectAll();
 
-  /// Suspends active relay sockets and periodic status polling while the app
-  /// is backgrounded, preserving configured relays for resume.
+  /// Closes every relay socket and pauses status polling, keeping the
+  /// configured relays. [forceReconnectAll], [retryDisconnectedRelays], or any
+  /// publish or query that finds no connected relay reconnects them.
   void suspendBackgroundRelays() => _relayManager.suspendConnections();
 
   /// Gets relay connection status as a simple map.

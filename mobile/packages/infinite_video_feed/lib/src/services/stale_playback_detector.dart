@@ -47,7 +47,7 @@ class StalePlaybackDetector {
 
   /// Starts monitoring [controller] for [index]. Cancels any previous monitor.
   ///
-  /// The 250 ms heartbeat timer runs only while [controller] is actively
+  /// The [interval] heartbeat runs only while [controller] is actively
   /// playing — when playback is paused or idle, the timer is cancelled and
   /// re-armed reactively via `controller.stateStream` once playback resumes.
   void start(int index, DivineVideoPlayerController? controller) {
@@ -110,8 +110,8 @@ class StalePlaybackDetector {
     _heartbeats = 0;
   }
 
-  /// Stops the active heartbeat without forgetting per-index recovery
-  /// counters.
+  /// Stops monitoring, both the heartbeat and the state subscription, without
+  /// forgetting per-index recovery counters.
   void stop() {
     unawaited(_stateSubscription?.cancel());
     _stateSubscription = null;
