@@ -17222,4 +17222,56 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Help';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Audio-invoerapparaat';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Automatisch (aanbevolen)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Kiest automatisch de beste microfoon';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Kies audio-invoer';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Onbekende microfoon';
+
+  @override
+  String get emailConfirmationTitle => 'Bevestig je e-mail';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'We hebben een link gestuurd naar $email. Tik erop om berichten te ontgrendelen en zorg dat je altijd weer in je account komt.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-mail opnieuw versturen';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Je bent binnen! Check $email om je account te bevestigen.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Verstuurd. Check je inbox.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Versturen lukte niet. Probeer het zo nog eens.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bevestig je e-mail om berichten te sturen';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tik op de link die we naar $email hebben gestuurd. Dan zijn berichten helemaal van jou.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'E-mail bevestigd. Berichten zijn ontgrendeld.';
 }

@@ -4,13 +4,16 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart' show DmSendPolicyDecision;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/email_confirmation_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -22,6 +25,18 @@ class _MockOfficials extends Mock implements OfficialAccountsService {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
+class _MockEmailConfirmationCubit extends MockCubit<EmailConfirmationState>
+    implements EmailConfirmationCubit {}
+
+EmailConfirmationCubit _emailCubitWith(EmailConfirmationStatus status) {
+  final cubit = _MockEmailConfirmationCubit();
+  when(() => cubit.state).thenReturn(EmailConfirmationState(status: status));
+  return cubit;
+}
+
+EmailConfirmationCubit _confirmedEmailCubit() =>
+    _emailCubitWith(EmailConfirmationStatus.confirmed);
+
 void main() {
   const strangerHex =
       'deadbeef00000000000000000000000000000000000000000000000000000000';
@@ -32,9 +47,17 @@ void main() {
     officials = _MockOfficials();
   });
 
-  ProviderContainer containerWith({required bool isRestricted}) {
+  ProviderContainer containerWith({
+    required bool isRestricted,
+    bool isEmailUnconfirmed = false,
+  }) {
     final container = ProviderContainer(
       overrides: [
+        emailConfirmationCubitProvider.overrideWithValue(
+          isEmailUnconfirmed
+              ? _emailCubitWith(EmailConfirmationStatus.unconfirmed)
+              : _confirmedEmailCubit(),
+        ),
         isDmRestrictedProvider.overrideWithValue(isRestricted),
         hasConfirmedDmRestrictionProvider.overrideWithValue(isRestricted),
         officialAccountsServiceProvider.overrideWithValue(officials),
@@ -45,6 +68,22 @@ void main() {
   }
 
   group('dmSendPolicyProvider', () {
+    test(
+      'holds sends back until the email is confirmed, keeping them queued',
+      () async {
+        final container = containerWith(
+          isRestricted: false,
+          isEmailUnconfirmed: true,
+        );
+        final policy = container.read(dmSendPolicyProvider);
+
+        expect(
+          await policy(strangerHex),
+          DmSendPolicyDecision.temporarilyBlocked,
+        );
+      },
+    );
+
     test(
       'an unrestricted user may send to anyone; officials not consulted',
       () async {
@@ -163,6 +202,9 @@ void main() {
         ).thenReturn(AuthenticationSource.divineOAuth);
         final container = ProviderContainer(
           overrides: [
+            emailConfirmationCubitProvider.overrideWithValue(
+              _confirmedEmailCubit(),
+            ),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             sharedPreferencesProvider.overrideWithValue(prefs),
             authServiceProvider.overrideWithValue(authService),
@@ -197,6 +239,9 @@ void main() {
         ).thenReturn(AuthenticationSource.divineOAuth);
         final container = ProviderContainer(
           overrides: [
+            emailConfirmationCubitProvider.overrideWithValue(
+              _confirmedEmailCubit(),
+            ),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             sharedPreferencesProvider.overrideWithValue(prefs),
             authServiceProvider.overrideWithValue(authService),

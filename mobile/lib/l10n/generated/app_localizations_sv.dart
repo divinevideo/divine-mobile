@@ -17149,4 +17149,56 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Hjälp';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Ljudingångsenhet';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Auto (rekommenderas)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Väljer automatiskt den bästa mikrofonen';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Välj ljudingång';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Okänd mikrofon';
+
+  @override
+  String get emailConfirmationTitle => 'Bekräfta din e-post';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Vi har skickat en länk till $email. Tryck på den för att låsa upp meddelanden och se till att du alltid kan ta dig tillbaka in på ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Skicka mejlet igen';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Du är inne! Kolla $email för att bekräfta ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Skickat. Kolla din inkorg.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Det gick inte att skicka. Försök igen om en stund.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bekräfta din e-post för att börja skicka meddelanden';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tryck på länken vi skickade till $email. Sen är meddelandena dina.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'E-post bekräftad. Meddelanden är upplåsta.';
 }

@@ -6679,5 +6679,19 @@
   "menuBarMute": "ድምጸ-ከል አድርግ",
   "menuBarUnmute": "ድምጸ-ከል አንሳ",
   "menuBarWindow": "መስኮት",
-  "menuBarHelp": "እገዛ"
+  "menuBarHelp": "እገዛ",
+  "contentPreferencesAudioInputDevice": "የድምጽ ግቤት መሣሪያ",
+  "contentPreferencesAutoRecommended": "ራስ-ሰር (የሚመከር)",
+  "contentPreferencesAutoSelectsBest": "በጣም ጥሩውን ማይክሮፎን በራስ-ሰር ይመርጣል",
+  "contentPreferencesSelectAudioInput": "የድምጽ ግቤትን ይምረጡ",
+  "contentPreferencesUnknownMicrophone": "ያልታወቀ ማይክሮፎን",
+  "emailConfirmationTitle": "ኢሜይልዎን ያረጋግጡ",
+  "emailConfirmationProfileSubtitle": "ወደ {email} አገናኝ ልከናል። መልእክቶችን ለመክፈት እና ሁልጊዜ ወደ መለያዎ መመለስ እንዲችሉ አገናኙን ይንኩ።",
+  "emailConfirmationResendButton": "ኢሜይሉን እንደገና ይላኩ",
+  "emailConfirmationNotice": "ገብተዋል! መለያዎን ለማረጋገጥ ወደ {email} የተላከውን ኢሜይል ይመልከቱ።",
+  "emailConfirmationResendSent": "ተልኳል። የገቢ መልእክት ሳጥንዎን ይመልከቱ።",
+  "emailConfirmationResendFailed": "መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
+  "emailConfirmationMessagesTitle": "መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ",
+  "emailConfirmationMessagesBody": "ወደ {email} የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።",
+  "emailConfirmationDone": "ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።"
 }

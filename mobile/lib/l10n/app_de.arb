@@ -6626,5 +6626,19 @@
   "menuBarMute": "Stummschalten",
   "menuBarUnmute": "Ton einschalten",
   "menuBarWindow": "Fenster",
-  "menuBarHelp": "Hilfe"
+  "menuBarHelp": "Hilfe",
+  "contentPreferencesAudioInputDevice": "Audio-Eingabegerät",
+  "contentPreferencesAutoRecommended": "Automatisch (empfohlen)",
+  "contentPreferencesAutoSelectsBest": "Wählt automatisch das beste Mikrofon",
+  "contentPreferencesSelectAudioInput": "Audio-Eingabe wählen",
+  "contentPreferencesUnknownMicrophone": "Unbekanntes Mikrofon",
+  "emailConfirmationTitle": "Bestätige deine E-Mail",
+  "emailConfirmationProfileSubtitle": "Wir haben einen Link an {email} geschickt. Tippe darauf, um Nachrichten freizuschalten und sicherzugehen, dass du immer wieder in dein Konto kommst.",
+  "emailConfirmationResendButton": "E-Mail erneut senden",
+  "emailConfirmationNotice": "Du bist drin! Schau bei {email} nach, um dein Konto zu bestätigen.",
+  "emailConfirmationResendSent": "Gesendet. Schau in deinen Posteingang.",
+  "emailConfirmationResendFailed": "Das hat nicht geklappt. Versuch es gleich noch mal.",
+  "emailConfirmationMessagesTitle": "Bestätige deine E-Mail, um Nachrichten zu schreiben",
+  "emailConfirmationMessagesBody": "Tippe auf den Link, den wir an {email} geschickt haben. Dann kann's mit Nachrichten losgehen.",
+  "emailConfirmationDone": "E-Mail bestätigt. Nachrichten sind freigeschaltet."
 }

@@ -1931,10 +1931,31 @@ void main() {
   });
 
   group('token mode', () {
-    testWidgets('signed-in accounts still verify an incoming token', (
+    testWidgets(
+      'signed-in accounts verify an incoming token and stay signed in',
+      (tester) async {
+        // An account that signed up without waiting for confirmation opens
+        // the link later: it is already in, so it lands back in the app
+        // rather than on a sign-in screen.
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+        await pumpVerificationScreen(tester, token: 'verification-token');
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockCubit.verifyEmailToken(token: 'verification-token'),
+        ).called(1);
+        expect(find.text('Explore popular'), findsOneWidget);
+        expect(find.textContaining('Login Options'), findsNothing);
+      },
+    );
+
+    testWidgets('anonymous accounts securing an email still go to sign-in', (
       tester,
     ) async {
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
+      when(() => mockAuthService.isAnonymous).thenReturn(true);
       await pumpVerificationScreen(tester, token: 'verification-token');
       await tester.pumpAndSettle();
 

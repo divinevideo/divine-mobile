@@ -17285,4 +17285,57 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Помощ';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Аудио вход';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Автоматично (препоръчано)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Автоматично избира най-добрия микрофон';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Избери аудио вход';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Неизвестен микрофон';
+
+  @override
+  String get emailConfirmationTitle => 'Потвърди имейла си';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Изпратихме връзка до $email. Натисни я, за да отключиш съобщенията и винаги да можеш да влезеш обратно в акаунта си.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Изпрати имейла отново';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Вътре си! Провери $email, за да потвърдиш акаунта си.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Изпратено. Провери входящата си поща.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Не успяхме да го изпратим. Опитай пак след малко.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Потвърди имейла си, за да пишеш съобщения';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Натисни връзката, която изпратихме до $email. После съобщенията са изцяло твои.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'Имейлът е потвърден. Съобщенията са отключени.';
 }

@@ -2,9 +2,11 @@
 // ABOUTME: supporter invitation, and animates between their prompts.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
@@ -38,6 +40,7 @@ Future<void> showProfileActionsSheet({
   final opensTall = switch (actions.first) {
     ProfileActionType.becomeSupporter => true,
     ProfileActionType.accountRestricted ||
+    ProfileActionType.confirmEmail ||
     ProfileActionType.secureAccount ||
     ProfileActionType.completeProfile => false,
   };
@@ -145,6 +148,10 @@ class _ProfileActionsSheetContentState
             onPrimaryTap: () => _openDestination(AccountStatusScreen.path),
             onSecondaryTap: _onMaybeLater,
           ),
+          ProfileActionType.confirmEmail => _ConfirmEmailPrompt(
+            key: key,
+            onMaybeLater: _onMaybeLater,
+          ),
           ProfileActionType.secureAccount => _ActionPrompt(
             key: key,
             sticker: DivineStickerName.skeletonKey,
@@ -176,6 +183,43 @@ class _ProfileActionsSheetContentState
   }
 }
 
+/// Prompt asking the account to confirm its email, with a resend button.
+///
+/// Resending keeps the sheet open: the app-wide notice reports the outcome,
+/// and the user can still step on to the next pending action.
+class _ConfirmEmailPrompt extends StatelessWidget {
+  const _ConfirmEmailPrompt({required this.onMaybeLater, super.key});
+
+  final VoidCallback onMaybeLater;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final email = context.select<EmailConfirmationCubit, String>(
+      (cubit) => cubit.state.email ?? '',
+    );
+    final isSending = context.select<EmailConfirmationCubit, bool>(
+      (cubit) =>
+          cubit.state.resendStatus == EmailConfirmationResendStatus.sending,
+    );
+    return _ActionPrompt(
+      sticker: DivineStickerName.email,
+      title: l10n.emailConfirmationTitle,
+      subtitle: l10n.emailConfirmationProfileSubtitle(email),
+      primaryLabel: l10n.emailConfirmationResendButton,
+      onPrimaryTap: isSending
+          ? null
+          : () => runDetached(
+              context.read<EmailConfirmationCubit>().resend(),
+              'resend confirmation email',
+              logName: 'ProfileActionsSheetContent',
+              category: LogCategory.auth,
+            ),
+      onSecondaryTap: onMaybeLater,
+    );
+  }
+}
+
 /// Prompt for an action whose primary button opens another screen.
 ///
 /// Displays a sticker illustration, title, subtitle, and primary/secondary
@@ -195,7 +239,7 @@ class _ActionPrompt extends StatelessWidget {
   final String title;
   final String subtitle;
   final String primaryLabel;
-  final VoidCallback onPrimaryTap;
+  final VoidCallback? onPrimaryTap;
   final VoidCallback onSecondaryTap;
 
   @override

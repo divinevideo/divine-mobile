@@ -17019,4 +17019,56 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Bantuan';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Perangkat Masukan Audio';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Otomatis (direkomendasikan)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Pilih mikrofon terbaik secara otomatis';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Pilih Masukan Audio';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Dikenal';
+
+  @override
+  String get emailConfirmationTitle => 'Konfirmasi emailmu';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Kami sudah mengirim tautan ke $email. Ketuk tautannya untuk membuka pesan dan memastikan kamu selalu bisa masuk lagi ke akunmu.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Kirim ulang email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Kamu sudah masuk! Cek $email untuk mengonfirmasi akunmu.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Terkirim. Cek kotak masukmu.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Gagal mengirim. Coba lagi sebentar lagi.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Konfirmasi emailmu untuk mulai kirim pesan';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Ketuk tautan yang kami kirim ke $email. Setelah itu, kamu bebas kirim pesan.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'Email dikonfirmasi. Pesan sudah terbuka.';
 }

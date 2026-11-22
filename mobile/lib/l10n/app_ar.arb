@@ -6626,5 +6626,19 @@
   "menuBarMute": "كتم الصوت",
   "menuBarUnmute": "إلغاء كتم الصوت",
   "menuBarWindow": "نافذة",
-  "menuBarHelp": "مساعدة"
+  "menuBarHelp": "مساعدة",
+  "contentPreferencesAudioInputDevice": "جهاز إدخال الصوت",
+  "contentPreferencesAutoRecommended": "تلقائي (موصى به)",
+  "contentPreferencesAutoSelectsBest": "يختار تلقائيًا أفضل ميكروفون",
+  "contentPreferencesSelectAudioInput": "حدد إدخال الصوت",
+  "contentPreferencesUnknownMicrophone": "ميكروفون غير معروف",
+  "emailConfirmationTitle": "تأكيد البريد الإلكتروني",
+  "emailConfirmationProfileSubtitle": "أرسلنا رابطًا إلى {email}. بالنقر عليه تُفتح الرسائل، وتبقى العودة إلى الحساب ممكنة دائمًا.",
+  "emailConfirmationResendButton": "إعادة إرسال البريد",
+  "emailConfirmationNotice": "تم التسجيل! الخطوة التالية: تأكيد الحساب عبر الرابط المرسل إلى {email}.",
+  "emailConfirmationResendSent": "تم الإرسال. الرسالة في صندوق الوارد.",
+  "emailConfirmationResendFailed": "تعذّر الإرسال. يمكن المحاولة مجددًا بعد قليل.",
+  "emailConfirmationMessagesTitle": "تأكيد البريد الإلكتروني لبدء المراسلة",
+  "emailConfirmationMessagesBody": "بالنقر على الرابط المرسل إلى {email} تصبح الرسائل متاحة بالكامل.",
+  "emailConfirmationDone": "تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن."
 }

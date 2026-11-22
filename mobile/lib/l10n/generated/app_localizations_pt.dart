@@ -17304,4 +17304,59 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Ajuda';
+
+  @override
+  String get contentPreferencesAudioInputDevice =>
+      'Dispositivo de entrada de áudio';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Automático (recomendado)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Seleciona automaticamente o melhor microfone';
+
+  @override
+  String get contentPreferencesSelectAudioInput =>
+      'Selecionar entrada de áudio';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Microfone desconhecido';
+
+  @override
+  String get emailConfirmationTitle => 'Confirme seu e-mail';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Enviamos um link para $email. Toque nele para desbloquear as mensagens e garantir que você sempre consiga voltar para sua conta.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Reenviar e-mail';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Pronto, você entrou! Abra $email para confirmar sua conta.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Enviado. Veja sua caixa de entrada.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Não deu para enviar. Tente de novo daqui a pouco.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirme seu e-mail para começar a mandar mensagens';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Toque no link que enviamos para $email. Aí as mensagens são todas suas.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'E-mail confirmado. Mensagens desbloqueadas.';
 }

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate_impl.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/providers/email_confirmation_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/nip05_resolver.dart';
@@ -73,6 +74,9 @@ moderationPresentationProvider = Provider.autoDispose
 /// ([OfficialAccountsService.isReadableByProtectedMinor]), and the send is
 /// refused either way.
 ///
+/// An account that signed in before confirming its email is held back
+/// temporarily until it confirms ([emailConfirmationCubitProvider]).
+///
 /// Otherwise, keys off [isDmRestrictedProvider]: an account is restricted
 /// only when it is confirmed as a protected minor, by a trusted live
 /// protected verdict or the persisted last-known protected value. An account
@@ -86,6 +90,11 @@ final dmSendPolicyProvider = Provider<DmSendPolicy>((ref) {
   return (String recipientPubkey) async {
     if (isRetiredModerationAccount(recipientPubkey)) {
       return DmSendPolicyDecision.terminallyBlockedRetain;
+    }
+    // Temporary, not terminal: confirming the email lifts it, and a queued
+    // send stays queued until then instead of being discarded.
+    if (ref.read(emailConfirmationCubitProvider).state.isUnconfirmed) {
+      return DmSendPolicyDecision.temporarilyBlocked;
     }
     if (!ref.read(isDmRestrictedProvider)) {
       return DmSendPolicyDecision.allowed;

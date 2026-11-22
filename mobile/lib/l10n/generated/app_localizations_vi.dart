@@ -17071,4 +17071,55 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Trợ giúp';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Thiết bị thu âm';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Tự động (khuyên dùng)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest => 'Tự động chọn micro tốt nhất';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Chọn nguồn âm thanh';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Micro không xác định';
+
+  @override
+  String get emailConfirmationTitle => 'Xác nhận email của bạn';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Bọn mình đã gửi liên kết đến $email. Bấm vào đó để mở khóa tin nhắn và đảm bảo bạn luôn vào lại được tài khoản.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Gửi lại email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Bạn vào rồi! Kiểm tra $email để xác nhận tài khoản nhé.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Đã gửi. Kiểm tra hộp thư nhé.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Chưa gửi được. Thử lại sau chút nhé.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Xác nhận email để bắt đầu nhắn tin';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Bấm vào liên kết bọn mình đã gửi đến $email. Sau đó tha hồ nhắn tin.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'Đã xác nhận email. Tin nhắn đã được mở khóa.';
 }

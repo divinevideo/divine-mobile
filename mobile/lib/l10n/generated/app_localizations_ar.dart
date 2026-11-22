@@ -17163,4 +17163,57 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'مساعدة';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'جهاز إدخال الصوت';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'تلقائي (موصى به)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'يختار تلقائيًا أفضل ميكروفون';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'حدد إدخال الصوت';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'ميكروفون غير معروف';
+
+  @override
+  String get emailConfirmationTitle => 'تأكيد البريد الإلكتروني';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'أرسلنا رابطًا إلى $email. بالنقر عليه تُفتح الرسائل، وتبقى العودة إلى الحساب ممكنة دائمًا.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'إعادة إرسال البريد';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'تم التسجيل! الخطوة التالية: تأكيد الحساب عبر الرابط المرسل إلى $email.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'تم الإرسال. الرسالة في صندوق الوارد.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'تعذّر الإرسال. يمكن المحاولة مجددًا بعد قليل.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'تأكيد البريد الإلكتروني لبدء المراسلة';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'بالنقر على الرابط المرسل إلى $email تصبح الرسائل متاحة بالكامل.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن.';
 }

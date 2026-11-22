@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
@@ -614,6 +615,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
               ProfileActionType.becomeSupporter =>
                 supporterPromptDismissal.dismiss(),
               ProfileActionType.accountRestricted ||
+              ProfileActionType.confirmEmail ||
               ProfileActionType.completeProfile => null,
             };
             if (dismissal == null) return;

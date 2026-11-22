@@ -17279,4 +17279,57 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Tulong';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Device para sa audio input';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Auto (inirerekomenda)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Awtomatikong pumipili ng pinakamagandang microphone';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Pumili ng Audio Input';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Hindi Kilalang Microphone';
+
+  @override
+  String get emailConfirmationTitle => 'I-confirm ang email mo';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Nagpadala kami ng link sa $email. I-tap ito para ma-unlock ang mga mensahe at siguradong makakabalik ka lagi sa account mo.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Ipadala ulit ang email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Pasok ka na! Tingnan ang $email para i-confirm ang account mo.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Naipadala na. Tingnan ang inbox mo.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Hindi namin naipadala. Subukan ulit mamaya.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'I-confirm ang email mo para makapagsimulang mag-message';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'I-tap ang link na pinadala namin sa $email. Tapos, sa\'yo na ang mga mensahe.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'Na-confirm na ang email. Naka-unlock na ang mga mensahe.';
 }

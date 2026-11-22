@@ -6626,5 +6626,19 @@
   "menuBarMute": "Sessize al",
   "menuBarUnmute": "Sesi aç",
   "menuBarWindow": "Pencere",
-  "menuBarHelp": "Yardım"
+  "menuBarHelp": "Yardım",
+  "contentPreferencesAudioInputDevice": "Ses Giriş Cihazı",
+  "contentPreferencesAutoRecommended": "Otomatik (önerilen)",
+  "contentPreferencesAutoSelectsBest": "En iyi mikrofonu otomatik olarak seçer",
+  "contentPreferencesSelectAudioInput": "Ses Girişi Seç",
+  "contentPreferencesUnknownMicrophone": "Bilinmeyen Mikrofon",
+  "emailConfirmationTitle": "E-postanı doğrula",
+  "emailConfirmationProfileSubtitle": "{email} adresine bir bağlantı gönderdik. Mesajların kilidini açmak ve hesabına her zaman geri dönebilmek için bağlantıya dokun.",
+  "emailConfirmationResendButton": "E-postayı Tekrar Gönder",
+  "emailConfirmationNotice": "İçeridesin! Hesabını doğrulamak için {email} adresini kontrol et.",
+  "emailConfirmationResendSent": "Gönderildi. Gelen kutunu kontrol et.",
+  "emailConfirmationResendFailed": "Gönderemedik. Biraz sonra tekrar dene.",
+  "emailConfirmationMessagesTitle": "Mesajlaşmaya başlamak için e-postanı doğrula",
+  "emailConfirmationMessagesBody": "{email} adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.",
+  "emailConfirmationDone": "E-posta doğrulandı. Mesajların kilidi açıldı."
 }

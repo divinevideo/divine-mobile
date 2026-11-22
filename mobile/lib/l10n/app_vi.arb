@@ -7919,5 +7919,19 @@
   "menuBarMute": "Tắt tiếng",
   "menuBarUnmute": "Bật tiếng",
   "menuBarWindow": "Cửa sổ",
-  "menuBarHelp": "Trợ giúp"
+  "menuBarHelp": "Trợ giúp",
+  "contentPreferencesAudioInputDevice": "Thiết bị thu âm",
+  "contentPreferencesAutoRecommended": "Tự động (khuyên dùng)",
+  "contentPreferencesAutoSelectsBest": "Tự động chọn micro tốt nhất",
+  "contentPreferencesSelectAudioInput": "Chọn nguồn âm thanh",
+  "contentPreferencesUnknownMicrophone": "Micro không xác định",
+  "emailConfirmationTitle": "Xác nhận email của bạn",
+  "emailConfirmationProfileSubtitle": "Bọn mình đã gửi liên kết đến {email}. Bấm vào đó để mở khóa tin nhắn và đảm bảo bạn luôn vào lại được tài khoản.",
+  "emailConfirmationResendButton": "Gửi lại email",
+  "emailConfirmationNotice": "Bạn vào rồi! Kiểm tra {email} để xác nhận tài khoản nhé.",
+  "emailConfirmationResendSent": "Đã gửi. Kiểm tra hộp thư nhé.",
+  "emailConfirmationResendFailed": "Chưa gửi được. Thử lại sau chút nhé.",
+  "emailConfirmationMessagesTitle": "Xác nhận email để bắt đầu nhắn tin",
+  "emailConfirmationMessagesBody": "Bấm vào liên kết bọn mình đã gửi đến {email}. Sau đó tha hồ nhắn tin.",
+  "emailConfirmationDone": "Đã xác nhận email. Tin nhắn đã được mở khóa."
 }

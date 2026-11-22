@@ -6626,5 +6626,19 @@
   "menuBarMute": "Dezactivează sunetul",
   "menuBarUnmute": "Activează sunetul",
   "menuBarWindow": "Fereastră",
-  "menuBarHelp": "Ajutor"
+  "menuBarHelp": "Ajutor",
+  "contentPreferencesAudioInputDevice": "Dispozitiv de intrare audio",
+  "contentPreferencesAutoRecommended": "Automat (recomandat)",
+  "contentPreferencesAutoSelectsBest": "Alege automat cel mai bun microfon",
+  "contentPreferencesSelectAudioInput": "Alege intrarea audio",
+  "contentPreferencesUnknownMicrophone": "Microfon necunoscut",
+  "emailConfirmationTitle": "Confirmă-ți emailul",
+  "emailConfirmationProfileSubtitle": "Ți-am trimis un link la {email}. Apasă-l ca să deblochezi mesajele și să te poți întoarce mereu în cont.",
+  "emailConfirmationResendButton": "Retrimite emailul",
+  "emailConfirmationNotice": "Ai intrat! Verifică {email} ca să-ți confirmi contul.",
+  "emailConfirmationResendSent": "Trimis. Verifică-ți inboxul.",
+  "emailConfirmationResendFailed": "Nu l-am putut trimite. Încearcă din nou puțin mai târziu.",
+  "emailConfirmationMessagesTitle": "Confirmă-ți emailul ca să poți trimite mesaje",
+  "emailConfirmationMessagesBody": "Apasă linkul pe care ți l-am trimis la {email}. Apoi mesajele sunt ale tale.",
+  "emailConfirmationDone": "Email confirmat. Mesajele sunt deblocate."
 }

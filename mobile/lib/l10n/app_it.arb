@@ -6626,5 +6626,19 @@
   "menuBarMute": "Disattiva audio",
   "menuBarUnmute": "Riattiva audio",
   "menuBarWindow": "Finestra",
-  "menuBarHelp": "Aiuto"
+  "menuBarHelp": "Aiuto",
+  "contentPreferencesAudioInputDevice": "Dispositivo di ingresso audio",
+  "contentPreferencesAutoRecommended": "Auto (consigliato)",
+  "contentPreferencesAutoSelectsBest": "Seleziona automaticamente il microfono migliore",
+  "contentPreferencesSelectAudioInput": "Seleziona ingresso audio",
+  "contentPreferencesUnknownMicrophone": "Microfono sconosciuto",
+  "emailConfirmationTitle": "Conferma la tua email",
+  "emailConfirmationProfileSubtitle": "Abbiamo inviato un link a {email}. Toccalo per sbloccare i messaggi e assicurarti di poter sempre rientrare nel tuo account.",
+  "emailConfirmationResendButton": "Invia di nuovo l'email",
+  "emailConfirmationNotice": "Ci sei! Controlla {email} per confermare il tuo account.",
+  "emailConfirmationResendSent": "Inviata. Controlla la posta in arrivo.",
+  "emailConfirmationResendFailed": "Invio non riuscito. Riprova tra poco.",
+  "emailConfirmationMessagesTitle": "Conferma la tua email per iniziare a scrivere messaggi",
+  "emailConfirmationMessagesBody": "Tocca il link che abbiamo inviato a {email}. Poi i messaggi sono tutti tuoi.",
+  "emailConfirmationDone": "Email confermata. Messaggi sbloccati."
 }

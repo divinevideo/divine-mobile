@@ -6626,5 +6626,19 @@
   "menuBarMute": "Wycisz",
   "menuBarUnmute": "Włącz dźwięk",
   "menuBarWindow": "Okno",
-  "menuBarHelp": "Pomoc"
+  "menuBarHelp": "Pomoc",
+  "contentPreferencesAudioInputDevice": "Urządzenie wejścia audio",
+  "contentPreferencesAutoRecommended": "Automatycznie (zalecane)",
+  "contentPreferencesAutoSelectsBest": "Automatycznie wybiera najlepszy mikrofon",
+  "contentPreferencesSelectAudioInput": "Wybierz wejście audio",
+  "contentPreferencesUnknownMicrophone": "Nieznany mikrofon",
+  "emailConfirmationTitle": "Potwierdź swój e-mail",
+  "emailConfirmationProfileSubtitle": "Wysłaliśmy link na adres {email}. Dotknij go, żeby odblokować wiadomości i mieć pewność, że zawsze wrócisz na swoje konto.",
+  "emailConfirmationResendButton": "Wyślij e-mail ponownie",
+  "emailConfirmationNotice": "Jesteś w środku! Sprawdź skrzynkę {email}, żeby potwierdzić konto.",
+  "emailConfirmationResendSent": "Wysłane. Sprawdź skrzynkę odbiorczą.",
+  "emailConfirmationResendFailed": "Nie udało się wysłać. Spróbuj ponownie za chwilę.",
+  "emailConfirmationMessagesTitle": "Potwierdź e-mail, żeby zacząć pisać wiadomości",
+  "emailConfirmationMessagesBody": "Dotknij linku, który wysłaliśmy na adres {email}. Potem możesz pisać do woli.",
+  "emailConfirmationDone": "E-mail potwierdzony. Wiadomości odblokowane."
 }

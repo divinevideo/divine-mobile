@@ -31,6 +31,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/email_confirmation_providers.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -49,6 +50,7 @@ import 'package:openvine/startup/upload_failure_listener.dart';
 import 'package:openvine/startup/video_dm_send_outcome_listener.dart';
 import 'package:openvine/widgets/app_lifecycle_handler.dart';
 import 'package:openvine/widgets/app_shell_badge_scope.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_sync.dart';
 import 'package:openvine/widgets/geo_blocking_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permissions_service/permissions_service.dart';
@@ -155,6 +157,9 @@ class AppCompositionRoot extends ConsumerWidget {
                 permissionsService: const PermissionHandlerPermissionsService(),
               )..add(const CameraPermissionRefresh()),
             ),
+            BlocProvider.value(
+              value: ref.watch(emailConfirmationCubitProvider),
+            ),
             BlocProvider(
               key: ValueKey((oauthClient, authService)),
               create: (_) => EmailVerificationCubit(
@@ -216,12 +221,14 @@ class AppCompositionRoot extends ConsumerWidget {
                 );
               }
             },
-            child: UpdateDialogListener(
-              child: UploadFailureListener(
-                child: VideoDmSendOutcomeListener(
-                  child: GeoBlockingGate(
-                    child: AppLifecycleHandler(
-                      child: SoundRequestsScope(child: child),
+            child: EmailConfirmationSync(
+              child: UpdateDialogListener(
+                child: UploadFailureListener(
+                  child: VideoDmSendOutcomeListener(
+                    child: GeoBlockingGate(
+                      child: AppLifecycleHandler(
+                        child: SoundRequestsScope(child: child),
+                      ),
                     ),
                   ),
                 ),

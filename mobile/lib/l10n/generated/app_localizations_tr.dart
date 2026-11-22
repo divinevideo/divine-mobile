@@ -17052,4 +17052,57 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Yardım';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Ses Giriş Cihazı';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Otomatik (önerilen)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'En iyi mikrofonu otomatik olarak seçer';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Ses Girişi Seç';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Bilinmeyen Mikrofon';
+
+  @override
+  String get emailConfirmationTitle => 'E-postanı doğrula';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email adresine bir bağlantı gönderdik. Mesajların kilidini açmak ve hesabına her zaman geri dönebilmek için bağlantıya dokun.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-postayı Tekrar Gönder';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'İçeridesin! Hesabını doğrulamak için $email adresini kontrol et.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Gönderildi. Gelen kutunu kontrol et.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Gönderemedik. Biraz sonra tekrar dene.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Mesajlaşmaya başlamak için e-postanı doğrula';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'E-posta doğrulandı. Mesajların kilidi açıldı.';
 }

@@ -7,6 +7,40 @@ import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_ty
 void main() {
   group(ProfileActionType, () {
     group('pending', () {
+      test('asks to confirm the email right after a restriction', () {
+        final actions = ProfileActionType.pending(
+          isOwnProfile: true,
+          isAccountEnforced: true,
+          isAnonymous: false,
+          isEmailUnconfirmed: true,
+          hasAnyProfileInfo: false,
+          canBecomeSupporter: true,
+        );
+
+        expect(
+          actions,
+          equals([
+            ProfileActionType.accountRestricted,
+            ProfileActionType.confirmEmail,
+            ProfileActionType.completeProfile,
+            ProfileActionType.becomeSupporter,
+          ]),
+        );
+      });
+
+      test('never asks another profile to confirm its email', () {
+        final actions = ProfileActionType.pending(
+          isOwnProfile: false,
+          isAccountEnforced: false,
+          isAnonymous: false,
+          isEmailUnconfirmed: true,
+          hasAnyProfileInfo: true,
+          canBecomeSupporter: false,
+        );
+
+        expect(actions, isEmpty);
+      });
+
       test('returns both actions when anonymous without profile info', () {
         final actions = ProfileActionType.pending(
           isOwnProfile: true,

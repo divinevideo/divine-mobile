@@ -6626,5 +6626,19 @@
   "menuBarMute": "ミュート",
   "menuBarUnmute": "ミュートを解除",
   "menuBarWindow": "ウインドウ",
-  "menuBarHelp": "ヘルプ"
+  "menuBarHelp": "ヘルプ",
+  "contentPreferencesAudioInputDevice": "音声入力デバイス",
+  "contentPreferencesAutoRecommended": "自動 (おすすめ)",
+  "contentPreferencesAutoSelectsBest": "最適なマイクを自動で選ぶよ",
+  "contentPreferencesSelectAudioInput": "音声入力を選ぶ",
+  "contentPreferencesUnknownMicrophone": "不明なマイク",
+  "emailConfirmationTitle": "メールアドレスの認証",
+  "emailConfirmationProfileSubtitle": "{email} にリンクを送りました。タップするとメッセージが使えるようになり、いつでもアカウントに戻れるようになります。",
+  "emailConfirmationResendButton": "メールを再送信",
+  "emailConfirmationNotice": "登録できました！{email} に届いたメールで、アカウントを認証してください。",
+  "emailConfirmationResendSent": "送信しました。受信トレイを確認してください。",
+  "emailConfirmationResendFailed": "送信できませんでした。少し時間をおいてもう一度お試しください。",
+  "emailConfirmationMessagesTitle": "メールアドレスを認証して、メッセージを始めましょう",
+  "emailConfirmationMessagesBody": "{email} に送ったリンクをタップしてください。それでメッセージが使えるようになります。",
+  "emailConfirmationDone": "メールアドレスの認証が完了しました。メッセージが使えるようになりました。"
 }

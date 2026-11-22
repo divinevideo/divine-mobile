@@ -7919,5 +7919,19 @@
   "menuBarMute": "میوٹ کریں",
   "menuBarUnmute": "ان میوٹ کریں",
   "menuBarWindow": "ونڈو",
-  "menuBarHelp": "مدد"
+  "menuBarHelp": "مدد",
+  "contentPreferencesAudioInputDevice": "آڈیو ان پٹ ڈیوائس",
+  "contentPreferencesAutoRecommended": "خودکار (تجویز کردہ)",
+  "contentPreferencesAutoSelectsBest": "خودبخود بہترین مائکروفون منتخب کرتا ہے",
+  "contentPreferencesSelectAudioInput": "آڈیو ان پٹ منتخب کریں",
+  "contentPreferencesUnknownMicrophone": "نامعلوم مائکروفون",
+  "emailConfirmationTitle": "اپنی ای میل کی تصدیق کریں",
+  "emailConfirmationProfileSubtitle": "ہم نے {email} پر ایک لنک بھیجا ہے۔ پیغامات کھولنے اور ہمیشہ اپنے اکاؤنٹ میں واپس آ سکنے کے لیے یہ لنک کھولیں۔",
+  "emailConfirmationResendButton": "ای میل دوبارہ بھیجیں",
+  "emailConfirmationNotice": "خوش آمدید! اپنے اکاؤنٹ کی تصدیق کے لیے {email} چیک کریں۔",
+  "emailConfirmationResendSent": "بھیج دی گئی۔ اپنا ان باکس چیک کریں۔",
+  "emailConfirmationResendFailed": "یہ نہیں بھیجی جا سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+  "emailConfirmationMessagesTitle": "پیغامات شروع کرنے کے لیے اپنی ای میل کی تصدیق کریں",
+  "emailConfirmationMessagesBody": "ہم نے {email} پر جو لنک بھیجا ہے اسے کھولیں۔ پھر پیغامات پوری طرح آپ کے ہیں۔",
+  "emailConfirmationDone": "ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔"
 }

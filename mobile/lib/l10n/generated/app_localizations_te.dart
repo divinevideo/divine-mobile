@@ -17511,4 +17511,57 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'సహాయం';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'ఆడియో ఇన్‌పుట్ పరికరం';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'ఆటో (సిఫార్సు చేయబడింది)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'ఉత్తమ మైక్రోఫోన్‌ను స్వయంచాలకంగా ఎంపిక చేస్తుంది';
+
+  @override
+  String get contentPreferencesSelectAudioInput =>
+      'ఆడియో ఇన్‌పుట్‌ని ఎంచుకోండి';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'తెలియని మైక్రోఫోన్';
+
+  @override
+  String get emailConfirmationTitle => 'మీ ఇమెయిల్‌ను నిర్ధారించండి';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'మేము $email కి ఒక లింక్ పంపాము. సందేశాలను అన్‌లాక్ చేయడానికి, మీ ఖాతాలోకి ఎప్పుడైనా తిరిగి రాగలిగేలా చూసుకోవడానికి దాన్ని నొక్కండి.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ఇమెయిల్‌ను మళ్లీ పంపండి';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'మీరు లోపలికి వచ్చేశారు! మీ ఖాతాను నిర్ధారించడానికి $email ని చూడండి.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'పంపాము. మీ ఇన్‌బాక్స్‌ని చూడండి.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'దాన్ని పంపలేకపోయాము. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'సందేశాలు పంపడం మొదలుపెట్టడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'మేము $email కి పంపిన లింక్‌ను నొక్కండి. ఆ తర్వాత సందేశాలు పూర్తిగా మీవే.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.';
 }

@@ -17334,4 +17334,57 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Hilfe';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Audio-Eingabegerät';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Automatisch (empfohlen)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Wählt automatisch das beste Mikrofon';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Audio-Eingabe wählen';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Unbekanntes Mikrofon';
+
+  @override
+  String get emailConfirmationTitle => 'Bestätige deine E-Mail';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Wir haben einen Link an $email geschickt. Tippe darauf, um Nachrichten freizuschalten und sicherzugehen, dass du immer wieder in dein Konto kommst.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-Mail erneut senden';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Du bist drin! Schau bei $email nach, um dein Konto zu bestätigen.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Gesendet. Schau in deinen Posteingang.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Das hat nicht geklappt. Versuch es gleich noch mal.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bestätige deine E-Mail, um Nachrichten zu schreiben';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tippe auf den Link, den wir an $email geschickt haben. Dann kann\'s mit Nachrichten losgehen.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'E-Mail bestätigt. Nachrichten sind freigeschaltet.';
 }

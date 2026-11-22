@@ -21,6 +21,7 @@ import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/ui/back_on_escape.dart';
 import 'package:openvine/ui/macos_menu_bar.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_notice.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerRasterizerHost;
@@ -94,8 +95,10 @@ class DivineMaterialApp extends ConsumerWidget {
                 child: AdaptiveLayoutScope(
                   child: EyedropperSources(
                     child: ShareDeliveryHost(
-                      child: BackOnEscape(
-                        child: child ?? const SizedBox.shrink(),
+                      child: EmailConfirmationNotice(
+                        child: BackOnEscape(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),

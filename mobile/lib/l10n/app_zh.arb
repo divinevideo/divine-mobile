@@ -7919,5 +7919,19 @@
   "menuBarMute": "静音",
   "menuBarUnmute": "取消静音",
   "menuBarWindow": "窗口",
-  "menuBarHelp": "帮助"
+  "menuBarHelp": "帮助",
+  "contentPreferencesAudioInputDevice": "音频输入设备",
+  "contentPreferencesAutoRecommended": "自动（推荐）",
+  "contentPreferencesAutoSelectsBest": "自动选择最佳麦克风",
+  "contentPreferencesSelectAudioInput": "选择音频输入",
+  "contentPreferencesUnknownMicrophone": "未知麦克风",
+  "emailConfirmationTitle": "确认你的邮箱",
+  "emailConfirmationProfileSubtitle": "我们已向 {email} 发送了一个链接。点击它即可解锁私信，并确保你随时都能回到自己的账号。",
+  "emailConfirmationResendButton": "重新发送邮件",
+  "emailConfirmationNotice": "你已加入！去 {email} 查收邮件，确认你的账号。",
+  "emailConfirmationResendSent": "已发送，去收件箱看看吧。",
+  "emailConfirmationResendFailed": "这封没发出去，稍后再试试。",
+  "emailConfirmationMessagesTitle": "确认邮箱后即可开始发私信",
+  "emailConfirmationMessagesBody": "点击我们发送到 {email} 的链接，私信就全归你啦。",
+  "emailConfirmationDone": "邮箱已确认，私信已解锁。"
 }

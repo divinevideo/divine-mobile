@@ -16361,4 +16361,52 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get menuBarHelp => '도움말';
+
+  @override
+  String get contentPreferencesAudioInputDevice => '오디오 입력 장치';
+
+  @override
+  String get contentPreferencesAutoRecommended => '자동 (추천)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest => '가장 좋은 마이크를 자동으로 고르주세요';
+
+  @override
+  String get contentPreferencesSelectAudioInput => '오디오 입력 선택';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => '알 수 없는 마이크';
+
+  @override
+  String get emailConfirmationTitle => '이메일 인증하기';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email 주소로 링크를 보냈어요. 링크를 탭하면 메시지가 열리고, 언제든 계정에 다시 들어올 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '이메일 다시 보내기';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '가입 완료! $email 주소로 온 메일에서 계정을 인증해주세요.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '보냈어요. 받은 편지함을 확인해주세요.';
+
+  @override
+  String get emailConfirmationResendFailed => '보내지 못했어요. 잠시 후 다시 시도해주세요.';
+
+  @override
+  String get emailConfirmationMessagesTitle => '메시지를 보내려면 이메일을 인증해주세요';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email 주소로 보낸 링크를 탭해주세요. 그러면 메시지를 마음껏 쓸 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationDone => '이메일 인증 완료. 이제 메시지를 쓸 수 있어요.';
 }

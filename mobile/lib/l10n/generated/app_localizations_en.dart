@@ -17249,4 +17249,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Help';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Audio Input Device';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Auto (recommended)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Automatically selects the best microphone';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Select Audio Input';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Unknown Microphone';
+
+  @override
+  String get emailConfirmationTitle => 'Confirm your email';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'We sent a link to $email. Tap it to unlock DMs and make sure you can always get back into your account.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Resend email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'You\'re in! Check $email to confirm your account.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Sent. Check your inbox.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Couldn\'t send that one. Try again in a bit.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirm your email to start messaging';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tap the link we sent to $email. Then DMs are all yours.';
+  }
+
+  @override
+  String get emailConfirmationDone => 'Email confirmed. DMs are unlocked.';
 }

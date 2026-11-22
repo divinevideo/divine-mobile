@@ -6626,5 +6626,19 @@
   "menuBarMute": "Silenciar",
   "menuBarUnmute": "Ativar Som",
   "menuBarWindow": "Janela",
-  "menuBarHelp": "Ajuda"
+  "menuBarHelp": "Ajuda",
+  "contentPreferencesAudioInputDevice": "Dispositivo de entrada de áudio",
+  "contentPreferencesAutoRecommended": "Automático (recomendado)",
+  "contentPreferencesAutoSelectsBest": "Seleciona automaticamente o melhor microfone",
+  "contentPreferencesSelectAudioInput": "Selecionar entrada de áudio",
+  "contentPreferencesUnknownMicrophone": "Microfone desconhecido",
+  "emailConfirmationTitle": "Confirme seu e-mail",
+  "emailConfirmationProfileSubtitle": "Enviamos um link para {email}. Toque nele para desbloquear as mensagens e garantir que você sempre consiga voltar para sua conta.",
+  "emailConfirmationResendButton": "Reenviar e-mail",
+  "emailConfirmationNotice": "Pronto, você entrou! Abra {email} para confirmar sua conta.",
+  "emailConfirmationResendSent": "Enviado. Veja sua caixa de entrada.",
+  "emailConfirmationResendFailed": "Não deu para enviar. Tente de novo daqui a pouco.",
+  "emailConfirmationMessagesTitle": "Confirme seu e-mail para começar a mandar mensagens",
+  "emailConfirmationMessagesBody": "Toque no link que enviamos para {email}. Aí as mensagens são todas suas.",
+  "emailConfirmationDone": "E-mail confirmado. Mensagens desbloqueadas."
 }

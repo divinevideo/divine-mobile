@@ -28686,6 +28686,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Help'**
   String get menuBarHelp;
+
+  /// No description provided for @contentPreferencesAudioInputDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Input Device'**
+  String get contentPreferencesAudioInputDevice;
+
+  /// No description provided for @contentPreferencesAutoRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto (recommended)'**
+  String get contentPreferencesAutoRecommended;
+
+  /// No description provided for @contentPreferencesAutoSelectsBest.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically selects the best microphone'**
+  String get contentPreferencesAutoSelectsBest;
+
+  /// No description provided for @contentPreferencesSelectAudioInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Audio Input'**
+  String get contentPreferencesSelectAudioInput;
+
+  /// No description provided for @contentPreferencesUnknownMicrophone.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Microphone'**
+  String get contentPreferencesUnknownMicrophone;
+
+  /// Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get emailConfirmationTitle;
+
+  /// Body of the own-profile prompt for an account whose email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a link to {email}. Tap it to unlock DMs and make sure you can always get back into your account.'**
+  String emailConfirmationProfileSubtitle(String email);
+
+  /// Button that asks Divine to send the email confirmation link again.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend email'**
+  String get emailConfirmationResendButton;
+
+  /// Pop-up shown after signing up, and on later launches, while the account's email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re in! Check {email} to confirm your account.'**
+  String emailConfirmationNotice(String email);
+
+  /// Pop-up after a new email confirmation link was requested.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent. Check your inbox.'**
+  String get emailConfirmationResendSent;
+
+  /// Pop-up when requesting a new email confirmation link failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send that one. Try again in a bit.'**
+  String get emailConfirmationResendFailed;
+
+  /// Title shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to start messaging'**
+  String get emailConfirmationMessagesTitle;
+
+  /// Body shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the link we sent to {email}. Then DMs are all yours.'**
+  String emailConfirmationMessagesBody(String email);
+
+  /// Pop-up when a signed-in account opens its email confirmation link in the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed. DMs are unlocked.'**
+  String get emailConfirmationDone;
 }
 
 class _AppLocalizationsDelegate

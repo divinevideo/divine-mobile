@@ -16717,4 +16717,54 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'እገዛ';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'የድምጽ ግቤት መሣሪያ';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'ራስ-ሰር (የሚመከር)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'በጣም ጥሩውን ማይክሮፎን በራስ-ሰር ይመርጣል';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'የድምጽ ግቤትን ይምረጡ';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'ያልታወቀ ማይክሮፎን';
+
+  @override
+  String get emailConfirmationTitle => 'ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ወደ $email አገናኝ ልከናል። መልእክቶችን ለመክፈት እና ሁልጊዜ ወደ መለያዎ መመለስ እንዲችሉ አገናኙን ይንኩ።';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ኢሜይሉን እንደገና ይላኩ';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'ገብተዋል! መለያዎን ለማረጋገጥ ወደ $email የተላከውን ኢሜይል ይመልከቱ።';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'ተልኳል። የገቢ መልእክት ሳጥንዎን ይመልከቱ።';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get emailConfirmationMessagesTitle => 'መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ወደ $email የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።';
+  }
+
+  @override
+  String get emailConfirmationDone => 'ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።';
 }

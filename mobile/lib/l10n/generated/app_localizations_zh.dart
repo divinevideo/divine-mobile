@@ -16144,4 +16144,52 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get menuBarHelp => '帮助';
+
+  @override
+  String get contentPreferencesAudioInputDevice => '音频输入设备';
+
+  @override
+  String get contentPreferencesAutoRecommended => '自动（推荐）';
+
+  @override
+  String get contentPreferencesAutoSelectsBest => '自动选择最佳麦克风';
+
+  @override
+  String get contentPreferencesSelectAudioInput => '选择音频输入';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => '未知麦克风';
+
+  @override
+  String get emailConfirmationTitle => '确认你的邮箱';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '我们已向 $email 发送了一个链接。点击它即可解锁私信，并确保你随时都能回到自己的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '重新发送邮件';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '你已加入！去 $email 查收邮件，确认你的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '已发送，去收件箱看看吧。';
+
+  @override
+  String get emailConfirmationResendFailed => '这封没发出去，稍后再试试。';
+
+  @override
+  String get emailConfirmationMessagesTitle => '确认邮箱后即可开始发私信';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '点击我们发送到 $email 的链接，私信就全归你啦。';
+  }
+
+  @override
+  String get emailConfirmationDone => '邮箱已确认，私信已解锁。';
 }

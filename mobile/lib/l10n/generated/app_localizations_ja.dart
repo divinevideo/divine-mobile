@@ -16342,4 +16342,52 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'ヘルプ';
+
+  @override
+  String get contentPreferencesAudioInputDevice => '音声入力デバイス';
+
+  @override
+  String get contentPreferencesAutoRecommended => '自動 (おすすめ)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest => '最適なマイクを自動で選ぶよ';
+
+  @override
+  String get contentPreferencesSelectAudioInput => '音声入力を選ぶ';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => '不明なマイク';
+
+  @override
+  String get emailConfirmationTitle => 'メールアドレスの認証';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email にリンクを送りました。タップするとメッセージが使えるようになり、いつでもアカウントに戻れるようになります。';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'メールを再送信';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '登録できました！$email に届いたメールで、アカウントを認証してください。';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '送信しました。受信トレイを確認してください。';
+
+  @override
+  String get emailConfirmationResendFailed => '送信できませんでした。少し時間をおいてもう一度お試しください。';
+
+  @override
+  String get emailConfirmationMessagesTitle => 'メールアドレスを認証して、メッセージを始めましょう';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email に送ったリンクをタップしてください。それでメッセージが使えるようになります。';
+  }
+
+  @override
+  String get emailConfirmationDone => 'メールアドレスの認証が完了しました。メッセージが使えるようになりました。';
 }

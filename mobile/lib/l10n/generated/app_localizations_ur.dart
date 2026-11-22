@@ -17129,4 +17129,57 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'مدد';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'آڈیو ان پٹ ڈیوائس';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'خودکار (تجویز کردہ)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'خودبخود بہترین مائکروفون منتخب کرتا ہے';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'آڈیو ان پٹ منتخب کریں';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'نامعلوم مائکروفون';
+
+  @override
+  String get emailConfirmationTitle => 'اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ہم نے $email پر ایک لنک بھیجا ہے۔ پیغامات کھولنے اور ہمیشہ اپنے اکاؤنٹ میں واپس آ سکنے کے لیے یہ لنک کھولیں۔';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ای میل دوبارہ بھیجیں';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'خوش آمدید! اپنے اکاؤنٹ کی تصدیق کے لیے $email چیک کریں۔';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'بھیج دی گئی۔ اپنا ان باکس چیک کریں۔';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'یہ نہیں بھیجی جا سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'پیغامات شروع کرنے کے لیے اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ہم نے $email پر جو لنک بھیجا ہے اسے کھولیں۔ پھر پیغامات پوری طرح آپ کے ہیں۔';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔';
 }

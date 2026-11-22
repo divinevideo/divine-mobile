@@ -277,6 +277,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       scope: 'policy:full',
       marketingConsent: marketingConsent,
       appVersion: _appVersion,
+      instantAccess: true,
     );
 
     if (!result.success) {
@@ -302,6 +303,18 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
           ),
         );
       }
+      return;
+    }
+
+    // Keycast created the account without waiting for the email link: sign
+    // in now and let the app nudge for confirmation instead of blocking.
+    if (result.isInstantAccess) {
+      Log.info(
+        'Account created; signing in before email confirmation',
+        name: 'DivineAuthCubit',
+        category: LogCategory.auth,
+      );
+      await _exchangeCodeAndLogin(result.code!, verifier);
       return;
     }
 

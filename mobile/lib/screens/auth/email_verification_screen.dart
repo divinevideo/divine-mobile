@@ -15,6 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -441,6 +442,26 @@ class _EmailVerificationScreenState
     if (clearPending) {
       await _clearPendingVerification();
       if (!mounted) return;
+    }
+    // An account that signed in before confirming is already in: confirming
+    // only unlocks what was waiting on it, so stay signed in.
+    final authService = ref.read(authServiceProvider);
+    if (authService.authState == AuthState.authenticated &&
+        !authService.isAnonymous) {
+      final confirmation = context.read<EmailConfirmationCubit?>();
+      if (confirmation != null) {
+        runDetached(
+          confirmation.refresh(),
+          'refresh email confirmation after link',
+          logName: 'EmailVerificationScreen',
+          category: LogCategory.auth,
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(context.l10n.emailConfirmationDone),
+      );
+      context.go(ExploreScreen.pathForTab('popular'));
+      return;
     }
     // Show feedback message before redirecting to login
     ScaffoldMessenger.of(context).showSnackBar(

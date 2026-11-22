@@ -9542,5 +9542,19 @@
   "menuBarMute": "మ్యూట్ చేయండి",
   "menuBarUnmute": "అన్‌మ్యూట్ చేయండి",
   "menuBarWindow": "విండో",
-  "menuBarHelp": "సహాయం"
+  "menuBarHelp": "సహాయం",
+  "contentPreferencesAudioInputDevice": "ఆడియో ఇన్‌పుట్ పరికరం",
+  "contentPreferencesAutoRecommended": "ఆటో (సిఫార్సు చేయబడింది)",
+  "contentPreferencesAutoSelectsBest": "ఉత్తమ మైక్రోఫోన్‌ను స్వయంచాలకంగా ఎంపిక చేస్తుంది",
+  "contentPreferencesSelectAudioInput": "ఆడియో ఇన్‌పుట్‌ని ఎంచుకోండి",
+  "contentPreferencesUnknownMicrophone": "తెలియని మైక్రోఫోన్",
+  "emailConfirmationTitle": "మీ ఇమెయిల్‌ను నిర్ధారించండి",
+  "emailConfirmationProfileSubtitle": "మేము {email} కి ఒక లింక్ పంపాము. సందేశాలను అన్‌లాక్ చేయడానికి, మీ ఖాతాలోకి ఎప్పుడైనా తిరిగి రాగలిగేలా చూసుకోవడానికి దాన్ని నొక్కండి.",
+  "emailConfirmationResendButton": "ఇమెయిల్‌ను మళ్లీ పంపండి",
+  "emailConfirmationNotice": "మీరు లోపలికి వచ్చేశారు! మీ ఖాతాను నిర్ధారించడానికి {email} ని చూడండి.",
+  "emailConfirmationResendSent": "పంపాము. మీ ఇన్‌బాక్స్‌ని చూడండి.",
+  "emailConfirmationResendFailed": "దాన్ని పంపలేకపోయాము. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "emailConfirmationMessagesTitle": "సందేశాలు పంపడం మొదలుపెట్టడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి",
+  "emailConfirmationMessagesBody": "మేము {email} కి పంపిన లింక్‌ను నొక్కండి. ఆ తర్వాత సందేశాలు పూర్తిగా మీవే.",
+  "emailConfirmationDone": "ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి."
 }

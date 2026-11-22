@@ -12821,9 +12821,13 @@
   "updateNotNow": "Not now",
   "updateAction": "Update",
   "announcementViewContest": "View contest",
-  "@announcementViewContest": {"description": "Button opening an official contest after its native announcement description."},
+  "@announcementViewContest": {
+    "description": "Button opening an official contest after its native announcement description."
+  },
   "featuredFeedUnavailable": "This featured feed is no longer available.",
-  "@featuredFeedUnavailable": {"description": "Safe destination when a campaign points to a missing, ended, or disabled featured feed."},
+  "@featuredFeedUnavailable": {
+    "description": "Safe destination when a campaign points to a missing, ended, or disabled featured feed."
+  },
   "updateNewIn": "New in {version}:",
   "@updateNewIn": {
     "description": "Heading before highlights for an available app update.",
@@ -14022,7 +14026,9 @@
   "@inviteFriendsLinkNote": {
     "description": "Note under the invite message explaining that the Divine download link is always appended. {url} is the link; keep it unchanged.",
     "placeholders": {
-      "url": {"type": "String"}
+      "url": {
+        "type": "String"
+      }
     }
   },
   "inviteFriendsShare": "Share",
@@ -14557,5 +14563,64 @@
   "menuBarHelp": "Help",
   "@menuBarHelp": {
     "description": "macOS menu bar: title of the Help menu, as in other Mac apps."
+  },
+  "contentPreferencesAudioInputDevice": "Audio Input Device",
+  "contentPreferencesAutoRecommended": "Auto (recommended)",
+  "contentPreferencesAutoSelectsBest": "Automatically selects the best microphone",
+  "contentPreferencesSelectAudioInput": "Select Audio Input",
+  "contentPreferencesUnknownMicrophone": "Unknown Microphone",
+  "emailConfirmationTitle": "Confirm your email",
+  "@emailConfirmationTitle": {
+    "description": "Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link."
+  },
+  "emailConfirmationProfileSubtitle": "We sent a link to {email}. Tap it to unlock DMs and make sure you can always get back into your account.",
+  "@emailConfirmationProfileSubtitle": {
+    "description": "Body of the own-profile prompt for an account whose email is not confirmed yet.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationResendButton": "Resend email",
+  "@emailConfirmationResendButton": {
+    "description": "Button that asks Divine to send the email confirmation link again."
+  },
+  "emailConfirmationNotice": "You're in! Check {email} to confirm your account.",
+  "@emailConfirmationNotice": {
+    "description": "Pop-up shown after signing up, and on later launches, while the account's email is not confirmed yet.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationResendSent": "Sent. Check your inbox.",
+  "@emailConfirmationResendSent": {
+    "description": "Pop-up after a new email confirmation link was requested."
+  },
+  "emailConfirmationResendFailed": "Couldn't send that one. Try again in a bit.",
+  "@emailConfirmationResendFailed": {
+    "description": "Pop-up when requesting a new email confirmation link failed."
+  },
+  "emailConfirmationMessagesTitle": "Confirm your email to start messaging",
+  "@emailConfirmationMessagesTitle": {
+    "description": "Title shown in place of direct messages while the account's email is not confirmed."
+  },
+  "emailConfirmationMessagesBody": "Tap the link we sent to {email}. Then DMs are all yours.",
+  "@emailConfirmationMessagesBody": {
+    "description": "Body shown in place of direct messages while the account's email is not confirmed.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationDone": "Email confirmed. DMs are unlocked.",
+  "@emailConfirmationDone": {
+    "description": "Pop-up when a signed-in account opens its email confirmation link in the app."
   }
 }

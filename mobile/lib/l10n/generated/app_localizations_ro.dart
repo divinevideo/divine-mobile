@@ -17461,4 +17461,57 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Ajutor';
+
+  @override
+  String get contentPreferencesAudioInputDevice =>
+      'Dispozitiv de intrare audio';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Automat (recomandat)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Alege automat cel mai bun microfon';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Alege intrarea audio';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Microfon necunoscut';
+
+  @override
+  String get emailConfirmationTitle => 'Confirmă-ți emailul';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Ți-am trimis un link la $email. Apasă-l ca să deblochezi mesajele și să te poți întoarce mereu în cont.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Retrimite emailul';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Ai intrat! Verifică $email ca să-ți confirmi contul.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Trimis. Verifică-ți inboxul.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Nu l-am putut trimite. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirmă-ți emailul ca să poți trimite mesaje';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Apasă linkul pe care ți l-am trimis la $email. Apoi mesajele sunt ale tale.';
+  }
+
+  @override
+  String get emailConfirmationDone =>
+      'Email confirmat. Mesajele sunt deblocate.';
 }

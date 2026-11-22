@@ -17128,4 +17128,55 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Bantuan';
+
+  @override
+  String get contentPreferencesAudioInputDevice => 'Peranti Input Audio';
+
+  @override
+  String get contentPreferencesAutoRecommended => 'Auto (disyorkan)';
+
+  @override
+  String get contentPreferencesAutoSelectsBest =>
+      'Memilih mikrofon terbaik secara automatik';
+
+  @override
+  String get contentPreferencesSelectAudioInput => 'Pilih Input Audio';
+
+  @override
+  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Diketahui';
+
+  @override
+  String get emailConfirmationTitle => 'Sahkan e-mel anda';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Kami telah menghantar pautan ke $email. Ketik pautan itu untuk membuka mesej dan pastikan anda sentiasa boleh kembali ke akaun anda.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Hantar semula e-mel';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Anda sudah masuk! Semak $email untuk mengesahkan akaun anda.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => 'Dihantar. Semak peti masuk anda.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Tidak dapat dihantar. Cuba lagi sekejap lagi.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Sahkan e-mel anda untuk mula menghantar mesej';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Ketik pautan yang kami hantar ke $email. Selepas itu, mesej milik anda sepenuhnya.';
+  }
+
+  @override
+  String get emailConfirmationDone => 'E-mel disahkan. Mesej sudah dibuka.';
 }

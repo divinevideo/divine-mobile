@@ -840,6 +840,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer((_) => registered.future);
             when(
@@ -877,6 +878,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
 
@@ -894,6 +896,7 @@ void main() {
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
                 appVersion: any(named: 'appVersion'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -930,10 +933,86 @@ void main() {
                 scope: any(named: 'scope'),
                 marketingConsent: true,
                 appVersion: '1.2.3',
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
 
             await cubit.close();
+          },
+        );
+
+        blocTest<DivineAuthCubit, DivineAuthState>(
+          'signs in straight away when Keycast grants instant access',
+          setUp: () {
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: 'test-pubkey',
+                  verificationRequired: false,
+                  code: testCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            ).thenAnswer(
+              (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+            );
+            when(
+              () => mockAuthService.signInWithDivineOAuth(any()),
+            ).thenAnswer((_) async {});
+          },
+          build: buildCubit,
+          seed: () => const DivineAuthFormState(
+            email: testEmail,
+            password: testPassword,
+          ),
+          act: (cubit) => cubit.submit(),
+          expect: () => [
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSubmitting: true,
+            ),
+            isA<DivineAuthSuccess>(),
+          ],
+          verify: (_) {
+            verify(
+              () => mockOAuth.headlessRegister(
+                email: testEmail,
+                password: testPassword,
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: true,
+              ),
+            ).called(1);
+            verify(
+              () => mockOAuth.exchangeCode(
+                code: testCode,
+                verifier: testVerifier,
+              ),
+            ).called(1);
+            verifyNever(
+              () => mockPendingVerification.save(
+                deviceCode: any(named: 'deviceCode'),
+                verifier: any(named: 'verifier'),
+                email: any(named: 'email'),
+              ),
+            );
           },
         );
 
@@ -946,6 +1025,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1005,6 +1085,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1039,6 +1120,7 @@ void main() {
                 password: testPassword,
                 scope: 'policy:full',
                 marketingConsent: false,
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
             verify(
@@ -1061,6 +1143,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1103,6 +1186,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1146,6 +1230,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1192,6 +1277,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1232,6 +1318,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1272,6 +1359,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1312,6 +1400,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1352,6 +1441,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1392,6 +1482,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1436,6 +1527,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1477,6 +1569,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1518,6 +1611,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenThrow(Exception('network failure'));
           },
@@ -1556,6 +1650,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer((_) => registered.future);
             when(
