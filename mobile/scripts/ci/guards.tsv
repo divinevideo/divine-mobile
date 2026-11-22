@@ -36,6 +36,14 @@
 
 🔐 Verify no profile publish reaches the ungated read provider (#6423)	-	bash scripts/check_profile_read_write_split.sh
 
+# Issue #11317. Kinds 0, 3, 10000-19999 and 30000-39999 are replaced whole on
+# every publish, so a republish built from a relay read that did not finish
+# deletes whatever only the unanswered relay held. Freezes the (file, kind)
+# pairs that publish such a kind without reading it through
+# NostrClient.readCurrentVersion; the list may only shrink, and every entry
+# carries its reason. Fails closed if the base baseline cannot be loaded.
+♻️ Verify replaceable publishes read their base through readCurrentVersion (#11317)	-	bash scripts/check_replaceable_base_reads.sh
+
 🪵 Verify no raw logging in production code	-	bash scripts/check_raw_logging.sh
 
 # Issues #8314 / #6985. The account-switch sweep named its keys by copied
