@@ -290,6 +290,60 @@ void main() {
       expect(signed, isNull);
     });
 
+    test('refuses when the account changes during the newest read', () async {
+      var account = owner;
+      when(() => auth.currentPublicKeyHex).thenAnswer((_) => account);
+      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer((_) async {
+        account = 'c' * 64;
+        return LatestVideoRevisionFound(
+          revision(id: 'd' * 64, createdAt: 4102444800, content: 'Newer'),
+        );
+      });
+      final publisher = VideoEventPublisher(
+        uploadManager: _Uploads(),
+        nostrService: nostr,
+        authService: auth,
+        videosRepositoryGetter: () => videos,
+      );
+
+      await expectLater(
+        publisher.republishWithAudioReuse(
+          existingEvent: opened,
+          audioEventId: audio,
+          audioRelayHint: 'wss://relay.divine.video',
+        ),
+        throwsA(isA<SoundReusePublicationException>()),
+      );
+      expect(signed, isNull);
+    });
+
+    test('refuses when the approval ends during the newest read', () async {
+      var current = true;
+      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer((_) async {
+        current = false;
+        return LatestVideoRevisionFound(
+          revision(id: 'd' * 64, createdAt: 4102444800, content: 'Newer'),
+        );
+      });
+      final publisher = VideoEventPublisher(
+        uploadManager: _Uploads(),
+        nostrService: nostr,
+        authService: auth,
+        videosRepositoryGetter: () => videos,
+      );
+
+      await expectLater(
+        publisher.republishWithAudioReuse(
+          existingEvent: opened,
+          audioEventId: audio,
+          audioRelayHint: 'wss://relay.divine.video',
+          isOperationCurrent: () => current,
+        ),
+        throwsA(isA<SoundReusePublicationException>()),
+      );
+      expect(signed, isNull);
+    });
+
     for (final (name, answer) in [
       ('cannot tell', const LatestVideoRevisionUnknown()),
       ('hold none', const LatestVideoRevisionAbsent()),
