@@ -441,8 +441,7 @@ class _AcceptedHolders extends ConsumerWidget {
               coordinate: coordinate,
             );
             final holders = context.read<BadgeHoldersCubit>().state;
-            if (holders.holdersStatus == BadgeHoldersStatus.preview ||
-                holders.holdersStatus == BadgeHoldersStatus.loaded) {
+            if (holders.hasUsableHolderSnapshot) {
               runDetached(
                 cubit.loadForHolders(holders.holders.toSet()),
                 'reload badge holder videos',
@@ -685,13 +684,10 @@ class _BadgeVideoGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (holdersStatus, hasPreview) = context.select(
-      (BadgeHoldersCubit cubit) =>
-          (cubit.state.holdersStatus, cubit.state.holders.isNotEmpty),
+    final hasHolderSnapshot = context.select(
+      (BadgeHoldersCubit cubit) => cubit.state.hasUsableHolderSnapshot,
     );
-    if (holdersStatus != BadgeHoldersStatus.loaded &&
-        holdersStatus != BadgeHoldersStatus.preview &&
-        !hasPreview) {
+    if (!hasHolderSnapshot) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     final state = context.watch<BadgeVideosCubit>().state;

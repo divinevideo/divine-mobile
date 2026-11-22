@@ -855,6 +855,9 @@ void main() {
       final client = _MockFunnelcakeClient();
       final videos = _MockVideosRepository();
       final pager = _MockBadgeVideoPager();
+      final replacement = _MockVideosRepository();
+      final replacementPager = _MockBadgeVideoPager();
+      final activeRepository = StateProvider<VideosRepository>((_) => videos);
       when(() => repository.loadBadgeDetail(any())).thenAnswer(
         (_) async => _detail(definition: _definition(), isOwner: false),
       );
@@ -871,10 +874,18 @@ void main() {
       when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
       when(pager.loadMore).thenAnswer((_) async => [_video()]);
       when(() => pager.hasMore).thenReturn(false);
+      when(() => replacement.createBadgeVideoPager(any()))
+          .thenReturn(replacementPager);
+      when(replacementPager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => replacementPager.hasMore).thenReturn(false);
       await tester.pumpWidget(
         buildSubject(
-          videosRepository: videos,
-          overrides: [funnelcakeApiClientProvider.overrideWithValue(client)],
+          overrides: [
+            funnelcakeApiClientProvider.overrideWithValue(client),
+            videosRepositoryProvider.overrideWith(
+              (ref) => ref.watch(activeRepository),
+            ),
+          ],
         ),
       );
       await tester.pump();
@@ -887,6 +898,15 @@ void main() {
         const BadgeReadIncompleteException('holder reconciliation'),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(BadgeDetailScreen)),
+      ).read(activeRepository.notifier).state = replacement;
+      await tester.pumpAndSettle();
+      verify(() => replacement.createBadgeVideoPager({_pubkey(3)})).called(1);
       expect(find.byType(VideoThumbnailWidget), findsOneWidget);
       expect(find.text(l10n.badgesLoadError), findsOneWidget);
       expect(find.text(l10n.commonRetry), findsOneWidget);
