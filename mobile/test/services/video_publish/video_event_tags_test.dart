@@ -18,9 +18,9 @@ import 'package:openvine/services/video_publish/video_event_tags.dart';
 const _self =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _other =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    '2222222222222222222222222222222222222222222222222222222222222222';
 const _third =
-    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+    '3333333333333333333333333333333333333333333333333333333333333333';
 const _rootEventId =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const _commentId =
