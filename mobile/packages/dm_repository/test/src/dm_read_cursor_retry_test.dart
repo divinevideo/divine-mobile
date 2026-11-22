@@ -745,7 +745,9 @@ void main() {
             });
             conversationsDao.holdNextLegacyQuery = true;
             await repository.startListening();
-            await conversationsDao.legacyQueryEntered.future;
+            await conversationsDao.legacyQueryEntered.future.timeout(
+              const Duration(seconds: 2),
+            );
             expect(accountState.contains(participants.join(',')), isFalse);
             conversationsDao.holdNextTransaction = true;
             final wrapId = 'e' * 64;
@@ -773,7 +775,11 @@ void main() {
                 'sig': '',
               }),
             );
-            await conversationsDao.entered.future;
+            // Bounded so that losing the ingest transaction fails here
+            // instead of hanging until the runner's timeout (#8408).
+            await conversationsDao.entered.future.timeout(
+              const Duration(seconds: 2),
+            );
             journalDao.observeNextWrite = true;
             final source = (await signer.signEvent(
               Event(
