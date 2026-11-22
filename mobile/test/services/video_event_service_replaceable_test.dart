@@ -501,6 +501,38 @@ void main() {
       expect(updates.map((v) => v.id), [republished.id]);
     });
 
+    test('keeps the winning revision when an older publish completes', () {
+      final owner = 'a' * 64;
+      when(() => mockNostrService.publicKey).thenReturn(owner);
+      final winner = sdk.Event(
+        owner,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', 'clip'],
+          ['url', 'https://example.com/video.mp4'],
+        ],
+        'Newer caption',
+        createdAt: 2000,
+      );
+      final older = VideoEvent.fromNostrEvent(
+        sdk.Event(
+          winner.pubkey,
+          winner.kind,
+          winner.tags,
+          'Earlier caption',
+          createdAt: 1000,
+        ),
+      );
+      service.handleEventForTesting(winner, SubscriptionType.discovery);
+      expect(service.discoveryVideos.single.id, winner.id);
+      expect(service.authorVideos(winner.pubkey).single.id, winner.id);
+
+      service.updateVideoEvent(older);
+
+      expect(service.discoveryVideos.single.id, winner.id);
+      expect(service.authorVideos(winner.pubkey).single.id, winner.id);
+    });
+
     test(
       'updateVideoEvent preserves nostrLikeCount from existing video',
       () {
