@@ -767,6 +767,18 @@ void main() {
         expect(find.text(l10n.commentsInputHint), findsOneWidget);
       });
 
+      testWidgets('offers the record-video button while the draft is empty', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pump();
+
+        expect(
+          find.bySemanticsIdentifier('record_video_comment_button'),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('adds CommentTextChanged on text entry', (tester) async {
         await tester.pumpWidget(buildTestWidget());
         await tester.pump();
