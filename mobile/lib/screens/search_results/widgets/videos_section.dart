@@ -17,8 +17,10 @@ import 'package:openvine/screens/search_results/widgets/search_section_error_sta
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -91,7 +93,11 @@ class _VideosContent extends ConsumerStatefulWidget {
 }
 
 class _VideosContentState extends ConsumerState<_VideosContent> {
-  void _onVideoTap(List<VideoEvent> videos, int index) {
+  void _onVideoTap(
+    List<VideoEvent> videos,
+    int index,
+    ValueGetter<VideoTileOrigin?> captureOrigin,
+  ) {
     final bloc = context.read<VideoSearchBloc>();
     runDetached(
       PooledFullscreenVideoFeedRouteData(
@@ -109,6 +115,7 @@ class _VideosContentState extends ConsumerState<_VideosContent> {
           ),
           initialIndex: index,
           initialVideoId: videos[index].id,
+          tileOrigin: captureOrigin(),
           contextTitle: 'Search Results',
           trafficSource: ViewTrafficSource.search,
           sourceDetail: bloc.state.query,
@@ -130,7 +137,7 @@ class _VideosGrid extends StatelessWidget {
   const _VideosGrid({required this.showAll, required this.onVideoTap});
 
   final bool showAll;
-  final void Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +187,7 @@ class _VideosGrid extends StatelessWidget {
           return SearchVideoTile(
             video: videos[index],
             index: index,
-            onTap: () => onVideoTap(videos, index),
+            onTap: (captureOrigin) => onVideoTap(videos, index, captureOrigin),
           );
         },
       ),
@@ -201,7 +208,10 @@ class SearchVideoTile extends StatelessWidget {
 
   final VideoEvent video;
   final int index;
-  final VoidCallback onTap;
+
+  /// Called on tap with a reader for this tile's origin; see
+  /// [VideoGridTapCallback] for when to call it.
+  final ValueChanged<ValueGetter<VideoTileOrigin?>> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -209,45 +219,51 @@ class SearchVideoTile extends StatelessWidget {
       identifier: SemanticIds.searchVideoTileAt(index),
       button: true,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () => onTap(() => VideoTileOrigin.captureVideo(context, video)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: Stack(
             children: [
-              VideoThumbnailWidget(video: video),
+              VideoTileThumbnailBoundary(
+                key: ValueKey(video.id),
+                child: VideoThumbnailWidget(video: video),
+              ),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.only(
-                    left: 8,
-                    right: 8,
-                    bottom: 6,
-                    top: 24,
-                  ),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [VineTheme.transparent, VineTheme.scrim80],
+                child: VideoTileScrimBoundary(
+                  opacity: VineTheme.scrim80.a,
+                  child: Container(
+                    padding: const EdgeInsets.only(
+                      left: 8,
+                      right: 8,
+                      bottom: 6,
+                      top: 24,
                     ),
-                  ),
-                  child: UserName.fromPubKey(
-                    video.pubkey,
-                    embeddedName: video.authorName,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: VineTheme.primaryText,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 3,
-                          color: VineTheme.scrim50,
-                        ),
-                      ],
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [VineTheme.transparent, VineTheme.scrim80],
+                      ),
+                    ),
+                    child: UserName.fromPubKey(
+                      video.pubkey,
+                      embeddedName: video.authorName,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: VineTheme.primaryText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 3,
+                            color: VineTheme.scrim50,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

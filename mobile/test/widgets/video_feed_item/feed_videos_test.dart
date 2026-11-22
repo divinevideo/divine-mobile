@@ -794,15 +794,25 @@ void main() {
         final video = _makeVideo();
         final cubit = _MockVideoPlaybackStatusCubit()
           ..stub(PlaybackStatus.forbidden, video.id);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
 
         await _pumpFeedVideos(
           tester,
           videos: [video],
           videoPlaybackStatusCubit: cubit,
+          tileTransitionPhase: phase,
         );
         await tester.pump();
 
         expect(find.byType(ModeratedContentOverlay), findsOneWidget);
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(video.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isTrue);
       },
     );
 
@@ -974,6 +984,7 @@ void main() {
           )
           .targets;
       expect(targets.blocksFlightFor(video.id), isTrue);
+      expect(targets.hasActiveSafetyOverlay, isTrue);
       expect(feed.canAutoPlay, isNotNull);
       expect(
         feed.canAutoPlay!(video),
@@ -987,6 +998,7 @@ void main() {
 
       expect(find.byType(ContentWarningBlurOverlay), findsNothing);
       expect(targets.blocksFlightFor(video.id), isFalse);
+      expect(targets.hasActiveSafetyOverlay, isFalse);
       final revealedFeed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );
@@ -996,6 +1008,62 @@ void main() {
         reason: 'View Anyway opens the autoplay gate for this video',
       );
     });
+
+    testWidgets(
+      'does not mark a warned neighbour as the current page safety overlay',
+      (tester) async {
+        final current = _makeVideo(id: 'current-video');
+        final neighbour = _makeVideo(
+          id: 'neighbour-video',
+          warnLabels: ['nsfw'],
+        );
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [current, neighbour],
+          tileTransitionPhase: phase,
+        );
+        await tester.pump();
+
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(neighbour.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isFalse);
+      },
+    );
+
+    testWidgets(
+      'does not mark a moderated neighbour as the current page safety overlay',
+      (tester) async {
+        final current = _makeVideo(id: 'current-video');
+        final neighbour = _makeVideo(id: 'neighbour-video');
+        final cubit = _MockVideoPlaybackStatusCubit()
+          ..stub(PlaybackStatus.forbidden, neighbour.id);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [current, neighbour],
+          videoPlaybackStatusCubit: cubit,
+          tileTransitionPhase: phase,
+        );
+        await tester.pump();
+
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(neighbour.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isFalse);
+      },
+    );
 
     testWidgets('allows autoplay for video without content warning', (
       tester,

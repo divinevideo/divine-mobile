@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 import 'sequenced_image_provider.dart';
@@ -141,6 +142,100 @@ void main() {
 
         await tester.pumpWidget(tile(disableAnimations: true));
         expect(VideoTileOrigin.capture(tileContext, videoId: 'v'), isNull);
+      });
+    });
+
+    group('captureVideo', () {
+      VideoEvent video({
+        List<String> warnLabels = const [],
+        List<String> contentWarningLabels = const [],
+        String? dimensions,
+      }) => VideoEvent(
+        id: 'video1',
+        pubkey: 'a' * 64,
+        createdAt: 1000,
+        content: '',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
+        warnLabels: warnLabels,
+        contentWarningLabels: contentWarningLabels,
+        dimensions: dimensions,
+      );
+
+      Future<BuildContext> pumpTile(WidgetTester tester) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          _Tile(rect: _tileRect, onContext: (c) => tileContext = c),
+        );
+        return tileContext;
+      }
+
+      testWidgets('captures the tile for the video it shows', (tester) async {
+        final tileContext = await pumpTile(tester);
+
+        final origin = VideoTileOrigin.captureVideo(tileContext, video());
+
+        addTearDown(() => origin?.takeImage()?.dispose());
+
+        expect(origin?.videoId, equals('video1'));
+        expect(origin?.rect, equals(_tileRect));
+      });
+
+      testWidgets('returns null for a video marked for a warning', (
+        tester,
+      ) async {
+        final tileContext = await pumpTile(tester);
+
+        expect(
+          VideoTileOrigin.captureVideo(
+            tileContext,
+            video(warnLabels: ['nudity']),
+          ),
+          isNull,
+        );
+      });
+
+      testWidgets('still captures a video whose labels raise no warning', (
+        tester,
+      ) async {
+        final tileContext = await pumpTile(tester);
+
+        final origin = VideoTileOrigin.captureVideo(
+          tileContext,
+          video(contentWarningLabels: ['profanity']),
+        );
+
+        addTearDown(() => origin?.takeImage()?.dispose());
+
+        expect(origin?.videoId, equals('video1'));
+      });
+
+      testWidgets('aims a square video at its letterboxed band', (
+        tester,
+      ) async {
+        final tileContext = await pumpTile(tester);
+
+        final origin = VideoTileOrigin.captureVideo(
+          tileContext,
+          video(dimensions: '480x480'),
+        );
+
+        addTearDown(() => origin?.takeImage()?.dispose());
+
+        expect(origin?.letterboxAspectRatio, equals(1));
+      });
+
+      testWidgets('lets a portrait video cover the screen', (tester) async {
+        final tileContext = await pumpTile(tester);
+
+        final origin = VideoTileOrigin.captureVideo(
+          tileContext,
+          video(dimensions: '1080x1920'),
+        );
+
+        addTearDown(() => origin?.takeImage()?.dispose());
+
+        expect(origin, isNotNull);
+        expect(origin!.letterboxAspectRatio, isNull);
       });
     });
 

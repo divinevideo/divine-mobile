@@ -130,6 +130,7 @@ void main() {
     testWidgets('feed that owns the screen pushes the tapped video route', (
       tester,
     ) async {
+      PooledFullscreenVideoFeedArgs? args;
       final router = GoRouter(
         initialLocation: '/hashtag/funny',
         routes: [
@@ -141,7 +142,10 @@ void main() {
           ),
           GoRoute(
             path: PooledFullscreenVideoFeedScreen.path,
-            builder: (_, _) => const Scaffold(body: Text('fullscreen feed')),
+            builder: (_, state) {
+              args = state.extra! as PooledFullscreenVideoFeedArgs;
+              return const Scaffold(body: Text('fullscreen feed'));
+            },
           ),
         ],
       );
@@ -168,6 +172,8 @@ void main() {
         router.state.uri.toString(),
         equals('/pooled-video-feed?video=video-2'),
       );
+      addTearDown(() => args?.tileOrigin?.takeImage()?.dispose());
+      expect(args?.tileOrigin?.videoId, equals('video-2'));
     });
 
     testWidgets('logs a rejected fullscreen route push instead of leaking it', (

@@ -1,8 +1,6 @@
 // ABOUTME: Badge detail page: badge artwork, accepted holders, and their videos.
 // ABOUTME: Owners can also award, edit, and revoke from this page.
 
-import 'dart:async';
-
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -38,6 +36,7 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -736,31 +735,45 @@ class _BadgeVideoGrid extends ConsumerWidget {
                         ),
                     itemBuilder: (context, index) {
                       final video = videos[index];
-                      return Semantics(
-                        label: context.l10n.profileVideoThumbnailLabel(
-                          index + 1,
-                        ),
-                        button: true,
-                        child: GestureDetector(
-                          onTap: () => unawaited(
-                            PooledFullscreenVideoFeedRouteData(
-                              video: video.id,
-                              $extra: PooledFullscreenVideoFeedArgs(
-                                source: VideoListViewSource(videos),
-                                feedRepository: ref.read(
-                                  feedRepositoryProvider,
-                                ),
-                                initialIndex: index,
-                                initialVideoId: video.id,
-                                trafficSource:
-                                    ViewTrafficSource.discoveryBadges,
-                                sourceDetail: coordinate.value,
-                              ),
-                            ).push<void>(context),
+                      // The item builder's context is the whole grid's; the
+                      // tile origin must be captured from this tile alone.
+                      return Builder(
+                        builder: (tileContext) => Semantics(
+                          label: tileContext.l10n.profileVideoThumbnailLabel(
+                            index + 1,
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: VideoThumbnailWidget(video: video),
+                          button: true,
+                          child: GestureDetector(
+                            onTap: () => runDetached(
+                              PooledFullscreenVideoFeedRouteData(
+                                video: video.id,
+                                $extra: PooledFullscreenVideoFeedArgs(
+                                  source: VideoListViewSource(videos),
+                                  feedRepository: ref.read(
+                                    feedRepositoryProvider,
+                                  ),
+                                  initialIndex: index,
+                                  initialVideoId: video.id,
+                                  tileOrigin: VideoTileOrigin.captureVideo(
+                                    tileContext,
+                                    video,
+                                  ),
+                                  trafficSource:
+                                      ViewTrafficSource.discoveryBadges,
+                                  sourceDetail: coordinate.value,
+                                ),
+                              ).push<void>(context),
+                              'open badge holder video',
+                              logName: 'BadgeDetailScreen',
+                              category: LogCategory.ui,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: VideoTileThumbnailBoundary(
+                                key: ValueKey(video.id),
+                                child: VideoThumbnailWidget(video: video),
+                              ),
+                            ),
                           ),
                         ),
                       );

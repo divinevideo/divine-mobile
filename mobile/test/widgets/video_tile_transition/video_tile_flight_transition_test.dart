@@ -36,8 +36,19 @@ class _Page extends StatelessWidget {
     this.bottomBar = false,
     this.movedOn = false,
     this.safetyOverlay = false,
+    this.overlayActive = false,
+    this.neighbourWarning = false,
     this.warning,
+    this.videoId = 'video1',
   });
+
+  final String videoId;
+
+  /// Whether the page's safety overlay belongs to the feed's current page.
+  final bool overlayActive;
+
+  /// Whether a warned neighbour page, not the current one, is also built.
+  final bool neighbourWarning;
 
   /// Whether the page has moved on from the tile's video to the next, which
   /// covers it, keeping the tile's built one page above, as a feed does.
@@ -109,7 +120,7 @@ class _Page extends StatelessWidget {
       Widget content = const SizedBox.expand();
       if (drawsVideo) content = const ColoredBox(color: _videoColor);
       target = VideoTileTransitionTarget(
-        videoId: 'video1',
+        videoId: videoId,
         aspectRatio: 1,
         coversViewport: false,
         showsVideo: drawsVideo,
@@ -117,17 +128,40 @@ class _Page extends StatelessWidget {
       );
     }
     final warning = this.warning;
-    final Widget video = warning == null
-        ? _Video(target: target, warned: safetyOverlay)
+    Widget video = warning == null
+        ? _Video(
+            videoId: videoId,
+            target: target,
+            warned: safetyOverlay,
+            overlayActive: overlayActive,
+          )
         // Behind a repaint boundary of its own, as each video in a feed is,
         // so the warning arriving repaints nothing above the page.
         : RepaintBoundary(
             child: ValueListenableBuilder<bool>(
               valueListenable: warning,
-              builder: (context, warned, _) =>
-                  _Video(target: target, warned: warned),
+              builder: (context, warned, _) => _Video(
+                videoId: videoId,
+                target: target,
+                warned: warned,
+                overlayActive: overlayActive,
+              ),
             ),
           );
+    if (neighbourWarning) {
+      video = Stack(
+        fit: StackFit.expand,
+        children: [
+          video,
+          const Offstage(
+            child: VideoTileTransitionTarget.safetyOverlay(
+              videoId: 'neighbour',
+              child: SizedBox.expand(),
+            ),
+          ),
+        ],
+      );
+    }
     if (!bottomBar) return video;
     return Column(
       children: [
@@ -139,12 +173,19 @@ class _Page extends StatelessWidget {
 }
 
 /// The page's black backdrop with its video [target], under a black safety
-/// overlay when [warned].
+/// overlay when [warned], marked as the current page's when [overlayActive].
 class _Video extends StatelessWidget {
-  const _Video({required this.target, required this.warned});
+  const _Video({
+    required this.videoId,
+    required this.target,
+    required this.warned,
+    required this.overlayActive,
+  });
 
+  final String videoId;
   final Widget? target;
   final bool warned;
+  final bool overlayActive;
 
   @override
   Widget build(BuildContext context) {
@@ -156,9 +197,10 @@ class _Video extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 ?target,
-                const VideoTileTransitionTarget.safetyOverlay(
-                  videoId: 'video1',
-                  child: ColoredBox(
+                VideoTileTransitionTarget.safetyOverlay(
+                  videoId: videoId,
+                  isActive: overlayActive,
+                  child: const ColoredBox(
                     key: ValueKey('warning'),
                     color: Color(0xFF000000),
                   ),
@@ -180,11 +222,14 @@ class _Harness extends StatelessWidget {
     this.origin,
     this.pageShowsVideo = true,
     this.pageDrawsVideo = false,
+    this.pageVideoId = 'video1',
     this.popGestureInProgress,
     this.pageRoundedCover = false,
     this.pageBottomBar = false,
     this.pageMovedOn = false,
     this.safetyOverlay = false,
+    this.pageOverlayActive = false,
+    this.pageNeighbourWarning = false,
     this.warning,
     this.disableAnimations = false,
     this.tileAlignment = Alignment.center,
@@ -203,11 +248,14 @@ class _Harness extends StatelessWidget {
   final VideoTileOrigin? origin;
   final bool pageShowsVideo;
   final bool pageDrawsVideo;
+  final String pageVideoId;
   final ValueListenable<bool>? popGestureInProgress;
   final bool pageRoundedCover;
   final bool pageBottomBar;
   final bool pageMovedOn;
   final bool safetyOverlay;
+  final bool pageOverlayActive;
+  final bool pageNeighbourWarning;
   final ValueListenable<bool>? warning;
   final bool disableAnimations;
   final Alignment tileAlignment;
@@ -298,6 +346,7 @@ class _Harness extends StatelessWidget {
             ?placedTile,
             if (animation != null && origin != null)
               Positioned.fill(
+                key: const ValueKey('flight'),
                 child: VideoTileFlightTransition(
                   animation: animation,
                   origin: origin,
@@ -305,10 +354,13 @@ class _Harness extends StatelessWidget {
                   child: _Page(
                     showsVideo: pageShowsVideo,
                     drawsVideo: pageDrawsVideo,
+                    videoId: pageVideoId,
                     roundedCover: pageRoundedCover,
                     bottomBar: pageBottomBar,
                     movedOn: pageMovedOn,
                     safetyOverlay: safetyOverlay,
+                    overlayActive: pageOverlayActive,
+                    neighbourWarning: pageNeighbourWarning,
                     warning: warning,
                   ),
                 ),
@@ -454,6 +506,95 @@ void main() {
     }
 
     group('opening', () {
+      testWidgets('keeps the warning over an opening video until reveal', (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester);
+        final warning = ValueNotifier(true);
+        addTearDown(warning.dispose);
+        controller.forward();
+
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageDrawsVideo: true,
+            warning: warning,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 140));
+
+        expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+        expect(_picture, findsNothing);
+
+        await tester.pumpAndSettle();
+        expect(await _shownAt(tester, _landing.center), (0, 0, 0, 0xFF));
+
+        warning.value = false;
+        await tester.pump();
+        expect(find.byKey(const ValueKey('warning')), findsNothing);
+        expect(await _shownAt(tester, _landing.center), (0xFF, 0, 0, 0xFF));
+      });
+
+      testWidgets(
+        'keeps the warning visible if the initial video was replaced',
+        (
+          tester,
+        ) async {
+          final origin = await pumpTile(tester);
+          controller.forward();
+
+          await tester.pumpWidget(
+            _Harness(
+              image: image,
+              animation: controller,
+              origin: origin,
+              pageDrawsVideo: true,
+              pageVideoId: 'replacement-video',
+              safetyOverlay: true,
+              pageOverlayActive: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 140));
+
+          expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+          expect(_picture, findsNothing);
+          await tester.pumpAndSettle();
+          expect(await _shownAt(tester, _landing.center), (0, 0, 0, 0xFF));
+        },
+      );
+
+      testWidgets(
+        'flies past a warned neighbour that is not the current page',
+        (
+          tester,
+        ) async {
+          final origin = await pumpTile(tester);
+          controller.forward();
+
+          await tester.pumpWidget(
+            _Harness(
+              image: image,
+              animation: controller,
+              origin: origin,
+              pageNeighbourWarning: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 140));
+
+          final targets = tester
+              .widget<VideoTileTransitionScope>(
+                find.byType(VideoTileTransitionScope),
+              )
+              .targets;
+          expect(targets.blocksFlightFor('neighbour'), isTrue);
+          expect(targets.hasActiveSafetyOverlay, isFalse);
+          expect(_picture, findsOneWidget);
+          await tester.pumpAndSettle();
+        },
+      );
+
       testWidgets('starts with the picture over the tile, page hidden', (
         tester,
       ) async {
@@ -1288,26 +1429,36 @@ void main() {
         tester,
       ) async {
         final origin = await pumpTile(tester);
-        controller.value = 1;
-        await tester.pumpWidget(
-          _Harness(
-            image: image,
-            showTile: false,
-            animation: controller,
-            origin: origin,
-          ),
+        controller.forward();
+        Widget harness({required bool showTile}) => _Harness(
+          image: image,
+          showTile: showTile,
+          animation: controller,
+          origin: origin,
+          pageDrawsVideo: true,
         );
-        expect(origin.rect, isNull);
+        await tester.pumpWidget(harness(showTile: true));
+        await tester.pumpAndSettle();
+        expect(_pageHasLanded(tester), isTrue);
 
+        final snapshot = find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint &&
+              widget.painter is VideoTilePageSnapshotPainter,
+        );
         controller.reverse();
         await tester.pump();
-        // Nothing to read from a tile that is gone, so no picture flies.
+        expect(snapshot, findsOneWidget);
+
+        await tester.pumpWidget(harness(showTile: false));
+        expect(origin.rect, isNull);
         expect(_picture, findsNothing);
+        expect(snapshot, findsNothing);
 
         await tester.pump(VideoTileFlightTransition.closeDuration);
         expect(_pageOpacity(tester), equals(0));
         await tester.pumpAndSettle();
-      });
+      }, variant: _readsFrames);
     });
 
     group('closing from the player', () {

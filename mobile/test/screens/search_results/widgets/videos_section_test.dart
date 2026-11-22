@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -14,6 +17,7 @@ import 'package:openvine/screens/search_results/widgets/search_section_empty_sta
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/videos_section.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 import '../../../helpers/go_router.dart';
 
@@ -59,6 +63,112 @@ void main() {
         ),
       );
     }
+
+    group('opens a search result', () {
+      for (final showAll in [false, true]) {
+        for (final reducedMotion in [false, true]) {
+          testWidgets(
+            'passes the tapped tile origin with showAll=$showAll and '
+            'reducedMotion=$reducedMotion',
+            (tester) async {
+              tester.platformDispatcher.accessibilityFeaturesTestValue =
+                  FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+              addTearDown(
+                tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+              );
+              when(() => mockBloc.state).thenReturn(
+                VideoSearchState(
+                  status: VideoSearchStatus.success,
+                  query: 'test',
+                  videos: [testVideo],
+                ),
+              );
+              PooledFullscreenVideoFeedArgs? args;
+              final router = GoRouter(
+                routes: [
+                  GoRoute(
+                    path: '/',
+                    builder: (context, state) => Scaffold(
+                      body: BlocProvider<VideoSearchBloc>.value(
+                        value: mockBloc,
+                        child: CustomScrollView(
+                          slivers: [VideosSection(showAll: showAll)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  GoRoute(
+                    path: PooledFullscreenVideoFeedScreen.path,
+                    builder: (context, state) {
+                      args = state.extra! as PooledFullscreenVideoFeedArgs;
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
+              );
+              addTearDown(router.dispose);
+              await tester.pumpWidget(
+                ProviderScope(
+                  child: MaterialApp.router(
+                    routerConfig: router,
+                    localizationsDelegates: appLocalizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                  ),
+                ),
+              );
+              await tester.tap(
+                find.bySemanticsIdentifier(SemanticIds.searchVideoTileAt(0)),
+              );
+              await tester.pumpAndSettle();
+
+              expect(args?.initialVideoId, testVideo.id);
+              expect(
+                args?.tileOrigin?.videoId,
+                reducedMotion ? null : testVideo.id,
+              );
+            },
+          );
+        }
+      }
+
+      testWidgets('drops a captured tile once new results reuse its slot', (
+        tester,
+      ) async {
+        final second = testVideo.copyWith(id: 'v2');
+        final results = StreamController<VideoSearchState>();
+        addTearDown(results.close);
+        whenListen(
+          mockBloc,
+          results.stream,
+          initialState: VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'test',
+            videos: [testVideo, second],
+          ),
+        );
+        await tester.pumpWidget(buildSubject(showAll: true));
+        await tester.pump();
+
+        final firstTile = find.byType(SearchVideoTile).first;
+        final origin = VideoTileOrigin.captureVideo(
+          tester.element(firstTile),
+          testVideo,
+        );
+        addTearDown(() => origin?.takeImage()?.dispose());
+        expect(origin?.rect, isNotNull);
+
+        results.add(
+          VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'test',
+            videos: [second, testVideo],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(origin!.rect, isNull);
+      });
+    });
 
     group('showAll: false (All tab preview)', () {
       testWidgets('hides entirely when success with empty results', (

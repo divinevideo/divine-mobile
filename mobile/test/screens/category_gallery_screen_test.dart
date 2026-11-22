@@ -50,7 +50,7 @@ void main() {
         onBack: onBack ?? () {},
         onRetry: onRetry ?? () {},
         onSortChanged: onSortChanged ?? (_) {},
-        onVideoTap: (videos, index) {},
+        onVideoTap: (videos, index, captureOrigin) {},
         onLoadMore: () async {},
         onRefresh: () async {},
         galleryOverride: galleryOverride,
@@ -895,6 +895,7 @@ void main() {
       );
       expect(args.initialVideoId, equals('allowed-id'));
       expect(args.initialIndex, equals(1));
+      expect(args.tileOrigin?.videoId, args.initialVideoId);
       expect(
         args.contextTitle,
         equals(lookupAppLocalizations(const Locale('en')).categoryAnimals),

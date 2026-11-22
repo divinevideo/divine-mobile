@@ -23,7 +23,6 @@ import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/user_name.dart';
-import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
@@ -40,8 +39,9 @@ const double _gridCacheExtentScreens = 2;
 ///
 /// [captureOrigin] reads the tapped tile, for a player that grows out of it.
 /// Call it during the callback, before navigating, and only to open such a
-/// player: reading the tile copies its picture. It returns `null` in
-/// selection mode, where a tap toggles the tile instead.
+/// player: reading the tile copies its picture. It returns `null` when the
+/// tile should not grow, as [VideoTileOrigin.captureVideo] decides, and in
+/// [ComposableVideoGrid]'s selection mode, where a tap toggles the tile.
 typedef VideoGridTapCallback = void Function(
   List<VideoEvent> videos,
   int index,
@@ -446,14 +446,10 @@ class _VideoItem extends StatelessWidget {
       onTap: () => onVideoTap(displayedVideos, index, () {
         // In selection mode a tap toggles the tile rather than opening it.
         if (isSelected != null) return null;
-        return VideoTileOrigin.capture(
+        return VideoTileOrigin.captureVideo(
           context,
-          videoId: video.id,
+          video,
           borderRadius: borderRadius,
-          letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
-            video.width,
-            video.height,
-          ),
         );
       }),
       onOwnerLongPress: onOwnerLongPress,
@@ -476,6 +472,7 @@ class _VideoItem extends StatelessWidget {
               )
             else
               VideoTileThumbnailBoundary(
+                key: ValueKey(video.id),
                 child: _VideoThumbnail(video: video),
               ),
             Positioned(

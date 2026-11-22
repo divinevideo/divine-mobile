@@ -35,6 +35,7 @@ import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/classic_vines_tab.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -234,6 +235,12 @@ void main() {
               )
               .first,
         );
+        final secondTileRect = tester.getRect(
+          find.ancestor(
+            of: secondTile,
+            matching: find.byType(VideoTileThumbnailBoundary),
+          ),
+        );
         await tester.tap(secondTile);
         await tester.pump();
 
@@ -253,6 +260,8 @@ void main() {
           _secondClassicId,
         );
         expect(args.initialVideoId, _secondClassicId);
+        expect(args.tileOrigin?.videoId, _secondClassicId);
+        expect(args.tileOrigin?.rect, secondTileRect);
         expect(
           args.contextTitle,
           lookupAppLocalizations(const Locale('en')).exploreTabClassics,

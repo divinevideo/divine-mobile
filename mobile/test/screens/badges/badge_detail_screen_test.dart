@@ -23,12 +23,15 @@ import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
@@ -71,10 +74,20 @@ void main() {
     Widget buildSubject({
       VideosRepository? videosRepository,
       List<Override> overrides = const [],
+      ValueChanged<PooledFullscreenVideoFeedArgs>? onFullscreenOpened,
     }) {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
+          GoRoute(
+            path: PooledFullscreenVideoFeedScreen.path,
+            builder: (_, state) {
+              onFullscreenOpened?.call(
+                state.extra! as PooledFullscreenVideoFeedArgs,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
           GoRoute(
             path: OtherProfileScreen.pathWithNpub,
             builder: (_, state) => Scaffold(
@@ -722,6 +735,58 @@ void main() {
       );
     });
 
+    testWidgets('grows an opened holder video out of the tapped tile', (
+      tester,
+    ) async {
+      final videosRepository = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      final videos = [_video(), _video('b')];
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+      when(
+        () => videosRepository.createBadgeVideoPager(any()),
+      ).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => videos);
+      when(() => pager.hasMore).thenReturn(false);
+      PooledFullscreenVideoFeedArgs? args;
+      Rect? originRect;
+
+      await tester.pumpWidget(
+        buildSubject(
+          videosRepository: videosRepository,
+          onFullscreenOpened: (opened) {
+            args = opened;
+            originRect = opened.tileOrigin?.rect;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      final secondTile = find.bySemanticsLabel(
+        l10n.profileVideoThumbnailLabel(2),
+      );
+      await scrollUntilTappable(
+        tester,
+        secondTile,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final secondThumbnail = tester.getRect(
+        find.byType(VideoTileThumbnailBoundary).at(1),
+      );
+
+      await tester.tap(secondTile);
+      await tester.pumpAndSettle();
+      addTearDown(() => args?.tileOrigin?.takeImage()?.dispose());
+
+      expect(args?.initialVideoId, videos[1].id);
+      expect(args?.tileOrigin?.videoId, videos[1].id);
+      expect(originRect, secondThumbnail);
+    });
+
     testWidgets('shows inline retry feedback only for new page failures', (
       tester,
     ) async {
@@ -1166,8 +1231,8 @@ Event _event({required int kind}) {
 
 String _pubkey(int seed) => (seed + 100).toRadixString(16).padLeft(64, '0');
 
-VideoEvent _video() => VideoEvent(
-  id: 'a'.padLeft(64, '0'),
+VideoEvent _video([String id = 'a']) => VideoEvent(
+  id: id.padLeft(64, '0'),
   pubkey: _pubkey(3),
   createdAt: 1000,
   content: '',

@@ -418,6 +418,87 @@ void main() {
       expect(tappedOrigin, isNull);
     });
 
+    testWidgets('drops a captured tile when the grid reuses its slot', (
+      tester,
+    ) async {
+      final videos = ValueNotifier(testVideos.take(2).toList());
+      addTearDown(videos.dispose);
+      VideoTileOrigin? origin;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ValueListenableBuilder(
+                valueListenable: videos,
+                builder: (context, current, _) => ComposableVideoGrid(
+                  videos: current,
+                  onVideoTap: (_, _, captureOrigin) => origin = captureOrigin(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final firstTile = find.byType(VideoTileThumbnailBoundary).first;
+      await tester.tap(firstTile);
+      expect(origin?.rect, tester.getRect(firstTile));
+      addTearDown(() => origin?.takeImage()?.dispose());
+
+      videos.value = videos.value.reversed.toList();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VideoTileThumbnailBoundary), findsNWidgets(2));
+      expect(origin!.rect, isNull);
+    });
+
+    testWidgets('opens a warned tile without enlarging its thumbnail', (
+      tester,
+    ) async {
+      final videos = [
+        testVideos[0].copyWith(contentWarningLabels: ['profanity']),
+        testVideos[1].copyWith(
+          contentWarningLabels: ['profanity'],
+          warnLabels: ['profanity'],
+        ),
+      ];
+      final tappedOrigins = <String, VideoTileOrigin?>{};
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ComposableVideoGrid(
+                videos: videos,
+                onVideoTap: (videos, index, captureOrigin) {
+                  tappedOrigins[videos[index].id] = captureOrigin();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      final thumbnails = find.byType(VideoTileThumbnailBoundary);
+      expect(thumbnails, findsNWidgets(2));
+      await tester.tap(thumbnails.at(0));
+      await tester.tap(thumbnails.at(1));
+
+      expect(tappedOrigins, containsPair(videos[0].id, isA<VideoTileOrigin>()));
+      expect(tappedOrigins, containsPair(videos[1].id, isNull));
+      tappedOrigins[videos[0].id]?.takeImage()?.dispose();
+    });
+
     testWidgets('calls onVideoTap with correct params when tile tapped', (
       tester,
     ) async {

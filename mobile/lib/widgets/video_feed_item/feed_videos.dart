@@ -1326,6 +1326,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
           _OverlayUnavailableMode():
         return VideoTileTransitionTarget.safetyOverlay(
           videoId: video.id,
+          isActive: widget.isActive,
           child: ModeratedContentOverlay(
             status: playbackStatus,
             onSkip: _skipToNextVideo,
@@ -1338,6 +1339,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
       case _OverlayContentWarningMode(:final labels):
         return VideoTileTransitionTarget.safetyOverlay(
           videoId: video.id,
+          isActive: widget.isActive,
           child: ContentWarningBlurOverlay(
             // Display uses the merged (creator + community) labels so the blur
             // names every warning. Hide-similar must persist ONLY the

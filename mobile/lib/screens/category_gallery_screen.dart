@@ -97,7 +97,7 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                 const CategoryVideosLoadMore(),
               );
             },
-            onVideoTap: (videos, index) {
+            onVideoTap: (videos, index, captureOrigin) {
               // The live first page can remove a cached tile. Do not open a
               // fullscreen session that its pending refresh could swap out.
               if (_bloc.state.isRefreshingVideos) return;
@@ -119,6 +119,7 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                     ),
                     initialIndex: index,
                     initialVideoId: videos[index].id,
+                    tileOrigin: captureOrigin(),
                     contextTitle: localizedCategoryName(
                       context.l10n,
                       widget.category.name,
@@ -156,7 +157,7 @@ class CategoryGalleryView extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRetry;
   final ValueChanged<String> onSortChanged;
-  final void Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
   final Future<void> Function() onLoadMore;
   final Future<void> Function() onRefresh;
   final Widget? galleryOverride;
@@ -219,7 +220,7 @@ class _CategoryGalleryBody extends StatelessWidget {
 
   final CategoriesState state;
   final VoidCallback onRetry;
-  final void Function(List<VideoEvent>, int) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
   final Future<void> Function() onLoadMore;
   final Future<void> Function() onRefresh;
   final Widget? galleryOverride;
@@ -264,7 +265,7 @@ class _CategoryGalleryBody extends StatelessWidget {
         return galleryOverride ??
             ComposableVideoGrid(
               videos: state.videos,
-              onVideoTap: (videos, index, _) => onVideoTap(videos, index),
+              onVideoTap: onVideoTap,
               useMasonryLayout: true,
               // Edge to edge: the gallery's rounded corners frame the grid.
               padding: const EdgeInsets.only(bottom: 12),

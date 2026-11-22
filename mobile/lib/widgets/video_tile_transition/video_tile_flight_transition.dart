@@ -32,9 +32,9 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// [VideoTileOrigin.letterboxAspectRatio]. The picture is drawn covering the
 /// moving rect, which reproduces the tile's crop at one end and the player's
 /// at the other: the crop's alignment moves from the tile's to the player's
-/// centered one with the rect. When the tile is no longer laid out the
-/// picture flies to the middle of the screen instead; a tile scrolled out of
-/// view but still built keeps its place.
+/// centered one with the rect. When the tile is no longer laid out nothing
+/// flies, and the page only fades; a tile scrolled out of view but still
+/// built keeps its place.
 ///
 /// The picture starts as the tile's own decode and switches to
 /// [VideoTileOrigin.playerSizeImage] whenever that has loaded, usually while
@@ -148,7 +148,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   bool get _hasSafetyOverlay =>
       _targets.blocksFlightFor(_videoId) ||
-      _targets.blocksFlightFor(widget.origin.videoId);
+      _targets.blocksFlightFor(widget.origin.videoId) ||
+      _targets.hasActiveSafetyOverlay;
 
   ImageStream? _playerSizeStream;
   ImageInfo? _playerSize;
@@ -253,7 +254,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     // Preserve the live warning rather than copying uncomposited pixels.
     // Keep that choice when an interactive drag becomes a normal pop.
     _closingFlightBlocked |= _hasSafetyOverlay;
-    if (_closingFlightBlocked) return;
+    if (_closingFlightBlocked || widget.origin.rect == null) return;
     _picture?.dispose();
     _picture = widget.origin.readImage();
     if (!wasLanded || !_framesReadable) return;
@@ -264,10 +265,11 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     );
   }
 
-  /// A safety overlay came or went in the page, which this widget only sees
-  /// when it rebuilds, and a drag held still does not rebuild it. The page
-  /// is building below it when this is called, so what flies is hidden when
-  /// this frame is painted, and this widget looks again once it is done.
+  /// A safety overlay came, went, or became or stopped being the current
+  /// page's, which this widget only sees when it rebuilds, and a drag held
+  /// still does not rebuild it. The page is building below it when this is
+  /// called, so what flies is hidden when this frame is painted, and this
+  /// widget looks again once it is done.
   void _onSafetyOverlaysChanged() {
     _gate.reconsider();
     if (_safetyCheckScheduled) return;
@@ -397,15 +399,10 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
       builder: (context, page) {
         final progress = _dragged ? widget.animation.value : _motion.value;
         final screen = Offset.zero & MediaQuery.sizeOf(context);
-        final from =
-            widget.origin.rect ??
-            Rect.fromCenter(
-              center: screen.center,
-              width: screen.width / 3,
-              height: screen.height / 3,
-            );
+        final originRect = widget.origin.rect;
         final landing = _landing(screen);
         final media = landing.media.outerRect;
+        final from = originRect ?? media;
         final rect = Rect.lerp(from, media, progress)!;
         final borderRadius = BorderRadius.lerp(
           widget.origin.borderRadius,
@@ -430,6 +427,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         // A drag back starts from the landed page, before the animation
         // reports it is moving.
         final flying =
+            originRect != null &&
             !_closingFlightBlocked &&
             !_hasSafetyOverlay &&
             (picture != null || frame != null) &&

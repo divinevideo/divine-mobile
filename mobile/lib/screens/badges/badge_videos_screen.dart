@@ -1,7 +1,5 @@
 // ABOUTME: Paginated videos by every currently accepted holder of one badge.
 
-import 'dart:async';
-
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -160,7 +158,7 @@ class BadgeVideosView extends ConsumerWidget {
             emptyBuilder: () => Center(
               child: Text(context.l10n.exploreNoVideosAvailable),
             ),
-            onVideoTap: (videos, index, _) => unawaited(
+            onVideoTap: (videos, index, captureOrigin) => runDetached(
               PooledFullscreenVideoFeedRouteData(
                 video: videos[index].id,
                 $extra: PooledFullscreenVideoFeedArgs(
@@ -168,10 +166,14 @@ class BadgeVideosView extends ConsumerWidget {
                   feedRepository: ref.read(feedRepositoryProvider),
                   initialIndex: index,
                   initialVideoId: videos[index].id,
+                  tileOrigin: captureOrigin(),
                   trafficSource: ViewTrafficSource.discoveryBadges,
                   sourceDetail: coordinate.value,
                 ),
               ).push<void>(context),
+              'open badge video',
+              logName: 'BadgeVideosScreen',
+              category: LogCategory.ui,
             ),
           ),
         },

@@ -58,18 +58,22 @@ class VideoTileTransitionTarget extends StatefulWidget {
     required this.child,
     this.showsVideo = false,
     super.key,
-  }) : blocksFlight = false;
+  }) : blocksFlight = false,
+       isActiveSafetyOverlay = false;
 
   /// Marks a safety overlay that must stay with the live page. It does not
-  /// provide landing geometry or a snapshot.
+  /// provide landing geometry or a snapshot. Set [isActive] for the feed's
+  /// current page, which may differ from the tapped video after a refresh.
   const VideoTileTransitionTarget.safetyOverlay({
     required this.videoId,
     required this.child,
+    bool isActive = false,
     super.key,
   }) : aspectRatio = null,
        coversViewport = false,
        showsVideo = false,
-       blocksFlight = true;
+       blocksFlight = true,
+       isActiveSafetyOverlay = isActive;
 
   /// The video the page shows.
   final String videoId;
@@ -90,6 +94,9 @@ class VideoTileTransitionTarget extends StatefulWidget {
 
   /// Whether the live page must be used instead of a media image.
   final bool blocksFlight;
+
+  /// Whether this safety overlay belongs to the current feed page.
+  final bool isActiveSafetyOverlay;
 
   @override
   State<VideoTileTransitionTarget> createState() =>
@@ -113,7 +120,8 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
   @override
   void didUpdateWidget(VideoTileTransitionTarget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.blocksFlight != widget.blocksFlight) {
+    if (oldWidget.blocksFlight != widget.blocksFlight ||
+        oldWidget.isActiveSafetyOverlay != widget.isActiveSafetyOverlay) {
       _targets?.onSafetyOverlaysChanged?.call();
     }
     if (oldWidget.videoId == widget.videoId) return;
@@ -207,9 +215,9 @@ class VideoTileTransitionTargets {
   /// Creates an empty set of targets.
   VideoTileTransitionTargets({this.onSafetyOverlaysChanged});
 
-  /// Called when a safety overlay comes or goes. That happens while the
-  /// page below is built or torn down, so a listener above it must not
-  /// rebuild from the call itself.
+  /// Called when a safety overlay comes or goes, or becomes or stops being
+  /// the current page's. That happens while the page below is built or torn
+  /// down, so a listener above it must not rebuild from the call itself.
   final VoidCallback? onSafetyOverlaysChanged;
 
   // More than one target can show a video at once: the feed stacks a loading
@@ -222,6 +230,11 @@ class VideoTileTransitionTargets {
   /// Whether the video is covered by a safety overlay.
   bool blocksFlightFor(String videoId) =>
       _targets[videoId]?.any((target) => target.widget.blocksFlight) ?? false;
+
+  /// Whether the current feed page has a safety overlay.
+  bool get hasActiveSafetyOverlay => _targets.values.any(
+    (targets) => targets.any((target) => target.widget.isActiveSafetyOverlay),
+  );
 
   /// Where the page shows [videoId], in [ancestor]'s coordinates, or `null`
   /// when it does not show it yet.

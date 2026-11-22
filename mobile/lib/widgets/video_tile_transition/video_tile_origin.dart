@@ -6,12 +6,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:models/models.dart';
+import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Marks the thumbnail a fullscreen player grows out of.
 ///
 /// [VideoTileOrigin.capture] looks for this widget under the tapped tile, and
-/// takes the tile's image and bounds from it.
+/// takes the tile's image and bounds from it. Key by video ID in a live grid
+/// so replacing a tile detaches its old capture.
 class VideoTileThumbnailBoundary extends StatelessWidget {
   /// Wraps [child], the tile's thumbnail.
   const VideoTileThumbnailBoundary({required this.child, super.key});
@@ -65,6 +68,30 @@ class VideoTileOrigin {
        alignment = image == null
            ? Alignment.center
            : image.alignment.resolve(image.textDirection);
+
+  /// Captures a laid-out video tile using the player's fit for [video], or
+  /// `null` in the cases [capture] lists.
+  ///
+  /// A video already marked for a warning uses the plain page transition so
+  /// its thumbnail does not grow while the player is loading the warning.
+  static VideoTileOrigin? captureVideo(
+    BuildContext tileContext,
+    VideoEvent video, {
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(4),
+    ),
+  }) {
+    if (video.shouldShowWarning) return null;
+    return capture(
+      tileContext,
+      videoId: video.id,
+      borderRadius: borderRadius,
+      letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
+        video.width,
+        video.height,
+      ),
+    );
+  }
 
   /// The origin of the tile under [tileContext] showing [videoId], or `null`
   /// when the tile holds no laid-out [VideoTileThumbnailBoundary], or when the
