@@ -5,13 +5,15 @@ description: |
   list, Kind 10002 relay list, etc.) in client apps. Use when: (1) Following someone wipes the user's
   entire follow list, (2) Updating profile metadata loses existing fields, (3) Fresh browser session
   or mobile login causes data loss on first action, (4) Replaceable event mutation uses stale or null
-  cached state. Root cause: Nostr replaceable events are full-replace (no partial update), so
-  publishing based on stale/unloaded cache overwrites the canonical version. Applies to any Nostr
-  client using React, Flutter, or similar reactive frameworks where query state may not be loaded
-  when a mutation fires.
+  cached state, (5) A republish is built from a relay read that did not finish (in divine-mobile:
+  `queryEvents`, or `queryEventsDetailed` without `requireAllRelaysSettled`). Root cause: Nostr
+  replaceable events are full-replace (no partial update), so publishing based on stale/unloaded
+  cache, or on a read some relay never answered, overwrites the canonical version. Applies to any
+  Nostr client using React, Flutter, or similar reactive frameworks where query state may not be
+  loaded when a mutation fires.
 author: Claude Code
-version: 1.1.0
-date: 2026-03-23
+version: 1.2.0
+date: 2026-11-22
 ---
 
 # Nostr Replaceable Event Mutation Overwrite
@@ -82,7 +84,9 @@ mutationFn: async ({ targetPubkey, currentContactList }) => {
   }
 
   if (!bestContactList) {
-    throw new Error('Could not load existing data. Please try again.');
+    // Only safe once the read is known to have finished (section 3): then
+    // no list exists yet, and this publish creates the first one.
+    bestContactList = { tags: [], content: '' };
   }
 
   // Now mutate bestContactList...
@@ -108,13 +112,57 @@ to any copy that can name a `created_at`.
 Worked example, including the persistence migration that gives the local cache a
 timestamp to be ordered by: divinevideo/divine-mobile#8266.
 
-### 3. Refuse to Publish on Total Failure
+### 3. Refuse to Publish When the Read Did Not Finish
 
-If neither the relay fetch nor the UI cache provides data, throw an error instead of
-publishing an empty/minimal replaceable event. A user-friendly error message is always
-better than silent data loss.
+A read for the current version has three outcomes, not two:
 
-### 4. Apply to Both Directions
+- **found**: replace the newest copy, ordered as in section 2.
+- **absent**: every relay asked answered, and none holds a list. Publishing the first one
+  is safe.
+- **failed**: the read threw, or a relay timed out, refused the request, dropped the
+  connection, or was never asked. Do not publish, even when the read returned an event or
+  a cached copy exists: a partial answer can carry an older version than the relay that
+  stayed silent. Keep the edit local and retry later. A user-facing error is always better
+  than silent data loss.
+
+Many clients do not throw on an unfinished read. They return whatever arrived, so a
+`catch` block never sees the failure. Find out how your client reports an unfinished read
+before trusting one. Section 4 covers divine-mobile.
+
+### 4. In divine-mobile, Ask NostrClient Whether the Read Finished
+
+`NostrClient` never throws on a timeout or a relay `CLOSED`. Read the base of a
+replacement like this:
+
+```dart
+final read = await nostrClient.queryEventsDetailed(
+  [Filter(authors: [pubkey], kinds: const [EventKind.contactList])],
+  requireAllRelaysSettled: true,
+);
+if (read.timedOut || read.noRelays) {
+  // failed: a relay that stayed silent, refused, or was never asked may
+  // hold a newer list than anything this read returned. Do not publish.
+  return false;
+}
+// found or absent: the relays that were asked all answered.
+final newest = pickNewest(read.events); // created_at, then lowest id
+```
+
+- `queryEvents` returns only the events and drops both flags. Never use it to read a base
+  you are about to replace.
+- Without `requireAllRelaysSettled: true`, `timedOut` is set only when the deadline fires.
+  A relay that sends `CLOSED`, drops its socket, or stays silent past the one-second settle
+  window comes back as `timedOut: false` with whatever the other relays sent.
+- `readEvents` returns a `QueryResult` instead. Act only when `isComplete` is true, and for
+  a list read also when `possiblyCapped` is false.
+- A settled read waits for a silent relay until its timeout. A shorter timeout errs toward
+  not publishing, which is the safe direction: the DM inbox read uses 3 seconds.
+- Worked examples: `_refreshCurrentUserContactList` in `follow_repository.dart`,
+  `_readAuthoritative` in `profile_pins_repository.dart`, and `_publishForPubkey` in
+  `relay_list_repository.dart`. divinevideo/divine-mobile#8258 lists every fixed site with
+  the tests that fail if its refusal is removed.
+
+### 5. Apply to Both Directions
 
 Apply this pattern to ALL mutation directions (follow AND unfollow, add AND remove relay,
 update AND clear profile fields). The unfollow path is just as dangerous as follow.
@@ -135,36 +183,52 @@ Cross-device removal — the case a tag-count heuristic passes and still corrupt
 7. Follow one new account there, then read the relay's kind 3 back and confirm
    the two removed accounts did not reappear in its `p` tags
 
+Partial read — the case a check that only catches thrown errors passes and still corrupts:
+
+8. Point the client at two relays and make one of them refuse the read (`CLOSED`) or
+   never answer it. In divine-mobile, a unit test does this with a scripted relay; see the
+   tests listed on divinevideo/divine-mobile#8258
+9. Follow someone and confirm that nothing is published until both relays answer
+
 ## Example
 
+A follow mutation that follows sections 1-3. It assumes a `nostr.query` that rejects when a
+relay does not finish; if yours resolves with a partial list instead, check its completion
+flag where the comment says so.
+
 ```typescript
-// Real-world fix from divine-web useFollowUser hook
+const newest = (events) =>
+  events
+    .filter(Boolean)
+    .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? -1 : 1))[0];
+
 export function useFollowUser() {
   const { nostr } = useNostr();
 
   return useMutation({
     mutationFn: async ({ targetPubkey, currentContactList }) => {
-      // Step 1: Fetch fresh from relay
-      let bestContactList = currentContactList;
+      // Step 1: read the relays' current list. A read that did not finish
+      // is a failure, never an empty answer.
+      let relayList;
       try {
-        const events = await nostr.query([
-          { kinds: [3], authors: [user.pubkey], limit: 1 }
-        ], { signal: AbortSignal.timeout(5000) });
-        const relayList = events.sort((a, b) => b.created_at - a.created_at)[0];
-        if (relayList) {
-          const relayFollows = relayList.tags.filter(t => t[0] === 'p').length;
-          const cachedFollows = currentContactList?.tags.filter(t => t[0] === 'p').length ?? 0;
-          if (relayFollows >= cachedFollows) bestContactList = relayList;
-        }
-      } catch { /* fall back to cached */ }
+        const events = await nostr.query(
+          [{ kinds: [3], authors: [user.pubkey], limit: 1 }],
+          { signal: AbortSignal.timeout(5000) },
+        );
+        // A client that resolves on a partial answer: check completion here.
+        relayList = newest(events);
+      } catch {
+        throw new Error('Could not confirm your follow list. Please try again.');
+      }
 
-      // Step 2: Refuse if no data
-      if (!bestContactList) throw new Error('Could not load follow list');
+      // Step 2: newest wins per NIP-01, never the longer list. With neither
+      // copy, the finished read proved there is no list yet.
+      const base = newest([relayList, currentContactList]) ?? { tags: [], content: '' };
 
-      // Step 3: Mutate safely
-      const tags = [...bestContactList.tags, ['p', targetPubkey]];
-      return publishEvent({ kind: 3, tags, content: bestContactList.content });
-    }
+      // Step 3: mutate the newest copy and publish it.
+      const tags = [...base.tags, ['p', targetPubkey]];
+      return publishEvent({ kind: 3, tags, content: base.content });
+    },
   });
 }
 ```
@@ -177,6 +241,8 @@ export function useFollowUser() {
   tap quickly
 - Safety check dialogs (like "are you sure?") don't help because they check the same
   stale cache - the fix must be inside the mutation itself
-- The 5-second timeout on the relay fetch is a reasonable balance between safety and UX
+- A read that waits for every relay costs up to its whole timeout when one relay stays
+  silent. Erring short is safe: an expired read is a failed read, and a failed read
+  publishes nothing
 - Consider also disabling the mutation button while the initial query is loading, as a
   belt-and-suspenders approach
