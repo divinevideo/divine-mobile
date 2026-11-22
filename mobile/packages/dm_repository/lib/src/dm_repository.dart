@@ -8840,12 +8840,11 @@ class DmRepository {
           error: e,
           stackTrace: stackTrace,
         );
-        // Publish landed but local persistence failed — degraded
-        // state. Don't rethrow: the caller still gets the success
-        // result. The retry sweep will not pick this row up again
-        // because the publish succeeded; missing local persistence
-        // surfaces only as a sender-side gap until the self-wrap
-        // arrives via the receive pipeline.
+        // The publish landed but the local persist failed. The transaction
+        // rolled the queue transition back with the message, so the row
+        // keeps its status and the retry sweep re-drives it; receivers drop
+        // the replay by its rumor id. Don't rethrow: the caller still gets
+        // the success result.
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.
