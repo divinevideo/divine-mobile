@@ -253,6 +253,7 @@ void main() {
           _secondClassicId,
         );
         expect(args.initialVideoId, _secondClassicId);
+        expect(args.tileOrigin?.videoId, _secondClassicId);
         expect(
           args.contextTitle,
           lookupAppLocalizations(const Locale('en')).exploreTabClassics,

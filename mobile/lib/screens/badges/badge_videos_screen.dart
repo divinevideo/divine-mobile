@@ -160,7 +160,7 @@ class BadgeVideosView extends ConsumerWidget {
             emptyBuilder: () => Center(
               child: Text(context.l10n.exploreNoVideosAvailable),
             ),
-            onVideoTap: (videos, index, _) => unawaited(
+            onVideoTap: (videos, index, captureOrigin) => unawaited(
               PooledFullscreenVideoFeedRouteData(
                 video: videos[index].id,
                 $extra: PooledFullscreenVideoFeedArgs(
@@ -168,6 +168,7 @@ class BadgeVideosView extends ConsumerWidget {
                   feedRepository: ref.read(feedRepositoryProvider),
                   initialIndex: index,
                   initialVideoId: videos[index].id,
+                  tileOrigin: captureOrigin(),
                   trafficSource: ViewTrafficSource.discoveryBadges,
                   sourceDetail: coordinate.value,
                 ),

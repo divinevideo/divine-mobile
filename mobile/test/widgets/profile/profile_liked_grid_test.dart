@@ -400,6 +400,7 @@ void main() {
                     ),
                   ).captured.single
                   as PooledFullscreenVideoFeedArgs;
+          expect(args.tileOrigin?.videoId, args.initialVideoId);
           final subscription = args.feedRepository
               .watchView(args.source)
               .listen((_) {});

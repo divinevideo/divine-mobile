@@ -24,6 +24,7 @@ import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -207,6 +208,7 @@ class _LikedGridTile extends ConsumerWidget {
               ),
               initialIndex: index,
               initialVideoId: videoEvent.id,
+              tileOrigin: VideoTileOrigin.captureVideo(context, videoEvent),
               trafficSource: ViewTrafficSource.profile,
             ),
           ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
@@ -224,9 +226,11 @@ class _LikedGridTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: VideoTileThumbnailBoundary(
+            child: ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
           ),
         ),
       ),

@@ -23,7 +23,6 @@ import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/user_name.dart';
-import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
@@ -446,14 +445,10 @@ class _VideoItem extends StatelessWidget {
       onTap: () => onVideoTap(displayedVideos, index, () {
         // In selection mode a tap toggles the tile rather than opening it.
         if (isSelected != null) return null;
-        return VideoTileOrigin.capture(
+        return VideoTileOrigin.captureVideo(
           context,
-          videoId: video.id,
+          video,
           borderRadius: borderRadius,
-          letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
-            video.width,
-            video.height,
-          ),
         );
       }),
       onOwnerLongPress: onOwnerLongPress,

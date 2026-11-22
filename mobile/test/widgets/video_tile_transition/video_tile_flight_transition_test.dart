@@ -454,6 +454,37 @@ void main() {
     }
 
     group('opening', () {
+      testWidgets('keeps the warning over an opening video until reveal', (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester);
+        final warning = ValueNotifier(true);
+        addTearDown(warning.dispose);
+        controller.forward();
+
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageDrawsVideo: true,
+            warning: warning,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 140));
+
+        expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+        expect(_picture, findsNothing);
+
+        await tester.pumpAndSettle();
+        expect(await _shownAt(tester, _landing.center), (0, 0, 0, 0xFF));
+
+        warning.value = false;
+        await tester.pump();
+        expect(find.byKey(const ValueKey('warning')), findsNothing);
+        expect(await _shownAt(tester, _landing.center), (0xFF, 0, 0, 0xFF));
+      });
+
       testWidgets('starts with the picture over the tile, page hidden', (
         tester,
       ) async {

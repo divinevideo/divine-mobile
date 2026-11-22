@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:models/models.dart';
+import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Marks the thumbnail a fullscreen player grows out of.
@@ -65,6 +67,23 @@ class VideoTileOrigin {
        alignment = image == null
            ? Alignment.center
            : image.alignment.resolve(image.textDirection);
+
+  /// Captures a laid-out video tile using the player's fit for [video].
+  static VideoTileOrigin? captureVideo(
+    BuildContext tileContext,
+    VideoEvent video, {
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(4),
+    ),
+  }) => capture(
+    tileContext,
+    videoId: video.id,
+    borderRadius: borderRadius,
+    letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
+      video.width,
+      video.height,
+    ),
+  );
 
   /// The origin of the tile under [tileContext] showing [videoId], or `null`
   /// when the tile holds no laid-out [VideoTileThumbnailBoundary], or when the

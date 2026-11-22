@@ -35,7 +35,6 @@ import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:openvine/widgets/profile/profile_videos_load_failed.dart';
-import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 /// Internal class that represents a video entry in the grid
@@ -602,16 +601,7 @@ class _VideoGridTile extends StatelessWidget {
     video: videoEvent,
     viewerPubkey: viewerPubkey,
     index: index,
-    onTap: () => onTap(
-      VideoTileOrigin.capture(
-        context,
-        videoId: videoEvent.id,
-        letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
-          videoEvent.width,
-          videoEvent.height,
-        ),
-      ),
-    ),
+    onTap: () => onTap(VideoTileOrigin.captureVideo(context, videoEvent)),
     onOwnerLongPress: onOwnerLongPress,
     // Read after the label ("Video thumbnail 2, Pinned"): the badge itself
     // is decorative, so this is the only way a screen reader learns of the
