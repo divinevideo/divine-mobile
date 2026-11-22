@@ -483,7 +483,8 @@ class VideoMetadataUpdateService {
         for (final warning in warnings) {
           tags.add(['l', warning, 'content-warning']);
         }
-      } else if (originalTags.any(_isReasonlessContentWarning)) {
+      }
+      if (originalTags.any(_isReasonlessContentWarning)) {
         tags.add(['content-warning']);
       }
 

@@ -1918,6 +1918,31 @@ void main() {
         );
       });
 
+      test('keeps a reasonless warning alongside a named one', () async {
+        final opened = _testVideo(
+          extraTags: const [
+            ['content-warning'],
+            ['L', 'content-warning'],
+            ['l', 'nudity', 'content-warning'],
+          ],
+        );
+
+        final result = await updateFromRelay(
+          originalVideo: opened,
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(title: 'Retitled'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags, contains(equals(['content-warning'])));
+        expect(
+          capturedTags,
+          contains(equals(['l', 'nudity', 'content-warning'])),
+        );
+      });
+
       test(
         'keeps a blank warning reason as a warning with no reason',
         () async {
