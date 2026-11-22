@@ -482,7 +482,10 @@ class DatabaseEncryptionBootstrap {
       );
       return;
     }
-    await _restorePrimaryKey(key);
+    final rewritten = await _restorePrimaryKey(key);
+    // A failed write that left the old item readable proves availability,
+    // not the new accessibility class. Retry the rewrite next launch.
+    if (!rewritten) return;
     try {
       await _markAccessibilityUpgradeCompleted();
     } on Object catch (error) {
@@ -495,16 +498,22 @@ class DatabaseEncryptionBootstrap {
   }
 
   /// Leaves the recovery copy intact until the primary has been verified.
-  Future<void> _restorePrimaryKey(String key) async {
+  ///
+  /// Returns whether a write of the primary succeeded. `false` means the first
+  /// write failed and the old item, still readable, was kept as it was.
+  Future<bool> _restorePrimaryKey(String key) async {
+    var wrote = false;
     try {
       try {
         await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+        wrote = true;
       } on Object {
         // An error need not mean the old item survived. Retry if it did not,
         // retaining the durable recovery copy through both attempts.
         if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) !=
             key) {
           await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+          wrote = true;
         }
       }
       if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) != key) {
@@ -531,6 +540,7 @@ class DatabaseEncryptionBootstrap {
         error: error,
       );
     }
+    return wrote;
   }
 
   /// Refuses to act on an empty primary slot while the platform cannot decrypt

@@ -33,6 +33,12 @@ private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDel
         )
         let ephemeral = URLSessionConfiguration.ephemeral
         ephemeral.urlCache = nil
+        // Keep the process-wide ephemeral session stateless across clips so
+        // redirect cookies or credentials never leak from one load to another.
+        ephemeral.httpShouldSetCookies = false
+        ephemeral.httpCookieAcceptPolicy = .never
+        ephemeral.httpCookieStorage = nil
+        ephemeral.urlCredentialStorage = nil
         ephemeralSession = Self.makeSession(
             configuration: ephemeral,
             queueName: "co.divine.video_player.caching_asset_loader.ephemeral_session",

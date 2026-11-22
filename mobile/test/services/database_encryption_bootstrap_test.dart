@@ -2062,6 +2062,58 @@ void main() {
         expect(key, equals(validKey));
         expect(markedCompleted, isTrue);
       });
+
+      test(
+        'does not mark upgrade completed when the primary rewrite fails',
+        () async {
+          final storage = _MockSecureStorage();
+          final values = <String, String>{dbCipherKeyStorageKey: validKey};
+          when(() => storage.read(key: any(named: 'key'))).thenAnswer(
+            (invocation) async =>
+                values[invocation.namedArguments[#key] as String],
+          );
+          when(
+            () => storage.write(
+              key: any(named: 'key'),
+              value: any(named: 'value'),
+            ),
+          ).thenAnswer((invocation) async {
+            final storageKey = invocation.namedArguments[#key] as String;
+            // The write fails before the old item is deleted, so it survives
+            // under its old accessibility class with the same key.
+            if (storageKey == dbCipherKeyStorageKey) {
+              throw PlatformException(code: 'write-failed');
+            }
+            values[storageKey] = invocation.namedArguments[#value] as String;
+            return;
+          });
+          when(() => storage.delete(key: any(named: 'key'))).thenAnswer((
+            invocation,
+          ) async {
+            values.remove(invocation.namedArguments[#key] as String);
+            return;
+          });
+
+          var markedCompleted = false;
+          final bootstrap = DatabaseEncryptionBootstrap(
+            secureStorage: storage,
+            isProtectedDataAvailable: () async => true,
+            ensureRuntime: () async {},
+            isCipherAvailable: () => true,
+            migrate: (_) async => CipherMigrationOutcome.alreadyEncrypted,
+            canOpenEncryptedDatabase: (_) async => true,
+            hasCompletedAccessibilityUpgrade: () async => markedCompleted,
+            markAccessibilityUpgradeCompleted: () async {
+              markedCompleted = true;
+            },
+          );
+
+          final key = await bootstrap.resolveCipherKey();
+
+          expect(key, equals(validKey));
+          expect(markedCompleted, isFalse);
+        },
+      );
     });
   });
 }

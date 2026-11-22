@@ -39,7 +39,7 @@ QueryExecutor openConnection() {
       // recovery snapshot left behind needs no such proof.
       setup: (rawDb) {
         _waitForDatabaseLocks(rawDb);
-        _configureDatabasePerformancePragmas(rawDb);
+        configureDatabasePerformancePragmas(rawDb);
         sweepPreservedDatabaseCopies(dbPath);
         sweepStrandedHotJournalSnapshots(dbPath);
       },
@@ -96,14 +96,17 @@ void _waitForDatabaseLocks(
 /// Applies connection-level SQLite performance pragmas after any cipher key
 /// has been configured.
 ///
-/// WAL mode allows concurrent reads alongside writes and avoids full-page
-/// rollback journal fsyncs on every event upsert; `synchronous = NORMAL` is
-/// crash-safe in WAL mode while cutting commit latency; `temp_store = MEMORY`
-/// keeps transient sort/index tables off flash storage.
-void _configureDatabasePerformancePragmas(CommonDatabase rawDb) {
+/// WAL mode allows concurrent reads alongside writes and uses sequential WAL
+/// appends instead of rollback journals; `synchronous = FULL` keeps every
+/// committed transaction durable across OS crashes and power loss (preserving
+/// SQLite's default rollback-journal durability for drafts and scheduled
+/// posts); `temp_store = MEMORY` keeps transient sort/index tables off flash
+/// storage.
+@visibleForTesting
+void configureDatabasePerformancePragmas(CommonDatabase rawDb) {
   rawDb
     ..execute('PRAGMA journal_mode = WAL;')
-    ..execute('PRAGMA synchronous = NORMAL;')
+    ..execute('PRAGMA synchronous = FULL;')
     ..execute('PRAGMA temp_store = MEMORY;');
 }
 
@@ -163,7 +166,7 @@ QueryExecutor openEncryptedConnection({
         // Before the key, so the schema read that checks it waits too.
         _waitForDatabaseLocks(rawDb);
         applyCipherKey(rawDb, rawKeyHex);
-        _configureDatabasePerformancePragmas(rawDb);
+        configureDatabasePerformancePragmas(rawDb);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
         // A launch killed after its journal was replayed leaves a snapshot
