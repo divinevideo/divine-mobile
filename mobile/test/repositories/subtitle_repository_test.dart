@@ -42,6 +42,7 @@ final _video = VideoEvent(
   content: '',
   timestamp: DateTime.fromMillisecondsSinceEpoch(0),
   vineId: 'my-vine-id',
+  addressableDTag: 'my-vine-id',
 );
 
 final VideoEvent _updatedVideo = _video.copyWith(

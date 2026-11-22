@@ -142,6 +142,7 @@ void main() {
               content: '',
               timestamp: DateTime.fromMillisecondsSinceEpoch(0),
               vineId: 'clip',
+              addressableDTag: 'clip',
             ),
             textTrackRef: 'https://media.divine.video/${'b' * 64}',
           ),

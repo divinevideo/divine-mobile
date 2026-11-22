@@ -114,6 +114,7 @@ void main() {
       timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
       title: 'Test Video',
       vineId: 'test-vine-id',
+      addressableDTag: 'test-vine-id',
       nostrEventTags: existingTags,
       eventCreatedAt: rawEventCreatedAt,
     );
@@ -468,6 +469,7 @@ void main() {
         timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
         title: 'Test Video',
         vineId: 'test-vine-id',
+        addressableDTag: 'test-vine-id',
         nostrEventTags: tagsWithTextTrack,
         textTrackRef: 'old-ref',
       );

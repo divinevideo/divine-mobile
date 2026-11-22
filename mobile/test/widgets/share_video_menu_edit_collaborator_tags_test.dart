@@ -56,8 +56,10 @@ VideoEvent _testVideo({
     videoUrl: 'https://cdn.example.com/video.mp4',
     title: 'Test Video Title',
     vineId: 'video-d-tag',
+    addressableDTag: 'video-d-tag',
     collaboratorPubkeys: [collaboratorPubkey],
     nostrEventTags: const [
+      ['d', 'video-d-tag'],
       ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
     ],
   );

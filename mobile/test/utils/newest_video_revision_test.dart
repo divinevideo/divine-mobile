@@ -25,6 +25,7 @@ VideoEvent _video({int? eventKind}) => VideoEvent(
   content: '',
   timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
   vineId: 'my-video',
+  addressableDTag: 'my-video',
   eventKind: eventKind,
 );
 
@@ -35,6 +36,45 @@ void main() {
     setUp(() {
       repository = _MockVideosRepository();
     });
+
+    test(
+      'does not use a display-only vine ID to look up another video',
+      () async {
+        final opened = VideoEvent.fromNostrEvent(
+          Event(
+            _owner,
+            34236,
+            [
+              ['vine_id', 'my-video'],
+              ['url', 'https://example.com/original.mp4'],
+            ],
+            'Addressless video',
+            createdAt: 1700000000,
+          ),
+        );
+        final different = Event(
+          _owner,
+          34236,
+          [
+            ['d', 'my-video'],
+            ['url', 'https://example.com/different.mp4'],
+          ],
+          'Different video',
+          createdAt: 1700000001,
+        );
+        expect(opened.addressableId, isNull);
+        expect(opened.stableId, 'my-video');
+        when(
+          () => repository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => LatestVideoRevisionFound(different));
+
+        expect(
+          await newestVideoRevision(repository, opened, logName: 'test'),
+          isNull,
+        );
+        verifyNever(() => repository.fetchLatestVideoRevision(any()));
+      },
+    );
 
     test('asks for the address of the video', () async {
       when(
@@ -50,6 +90,61 @@ void main() {
       verify(
         () => repository.fetchLatestVideoRevision('34235:$_owner:my-video'),
       ).called(1);
+    });
+
+    test('refuses an opened event with conflicting d tags', () async {
+      final opened = VideoEvent.fromNostrEvent(
+        Event(
+          _owner,
+          34236,
+          [
+            ['d', 'other-video'],
+            ['d', 'my-video'],
+            ['url', 'https://example.com/original.mp4'],
+          ],
+          'Ambiguous video',
+          createdAt: 1700000000,
+        ),
+      );
+      final different = Event(
+        _owner,
+        34236,
+        [
+          ['d', 'my-video'],
+        ],
+        'Different video',
+        createdAt: 1700000001,
+      );
+      when(
+        () => repository.fetchLatestVideoRevision(any()),
+      ).thenAnswer((_) async => LatestVideoRevisionFound(different));
+
+      expect(
+        await newestVideoRevision(repository, opened, logName: 'test'),
+        isNull,
+      );
+      verifyNever(() => repository.fetchLatestVideoRevision(any()));
+    });
+
+    test('refuses a relay revision with conflicting d tags', () async {
+      final ambiguous = Event(
+        _owner,
+        34236,
+        [
+          ['d', 'my-video'],
+          ['d', 'other-video'],
+        ],
+        'Ambiguous relay revision',
+        createdAt: 1700000001,
+      );
+      when(
+        () => repository.fetchLatestVideoRevision(any()),
+      ).thenAnswer((_) async => LatestVideoRevisionFound(ambiguous));
+
+      expect(
+        await newestVideoRevision(repository, _video(), logName: 'test'),
+        isNull,
+      );
     });
 
     test('treats a video with no kind as a short video', () async {

@@ -295,6 +295,7 @@ void main() {
             videoUrl: '',
             title: 'Test',
             vineId: 'video-d-tag',
+            addressableDTag: 'video-d-tag',
             nostrEventTags: const [
               ['d', 'video-d-tag'],
             ],
@@ -705,6 +706,7 @@ void main() {
           videoUrl: 'https://cdn.example.com/video.mp4',
           title: 'Test Video Title',
           vineId: 'video-d-tag',
+          addressableDTag: 'video-d-tag',
         );
         when(
           () => mockVideosRepository.fetchLatestVideoRevision(any()),
