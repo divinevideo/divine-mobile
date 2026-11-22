@@ -1662,6 +1662,75 @@ void main() {
         ];
         expect(customVideoEffectsInRenderOrder(effects), effects);
       });
+
+      test('runs a Time effect that starts later ahead of one that ends '
+          'where it starts', () {
+        // On Android the time split keeps frames from 200 ms before its
+        // start, inside the window of the motion only; running first, it
+        // keeps them before the motion only draws on them.
+        const motionOnly = CustomVideoEffect(
+          id: motionOnlyVideoEffectId,
+          endTime: Duration(seconds: 1),
+        );
+        const timeSplit = CustomVideoEffect(
+          id: timeSplitVideoEffectId,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 2),
+        );
+
+        expect(
+          customVideoEffectsInRenderOrder([motionOnly, timeSplit]),
+          [timeSplit, motionOnly],
+        );
+      });
+
+      test('puts every Time effect behind those that start once it ended, '
+          'after one was cut out of another', () {
+        final separated = withoutExclusiveOverlaps(
+          [
+            EditorVideoEffect.of(
+              id: 'echo',
+              type: EditorEffectType.echo,
+              intensity: 0.5,
+            ),
+            EditorVideoEffect.of(
+              id: 'stutter',
+              type: EditorEffectType.stutter,
+              intensity: 0.5,
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 4),
+            ),
+          ],
+          keepId: 'stutter',
+          createId: () => 'echo-after',
+        )!;
+
+        final ordered = customVideoEffectsInRenderOrder([
+          for (final effect in separated) effect.custom!,
+        ]);
+
+        expect(
+          [for (final e in ordered) (e.id, e.startTime, e.endTime)],
+          [
+            (echoVideoEffectId, const Duration(seconds: 4), null),
+            (
+              stutterVideoEffectId,
+              const Duration(seconds: 2),
+              const Duration(seconds: 4),
+            ),
+            (echoVideoEffectId, Duration.zero, const Duration(seconds: 2)),
+          ],
+        );
+        for (var i = 0; i < ordered.length; i++) {
+          for (final later in ordered.skip(i + 1)) {
+            expect(
+              ordered[i].startTime! >= later.endTime!,
+              isTrue,
+              reason: '${ordered[i].startTime} before ${later.endTime}',
+            );
+          }
+        }
+      });
     });
   });
 

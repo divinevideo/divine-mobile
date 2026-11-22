@@ -309,7 +309,8 @@ enum EditorEffectExclusiveGroup {
   /// ones. A second one running with the first would read the first one's
   /// output in the Android export, but the unprocessed frames in the preview
   /// and the iOS export, so it would look different once exported; see
-  /// [customVideoEffectsInRenderOrder].
+  /// [customVideoEffectsInRenderOrder] for how ones that follow each other
+  /// keep apart.
   earlierFrames,
 }
 
@@ -1174,17 +1175,24 @@ EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
     };
 
 /// [effects] in the order the preview and the export draw them: the effects
-/// that read earlier frames first, then the others, then the looks, each
-/// group in its own order.
+/// that read earlier frames first, the one that starts latest ahead of the
+/// others, then the other effects, then the looks, each in its own order.
 ///
 /// The earlier frames an effect like Echo reads come unprocessed in the
 /// preview and in the iOS export, but in the Android export from the custom
 /// effect before it in the chain; the custom effects run first there, ahead
 /// of the built-in ones. So the [EditorEffectType.readsEarlierFrames] effects
 /// go first, where all three read the same frames, and whatever comes after
-/// them, such as a comic look, draws over their trails and ghosts alike. A
-/// second one would still read the first one's output on Android, so no two
-/// of them overlap; see [EditorEffectExclusiveGroup.earlierFrames].
+/// them, such as a comic look, draws over their trails and ghosts alike.
+///
+/// No two of them overlap (see [EditorEffectExclusiveGroup.earlierFrames]),
+/// but on Android each also keeps the frames from its furthest offset before
+/// its start, which can lie in the window of one that ends right there. The
+/// one that starts latest therefore runs first: every effect ahead of another
+/// starts no sooner than that one ends, so it only passes frames through, as
+/// an Android stage does outside its window, everywhere the other one reads
+/// from. Effects starting together, as two overlapping ones from before the
+/// rule did, keep their own order.
 ///
 /// A look grades the finished picture, like a colour filter, so it goes last;
 /// see `adjustVideoEffectsOf` for Adjust, which goes after the looks.
@@ -1195,9 +1203,18 @@ List<CustomVideoEffect> customVideoEffectsInRenderOrder(
       EditorEffectType.byName(effect.id)?.readsEarlierFrames ?? false;
   bool isLook(CustomVideoEffect effect) =>
       lookTableAssets.containsKey(effect.id);
+  final earlierFrames =
+      [
+        for (final (index, effect) in effects.indexed)
+          if (readsEarlierFrames(effect)) (index, effect),
+      ]..sort((a, b) {
+        final byStart = (b.$2.startTime ?? Duration.zero).compareTo(
+          a.$2.startTime ?? Duration.zero,
+        );
+        return byStart != 0 ? byStart : a.$1.compareTo(b.$1);
+      });
   return [
-    for (final effect in effects)
-      if (readsEarlierFrames(effect)) effect,
+    for (final (_, effect) in earlierFrames) effect,
     for (final effect in effects)
       if (!readsEarlierFrames(effect) && !isLook(effect)) effect,
     for (final effect in effects)
