@@ -2206,6 +2206,30 @@ class RelayPool {
     _queryOutcomes[subId]?.recordRejectedEvent(relay);
   }
 
+  /// Reports [event], which [relay] sent for [subId] while that read was
+  /// open, dropped because the read ended during the event's signature
+  /// check. Without it a support log cannot tell this event from one that
+  /// never arrived (#11048). [subId] is printed as is: the pool held it when
+  /// the frame arrived, so it is not text the relay chose.
+  void _reportInFlightEventDrop(
+    Relay relay,
+    String subId,
+    String readType,
+    Event event,
+  ) {
+    log(
+      'Dropping relay event whose $readType $subId ended during its '
+      'signature check from ${relay.url}: eventId=${event.id}',
+    );
+    _diagnose(
+      RelayDiagnosticSite.inFlightEventDrop,
+      RelayDiagnosticLevel.debug,
+      relay.url,
+      'Dropped event ${event.id} (kind ${event.kind}) for $readType $subId, '
+      "which ended while the event's signature was being checked",
+    );
+  }
+
   Future<void> _dispatchTypedFrame(
     Relay relay,
     List<dynamic> json,
@@ -2226,6 +2250,10 @@ class RelayPool {
             relay.getRequestSubscription(subId) == null) {
           return;
         }
+        // Taken now: the read may end during the verify below.
+        final readType = _subscriptions[subId] != null
+            ? 'subscription'
+            : 'query';
 
         final eventJson = _mapAt(relay, json, 2, 'EVENT payload');
         if (eventJson == null) {
@@ -2309,6 +2337,7 @@ class RelayPool {
         final subscription = poolSubscription ?? querySubscription;
 
         if (subscription == null) {
+          _reportInFlightEventDrop(relay, subId, readType, event);
           return;
         }
 

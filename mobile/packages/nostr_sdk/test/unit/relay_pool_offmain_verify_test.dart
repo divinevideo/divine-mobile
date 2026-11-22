@@ -292,6 +292,95 @@ void main() {
     List<RelayDiagnostic> diagnosticsNaming(Event event) =>
         diagnostics.where((d) => d.message.contains(event.id)).toList();
 
+    /// Fails unless the sink already holds a diagnostic naming [readId], so a
+    /// missing drop report below is an absence rather than an unwired sink.
+    void expectSinkRecordsRead(String readId) => expect(
+      diagnostics.where((d) => d.message.contains(readId)),
+      isNotEmpty,
+      reason: 'the sink records this read',
+    );
+
+    test('reports an event whose read reached its deadline mid-verify', () {
+      fakeAsync((async) {
+        final relay = _FakeRelay('wss://relay.a');
+        startPool(async, [relay]);
+        QueryResult? result;
+        startRead('read-1', const Duration(seconds: 5), (r) => result = r);
+        async.flushMicrotasks();
+
+        unawaited(relay.deliver(['EVENT', 'read-1', prompt.toJson()]));
+        unawaited(relay.deliver(['EVENT', 'read-1', held.toJson()]));
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+        expect(result, isNotNull, reason: 'the deadline ended the read');
+        expect(worker.calls, 2, reason: 'both events reached their verify');
+
+        gate.complete(true);
+        async.flushMicrotasks();
+
+        expect(result!.events.map((e) => e.id), [prompt.id]);
+        expectSinkRecordsRead('read-1');
+        final drops = diagnosticsNaming(held);
+        expect(drops, hasLength(1));
+        expect(drops.single.site.name, 'inFlightEventDrop');
+        expect(drops.single.level, RelayDiagnosticLevel.debug);
+        expect(drops.single.relayUrl, 'wss://relay.a');
+        expect(
+          drops.single.message,
+          allOf(contains('query read-1'), contains('kind 1')),
+        );
+        expect(diagnosticsNaming(prompt), isEmpty);
+      });
+    });
+
+    test('reports an event whose live subscription closed mid-verify', () {
+      fakeAsync((async) {
+        final relay = _FakeRelay('wss://relay.a');
+        startPool(async, [relay]);
+        final delivered = <Event>[];
+        nostr.subscribe([filter], delivered.add, id: 'live-1');
+        async.flushMicrotasks();
+
+        unawaited(relay.deliver(['EVENT', 'live-1', held.toJson()]));
+        async.flushMicrotasks();
+        expect(worker.calls, 1, reason: 'the event reached its verify');
+
+        nostr.unsubscribe('live-1');
+        gate.complete(true);
+        async.flushMicrotasks();
+
+        expect(delivered, isEmpty);
+        expectSinkRecordsRead('live-1');
+        final drops = diagnosticsNaming(held);
+        expect(drops, hasLength(1));
+        expect(drops.single.site.name, 'inFlightEventDrop');
+        expect(drops.single.level, RelayDiagnosticLevel.debug);
+        expect(drops.single.message, contains('subscription live-1'));
+      });
+    });
+
+    test('delivers the event and reports nothing when its verify ends before '
+        'the read', () {
+      fakeAsync((async) {
+        final relay = _FakeRelay('wss://relay.a');
+        startPool(async, [relay]);
+        QueryResult? result;
+        startRead('read-1', const Duration(seconds: 5), (r) => result = r);
+        async.flushMicrotasks();
+
+        unawaited(relay.deliver(['EVENT', 'read-1', held.toJson()]));
+        async.flushMicrotasks();
+        gate.complete(true);
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+
+        expect(result!.events.map((e) => e.id), [held.id]);
+        expect(diagnosticsNaming(held), isEmpty);
+      });
+    });
+
     test('keeps a read open past the settle window while a relay that owes '
         'it is still verifying its event', () {
       fakeAsync((async) {
@@ -344,7 +433,7 @@ void main() {
     });
 
     test('still ends the read at its deadline while a relay is verifying its '
-        'event', () {
+        'event, and reports the event', () {
       fakeAsync((async) {
         final relayA = _FakeRelay('wss://relay.a');
         final relayB = _FakeRelay('wss://relay.b');
@@ -367,6 +456,8 @@ void main() {
         gate.complete(true);
         async.flushMicrotasks();
         expect(result!.events, isEmpty);
+        expectSinkRecordsRead('settle-1');
+        expect(diagnosticsNaming(held), hasLength(1));
       });
     });
   });

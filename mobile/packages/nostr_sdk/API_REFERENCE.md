@@ -170,8 +170,11 @@ Future<QueryResult> readEvents(
 ```
 Read events matching `filters` and report how the read ended — see
 `QueryResult`. The read stops at `deadline` (`timeout` from now when
-`deadline` is not given) and returns whatever events had arrived by then,
-whether or not the read finished.
+`deadline` is not given) and returns the events that had arrived and passed
+their signature check by then, whether or not the read finished. An event
+that arrived in time but was still being checked when the read ended is
+dropped, and the pool files one `inFlightEventDrop` debug diagnostic naming
+it.
 
 **Parameters:**
 - `filters`: Nostr filters

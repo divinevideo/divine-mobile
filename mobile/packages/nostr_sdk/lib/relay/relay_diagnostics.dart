@@ -17,6 +17,10 @@ enum RelayDiagnosticSite {
   /// not end cleanly (see `QueryEnd` in `query_result.dart`), or it ended
   /// cleanly but a relay may have capped the result.
   queryCompletion,
+
+  /// An event a relay sent while its read was open, dropped because the read
+  /// ended while the pool was still checking the event's signature.
+  inFlightEventDrop,
 }
 
 /// A safe, structured description of relay activity.
