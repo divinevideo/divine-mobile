@@ -110,6 +110,9 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    // Stable for the app's lifetime and follows identity changes itself, so
+    // a read here cannot go stale (#9341).
+    final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
@@ -143,6 +146,8 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
+                  unavailableFilter: unavailabilityGate.isVideoBroken,
+                  unavailableVideoIds: unavailabilityGate.markedVideoIds,
                   classicSession: useAdaptiveClassics
                       ? _homeClassicSession(ref, viewerPubkey)
                       : null,
@@ -833,11 +838,15 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
         .read(analyticsServiceIdentityStreamProvider)
         .doOnData((current) => analytics = current)
         .switchMap((current) => current.privacyChanges),
+    // Same predicates as the Home list, so the session's index stays valid
+    // for the videos Home displays.
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
+      final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
       return repository
           .applyContentPreferences(videos)
           .where((video) => !repository.isVideoKnownDeleted(video))
+          .where((video) => !unavailabilityGate.isVideoBroken(video.id))
           .toList();
     },
   )..setActive(active: false);

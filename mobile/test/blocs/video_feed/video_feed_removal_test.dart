@@ -100,6 +100,8 @@ void main() {
       bool serveCachedHomeFeed = false,
       Stream<VideosRepository>? removalRepositoryStream,
       ClassicFeedSession? classicSession,
+      bool Function(String videoId)? unavailableFilter,
+      Stream<String>? unavailableVideoIds,
     }) => VideoFeedBloc(
       videosRepository: videos,
       classicSession: classicSession,
@@ -111,6 +113,8 @@ void main() {
       profileRepository: profiles,
       homeFeedCache: cache ?? _MemoryHomeFeedCache(),
       feedTracker: feedTracker,
+      unavailableFilter: unavailableFilter,
+      unavailableVideoIds: unavailableVideoIds,
     );
 
     group(VideoFeedVideoRemoved, () {
@@ -299,6 +303,86 @@ void main() {
       expect(removals.hasListener, isTrue);
       await bloc.close();
       expect(removals.hasListener, isFalse);
+    });
+
+    group('confirmed-unavailable videos', () {
+      late StreamController<String> unavailable;
+
+      setUp(() => unavailable = StreamController<String>.broadcast());
+      tearDown(() => unavailable.close());
+
+      feedBlocTest(
+        'drops a video the viewer has not reached yet',
+        build: () => createBloc(unavailableVideoIds: unavailable.stream),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2'), _video('3')],
+        ),
+        act: (_) => unavailable.add('3' * 64),
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((state) => state.videos, 'videos', [
+                _video('1'),
+                _video('2'),
+              ])
+              .having((state) => state.currentIndex, 'current index', 0),
+        ],
+      );
+
+      // Removing these would restart the video being watched, and every later
+      // read leaves them out anyway.
+      feedBlocTest(
+        'leaves the on-screen video and earlier ones in place',
+        build: () => createBloc(unavailableVideoIds: unavailable.stream),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2'), _video('3')],
+          currentIndex: 1,
+        ),
+        act: (_) {
+          // The bloc is listening, so silence below is a decision.
+          expect(unavailable.hasListener, isTrue);
+          unavailable
+            ..add('2' * 64)
+            ..add('1' * 64);
+        },
+        wait: Duration.zero,
+        expect: () => <VideoFeedBlocState>[],
+      );
+
+      feedBlocTest(
+        'leaves unavailable videos out of a refresh',
+        build: () => createBloc(unavailableFilter: (id) => id == '2' * 64),
+        setUp: () {
+          when(
+            () => videos.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [_video('1'), _video('2')]),
+          );
+        },
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('3')],
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoFeedRefreshRequested());
+          await pumpEventQueue();
+        },
+        verify: (bloc) => expect(bloc.state.videos, [_video('1')]),
+      );
+
+      test('close cancels the unavailable-video subscription', () async {
+        final bloc = createBloc(unavailableVideoIds: unavailable.stream);
+        expect(unavailable.hasListener, isTrue);
+        await bloc.close();
+        expect(unavailable.hasListener, isFalse);
+      });
     });
 
     group('removal repository replacement', () {

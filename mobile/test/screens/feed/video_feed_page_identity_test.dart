@@ -389,6 +389,130 @@ void main() {
     });
 
     testWidgets(
+      'keeps a video the dead-media guard marked broken out of a Home refresh',
+      (tester) async {
+        // #5953: the guard persists a moderation-blocked 404 in the
+        // per-account BrokenVideoTracker, which every other feed honours.
+        final home = await _mountSafetyPolicyHome(tester);
+        final brokenId = '2' * 64;
+        final tracker = (await tester.runAsync(
+          () => home.container.read(brokenVideoTrackerProvider.future),
+        ))!;
+        await tester.runAsync(
+          () => tracker.markVideoBroken(
+            brokenId,
+            'Confirmed moderation-unavailable 404 in home feed',
+          ),
+        );
+        expect(tracker.isVideoBroken(brokenId), isTrue);
+        when(
+          () => home.videos.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              HomeFeedResult(videos: [_removalVideo('1'), _removalVideo('2')]),
+        );
+
+        home.originalFeed.add(const VideoFeedRefreshRequested());
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+      },
+    );
+
+    testWidgets(
+      'drops a Home video the viewer has not reached once it is marked broken',
+      (tester) async {
+        // #5953: a mark ahead of the viewer leaves the session at once.
+        final home = await _mountSafetyPolicyHome(tester);
+        await _loadRemovalVideos(tester, home);
+        final tracker = (await tester.runAsync(
+          () => home.container.read(brokenVideoTrackerProvider.future),
+        ))!;
+
+        await tester.runAsync(
+          () => tracker.markVideoBroken(
+            '2' * 64,
+            'Confirmed moderation-unavailable 404 in home feed',
+          ),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        expect(tracker.isVideoBroken('2' * 64), isTrue);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+      },
+    );
+
+    testWidgets(
+      'Classics resumes on the same video when a marked one comes before it',
+      (tester) async {
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [adaptiveClassicsEnabledProvider.overrideWithValue(true)],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(
+            videos: [
+              for (final digit in '1234'.split('')) _removalVideo(digit),
+            ],
+            paginationCursor: 'next',
+            hasMore: true,
+            recommendationPageCount: 1,
+          ),
+        );
+        final tracker = (await tester.runAsync(
+          () => home.container.read(brokenVideoTrackerProvider.future),
+        ))!;
+        await tester.runAsync(
+          () => tracker.markVideoBroken('2' * 64, 'Confirmed unavailable'),
+        );
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos, [
+          _removalVideo('1'),
+          _removalVideo('3'),
+          _removalVideo('4'),
+        ]);
+
+        // Watch video 3, leave Classics, come back.
+        home.originalFeed.add(const VideoFeedActiveIndexChanged(1));
+        await tester.runAsync(pumpEventQueue);
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        final state = home.originalFeed.state;
+        expect(state.videos[state.currentIndex], _removalVideo('3'));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
       'same-account repository replacement keeps Home alive and follows removals',
       (tester) async {
         final oldRemovals = StreamController<String>.broadcast();

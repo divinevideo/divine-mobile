@@ -10,7 +10,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Answers the fullscreen feed's unavailability questions on behalf of the
+/// Answers the feeds' unavailability questions on behalf of the
 /// per-identity [BrokenVideoTracker] and [DeadMediaFeedGuard].
 ///
 /// Also routes removals through the current [VideoEventService], which client
@@ -80,7 +80,8 @@ class FeedUnavailabilityGate {
   /// stream boundary. This covers static / by-id sources (liked, saved,
   /// reposts, collabs, curated lists) whose repositories skip the central
   /// feed filters, so a video confirmed unavailable in a previous session
-  /// does not reappear when opened fullscreen. See #5237.
+  /// does not reappear when opened fullscreen. See #5237. Home applies it
+  /// to every page it fetches.
   bool isVideoBroken(String videoId) =>
       _tracker?.isVideoBroken(videoId) ?? false;
 

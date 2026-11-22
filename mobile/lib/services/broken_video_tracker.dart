@@ -20,9 +20,9 @@ class BrokenVideoTracker {
   final String _timestampKey;
   late SharedPreferences _prefs;
   Set<String> _brokenVideoIds = {};
+  Map<String, DateTime> _brokenTimestamps = {};
   final StreamController<String> _markedVideoIdsController =
       StreamController<String>.broadcast();
-  Map<String, DateTime> _brokenTimestamps = {};
 
   static String _scopedKey(String baseKey, String? ownerPubkey) {
     final scope = ownerPubkey == null || ownerPubkey.isEmpty
