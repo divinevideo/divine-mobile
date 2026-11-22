@@ -2,10 +2,12 @@
 // ABOUTME: Tests the count method and countEvents on Nostr class.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 
 import '../support/fake_web_socket.dart';
 
@@ -175,6 +177,217 @@ void main() {
         diagnostics.map((entry) => entry.message).join('\n'),
         isNot(contains(filterSentinel)),
       );
+    });
+  });
+
+  group('RelayPool.count beside a relay that does not support COUNT', () {
+    const countingUrl = 'wss://counting.test';
+    const legacyUrl = 'wss://legacy.test';
+    const countId = 'count-9009';
+    // strfry before 1.1 answers a COUNT with this NOTICE, which carries no
+    // subscription id.
+    const unknownCommandNotice = 'ERROR: bad msg: unknown cmd';
+    final filters = [
+      {
+        'kinds': [7],
+        '#e': [
+          '2e6763e2f81be92707635a221f4e27ad8740df553b1b5058cf5a8cb125a7cbd3',
+        ],
+      },
+    ];
+
+    late FakeWebSocketChannelFactory countingFactory;
+    late FakeWebSocketChannelFactory legacyFactory;
+    late RelayBase countingRelay;
+    late RelayBase legacyRelay;
+    late Nostr nostr;
+
+    setUp(() {
+      countingFactory = FakeWebSocketChannelFactory();
+      legacyFactory = FakeWebSocketChannelFactory();
+      nostr = Nostr(
+        LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        ),
+        [],
+        (url) =>
+            RelayBase(url, RelayStatus(url), channelFactory: countingFactory),
+      );
+      countingRelay = RelayBase(
+        countingUrl,
+        RelayStatus(countingUrl),
+        channelFactory: countingFactory,
+      );
+      legacyRelay = RelayBase(
+        legacyUrl,
+        RelayStatus(legacyUrl),
+        channelFactory: legacyFactory,
+      );
+    });
+
+    tearDown(() => nostr.close());
+
+    // A relay reads its NIP-11 document only when it has none, on connect,
+    // so a test that supplies one sets it before adding the relay.
+    Future<void> addRelays() async {
+      expect(await nostr.relayPool.add(countingRelay), isTrue);
+      expect(await nostr.relayPool.add(legacyRelay), isTrue);
+    }
+
+    RelayInfo nip11Listing(List<int> nips) =>
+        RelayInfo('', '', '', '', nips, 'strfry', '1.0.3');
+
+    Future<CountResponse> count({String id = countId}) => nostr.relayPool.count(
+      filters,
+      id: id,
+      timeout: const Duration(seconds: 3),
+    );
+
+    Iterable<String> countFramesOn(FakeWebSocketChannel channel) => channel
+        .sentMessages
+        .cast<String>()
+        .where((frame) => frame.startsWith('["COUNT"'));
+
+    void answerCount(FakeWebSocketChannel channel, int count) {
+      final frame = jsonDecode(countFramesOn(channel).last) as List<dynamic>;
+      channel.simulateMessage(
+        jsonEncode([
+          'COUNT',
+          frame[1],
+          {'count': count},
+        ]),
+      );
+    }
+
+    void sendNotice(FakeWebSocketChannel channel, String message) =>
+        channel.simulateMessage(jsonEncode(['NOTICE', message]));
+
+    test('answers once the counting relay has, when the other relay replies '
+        'that it does not know COUNT', () async {
+      await addRelays();
+      var settled = false;
+      final result = count();
+      unawaited(result.whenComplete(() => settled = true));
+      await pumpEventQueue();
+
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      await pumpEventQueue();
+
+      expect(settled, isTrue);
+      expect((await result).count, equals(42));
+    });
+
+    test('stops asking a relay that replied it does not know COUNT', () async {
+      await addRelays();
+      final first = count();
+      await pumpEventQueue();
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      expect((await first).count, equals(42));
+
+      final second = count(id: 'count-9009-again');
+      await pumpEventQueue();
+
+      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+      answerCount(countingFactory.lastChannel!, 43);
+      expect((await second).count, equals(43));
+    });
+
+    test('keeps waiting on a relay whose NOTICE is not about COUNT', () async {
+      await addRelays();
+      final result = count();
+      await pumpEventQueue();
+
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, 'rate-limited: slow down');
+      await pumpEventQueue();
+      answerCount(legacyFactory.lastChannel!, 99);
+
+      expect((await result).count, equals(99));
+    });
+
+    test('keeps asking a relay that said it does not know a command while no '
+        'COUNT was waiting on it', () async {
+      await addRelays();
+      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+      await pumpEventQueue();
+
+      final result = count();
+      await pumpEventQueue();
+
+      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+      answerCount(countingFactory.lastChannel!, 42);
+      answerCount(legacyFactory.lastChannel!, 7);
+      expect((await result).count, equals(42));
+    });
+
+    test(
+      'does not ask a relay whose NIP-11 document leaves out NIP-45',
+      () async {
+        legacyRelay.info = nip11Listing([1, 2, 9, 11]);
+        await addRelays();
+
+        final result = count();
+        await pumpEventQueue();
+
+        expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+        answerCount(countingFactory.lastChannel!, 42);
+        expect((await result).count, equals(42));
+      },
+    );
+
+    for (final (description, nips) in [
+      ('lists NIP-45', [1, 11, 45]),
+      ('lists no NIPs', <int>[]),
+    ]) {
+      test('still asks a relay whose NIP-11 document $description', () async {
+        legacyRelay.info = nip11Listing(nips);
+        await addRelays();
+
+        final result = count();
+        await pumpEventQueue();
+
+        expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+        answerCount(countingFactory.lastChannel!, 42);
+        answerCount(legacyFactory.lastChannel!, 7);
+        expect((await result).count, equals(42));
+      });
+    }
+
+    test('reports COUNT as unsupported, without sending it, when no relay '
+        'supports it', () async {
+      countingRelay.info = nip11Listing([1, 11]);
+      legacyRelay.info = nip11Listing([1, 11]);
+      await addRelays();
+
+      await expectLater(
+        count(),
+        throwsA(
+          allOf(
+            isA<CountNotSupportedException>(),
+            isNot(isA<CountNotSentException>()),
+          ),
+        ),
+      );
+
+      expect(countFramesOn(countingFactory.lastChannel!), isEmpty);
+      expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+    });
+
+    test('answers once both relays have, when both support COUNT', () async {
+      await addRelays();
+      var settled = false;
+      final result = count();
+      unawaited(result.whenComplete(() => settled = true));
+      await pumpEventQueue();
+
+      answerCount(countingFactory.lastChannel!, 42);
+      answerCount(legacyFactory.lastChannel!, 7);
+      await pumpEventQueue();
+
+      expect(settled, isTrue);
+      expect((await result).count, equals(42));
     });
   });
 

@@ -48,6 +48,8 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
+  bool _answeredCountWithUnknownCommand = false;
+
   Relay(this.url, this.relayStatus, {this.diagnosticsSink});
 
   final RelayDiagnosticsSink? diagnosticsSink;
@@ -462,6 +464,35 @@ abstract class Relay {
   void failCountQuery(String id, String reason) {
     final completer = _countQueries.remove(id);
     completer?.completeError(CountNotSupportedException(reason));
+  }
+
+  /// Whether a COUNT sent to this relay is still waiting for its answer.
+  bool get hasPendingCountQueries => _countQueries.isNotEmpty;
+
+  /// Whether this relay is known not to support NIP-45 COUNT, so asking it
+  /// would only hold a count until its deadline.
+  ///
+  /// It is known when the relay replied to a COUNT that it does not know the
+  /// command, or when its NIP-11 document lists its NIPs without 45. A relay
+  /// whose document never arrived, or lists no NIPs, is still asked.
+  bool get countUnsupported {
+    if (_answeredCountWithUnknownCommand) return true;
+    final nips = info?.nips;
+    if (nips == null || nips.isEmpty) return false;
+    return !nips.any((nip) => '$nip' == '45');
+  }
+
+  /// Records that this relay replied to a COUNT that it does not know the
+  /// command, and ends every COUNT waiting on it with
+  /// [CountNotSupportedException]. The relay is not asked again while this
+  /// object lives.
+  void markCountUnsupported(String reason) {
+    _answeredCountWithUnknownCommand = true;
+    final pending = _countQueries.values.toList();
+    _countQueries.clear();
+    for (final completer in pending) {
+      completer.completeError(CountNotSupportedException(reason));
+    }
   }
 
   Function? relayStatusCallback;
