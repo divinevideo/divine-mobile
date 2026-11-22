@@ -4227,7 +4227,7 @@ class RelayPool {
   /// its answer would reach nobody.
   ///
   /// A relay skipped after an unknown-command notice ([Relay.countUnsupported])
-  /// cannot hold another count until the deadline.
+  /// is eligible again when its socket reconnects.
   ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered

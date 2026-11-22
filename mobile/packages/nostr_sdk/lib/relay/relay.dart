@@ -48,7 +48,7 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
-  // Null until the relay answers COUNT or appears to reject the command.
+  // Observed COUNT support on the current socket.
   bool? _supportsCount;
 
   Relay(this.url, this.relayStatus, {this.diagnosticsSink});
@@ -139,7 +139,10 @@ abstract class Relay {
   /// `RelayPool`.
   Future onConnected({String? source}) async {
     final isFresh = connectionIsFresh;
-    if (isFresh) _connectionGeneration = ++_lastConnectionGeneration;
+    if (isFresh) {
+      _connectionGeneration = ++_lastConnectionGeneration;
+      _supportsCount = null;
+    }
     final saved = isFresh
         ? [..._subscriptions.values, ..._queries.values]
         : const <Subscription>[];
@@ -469,11 +472,13 @@ abstract class Relay {
     completer?.completeError(CountNotSupportedException(reason));
   }
 
-  /// Whether to skip COUNT after the relay appears to reject the command.
+  /// Whether to skip COUNT after an apparent refusal on the current socket.
   ///
   /// Some relays answer COUNT despite omitting NIP-45 from their NIP-11
   /// documents, so an omission alone never disqualifies a relay.
-  bool get countUnsupported => _supportsCount == false;
+  bool get countUnsupported =>
+      _supportsCount == false &&
+      relayStatus.connected == ClientConnected.connected;
 
   /// Treats an unscoped unknown-command notice as a COUNT refusal only when
   /// a COUNT is pending and there is no evidence that this relay supports it.

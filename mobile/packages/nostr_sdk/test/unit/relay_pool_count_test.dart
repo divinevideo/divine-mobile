@@ -294,6 +294,37 @@ void main() {
       expect((await second).count, equals(43));
     });
 
+    test(
+      'asks again on a new socket after the old socket refused COUNT',
+      () async {
+        expect(await nostr.relayPool.add(legacyRelay), isTrue);
+        final first = expectLater(
+          count(),
+          throwsA(isA<CountNotSupportedException>()),
+        );
+        await pumpEventQueue();
+        expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+        sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+        await first;
+
+        await legacyFactory.lastChannel!.closeFromRemote();
+        await pumpEventQueue();
+        await expectLater(
+          count(id: 'count-while-disconnected'),
+          throwsA(isA<CountNotSentException>()),
+        );
+
+        expect(await legacyRelay.connect(), isTrue);
+        expect(legacyFactory.createdChannels, hasLength(2));
+
+        final second = count(id: 'count-after-reconnect');
+        await pumpEventQueue();
+        expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+        answerCount(legacyFactory.lastChannel!, 99);
+        expect((await second).count, equals(99));
+      },
+    );
+
     test('keeps waiting on a relay whose NOTICE is not about COUNT', () async {
       await addRelays();
       final result = count();
