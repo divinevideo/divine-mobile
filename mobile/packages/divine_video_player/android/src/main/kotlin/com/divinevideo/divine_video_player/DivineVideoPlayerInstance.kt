@@ -3083,7 +3083,7 @@ internal class DivineVideoPlayerInstance(
      */
     fun onAppBackgrounded() {
         mainHandler.removeCallbacks(positionUpdater)
-        wasPlayingBeforePause = player?.isPlaying ?: false
+        wasPlayingBeforePause = player?.playWhenReady == true
         if (wasPlayingBeforePause) {
             player?.pause()
             audioOverlayManager.pauseAll()

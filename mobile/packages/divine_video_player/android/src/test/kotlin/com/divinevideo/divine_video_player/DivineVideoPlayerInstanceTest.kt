@@ -279,6 +279,22 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `backgrounding also pauses and restores a buffering playback request`() {
+        materializePlayer()
+        every { mockPlayer.playWhenReady } returns true
+        every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
+        every { mockPlayer.isPlaying } returns false
+        clearMocks(mockPlayer, answers = false, recordedCalls = true)
+
+        instance.onAppBackgrounded()
+        verify(exactly = 1) { mockPlayer.pause() }
+        verify(exactly = 0) { mockPlayer.play() }
+
+        instance.onAppForegrounded()
+        verify(exactly = 1) { mockPlayer.play() }
+    }
+
+    @Test
     fun `stopForActivityDetach pauses audio overlays for symmetry with onAppBackgrounded`() {
         materializePlayer()
 
