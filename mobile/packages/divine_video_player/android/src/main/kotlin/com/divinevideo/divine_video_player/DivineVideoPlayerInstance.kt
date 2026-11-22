@@ -268,16 +268,7 @@ internal class DivineVideoPlayerInstance(
     private var frameEffectSurfaceSize: Size? = null
 
     /** Decodes the earlier frames frame effects need after a seek. */
-    /** Lazily allocated only when frame effects are active, avoiding thread churn on feed players. */
-    private var frameEffectsFillExecutor: java.util.concurrent.ExecutorService? = null
-
-    private fun ensureFrameEffectsFillExecutor(): java.util.concurrent.ExecutorService {
-        val existing = frameEffectsFillExecutor
-        if (existing != null && !existing.isShutdown) return existing
-        return java.util.concurrent.Executors.newSingleThreadExecutor().also {
-            frameEffectsFillExecutor = it
-        }
-    }
+    private val frameEffectsFillExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     /**
      * The display size of each clip, read from its file. With the effect
@@ -2206,10 +2197,9 @@ internal class DivineVideoPlayerInstance(
             .map { offsetUs -> seekUs - (offsetUs * speed).toLong() }
             .filter { it >= clipStartUs }
         if (targets.isEmpty()) return
-        val executor = ensureFrameEffectsFillExecutor()
-        if (executor.isShutdown) return
+        if (frameEffectsFillExecutor.isShutdown) return
         frameEffectsFillRunning = request
-        executor.execute {
+        frameEffectsFillExecutor.execute {
             val isCancelled = {
                 val newer = frameEffectsFillRequest
                 frameEffectsState !== state || (newer != null &&
@@ -3175,8 +3165,7 @@ internal class DivineVideoPlayerInstance(
         frameEffectsState = null
         frameEffectsFillRequest = null
         mainHandler.removeCallbacks(frameEffectsRedraw)
-        frameEffectsFillExecutor?.shutdownNow()
-        frameEffectsFillExecutor = null
+        frameEffectsFillExecutor.shutdownNow()
         seekCompletionResult?.success(null)
         seekCompletionResult = null
         pendingSetClipsResult?.success(null)
