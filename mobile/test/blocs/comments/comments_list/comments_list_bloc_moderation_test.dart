@@ -67,6 +67,7 @@ void main() {
           rootEventKind: any(named: 'rootEventKind'),
           rootAddressableId: any(named: 'rootAddressableId'),
           limit: any(named: 'limit'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer(
         (_) async => CommentThread(

@@ -18,9 +18,10 @@ part 'comments_list_state.dart';
 /// BLoC owning the canonical store of [Comment]s for one video.
 ///
 /// Loads, paginates, sorts, and watches the live stream of comments for one
-/// video. Mutations from [CommentComposerBloc] and [CommentReactionsBloc]
-/// flow in through UI [BlocListener]s as Optimistic*/CommentReplacedInStore /
-/// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
+/// video, video replies included. Mutations from [CommentComposerBloc] and
+/// [CommentReactionsBloc] flow in through UI [BlocListener]s as
+/// Optimistic*/CommentReplacedInStore / CommentRemovedFromStore /
+/// CommentsRemovedByAuthorFromStore events.
 /// Top sort needs vote counts from [CommentReactionsBloc]; see
 /// [CommentsListState.displayCommentsWith].
 ///
@@ -36,7 +37,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     required String rootAuthorPubkey,
     String? rootAddressableId,
     int? initialTotalCount,
-    bool includeVideoReplies = false,
     String? focusCommentId,
     CommentModerationRepository? commentModerationRepository,
     String? viewerPubkey,
@@ -45,7 +45,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   }) : _commentsRepository = commentsRepository,
        _commentModerationRepository = commentModerationRepository,
        _initialTotalCount = initialTotalCount,
-       _includeVideoReplies = includeVideoReplies,
        super(
          CommentsListState(
            rootEventId: rootEventId,
@@ -116,7 +115,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   final CommentsRepository _commentsRepository;
   final CommentModerationRepository? _commentModerationRepository;
   StreamSubscription<Set<String>>? _viewerBlocksSubscription;
-  final bool _includeVideoReplies;
   BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
 
@@ -171,7 +169,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootEventKind: state.rootEventKind,
         rootAddressableId: state.rootAddressableId,
         limit: _pageSize,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
       final loadedModeration = await moderation;
 
@@ -267,7 +265,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         limit: _pageSize,
         before: cursor,
         offset: state.nextOffset ?? 0,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
 
       final loadedBefore = state.commentsById.length;
@@ -868,7 +866,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootEventId: state.rootEventId,
         rootEventKind: state.rootEventKind,
         rootAddressableId: state.rootAddressableId,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
         onEose: () {
           // The stored comments are still in the open window; take them in
           // first, or the backfill would be called complete before they
@@ -894,7 +892,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       _commentDeletionSubscription = _commentsRepository
           .watchCommentDeletions(
             rootEventId: state.rootEventId,
-            includeVideoReplies: _includeVideoReplies,
+            includeVideoReplies: true,
           )
           .listen(
             (deletion) {

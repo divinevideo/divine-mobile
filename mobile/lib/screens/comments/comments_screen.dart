@@ -353,7 +353,6 @@ class _CommentsBlocScope extends StatelessWidget {
             rootAuthorPubkey: video.pubkey,
             rootAddressableId: video.addressableId,
             initialTotalCount: seedCommentCount,
-            includeVideoReplies: true,
             focusCommentId: focusCommentId,
             commentModerationRepository:
                 dependencies.commentModerationRepository,
