@@ -2406,6 +2406,63 @@ void main() {
       });
     });
 
+    group('suspendConnections', () {
+      late RelayManager suspendManager;
+
+      setUp(() async {
+        suspendManager = RelayManager(
+          config: _createTestConfig(),
+          relayPool: mockRelayPool,
+          relayFactory: _FakeRelay.new,
+        );
+        addTearDown(suspendManager.dispose);
+        await suspendManager.initialize();
+        expect(suspendManager.isStatusPollingActive, isTrue);
+        expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
+      });
+
+      test(
+        'closes every configured relay socket and pauses status polling',
+        () {
+          clearInteractions(mockRelayPool);
+
+          suspendManager.suspendConnections();
+
+          verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+          expect(suspendManager.isStatusPollingActive, isFalse);
+          expect(suspendManager.connectedRelays, isEmpty);
+          expect(
+            suspendManager.configuredRelays,
+            contains(testDefaultRelayUrl),
+          );
+        },
+      );
+
+      test('forceReconnectAll restores the connections and polling', () async {
+        suspendManager.suspendConnections();
+
+        await suspendManager.forceReconnectAll();
+
+        expect(suspendManager.isStatusPollingActive, isTrue);
+        expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
+      });
+
+      test(
+        'retryDisconnectedRelays restores the connections and polling',
+        () async {
+          suspendManager.suspendConnections();
+
+          await suspendManager.retryDisconnectedRelays();
+
+          expect(suspendManager.isStatusPollingActive, isTrue);
+          expect(
+            suspendManager.connectedRelays,
+            contains(testDefaultRelayUrl),
+          );
+        },
+      );
+    });
+
     group('dispose', () {
       test('stops status polling', () async {
         await manager.initialize();
@@ -2823,42 +2880,6 @@ void main() {
               verify(() => mockStorage.saveRelays(captureAny())).captured.last
                   as List<String>;
           expect(saved, isNot(contains(productionRelayUrl)));
-        },
-      );
-    });
-
-    group('background suspension', () {
-      test(
-        'suspendConnections stops polling, removes pooled sockets, '
-        'and keeps configured relays for resume',
-        () async {
-          final suspendManager = RelayManager(
-            config: _createTestConfig(),
-            relayPool: mockRelayPool,
-            relayFactory: _FakeRelay.new,
-          );
-          addTearDown(suspendManager.dispose);
-
-          await suspendManager.initialize();
-          expect(suspendManager.isStatusPollingActive, isTrue);
-          expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
-
-          suspendManager.suspendConnections();
-
-          expect(suspendManager.isStatusPollingActive, isFalse);
-          expect(
-            suspendManager.configuredRelays,
-            contains(testDefaultRelayUrl),
-          );
-          expect(suspendManager.connectedRelays, isEmpty);
-          verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(
-            greaterThanOrEqualTo(1),
-          );
-
-          await suspendManager.forceReconnectAll();
-
-          expect(suspendManager.isStatusPollingActive, isTrue);
-          expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
         },
       );
     });
