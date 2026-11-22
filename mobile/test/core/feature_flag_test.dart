@@ -27,10 +27,9 @@ void main() {
 
     test('should include expected flags for OpenVine', () {
       expect(FeatureFlag.values, contains(FeatureFlag.accountSwitching));
-      expect(FeatureFlag.values, contains(FeatureFlag.enhancedAnalytics));
+      expect(FeatureFlag.values, contains(FeatureFlag.blueskyPublishing));
       expect(FeatureFlag.values, contains(FeatureFlag.debugTools));
       expect(FeatureFlag.values, contains(FeatureFlag.integratedApps));
-      expect(FeatureFlag.values, contains(FeatureFlag.videoReplies));
     });
 
     test('integratedApps flag should have correct metadata', () {
@@ -113,7 +112,6 @@ void main() {
 
     test('should leave user-facing flags visible to users', () {
       expect(FeatureFlag.blueskyPublishing.audience, FeatureFlagAudience.user);
-      expect(FeatureFlag.videoReplies.audience, FeatureFlagAudience.user);
       // Parents opt in to Greenlight recording from the user-facing list;
       // the toggle must not be developer-mode-only.
       expect(

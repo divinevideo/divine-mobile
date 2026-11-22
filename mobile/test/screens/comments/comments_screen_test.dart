@@ -21,8 +21,6 @@ import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_surface_performance_telemetry.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -495,8 +493,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(mockAuthService),
           nostrSessionProvider.overrideWith(_SignedOutNostrSession.new),
-          isFeatureEnabledProvider(FeatureFlag.videoReplies)
-              .overrideWithValue(false),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,

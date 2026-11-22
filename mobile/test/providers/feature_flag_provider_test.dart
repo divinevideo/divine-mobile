@@ -125,9 +125,9 @@ void main() {
         ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       expect(
-        const BuildConfiguration().getDefault(FeatureFlag.enhancedAnalytics),
+        const BuildConfiguration().getDefault(FeatureFlag.blueskyPublishing),
         isFalse,
         reason: 'the override must differ from the build default to be seen',
       );
@@ -143,7 +143,7 @@ void main() {
       addTearDown(subscription.close);
 
       expect(
-        container.read(isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics)),
+        container.read(isFeatureEnabledProvider(FeatureFlag.blueskyPublishing)),
         isTrue,
       );
     });
@@ -171,16 +171,16 @@ void main() {
 
       // Initial state
       final initialEnabled = container.read(
-        isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
+        isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
       );
       expect(initialEnabled, isFalse);
 
       // Change flag
-      await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+      await service.setFlag(FeatureFlag.blueskyPublishing, true);
 
       // State should update
       final newEnabled = container.read(
-        isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
+        isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
       );
       expect(newEnabled, isTrue);
 
@@ -190,7 +190,7 @@ void main() {
     test('gates internal flag overrides on developer mode', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'ff_communityContentWarnings': true,
-        'ff_enhancedAnalytics': true,
+        'ff_blueskyPublishing': true,
       });
       final prefs = await SharedPreferences.getInstance();
 
@@ -206,7 +206,7 @@ void main() {
       await service.initialize();
 
       expect(service.isEnabled(FeatureFlag.communityContentWarnings), isFalse);
-      expect(service.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
+      expect(service.isEnabled(FeatureFlag.blueskyPublishing), isTrue);
       expect(prefs.getBool('ff_communityContentWarnings'), isTrue);
 
       await environment.enableDeveloperMode();
@@ -320,24 +320,24 @@ void main() {
 
         final enabledValues = <bool>[];
         final subscription = container.listen(
-          isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
+          isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
           (_, next) => enabledValues.add(next),
         );
 
         expect(
           container.read(
-            isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
+            isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
           ),
           isFalse,
         );
         expect(service.addListenerCalls, equals(1));
 
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
         await pumpEventQueue();
 
         expect(
           container.read(
-            isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
+            isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
           ),
           isTrue,
         );
@@ -368,8 +368,8 @@ void main() {
           (_, next) => notifications.add(next),
         );
 
-        final currentValue = service.isEnabled(FeatureFlag.enhancedAnalytics);
-        await service.setFlag(FeatureFlag.enhancedAnalytics, currentValue);
+        final currentValue = service.isEnabled(FeatureFlag.blueskyPublishing);
+        await service.setFlag(FeatureFlag.blueskyPublishing, currentValue);
         await pumpEventQueue();
 
         expect(

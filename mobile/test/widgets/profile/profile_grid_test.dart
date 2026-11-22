@@ -24,8 +24,6 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -345,9 +343,6 @@ void main() {
           contentBlocklistRepositoryProvider.overrideWithValue(
             blocklistRepository,
           ),
-          isFeatureEnabledProvider(
-            FeatureFlag.videoReplies,
-          ).overrideWith((_) => false),
           if (curatedListService != null)
             curatedListsStateProvider.overrideWith(
               () => _FakeCuratedListsState(curatedListService),
@@ -386,6 +381,31 @@ void main() {
         ),
       );
     }
+
+    testWidgets('profile comments include video replies without a flag', (
+      tester,
+    ) async {
+      when(
+        () => commentsRepository.loadCommentsByAuthor(
+          authorPubkey: userIdHex,
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) async => const AuthorCommentsPage(comments: []));
+
+      await tester.pumpWidget(buildSubject(isOwnProfile: false));
+      await tester.pump();
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileCommentsTab),
+      );
+      await tester.pump();
+
+      verify(
+        () => commentsRepository.loadCommentsByAuthor(
+          authorPubkey: userIdHex,
+          includeVideoReplies: true,
+        ),
+      ).called(1);
+    });
 
     testWidgets(
       'recreates tab state when own-profile status changes in place',
@@ -522,9 +542,6 @@ void main() {
             contentBlocklistRepositoryProvider.overrideWithValue(
               blocklistRepository,
             ),
-            isFeatureEnabledProvider(
-              FeatureFlag.videoReplies,
-            ).overrideWith((_) => false),
           ],
         );
         addTearDown(container.dispose);

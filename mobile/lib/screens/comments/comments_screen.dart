@@ -19,8 +19,6 @@ import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_surface_performance_telemetry.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -212,7 +210,6 @@ abstract final class CommentsScreen {
         CommentsSurfacePerformanceTelemetry.withTracker(
           container.read(surfacePerformanceTrackerProvider),
         )..start(
-          videoRepliesEnabled: dependencies.showVideoReplies,
           initialCount: seedCommentCount,
         );
 
@@ -303,9 +300,6 @@ class _CommentsDependencies {
       commentModerationRepository = container.read(
         commentModerationRepositoryProvider,
       ),
-      showVideoReplies = container.read(
-        isFeatureEnabledProvider(FeatureFlag.videoReplies),
-      ),
       viewerPubkey = container.read(authServiceProvider).currentPublicKeyHex;
 
   final ProviderContainer container;
@@ -315,7 +309,6 @@ class _CommentsDependencies {
   final ProfileRepository? profileRepository;
   final FollowRepository followRepository;
   final CommentModerationRepository commentModerationRepository;
-  final bool showVideoReplies;
 
   /// The signed-in account as the comments opened.
   final String? viewerPubkey;
@@ -360,7 +353,7 @@ class _CommentsBlocScope extends StatelessWidget {
             rootAuthorPubkey: video.pubkey,
             rootAddressableId: video.addressableId,
             initialTotalCount: seedCommentCount,
-            includeVideoReplies: dependencies.showVideoReplies,
+            includeVideoReplies: true,
             focusCommentId: focusCommentId,
             commentModerationRepository:
                 dependencies.commentModerationRepository,
@@ -1014,53 +1007,45 @@ class _CommentsScreenBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final showVideoReplies = ref.watch(
-          isFeatureEnabledProvider(FeatureFlag.videoReplies),
-        );
-        return MultiBlocListener(
-          listeners: [
-            BlocListener<CommentsListBloc, CommentsListState>(
-              listenWhen: (prev, next) =>
-                  prev.error != next.error && next.error != null,
-              listener: (ctx, state) {
-                _snack(ctx, _listErrorToString(ctx.l10n, state.error!));
-                ctx.read<CommentsListBloc>().add(
-                  const CommentsListErrorCleared(),
-                );
-              },
-            ),
-            BlocListener<CommentComposerBloc, CommentComposerState>(
-              listenWhen: (prev, next) =>
-                  prev.error != next.error && next.error != null,
-              listener: (ctx, state) {
-                _snack(ctx, _composerErrorToString(ctx.l10n, state.error!));
-                ctx.read<CommentComposerBloc>().add(
-                  const CommentComposerErrorCleared(),
-                );
-              },
-            ),
-            BlocListener<CommentReactionsBloc, CommentReactionsState>(
-              listenWhen: (prev, next) =>
-                  prev.error != next.error && next.error != null,
-              listener: (ctx, state) {
-                _snack(ctx, _reactionsErrorToString(ctx.l10n, state.error!));
-                ctx.read<CommentReactionsBloc>().add(
-                  const CommentReactionsErrorCleared(),
-                );
-              },
-            ),
-          ],
-          child: SizedBox(
-            child: CommentsList(
-              showClassicVineNotice: videoEvent.isOriginalVine,
-              scrollController: sheetScrollController,
-              showVideoReplies: showVideoReplies,
-            ),
-          ),
-        );
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<CommentsListBloc, CommentsListState>(
+          listenWhen: (prev, next) =>
+              prev.error != next.error && next.error != null,
+          listener: (ctx, state) {
+            _snack(ctx, _listErrorToString(ctx.l10n, state.error!));
+            ctx.read<CommentsListBloc>().add(
+              const CommentsListErrorCleared(),
+            );
+          },
+        ),
+        BlocListener<CommentComposerBloc, CommentComposerState>(
+          listenWhen: (prev, next) =>
+              prev.error != next.error && next.error != null,
+          listener: (ctx, state) {
+            _snack(ctx, _composerErrorToString(ctx.l10n, state.error!));
+            ctx.read<CommentComposerBloc>().add(
+              const CommentComposerErrorCleared(),
+            );
+          },
+        ),
+        BlocListener<CommentReactionsBloc, CommentReactionsState>(
+          listenWhen: (prev, next) =>
+              prev.error != next.error && next.error != null,
+          listener: (ctx, state) {
+            _snack(ctx, _reactionsErrorToString(ctx.l10n, state.error!));
+            ctx.read<CommentReactionsBloc>().add(
+              const CommentReactionsErrorCleared(),
+            );
+          },
+        ),
+      ],
+      child: SizedBox(
+        child: CommentsList(
+          showClassicVineNotice: videoEvent.isOriginalVine,
+          scrollController: sheetScrollController,
+        ),
+      ),
     );
   }
 }
@@ -1251,10 +1236,8 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
               )
               ..add(const MentionSuggestionsCleared());
           },
-          onVideoReplyPressed:
-              ref.watch(isFeatureEnabledProvider(FeatureFlag.videoReplies))
-              ? () => _openVideoReplyCamera(context, state, replyToAuthorPubkey)
-              : null,
+          onVideoReplyPressed: () =>
+              _openVideoReplyCamera(context, state, replyToAuthorPubkey),
           onChanged: (text) {
             context.read<CommentComposerBloc>().add(
               CommentTextChanged(text, commentId: state.activeReplyCommentId),

@@ -18,8 +18,6 @@ class BuildConfiguration {
     switch (flag) {
       case FeatureFlag.publishingIdeas:
         return const bool.fromEnvironment('FF_PUBLISHING_IDEAS');
-      case FeatureFlag.enhancedAnalytics:
-        return const bool.fromEnvironment('FF_ENHANCED_ANALYTICS');
       case FeatureFlag.debugTools:
         return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
       case FeatureFlag.blueskyPublishing:
@@ -28,21 +26,11 @@ class BuildConfiguration {
         return const bool.fromEnvironment('FF_INTEGRATED_APPS');
       case FeatureFlag.accountSwitching:
         return const bool.fromEnvironment('FF_ACCOUNT_SWITCHING');
-      case FeatureFlag.videoReplies:
-        return const bool.fromEnvironment(
-          'FF_VIDEO_REPLIES',
-          defaultValue: true,
-        );
       case FeatureFlag.advancedRelaySettings:
         return const bool.fromEnvironment('FF_ADVANCED_RELAY_SETTINGS');
       case FeatureFlag.feedTuning:
         // TODO(#6649): Re-promote after divine-funnelcake#691 ships.
         return const bool.fromEnvironment('FF_FEED_TUNING');
-      case FeatureFlag.profileMonetizationLinks:
-        return const bool.fromEnvironment(
-          'FF_PROFILE_MONETIZATION_LINKS',
-          defaultValue: true,
-        );
       case FeatureFlag.communityContentWarnings:
         // Default OFF pending T&S sign-off on surfacing warnings from
         // unverified community votes (#4771).
@@ -104,8 +92,6 @@ class BuildConfiguration {
     switch (flag) {
       case FeatureFlag.publishingIdeas:
         return 'FF_PUBLISHING_IDEAS';
-      case FeatureFlag.enhancedAnalytics:
-        return 'FF_ENHANCED_ANALYTICS';
       case FeatureFlag.debugTools:
         return 'FF_DEBUG_TOOLS';
       case FeatureFlag.blueskyPublishing:
@@ -114,14 +100,10 @@ class BuildConfiguration {
         return 'FF_INTEGRATED_APPS';
       case FeatureFlag.accountSwitching:
         return 'FF_ACCOUNT_SWITCHING';
-      case FeatureFlag.videoReplies:
-        return 'FF_VIDEO_REPLIES';
       case FeatureFlag.advancedRelaySettings:
         return 'FF_ADVANCED_RELAY_SETTINGS';
       case FeatureFlag.feedTuning:
         return 'FF_FEED_TUNING';
-      case FeatureFlag.profileMonetizationLinks:
-        return 'FF_PROFILE_MONETIZATION_LINKS';
       case FeatureFlag.communityContentWarnings:
         return 'FF_COMMUNITY_CONTENT_WARNINGS';
       case FeatureFlag.newPostNotifications:

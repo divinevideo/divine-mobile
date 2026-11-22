@@ -9,10 +9,6 @@ enum FeatureFlag {
     'Inline title, description, and hashtag ideas.',
     audience: FeatureFlagAudience.internal,
   ),
-  enhancedAnalytics(
-    'Enhanced Analytics',
-    'Detailed usage tracking and insights',
-  ),
   debugTools('Debug Tools', 'Developer debugging utilities and diagnostics'),
   blueskyPublishing(
     'Bluesky Publishing',
@@ -26,10 +22,6 @@ enum FeatureFlag {
     'Account Switching',
     'Enable switching between remembered accounts in Settings',
   ),
-  videoReplies(
-    'Video Replies',
-    'Enable recording and posting short video replies from comment threads',
-  ),
   advancedRelaySettings(
     'Advanced Relay Settings',
     'Show Nostr relay configuration and diagnostics in Settings. '
@@ -42,10 +34,6 @@ enum FeatureFlag {
         'signals that personalize recommendations. Off by default until the '
         'relay and recommendation backend are ready.',
     audience: FeatureFlagAudience.internal,
-  ),
-  profileMonetizationLinks(
-    'Profile Monetization Links',
-    'Enable outbound tip and subscription links on profiles.',
   ),
   communityContentWarnings(
     'Community Content Warnings',

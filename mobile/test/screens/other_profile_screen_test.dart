@@ -21,8 +21,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -291,12 +289,6 @@ void main() {
         fetchUserProfileProvider(
           targetPubkey,
         ).overrideWith((ref) async => profile()),
-        isFeatureEnabledProvider(
-          FeatureFlag.videoReplies,
-        ).overrideWith((ref) => false),
-        isFeatureEnabledProvider(
-          FeatureFlag.profileMonetizationLinks,
-        ).overrideWith((ref) => false),
         // Element-level, since the standard overrides already claim the
         // family and Riverpod rejects a second family override.
         if (isVanished)
@@ -493,17 +485,12 @@ void main() {
     );
 
     testWidgets(
-      're-fetches raw Kind 0 when the monetization flag flips while mounted',
+      'loads support links on mount without a feature flag',
       (tester) async {
-        // Regression: the flag both gates the Tip/Support button AND gates
-        // OtherProfileBloc.loadSupportLinks (relay Kind 0, which carries the
-        // monetization links, vs the REST projection that strips them). A
-        // keyless BlocProvider captured the first flag value forever, so
-        // enabling the flag on an already-mounted profile never re-fetched the
-        // raw Kind 0 and the button never appeared.
+        // Support links are part of normal profile loading. The raw Kind 0
+        // fetch must happen immediately, without toggling an experiment.
         const targetNpub =
             'npub1424242424242424242424242424242424242424242424242424qamrcaj';
-        final flag = StateProvider<bool>((ref) => false);
         final identityClaims = _MockIdentityClaimsRepository();
         final profileRepo = MockProfileRepository();
         when(
@@ -578,12 +565,6 @@ void main() {
             fetchUserProfileProvider(
               targetPubkey,
             ).overrideWith((ref) async => profile()),
-            isFeatureEnabledProvider(
-              FeatureFlag.videoReplies,
-            ).overrideWith((ref) => false),
-            isFeatureEnabledProvider(
-              FeatureFlag.profileMonetizationLinks,
-            ).overrideWith((ref) => ref.watch(flag)),
           ],
         );
         addTearDown(container.dispose);
@@ -604,16 +585,7 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 50));
 
-        verifyNever(
-          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
-        );
-        expect(find.byKey(const Key('profile-support-button')), findsNothing);
-
-        container.read(flag.notifier).state = true;
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        // Flipping the flag must recreate the bloc and re-fetch the raw Kind 0.
+        // The raw Kind 0 is fetched even with no feature-flag overrides.
         verify(
           () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
         ).called(1);

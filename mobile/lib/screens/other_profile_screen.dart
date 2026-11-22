@@ -13,8 +13,6 @@ import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
@@ -95,16 +93,12 @@ class OtherProfileScreen extends ConsumerWidget {
     final identityClaimsRepository = ref.watch(
       identityClaimsRepositoryProvider,
     );
-    final loadSupportLinks = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-    );
 
     return BlocProvider(
       // Re-create the bloc when captured dependencies change. A keyless
       // create: would keep stale repositories/current-user state after auth or
-      // account changes, and would also miss support-link flag changes.
+      // account changes.
       key: ValueKey((
-        loadSupportLinks,
         profileRepository,
         blocklistRepository,
         nostrClient.publicKey,
@@ -118,7 +112,7 @@ class OtherProfileScreen extends ConsumerWidget {
         currentUserPubkey: nostrClient.publicKey,
         followRepository: followRepository,
         identityClaimsRepository: identityClaimsRepository,
-        loadSupportLinks: loadSupportLinks,
+        loadSupportLinks: true,
       )..add(const OtherProfileLoadRequested()),
       child: OtherProfileView(
         pubkey: pubkey,

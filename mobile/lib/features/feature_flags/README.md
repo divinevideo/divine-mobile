@@ -1,7 +1,7 @@
 # Feature Flags System
 
 Status: Current
-Validated against: feature flag package structure on 2026-03-19.
+Validated against: feature flag package structure on 2026-11-22.
 
 A comprehensive TDD-built feature flag system for Divine, providing build-time configuration, runtime management, and user override capabilities.
 
@@ -16,9 +16,13 @@ The feature flag system follows clean architecture principles with clear separat
 
 ## Available Feature Flags
 
-- `enhancedVideoPlayer` - Improved video playback engine with better performance
-- `enhancedAnalytics` - Detailed usage tracking and insights
-- `debugTools` - Developer debugging utilities and diagnostics
+The current inventory is defined by [FeatureFlag](models/feature_flag.dart),
+with build defaults in [BuildConfiguration](services/build_configuration.dart).
+Internal flags allow device overrides only in Developer Mode.
+
+Video replies and profile tip/support links are normal product behavior and
+have no experimental toggle or build override. The unused Enhanced Analytics
+flag is removed; analytics consent remains in Privacy & safety.
 
 ## Quick Start
 
@@ -27,11 +31,12 @@ The feature flag system follows clean architecture principles with clear separat
 ```dart
 import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 FeatureFlagWidget(
-  flag: FeatureFlag.enhancedAnalytics,
-  disabled: const StandardCameraWidget(),
-  child: const EnhancedCameraWidget(),
+  flag: FeatureFlag.blueskyPublishing,
+  disabled: const SizedBox.shrink(),
+  child: const BlueskySettingsScreen(),
 )
 ```
 
@@ -40,18 +45,20 @@ FeatureFlagWidget(
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 class MyWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isNewCameraEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics)
+    final isBlueskyEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.blueskyPublishing)
     );
     
-    if (isNewCameraEnabled) {
-      return const EnhancedCameraWidget();
+    if (isBlueskyEnabled) {
+      return const BlueskySettingsScreen();
     } else {
-      return const StandardCameraWidget();
+      return const SizedBox.shrink();
     }
   }
 }
@@ -75,8 +82,8 @@ Feature flags have build-time defaults that can be configured per environment:
 bool getDefault(FeatureFlag flag) {
   switch (flag) {
     case FeatureFlag.debugTools:
-      return kDebugMode; // Only enabled in debug builds
-    case FeatureFlag.enhancedAnalytics:
+      return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
+    case FeatureFlag.blueskyPublishing:
       return false; // Disabled by default
     // ... other flags
   }
@@ -117,7 +124,7 @@ Comprehensive test coverage with 47 tests across:
 ```dart
 testWidgets('should show enhanced feature when flag enabled', (tester) async {
   final mockPrefs = MockSharedPreferences();
-  when(mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+  when(mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
   
   await tester.pumpWidget(
     ProviderScope(

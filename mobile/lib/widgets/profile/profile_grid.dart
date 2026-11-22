@@ -19,8 +19,6 @@ import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_b
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -217,7 +215,6 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   ({
     String userIdHex,
     bool isOwnProfile,
-    bool includeVideoReplies,
     String currentUserPubkey,
     Object likesRepository,
     Object repostsRepository,
@@ -764,9 +761,6 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     final bookmarksRepository = widget.isOwnProfile
         ? ref.watch(bookmarksRepositoryProvider)
         : null;
-    final includeVideoReplies = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.videoReplies),
-    );
     final nostrService = ref.watch(nostrServiceProvider);
     final contentBlocklistRepository = ref.watch(
       contentBlocklistRepositoryProvider,
@@ -783,7 +777,6 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     final blocsDeps = (
       userIdHex: widget.userIdHex,
       isOwnProfile: widget.isOwnProfile,
-      includeVideoReplies: includeVideoReplies,
       currentUserPubkey: currentUserPubkey,
       likesRepository: likesRepository as Object,
       repostsRepository: repostsRepository as Object,
@@ -888,7 +881,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         ProfileCommentsBloc(
           commentsRepository: commentsRepository,
           targetUserPubkey: widget.userIdHex,
-          includeVideoReplies: includeVideoReplies,
+          includeVideoReplies: true,
         ),
         'profile comments',
       );

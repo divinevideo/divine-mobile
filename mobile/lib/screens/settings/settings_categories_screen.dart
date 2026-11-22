@@ -104,9 +104,6 @@ class CreatingSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isAuthenticated =
         ref.watch(currentAuthStateProvider) == AuthState.authenticated;
-    final monetizationEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-    );
     final blueskyEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
     );
@@ -163,7 +160,7 @@ class CreatingSettingsScreen extends ConsumerWidget {
           subtitle: context.l10n.settingsBadgesSubtitle,
           onTap: () => context.push(BadgesScreen.path),
         ),
-        if (isAuthenticated && monetizationEnabled)
+        if (isAuthenticated)
           DivineListTile(
             icon: DivineIconName.heart,
             title: usesAppleAppStoreTipPolicy

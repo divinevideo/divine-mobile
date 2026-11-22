@@ -144,18 +144,18 @@ void main() {
 
       // Verify settings screen loaded
       expect(find.text('Feature Flags'), findsOneWidget);
-      expect(find.text('Enhanced Analytics'), findsOneWidget);
+      expect(find.text('Bluesky Publishing'), findsOneWidget);
 
       // Enable the feature flag
       // Update mock to return true when getBool is called after toggle
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       final flagSwitch = find.descendant(
         of: find.ancestor(
-          of: find.text('Enhanced Analytics'),
+          of: find.text('Bluesky Publishing'),
           matching: find.byType(Card),
         ),
         matching: find.byType(Switch),
@@ -164,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify persistence call was made
-      verify(() => mockPrefs.setBool('ff_enhancedAnalytics', true)).called(1);
+      verify(() => mockPrefs.setBool('ff_blueskyPublishing', true)).called(1);
 
       // Navigate back to home
       await tester.tap(find.byType(DivineAppBarIconButton).first);
@@ -177,9 +177,9 @@ void main() {
 
     testWidgets('should handle multiple flags independently', (tester) async {
       // Set up mixed initial state
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       await tester.pumpWidget(
@@ -197,7 +197,7 @@ void main() {
               body: Column(
                 children: [
                   const FeatureFlagWidget(
-                    flag: FeatureFlag.enhancedAnalytics,
+                    flag: FeatureFlag.blueskyPublishing,
                     disabled: Text('Standard Camera'),
                     child: Text('Enhanced Camera'),
                   ),
@@ -245,7 +245,7 @@ void main() {
       );
 
       // Verify the feature flag list items are present
-      expect(find.text('Enhanced Analytics'), findsOneWidget);
+      expect(find.text('Bluesky Publishing'), findsOneWidget);
     });
 
     testWidgets('should persist flag changes across app restarts', (
@@ -276,15 +276,15 @@ void main() {
       await service1.initialize();
       await tester.pumpAndSettle();
 
-      // Change a flag - find the enhancedAnalytics switch specifically
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      // Change a flag - find the blueskyPublishing switch specifically
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       final flagSwitch = find.descendant(
         of: find.ancestor(
-          of: find.text('Enhanced Analytics'),
+          of: find.text('Bluesky Publishing'),
           matching: find.byType(Card),
         ),
         matching: find.byType(Switch),
@@ -293,12 +293,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify persistence call
-      verify(() => mockPrefs.setBool('ff_enhancedAnalytics', true)).called(1);
+      verify(() => mockPrefs.setBool('ff_blueskyPublishing', true)).called(1);
 
       // Simulate app restart by setting up persistence response
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       // Create new app instance (simulating restart)
@@ -333,9 +333,9 @@ void main() {
 
     testWidgets('should handle flag reset functionality', (tester) async {
       // Set up flags with user overrides
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       await tester.pumpWidget(
@@ -353,7 +353,7 @@ void main() {
               body: Column(
                 children: [
                   FeatureFlagWidget(
-                    flag: FeatureFlag.enhancedAnalytics,
+                    flag: FeatureFlag.blueskyPublishing,
                     disabled: Text('Standard Camera'),
                     child: Text('Enhanced Camera'),
                   ),
@@ -409,9 +409,9 @@ void main() {
 
     testWidgets('renders a stored override as the row state', (tester) async {
       // Set up one flag with user override; every other flag keeps its default.
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       await tester.pumpWidget(
@@ -441,7 +441,7 @@ void main() {
       // The row's own switch is the override indicator — a flag forced on
       // reads on, and every flag left at its default reads off.
       final overriddenRow = find.ancestor(
-        of: find.text(FeatureFlag.enhancedAnalytics.displayName),
+        of: find.text(FeatureFlag.blueskyPublishing.displayName),
         matching: find.byType(ListTile),
       );
       final overriddenSwitch = tester.widget<DivineSwitch>(
@@ -449,7 +449,7 @@ void main() {
       );
       expect(overriddenSwitch.value, isTrue);
 
-      // integratedApps shares enhancedAnalytics' false build default but has
+      // integratedApps shares blueskyPublishing' false build default but has
       // no stored override, so it stays off.
       final defaultedRow = find.ancestor(
         of: find.text(FeatureFlag.integratedApps.displayName),
@@ -475,7 +475,7 @@ void main() {
               body: Column(
                 children: [
                   const FeatureFlagWidget(
-                    flag: FeatureFlag.enhancedAnalytics,
+                    flag: FeatureFlag.blueskyPublishing,
                     disabled: Text('Standard Camera'),
                     child: Text('Enhanced Camera'),
                   ),
@@ -532,7 +532,7 @@ void main() {
       // Try to toggle a flag - should not crash the app but should update UI
       final flagSwitch = find.descendant(
         of: find.ancestor(
-          of: find.text('Enhanced Analytics'),
+          of: find.text('Bluesky Publishing'),
           matching: find.byType(Card),
         ),
         matching: find.byType(Switch),
@@ -566,7 +566,7 @@ class TestHomeScreen extends ConsumerWidget {
       body: Column(
         children: [
           const FeatureFlagWidget(
-            flag: FeatureFlag.enhancedAnalytics,
+            flag: FeatureFlag.blueskyPublishing,
             disabled: Text('Standard Camera UI'),
             child: Text('Enhanced Camera UI'),
           ),
@@ -588,7 +588,7 @@ class TestContentScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return const Scaffold(
       body: FeatureFlagWidget(
-        flag: FeatureFlag.enhancedAnalytics,
+        flag: FeatureFlag.blueskyPublishing,
         disabled: Text('Standard Camera'),
         child: Text('New Camera Feature Enabled'),
       ),
