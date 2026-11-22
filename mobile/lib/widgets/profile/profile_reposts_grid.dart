@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
@@ -191,7 +192,7 @@ class _RepostGridTile extends ConsumerWidget {
                 hasMore: bloc.stream
                     .map((state) => state.hasMoreContent)
                     .startWith(bloc.state.hasMoreContent),
-                onLoadMore: () async => bloc.add(
+                onLoadMore: () async => bloc.addIfOpen(
                   const ProfileRepostedVideosLoadMoreRequested(),
                 ),
               ),

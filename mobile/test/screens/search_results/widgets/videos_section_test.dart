@@ -9,10 +9,13 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/videos_section.dart';
+
+import '../../../helpers/go_router.dart';
 
 class _MockVideoSearchBloc extends MockBloc<VideoSearchEvent, VideoSearchState>
     implements VideoSearchBloc {}
@@ -166,6 +169,68 @@ void main() {
         ).called(1);
       },
     );
+
+    group('fullscreen feed', () {
+      late MockGoRouter mockGoRouter;
+
+      setUp(() {
+        mockGoRouter = MockGoRouter();
+        when(
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        when(() => mockBloc.state).thenReturn(
+          VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'cats',
+            videos: [testVideo],
+            hasMore: true,
+          ),
+        );
+      });
+
+      Future<PooledFullscreenVideoFeedArgs> openFeed(
+        WidgetTester tester,
+      ) async {
+        await tester.pumpWidget(
+          MockGoRouterProvider(goRouter: mockGoRouter, child: buildSubject()),
+        );
+        await tester.tap(find.byType(SearchVideoTile));
+        await tester.pump();
+
+        return verify(
+              () => mockGoRouter.push<void>(
+                any(),
+                extra: captureAny(named: 'extra'),
+              ),
+            ).captured.single
+            as PooledFullscreenVideoFeedArgs;
+      }
+
+      testWidgets('loading more asks the search for its next page', (
+        tester,
+      ) async {
+        when(() => mockBloc.isClosed).thenReturn(false);
+        final args = await openFeed(tester);
+
+        await args.feedRepository.loadMore(args.source);
+
+        verify(() => mockBloc.add(const VideoSearchLoadMore())).called(1);
+      });
+
+      // The search page replaces its VideoSearchBloc when a captured
+      // repository rebuilds, while the pushed feed still holds the old one.
+      testWidgets('loading more after the search bloc closed does not throw', (
+        tester,
+      ) async {
+        final args = await openFeed(tester);
+        when(() => mockBloc.isClosed).thenReturn(true);
+        when(() => mockBloc.add(const VideoSearchLoadMore())).thenThrow(
+          StateError('Cannot add new events after calling close'),
+        );
+
+        await expectLater(args.feedRepository.loadMore(args.source), completes);
+      });
+    });
 
     group('loading more indicator', () {
       testWidgets('shows loading indicator when showAll and isLoadingMore', (

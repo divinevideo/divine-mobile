@@ -174,6 +174,7 @@ class FullscreenFeedBloc
   final FeedTuningRepository? _feedTuningRepository;
   final void Function(ClassicFeedFeedback)? _recommendationFeedback;
   StreamSubscription<bool>? _hasMoreSubscription;
+  bool _paginationEnded = false;
   StreamSubscription<String>? _removedIdsSubscription;
   int _tuningActionSequence = 0;
 
@@ -267,6 +268,13 @@ class FullscreenFeedBloc
           stackTrace: stackTrace,
         );
       },
+      // A finished stream keeps its last value, which can still be `true`
+      // when the source bloc closed under this route. Nothing can report a
+      // next page any more, so stop asking for one.
+      onDone: () {
+        _paginationEnded = true;
+        if (!isClosed) add(const FullscreenFeedHasMoreChanged(false));
+      },
     );
 
     // Side-channel: deletion (and future block / mute) emits a removed
@@ -352,15 +360,24 @@ class FullscreenFeedBloc
       },
     );
 
-    // The source stream completed. Single-emit sources — a static video list,
-    // the hashtag snapshot (`Stream.fromFuture`) — cannot deliver anything
-    // else, so an empty list here is terminal rather than a warm-up. Without
-    // this the screen holds its loading placeholder forever. Live sources
-    // only complete when the route is going away, which `isDone` covers.
-    if (!emit.isDone &&
-        state.videos.isEmpty &&
-        state.status != FullscreenFeedStatus.emptyAfterRemoval) {
-      emit(state.copyWith(status: FullscreenFeedStatus.empty));
+    // The source stream completed, so nothing else can arrive. Single-emit
+    // sources — a static video list, the hashtag snapshot — end right away,
+    // and an empty list there is terminal rather than a warm-up. A live source
+    // ends under an open route when its owning bloc closes, e.g. the search
+    // page replacing its VideoSearchBloc, so pagination ends too. `isDone`
+    // covers a route that is going away.
+    if (!emit.isDone) {
+      _paginationEnded = true;
+      final terminalEmpty =
+          state.videos.isEmpty &&
+          state.status != FullscreenFeedStatus.emptyAfterRemoval;
+      emit(
+        state.copyWith(
+          status: terminalEmpty ? FullscreenFeedStatus.empty : null,
+          canLoadMore: false,
+          isLoadingMore: false,
+        ),
+      );
     }
   }
 
@@ -423,10 +440,12 @@ class FullscreenFeedBloc
     FullscreenFeedHasMoreChanged event,
     Emitter<FullscreenFeedState> emit,
   ) {
+    // Either stream can end while the other still has messages queued.
+    final hasMore = event.hasMore && !_paginationEnded;
     emit(
       state.copyWith(
-        canLoadMore: event.hasMore,
-        isLoadingMore: state.isLoadingMore && event.hasMore,
+        canLoadMore: hasMore,
+        isLoadingMore: state.isLoadingMore && hasMore,
       ),
     );
   }
@@ -437,7 +456,7 @@ class FullscreenFeedBloc
     Emitter<FullscreenFeedState> emit,
   ) {
     final onLoadMore = _onLoadMore;
-    if (onLoadMore == null || state.isLoadingMore) return;
+    if (onLoadMore == null || _paginationEnded || state.isLoadingMore) return;
 
     Log.debug(
       'FullscreenFeedBloc: Load more requested',
