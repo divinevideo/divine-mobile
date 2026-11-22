@@ -1231,10 +1231,10 @@ class CommentsRepository {
         watch,
         onError: deletions.addError,
       ),
-      onCancel: () {
+      onCancel: () async {
         final candidate = pending;
         pending = null;
-        return Future.wait(
+        await Future.wait(
           [
             authorsSubscription?.cancel(),
             requests?.cancel(),
