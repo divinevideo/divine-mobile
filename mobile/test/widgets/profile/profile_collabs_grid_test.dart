@@ -319,7 +319,8 @@ void main() {
           ).captured;
           expect(captured, hasLength(1));
           final args = captured.single as PooledFullscreenVideoFeedArgs;
-          expect(args.tileOrigin?.videoId, args.initialVideoId);
+          expect(args.initialVideoId, videos.first.id);
+          expect(args.tileOrigin?.videoId, videos.first.id);
           expect(args.source, isA<CollabsViewSource>());
           expect(args.feedRepository, isNotNull);
         },

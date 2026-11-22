@@ -561,6 +561,7 @@ void main() {
           expect(find.byKey(const ValueKey('warning')), findsOneWidget);
           expect(_picture, findsNothing);
           await tester.pumpAndSettle();
+          expect(await _shownAt(tester, _landing.center), (0, 0, 0, 0xFF));
         },
       );
 
