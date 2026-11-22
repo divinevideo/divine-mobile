@@ -512,7 +512,8 @@ internal class DivineVideoPlayerInstance(
     private val seekTimeoutRunnable = Runnable {
         if (seekCompletionResult == null) return@Runnable
         if (player?.isPlaying == false) sendStateUpdate()
-        completeSeekIfPending()
+        // Release the Dart await without dropping a still-arriving paused frame.
+        completeSeekIfPending(waitForLateFrame = true)
     }
 
     /**
@@ -2375,8 +2376,8 @@ internal class DivineVideoPlayerInstance(
     }
 
     /** Completes the pending seekTo result so Dart's await returns. */
-    private fun completeSeekIfPending() {
-        seekAwaitsFrame = false
+    private fun completeSeekIfPending(waitForLateFrame: Boolean = false) {
+        if (!waitForLateFrame) seekAwaitsFrame = false
         seekCompletionResult?.let {
             mainHandler.removeCallbacks(seekTimeoutRunnable)
             it.success(null)

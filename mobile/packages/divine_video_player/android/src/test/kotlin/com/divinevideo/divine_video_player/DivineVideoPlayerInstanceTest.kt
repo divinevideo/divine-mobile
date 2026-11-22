@@ -766,10 +766,10 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
-    fun `a paused seek without a decoder callback reports the position at timeout`() {
+    fun `a paused seek reports position at timeout and updates when the late frame arrives`() {
         val timeout = slot<Runnable>()
         every { mockHandler.postDelayed(capture(timeout), 500L) } returns true
-        val (_, _, result) = seekWithSurface(playWhenReady = false)
+        val (_, frames, result) = seekWithSurface(playWhenReady = false)
         pausePictureTestAt(200L)
         val states = mutableListOf<Any>()
         val sink = mockk<EventChannel.EventSink>(relaxed = true)
@@ -781,6 +781,13 @@ class DivineVideoPlayerInstanceTest {
         timeout.captured.run()
 
         assertEquals(500L, (states.last() as Map<*, *>)["positionMs"])
+        assertEquals(null, (states.last() as Map<*, *>)["shownPositionMs"])
+        verify(exactly = 1) { result.success(null) }
+
+        armSeekFrame()
+        frames.renderAt(733_333L)
+
+        assertEquals(533L, (states.last() as Map<*, *>)["shownPositionMs"])
         verify(exactly = 1) { result.success(null) }
     }
 
