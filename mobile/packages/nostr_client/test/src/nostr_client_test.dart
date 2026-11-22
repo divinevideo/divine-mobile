@@ -3878,6 +3878,14 @@ void main() {
       });
     });
 
+    group('suspendBackgroundRelays', () {
+      test('delegates to RelayManager.suspendConnections', () {
+        client.suspendBackgroundRelays();
+
+        verify(mockRelayManager.suspendConnections).called(1);
+      });
+    });
+
     group('sendLike', () {
       void stubOutcome(PublishOutcome outcome) {
         when(

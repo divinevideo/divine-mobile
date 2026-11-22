@@ -175,6 +175,34 @@ void main() {
       },
     );
 
+    testWidgets(
+      'decodes a layout smaller than the cap at its own physical size',
+      (tester) async {
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const Center(
+              child: SizedBox(
+                width: 20,
+                height: 40,
+                child: BlurredVideoBackdrop(url: testUrl),
+              ),
+            ),
+          ),
+        );
+
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.memCacheWidth, equals(40));
+        expect(image.memCacheHeight, equals(80));
+      },
+    );
+
     testWidgets('uses $BoxFit cover with half opacity', (tester) async {
       await tester.pumpWidget(buildWidget());
 
