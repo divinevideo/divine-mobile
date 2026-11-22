@@ -241,55 +241,36 @@ void main() {
     });
 
     group('non-playing state resets heartbeat', () {
-      test('heartbeat counter resets when state becomes paused', () {
+      test('pauses polling and waits for a new stall after resume', () {
         fakeAsync((async) {
           final seeks = <(int, int)>[];
-          final controller = FakeController();
+          const stalled = DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            position: Duration(seconds: 1),
+          );
+          final controller = FakeController()..pushState(stalled);
           final det = _makeDetector(seekEvents: seeks)..start(0, controller);
-          // Burn grace.
-          for (var i = 0; i < StalePlaybackDetector.graceAfterPlay + 1; i++) {
-            controller.pushState(
-              DivineVideoPlayerState(
-                status: PlaybackStatus.playing,
-                position: Duration(milliseconds: i * 100),
-              ),
-            );
-            _tick(async, 1);
-          }
+          const threshold = StalePlaybackDetector.heartbeatThreshold;
 
-          // Accumulate some stale heartbeats, then pause.
-          for (
-            var i = 0;
-            i < StalePlaybackDetector.heartbeatThreshold - 1;
-            i++
-          ) {
-            controller.pushState(
-              const DivineVideoPlayerState(
-                status: PlaybackStatus.playing,
-                position: Duration(milliseconds: 1000),
-              ),
-            );
-            _tick(async, 1);
-          }
-
-          // Pause → counter resets and the periodic heartbeat timer stops
-          // so paused videos do not wake the Dart isolate at 4 Hz.
+          // Pause one heartbeat before recovery would have fired.
+          _tick(async, StalePlaybackDetector.graceAfterPlay + threshold - 1);
+          expect(seeks, isEmpty);
           controller.pushState(
             const DivineVideoPlayerState(status: PlaybackStatus.paused),
           );
           _tick(async, 1);
-          expect(async.periodicTimerCount, equals(0));
+          expect(async.periodicTimerCount, 0);
 
-          // Resume → heartbeat timer re-arms reactively from stateStream.
-          controller.pushState(
-            const DivineVideoPlayerState(
-              status: PlaybackStatus.playing,
-              position: Duration(milliseconds: 1000),
-            ),
-          );
+          controller.pushState(stalled);
           async.flushMicrotasks();
-          expect(async.periodicTimerCount, equals(1));
+          expect(async.periodicTimerCount, 1);
+
+          // The first tick observes the position and the next eight establish
+          // a new stall. No heartbeat from before the pause counts here.
+          _tick(async, threshold);
           expect(seeks, isEmpty);
+          _tick(async, 1);
+          expect(seeks, [(0, 1000)]);
           det.disposeAll();
         });
       });
