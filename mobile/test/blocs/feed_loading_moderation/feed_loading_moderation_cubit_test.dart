@@ -109,7 +109,10 @@ void main() {
             fake.elapse(const Duration(milliseconds: 500));
             fake.flushMicrotasks();
             verifyNever(() => mockService.fetchStatus(any()));
+            expect(fake.pendingTimers, hasLength(1));
             unawaited(cubit.close());
+            fake.flushMicrotasks();
+            expect(fake.pendingTimers, isEmpty);
             fake.elapse(const Duration(seconds: 5));
             fake.flushMicrotasks();
             verifyNever(() => mockService.fetchStatus(any()));
