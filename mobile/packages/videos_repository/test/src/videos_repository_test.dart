@@ -3182,6 +3182,7 @@ void main() {
                     comments: 0,
                     reposts: 0,
                     embeddedLoops: 5,
+                    loops: 50,
                     views: 42,
                   ),
                 },
@@ -3201,6 +3202,7 @@ void main() {
             expect(result.videos, hasLength(1));
             expect(result.videos.first.rawTags['views'], equals('7'));
             expect(result.videos.first.totalLoops, equals(12));
+            expect(result.videos.first.loopCountSnapshot?.count, 55);
             verify(
               () => mockFunnelcakeClient.getBulkVideoStats(['event-1']),
             ).called(1);
@@ -3211,7 +3213,7 @@ void main() {
         for (final failSecondBatch in [false, true]) {
           test(
             failSecondBatch
-                ? 'keeps stats from successful batches when a parallel batch fails'
+                ? 'keeps successful stats when a parallel batch fails'
                 : 'hydrates large API results in parallel batches',
             () async {
               final firstBatchDone = Completer<void>();
@@ -3293,6 +3295,7 @@ void main() {
                 (video) => video.id == 'event-100',
               );
               expect(firstVideo.totalLoops, equals(1));
+              expect(firstVideo.loopCountSnapshot?.count, 1);
               expect(lastVideo.totalLoops, failSecondBatch ? 0 : 101);
               expect(
                 captured.expand((ids) => ids as List<String>),

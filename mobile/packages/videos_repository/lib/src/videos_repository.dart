@@ -674,7 +674,13 @@ class VideosRepository {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) return null;
     final response = await client.getBulkVideoStats([video.id]);
-    final stats = response.stats[video.id];
+    return _loopCountFromBulkStats(video, response.stats[video.id]);
+  }
+
+  static int? _loopCountFromBulkStats(
+    VideoEvent video,
+    BulkVideoStatsEntry? stats,
+  ) {
     if (stats == null || (stats.loops == null && stats.views == null)) {
       return null;
     }
@@ -726,10 +732,12 @@ class VideosRepository {
 
     if (statsById.isEmpty) return videos;
 
+    final fetchedAt = DateTime.now().toUtc();
     return videos.map((video) {
       final stats = statsById[video.id];
       if (stats == null) return video;
 
+      final loopCount = _loopCountFromBulkStats(video, stats);
       return video.copyWith(
         // Only the archival embedded_loops may seed originalLoops; the
         // live computed stats.loops would clobber the Vine-era count and
@@ -753,6 +761,9 @@ class VideosRepository {
         rawTags: video.rawTags['views'] == null && stats.views != null
             ? {...video.rawTags, 'views': stats.views.toString()}
             : video.rawTags,
+        loopCountSnapshot: loopCount == null
+            ? null
+            : (count: loopCount, fetchedAt: fetchedAt),
       );
     }).toList();
   }

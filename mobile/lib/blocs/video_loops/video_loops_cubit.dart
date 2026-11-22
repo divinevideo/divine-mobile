@@ -63,12 +63,8 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
        _videosRepository = videosRepository,
        _staleAfter = staleAfter,
        _clock = clock ?? DateTime.now,
-       _lastSyncedAt = video.hasLoopMetadata ? (clock ?? DateTime.now)() : null,
-       super(
-         VideoLoopsState(
-           count: video.hasLoopMetadata ? video.totalLoops : null,
-         ),
-       );
+       _lastSyncedAt = video.loopCountSnapshot?.fetchedAt,
+       super(VideoLoopsState(count: _seedCount(video)));
 
   final VideoEvent _video;
   final VideosRepository _videosRepository;
@@ -76,9 +72,17 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
   final DateTime Function() _clock;
   DateTime? _lastSyncedAt;
 
+  static int? _seedCount(VideoEvent video) {
+    final snapshot = video.loopCountSnapshot;
+    if (snapshot != null) return math.max(snapshot.count, video.totalLoops);
+    return video.hasLoopMetadata ? video.totalLoops : null;
+  }
+
   bool get _needsRefresh {
-    if (state.count == null || _lastSyncedAt == null) return true;
-    return _clock().difference(_lastSyncedAt!) >= _staleAfter;
+    final lastSyncedAt = _lastSyncedAt;
+    if (state.count == null || lastSyncedAt == null) return true;
+    final age = _clock().difference(lastSyncedAt);
+    return age.isNegative || age >= _staleAfter;
   }
 
   /// Marks playback active and refreshes only when loop metadata is missing or

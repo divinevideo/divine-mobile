@@ -9,13 +9,17 @@ import 'package:videos_repository/videos_repository.dart';
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 void main() {
-  final video = VideoEvent(
+  final seededAt = DateTime.now().toUtc();
+  final videoWithoutSnapshot = VideoEvent(
     id: 'a' * 64,
     pubkey: 'b' * 64,
     createdAt: 1700000000,
     content: '',
     timestamp: DateTime.utc(2026),
     rawTags: const {'views': '10'},
+  );
+  final video = videoWithoutSnapshot.copyWith(
+    loopCountSnapshot: (count: 10, fetchedAt: seededAt),
   );
   late _MockVideosRepository repository;
 
@@ -46,7 +50,7 @@ void main() {
     test(
       'a video with no metadata gains a visible count from completed playback',
       () async {
-        final unknown = video.copyWith(rawTags: const {});
+        final unknown = videoWithoutSnapshot.copyWith(rawTags: const {});
         when(() => repository.fetchLoopCount(unknown))
             .thenAnswer((_) async => null);
         final cubit = VideoLoopsCubit(
@@ -125,16 +129,19 @@ void main() {
 
   group('setActive', () {
     test('trusts fresh feed metadata on activation without fetching', () async {
-      var now = DateTime.utc(2026, 11, 22, 12);
+      var now = seededAt;
+      final hydrated = video.copyWith(
+        loopCountSnapshot: (count: 14, fetchedAt: seededAt),
+      );
       final cubit = VideoLoopsCubit(
-        video: video,
+        video: hydrated,
         videosRepository: repository,
         clock: () => now,
       );
       cubit.setActive(true);
       await Future<void>.value();
       verifyNever(() => repository.fetchLoopCount(video));
-      expect(cubit.state.count, 10);
+      expect(cubit.state.count, 14);
 
       // Re-activating before staleAfter still skips the network fetch.
       cubit.setActive(false);
@@ -157,7 +164,7 @@ void main() {
     test(
       'fetches immediately on activation when loop metadata is missing',
       () async {
-        final unknown = video.copyWith(rawTags: const {});
+        final unknown = videoWithoutSnapshot.copyWith(rawTags: const {});
         when(() => repository.fetchLoopCount(unknown))
             .thenAnswer((_) async => 7);
         final cubit = VideoLoopsCubit(
@@ -173,25 +180,63 @@ void main() {
       },
     );
 
-    test('retries a stale seed when the server returns no count', () async {
-      var now = DateTime.utc(2026, 11, 22, 12);
+    test('reconciles an archive-only loop count on activation', () async {
+      final archived = videoWithoutSnapshot.copyWith(
+        rawTags: const {},
+        originalLoops: 100,
+      );
+      when(() => repository.fetchLoopCount(archived))
+          .thenAnswer((_) async => 112);
       final cubit = VideoLoopsCubit(
-        video: video,
+        video: archived,
         videosRepository: repository,
-        clock: () => now,
       );
       addTearDown(cubit.close);
+      expect(cubit.state.count, 100);
 
-      now = now.add(const Duration(minutes: 5));
-      when(() => repository.fetchLoopCount(video))
-          .thenAnswer((_) async => null);
       cubit.setActive(true);
       await pumpEventQueue();
-      verify(() => repository.fetchLoopCount(video)).called(1);
+      expect(cubit.state.count, 112);
+    });
+
+    test(
+      'retries a stale cached seed when the server returns no count',
+      () async {
+        final now = seededAt.add(const Duration(minutes: 5));
+        final cachedVideo = VideoEvent.fromJson(video.toJson());
+        final cubit = VideoLoopsCubit(
+          video: cachedVideo,
+          videosRepository: repository,
+          clock: () => now,
+        );
+        addTearDown(cubit.close);
+
+        when(() => repository.fetchLoopCount(video))
+            .thenAnswer((_) async => null);
+        cubit.setActive(true);
+        await pumpEventQueue();
+        verify(() => repository.fetchLoopCount(video)).called(1);
+        expect(cubit.state.count, 10);
+
+        cubit.setActive(false);
+        when(() => repository.fetchLoopCount(video))
+            .thenAnswer((_) async => 25);
+        cubit.setActive(true);
+        await pumpEventQueue();
+        expect(cubit.state.count, 25);
+      },
+    );
+
+    test('reconciles feed views when no bulk snapshot is available', () async {
+      when(() => repository.fetchLoopCount(videoWithoutSnapshot))
+          .thenAnswer((_) async => 25);
+      final cubit = VideoLoopsCubit(
+        video: videoWithoutSnapshot,
+        videosRepository: repository,
+      );
+      addTearDown(cubit.close);
       expect(cubit.state.count, 10);
 
-      cubit.setActive(false);
-      when(() => repository.fetchLoopCount(video)).thenAnswer((_) async => 25);
       cubit.setActive(true);
       await pumpEventQueue();
       expect(cubit.state.count, 25);
