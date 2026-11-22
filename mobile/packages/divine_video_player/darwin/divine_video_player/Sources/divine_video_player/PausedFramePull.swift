@@ -12,6 +12,9 @@ struct PausedFramePull {
     /// Whether a frame at or before `target` has reached the texture.
     private var hasTargetFrame = false
 
+    /// A provisional step frame can be shown while the target is still due.
+    var isAwaitingTargetFrame: Bool { target.isNumeric && !hasTargetFrame }
+
     /// Holds a paused picture at `time`, where a seek or reload put it.
     mutating func hold(at time: CMTime) {
         target = time

@@ -13,6 +13,7 @@ enum PausedFramePullTests {
         followsTheClockOnceTheItemChanges()
         dropsTheStepsFrameOnceThePausedFrameIsUp()
         takesALaterFrameWhileTheTextureHasNoPausedFrame()
+        waitsForTheSeekFrameAfterADecoderStepAcrossACut()
         takesEveryFrameWhilePlaying()
         print("Paused frame pull tests passed")
     }
@@ -62,6 +63,17 @@ enum PausedFramePullTests {
         var pull = PausedFramePull()
         pull.hold(at: ms(21))
         check(pull.accepts(frameAt: frame(1), playing: false), "first frame after the hold")
+    }
+
+    static func waitsForTheSeekFrameAfterADecoderStepAcrossACut() {
+        var pull = PausedFramePull()
+        check(!pull.isAwaitingTargetFrame, "idle without a seek")
+        pull.hold(at: ms(1370))
+        check(pull.isAwaitingTargetFrame, "waiting before the decoder supplies a frame")
+        check(pull.accepts(frameAt: ms(1383), playing: false), "provisional step frame")
+        check(pull.isAwaitingTargetFrame, "still waiting after the next clip's frame")
+        check(pull.accepts(frameAt: frame(41), playing: false), "late target frame")
+        check(!pull.isAwaitingTargetFrame, "idle once the sought frame is up")
     }
 
     static func takesEveryFrameWhilePlaying() {
