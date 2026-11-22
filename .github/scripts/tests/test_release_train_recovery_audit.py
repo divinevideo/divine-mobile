@@ -314,15 +314,30 @@ class DraftRecoveryAuditTest(unittest.TestCase):
 
 class ActionableRejectionSummaryTest(unittest.TestCase):
     def test_rejection_summary_names_exact_acknowledgement_items(self):
+        for status in ["REJECTED", "METADATA_REJECTED"]:
+            with self.subTest(status=status):
+                s = rejected_snapshot()
+                s["ios"]["versions"][0]["state"] = status
+                result = plan_tick(s, soaked_state(), {"ios": "app-store"})
+                reason = next(line for line in result["reasons"] if "ios-version:v" in line)
+                self.assertIn("APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection", reason)
+                self.assertIn("reply to App Review before acknowledging ios-version:v", reason)
+                self.assertFalse(any(a["kind"] == "app-store" for a in result["actions"]))
+
         s = rejected_snapshot()
-        result = plan_tick(s, soaked_state(), {"ios": "app-store", "android": "off"})
-        reason = next(line for line in result["reasons"] if "ios-version:v" in line)
-        self.assertIn("APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection", reason)
-        self.assertIn("reply to App Review before acknowledging ios-version:v", reason)
-        self.assertFalse(any(a["kind"] == "app-store" for a in result["actions"]))
         s["ios"]["builds"] = [build() | {"external": "BETA_REJECTED"}]
         result = plan_tick(s, {}, {"ios": "testflight", "android": "off"})
         self.assertTrue(any("ios-build:10" in reason for reason in result["reasons"]))
+
+    def test_holds_without_an_app_review_rejection_keep_recovery_instructions(self):
+        for status in ["INVALID_BINARY", "DEVELOPER_REJECTED"]:
+            with self.subTest(status=status):
+                s = rejected_snapshot()
+                s["ios"]["versions"][0]["state"] = status
+                result = plan_tick(s, soaked_state(), {"ios": "app-store"})
+                reason = next(line for line in result["reasons"] if "ios-version:v" in line)
+                self.assertIn("resolve the issue", reason)
+                self.assertNotIn("reply to App Review", reason)
 
 
 class RecoveryIntegrationAuditTest(unittest.TestCase):
