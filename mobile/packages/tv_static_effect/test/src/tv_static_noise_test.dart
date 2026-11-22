@@ -197,12 +197,19 @@ void main() {
     );
 
     group('shader lifetime', () {
-      // Loaded by the package-relative key: the package-qualified key the
-      // widget uses only resolves in an app that depends on this package.
+      // The package's own test run bundles the shader under its
+      // package-relative key; a run from the app root (the pre-push hook)
+      // bundles it under the package-qualified key the widget uses.
       Future<ui.FragmentShader> loadShader(WidgetTester tester) async {
-        final program = await tester.runAsync(
-          () => ui.FragmentProgram.fromAsset('shaders/tv_static.frag'),
-        );
+        final program = await tester.runAsync(() async {
+          try {
+            return await ui.FragmentProgram.fromAsset('shaders/tv_static.frag');
+          } on Exception {
+            return ui.FragmentProgram.fromAsset(
+              'packages/tv_static_effect/shaders/tv_static.frag',
+            );
+          }
+        });
         return program!.fragmentShader();
       }
 
