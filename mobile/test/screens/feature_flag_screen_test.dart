@@ -61,7 +61,8 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('normal reply and support features are not experiments', (
+    testWidgets('lists no Video Replies, Profile Monetization Links or '
+        'Enhanced Analytics flag', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 6000);
@@ -72,6 +73,10 @@ void main() {
       await tester.pumpWidget(buildSubject(isDeveloperMode: true));
       await initializeFeatureFlags(tester);
 
+      expect(
+        find.text(FeatureFlag.blueskyPublishing.displayName),
+        findsOneWidget,
+      );
       expect(find.text('Enhanced Analytics'), findsNothing);
       expect(find.text('Video Replies'), findsNothing);
       expect(find.text('Profile Monetization Links'), findsNothing);

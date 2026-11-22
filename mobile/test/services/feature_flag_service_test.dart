@@ -307,9 +307,9 @@ void main() {
         final metadata = service.getFlagMetadata(FeatureFlag.blueskyPublishing);
 
         expect(metadata.flag, equals(FeatureFlag.blueskyPublishing));
-        expect(metadata.isEnabled, isNotNull);
-        expect(metadata.hasUserOverride, isNotNull);
-        expect(metadata.buildDefault, isNotNull);
+        expect(metadata.isEnabled, isFalse);
+        expect(metadata.hasUserOverride, isFalse);
+        expect(metadata.buildDefault, isFalse);
       });
     });
 

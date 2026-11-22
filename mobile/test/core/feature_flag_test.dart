@@ -25,13 +25,6 @@ void main() {
       expect(displayNames.length, equals(FeatureFlag.values.length));
     });
 
-    test('should include expected flags for OpenVine', () {
-      expect(FeatureFlag.values, contains(FeatureFlag.accountSwitching));
-      expect(FeatureFlag.values, contains(FeatureFlag.blueskyPublishing));
-      expect(FeatureFlag.values, contains(FeatureFlag.debugTools));
-      expect(FeatureFlag.values, contains(FeatureFlag.integratedApps));
-    });
-
     test('integratedApps flag should have correct metadata', () {
       expect(FeatureFlag.integratedApps.displayName, equals('Integrated Apps'));
       expect(FeatureFlag.integratedApps.description, isNotEmpty);
