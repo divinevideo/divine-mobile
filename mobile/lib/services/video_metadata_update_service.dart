@@ -14,6 +14,7 @@ import 'package:models/models.dart'
         clipSourceCreditTagMarker,
         withSoundCreditLines;
 import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -389,6 +390,7 @@ class VideoMetadataUpdateService {
         );
         if (collaboratorPubkeys.difference(existingCollaborators).isNotEmpty) {
           // Do not silently discard either device's collaborator choices.
+          if (ownsEdit()) _showNewestRevision(latest, video);
           throw const _VideoUpdateException(
             VideoMetadataUpdateError.concurrentEditsOverLimit,
             'Concurrent edits exceed the collaborator limit',
@@ -401,6 +403,7 @@ class VideoMetadataUpdateService {
           .toSet();
       if (mergedHashtags.length > HashtagExtractor.maxHashtagsPerVideo &&
           mergedHashtags.difference(latestHashtags).isNotEmpty) {
+        if (ownsEdit()) _showNewestRevision(latest, video);
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.concurrentEditsOverLimit,
           'Concurrent edits exceed the hashtag limit',
@@ -711,6 +714,13 @@ class VideoMetadataUpdateService {
   static bool _isHttpUrl(String? url) {
     if (url == null || url.isEmpty) return false;
     return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  /// Replaces the stale copies of a video whose edit was refused with
+  /// [latest], so reopening it shows what the other device changed.
+  void _showNewestRevision(Event latest, VideoEvent video) {
+    _personalEventCache.cacheUserEvent(latest);
+    _videoEventService.updateVideoEvent(video);
   }
 
   /// Sends DM invites to newly added collaborators and returns the failure

@@ -1030,7 +1030,8 @@ void main() {
       );
 
       test(
-        'refuses a concurrent collaborator addition above the limit',
+        'refuses a concurrent collaborator addition above the limit and '
+        'shows the newest revision',
         () async {
           final opened = _testVideo();
           final remoteCollaborators = ['1', '2', '3', '4', '5'];
@@ -1059,10 +1060,29 @@ void main() {
             ),
           );
           verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+          verify(
+            () => mockVideoEventService.updateVideoEvent(
+              any(
+                that: isA<VideoEvent>().having(
+                  (v) => v.id,
+                  'id',
+                  'newer-event-id',
+                ),
+              ),
+            ),
+          ).called(1);
+          verify(
+            () => mockPersonalEventCacheService.cacheUserEvent(
+              any(
+                that: isA<Event>().having((e) => e.id, 'id', 'newer-event-id'),
+              ),
+            ),
+          ).called(1);
         },
       );
 
-      test('refuses two ten-tag edits whose union exceeds the limit', () async {
+      test('refuses two ten-tag edits whose union exceeds the limit and shows '
+          'the newest revision', () async {
         final shared = [for (var i = 0; i < 9; i++) 'shared$i'];
         final opened = _testVideo(
           extraTags: [
@@ -1096,7 +1116,75 @@ void main() {
           ),
         );
         verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+        verify(
+          () => mockVideoEventService.updateVideoEvent(
+            any(
+              that: isA<VideoEvent>().having(
+                (v) => v.id,
+                'id',
+                'newer-event-id',
+              ),
+            ),
+          ),
+        ).called(1);
+        verify(
+          () => mockPersonalEventCacheService.cacheUserEvent(
+            any(that: isA<Event>().having((e) => e.id, 'id', 'newer-event-id')),
+          ),
+        ).called(1);
       });
+
+      test(
+        'leaves the cached copies alone when the account changes before an '
+        'over-limit edit is refused',
+        () async {
+          final shared = [for (var i = 0; i < 9; i++) 'shared$i'];
+          final opened = _testVideo(
+            extraTags: [
+              for (final tag in shared) ['t', tag],
+            ],
+          );
+          relaysHold(
+            newerRevision(
+              extraTags: [
+                for (final tag in [...shared, 'remotetenth']) ['t', tag],
+              ],
+            ),
+          );
+          when(
+            () => mockBlossomUploadService.uploadImage(
+              imageFile: any(named: 'imageFile'),
+              nostrPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async {
+            when(() => mockAuthService.currentPublicKeyHex)
+                .thenReturn('f' * 64);
+            return const BlossomUploadResult(success: false);
+          });
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(
+              opened,
+            ).copyWith(tags: {...shared, 'localtenth'}),
+            initialCollaboratorPubkeys: const {},
+            newThumbnailFile: File('new-thumbnail.jpg'),
+          );
+
+          expect(
+            result,
+            isA<VideoUpdateFailure>().having(
+              (failure) => failure.reason,
+              'reason',
+              VideoMetadataUpdateError.concurrentEditsOverLimit,
+            ),
+          );
+          verifyNever(
+            () => mockPersonalEventCacheService.cacheUserEvent(any()),
+          );
+          verifyNever(() => mockVideoEventService.updateVideoEvent(any()));
+        },
+      );
 
       test(
         'publishes a merge that lands exactly on the hashtag limit',
