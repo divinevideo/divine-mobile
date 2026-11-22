@@ -881,7 +881,6 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         ProfileCommentsBloc(
           commentsRepository: commentsRepository,
           targetUserPubkey: widget.userIdHex,
-          includeVideoReplies: true,
         ),
         'profile comments',
       );
