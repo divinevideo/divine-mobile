@@ -8711,9 +8711,8 @@ void main() {
         );
       }
 
-      /// The one warning naming [relay] carries the refusal category and none
-      /// of the relay's own text.
-      void expectCategoryOnlyWarningFor(String relay) {
+      /// The one warning naming [relay].
+      String warningFor(String relay) {
         final warnings = LogCaptureService()
             .getRecentLogs()
             .where(
@@ -8722,9 +8721,16 @@ void main() {
             .map((e) => e.message)
             .toList();
         expect(warnings, hasLength(1));
-        expect(warnings.single, contains('blocked'));
-        expect(warnings.single, isNot(contains('203.0.113.9')));
-        expect(warnings.single, isNot(contains('kind not allowed')));
+        return warnings.single;
+      }
+
+      /// The one warning naming [relay] carries the refusal category and none
+      /// of the relay's own text.
+      void expectCategoryOnlyWarningFor(String relay) {
+        final warning = warningFor(relay);
+        expect(warning, contains('blocked'));
+        expect(warning, isNot(contains('203.0.113.9')));
+        expect(warning, isNot(contains('kind not allowed')));
       }
 
       test(
@@ -8750,17 +8756,7 @@ void main() {
         ).thenAnswer((_) async => outcome);
       }
 
-      /// The one warning naming [relay].
-      String warningFor(String relay) => LogCaptureService()
-          .getRecentLogs()
-          .where(
-            (e) => e.level == LogLevel.warning && e.message.contains(relay),
-          )
-          .map((e) => e.message)
-          .single;
-
-      // "No response" means the relay got the event and stayed silent, so it
-      // may hold it; a relay the publish never reached cannot (#8380).
+      // #8380
       test(
         'logs an advertised relay the publish never reached as unreachable',
         () async {
