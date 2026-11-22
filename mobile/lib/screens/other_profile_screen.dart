@@ -112,7 +112,6 @@ class OtherProfileScreen extends ConsumerWidget {
         currentUserPubkey: nostrClient.publicKey,
         followRepository: followRepository,
         identityClaimsRepository: identityClaimsRepository,
-        loadSupportLinks: true,
       )..add(const OtherProfileLoadRequested()),
       child: OtherProfileView(
         pubkey: pubkey,
