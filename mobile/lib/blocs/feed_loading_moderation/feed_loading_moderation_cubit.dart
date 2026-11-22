@@ -24,11 +24,19 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// `false` for [videoUrl], or when no sha256 can be resolved, [start]
   /// is a no-op and the cubit stays in the [FeedLoadingModerationStatus.loading]
   /// state forever (meaning no moderation overlay is shown).
+  /// Default delay before hitting the moderation API while a video is loading.
+  ///
+  /// Cached and fast-starting videos unmount the loading overlay well before
+  /// this threshold, avoiding a wasted HTTP round-trip on every swipe.
+  static const defaultCheckDelay = Duration(milliseconds: 1200);
+
   FeedLoadingModerationCubit({
     required VideoModerationStatusService service,
     required String? explicitSha256,
     required String? videoUrl,
+    Duration checkDelay = defaultCheckDelay,
   }) : _service = service,
+       _checkDelay = checkDelay,
        _sha256 = VideoModerationStatusService.shouldCheckModeration(videoUrl)
            ? VideoModerationStatusService.resolveSha256(
                explicitSha256: explicitSha256,
@@ -38,18 +46,38 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
        super(const FeedLoadingModerationState());
 
   final VideoModerationStatusService _service;
+  final Duration _checkDelay;
 
   /// The resolved, normalised sha256 for this video, or `null` when the
   /// moderation check is not applicable.
   final String? _sha256;
 
-  /// Starts the moderation check.
+  Timer? _delayTimer;
+  bool _started = false;
+
+  /// Starts the moderation check after [_checkDelay].
   ///
-  /// No-ops when there is no resolvable sha256 for this video.
+  /// No-ops when there is no resolvable sha256 for this video, or when already
+  /// started or closed.
   void start() {
     final sha256 = _sha256;
-    if (sha256 == null) return;
-    unawaited(_checkModeration(sha256));
+    if (sha256 == null || _started || isClosed) return;
+    _started = true;
+    if (_checkDelay <= Duration.zero) {
+      unawaited(_checkModeration(sha256));
+      return;
+    }
+    _delayTimer = Timer(_checkDelay, () {
+      _delayTimer = null;
+      unawaited(_checkModeration(sha256));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _delayTimer?.cancel();
+    _delayTimer = null;
+    return super.close();
   }
 
   Future<void> _checkModeration(String sha256) async {

@@ -75,11 +75,12 @@ void main() {
           videosRepository: repository,
         );
         cubit.setActive(true);
+        final inFlight = cubit.refresh();
         cubit.loopCompleted();
         await cubit.refresh();
         verify(() => repository.fetchLoopCount(video)).called(1);
         response.complete(10);
-        await Future<void>.value();
+        await inFlight;
         expect(cubit.state.count, 11);
         await cubit.close();
       },
@@ -110,7 +111,7 @@ void main() {
           videosRepository: repository,
         );
         cubit.setActive(true);
-        await Future<void>.value();
+        await cubit.refresh();
         cubit.loopCompleted();
         expect(cubit.state.count, 11);
         when(() => repository.fetchLoopCount(video))
@@ -123,6 +124,55 @@ void main() {
   });
 
   group('setActive', () {
+    test('trusts fresh feed metadata on activation without fetching', () async {
+      var now = DateTime.utc(2026, 11, 22, 12);
+      final cubit = VideoLoopsCubit(
+        video: video,
+        videosRepository: repository,
+        clock: () => now,
+      );
+      cubit.setActive(true);
+      await Future<void>.value();
+      verifyNever(() => repository.fetchLoopCount(video));
+      expect(cubit.state.count, 10);
+
+      // Re-activating before staleAfter still skips the network fetch.
+      cubit.setActive(false);
+      now = now.add(const Duration(minutes: 4));
+      cubit.setActive(true);
+      await Future<void>.value();
+      verifyNever(() => repository.fetchLoopCount(video));
+
+      // Re-activating once stale refreshes from the server.
+      cubit.setActive(false);
+      now = now.add(const Duration(minutes: 1));
+      when(() => repository.fetchLoopCount(video)).thenAnswer((_) async => 25);
+      cubit.setActive(true);
+      await Future<void>.value();
+      verify(() => repository.fetchLoopCount(video)).called(1);
+      expect(cubit.state.count, 25);
+      await cubit.close();
+    });
+
+    test(
+      'fetches immediately on activation when loop metadata is missing',
+      () async {
+        final unknown = video.copyWith(rawTags: const {});
+        when(() => repository.fetchLoopCount(unknown))
+            .thenAnswer((_) async => 7);
+        final cubit = VideoLoopsCubit(
+          video: unknown,
+          videosRepository: repository,
+        );
+        expect(cubit.state.count, isNull);
+        cubit.setActive(true);
+        await Future<void>.value();
+        verify(() => repository.fetchLoopCount(unknown)).called(1);
+        expect(cubit.state.count, 7);
+        await cubit.close();
+      },
+    );
+
     test('inactive playback neither refreshes nor adds loops', () async {
       final cubit = VideoLoopsCubit(video: video, videosRepository: repository);
       await cubit.refresh();
@@ -130,7 +180,7 @@ void main() {
       verifyNever(() => repository.fetchLoopCount(video));
       expect(cubit.state.count, 10);
       cubit.setActive(true);
-      await Future<void>.value();
+      await cubit.refresh();
       cubit.setActive(false);
       await cubit.refresh();
       cubit.loopCompleted();
@@ -150,9 +200,10 @@ void main() {
           videosRepository: repository,
         );
         cubit.setActive(true);
+        final pending = cubit.refresh();
         cubit.setActive(false);
         response.complete(100);
-        await Future<void>.value();
+        await pending;
         expect(cubit.state.count, 10);
         await cubit.close();
       },

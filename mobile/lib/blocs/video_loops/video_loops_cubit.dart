@@ -50,11 +50,20 @@ class VideoLoopsState extends Equatable {
 /// the server cannot identify which local reports its snapshot includes.
 /// Adding pending loops to every snapshot would count those reports twice.
 class VideoLoopsCubit extends Cubit<VideoLoopsState> {
+  /// How long a seeded or previously fetched loop count stays fresh before
+  /// reactivation triggers another server lookup.
+  static const defaultStaleAfter = Duration(minutes: 5);
+
   VideoLoopsCubit({
     required VideoEvent video,
     required VideosRepository videosRepository,
+    Duration staleAfter = defaultStaleAfter,
+    DateTime Function()? clock,
   }) : _video = video,
        _videosRepository = videosRepository,
+       _staleAfter = staleAfter,
+       _clock = clock ?? DateTime.now,
+       _lastSyncedAt = video.hasLoopMetadata ? (clock ?? DateTime.now)() : null,
        super(
          VideoLoopsState(
            count: video.hasLoopMetadata ? video.totalLoops : null,
@@ -63,8 +72,17 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
 
   final VideoEvent _video;
   final VideosRepository _videosRepository;
+  final Duration _staleAfter;
+  final DateTime Function() _clock;
+  DateTime? _lastSyncedAt;
 
-  /// Starts a fresh read on playback and invalidates it on pause or cover.
+  bool get _needsRefresh {
+    if (state.count == null || _lastSyncedAt == null) return true;
+    return _clock().difference(_lastSyncedAt!) >= _staleAfter;
+  }
+
+  /// Marks playback active and refreshes only when loop metadata is missing or
+  /// stale; invalidates any in-flight refresh on pause or cover.
   void setActive(bool active) {
     if (isClosed || active == state.isActive) return;
     emit(
@@ -74,7 +92,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
         generation: state.generation + 1,
       ),
     );
-    if (active) unawaited(refresh());
+    if (active && _needsRefresh) unawaited(refresh());
   }
 
   /// Immediately reflects a completed playthrough reported by the player.
@@ -91,6 +109,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
     try {
       final count = await _videosRepository.fetchLoopCount(_video);
       if (isClosed || generation != state.generation) return;
+      _lastSyncedAt = _clock();
       emit(
         state.copyWith(
           count: count == null ? null : math.max(state.count ?? 0, count),

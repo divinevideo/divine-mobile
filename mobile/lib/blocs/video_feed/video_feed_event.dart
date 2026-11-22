@@ -205,6 +205,23 @@ final class VideoFeedEnrichmentReady extends VideoFeedEvent {
   List<Object?> get props => [source, enrichedVideos, sourceIds];
 }
 
+/// Batch-fetched creator profiles arrived for feed videos.
+final class VideoFeedCreatorProfilesLoaded extends VideoFeedEvent {
+  const VideoFeedCreatorProfilesLoaded({
+    required this.source,
+    required this.profiles,
+  });
+
+  /// Feed source that requested profile hydration.
+  final VideoFeedSource source;
+
+  /// Resolved profiles keyed by pubkey.
+  final Map<String, UserProfile> profiles;
+
+  @override
+  List<Object?> get props => [source, profiles];
+}
+
 /// A user was blocked or the blocklist changed.
 ///
 /// When [blockedPubkey] is provided, the handler removes that user's videos

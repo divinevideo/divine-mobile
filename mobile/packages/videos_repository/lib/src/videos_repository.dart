@@ -549,11 +549,10 @@ class VideosRepository {
         response.videos,
         sortByCreatedAt: false,
       );
-      final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
-      final unseenVideos = _withoutSeenVideos(hydratedVideos);
+      final unseenVideos = _withoutSeenVideos(videos);
       if (unseenVideos.isNotEmpty) {
         seenOnlyPages = 0;
-      } else if (hydratedVideos.isNotEmpty) {
+      } else if (videos.isNotEmpty) {
         seenOnlyPages++;
       }
       _appendUniqueVideos(
@@ -581,10 +580,14 @@ class VideosRepository {
       }
     }
 
+    // Hydrate bulk stats once for the surviving unseen videos instead of once
+    // per fetched page (which wasted round-trips on seen-only pages).
+    final hydratedVisible = await _hydrateVideosWithBulkStats(visible);
+
     // Return the over-fetched tail too: the next page resumes after the last
     // fetched page, so trimming it here would skip it for good.
     return _FollowingFetchResult(
-      videos: visible,
+      videos: hydratedVisible,
       pageCount: pageCount,
       nextBefore: nextBefore,
     );
@@ -712,14 +715,23 @@ class VideosRepository {
 
     try {
       final statsById = <String, BulkVideoStatsEntry>{};
-      for (var i = 0; i < videosNeedingStats.length; i += 100) {
-        final end = i + 100 > videosNeedingStats.length
-            ? videosNeedingStats.length
-            : i + 100;
-        final chunk = videosNeedingStats.sublist(i, end);
-        final response = await _funnelcakeApiClient.getBulkVideoStats(
-          chunk.map((video) => video.id).toList(),
-        );
+      final chunks = <List<String>>[
+        for (var i = 0; i < videosNeedingStats.length; i += 100)
+          videosNeedingStats
+              .sublist(
+                i,
+                i + 100 > videosNeedingStats.length
+                    ? videosNeedingStats.length
+                    : i + 100,
+              )
+              .map((video) => video.id)
+              .toList(),
+      ];
+      final responses = await Future.wait([
+        for (final chunk in chunks)
+          _funnelcakeApiClient.getBulkVideoStats(chunk),
+      ]);
+      for (final response in responses) {
         statsById.addAll(response.stats);
       }
 
@@ -1498,10 +1510,7 @@ class VideosRepository {
         );
 
         final pageVideos = _filterPopularVideosForVariant(
-          await _hydrateVideosWithBulkStats(
-            _transformVideoStats(stats, sortByCreatedAt: false),
-            replaceInteractionCounts: true,
-          ),
+          _transformVideoStats(stats, sortByCreatedAt: false),
           PopularVideosVariant.classic,
         );
 
@@ -1548,11 +1557,17 @@ class VideosRepository {
       );
     }
 
-    collected.shuffle(_random);
+    // Hydrate bulk stats once on the surviving filtered videos rather than
+    // once per fetched page before seen/archive filtering.
+    final hydratedCollected = await _hydrateVideosWithBulkStats(
+      collected,
+      replaceInteractionCounts: true,
+    );
+    hydratedCollected.shuffle(_random);
 
     final hasMore = !exhausted && !failed;
     final result = HomeFeedResult(
-      videos: collected,
+      videos: hydratedCollected,
       paginationCursor: hasMore ? _encodeClassicsOffsetCursor(offset) : null,
       hasMore: hasMore,
     );

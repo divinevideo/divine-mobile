@@ -97,7 +97,29 @@ void main() {
       });
 
       test(
-        'emits restricted immediately when service returns a blocked status',
+        'skips fetchStatus when closed before checkDelay elapses',
+        () {
+          when(
+            () => mockService.fetchStatus(sha256),
+          ).thenAnswer((_) async => blockedStatus);
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(videoUrl: divineUrl);
+            cubit.start();
+            fake.elapse(const Duration(milliseconds: 500));
+            fake.flushMicrotasks();
+            verifyNever(() => mockService.fetchStatus(any()));
+            unawaited(cubit.close());
+            fake.elapse(const Duration(seconds: 5));
+            fake.flushMicrotasks();
+            verifyNever(() => mockService.fetchStatus(any()));
+            expect(cubit.state.isRestricted, isFalse);
+          });
+        },
+      );
+
+      test(
+        'emits restricted after checkDelay when service returns a blocked status',
         () {
           when(
             () => mockService.fetchStatus(sha256),
@@ -107,6 +129,9 @@ void main() {
             final cubit = buildCubit(videoUrl: divineUrl);
             addTearDown(cubit.close);
             cubit.start();
+            fake.flushMicrotasks();
+            verifyNever(() => mockService.fetchStatus(any()));
+            fake.elapse(FeedLoadingModerationCubit.defaultCheckDelay);
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isTrue);
             verify(() => mockService.fetchStatus(sha256)).called(1);
@@ -162,6 +187,7 @@ void main() {
           final cubit = buildCubit(videoUrl: divineUrl);
           addTearDown(cubit.close);
           cubit.start();
+          fake.elapse(FeedLoadingModerationCubit.defaultCheckDelay);
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isTrue);
           expect(cubit.state.isAgeRestricted, isFalse);
@@ -235,6 +261,7 @@ void main() {
             service: mockService,
             explicitSha256: sha256,
             videoUrl: divineUrl,
+            checkDelay: Duration.zero,
           );
         },
         act: (cubit) => cubit.start(),
@@ -264,6 +291,7 @@ void main() {
             service: mockService,
             explicitSha256: sha256,
             videoUrl: divineUrl,
+            checkDelay: Duration.zero,
           );
         },
         act: (cubit) async {

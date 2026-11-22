@@ -289,6 +289,19 @@ void main() {
             repostCount: 0,
           ),
         ],
+        verify: (_) {
+          verifyNever(
+            () => mockCommentsRepository.getCommentsCount(
+              any(),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
+            ),
+          );
+          verifyNever(() => mockRepostsRepository.getRepostCount(any()));
+          verifyNever(
+            () => mockRepostsRepository.getRepostCountByEventId(any()),
+          );
+        },
       );
 
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(

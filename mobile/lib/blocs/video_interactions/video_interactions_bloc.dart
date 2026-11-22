@@ -239,13 +239,22 @@ class VideoInteractionsBloc
           _addressableId != null &&
           await _repostsRepository.isReposted(_addressableId);
 
-      // Fetch counts in parallel
-      // Query repost count by addressable ID when available (NIP-18 specifies
-      // that generic reposts of addressable events use the `a` tag).
-      // Fall back to event ID for non-addressable videos.
-      final repostCountFuture = _addressableId != null
+      // Fetch only counts that are not already seeded from the feed payload.
+      // Comment and repost seeds are never overwritten by relay counts below,
+      // so querying relays when already seeded would discard every result.
+      final repostCountFuture = preFetchRepostCount != null
+          ? Future<int?>.value()
+          : _addressableId != null
           ? _repostsRepository.getRepostCount(_addressableId)
           : _repostsRepository.getRepostCountByEventId(_eventId);
+
+      final commentCountFuture = preFetchCommentCount != null
+          ? Future<int?>.value()
+          : _commentsRepository.getCommentsCount(
+              _eventId,
+              rootAddressableId: _addressableId,
+              includeVideoReplies: _includeVideoReplies,
+            );
 
       // Fetch a fallback like count for blocs that were not seeded from the
       // feed payload. Addressable videos resolve the same filtered liker set as
@@ -258,11 +267,7 @@ class VideoInteractionsBloc
 
       final results = await Future.wait([
         likeCountFuture,
-        _commentsRepository.getCommentsCount(
-          _eventId,
-          rootAddressableId: _addressableId,
-          includeVideoReplies: _includeVideoReplies,
-        ),
+        commentCountFuture,
         repostCountFuture,
       ]);
 

@@ -1541,5 +1541,67 @@ void main() {
         expect(result.paginationCursor, isNull);
       },
     );
+
+    test(
+      'Following feed filters seen videos before bulk-stats hydration',
+      () async {
+        final seenId = 's' * 64;
+        final unseenId = 'u' * 64;
+        var pageCalls = 0;
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          pageCalls++;
+          if (pageCalls == 1) {
+            return HomeFeedResponse(
+              videos: [_stats(seenId, createdAt: 1000)],
+              rawBody: '{}',
+              hasMore: true,
+              nextCursor: 999,
+            );
+          }
+          return HomeFeedResponse(
+            videos: [_stats(unseenId, createdAt: 900)],
+            rawBody: '{}',
+          );
+        });
+        final hydratedBatches = <List<String>>[];
+        when(() => mockFunnelcake.getBulkVideoStats(any())).thenAnswer((
+          inv,
+        ) async {
+          final ids = List<String>.from(inv.positionalArguments.first as List);
+          hydratedBatches.add(ids);
+          return const BulkVideoStatsResponse(stats: {});
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+                id == seenId,
+          ),
+        );
+
+        final result = await repo.getHomeFeedVideos(
+          authors: const ['author'],
+          userPubkey: 'viewer',
+          limit: 1,
+        );
+
+        expect(result.videos.map((v) => v.id), equals([unseenId]));
+        expect(
+          hydratedBatches,
+          equals([
+            [unseenId],
+          ]),
+        );
+      },
+    );
   });
 }
