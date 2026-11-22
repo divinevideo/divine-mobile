@@ -85,8 +85,9 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
     return age.isNegative || age >= _staleAfter;
   }
 
-  /// Marks playback active and refreshes only when loop metadata is missing or
-  /// stale; invalidates any in-flight refresh on pause or cover.
+  /// Marks playback active and refreshes unless a server count fetched within
+  /// the stale window is known; invalidates any in-flight refresh on pause or
+  /// cover.
   void setActive(bool active) {
     if (isClosed || active == state.isActive) return;
     emit(

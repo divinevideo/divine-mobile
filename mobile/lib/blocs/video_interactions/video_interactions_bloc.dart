@@ -239,9 +239,9 @@ class VideoInteractionsBloc
           _addressableId != null &&
           await _repostsRepository.isReposted(_addressableId);
 
-      // Fetch only counts that are not already seeded from the feed payload.
-      // Comment and repost seeds are never overwritten by relay counts below,
-      // so querying relays when already seeded would discard every result.
+      // Skip the comment and repost relay queries when the feed payload seeded
+      // them: those seeds always win below, so the relay result would be
+      // dropped. Likes are fetched either way.
       final repostCountFuture = preFetchRepostCount != null
           ? Future<int?>.value()
           : _addressableId != null

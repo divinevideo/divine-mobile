@@ -24,12 +24,9 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// `false` for [videoUrl], or when no sha256 can be resolved, [start]
   /// is a no-op and the cubit stays in the [FeedLoadingModerationStatus.loading]
   /// state forever (meaning no moderation overlay is shown).
-  /// Default delay before hitting the moderation API while a video is loading.
   ///
-  /// Cached and fast-starting videos unmount the loading overlay well before
-  /// this threshold, avoiding a wasted HTTP round-trip on every swipe.
-  static const defaultCheckDelay = Duration(milliseconds: 1200);
-
+  /// [start] waits [checkDelay] before querying; [Duration.zero] or less
+  /// queries immediately.
   FeedLoadingModerationCubit({
     required VideoModerationStatusService service,
     required String? explicitSha256,
@@ -45,6 +42,12 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
            : null,
        super(const FeedLoadingModerationState());
 
+  /// Default delay before hitting the moderation API while a video is loading.
+  ///
+  /// Cached and fast-starting videos unmount the loading overlay well before
+  /// this threshold, avoiding a wasted HTTP round-trip on every swipe.
+  static const defaultCheckDelay = Duration(milliseconds: 1200);
+
   final VideoModerationStatusService _service;
   final Duration _checkDelay;
 
@@ -55,7 +58,8 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   Timer? _delayTimer;
   bool _started = false;
 
-  /// Starts the moderation check after [_checkDelay].
+  /// Starts the moderation check after the constructor's `checkDelay`
+  /// ([defaultCheckDelay] unless overridden).
   ///
   /// No-ops when there is no resolvable sha256 for this video, or when already
   /// started or closed.
