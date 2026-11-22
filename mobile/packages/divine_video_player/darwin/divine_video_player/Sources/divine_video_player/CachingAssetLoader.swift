@@ -31,36 +31,51 @@ private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDel
     private var defaultLoaders: [Int: WeakLoader] = [:]
     private var ephemeralLoaders: [Int: WeakLoader] = [:]
 
-    private lazy var defaultSession: URLSession = {
-        let queue = OperationQueue()
-        queue.name = "co.divine.video_player.caching_asset_loader.default_session"
-        queue.maxConcurrentOperationCount = 1
-        return URLSession(
-            configuration: .default,
-            delegate: self,
-            delegateQueue: queue
-        )
-    }()
+    // Created once, in `init`, rather than as `lazy var`s: loaders start tasks
+    // from their own queues, and a lazy property first read from two threads at
+    // once can be initialized twice. A task made on the losing session would
+    // then fail `owner(for:)`'s identity check and be cancelled. `shared` is a
+    // static `let`, which Swift initializes exactly once.
+    private var defaultSession: URLSession!
+    private var ephemeralSession: URLSession!
 
-    private lazy var ephemeralSession: URLSession = {
+    private override init() {
+        super.init()
+        defaultSession = Self.makeSession(
+            configuration: .default,
+            queueName: "co.divine.video_player.caching_asset_loader.default_session",
+            delegate: self
+        )
+        let ephemeral = URLSessionConfiguration.ephemeral
+        ephemeral.urlCache = nil
+        ephemeralSession = Self.makeSession(
+            configuration: ephemeral,
+            queueName: "co.divine.video_player.caching_asset_loader.ephemeral_session",
+            delegate: self
+        )
+    }
+
+    private static func makeSession(
+        configuration: URLSessionConfiguration,
+        queueName: String,
+        delegate: URLSessionDataDelegate
+    ) -> URLSession {
         let queue = OperationQueue()
-        queue.name = "co.divine.video_player.caching_asset_loader.ephemeral_session"
+        queue.name = queueName
         queue.maxConcurrentOperationCount = 1
-        let config = URLSessionConfiguration.ephemeral
-        config.urlCache = nil
         return URLSession(
-            configuration: config,
-            delegate: self,
+            configuration: configuration,
+            delegate: delegate,
             delegateQueue: queue
         )
-    }()
+    }
 
     func startDataTask(
         with request: URLRequest,
         keepsDownload: Bool,
         owner: CachingAssetLoader
     ) -> URLSessionDataTask {
-        let session = keepsDownload ? defaultSession : ephemeralSession
+        let session: URLSession = keepsDownload ? defaultSession! : ephemeralSession!
         let task = session.dataTask(with: request)
         lock.lock()
         if keepsDownload {
