@@ -170,11 +170,21 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         )[0]
         gate = gate.replace("${{ inputs.RELEASE_VERSION }}", "1.2.3+456")
         gate = gate.replace("build/shorebird/dart_defines.json", shlex.quote(str(self.defines)))
+        # The patch workflow runs on macOS; configuration CI runs on Linux.
+        # Supply recorded xcodebuild output without replacing the shell parser.
+        xcodebuild = self.root / "xcodebuild"
+        xcodebuild.write_text(
+            "#!/bin/sh\n"
+            '[ "$#" -eq 1 ] && [ "$1" = -version ] || exit 1\n'
+            "printf 'Xcode 27.2\\nBuild version 27B52\\n'\n"
+        )
+        xcodebuild.chmod(0o755)
         return subprocess.run(
             ["bash", "-c", "set -euo pipefail\n" + gate],
             cwd=REPO_ROOT / "mobile",
             env={
                 **self.environment,
+                "PATH": f"{self.root}{os.pathsep}{self.environment['PATH']}",
                 "PROVENANCE_PATH": str(self.record),
                 "SHOREBIRD_PLATFORM": "ios",
                 "CM_REPO_SLUG": "divinevideo/divine-mobile",
