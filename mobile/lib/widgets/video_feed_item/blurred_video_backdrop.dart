@@ -69,6 +69,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
         url: url,
         filePath: filePath,
         blurhash: blurhash,
+        isolatePosterPaint: true,
       );
     }
     return LayoutBuilder(
@@ -106,11 +107,17 @@ class BlurredVideoBackdrop extends StatelessWidget {
 /// The blurred fill itself, without any letterbox clip. Prefers the cheap
 /// stretched-blurhash path and falls back to a runtime gaussian of the poster.
 class _BackdropContent extends StatelessWidget {
-  const _BackdropContent({this.url, this.filePath, this.blurhash});
+  const _BackdropContent({
+    this.url,
+    this.filePath,
+    this.blurhash,
+    this.isolatePosterPaint = false,
+  });
 
   final String? url;
   final String? filePath;
   final String? blurhash;
+  final bool isolatePosterPaint;
 
   @override
   Widget build(BuildContext context) {
@@ -167,17 +174,18 @@ class _BackdropContent extends StatelessWidget {
   }
 
   Widget _blurredPoster(Widget poster) {
-    return RepaintBoundary(
-      child: ClipRect(
-        // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
-        // keeps the bleeding edge of the blur kernel from leaking
-        // outside the widget's box and over the surrounding chrome.
-        child: ImageFiltered(
-          imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Opacity(opacity: 0.5, child: poster),
-        ),
+    final blurredPoster = ClipRect(
+      // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
+      // keeps the bleeding edge of the blur kernel from leaking
+      // outside the widget's box and over the surrounding chrome.
+      child: ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: Opacity(opacity: 0.5, child: poster),
       ),
     );
+    return isolatePosterPaint
+        ? RepaintBoundary(child: blurredPoster)
+        : blurredPoster;
   }
 }
 

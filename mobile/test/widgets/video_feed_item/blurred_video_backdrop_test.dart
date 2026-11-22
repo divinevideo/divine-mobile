@@ -166,11 +166,14 @@ void main() {
         );
         expect(image.resizePolicy, ResizeImagePolicy.fit);
         expect(
-          find.ancestor(
-            of: find.byType(ImageFiltered),
-            matching: find.byType(RepaintBoundary),
+          find.descendant(
+            of: find.byType(BlurredVideoBackdrop),
+            matching: find.ancestor(
+              of: find.byType(ImageFiltered),
+              matching: find.byType(RepaintBoundary),
+            ),
           ),
-          findsWidgets,
+          findsOneWidget,
         );
       },
     );
@@ -235,6 +238,22 @@ void main() {
     });
 
     group('letterbox bands', () {
+      testWidgets('uses one paint boundary per blurred poster band', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(videoAspectRatio: 1));
+
+        expect(find.byType(ImageFiltered), findsNWidgets(2));
+        for (final blur in find.byType(ImageFiltered).evaluate()) {
+          var boundaries = 0;
+          blur.visitAncestorElements((element) {
+            if (element.widget is RepaintBoundary) boundaries++;
+            return element.widget is! BlurredVideoBackdrop;
+          });
+          expect(boundaries, 1);
+        }
+      });
+
       testWidgets(
         'renders a RepaintBoundary-isolated blur fill in each letterbox bar '
         'when the aspect ratio is known',
