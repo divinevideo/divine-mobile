@@ -8843,8 +8843,11 @@ class DmRepository {
         // The publish landed but the local persist failed. The transaction
         // rolled the queue transition back with the message, so the row
         // keeps its status and the retry sweep re-drives it; receivers drop
-        // the replay by its rumor id. Don't rethrow: the caller still gets
-        // the success result.
+        // the replay by its rumor id. The attempt spends retry budget, so a
+        // persist failure that keeps recurring stops being republished once
+        // the budget runs out. Don't rethrow: the caller still gets the
+        // success result.
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.

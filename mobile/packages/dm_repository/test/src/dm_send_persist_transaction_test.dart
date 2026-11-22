@@ -261,6 +261,23 @@ void main() {
           OutgoingWrapStatus.failed,
         );
       });
+
+      test('spends retry budget on a replay it could not store', () async {
+        final rumorId = await queueRefusedSend();
+        final budgetBefore = (await outgoing.getById(rumorId))!.retryCount;
+        probe.failOn('deleteById');
+
+        final replay = await repository.recoverFullSend(rumorId: rumorId);
+
+        expect(replay.success, isTrue, reason: 'the replay was published');
+        // The rollback leaves the row for the sweep to re-drive. Unless the
+        // attempt spends budget, a persist failure that keeps recurring has
+        // the sweep republish the message on every pass, for ever.
+        expect(
+          (await outgoing.getById(rumorId))?.retryCount,
+          budgetBefore + 1,
+        );
+      });
     });
 
     group('sending to a group', () {
