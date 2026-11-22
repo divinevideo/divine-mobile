@@ -64,6 +64,18 @@ void main() {
           ownerPubkey: any(named: 'ownerPubkey'),
         ),
       ).thenAnswer((_) async => probe.record('reactions'));
+      // Removal waits for the sign-in maintenance, which also asks the
+      // reactions repository to tidy its queue; nothing is left to tidy.
+      when(
+        () => reactions.purgeStrandedByRemoval(
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => reactions.backfillQueuedRecipients(
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => 0);
 
       repository = DmRepository(
         nostrClient: _MockNostrClient(),
