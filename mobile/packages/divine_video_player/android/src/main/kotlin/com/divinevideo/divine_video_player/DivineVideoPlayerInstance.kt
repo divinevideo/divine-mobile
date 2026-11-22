@@ -568,6 +568,7 @@ internal class DivineVideoPlayerInstance(
 
     private val positionUpdater = object : Runnable {
         override fun run() {
+            if (player?.isPlaying != true || eventSink == null) return
             updateFrameEffectWindows()
             syncAudioOverlays()
             sendStateUpdate()
@@ -821,8 +822,12 @@ internal class DivineVideoPlayerInstance(
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
         eventSink = events
         sendStateUpdate()
-        if (player?.isPlaying == true) {
-            mainHandler.removeCallbacks(positionUpdater)
+        updatePositionPolling(player?.isPlaying == true)
+    }
+
+    private fun updatePositionPolling(isPlaying: Boolean) {
+        mainHandler.removeCallbacks(positionUpdater)
+        if (isPlaying && eventSink != null) {
             mainHandler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
         }
     }
@@ -2803,10 +2808,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            mainHandler.removeCallbacks(positionUpdater)
-            if (isPlaying && eventSink != null) {
-                mainHandler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
-            }
+            updatePositionPolling(isPlaying)
             pictureAdvancing = false
             mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
             if (isPlaying) {

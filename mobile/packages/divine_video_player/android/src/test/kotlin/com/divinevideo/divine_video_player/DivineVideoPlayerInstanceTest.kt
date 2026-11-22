@@ -459,6 +459,29 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    @Test
+    fun `position polling stays idle when paused and reports while playing`() {
+        val heartbeat = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(heartbeat), 200L) } returns true
+        val (listener, _, states) = startPictureTest()
+        pausePictureTestAt(1_000L)
+        verify(exactly = 0) { mockHandler.postDelayed(any(), 200L) }
+
+        every { mockPlayer.isPlaying } returns true
+        listener.onIsPlayingChanged(true)
+        every { mockPlayer.currentPosition } returns 1_200L
+        heartbeat.captured.run()
+        assertEquals(1_200L, states.last()["positionMs"])
+
+        val scheduledTick = heartbeat.captured
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        every { mockPlayer.isPlaying } returns false
+        listener.onIsPlayingChanged(false)
+        verify { mockHandler.removeCallbacks(scheduledTick) }
+        scheduledTick.run()
+        verify(exactly = 0) { mockHandler.postDelayed(any(), 200L) }
+    }
+
     // -- decoder crop --
 
     private val paddedCrop = listOf(0.0, 0.0, 1080.0 / 1088, 1.0)
