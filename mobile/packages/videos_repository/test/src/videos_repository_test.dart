@@ -3208,7 +3208,11 @@ void main() {
           },
         );
 
-        test('chunks bulk stat hydration for large API result sets', () async {
+        test('hydrates large API results in parallel batches', () async {
+          final firstBatchDone = Completer<void>();
+          addTearDown(() {
+            if (!firstBatchDone.isCompleted) firstBatchDone.complete();
+          });
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
             () => mockFunnelcakeClient.getHomeFeed(
@@ -3234,6 +3238,7 @@ void main() {
             invocation,
           ) async {
             final ids = invocation.positionalArguments.single as List<String>;
+            if (ids.contains('event-0')) await firstBatchDone.future;
             return BulkVideoStatsResponse(
               stats: {
                 for (final id in ids)
@@ -3253,12 +3258,21 @@ void main() {
             funnelcakeApiClient: mockFunnelcakeClient,
           );
 
-          final result = await repositoryWithApi.getHomeFeedVideos(
+          final load = repositoryWithApi.getHomeFeedVideos(
             authors: ['followed-user'],
             userPubkey: 'my-pubkey',
             limit: 101,
           );
+          await pumpEventQueue();
+          final captured = verify(
+            () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
+          ).captured;
+          expect(captured, hasLength(2));
+          expect(captured.first as List<String>, hasLength(100));
+          expect(captured.last as List<String>, ['event-100']);
+          firstBatchDone.complete();
 
+          final result = await load;
           expect(result.videos, hasLength(101));
           final firstVideo = result.videos.firstWhere(
             (video) => video.id == 'event-0',
@@ -3268,12 +3282,6 @@ void main() {
           );
           expect(firstVideo.totalLoops, equals(1));
           expect(lastVideo.totalLoops, equals(101));
-          final captured = verify(
-            () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
-          ).captured;
-          expect(captured, hasLength(2));
-          expect(captured.first as List<String>, hasLength(100));
-          expect(captured.last as List<String>, hasLength(1));
           expect(
             captured.expand((ids) => ids as List<String>),
             containsAll(['event-0', 'event-100']),

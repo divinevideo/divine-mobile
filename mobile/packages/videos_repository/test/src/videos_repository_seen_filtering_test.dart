@@ -1059,7 +1059,7 @@ void main() {
     });
 
     test(
-      'classic deep-fetch triggers when filtering removes most of page',
+      'classics walks past seen pages and only hydrates surviving videos',
       () async {
         final seenPage = List.generate(
           5,
@@ -1099,6 +1099,12 @@ void main() {
         expect(result.videos.any((v) => v.id.startsWith('seen-')), isFalse);
         expect(result.videos.any((v) => v.id.startsWith('fresh-')), isTrue);
         expect(call, greaterThan(1));
+        expect(
+          verify(() => mockFunnelcake.getBulkVideoStats(captureAny())).captured,
+          [
+            ['fresh-0', 'fresh-1'],
+          ],
+        );
       },
     );
 
