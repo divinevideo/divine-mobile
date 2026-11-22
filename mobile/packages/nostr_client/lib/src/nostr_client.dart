@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'package:clock/clock.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
+import 'package:nostr_client/src/current_version_read.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_client/src/nip89_client_tag.dart';
 import 'package:nostr_client/src/publish_result.dart';
@@ -1307,6 +1308,142 @@ class NostrClient {
     );
     return read.result;
   }
+
+  /// Reads the current version of one replaceable or addressable event:
+  /// [kind] and [pubkey], plus [dTag] for an addressable kind.
+  ///
+  /// Build a replacement on this read and nothing else. Publishing a
+  /// replaceable event replaces it whole, so a replacement built from a read
+  /// that missed a relay deletes whatever only that relay held (#11317).
+  ///
+  /// * [CurrentVersionFound]: every relay the user publishes to, and each of
+  ///   [extraRelays], answered, and its event is the newest version any of
+  ///   them holds.
+  /// * [CurrentVersionAbsent]: every one of them answered with nothing.
+  /// * [CurrentVersionFailed]: a relay did not answer — it stayed silent,
+  ///   refused, dropped, could not be reached, or ran out of time — even if
+  ///   another relay returned a version. Do not publish.
+  ///
+  /// [extraRelays] names relays outside the user's set that the replacement
+  /// will also go to, such as the indexers a relay list is published to. A
+  /// publish replaces whatever each relay it reaches holds, so their answers
+  /// are needed too.
+  ///
+  /// It asks relays only: a cached copy the relays no longer hold must never
+  /// become the base of a republish. A version counts only when it matches
+  /// the address exactly and is validly signed by [pubkey], whatever a relay
+  /// sent or whether the pool checked signatures.
+  ///
+  /// A first read that leaves a relay unanswered, or finishes without one it
+  /// needs, is asked once more over new connections with every such relay
+  /// required ([queryEventsOnFreshConnections]): a relay busy behind a long
+  /// replay on the shared connection still answers, and one that cannot be
+  /// reached makes the read fail. Each read gets [timeout].
+  ///
+  /// Throws [ArgumentError] when [kind] is neither replaceable nor
+  /// addressable, when an addressable kind has no [dTag] or an empty one,
+  /// when a replaceable kind has one, or when [pubkey] is not a 64-character
+  /// lowercase hex key. Each would read as absent and invite a replacement
+  /// built from nothing: no `#d` filter matches a version without a `d` tag,
+  /// and no event matches a key in another encoding.
+  Future<CurrentVersionRead> readCurrentVersion({
+    required int kind,
+    required String pubkey,
+    String? dTag,
+    List<String> extraRelays = const [],
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final addressable = EventKind.isParameterizedReplaceable(kind);
+    if (!addressable && !EventKind.isReplaceable(kind)) {
+      throw ArgumentError.value(kind, 'kind', 'is not replaceable');
+    }
+    if (addressable && (dTag == null || dTag.isEmpty)) {
+      throw ArgumentError.value(
+        dTag,
+        'dTag',
+        'an addressable kind needs a non-empty one',
+      );
+    }
+    if (!addressable && dTag != null) {
+      throw ArgumentError.value(dTag, 'dTag', 'a replaceable kind has none');
+    }
+    if (!_lowercaseHexKey.hasMatch(pubkey)) {
+      throw ArgumentError.value(pubkey, 'pubkey', 'is not a lowercase hex key');
+    }
+    // No `limit`: on a one-filter read the client keeps only the newest
+    // `created_at`, which would drop a same-second rival before the lowest-id
+    // tie-break and a valid version hidden behind an invalid one.
+    final filter = Filter(
+      kinds: [kind],
+      authors: [pubkey],
+      d: dTag == null ? null : [dTag],
+    );
+    final requiredRelays = {
+      ..._relayManager.configuredRelays,
+      ...extraRelays,
+    }.toList();
+    final first = await readEvents(
+      [filter],
+      tempRelays: extraRelays.isEmpty ? null : extraRelays,
+      useCache: false,
+      requireAllRelaysSettled: true,
+      timeout: timeout,
+    );
+    if (first.isComplete &&
+        first.answeredNetworkRelayCount >= requiredRelays.length) {
+      return _newestVersionOf(first.events, dTag);
+    }
+    final retry = await queryEventsOnFreshConnections(
+      [filter],
+      timeout: timeout,
+      requiredRelays: requiredRelays,
+    );
+    if (retry.noRelays || retry.timedOut) {
+      final why = retry.noRelays
+          ? 'no relay took the read'
+          : 'a relay did not answer';
+      Log.warning(
+        'Current version of kind $kind'
+        '${dTag == null ? '' : ' (d=$dTag)'} by ${pubkeyForLogs(pubkey)} '
+        'is unknown: $why',
+        name: 'NostrClient',
+        category: LogCategory.relay,
+      );
+      return CurrentVersionFailed(noRelay: retry.noRelays);
+    }
+    return _newestVersionOf([...first.events, ...retry.events], dTag);
+  }
+
+  /// The newest version at the address among [events]: the latest
+  /// `created_at`, then the lowest id (NIP-01), counting only events with a
+  /// valid id and signature. The pool already dropped events off the filter,
+  /// but it admits one whose any `d` tag matches, and the address is the
+  /// first.
+  static CurrentVersionRead _newestVersionOf(
+    Iterable<Event> events,
+    String? dTag,
+  ) {
+    Event? newest;
+    for (final event in events) {
+      if (dTag != null && event.dTagValue != dTag) continue;
+      if (newest != null && !_isNewerVersion(event, newest)) continue;
+      // The pool marks only a signature it verified; check every other one.
+      if (!event.isValid || !(event.hasVerifiedSignature || event.isSigned)) {
+        continue;
+      }
+      newest = event;
+    }
+    return newest == null
+        ? const CurrentVersionAbsent()
+        : CurrentVersionFound(newest);
+  }
+
+  static bool _isNewerVersion(Event candidate, Event current) =>
+      candidate.createdAt != current.createdAt
+      ? candidate.createdAt > current.createdAt
+      : candidate.id.compareTo(current.id) < 0;
+
+  static final RegExp _lowercaseHexKey = RegExp(r'^[0-9a-f]{64}$');
 
   /// Zone key [observeSkippedReads] puts its listener under.
   static final Object _skippedReadListenerKey = Object();

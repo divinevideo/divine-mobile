@@ -6,6 +6,7 @@
 library;
 
 export 'src/block_list_signer.dart';
+export 'src/current_version_read.dart';
 export 'src/latest_addressable_events.dart';
 export 'src/models/models.dart';
 export 'src/nip89_client_tag.dart';
