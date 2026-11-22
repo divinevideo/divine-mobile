@@ -9,10 +9,11 @@ import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/shell/shell_title_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 const _otherUserHex =
     '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
-const _viewerHex =
-    'aaaa1f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
+const String _viewerHex = syntheticTestPubkey;
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));

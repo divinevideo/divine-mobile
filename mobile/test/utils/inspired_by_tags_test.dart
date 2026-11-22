@@ -6,11 +6,11 @@ import 'package:models/models.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 void main() {
-  const creatorPubkey =
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  const otherPubkey =
-      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+  const creatorPubkey = syntheticTestPubkey;
+  const otherPubkey = syntheticOtherTestPubkey;
   const selfPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 

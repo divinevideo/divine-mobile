@@ -30,6 +30,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_pubkeys.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -39,7 +40,7 @@ class _MockPeopleListsRepository extends Mock
 
 // Synthetic complete keys; no real accounts are used.
 final String _owner = 'a' * 64;
-final String _foreignOwner = 'b' * 64;
+const String _foreignOwner = syntheticOtherTestPubkey;
 Widget? _selected;
 
 final ProviderFamily<GoRouter, (String, bool)> _routerProvider =

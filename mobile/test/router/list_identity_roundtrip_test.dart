@@ -9,6 +9,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -58,7 +59,7 @@ void main() {
               router: router,
               authService: _Auth(),
             );
-            for (final owner in ['a' * 64, 'b' * 64]) {
+            for (final owner in ['a' * 64, syntheticOtherTestPubkey]) {
               final path = type == DeepLinkType.peopleList
                   ? RoutePaths.peopleListByAuthorFor(
                       pubkey: owner,

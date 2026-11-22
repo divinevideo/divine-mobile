@@ -20,6 +20,7 @@ import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _FakeUrlLauncherPlatform extends UrlLauncherPlatform {
   String? launchedUrl;
@@ -48,8 +49,7 @@ class _FakeUrlLauncherPlatform extends UrlLauncherPlatform {
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
-const _testHexPubkey =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _testHexPubkey = syntheticTestPubkey;
 
 const _mentionedHexPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';

@@ -55,6 +55,17 @@ void main() {
       expect((target! as NostrProfileTarget).hexPubkey, equals(authorHex));
     });
 
+    // x = 5 is well-formed and checksums, but is no point on secp256k1, so no
+    // account can own it and search must not open it as a profile (#8706).
+    test('does not classify an npub no account can own as a profile', () {
+      expect(
+        resolveNostrSearchTarget(
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzsfj2hcx',
+        ),
+        isNull,
+      );
+    });
+
     test('classifies a bare hex value as ambiguous and lowercases it', () {
       final target = resolveNostrSearchTarget(hexId.toUpperCase());
 
