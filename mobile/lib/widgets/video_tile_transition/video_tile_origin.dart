@@ -69,21 +69,27 @@ class VideoTileOrigin {
            : image.alignment.resolve(image.textDirection);
 
   /// Captures a laid-out video tile using the player's fit for [video].
+  ///
+  /// A video already marked for a warning uses the plain page transition so
+  /// its thumbnail does not grow while the player is loading the warning.
   static VideoTileOrigin? captureVideo(
     BuildContext tileContext,
     VideoEvent video, {
     BorderRadiusGeometry borderRadius = const BorderRadius.all(
       Radius.circular(4),
     ),
-  }) => capture(
-    tileContext,
-    videoId: video.id,
-    borderRadius: borderRadius,
-    letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
-      video.width,
-      video.height,
-    ),
-  );
+  }) {
+    if (video.shouldShowWarning) return null;
+    return capture(
+      tileContext,
+      videoId: video.id,
+      borderRadius: borderRadius,
+      letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
+        video.width,
+        video.height,
+      ),
+    );
+  }
 
   /// The origin of the tile under [tileContext] showing [videoId], or `null`
   /// when the tile holds no laid-out [VideoTileThumbnailBoundary], or when the

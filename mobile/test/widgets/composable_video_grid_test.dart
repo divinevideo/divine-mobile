@@ -418,6 +418,45 @@ void main() {
       expect(tappedOrigin, isNull);
     });
 
+    testWidgets('opens a warned tile without enlarging its thumbnail', (
+      tester,
+    ) async {
+      final videos = [
+        testVideos[0].copyWith(contentWarningLabels: ['profanity']),
+        testVideos[1].copyWith(
+          contentWarningLabels: ['profanity'],
+          warnLabels: ['profanity'],
+        ),
+      ];
+      final tappedOrigins = <String, VideoTileOrigin?>{};
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ComposableVideoGrid(
+                videos: videos,
+                onVideoTap: (videos, index, captureOrigin) {
+                  tappedOrigins[videos[index].id] = captureOrigin();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final thumbnails = find.byType(VideoTileThumbnailBoundary);
+      await tester.tap(thumbnails.at(0));
+      await tester.tap(thumbnails.at(1));
+
+      expect(tappedOrigins, containsPair(videos[0].id, isA<VideoTileOrigin>()));
+      expect(tappedOrigins, containsPair(videos[1].id, isNull));
+      tappedOrigins[videos[0].id]?.takeImage()?.dispose();
+    });
+
     testWidgets('calls onVideoTap with correct params when tile tapped', (
       tester,
     ) async {
