@@ -1223,7 +1223,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       _scheduleNostrEnrichment(source: source, videos: updatedVideos);
 
       // Batch-fetch profiles for new creators without blocking pagination.
-      add(_VideoFeedCreatorProfilesRequested(validNewVideos));
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validNewVideos));
 
       // The cross-restart cache is written only on a genuine swipe
       // (_onActiveIndexChanged); pagination alone does not move the resume
@@ -1997,7 +1997,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
       // Batch-fetch creator profiles in the background to warm the Drift cache
       // without delaying resume persistence or blocking subsequent loads.
-      add(_VideoFeedCreatorProfilesRequested(validVideos));
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validVideos));
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
