@@ -674,9 +674,13 @@ void main() {
 
           authors.add({authorPubkey, otherPubkey});
           await pumpEventQueue();
+          expect(subscribeCalls, 2);
+          const thirdPubkey = rootAuthorPubkey;
+          authors.add({authorPubkey, otherPubkey, thirdPubkey});
+          await pumpEventQueue();
           expect(
             subscribedFilters.single.authors,
-            unorderedEquals([authorPubkey, otherPubkey]),
+            unorderedEquals([authorPubkey, otherPubkey, thirdPubkey]),
           );
         },
       );

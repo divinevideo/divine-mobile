@@ -1155,7 +1155,8 @@ class CommentsRepository {
   ///
   /// The watch retains the previous relay subscription until its replacement
   /// finishes backfill. Cancelling the stream closes both. A subscription
-  /// refusal reaches the stream as a [WatchCommentsFailedException].
+  /// refusal reaches the stream as a [WatchCommentsFailedException]. A new
+  /// request is sent only when an author is listed for the first time.
   Stream<CommentDeletion> watchCommentDeletions({
     required String rootEventId,
     required Stream<Set<String>> commentAuthors,
@@ -1167,8 +1168,6 @@ class CommentsRepository {
       if (includeVideoReplies) EventKind.videoVertical.toString(),
     ];
     final seenAuthors = <String>{};
-    Set<String> watched = const {};
-    Set<String> pendingAuthors = const {};
     StreamSubscription<Set<String>>? authorsSubscription;
     StreamSubscription<CommentDeletion>? requests;
     StreamSubscription<CommentDeletion>? pending;
@@ -1188,27 +1187,22 @@ class CommentsRepository {
     }
 
     void watch(Set<String> authors) {
+      // Unrelated sheet state changes must not retry a refused filter.
+      if (seenAuthors.containsAll(authors)) return;
       seenAuthors.addAll(authors);
-      if (watched.containsAll(seenAuthors) ||
-          pendingAuthors.containsAll(seenAuthors)) {
-        return;
-      }
-      final desired = Set<String>.of(seenAuthors);
       late final StreamSubscription<CommentDeletion> opened;
       try {
         opened =
             _commentDeletionRequests(
               rootEventId: rootEventId,
-              authors: desired.toList(),
+              authors: seenAuthors.toList(),
               commentKinds: commentKinds,
               since: since,
               onEose: () {
                 if (!identical(pending, opened)) return;
                 final replaced = requests;
                 requests = opened;
-                watched = desired;
                 pending = null;
-                pendingAuthors = const {};
                 cancelDetached(replaced);
               },
             ).listen(
@@ -1217,11 +1211,9 @@ class CommentsRepository {
               onDone: () {
                 if (identical(pending, opened)) {
                   pending = null;
-                  pendingAuthors = const {};
                 }
                 if (identical(requests, opened)) {
                   requests = null;
-                  watched = const {};
                 }
               },
             );
@@ -1231,7 +1223,6 @@ class CommentsRepository {
       }
       final superseded = pending;
       pending = opened;
-      pendingAuthors = desired;
       cancelDetached(superseded);
     }
 

@@ -117,6 +117,7 @@ void main() {
         () async {
           final first = TestCommenter();
           final second = TestCommenter();
+          final third = TestCommenter();
           final errors = <Object>[];
           final seen = <String>[];
           final watch = repository
@@ -147,6 +148,9 @@ void main() {
 
           relay.refuse = null;
           commentAuthors.add({first.pubkey, second.pubkey});
+          await pumpEventQueue();
+          expect(relay.requests, hasLength(2));
+          commentAuthors.add({first.pubkey, second.pubkey, third.pubkey});
           await pumpEventQueue();
           expect(relay.requests, hasLength(3));
           expect(relay.openSubscriptions, {relay.requests.last});
