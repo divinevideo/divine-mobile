@@ -24,7 +24,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
-import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -97,24 +96,6 @@ void main() {
             builder: (_, state) => Scaffold(
               body: Text('profile ${state.pathParameters.values.single}'),
             ),
-          ),
-          GoRoute(
-            path: BadgeVideosScreen.path,
-            builder: (_, state) {
-              expect(
-                state.extra,
-                isA<BadgeVideosSeed>().having(
-                  (seed) => seed.coordinate,
-                  'coordinate',
-                  _coordinate,
-                ),
-              );
-              return Scaffold(
-                body: Text(
-                  'badge video destination ${state.pathParameters['naddr']}',
-                ),
-              );
-            },
           ),
           GoRoute(
             path: '/badges',
@@ -867,6 +848,50 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('late holder failure keeps the playable video preview', (
+      tester,
+    ) async {
+      final holders = Completer<Set<String>>();
+      final client = _MockFunnelcakeClient();
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) => holders.future);
+      when(() => repository.withoutHiddenPubkeys(any()))
+          .thenReturn([_pubkey(3)]);
+      when(
+        () => client.getBadgeHolderPreview(
+          creatorPubkey: any(named: 'creatorPubkey'),
+          dTag: any(named: 'dTag'),
+        ),
+      ).thenAnswer((_) async => [_pubkey(3)]);
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+      await tester.pumpWidget(
+        buildSubject(
+          videosRepository: videos,
+          overrides: [funnelcakeApiClientProvider.overrideWithValue(client)],
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+      holders.completeError(
+        const BadgeReadIncompleteException('holder reconciliation'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+    });
+
     testWidgets('inline holder grid excludes broken videos', (tester) async {
       final videos = _MockVideosRepository();
       final pager = _MockBadgeVideoPager();
@@ -1199,7 +1224,7 @@ void main() {
       );
     }
 
-    testWidgets('puts badge actions and videos before holders and issuer', (
+    testWidgets('puts playable thumbnails before compact follow and holders', (
       tester,
     ) async {
       final videos = _MockVideosRepository();
@@ -1228,15 +1253,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final subscribe = find.text(l10n.badgeSubscribeAction);
-      final watch = find.text(l10n.profileVideosLabel);
       final thumbnail = find.byType(VideoThumbnailWidget);
       final holders = find.text(l10n.badgeAcceptedHoldersTitle);
       final issuer = find.text(l10n.badgeDetailMadeBy);
       expect(subscribe.hitTestable(), findsOneWidget);
-      expect(watch.hitTestable(), findsOneWidget);
+      expect(find.text(l10n.profileVideosLabel), findsNothing);
       expect(
-        tester.getBottomLeft(subscribe).dy,
-        lessThan(tester.getTopLeft(thumbnail).dy),
+        tester.getBottomLeft(thumbnail).dy,
+        lessThan(tester.getTopLeft(subscribe).dy),
       );
       expect(
         tester.getBottomLeft(thumbnail).dy,
@@ -1251,23 +1275,6 @@ void main() {
       expect(
         tester.getTopLeft(holders).dy,
         lessThan(tester.getTopLeft(issuer).dy),
-      );
-    });
-
-    testWidgets('opens the badge video page from the visible watch action', (
-      tester,
-    ) async {
-      when(() => repository.loadBadgeDetail(any())).thenAnswer(
-        (_) async => _detail(definition: _definition(), isOwner: false),
-      );
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.profileVideosLabel).hitTestable(), findsOneWidget);
-      await tester.tap(find.text(l10n.profileVideosLabel));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('badge video destination ${_coordinate.toNaddr()}'),
-        findsOneWidget,
       );
     });
 

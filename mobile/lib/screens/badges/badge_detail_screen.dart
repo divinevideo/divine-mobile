@@ -30,7 +30,6 @@ import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
-import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -513,13 +512,13 @@ class _AcceptedHolders extends ConsumerWidget {
         ],
         child: SliverMainAxisGroup(
           slivers: [
-            SliverToBoxAdapter(
+            _BadgeVideoGrid(coordinate: coordinate),
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 20),
-                child: _BadgeEngagementActions(coordinate: coordinate),
+                padding: EdgeInsets.only(top: 20, bottom: 20),
+                child: _BadgeEngagementActions(),
               ),
             ),
-            _BadgeVideoGrid(coordinate: coordinate),
             const SliverToBoxAdapter(child: _HoldersHeader()),
             const _AcceptedHolderList(),
           ],
@@ -543,9 +542,7 @@ class _HoldersHeader extends StatelessWidget {
 }
 
 class _BadgeEngagementActions extends StatelessWidget {
-  const _BadgeEngagementActions({required this.coordinate});
-
-  final BadgeCoordinate coordinate;
+  const _BadgeEngagementActions();
 
   @override
   Widget build(BuildContext context) {
@@ -562,53 +559,21 @@ class _BadgeEngagementActions extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final buttonWidth = canSubscribe && constraints.maxWidth >= 480
-                ? (constraints.maxWidth - 12) / 2
-                : constraints.maxWidth;
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                if (canSubscribe)
-                  SizedBox(
-                    width: buttonWidth,
-                    child: DivineButton(
-                      label: status == BadgeSubscriptionStatus.loading
-                          ? context.l10n.commonLoading
-                          : subscribed
-                          ? context.l10n.badgeSubscribedAction
-                          : context.l10n.badgeSubscribeAction,
-                      expanded: true,
-                      onPressed: status == BadgeSubscriptionStatus.ready
-                          ? cubit.toggleSubscription
-                          : null,
-                    ),
-                  ),
-                SizedBox(
-                  width: buttonWidth,
-                  child: DivineButton(
-                    label: context.l10n.profileVideosLabel,
-                    leadingIcon: DivineIconName.playCircle,
-                    type: DivineButtonType.secondary,
-                    expanded: true,
-                    onPressed: () => context.push<void>(
-                      BadgeVideosScreen.pathFor(coordinate),
-                      extra:
-                          cubit.state.holdersStatus == BadgeHoldersStatus.loaded
-                          ? BadgeVideosSeed(
-                              coordinate: coordinate,
-                              holders: cubit.state.holders.toSet(),
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+        if (canSubscribe)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: DivineButton(
+              label: status == BadgeSubscriptionStatus.loading
+                  ? context.l10n.commonLoading
+                  : subscribed
+                  ? context.l10n.badgeSubscribedAction
+                  : context.l10n.badgeSubscribeAction,
+              size: DivineButtonSize.small,
+              onPressed: status == BadgeSubscriptionStatus.ready
+                  ? cubit.toggleSubscription
+                  : null,
+            ),
+          ),
         if (canSubscribe)
           Text(
             context.l10n.badgeCommunityFollowHint,
@@ -720,11 +685,13 @@ class _BadgeVideoGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final holdersStatus = context.select(
-      (BadgeHoldersCubit cubit) => cubit.state.holdersStatus,
+    final (holdersStatus, hasPreview) = context.select(
+      (BadgeHoldersCubit cubit) =>
+          (cubit.state.holdersStatus, cubit.state.holders.isNotEmpty),
     );
     if (holdersStatus != BadgeHoldersStatus.loaded &&
-        holdersStatus != BadgeHoldersStatus.preview) {
+        holdersStatus != BadgeHoldersStatus.preview &&
+        !hasPreview) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     final state = context.watch<BadgeVideosCubit>().state;

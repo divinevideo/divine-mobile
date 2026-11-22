@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -23,6 +23,7 @@ import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -381,18 +382,31 @@ void main() {
       },
     );
 
-    testWidgets('shows a direct path from each badge to its videos', (
-      tester,
-    ) async {
-      when(() => cubit.state).thenReturn(
-        ExploreBadgesState(
-          status: ExploreBadgesStatus.loaded,
-          definitions: [_definition],
-        ),
-      );
-      await tester.pumpWidget(buildSubject());
-      expect(find.text(l10n.profileVideosLabel), findsOneWidget);
-    });
+    testWidgets(
+      'relay cards lead with full thumbnails without Videos buttons',
+      (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        expect(find.text(l10n.profileVideosLabel), findsNothing);
+        final card = find.byType(BadgeCommunityCard);
+        final media = find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is AspectRatio &&
+                widget.aspectRatio == badgeArtworkAspectRatio,
+          ),
+        );
+        expect(tester.getSize(media).width, tester.getSize(card).width);
+      },
+    );
 
     testWidgets('an empty gallery offers a mouse-accessible retry', (
       tester,
@@ -832,6 +846,11 @@ void main() {
           find.bySemanticsLabel('Videos from Loop makers'),
           findsOneWidget,
         );
+        expect(find.text(l10n.profileVideosLabel), findsNothing);
+        final media = find.byType(DivineListMedia);
+        expect(media, findsOneWidget);
+        final size = tester.getSize(media);
+        expect(size.width / size.height, closeTo(177 / 120, 0.001));
         verifyNever(() => cubit.loadPreview(_definition.coordinate));
         await tester.tap(find.bySemanticsLabel('A community clip'));
         await tester.pumpAndSettle();

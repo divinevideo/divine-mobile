@@ -18,12 +18,10 @@ import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
-import 'package:openvine/screens/badges/badge_videos_screen.dart';
-import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
-import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -311,34 +309,29 @@ class _BadgePreviewCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
       children: [
-        _BadgeClips(videos: visible),
+        if (visible.isNotEmpty)
+          Semantics(
+            container: true,
+            explicitChildNodes: true,
+            label: context.l10n.badgeDiscoveryVideosLabel(
+              [definition.name, definition.dTag]
+                      .whereType<String>()
+                      .map(sanitizeUtf16)
+                      .where((name) => name.trim().isNotEmpty)
+                      .firstOrNull ??
+                  context.l10n.profileBadgeFallbackSemanticLabel,
+            ),
+            child: _BadgeClips(videos: visible),
+          ),
         BlocSelector<ExploreBadgesCubit, ExploreBadgesState, List<String>>(
           selector: (state) => state.previews[coordinate] ?? const [],
           builder: (context, members) => BadgeCommunityCard(
             key: ValueKey(coordinate),
             definition: definition,
             memberPubkeys: members,
-            compactArtwork: true,
+            compactArtwork: visible.isNotEmpty,
             onTap: () => context.push<void>(BadgeDetailScreen.pathFor(parsed)),
           ),
-        ),
-        DivineButton(
-          label: context.l10n.profileVideosLabel,
-          semanticLabel: context.l10n.badgeDiscoveryVideosLabel(
-            [
-                      definition.name,
-                      definition.dTag,
-                    ]
-                    .whereType<String>()
-                    .map(sanitizeUtf16)
-                    .where((name) => name.trim().isNotEmpty)
-                    .firstOrNull ??
-                context.l10n.profileBadgeFallbackSemanticLabel,
-          ),
-          leadingIcon: DivineIconName.playCircle,
-          type: DivineButtonType.secondary,
-          onPressed: () =>
-              context.push<void>(BadgeVideosScreen.pathFor(parsed)),
         ),
       ],
     );
@@ -347,74 +340,37 @@ class _BadgePreviewCard extends ConsumerWidget {
 
 class _BadgeClips extends StatelessWidget {
   const _BadgeClips({required this.videos});
+
   final List<BadgeVideoPreview> videos;
 
   @override
   Widget build(BuildContext context) {
-    if (videos.isEmpty) return const SizedBox.shrink();
-    return Row(
-      spacing: 6,
-      children: [
-        for (var index = 0; index < videos.length; index++)
-          Expanded(
-            child: _BadgeClip(video: videos[index], index: index),
-          ),
-      ],
-    );
-  }
-}
-
-class _BadgeClip extends StatelessWidget {
-  const _BadgeClip({required this.video, required this.index});
-
-  final BadgeVideoPreview video;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
+    final video = videos.first;
     final title = sanitizeUtf16(video.title).trim();
     final label = title.isEmpty
-        ? context.l10n.profileVideoThumbnailLabel(index + 1)
+        ? context.l10n.profileVideoThumbnailLabel(1)
         : title;
     return Semantics(
       label: label,
       button: true,
+      onTap: () => VideoDetailRouteData(
+        id: Nip19.encodeNoteId(video.id),
+        author: video.pubkey,
+      ).push<void>(context),
+      excludeSemantics: true,
       child: Material(
         color: context.vineColors.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => VideoDetailRouteData(
             id: Nip19.encodeNoteId(video.id),
             author: video.pubkey,
           ).push<void>(context),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (isUsableNetworkImageUrl(video.thumbnail))
-                  VineCachedImage(
-                    imageUrl: video.thumbnail,
-                    memCacheWidth: 360,
-                  ),
-                Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.vineColors.mediaChrome,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: DivineIcon(
-                        icon: DivineIconName.playCircle,
-                        color: context.vineColors.mediaChromeForeground,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: DivineListMedia.videos(
+            thumbnailUrls: [for (final clip in videos) clip.thumbnail],
+            videoCount: videos.length,
+            showCount: false,
           ),
         ),
       ),
