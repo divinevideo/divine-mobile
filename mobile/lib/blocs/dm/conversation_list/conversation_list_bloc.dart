@@ -1053,6 +1053,10 @@ class ConversationListBloc
     ConversationListProfileRepositoryChanged event,
     Emitter<ConversationListState> emit,
   ) {
+    // The inbox can forward a repository in the frame its re-key closes this
+    // bloc, so the event may run after close(): subscribing then would leak,
+    // and the add() below would throw.
+    if (isClosed) return;
     if (identical(_profileRepository, event.profileRepository)) return;
     _profileRepository = event.profileRepository;
     _subscribeToVanishedPubkeys();
