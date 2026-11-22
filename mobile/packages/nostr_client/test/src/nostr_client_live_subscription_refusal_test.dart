@@ -22,6 +22,7 @@ class _ScriptedRelay extends Relay {
     this.refuseWith,
     this.connects = true,
     this.failReplay = false,
+    this.reconnectsAfterReplayFailure = false,
   }) : super(url, RelayStatus(url));
 
   /// While non-null and incomplete, [doConnect] waits on it.
@@ -33,8 +34,9 @@ class _ScriptedRelay extends Relay {
   /// Whether [doConnect] succeeds once [held] completes.
   final bool connects;
 
-  /// The socket drops on REQ and the next connection attempt fails.
+  /// The socket drops on REQ.
   final bool failReplay;
+  final bool reconnectsAfterReplayFailure;
   var _socketDropped = false;
 
   final List<String> reqs = [];
@@ -43,7 +45,7 @@ class _ScriptedRelay extends Relay {
   Future<bool> doConnect() async {
     relayStatus.connected = ClientConnected.connecting;
     await held?.future;
-    if (!connects || _socketDropped) {
+    if (!connects || (_socketDropped && !reconnectsAfterReplayFailure)) {
       relayStatus.connected = ClientConnected.disconnect;
       return false;
     }
@@ -248,6 +250,34 @@ void main() {
       });
     });
 
+    test('ends the subscription if the fallback connects but fails to '
+        'write the replay', () async {
+      await manager.initialize();
+      subscribe();
+      await pumpEventQueue();
+
+      final redial = Completer<void>();
+      dialer.next[_refusingUrl] = (url) =>
+          _ScriptedRelay(url, refuseWith: 'rate-limited: slow down');
+      dialer.next[_redialledUrl] = (url) => _ScriptedRelay(
+        url,
+        held: redial,
+        failReplay: true,
+        reconnectsAfterReplayFailure: true,
+      );
+      final reconnect = client.forceReconnectAll();
+      await pumpEventQueue();
+      expect(errors, isEmpty);
+
+      redial.complete();
+      await reconnect;
+      await pumpEventQueue();
+
+      expect(dialer.latest(_redialledUrl).reqs, [_liveId, _liveId]);
+      expect(errors, [isA<RelaySubscriptionRefusedException>()]);
+      expect(done, isTrue);
+    });
+
     group('the relay it waits for leaves the pool', () {
       late Completer<void> redial;
 
@@ -303,6 +333,34 @@ void main() {
     });
 
     group('initialize', () {
+      test('ends the subscription if the only remaining copy was saved by '
+          'a relay whose connection already failed', () async {
+        final connect = Completer<void>();
+        dialer.next[_redialledUrl] = (url) =>
+            _ScriptedRelay(url, held: connect, connects: false);
+        final initialized = manager.initialize();
+        await pumpEventQueue();
+        subscribe();
+        await pumpEventQueue();
+        expect(
+          dialer.latest(_redialledUrl).hasSubscriptionById(_liveId),
+          isTrue,
+        );
+
+        connect.complete();
+        await initialized;
+        final refusing = dialer.latest(_refusingUrl);
+        expect(refusing.reqs, contains(_liveId));
+        refusing.onMessage!(
+          refusing,
+          ['CLOSED', _liveId, 'rate-limited: slow down'],
+        );
+        await pumpEventQueue();
+
+        expect(errors, [isA<RelaySubscriptionRefusedException>()]);
+        expect(done, isTrue);
+      });
+
       test('ends the subscription with the refusal if the relay it waited for '
           'saved the request before its connection failed', () async {
         final connect = Completer<void>();

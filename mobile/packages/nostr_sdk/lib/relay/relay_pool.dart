@@ -107,6 +107,10 @@ class RelayPool {
   /// subscription, so one that no relay holds yet is not orphaned (#9006).
   final Set<Relay> _relaysStillReplaying = {};
 
+  /// Saved requests that a completed pool add could not send. A null set
+  /// means its dial failed. The next socket can reissue them as usual.
+  final _failedReplays = Expando<({int generation, Set<String>? unsentIds})>();
+
   /// Live subscriptions whose serving relays all refused while a relay in
   /// [_relaysStillReplaying] could still take them, with the last reason.
   final Map<String, String> _refusedAwaitingReplay = {};
@@ -762,11 +766,10 @@ class RelayPool {
     } finally {
       _relaysStillReplaying.remove(relay);
       if (!replaySucceeded) {
-        // A request saved before the socket was ready, or before a failed
-        // send, cannot replace the last relay that refused it.
-        for (final id in _refusedAwaitingReplay.keys) {
-          relay.discardSubscription(id);
-        }
+        _failedReplays[relay] = (
+          generation: relay.connectionGeneration,
+          unsentIds: null,
+        );
       }
       _settleRefusedAwaitingReplay();
     }
@@ -786,7 +789,8 @@ class RelayPool {
         'Relay connection succeeded',
       );
       if (autoSubscribe) {
-        var replayFailed = false;
+        final generation = relay.connectionGeneration;
+        final unsentIds = <String>{};
         final msg =
             '🔄 autoSubscribe: re-sending ${_subscriptions.length} '
             'subscriptions to ${relay.url}';
@@ -808,9 +812,9 @@ class RelayPool {
             subscription.toJson(),
             skipReconnect: true,
           );
-          replayFailed = replayFailed || !sent;
+          if (!sent) unsentIds.add(subscription.id);
         }
-        if (replayFailed) {
+        if (unsentIds.isNotEmpty) {
           _diagnose(
             RelayDiagnosticSite.subscriptionReplay,
             RelayDiagnosticLevel.warning,
@@ -822,7 +826,18 @@ class RelayPool {
             'autoSubscribe replay failed for ${relay.url}; '
             'reconnecting once for saved-request replay',
           );
-          if (!await relay.connect()) return false;
+          final retryUnsentIds = <String>{};
+          if (!await relay.connect(onReplayFailure: retryUnsentIds.add)) {
+            return false;
+          }
+          final retryGeneration = relay.connectionGeneration;
+          _failedReplays[relay] = (
+            generation: retryGeneration,
+            // A reused socket doesn't reissue its saved requests.
+            unsentIds: retryGeneration == generation
+                ? unsentIds
+                : retryUnsentIds,
+          );
         }
       }
       if (init) {
@@ -977,7 +992,7 @@ class RelayPool {
     for (final entry in _refusedAwaitingReplay.entries.toList()) {
       if (_getRelaysWithSubscription(
         entry.key,
-        skipReplaying: true,
+        forRefusalSettlement: true,
       ).isNotEmpty) {
         _refusedAwaitingReplay.remove(entry.key);
       } else if (!_aRelayIsStillReplaying) {
@@ -995,7 +1010,10 @@ class RelayPool {
     _subscriptionEoseRelays.remove(subId);
     _storedEventsPhases.remove(subId);
     _subscriptionSentAt.remove(subId);
-    subscription?.onClosed?.call(reason);
+    if (subscription != null) {
+      _releaseSubscription(subId);
+      subscription.onClosed?.call(reason);
+    }
   }
 
   Relay? getRelay(String url) {
@@ -2856,28 +2874,28 @@ class RelayPool {
       if (!_shouldReplayQueryAfterAuth(relay, reason) &&
           relay.discardSubscription(subscriptionId)) {
         final subscription = _subscriptions[subscriptionId];
-        final activeRelays = _getRelaysWithSubscription(subscriptionId);
-        final awaitsReplay =
-            _aRelayIsStillReplaying &&
-            _getRelaysWithSubscription(
-              subscriptionId,
-              skipReplaying: true,
-            ).isEmpty;
-        if (subscription != null && awaitsReplay) {
+        if (subscription == null) return;
+        final servingRelays = _getRelaysWithSubscription(
+          subscriptionId,
+          forRefusalSettlement: true,
+        );
+        final awaitsReplay = servingRelays.isEmpty && _aRelayIsStillReplaying;
+        if (servingRelays.isEmpty && !awaitsReplay) {
+          _endRefusedSubscription(subscriptionId, reason);
+          return;
+        }
+        if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
         }
-        if (subscription != null && (activeRelays.isNotEmpty || awaitsReplay)) {
-          _storedEventsPhaseAnswered(
-            relay,
-            subscriptionId,
-            receivedOnGeneration,
-            completesBatch: false,
-            dropsRequest: true,
-          );
-        }
-        if (subscription != null && activeRelays.isEmpty && !awaitsReplay) {
-          _endRefusedSubscription(subscriptionId, reason);
-        } else if (subscription != null && subscription.onEose != null) {
+        _storedEventsPhaseAnswered(
+          relay,
+          subscriptionId,
+          receivedOnGeneration,
+          completesBatch: false,
+          dropsRequest: true,
+        );
+        if (subscription.onEose != null) {
+          final activeRelays = _getRelaysWithSubscription(subscriptionId);
           final eoseRelays = _subscriptionEoseRelays[subscriptionId];
           // A relay that reported EOSE and then refused the REQ leaves the
           // tally with it. Left in, its EOSE would stand in for a relay that
@@ -3085,6 +3103,7 @@ class RelayPool {
             .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (result) {
+          _failedReplays[relay]?.unsentIds?.remove(subscription.id);
           log('Request ${subscription.id} dispatch to ${relay.url} succeeded');
           _diagnose(
             RelayDiagnosticSite.queryDispatch,
@@ -3096,6 +3115,7 @@ class RelayPool {
         }
       } else {
         var result = await relay.send(message, skipReconnect: true);
+        if (result) _failedReplays[relay]?.unsentIds?.remove(subscription.id);
         log('📤 relayDoSubscribe: ${subscription.id} send result=$result');
         _diagnose(
           RelayDiagnosticSite.queryDispatch,
@@ -4467,19 +4487,25 @@ class RelayPool {
 
   /// Returns the URLs of relays with a saved copy of this subscription.
   ///
-  /// With [skipReplaying], a relay whose pool replay has yet to finish is not
-  /// counted as serving: it may have only saved its copy of the subscription.
+  /// [forRefusalSettlement] excludes relays still attempting a replay and
+  /// copies an earlier pool replay failed to send on this socket.
   ///
   /// EOSE settlement includes connecting relays with a queued copy so their
   /// replay has time to arrive.
   Set<String> _getRelaysWithSubscription(
     String subscriptionId, {
-    bool skipReplaying = false,
+    bool forRefusalSettlement = false,
   }) {
     final relays = <String>{};
-    bool holdsRequest(Relay relay) =>
-        (!skipReplaying || !_relaysStillReplaying.contains(relay)) &&
-        relay.hasSubscriptionById(subscriptionId);
+    bool holdsRequest(Relay relay) {
+      if (!relay.hasSubscriptionById(subscriptionId)) return false;
+      if (!forRefusalSettlement) return true;
+      if (_relaysStillReplaying.contains(relay)) return false;
+      final failedReplay = _failedReplays[relay];
+      return failedReplay == null ||
+          failedReplay.generation != relay.connectionGeneration ||
+          !(failedReplay.unsentIds?.contains(subscriptionId) ?? true);
+    }
 
     // Check normal relays
     for (final entry in _relayEntriesSnapshot()) {
