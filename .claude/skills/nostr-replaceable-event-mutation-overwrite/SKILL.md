@@ -81,22 +81,41 @@ before trusting one. Section 4 covers divine-mobile.
 
 ### 4. In divine-mobile, Ask NostrClient Whether the Read Finished
 
-`NostrClient` never throws on a timeout or a relay `CLOSED`. Read the base of a
-replacement like this:
+`NostrClient` reports timeouts and relay `CLOSED` in the read result. Choose the network relay URLs
+that must answer for the event you are replacing. For a single contact-list coordinate,
+read each of those relays separately:
 
 ```dart
-final read = await nostrClient.readEvents(
-  [Filter(authors: [pubkey], kinds: const [EventKind.contactList])],
-  relayTypes: RelayType.network,
-  useCache: false,
-  requireAllRelaysSettled: true,
-);
-if (!read.isComplete || read.possiblyCapped) {
+if (requiredRelays.isEmpty) return false;
+final reads = await Future.wait([
+  for (final url in requiredRelays)
+    nostrClient.readEvents(
+      [
+        Filter(authors: [pubkey], kinds: const [EventKind.contactList], limit: 2),
+      ],
+      tempRelays: [url],
+      relayTypes: RelayType.onlyTemp,
+      useCache: false,
+      requireAllRelaysSettled: true,
+    ),
+]);
+if (reads.any(
+  (read) => !read.isComplete || read.possiblyCapped || read.events.length > 1,
+)) {
   return false;
 }
-// Select the newest matching revision, then apply the pending edit.
+final candidates = [for (final read in reads) ...read.events];
+// Select the newest revision from candidates, then apply the pending edit.
 ```
 
+- This filter expects one current revision per relay. A limit of two lets a normal one-event
+  `EOSE` answer pass when the relay advertises no result cap. A smaller advertised cap, a
+  `more` hint, or rejected events may still leave the read inconclusive. The example also
+  refuses multiple revisions from one relay because the client may already have trimmed that
+  answer. [NIP-01 replaceable events](https://github.com/nostr-protocol/nips/blob/master/01.md#kinds)
+- Keep the queries separate so a limit applies to one relay's answer. `NostrClient` merges
+  with a timestamp-only sort when a limit trims the result, so a shared limit can drop the
+  lowest ID among events tied for newest across relays.
 - `queryEvents` returns only the events and drops both flags. Never use it to read a base
   you are about to replace.
 - With `queryEventsDetailed`, check `timedOut || noRelays` and set `requireAllRelaysSettled`.
@@ -107,16 +126,12 @@ if (!read.isComplete || read.possiblyCapped) {
   When a relay finishes with a `more` hint and no usable event, it can be complete and still
   have withheld the only matching revision. This example rejects potentially capped reads.
   Use the cap flag or other evidence that the newest revision was included before publishing.
-- `useCache: false` excludes the database cache. `RelayType.network` also excludes cache
-  relays, which can otherwise complete a query without any network relay answering.
+- `useCache: false` excludes the database cache. `RelayType.onlyTemp` restricts each query
+  to the named relay. Otherwise a cache relay can complete a read with no network answer.
 - Full settlement covers relays that took the request. A disconnected relay can be skipped
-  during dispatch while another relay returns a complete answer. For specific required relays,
-  run `readEvents` against each URL using `tempRelays: [url]` and `relayTypes: RelayType.onlyTemp`.
-  Require a complete, usable answer from each. `queryEventsOnFreshConnections` also checks
-  required relay participation when called with `requiredRelays`, but only reports settlement.
-- Keep a global `limit` off the replacement read unless the client applies the same ordering
-  before truncating. `NostrClient` merges with a timestamp-only sort when a limit trims the
-  result, so it can drop the lowest ID among events tied for newest.
+  during dispatch while another relay returns a complete answer. Reading each required relay
+  separately exposes a missed request. `queryEventsOnFreshConnections` also checks required
+  relay participation when called with `requiredRelays`, but does not report caps.
 - A settled read can spend the whole timeout waiting for a silent relay. The follow
   repository uses three seconds and withholds the publish if the read expires.
 - Examples of checking the settlement flags: `_refreshCurrentUserContactList` in
@@ -154,7 +169,8 @@ Partial read:
 8. Have one relay return an older contact list and finish the read. Have the other relay
    refuse the read (`CLOSED`) or accept the request and stay silent.
 9. Follow someone and confirm the failed read leaves the publish count at zero. Retry with
-   the second relay returning a newer list. Check that the publish preserves it and adds the follow.
+   the second relay returning a newer list and a plain `EOSE`. Check that the publish preserves
+   that list and adds the follow, including when the relay does not advertise a result cap.
    Also verify that a cache-only answer, a missed required relay, or an empty answer with a
    `more` hint cannot authorize a publish.
 
