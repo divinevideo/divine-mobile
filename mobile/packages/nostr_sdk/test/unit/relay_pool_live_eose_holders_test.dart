@@ -68,6 +68,19 @@ Map<String, dynamic> _comment(int createdAt, {int kind = 1111}) {
   return event.toJson();
 }
 
+class _HeldVerifyWorker implements EventVerifyWorker {
+  final release = Completer<void>();
+
+  @override
+  Future<bool> verify(Map<String, dynamic> eventJson) async {
+    await release.future;
+    return true;
+  }
+
+  @override
+  void close() {}
+}
+
 void main() {
   group('RelayPool live-subscription onEose', () {
     Relay tempRelay(String url) => RelayBase(url, RelayStatus(url));
@@ -89,7 +102,7 @@ void main() {
     }
 
     /// Pools [relays] and opens a live subscription on all of them.
-    String subscribe(List<_Relay> relays) {
+    String subscribe(List<_Relay> relays, {void Function(Event)? onEvent}) {
       for (final relay in relays) {
         settle(nostr.relayPool.add(relay));
       }
@@ -100,12 +113,39 @@ void main() {
             'limit': 50,
           },
         ],
-        (Event _) {},
+        onEvent ?? (Event _) {},
         onEose: () => eoseCalls++,
       );
       async.flushMicrotasks();
       return subId;
     }
+
+    test('does not settle before a received event finishes verifying', () {
+      fakeAsync((fake) {
+        async = fake;
+        final worker = _HeldVerifyWorker();
+        nostr.relayPool.eventVerifyWorker = worker;
+        final live = _Relay('wss://live.example');
+        final owing = _Relay('wss://owing.example');
+        var delivered = 0;
+        final subId = subscribe([live, owing], onEvent: (_) => delivered++);
+
+        settle(live.deliver(['EOSE', subId]));
+        final halfWindow = window ~/ 2;
+        async.elapse(halfWindow);
+        settle(owing.deliver(['EVENT', subId, _comment(1)]));
+        async.elapse(halfWindow);
+        expect(eoseCalls, 0);
+
+        worker.release.complete();
+        async.flushMicrotasks();
+        expect(delivered, 1);
+        expect(eoseCalls, 0);
+        settle(owing.deliver(['EOSE', subId]));
+        expect(eoseCalls, 1);
+        nostr.relayPool.unsubscribe(subId);
+      });
+    });
 
     test('control: fires on the EOSE of the only relay holding the REQ', () {
       fakeAsync((fake) {

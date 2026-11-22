@@ -2322,7 +2322,11 @@ class RelayPool {
       return;
     }
     final owing = _relaysOwingLiveEose(subId, eosed);
-    if (owing.isNotEmpty && !settleWindowElapsed) {
+    // The timer is not on the ordered frame chain. Do not close a bounded
+    // read while an owing relay's already-received frames await verification.
+    if (owing.isNotEmpty &&
+        (!settleWindowElapsed ||
+            owing.any((url) => _orderedFrameTails.containsKey((url, subId))))) {
       if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
       return;
     }
