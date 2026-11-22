@@ -33,7 +33,7 @@ class ProfileVideosLoadFailed extends StatefulWidget {
   /// "videos" in the title.
   final bool isOwnProfile;
 
-  /// Key for the wrapping scroll view; see
+  /// Passed to the [ProfileTabEmptyState] this builds; see
   /// [ProfileTabEmptyState.scrollViewKey].
   final GlobalKey? scrollViewKey;
 
