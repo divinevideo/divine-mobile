@@ -100,6 +100,14 @@ class SubtitleRepository {
   /// the save fails too, because readers using that address can still play
   /// the old captions. Saving again rebuilds both from the newest revision.
   ///
+  /// The address holds one track, so a save in one language replaces the
+  /// captions it served in another. And two saves that read the same newest
+  /// revision stamp their video and subtitle events alike: NIP-01 breaks
+  /// each tie by event ID on its own, so the winning video can name one
+  /// save's file while the address serves the other's captions. Readers play
+  /// the video's own file first, so they see the other save's captions only
+  /// when that file cannot be fetched.
+  ///
   /// Throws:
   ///
   /// * [SubtitleEditException] when the user is not authenticated.
