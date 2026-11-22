@@ -31,13 +31,6 @@ import 'package:unified_logger/unified_logger.dart';
 /// Handles app lifecycle events for video playback
 class AppLifecycleHandler extends ConsumerStatefulWidget {
   const AppLifecycleHandler({required this.child, super.key});
-
-  /// How long the app stays backgrounded before every relay socket is closed.
-  /// A shorter app switch keeps its connections; a publish still waiting for
-  /// its OK when the grace ends loses its socket.
-  @visibleForTesting
-  static const Duration backgroundRelaySuspendGrace = Duration(seconds: 20);
-
   final Widget child;
 
   @override
@@ -50,7 +43,6 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
   late final BackgroundActivityManager _backgroundManager;
   // Read here rather than in dispose(), where ref is no longer usable.
   late final LogMessageBatcher _logMessageBatcher;
-  Timer? _relaySuspendTimer;
   bool _tickersEnabled = true;
 
   @override
@@ -139,11 +131,9 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
   @override
   void dispose() {
-    _relaySuspendTimer?.cancel();
-    _relaySuspendTimer = null;
     WidgetsBinding.instance.removeObserver(this);
-    // Account-scoped widget, device-scoped batcher: flush rather than dispose,
-    // so timed batching survives an account swap.
+    // This widget is account-scoped while the batcher is device-scoped. Flush
+    // pending summaries without cancelling the timer on account swaps.
     _logMessageBatcher.flush();
     super.dispose();
   }
@@ -164,8 +154,6 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
     switch (state) {
       case AppLifecycleState.resumed:
-        _relaySuspendTimer?.cancel();
-        _relaySuspendTimer = null;
         unawaited(ref.read(accountSyncLifecycleProvider)?.flush());
         ref.read(playbackWindowFocusedProvider.notifier).setFocused(true);
         Log.info(
@@ -267,37 +255,9 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
           setState(() => _tickersEnabled = false);
         }
 
-        _relaySuspendTimer ??= Timer(
-          AppLifecycleHandler.backgroundRelaySuspendGrace,
-          _suspendRelaysInBackground,
-        );
-
       case AppLifecycleState.detached:
-        _relaySuspendTimer?.cancel();
-        _relaySuspendTimer = null;
         // App is being terminated
         unawaited(VideoEditorRenderService.cancelActiveNativeTasks());
-    }
-  }
-
-  void _suspendRelaysInBackground() {
-    _relaySuspendTimer = null;
-    if (!mounted) return;
-    try {
-      ref.read(nostrServiceProvider).suspendBackgroundRelays();
-      Log.info(
-        '📱 Suspended relay connections after background grace window',
-        name: 'AppLifecycleHandler',
-        category: LogCategory.system,
-      );
-    } catch (e, stackTrace) {
-      Log.warning(
-        '📱 Failed to suspend relays in background',
-        name: 'AppLifecycleHandler',
-        category: LogCategory.system,
-        error: e,
-        stackTrace: stackTrace,
-      );
     }
   }
 
