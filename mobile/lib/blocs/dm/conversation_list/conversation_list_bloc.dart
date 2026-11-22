@@ -148,10 +148,11 @@ class ConversationListBloc
     // Recover the full DM history once per install. After a reinstall the
     // live subscription's first-open window (limit:50) only persists the
     // most-recent conversations; this idempotent, one-time, background
-    // drain backfills the rest so the list is complete. Triggered here (on
-    // inbox open) because relay discovery has reliably finished by the time
-    // the user navigates to Messages — fetching against the full relay
-    // pool, not the divine-only pool present at cold start. See #4953.
+    // drain backfills the rest so the list is complete. Triggered here, when
+    // Messages first opens (only the Messages pane reads this bloc, #11020),
+    // because relay discovery has reliably finished by then — fetching
+    // against the full relay pool, not the divine-only pool present at cold
+    // start. See #4953.
     unawaited(_dmRepository.backfillHistoryIfNeeded());
 
     // Replay any gift wraps that failed decryption on a previous pass (e.g.
