@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -228,7 +229,7 @@ class _SavedGridTile extends ConsumerWidget {
                     .map((state) => state.hasMoreContent)
                     .startWith(bloc.state.hasMoreContent),
                 onLoadMore: () async =>
-                    bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+                    bloc.addIfOpen(const ProfileSavedVideosLoadMoreRequested()),
               ),
               initialIndex: index,
               initialVideoId: videoEvent.id,

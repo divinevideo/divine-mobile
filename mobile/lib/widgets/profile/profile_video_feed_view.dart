@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -129,7 +130,8 @@ class _ProfileFullscreenContentState extends State<_ProfileFullscreenContent> {
       hasMore: _cubit.stream
           .map((state) => state.hasMoreContent)
           .startWith(initialState.hasMoreContent),
-      onLoadMore: () async => _cubit.add(const ProfileFeedLoadMoreRequested()),
+      onLoadMore: () async =>
+          _cubit.addIfOpen(const ProfileFeedLoadMoreRequested()),
     );
   }
 

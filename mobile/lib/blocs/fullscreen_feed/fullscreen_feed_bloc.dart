@@ -267,6 +267,12 @@ class FullscreenFeedBloc
           stackTrace: stackTrace,
         );
       },
+      // A finished stream keeps its last value, which can still be `true`
+      // when the source bloc closed under this route. Nothing can report a
+      // next page any more, so stop asking for one.
+      onDone: () {
+        if (!isClosed) add(const FullscreenFeedHasMoreChanged(false));
+      },
     );
 
     // Side-channel: deletion (and future block / mute) emits a removed
@@ -352,15 +358,23 @@ class FullscreenFeedBloc
       },
     );
 
-    // The source stream completed. Single-emit sources — a static video list,
-    // the hashtag snapshot (`Stream.fromFuture`) — cannot deliver anything
-    // else, so an empty list here is terminal rather than a warm-up. Without
-    // this the screen holds its loading placeholder forever. Live sources
-    // only complete when the route is going away, which `isDone` covers.
-    if (!emit.isDone &&
-        state.videos.isEmpty &&
-        state.status != FullscreenFeedStatus.emptyAfterRemoval) {
-      emit(state.copyWith(status: FullscreenFeedStatus.empty));
+    // The source stream completed, so nothing else can arrive. Single-emit
+    // sources — a static video list, the hashtag snapshot — end right away,
+    // and an empty list there is terminal rather than a warm-up. A live source
+    // ends under an open route when its owning bloc closes, e.g. the search
+    // page replacing its VideoSearchBloc, so pagination ends too. `isDone`
+    // covers a route that is going away.
+    if (!emit.isDone) {
+      final terminalEmpty =
+          state.videos.isEmpty &&
+          state.status != FullscreenFeedStatus.emptyAfterRemoval;
+      emit(
+        state.copyWith(
+          status: terminalEmpty ? FullscreenFeedStatus.empty : null,
+          canLoadMore: false,
+          isLoadingMore: false,
+        ),
+      );
     }
   }
 

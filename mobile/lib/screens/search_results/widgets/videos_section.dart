@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -102,7 +103,9 @@ class _VideosContentState extends ConsumerState<_VideosContent> {
             hasMore: bloc.stream
                 .map((state) => state.hasMore)
                 .startWith(bloc.state.hasMore),
-            onLoadMore: () async => bloc.add(const VideoSearchLoadMore()),
+            // The search page replaces this bloc when a repository it
+            // captured rebuilds, and this feed can outlive that.
+            onLoadMore: () async => bloc.addIfOpen(const VideoSearchLoadMore()),
           ),
           initialIndex: index,
           initialVideoId: videos[index].id,

@@ -1358,6 +1358,59 @@ void main() {
           ),
         ],
       );
+
+      // The source bloc can close while the pushed feed is still open: the
+      // search page replaces its VideoSearchBloc when a captured repository
+      // rebuilds. Its streams then end on their last value, which can still
+      // say "more to load", and no later page will ever arrive.
+      test('stops paginating once the source hasMore stream ends', () async {
+        final bloc = createBloc(
+          onLoadMore: () {},
+          hasMoreStream: hasMoreController.stream,
+        );
+        addTearDown(bloc.close);
+        bloc.add(const FullscreenFeedStarted());
+        await pumpEventQueue();
+        videosController.add([createTestVideo('video1')]);
+        hasMoreController.add(true);
+        await pumpEventQueue();
+        bloc.add(const FullscreenFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(bloc.state.canLoadMore, isTrue);
+        expect(bloc.state.isLoadingMore, isTrue);
+
+        await hasMoreController.close();
+        await pumpEventQueue();
+
+        expect(bloc.state.canLoadMore, isFalse);
+        expect(bloc.state.isLoadingMore, isFalse);
+        expect(bloc.state.videos.map((video) => video.id), equals(['video1']));
+      });
+
+      test('stops paginating once the source videos stream ends', () async {
+        final bloc = createBloc(
+          onLoadMore: () {},
+          hasMoreStream: hasMoreController.stream,
+        );
+        addTearDown(bloc.close);
+        bloc.add(const FullscreenFeedStarted());
+        await pumpEventQueue();
+        videosController.add([createTestVideo('video1')]);
+        hasMoreController.add(true);
+        await pumpEventQueue();
+        bloc.add(const FullscreenFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(bloc.state.canLoadMore, isTrue);
+        expect(bloc.state.isLoadingMore, isTrue);
+
+        await videosController.close();
+        await pumpEventQueue();
+
+        expect(bloc.state.canLoadMore, isFalse);
+        expect(bloc.state.isLoadingMore, isFalse);
+        expect(bloc.state.status, equals(FullscreenFeedStatus.ready));
+        expect(bloc.state.videos.map((video) => video.id), equals(['video1']));
+      });
     });
 
     group('FullscreenFeedIndexChanged', () {

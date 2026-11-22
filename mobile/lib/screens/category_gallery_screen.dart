@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/categories/categories_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -112,8 +113,9 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                       hasMore: _bloc.stream
                           .map((state) => state.hasMoreVideos)
                           .startWith(state.hasMoreVideos),
+                      // The pushed feed can outlive this screen's bloc.
                       onLoadMore: () async =>
-                          _bloc.add(const CategoryVideosLoadMore()),
+                          _bloc.addIfOpen(const CategoryVideosLoadMore()),
                     ),
                     initialIndex: index,
                     initialVideoId: videos[index].id,
