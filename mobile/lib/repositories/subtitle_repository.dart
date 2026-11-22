@@ -35,7 +35,8 @@ class SubtitleEditException implements Exception {
 /// - Generating VTT, uploading it to Blossom, republishing the video event
 ///   with both refs attached, and publishing the 39307 subtitle event.
 ///
-/// Throws [SubtitleEditException] when any step fails.
+/// Reports rejected steps as [SubtitleEditException]. Exceptions from the
+/// upload and publishing services propagate to the caller.
 class SubtitleRepository {
   SubtitleRepository({
     required BlossomUploadService blossomUploadService,
@@ -108,8 +109,8 @@ class SubtitleRepository {
   ///   read.
   /// * [SubtitleEditException] when the Blossom upload fails.
   /// * [SubtitleEditException] when the video republish fails.
-  /// * [SubtitleEditException] when the subtitle event publish fails after
-  ///   the video republish.
+  /// * [SubtitleEditException] when the subtitle event publish returns no
+  ///   reference after the video republish.
   /// * [AccountRestrictedPublishException] when the configured Divine relay
   ///   reports that the account is suspended or banned.
   Future<VideoEvent> publishEditedSubtitles({
