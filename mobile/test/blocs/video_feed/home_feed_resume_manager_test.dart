@@ -102,7 +102,7 @@ void main() {
             seenVideoLookup: filteringEnabled
                 ? SeenVideoLookup(
                     initialize: () async {
-                      await Future<void>.delayed(Duration.zero);
+                      await Future<void>.value();
                       historyReady = true;
                     },
                     wasSeenRecently: (

@@ -120,7 +120,7 @@ void main() {
             seenVideoLookup: enabled
                 ? SeenVideoLookup(
                     initialize: () async {
-                      await Future<void>.delayed(Duration.zero);
+                      await Future<void>.value();
                       historyReady = true;
                     },
                     wasSeenRecently:
