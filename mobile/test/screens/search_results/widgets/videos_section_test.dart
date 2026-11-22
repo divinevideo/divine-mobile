@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,7 @@ import 'package:openvine/screens/search_results/widgets/search_section_empty_sta
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/videos_section.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 class _MockVideoSearchBloc extends MockBloc<VideoSearchEvent, VideoSearchState>
     implements VideoSearchBloc {}
@@ -125,6 +128,44 @@ void main() {
           );
         }
       }
+
+      testWidgets('drops a captured tile once new results reuse its slot', (
+        tester,
+      ) async {
+        final second = testVideo.copyWith(id: 'v2');
+        final results = StreamController<VideoSearchState>();
+        addTearDown(results.close);
+        whenListen(
+          mockBloc,
+          results.stream,
+          initialState: VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'test',
+            videos: [testVideo, second],
+          ),
+        );
+        await tester.pumpWidget(buildSubject(showAll: true));
+        await tester.pump();
+
+        final firstTile = find.byType(SearchVideoTile).first;
+        final origin = VideoTileOrigin.captureVideo(
+          tester.element(firstTile),
+          testVideo,
+        );
+        addTearDown(() => origin?.takeImage()?.dispose());
+        expect(origin?.rect, isNotNull);
+
+        results.add(
+          VideoSearchState(
+            status: VideoSearchStatus.success,
+            query: 'test',
+            videos: [second, testVideo],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(origin!.rect, isNull);
+      });
     });
 
     group('showAll: false (All tab preview)', () {
