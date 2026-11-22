@@ -117,7 +117,8 @@ The comments sheet measures:
 - tap/open intent to first rendered sheet frame
 - tap/open intent to comments success, empty state, or failure
 - count loaded
-- whether video replies were enabled
+- `feature_flag`, which is always `video_replies_enabled` now that video
+  replies are always on
 - whether the user dismissed before data loaded
 
 ## Sound Picker
