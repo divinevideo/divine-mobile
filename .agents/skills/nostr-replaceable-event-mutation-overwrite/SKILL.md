@@ -40,64 +40,16 @@ the client has loaded their existing contact list.
 
 ### 1. Always Fetch Fresh State Inside the Mutation
 
-Never rely solely on the UI's cached/query state. Fetch the latest version of the replaceable
-event directly from the relay inside the mutation function, before publishing:
-
-```typescript
-// BAD: Relies on UI cache which may be null/stale
-mutationFn: async ({ targetPubkey, currentContactList }) => {
-  const currentTags = currentContactList?.tags || []; // null -> [] -> data loss!
-  // ... publish with only the new follow
-}
-
-// GOOD: Fetches fresh from relay before mutating
-mutationFn: async ({ targetPubkey, currentContactList }) => {
-  let bestContactList = currentContactList;
-
-  try {
-    const relayEvents = await nostr.query([
-      { kinds: [3], authors: [userPubkey], limit: 1 },
-    ], { signal: AbortSignal.timeout(5000) });
-
-    const relayContactList = relayEvents
-      .sort((a, b) => b.created_at - a.created_at)[0] || null;
-
-    if (relayContactList) {
-      // NIP-01 already fixes which copy of a replaceable event wins:
-      // the higher created_at, and on an exact tie the lower event id.
-      // Never compare tag counts — a shorter list is what a legitimate
-      // unfollow produces.
-      const passed = currentContactList;
-      const isNewer =
-        !passed ||
-        relayContactList.created_at > passed.created_at ||
-        (relayContactList.created_at === passed.created_at &&
-          relayContactList.id < passed.id);
-      if (isNewer) {
-        bestContactList = relayContactList;
-      }
-    }
-  } catch {
-    // The read failed. It cannot be told apart from "the relay holds
-    // nothing", so refuse to publish rather than replacing from a guess.
-    throw new Error('Could not confirm the current list. Please try again.');
-  }
-
-  if (!bestContactList) {
-    // Only safe once the read is known to have finished (section 3): then
-    // no list exists yet, and this publish creates the first one.
-    bestContactList = { tags: [], content: '' };
-  }
-
-  // Now mutate bestContactList...
-}
-```
+Fetch the current revision inside the mutation, before publishing. Filter by author and
+kind, and include the `d` tag for an addressable event. Only compare cached or locally
+accepted revisions of that same event. See the [follow example](#example) below.
 
 ### 2. Newest Wins, Per NIP-01
 
 Order the relay's version against the cached one by `created_at`, and on an exact tie by
 the lower event id. That is the rule relays themselves apply, so it is the only choice
-that converges.
+that converges. Use the publisher's timestamp policy to give the replacement a later
+`created_at` than the selected base.
 
 **Do not compare tag counts.** "Use whichever has MORE data" looks safe and is not: the
 newer, authoritative list is *shorter* whenever the user removed someone, so preferring
@@ -191,47 +143,58 @@ Partial read:
 8. Have one relay return an older contact list and finish the read. Have the other relay
    refuse the read (`CLOSED`) or accept the request and stay silent.
 9. Follow someone and confirm the failed read leaves the publish count at zero. Retry with
-   both relays answering and check that the publish preserves the newer list and adds the follow.
+   the second relay returning a newer list. Check that the publish preserves it and adds the follow.
    Also verify that a cache-only answer or a missed required relay cannot authorize a publish.
 
 ## Example
 
-A follow mutation that follows sections 1-3. It assumes a `nostr.query` that rejects when a
-relay does not finish; if yours resolves with a partial list instead, check its completion
-flag where the comment says so.
+A follow mutation that assumes `nostr.query` rejects when any required relay fails to
+finish the read. If the client returns partial answers, check its completion status before
+using the events. The illustrative `publishEvent` helper rejects if it cannot assign a
+valid timestamp later than `newerThan`.
 
 ```typescript
-const newest = (events) =>
-  events
-    .filter(Boolean)
-    .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? -1 : 1))[0];
+type ContactList = {
+  id: string;
+  created_at: number;
+  tags: string[][];
+  content: string;
+};
 
-export function useFollowUser() {
+function newest(events: (ContactList | null | undefined)[]) {
+  return events.filter((event) => event != null).sort((a, b) => {
+    if (a.created_at !== b.created_at) return b.created_at - a.created_at;
+    if (a.id === b.id) return 0;
+    return a.id < b.id ? -1 : 1;
+  })[0];
+}
+
+export function useFollowUser(pubkey: string) {
   const { nostr } = useNostr();
 
   return useMutation({
-    mutationFn: async ({ targetPubkey, currentContactList }) => {
-      // Step 1: read the relays' current list. A read that did not finish
-      // is a failure, never an empty answer.
-      let relayList;
+    mutationFn: async ({ targetPubkey, currentContactList }: {
+      targetPubkey: string;
+      currentContactList?: ContactList | null;
+    }) => {
+      let events: ContactList[];
       try {
-        const events = await nostr.query(
-          [{ kinds: [3], authors: [user.pubkey], limit: 1 }],
+        events = await nostr.query(
+          [{ kinds: [3], authors: [pubkey], limit: 1 }],
           { signal: AbortSignal.timeout(5000) },
         );
-        // A client that resolves on a partial answer: check completion here.
-        relayList = newest(events);
       } catch {
         throw new Error('Could not confirm your follow list. Please try again.');
       }
 
-      // Step 2: newest wins per NIP-01, never the longer list. With neither
-      // copy, the finished read proved there is no list yet.
-      const base = newest([relayList, currentContactList]) ?? { tags: [], content: '' };
-
-      // Step 3: mutate the newest copy and publish it.
-      const tags = [...base.tags, ['p', targetPubkey]];
-      return publishEvent({ kind: 3, tags, content: base.content });
+      const base = newest([...events, currentContactList]);
+      const tags = [...(base?.tags ?? [])];
+      if (tags.some(([kind, value]) => kind === 'p' && value === targetPubkey)) return;
+      tags.push(['p', targetPubkey]);
+      return publishEvent(
+        { kind: 3, tags, content: base?.content ?? '' },
+        { newerThan: base?.created_at },
+      );
     },
   });
 }
