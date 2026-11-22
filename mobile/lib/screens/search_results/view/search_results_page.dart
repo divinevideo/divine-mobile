@@ -13,6 +13,7 @@ import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -212,7 +213,7 @@ class _SearchResultsScope extends ConsumerWidget {
                             controller: controller,
                             // The viewer's own lists remain discoverable before posting.
                             viewerPubkey: viewerPubkey,
-                            child: _BlocklistRefreshListener(
+                            child: _SearchResultsListeners(
                               child: Scaffold(
                                 // bg/surface — matches SearchResultsView's body background so the
                                 // app bar area (which doesn't paint its own background) doesn't
@@ -384,20 +385,27 @@ class _ListSearchPolicyScopeState extends State<_ListSearchPolicyScope> {
   );
 }
 
-/// Re-runs the active searches when the blocklist changes, so an author
-/// blocked from a result's profile disappears from still-open search
-/// results without a manual re-search (and reappears after an unblock).
+/// Keeps open search results current: re-runs the active searches when the
+/// blocklist changes, and teaches the OG Viner cache from video results.
+///
+/// A blocklist change makes an author blocked from a result's profile
+/// disappear from still-open search results without a manual re-search (and
+/// reappear after an unblock).
 ///
 /// Re-dispatching the current query is safe: every search bloc debounces
 /// and uses a restartable transformer, and results are re-fetched through
 /// repository paths that apply the block filter.
-class _BlocklistRefreshListener extends ConsumerWidget {
-  const _BlocklistRefreshListener({required this.child});
+///
+/// Video results also teach the local OG Viner cache, since search bypasses
+/// VideoEventService's feed observer. The cache only learns verified archives.
+class _SearchResultsListeners extends ConsumerWidget {
+  const _SearchResultsListeners({required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ogVinerCache = ref.watch(ogVinerCacheServiceProvider.notifier);
     final listPolicy = ref.read(curatedListThumbnailFilterProvider);
     ref.listen<int>(blocklistVersionProvider, (previous, next) {
       if (previous == next) return;
@@ -417,7 +425,16 @@ class _BlocklistRefreshListener extends ConsumerWidget {
         context.read<UserSearchBloc>().add(UserSearchQueryChanged(userQuery));
       }
     });
-    return child;
+    return BlocListener<VideoSearchBloc, VideoSearchState>(
+      listenWhen: (previous, current) => previous.videos != current.videos,
+      listener: (context, state) => runDetached(
+        ogVinerCache.learnFromVideos(state.videos),
+        'learn OG Viners from video search',
+        logName: 'SearchResultsPage',
+        category: LogCategory.ui,
+      ),
+      child: child,
+    );
   }
 }
 
