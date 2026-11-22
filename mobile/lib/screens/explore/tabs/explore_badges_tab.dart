@@ -18,6 +18,7 @@ import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
+import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
@@ -367,10 +368,36 @@ class _BadgeClips extends StatelessWidget {
             id: Nip19.encodeNoteId(video.id),
             author: video.pubkey,
           ).push<void>(context),
-          child: DivineListMedia.videos(
-            thumbnailUrls: [for (final clip in videos) clip.thumbnail],
-            videoCount: videos.length,
-            showCount: false,
+          child: Stack(
+            children: [
+              DivineListMedia.videos(
+                thumbnailUrls: [
+                  for (final clip in videos)
+                    isUsableNetworkImageUrl(clip.thumbnail)
+                        ? clip.thumbnail
+                        : '',
+                ],
+                videoCount: videos.length,
+                showCount: false,
+              ),
+              Positioned.fill(
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.vineColors.mediaChrome,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: DivineIcon(
+                        icon: DivineIconName.playCircle,
+                        color: context.vineColors.mediaChromeForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

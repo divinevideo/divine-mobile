@@ -778,88 +778,111 @@ void main() {
         );
       });
 
-      testWidgets('plays the selected clip using its exact event and author', (
-        tester,
-      ) async {
-        final videoId = 'a' * 64;
-        final author = 'b' * 64;
-        when(() => cubit.state).thenReturn(
-          ExploreBadgesState(
-            status: ExploreBadgesStatus.loaded,
-            definitions: [_definition],
-            videoPreviews: {
-              _definition.coordinate: [
-                (
-                  id: videoId,
-                  pubkey: author,
-                  title: 'A community clip',
-                  thumbnail: '',
-                  createdAt: 1700000000,
-                  kind: 34236,
-                  moderationLabels: const <String>[],
-                  verifiedArchive: false,
-                  archiveProvenanceAvailable: true,
-                  tags: const [
-                    ['d', 'clip'],
-                    ['url', 'https://media.divine.video/clip.mp4'],
+      for (final thumbnail in ['', 'http://media.divine.video/preview.jpg']) {
+        testWidgets(
+          'thumbnail fan plays the exact event with ${thumbnail.isEmpty ? 'missing' : 'ineligible'} artwork',
+          (
+            tester,
+          ) async {
+            final videoId = 'a' * 64;
+            final author = 'b' * 64;
+            when(() => cubit.state).thenReturn(
+              ExploreBadgesState(
+                status: ExploreBadgesStatus.loaded,
+                definitions: [_definition],
+                videoPreviews: {
+                  _definition.coordinate: [
+                    (
+                      id: videoId,
+                      pubkey: author,
+                      title: 'A community clip',
+                      thumbnail: thumbnail,
+                      createdAt: 1700000000,
+                      kind: 34236,
+                      moderationLabels: const <String>[],
+                      verifiedArchive: false,
+                      archiveProvenanceAvailable: true,
+                      tags: const [
+                        ['d', 'clip'],
+                        ['url', 'https://media.divine.video/clip.mp4'],
+                      ],
+                    ),
                   ],
+                },
+              ),
+            );
+            final router = GoRouter(
+              routes: [
+                GoRoute(
+                  path: '/',
+                  builder: (_, _) => Scaffold(
+                    body: BlocProvider<ExploreBadgesCubit>.value(
+                      value: cubit,
+                      child: const ExploreBadgesView(),
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: VideoDetailScreen.path,
+                  builder: (_, state) => Scaffold(
+                    body: Text(
+                      '${state.pathParameters['id']}:${state.uri.queryParameters['author']}',
+                    ),
+                  ),
                 ),
               ],
-            },
-          ),
-        );
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => Scaffold(
-                body: BlocProvider<ExploreBadgesCubit>.value(
-                  value: cubit,
-                  child: const ExploreBadgesView(),
+            );
+            addTearDown(router.dispose);
+            await tester.pumpWidget(
+              testProviderScope(
+                mockVideoEventService: _PreviewVideoService(),
+                child: MaterialApp.router(
+                  routerConfig: router,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
                 ),
               ),
-            ),
-            GoRoute(
-              path: VideoDetailScreen.path,
-              builder: (_, state) => Scaffold(
-                body: Text(
-                  '${state.pathParameters['id']}:${state.uri.queryParameters['author']}',
-                ),
+            );
+            final semantics = tester.ensureSemantics();
+            await tester.pumpAndSettle();
+            expect(
+              find.bySemanticsLabel('Videos from Loop makers'),
+              findsOneWidget,
+            );
+            expect(find.text(l10n.profileVideosLabel), findsNothing);
+            final media = find.byType(DivineListMedia);
+            expect(media, findsOneWidget);
+            final size = tester.getSize(media);
+            expect(size.width / size.height, closeTo(177 / 120, 0.001));
+            final providers = tester
+                .widgetList<Image>(find.byType(Image))
+                .map((image) => image.image)
+                .map(
+                  (provider) => provider is ResizeImage
+                      ? provider.imageProvider
+                      : provider,
+                )
+                .whereType<NetworkImage>();
+            expect(providers.where((image) => image.url == thumbnail), isEmpty);
+            expect(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is DivineIcon &&
+                    widget.icon == DivineIconName.playCircle,
               ),
-            ),
-          ],
+              findsOneWidget,
+            );
+            verifyNever(() => cubit.loadPreview(_definition.coordinate));
+            await tester.tap(find.bySemanticsLabel('A community clip'));
+            await tester.pumpAndSettle();
+            semantics.dispose();
+            expect(
+              find.text('${Nip19.encodeNoteId(videoId)}:$author'),
+              findsOneWidget,
+            );
+          },
         );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          testProviderScope(
-            mockVideoEventService: _PreviewVideoService(),
-            child: MaterialApp.router(
-              routerConfig: router,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-            ),
-          ),
-        );
-        final semantics = tester.ensureSemantics();
-        await tester.pumpAndSettle();
-        expect(
-          find.bySemanticsLabel('Videos from Loop makers'),
-          findsOneWidget,
-        );
-        expect(find.text(l10n.profileVideosLabel), findsNothing);
-        final media = find.byType(DivineListMedia);
-        expect(media, findsOneWidget);
-        final size = tester.getSize(media);
-        expect(size.width / size.height, closeTo(177 / 120, 0.001));
-        verifyNever(() => cubit.loadPreview(_definition.coordinate));
-        await tester.tap(find.bySemanticsLabel('A community clip'));
-        await tester.pumpAndSettle();
-        semantics.dispose();
-        expect(
-          find.text('${Nip19.encodeNoteId(videoId)}:$author'),
-          findsOneWidget,
-        );
-      });
+      }
 
       testWidgets('hides clip titles and artwork that need a warning', (
         tester,
