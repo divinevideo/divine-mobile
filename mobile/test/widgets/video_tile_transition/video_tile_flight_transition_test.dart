@@ -37,7 +37,10 @@ class _Page extends StatelessWidget {
     this.movedOn = false,
     this.safetyOverlay = false,
     this.warning,
+    this.videoId = 'video1',
   });
+
+  final String videoId;
 
   /// Whether the page has moved on from the tile's video to the next, which
   /// covers it, keeping the tile's built one page above, as a feed does.
@@ -109,7 +112,7 @@ class _Page extends StatelessWidget {
       Widget content = const SizedBox.expand();
       if (drawsVideo) content = const ColoredBox(color: _videoColor);
       target = VideoTileTransitionTarget(
-        videoId: 'video1',
+        videoId: videoId,
         aspectRatio: 1,
         coversViewport: false,
         showsVideo: drawsVideo,
@@ -118,14 +121,14 @@ class _Page extends StatelessWidget {
     }
     final warning = this.warning;
     final Widget video = warning == null
-        ? _Video(target: target, warned: safetyOverlay)
+        ? _Video(videoId: videoId, target: target, warned: safetyOverlay)
         // Behind a repaint boundary of its own, as each video in a feed is,
         // so the warning arriving repaints nothing above the page.
         : RepaintBoundary(
             child: ValueListenableBuilder<bool>(
               valueListenable: warning,
               builder: (context, warned, _) =>
-                  _Video(target: target, warned: warned),
+                  _Video(videoId: videoId, target: target, warned: warned),
             ),
           );
     if (!bottomBar) return video;
@@ -141,8 +144,13 @@ class _Page extends StatelessWidget {
 /// The page's black backdrop with its video [target], under a black safety
 /// overlay when [warned].
 class _Video extends StatelessWidget {
-  const _Video({required this.target, required this.warned});
+  const _Video({
+    required this.videoId,
+    required this.target,
+    required this.warned,
+  });
 
+  final String videoId;
   final Widget? target;
   final bool warned;
 
@@ -156,9 +164,10 @@ class _Video extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 ?target,
-                const VideoTileTransitionTarget.safetyOverlay(
-                  videoId: 'video1',
-                  child: ColoredBox(
+                VideoTileTransitionTarget.safetyOverlay(
+                  videoId: videoId,
+                  isActive: true,
+                  child: const ColoredBox(
                     key: ValueKey('warning'),
                     color: Color(0xFF000000),
                   ),
@@ -180,6 +189,7 @@ class _Harness extends StatelessWidget {
     this.origin,
     this.pageShowsVideo = true,
     this.pageDrawsVideo = false,
+    this.pageVideoId = 'video1',
     this.popGestureInProgress,
     this.pageRoundedCover = false,
     this.pageBottomBar = false,
@@ -203,6 +213,7 @@ class _Harness extends StatelessWidget {
   final VideoTileOrigin? origin;
   final bool pageShowsVideo;
   final bool pageDrawsVideo;
+  final String pageVideoId;
   final ValueListenable<bool>? popGestureInProgress;
   final bool pageRoundedCover;
   final bool pageBottomBar;
@@ -305,6 +316,7 @@ class _Harness extends StatelessWidget {
                   child: _Page(
                     showsVideo: pageShowsVideo,
                     drawsVideo: pageDrawsVideo,
+                    videoId: pageVideoId,
                     roundedCover: pageRoundedCover,
                     bottomBar: pageBottomBar,
                     movedOn: pageMovedOn,
@@ -484,6 +496,32 @@ void main() {
         expect(find.byKey(const ValueKey('warning')), findsNothing);
         expect(await _shownAt(tester, _landing.center), (0xFF, 0, 0, 0xFF));
       });
+
+      testWidgets(
+        'keeps the warning visible if the initial video was replaced',
+        (
+          tester,
+        ) async {
+          final origin = await pumpTile(tester);
+          controller.forward();
+
+          await tester.pumpWidget(
+            _Harness(
+              image: image,
+              animation: controller,
+              origin: origin,
+              pageDrawsVideo: true,
+              pageVideoId: 'replacement-video',
+              safetyOverlay: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 140));
+
+          expect(find.byKey(const ValueKey('warning')), findsOneWidget);
+          expect(_picture, findsNothing);
+          await tester.pumpAndSettle();
+        },
+      );
 
       testWidgets('starts with the picture over the tile, page hidden', (
         tester,

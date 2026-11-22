@@ -974,6 +974,7 @@ void main() {
           )
           .targets;
       expect(targets.blocksFlightFor(video.id), isTrue);
+      expect(targets.hasActiveSafetyOverlay, isTrue);
       expect(feed.canAutoPlay, isNotNull);
       expect(
         feed.canAutoPlay!(video),
@@ -987,6 +988,7 @@ void main() {
 
       expect(find.byType(ContentWarningBlurOverlay), findsNothing);
       expect(targets.blocksFlightFor(video.id), isFalse);
+      expect(targets.hasActiveSafetyOverlay, isFalse);
       final revealedFeed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );

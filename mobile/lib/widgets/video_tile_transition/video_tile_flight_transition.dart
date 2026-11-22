@@ -148,7 +148,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   bool get _hasSafetyOverlay =>
       _targets.blocksFlightFor(_videoId) ||
-      _targets.blocksFlightFor(widget.origin.videoId);
+      _targets.blocksFlightFor(widget.origin.videoId) ||
+      _targets.hasActiveSafetyOverlay;
 
   ImageStream? _playerSizeStream;
   ImageInfo? _playerSize;

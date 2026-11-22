@@ -96,6 +96,47 @@ void main() {
       return pageKey.currentContext!.findRenderObject()! as RenderBox;
     }
 
+    group('active safety overlays', () {
+      testWidgets('notifies when an existing warning becomes active', (
+        tester,
+      ) async {
+        final active = ValueNotifier(false);
+        addTearDown(active.dispose);
+        final notifications = <bool>[];
+        targets = VideoTileTransitionTargets(
+          onSafetyOverlaysChanged: () =>
+              notifications.add(targets.hasActiveSafetyOverlay),
+        );
+
+        await tester.pumpWidget(
+          VideoTileTransitionScope(
+            targets: targets,
+            phase: phase,
+            flight: flight,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: active,
+              builder: (context, isActive, _) =>
+                  VideoTileTransitionTarget.safetyOverlay(
+                    videoId: 'neighbour',
+                    isActive: isActive,
+                    child: const SizedBox.expand(),
+                  ),
+            ),
+          ),
+        );
+        expect(targets.blocksFlightFor('neighbour'), isTrue);
+        expect(notifications, [false]);
+
+        active.value = true;
+        await tester.pump();
+        expect(notifications, [false, true]);
+
+        active.value = false;
+        await tester.pump();
+        expect(notifications, [false, true, false]);
+      });
+    });
+
     group('landingOf', () {
       testWidgets('letterboxes a square video in the middle of the page', (
         tester,
