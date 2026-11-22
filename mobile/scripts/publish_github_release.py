@@ -86,8 +86,11 @@ class GitHub:
             return
         # GitHub selects Latest by date/semantic version. Forcing latest=true
         # here could undo a newer release completed during our artifact upload.
-        payload = dict(name=f'Divine {tag}', body=body, draft=False,
-                       prerelease=beta, make_latest='false' if beta else 'legacy')
+        payload = dict(draft=False, make_latest='false' if beta else 'legacy')
+        if validate is None:
+            payload.update(name=f'Divine {tag}', body=body, prerelease=beta)
+        # Automatic publication set metadata when creating the draft. Do not
+        # write it back over an editor racing this request; verify it afterward.
         result = subprocess.run(
             ['gh', 'api', '--method', 'PATCH',
              f"repos/{self.repo}/releases/{record['id']}", '--input', '-'],

@@ -1,5 +1,6 @@
 """Release publication must not overwrite a different build or stable assets."""
 import contextlib
+import copy
 import io
 import importlib.util
 import json
@@ -41,7 +42,9 @@ class FakeGitHub:
         if validate is not None and not validate(self.get_release(tag)):
             return
         self.calls.append(('edit', tag, beta))
-        self.record.update(draft=False, prerelease=beta, body=body)
+        self.record.update(draft=False)
+        if validate is None:
+            self.record.update(prerelease=beta, body=body)
         if self.commit is None:
             self.commit = self.record['target_commitish']
 
@@ -69,6 +72,31 @@ class PublicationTest(unittest.TestCase):
         self.assertFalse(self.gh.record['prerelease'])
         self.assertFalse(self.gh.record['draft'])
         self.assertIn('Add your own sounds', self.gh.record['body'])
+
+    def test_automatic_promotion_never_patches_notes_after_concurrent_editor(self):
+        adapter = release.GitHub('owner/repo')
+        payloads = []
+        def concurrent(tag):
+            self.gh.record.update(draft=False, body='Operator notes')
+            return SHA
+        def apply_patch(*args, **kwargs):
+            payload = json.loads(kwargs['input'])
+            payloads.append(payload)
+            self.gh.record.update(payload)
+            return subprocess.CompletedProcess([], 0, '', '')
+        def edit(tag, body, beta, **kwargs):
+            snapshot = copy.deepcopy(self.gh.record) | {'id': 42}
+            with patch.object(adapter, 'get_release', return_value=snapshot), \
+                 patch.object(self.gh, 'tag_commit', side_effect=concurrent), \
+                 patch.object(release.subprocess, 'run', side_effect=apply_patch):
+                adapter.edit(tag, body, beta, **kwargs)
+        self.gh.edit = edit
+        with self.assertRaisesRegex(RuntimeError, 'metadata verification'):
+            release.publish(self.gh, '1.2.3', SHA, 'PRODUCTION', 'PRODUCTION',
+                            self.notes, [self.asset], preserve_existing=True)
+        self.assertEqual(self.gh.record['body'], 'Operator notes')
+        self.assertEqual(len(payloads), 1)
+        self.assertTrue({'body', 'name', 'prerelease'}.isdisjoint(payloads[0]))
 
     def test_beta_uses_separate_source_tag(self):
         self.assertEqual(self.publish('BETA'), '1.2.3-beta.production.' + SHA)
