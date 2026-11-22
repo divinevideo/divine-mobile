@@ -373,9 +373,10 @@ class _BadgeClips extends StatelessWidget {
               DivineListMedia.videos(
                 thumbnailUrls: [
                   for (final clip in videos)
-                    isUsableNetworkImageUrl(clip.thumbnail)
-                        ? clip.thumbnail
-                        : '',
+                    if (isUsableNetworkImageUrl(clip.thumbnail))
+                      clip.thumbnail
+                    else
+                      '',
                 ],
                 videoCount: videos.length,
                 showCount: false,
