@@ -86,6 +86,29 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_ios_release_and_simulator_use_sdk_27(self) -> None:
+        workflows = self._resolved_config()["workflows"]
+        for name in ("ios-build", "ios-scheduled-build", "ios-simulator-build"):
+            with self.subTest(workflow=name):
+                self.assertEqual("27.2", workflows[name]["environment"]["xcode"])
+
+        native = self.mobile_ci_contents.split("  ios-native-tests:\n", 1)[1]
+        self.assertIn("    runs-on: xcode-27\n", native.split("    steps:", 1)[0])
+        build = self._definition_block("build_ios")
+        self.assertIn("Print :DTSDKName", build)
+        self.assertIn("Runner.xcarchive/Products/Applications/Runner.app", build)
+
+    def test_ios_patch_can_select_the_release_xcode(self) -> None:
+        workflow = self._resolved_config()["workflows"]["ios-patch"]
+        self.assertEqual("${{ inputs.XCODE_VERSION }}", workflow["environment"]["xcode"])
+        self.assertEqual("27.2", workflow["inputs"]["XCODE_VERSION"]["default"])
+        emit = self._definition_block("emit_shorebird_provenance")
+        verify = self._definition_block("fetch_and_verify_shorebird_provenance")
+        self.assertIn("Print :DTXcodeBuild", emit)
+        self.assertIn("xcodebuild -version", verify)
+        self.assertIn('--xcode-build "$XCODE_BUILD"', emit)
+        self.assertIn('--xcode-build "$XCODE_BUILD"', verify)
+
     def test_ios_e2e_uses_one_simulator_for_boot_install_and_maestro(
         self,
     ) -> None:

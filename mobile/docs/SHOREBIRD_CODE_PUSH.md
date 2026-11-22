@@ -459,6 +459,10 @@ test-backed.
    isolated app source. Use:
    - `CONFIRM_PATCH` = `YES` (defaults to `NO`; the build aborts otherwise)
    - `RELEASE_VERSION` = the exact release string, e.g. `1.0.9+247`
+   - iOS only: `XCODE_VERSION` = the Xcode version in the original release
+     build log. New builds use Xcode 27.2 and record its build ID in provenance,
+     so patch verification rejects a different build ID. For older releases,
+     select the original version from the log, for example `26.5`.
    - `PATCH_BRANCH` = `shorebird-patch/<platform>/<RELEASE_VERSION>`
    - `RELEASE_COMMIT` = optional source assertion; normally leave it empty
    - `DEFAULT_ENV` = **the same value the release was built with**

@@ -61,6 +61,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         self,
         output: Path | None = None,
         environment: dict[str, str] | None = None,
+        xcode_build: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -85,6 +86,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
                 str(self.defines),
                 "--output",
                 str(output or self.record),
+                *(["--xcode-build", xcode_build] if xcode_build is not None else []),
             ],
             cwd=REPO_ROOT,
             env=environment or self.environment,
@@ -124,6 +126,8 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         ]
         if "release_commit" in overrides:
             arguments.extend(["--release-commit", overrides["release_commit"]])
+        if "xcode_build" in overrides:
+            arguments.extend(["--xcode-build", overrides["xcode_build"]])
         return subprocess.run(
             arguments,
             cwd=REPO_ROOT,
@@ -132,6 +136,27 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             text=True,
             capture_output=True,
         )
+
+    def test_ios_patch_uses_the_recorded_xcode_build(self) -> None:
+        release = self.emit(xcode_build="27B52")
+        self.assertEqual(0, release.returncode, release.stderr)
+        self.assertEqual("27B52", json.loads(self.record.read_text())["xcode_build"])
+
+        for overrides in ({}, {"xcode_build": "17F42"}):
+            with self.subTest(overrides=overrides):
+                rejected = self.verify(**overrides)
+                self.assertNotEqual(0, rejected.returncode)
+                self.assertIn("Xcode build does not match release provenance", rejected.stderr)
+                self.assertFalse(self.env_output.exists())
+
+        matched = self.verify(xcode_build="27B52")
+        self.assertEqual(0, matched.returncode, matched.stderr)
+
+    def test_legacy_ios_patch_accepts_selected_xcode(self) -> None:
+        self.assertEqual(0, self.emit().returncode)
+        legacy = self.verify(xcode_build="17F42")
+        self.assertEqual(0, legacy.returncode, legacy.stderr)
+        self.assertIn("predates Xcode build recording", legacy.stderr)
 
     def prepare_patch_policy(self, policy: str = "[]", invite: str = "", relay: str = "") -> subprocess.CompletedProcess[str]:
         # Execute the actual Codemagic gate with the real Ruby authenticator and
