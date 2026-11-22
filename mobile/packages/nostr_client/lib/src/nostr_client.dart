@@ -2068,7 +2068,8 @@ class NostrClient {
   /// receives them, and they leave the shared cache alone.
   ///
   /// The stream emits a [RelaySubscriptionRefusedException] if every serving
-  /// relay ends the REQ with `CLOSED`.
+  /// relay ends the REQ with `CLOSED` and no relay still connecting can take
+  /// it.
   ///
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has
