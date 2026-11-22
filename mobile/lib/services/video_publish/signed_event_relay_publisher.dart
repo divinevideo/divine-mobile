@@ -189,7 +189,8 @@ class SignedEventRelayPublisher {
   ///    WebSocket relay refused the event in a way a resend cannot change.
   ///
   /// When no [EventApiClient] is configured, the WebSocket-only retry path
-  /// is used, with the same early stop.
+  /// is used. It stops early when every WebSocket relay asked refuses the
+  /// event in a way a resend cannot change.
   ///
   /// The same signed [event] is reused across all attempts — no event is
   /// re-signed per retry, so relays deduplicate by id.
@@ -228,7 +229,7 @@ class SignedEventRelayPublisher {
           await _relayPresence(event, matchAddress: matchAddress) ==
               _RelayPresence.found) {
         Log.info(
-          '♻️ Event ${event.id} found on relay before retry $attempt; '
+          '♻️ Event ${event.id} found on relay before attempt $attempt; '
           'marking published',
           name: _logName,
           category: LogCategory.video,
