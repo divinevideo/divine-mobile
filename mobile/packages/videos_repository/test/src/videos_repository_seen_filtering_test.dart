@@ -1609,5 +1609,71 @@ void main() {
         );
       },
     );
+
+    test(
+      'Following feed hydrates every walked page in one bulk-stats request',
+      () async {
+        final firstId = 'a' * 64;
+        final seenId = 's' * 64;
+        final secondId = 'b' * 64;
+        var pageCalls = 0;
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          pageCalls++;
+          if (pageCalls == 1) {
+            return HomeFeedResponse(
+              videos: [
+                _stats(firstId, createdAt: 1000),
+                _stats(seenId, createdAt: 990),
+              ],
+              rawBody: '{}',
+              hasMore: true,
+              nextCursor: 990,
+            );
+          }
+          return HomeFeedResponse(
+            videos: [_stats(secondId, createdAt: 900)],
+            rawBody: '{}',
+          );
+        });
+        final hydratedBatches = <List<String>>[];
+        when(() => mockFunnelcake.getBulkVideoStats(any())).thenAnswer((
+          inv,
+        ) async {
+          final ids = List<String>.from(inv.positionalArguments.first as List);
+          hydratedBatches.add(ids);
+          return const BulkVideoStatsResponse(stats: {});
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+                id == seenId,
+          ),
+        );
+
+        await repo.getHomeFeedVideos(
+          authors: const ['author'],
+          userPubkey: 'viewer',
+          limit: 2,
+        );
+
+        expect(pageCalls, equals(2));
+        expect(
+          hydratedBatches,
+          equals([
+            [firstId, secondId],
+          ]),
+        );
+      },
+    );
   });
 }
