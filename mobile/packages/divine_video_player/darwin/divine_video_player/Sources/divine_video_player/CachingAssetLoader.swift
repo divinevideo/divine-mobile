@@ -2,21 +2,6 @@ import AVFoundation
 import Foundation
 import UniformTypeIdentifiers
 
-/// Streams a remote clip to `AVPlayer` through one download it keeps, so the
-/// clip's audio can be decoded from the same bytes without fetching them
-/// again — the Apple counterpart of decoding from ExoPlayer's cache on
-/// Android (#9327).
-///
-/// `AVAssetReader` refuses a remote asset and `AVPlayer` keeps what it
-/// downloads to itself, so the player is handed an asset whose URL scheme only
-/// this loader can resolve. The loader fetches the file once into a temporary
-/// file, answers the player's byte-range requests from what has arrived, and
-/// reports the file once it is complete.
-///
-/// A file larger than [maxKeptBytes] is not kept: a feed plays only its first
-/// seconds, and fetching all of a long video to loop them would waste the
-/// data. The loader then fetches each byte range the player asks for on its
-/// own, as `AVFoundation` would have, and never reports a file.
 /// Shared `URLSession` pool and delegate router so consecutive feed clips reuse
 /// warm HTTP/2 and TLS connections instead of creating and invalidating a
 /// fresh `URLSession` per video.
@@ -144,6 +129,21 @@ private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDel
     }
 }
 
+/// Streams a remote clip to `AVPlayer` through one download it keeps, so the
+/// clip's audio can be decoded from the same bytes without fetching them
+/// again — the Apple counterpart of decoding from ExoPlayer's cache on
+/// Android (#9327).
+///
+/// `AVAssetReader` refuses a remote asset and `AVPlayer` keeps what it
+/// downloads to itself, so the player is handed an asset whose URL scheme only
+/// this loader can resolve. The loader fetches the file once into a temporary
+/// file, answers the player's byte-range requests from what has arrived, and
+/// reports the file once it is complete.
+///
+/// A file larger than `maxKeptBytes` is not kept: a feed plays only its first
+/// seconds, and fetching all of a long video to loop them would waste the
+/// data. The loader then fetches each byte range the player asks for on its
+/// own, as `AVFoundation` would have, and never reports a file.
 final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
 
     /// The largest file kept for decoding. Feed clips are a few megabytes.
