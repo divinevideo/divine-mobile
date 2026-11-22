@@ -550,7 +550,7 @@ class CommentsRepository {
   ///   (format: `kind:pubkey:d-tag`). When provided, counts comments from both
   ///   E and A tag queries to get an accurate total.
   /// - [includeVideoReplies]: Whether to include Kind 34236 video replies in
-  ///   the count. Defaults to `false` so flag-off callers do not inflate the
+  ///   the count. Defaults to `false` so text-only callers do not inflate the
   ///   comment badge with reply-only videos.
   ///
   /// Returns the number of comments on the event, or `null` when the count is

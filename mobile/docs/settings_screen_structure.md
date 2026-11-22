@@ -44,7 +44,7 @@ Signed-out users see a sign-in row instead.
 
 - hold to record, music mode (iOS and Android), audio device (not Linux), audio sharing
 - crossposting and Bluesky publishing, when eligible
-- creator analytics, badges, and tips or monetization links when enabled
+- creator analytics, badges, and tips or monetization links (signed in)
 - account content labels
 
 ### Privacy & safety

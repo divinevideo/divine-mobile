@@ -278,19 +278,19 @@ void main() {
 
     group('state queries', () {
       test('exposes user and internal flag metadata', () {
-        final analytics = service.getFlagMetadata(
+        final bluesky = service.getFlagMetadata(
           FeatureFlag.blueskyPublishing,
         );
         final contentWarnings = service.getFlagMetadata(
           FeatureFlag.communityContentWarnings,
         );
 
-        expect(analytics.flag.displayName, equals('Bluesky Publishing'));
+        expect(bluesky.flag.displayName, equals('Bluesky Publishing'));
         expect(
           contentWarnings.flag.displayName,
           equals('Community Content Warnings'),
         );
-        expect(analytics.isEnabled, isFalse);
+        expect(bluesky.isEnabled, isFalse);
         expect(contentWarnings.isEnabled, isFalse);
       });
 

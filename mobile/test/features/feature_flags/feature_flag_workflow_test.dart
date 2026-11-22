@@ -449,7 +449,7 @@ void main() {
       );
       expect(overriddenSwitch.value, isTrue);
 
-      // integratedApps shares blueskyPublishing' false build default but has
+      // integratedApps shares blueskyPublishing's false build default but has
       // no stored override, so it stays off.
       final defaultedRow = find.ancestor(
         of: find.text(FeatureFlag.integratedApps.displayName),

@@ -487,8 +487,8 @@ void main() {
     testWidgets(
       'loads support links on mount without a feature flag',
       (tester) async {
-        // Support links are part of normal profile loading. The raw Kind 0
-        // fetch must happen immediately, without toggling an experiment.
+        // Support links come only from the raw Kind 0, which the REST
+        // projection strips, so mounting the screen must fetch it.
         const targetNpub =
             'npub1424242424242424242424242424242424242424242424242424qamrcaj';
         final identityClaims = _MockIdentityClaimsRepository();
@@ -585,7 +585,6 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 50));
 
-        // The raw Kind 0 is fetched even with no feature-flag overrides.
         verify(
           () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
         ).called(1);

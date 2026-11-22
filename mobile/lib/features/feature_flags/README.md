@@ -20,9 +20,8 @@ The current inventory is defined by [FeatureFlag](models/feature_flag.dart),
 with build defaults in [BuildConfiguration](services/build_configuration.dart).
 Internal flags allow device overrides only in Developer Mode.
 
-Video replies and profile tip/support links are normal product behavior and
-have no experimental toggle or build override. The unused Enhanced Analytics
-flag is removed; analytics consent remains in Privacy & safety.
+Video replies and profile tip/support links are always on and are not feature
+flags.
 
 ## Quick Start
 
