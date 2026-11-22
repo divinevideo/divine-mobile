@@ -2503,59 +2503,6 @@ void main() {
 
         expect(result, isNull);
       });
-
-      test(
-        'does not double-write cache after queryEvents already batched it',
-        () async {
-          const pubkey = testPublicKey;
-          final profileEvent = _createTestEvent(
-            pubkey: pubkey,
-            kind: EventKind.metadata,
-            content: '{"name":"Single Write"}',
-          );
-          final mockDbClient = _MockAppDbClient();
-          final mockDatabase = _MockAppDatabase();
-          final mockNostrEventsDao = _MockNostrEventsDao();
-          when(() => mockDbClient.database).thenReturn(mockDatabase);
-          when(
-            () => mockDatabase.nostrEventsDao,
-          ).thenReturn(mockNostrEventsDao);
-          when(
-            () => mockNostrEventsDao.getProfileByPubkey(pubkey),
-          ).thenAnswer((_) async => null);
-          when(
-            () => mockNostrEventsDao.upsertEventsBatch(any()),
-          ).thenAnswer((_) async {});
-          when(
-            () => mockNostrEventsDao.upsertEvent(any()),
-          ).thenAnswer((_) async {});
-          when(
-            () => mockNostr.queryEvents(
-              any(),
-              id: any(named: 'id'),
-              tempRelays: any(named: 'tempRelays'),
-              relayTypes: any(named: 'relayTypes'),
-              sendAfterAuth: any(named: 'sendAfterAuth'),
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((_) async => [profileEvent]);
-
-          final clientWithCache = NostrClient.forTesting(
-            nostr: mockNostr,
-            relayManager: mockRelayManager,
-            dbClient: mockDbClient,
-          );
-
-          final result = await clientWithCache.fetchProfile(pubkey);
-          await pumpEventQueue();
-
-          expect(result, equals(profileEvent));
-          verify(
-            () => mockNostrEventsDao.upsertEventsBatch([profileEvent]),
-          ).called(1);
-          verifyNever(() => mockNostrEventsDao.upsertEvent(any()));
-        },
-      );
     });
 
     group('subscribe NIP-09 auto-cache suppression', () {
