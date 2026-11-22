@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
-import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -28,7 +27,7 @@ class ProfileVideosGridSkeleton extends StatelessWidget {
 
   /// Key for the wrapping [CustomScrollView].
   ///
-  /// See [ProfileTabLoadingState.scrollViewKey].
+  /// See `ProfileTabLoadingState.scrollViewKey`.
   final GlobalKey? scrollViewKey;
 
   @override

@@ -42,7 +42,7 @@ class ProfileTabEmptyState extends StatelessWidget {
 
   /// Key for the wrapping [CustomScrollView].
   ///
-  /// See [ProfileTabLoadingState.scrollViewKey].
+  /// See `ProfileTabLoadingState.scrollViewKey`.
   final GlobalKey? scrollViewKey;
 
   @override
