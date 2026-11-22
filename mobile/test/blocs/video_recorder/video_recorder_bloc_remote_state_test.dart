@@ -68,9 +68,14 @@ void main() {
       wakelockPlusPlatformInstance = previousWakelock;
     });
 
-    void stubClips({required Duration total, Duration take = Duration.zero}) {
+    void stubClips({
+      required Duration total,
+      Duration take = Duration.zero,
+      Duration limit = VideoEditorConstants.maxDuration,
+    }) {
       when(() => clipManager.clips).thenReturn(const []);
       when(() => clipManager.totalDuration).thenReturn(total);
+      when(() => clipManager.durationLimit).thenReturn(limit);
       when(() => clipManager.activeRecordingDuration).thenReturn(take);
     }
 
@@ -89,6 +94,16 @@ void main() {
       addTearDown(bloc.close);
 
       expect(published, isEmpty);
+    });
+
+    test('publishes the room part limit and disables Start at that limit', () {
+      const limit = Duration(seconds: 2);
+      stubClips(total: limit, limit: limit);
+      final bloc = buildBloc()..emit(openRecorder.copyWith(isCollabPart: true));
+      addTearDown(bloc.close);
+
+      expect(published.single!.budget, limit);
+      expect(published.single!.isShutterEnabled, isFalse);
     });
 
     test('publishes the clip budget spent once the camera is up', () {
