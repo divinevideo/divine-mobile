@@ -117,13 +117,10 @@ timestamp to be ordered by: divinevideo/divine-mobile#8266.
 A read for the current version has three outcomes, not two:
 
 - **found**: replace the newest copy, ordered as in section 2.
-- **absent**: every relay asked answered, and none holds a list. Publishing the first one
-  is safe.
-- **failed**: the read threw, or a relay timed out, refused the request, dropped the
-  connection, or was never asked. Do not publish, even when the read returned an event or
-  a cached copy exists: a partial answer can carry an older version than the relay that
-  stayed silent. Keep the edit local and retry later. A user-facing error is always better
-  than silent data loss.
+- **absent**: the required network read completed with no matching event, and there is no
+  locally accepted revision to preserve. The mutation can create the first event.
+- **failed**: the read threw or a required relay did not answer. Do not publish even when
+  the read returned an event or a cached copy exists. Keep the edit local and retry later.
 
 Many clients do not throw on an unfinished read. They return whatever arrived, so a
 `catch` block never sees the failure. Find out how your client reports an unfinished read
@@ -137,26 +134,32 @@ replacement like this:
 ```dart
 final read = await nostrClient.queryEventsDetailed(
   [Filter(authors: [pubkey], kinds: const [EventKind.contactList])],
+  relayTypes: RelayType.network,
+  useCache: false,
   requireAllRelaysSettled: true,
 );
 if (read.timedOut || read.noRelays) {
-  // failed: a relay that stayed silent, refused, or was never asked may
-  // hold a newer list than anything this read returned. Do not publish.
   return false;
 }
-// found or absent: the relays that were asked all answered.
-final newest = pickNewest(read.events); // created_at, then lowest id
+// Select the newest matching revision, then apply the pending edit.
 ```
 
 - `queryEvents` returns only the events and drops both flags. Never use it to read a base
   you are about to replace.
-- Without `requireAllRelaysSettled: true`, `timedOut` is set only when the deadline fires.
-  A relay that sends `CLOSED`, drops its socket, or stays silent past the one-second settle
-  window comes back as `timedOut: false` with whatever the other relays sent.
-- `readEvents` returns a `QueryResult` instead. Act only when `isComplete` is true, and for
-  a list read also when `possiblyCapped` is false.
-- A settled read waits for a silent relay until its timeout. A shorter timeout errs toward
-  not publishing, which is the safe direction: the DM inbox read uses 3 seconds.
+- A default read can return `timedOut: false` after a `CLOSED`, a dropped socket, or the
+  one-second settle window. Leave `acceptRelayClosedWhenOthersAnswered` disabled for this
+  replacement read.
+- `useCache: false` excludes the database cache. `RelayType.network` also excludes cache
+  relays, which can otherwise complete a query without any network relay answering.
+- Full settlement covers relays that took the request. A disconnected relay can be skipped
+  during dispatch while another relay returns a complete answer. If the mutation depends on
+  specific relays, pass those URLs as `requiredRelays` to `queryEventsOnFreshConnections`
+  and check both flags. That method also fails the read when a required relay never takes it.
+- With `readEvents`, use the same network scope and `requireAllRelaysSettled: true`, and
+  require `isComplete`. When a mutation truly needs every matching event, also handle
+  `possiblyCapped`. A list stored in one replaceable event only needs the newest revision.
+- A settled read can spend the whole timeout waiting for a silent relay. The follow
+  repository uses three seconds and withholds the publish if the read expires.
 - Worked examples: `_refreshCurrentUserContactList` in `follow_repository.dart`,
   `_readAuthoritative` in `profile_pins_repository.dart`, and `_publishForPubkey` in
   `relay_list_repository.dart`. divinevideo/divine-mobile#8258 lists every fixed site with
@@ -183,12 +186,13 @@ Cross-device removal — the case a tag-count heuristic passes and still corrupt
 7. Follow one new account there, then read the relay's kind 3 back and confirm
    the two removed accounts did not reappear in its `p` tags
 
-Partial read — the case a check that only catches thrown errors passes and still corrupts:
+Partial read:
 
-8. Point the client at two relays and make one of them refuse the read (`CLOSED`) or
-   never answer it. In divine-mobile, a unit test does this with a scripted relay; see the
-   tests listed on divinevideo/divine-mobile#8258
-9. Follow someone and confirm that nothing is published until both relays answer
+8. Have one relay return an older contact list and finish the read. Have the other relay
+   refuse the read (`CLOSED`) or accept the request and stay silent.
+9. Follow someone and confirm the failed read leaves the publish count at zero. Retry with
+   both relays answering and check that the publish preserves the newer list and adds the follow.
+   Also verify that a cache-only answer or a missed required relay cannot authorize a publish.
 
 ## Example
 
