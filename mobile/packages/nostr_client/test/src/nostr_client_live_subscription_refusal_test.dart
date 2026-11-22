@@ -16,8 +16,13 @@ const _liveId = 'live-reactions';
 /// A relay socket whose connect can be held open, and which can answer every
 /// REQ with `CLOSED`.
 class _ScriptedRelay extends Relay {
-  _ScriptedRelay(String url, {this.held, this.refuseWith, this.connects = true})
-    : super(url, RelayStatus(url));
+  _ScriptedRelay(
+    String url, {
+    this.held,
+    this.refuseWith,
+    this.connects = true,
+    this.failReplay = false,
+  }) : super(url, RelayStatus(url));
 
   /// While non-null and incomplete, [doConnect] waits on it.
   final Completer<void>? held;
@@ -28,13 +33,17 @@ class _ScriptedRelay extends Relay {
   /// Whether [doConnect] succeeds once [held] completes.
   final bool connects;
 
+  /// The socket drops on REQ and the next connection attempt fails.
+  final bool failReplay;
+  var _socketDropped = false;
+
   final List<String> reqs = [];
 
   @override
   Future<bool> doConnect() async {
     relayStatus.connected = ClientConnected.connecting;
     await held?.future;
-    if (!connects) {
+    if (!connects || _socketDropped) {
       relayStatus.connected = ClientConnected.disconnect;
       return false;
     }
@@ -55,8 +64,14 @@ class _ScriptedRelay extends Relay {
     DateTime? deadline,
   }) async {
     if (message.first == 'REQ') {
+      if (relayStatus.connected != ClientConnected.connected) return false;
       final id = message[1] as String;
       reqs.add(id);
+      if (failReplay) {
+        _socketDropped = true;
+        relayStatus.connected = ClientConnected.disconnect;
+        return false;
+      }
       final reason = refuseWith;
       if (reason != null) {
         scheduleMicrotask(() => onMessage!(this, ['CLOSED', id, reason]));
@@ -86,6 +101,7 @@ void main() {
     late Nostr nostr;
     late RelayManager manager;
     late NostrClient client;
+    late List<Event> received;
     late List<Object> errors;
     late bool done;
 
@@ -103,6 +119,7 @@ void main() {
         relayFactory: dialer.call,
       );
       client = NostrClient.forTesting(nostr: nostr, relayManager: manager);
+      received = [];
       errors = [];
       done = false;
     });
@@ -114,7 +131,7 @@ void main() {
           .subscribe([
             Filter(kinds: const [EventKind.reaction], limit: 1),
           ], subscriptionId: _liveId)
-          .listen((_) {}, onError: errors.add, onDone: () => done = true);
+          .listen(received.add, onError: errors.add, onDone: () => done = true);
     }
 
     group('forceReconnectAll', () {
@@ -146,6 +163,20 @@ void main() {
           expect(dialer.latest(_redialledUrl).reqs, contains(_liveId));
           expect(errors, isEmpty);
           expect(done, isFalse);
+
+          final event = (await nostr.nostrSigner.signEvent(
+            Event(
+              await nostr.ensurePublicKey(),
+              EventKind.reaction,
+              const [],
+              '+',
+            ),
+          ))!;
+          final redialled = dialer.latest(_redialledUrl);
+          redialled.onMessage!(redialled, ['EVENT', _liveId, event.toJson()]);
+          await pumpEventQueue();
+
+          expect(received.map((event) => event.id), [event.id]);
         },
       );
 
@@ -182,6 +213,39 @@ void main() {
           expect(done, isTrue);
         },
       );
+
+      test('ends the subscription with the refusal if replay cannot send '
+          'the request and reconnecting fails', () async {
+        await manager.initialize();
+        subscribe();
+        await pumpEventQueue();
+
+        final redial = Completer<void>();
+        dialer.next[_refusingUrl] = (url) =>
+            _ScriptedRelay(url, refuseWith: 'rate-limited: slow down');
+        dialer.next[_redialledUrl] = (url) =>
+            _ScriptedRelay(url, held: redial, failReplay: true);
+        final reconnect = client.forceReconnectAll();
+        await pumpEventQueue();
+
+        expect(dialer.latest(_refusingUrl).reqs, contains(_liveId));
+        expect(errors, isEmpty);
+        expect(done, isFalse);
+
+        redial.complete();
+        await reconnect;
+        await pumpEventQueue();
+
+        expect(dialer.latest(_redialledUrl).reqs, contains(_liveId));
+        expect(errors, [
+          isA<RelaySubscriptionRefusedException>().having(
+            (e) => e.reason,
+            'reason',
+            'rate-limited: slow down',
+          ),
+        ]);
+        expect(done, isTrue);
+      });
     });
 
     group('the relay it waits for leaves the pool', () {
@@ -239,6 +303,41 @@ void main() {
     });
 
     group('initialize', () {
+      test('ends the subscription with the refusal if the relay it waited for '
+          'saved the request before its connection failed', () async {
+        final connect = Completer<void>();
+        dialer.next[_refusingUrl] = (url) =>
+            _ScriptedRelay(url, refuseWith: 'rate-limited: slow down');
+        dialer.next[_redialledUrl] = (url) =>
+            _ScriptedRelay(url, held: connect, connects: false);
+        final initialized = manager.initialize();
+        await pumpEventQueue();
+
+        subscribe();
+        await pumpEventQueue();
+
+        expect(dialer.latest(_refusingUrl).reqs, contains(_liveId));
+        expect(
+          dialer.latest(_redialledUrl).hasSubscriptionById(_liveId),
+          isTrue,
+        );
+        expect(errors, isEmpty);
+        expect(done, isFalse);
+
+        connect.complete();
+        await initialized;
+        await pumpEventQueue();
+
+        expect(errors, [
+          isA<RelaySubscriptionRefusedException>().having(
+            (e) => e.reason,
+            'reason',
+            'rate-limited: slow down',
+          ),
+        ]);
+        expect(done, isTrue);
+      });
+
       test(
         'keeps a subscription opened before the pool connects when the first '
         'relay refuses it and the other is still connecting',
