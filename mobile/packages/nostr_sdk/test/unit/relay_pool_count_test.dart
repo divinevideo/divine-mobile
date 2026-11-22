@@ -375,26 +375,39 @@ void main() {
       });
     }
 
-    test('skips every relay after each has rejected COUNT', () async {
-      await addRelays();
+    test(
+      'settles concurrent counts and skips relays that reject COUNT',
+      () async {
+        await addRelays();
 
-      final isUnsupported = throwsA(
-        allOf(
-          isA<CountNotSupportedException>(),
-          isNot(isA<CountNotSentException>()),
-        ),
-      );
+        final isUnsupported = throwsA(
+          allOf(
+            isA<CountNotSupportedException>(),
+            isNot(isA<CountNotSentException>()),
+          ),
+        );
 
-      final first = expectLater(count(), isUnsupported);
-      await pumpEventQueue();
-      sendNotice(countingFactory.lastChannel!, unknownCommandNotice);
-      sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
-      await first;
+        var settled = 0;
+        final first = expectLater(
+          count(),
+          isUnsupported,
+        ).then((_) => settled++);
+        final second = expectLater(
+          count(id: 'count-9009-concurrent'),
+          isUnsupported,
+        ).then((_) => settled++);
+        await pumpEventQueue();
+        sendNotice(countingFactory.lastChannel!, unknownCommandNotice);
+        sendNotice(legacyFactory.lastChannel!, unknownCommandNotice);
+        await pumpEventQueue();
+        expect(settled, equals(2));
+        await Future.wait([first, second]);
 
-      await expectLater(count(id: 'count-9009-again'), isUnsupported);
-      expect(countFramesOn(countingFactory.lastChannel!), hasLength(1));
-      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
-    });
+        await expectLater(count(id: 'count-9009-again'), isUnsupported);
+        expect(countFramesOn(countingFactory.lastChannel!), hasLength(2));
+        expect(countFramesOn(legacyFactory.lastChannel!), hasLength(2));
+      },
+    );
 
     test('answers once both relays have, when both support COUNT', () async {
       await addRelays();
@@ -404,6 +417,9 @@ void main() {
       await pumpEventQueue();
 
       answerCount(countingFactory.lastChannel!, 42);
+      await pumpEventQueue();
+      expect(settled, isFalse);
+
       answerCount(legacyFactory.lastChannel!, 7);
       await pumpEventQueue();
 
