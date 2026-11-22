@@ -111,6 +111,50 @@ void main() {
 
         expect(relay.openSubscriptions, hasLength(1));
       });
+
+      test(
+        'retains the accepted watch if the relay refuses its replacement',
+        () async {
+          final first = TestCommenter();
+          final second = TestCommenter();
+          final errors = <Object>[];
+          final seen = <String>[];
+          final watch = repository
+              .watchCommentDeletions(
+                rootEventId: video.id,
+                commentAuthors: commentAuthors.stream,
+              )
+              .listen(
+                (deletion) => seen.add(deletion.commentId),
+                onError: errors.add,
+              );
+          addTearDown(watch.cancel);
+          commentAuthors.add({first.pubkey});
+          await pumpEventQueue();
+          final original = relay.openSubscriptions.single;
+
+          relay.refuse = (filters) => filters.any(
+            (filter) => (filter['authors'] as List<dynamic>).length > 1,
+          );
+          commentAuthors.add({first.pubkey, second.pubkey});
+          await pumpEventQueue();
+          expect(relay.requests, hasLength(2));
+          expect(relay.openSubscriptions, {original});
+          expect(errors, [isA<WatchCommentsFailedException>()]);
+          final firstDeletion = deleteCommentOf(first);
+          await pumpEventQueue();
+          expect(seen, contains(firstDeletion.commentId));
+
+          relay.refuse = null;
+          commentAuthors.add({first.pubkey, second.pubkey});
+          await pumpEventQueue();
+          expect(relay.requests, hasLength(3));
+          expect(relay.openSubscriptions, {relay.requests.last});
+          final secondDeletion = deleteCommentOf(second);
+          await pumpEventQueue();
+          expect(seen, contains(secondDeletion.commentId));
+        },
+      );
     });
   });
 }

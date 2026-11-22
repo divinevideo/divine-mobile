@@ -14,6 +14,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// matches. Pass it as the `webSocketChannelFactory` of both the
 /// `NostrClientConfig` and the `RelayManagerConfig`.
 class InMemoryRelay implements WebSocketChannelFactory {
+  bool Function(List<Map<String, dynamic>> filters)? refuse;
   final List<Map<String, dynamic>> _events = [];
   final List<_RelayConnection> _connections = [];
 
@@ -124,6 +125,10 @@ class _RelayConnection {
         final id = frame[1] as String;
         final filters = frame.skip(2).cast<Map<String, dynamic>>().toList();
         _relay.requests.add(id);
+        if (_relay.refuse?.call(filters) ?? false) {
+          channel.send(['CLOSED', id, 'restricted: filter refused']);
+          return;
+        }
         _subscriptions[id] = filters;
         for (final event in _relay._stored(filters)) {
           _relay.sentEventIds.add(event['id'] as String);

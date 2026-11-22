@@ -562,6 +562,7 @@ void main() {
             any(),
             subscriptionId: any(named: 'subscriptionId'),
             handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((invocation) {
           subscribedFilters =
@@ -618,6 +619,7 @@ void main() {
             any(),
             subscriptionId: any(named: 'subscriptionId'),
             handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenThrow(Exception('client is closed'));
         final errors = <Object>[];
@@ -643,6 +645,7 @@ void main() {
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               handleDeletionRequests: any(named: 'handleDeletionRequests'),
+              onEose: any(named: 'onEose'),
             ),
           ).thenAnswer((invocation) {
             if (++subscribeCalls == 2) throw Exception('too many REQs');
@@ -766,6 +769,7 @@ void main() {
             any(),
             subscriptionId: any(named: 'subscriptionId'),
             handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((invocation) {
           final id = invocation.namedArguments[#subscriptionId] as String?;
