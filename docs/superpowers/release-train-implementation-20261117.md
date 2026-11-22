@@ -18,6 +18,37 @@ designated public cohort for external TestFlight distribution. App Store
 submission uses the newest processed, CI-verified build without a mandatory
 TestFlight waiting period. New betas never replace an in-flight store review.
 
+## Approved Android direct distribution
+
+At the `production` Android level the coordinator also observes GitHub/Zapstore
+distribution. Native candidates retain their original ARM APK digests and notes
+in `artifacts/android-downloads/<number>.json`. Only the newest actually
+published Play production candidate, verified against source CI and retained
+identity, qualifies. A pending/rejected/partial Play observation cannot authorize
+publication. Missing historical evidence is reported; do not rebuild it.
+
+The coordinator records an immutable, short-lived approval observation and a
+durable `android-distribution` operation before dispatching the existing
+`zapstore-publish` workflow on main. Its non-secret inputs name the exact build,
+version, source, attempt and approval observation. The existing scoped ledger
+credential is refreshed securely in `store_release_credentials`; public GitHub
+and Zapstore signing credentials stay in their existing groups.
+
+That workflow verifies the original completed build and provenance, downloads
+the original retained APKs, verifies hashes, publishes/verifies stable GitHub
+metadata and assets, and only then signs the exact GitHub tag for Zapstore.
+Successful signer exit and a final GitHub read-back produce an immutable receipt
+at `distributions/android/<number>.json`. This receipt records successful CLI
+publication; it does not independently attest every downstream relay/cache.
+
+The next observation reconciles provider status and the exact receipt. A
+dispatch response alone does not mean distribution completed. Confirmed terminal
+failures permit at most three automatic attempts with the same original files;
+unknown acceptance, conflicting jobs/receipts and exhausted retries create an
+`android-distribution` hold without changing native attempt counts or store
+cadence. Existing Android store holds also stop new distribution. Dry runs
+propose the handoff without writes; the Android kill switch still controls it.
+
 ## Credentials and configuration
 
 The `store-release` GitHub Environment must allow only `main`. No PR or tag
@@ -36,13 +67,14 @@ workflow receives release credentials. It holds:
 
 Before starting each store build, the GitHub driver refreshes the existing
 application-scoped Codemagic `store_release_credentials` group with a secure,
-private-ledger-scoped App token. Only native store workflows import this group;
+private-ledger-scoped App token. Native store workflows and the main-only
+approved Android distribution workflow import this group;
 shared credentials used by other manual workflows remain unchanged.
 `PROVENANCE_TOKEN` can access only the private release ledger. Native public
 publishing retains the existing `github_credentials` credential, with its
 separate permissions and lifetime. The candidate-tag App token stays in GitHub
 Actions, is revoked when the coordinator exits, and is never copied into native
-builds. Any obsolete `GH_TOKEN`/`GITHUB_TOKEN` entries in the native-only group
+builds. Any obsolete `GH_TOKEN`/`GITHUB_TOKEN` entries in the scoped ledger group
 are deleted and their absence verified before dispatch. Ledger operations
 select that private token without changing the public publisher's environment.
 The repository public-list policy is forwarded into the same secure group,

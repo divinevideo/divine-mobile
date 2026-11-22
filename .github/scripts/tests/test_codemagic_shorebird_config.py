@@ -321,12 +321,12 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('zapstore-publish', workflows)
         workflow = workflows['zapstore-publish']
         self.assertEqual(workflow['environment']['groups'],
-                         ['github_credentials', 'zapstore_credentials'])
+                         ['github_credentials', 'zapstore_credentials', 'store_release_credentials'])
         self.assertEqual(workflow['triggering']['events'], [])
         self.assertNotIn('publishing', workflow)
         self.assertNotIn('android_signing', workflow['environment'])
-        self.assertEqual(len(workflow['scripts']), 2)
-        self.assertEqual(workflow['scripts'][1],
+        self.assertEqual(len(workflow['scripts']), 4)
+        self.assertEqual(workflow['scripts'][2],
                          next(step for step in workflows['android-build']['scripts']
                               if step['name'] == 'Publish to Zapstore'))
         self.assertEqual(workflow['inputs']['PUBLISH_TO_GITHUB']['default'], 'YES')
