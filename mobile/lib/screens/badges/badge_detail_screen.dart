@@ -1,8 +1,6 @@
 // ABOUTME: Badge detail page: badge artwork, accepted holders, and their videos.
 // ABOUTME: Owners can also award, edit, and revoke from this page.
 
-import 'dart:async';
-
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -746,7 +744,7 @@ class _BadgeVideoGrid extends ConsumerWidget {
                           ),
                           button: true,
                           child: GestureDetector(
-                            onTap: () => unawaited(
+                            onTap: () => runDetached(
                               PooledFullscreenVideoFeedRouteData(
                                 video: video.id,
                                 $extra: PooledFullscreenVideoFeedArgs(
@@ -765,6 +763,9 @@ class _BadgeVideoGrid extends ConsumerWidget {
                                   sourceDetail: coordinate.value,
                                 ),
                               ).push<void>(context),
+                              'open badge holder video',
+                              logName: 'BadgeDetailScreen',
+                              category: LogCategory.ui,
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(4),
