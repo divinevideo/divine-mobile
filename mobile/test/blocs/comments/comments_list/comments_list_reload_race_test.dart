@@ -19,6 +19,10 @@ String _validId(String suffix) {
 
 void main() {
   group('CommentsListBloc overlapping reloads', () {
+    setUpAll(
+      () => registerFallbackValue(const Stream<Set<String>>.empty()),
+    );
+
     test('closing the bloc leaves no comment subscription listening', () async {
       final repo = _MockCommentsRepository();
       final controllers = <StreamController<Comment>>[];
@@ -61,6 +65,7 @@ void main() {
       when(
         () => repo.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
@@ -139,6 +144,7 @@ void main() {
       when(
         () => repo.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) {

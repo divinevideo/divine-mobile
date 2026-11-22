@@ -29,6 +29,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Comment>[]);
+      registerFallbackValue(const Stream<Set<String>>.empty());
     });
 
     setUp(() {
@@ -45,6 +46,7 @@ void main() {
       when(
         () => mockCommentsRepository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
@@ -1423,6 +1425,7 @@ void main() {
         when(
           () => mockCommentsRepository.watchCommentDeletions(
             rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
             includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) => deletions.stream);
@@ -1468,6 +1471,38 @@ void main() {
         await bloc.close();
 
         expect(deletions.hasListener, isFalse);
+      });
+
+      test('watches requests by the authors of the listed comments', () async {
+        Stream<Set<String>>? commentAuthors;
+        when(
+          () => mockCommentsRepository.watchCommentDeletions(
+            rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
+          ),
+        ).thenAnswer((invocation) {
+          commentAuthors =
+              invocation.namedArguments[#commentAuthors] as Stream<Set<String>>;
+          return deletions.stream;
+        });
+        final bloc = createBloc()..add(const CommentsLoadRequested());
+        addTearDown(bloc.close);
+        await pumpEventQueue();
+        final listed = <Set<String>>[];
+        final subscription = commentAuthors!.listen(listed.add);
+        addTearDown(subscription.cancel);
+        await pumpEventQueue();
+        expect(listed.last, equals({validId('a1')}));
+
+        bloc.add(
+          NewCommentsBatchReceived([
+            makeComment(validId('c2'), authorPubkey: validId('a2')),
+          ]),
+        );
+        await pumpEventQueue();
+
+        expect(listed.last, equals({validId('a1'), validId('a2')}));
       });
     });
 

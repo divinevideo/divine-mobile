@@ -23,6 +23,14 @@ class InMemoryRelay implements WebSocketChannelFactory {
   /// The subscription id of every CLOSE a client sent, in order.
   final List<String> closes = [];
 
+  /// The id of every event the relay has sent a client, in order.
+  final List<String> sentEventIds = [];
+
+  /// The subscription ids clients hold open, across every connection.
+  Set<String> get openSubscriptions => {
+    for (final connection in _connections) ...connection.subscriptionIds,
+  };
+
   @override
   WebSocketChannel create(Uri uri) {
     final connection = _RelayConnection(this);
@@ -98,9 +106,12 @@ class _RelayConnection {
   late final _InMemoryChannel channel;
   final Map<String, List<Map<String, dynamic>>> _subscriptions = {};
 
+  Iterable<String> get subscriptionIds => _subscriptions.keys;
+
   void deliver(Map<String, dynamic> event) {
     for (final MapEntry(key: id, value: filters) in _subscriptions.entries) {
       if (filters.any((filter) => _matches(filter, event))) {
+        _relay.sentEventIds.add(event['id'] as String);
         channel.send(['EVENT', id, event]);
       }
     }
@@ -115,6 +126,7 @@ class _RelayConnection {
         _relay.requests.add(id);
         _subscriptions[id] = filters;
         for (final event in _relay._stored(filters)) {
+          _relay.sentEventIds.add(event['id'] as String);
           channel.send(['EVENT', id, event]);
         }
         channel.send(['EOSE', id]);

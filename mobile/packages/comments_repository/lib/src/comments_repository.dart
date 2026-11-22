@@ -1138,61 +1138,109 @@ class CommentsRepository {
     }
   }
 
-  /// Watches for NIP-09 deletion requests of comments, live.
+  /// Watches for NIP-09 deletion requests of comments by [commentAuthors],
+  /// live.
+  ///
+  /// Only a comment's author can delete it, so the relay is asked only for
+  /// the requests of [commentAuthors], the authors of the listed comments,
+  /// emitted again whenever that list changes. Nothing is asked while none is
+  /// listed, and a request published from a minute before the watch began is
+  /// delivered once its author is listed.
   ///
   /// Emits one [CommentDeletion] per `e` tag of each request whose `k` tag
-  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]),
-  /// published from a minute before now. The stream carries no author check:
-  /// hide a comment only when [CommentDeletion.appliesTo] holds. A request
-  /// without a `k` tag is not seen here; [findAuthorDeletedComments] still
-  /// finds it.
+  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]).
+  /// The stream carries no author check: hide a comment only when
+  /// [CommentDeletion.appliesTo] holds. A request without a `k` tag is not
+  /// seen here; [findAuthorDeletedComments] still finds it.
   ///
-  /// Each call opens a relay subscription of its own, which cancelling the
-  /// stream's subscription closes.
-  ///
-  /// Throws [WatchCommentsFailedException] if the subscription fails.
+  /// The watch holds one relay subscription, opened once the stream is
+  /// listened to and replaced as authors are added; cancelling the stream's
+  /// subscription closes it. A subscription the client refuses reaches the
+  /// stream as a [WatchCommentsFailedException].
   Stream<CommentDeletion> watchCommentDeletions({
     required String rootEventId,
+    required Stream<Set<String>> commentAuthors,
     bool includeVideoReplies = false,
   }) {
-    try {
-      final since = _now().subtract(_liveDeletionLookback);
-      return _nostrClient
-          .subscribe(
-            [
-              Filter(
-                kinds: const [_deletionKind],
-                k: [
-                  _commentKind.toString(),
-                  if (includeVideoReplies) EventKind.videoVertical.toString(),
-                ],
-                since: since.millisecondsSinceEpoch ~/ 1000,
-              ),
-            ],
-            subscriptionId: _watchSubscriptionId(
-              'comment_deletions_watch',
-              rootEventId,
-            ),
-            handleDeletionRequests: false,
-          )
-          .where((event) => event.kind == _deletionKind)
-          .expand(
-            (request) => [
-              for (final tag in request.tags)
-                if (tag.length >= 2 && tag[0] == 'e')
-                  CommentDeletion(
-                    commentId: tag[1],
-                    requesterPubkey: request.pubkey,
-                  ),
-            ],
-          )
-          .map(_rememberDeletionRequest);
-    } on Exception catch (e) {
-      throw WatchCommentsFailedException(
-        'Failed to watch comment deletions: $e',
-      );
+    final since = _now().subtract(_liveDeletionLookback);
+    final commentKinds = [
+      _commentKind.toString(),
+      if (includeVideoReplies) EventKind.videoVertical.toString(),
+    ];
+    final watched = <String>{};
+    StreamSubscription<Set<String>>? authorsSubscription;
+    StreamSubscription<CommentDeletion>? requests;
+    late final StreamController<CommentDeletion> deletions;
+
+    void watch(Set<String> authors) {
+      if (watched.containsAll(authors)) return;
+      final replaced = requests;
+      try {
+        requests = _commentDeletionRequests(
+          rootEventId: rootEventId,
+          authors: {...watched, ...authors}.toList(),
+          commentKinds: commentKinds,
+          since: since,
+        ).listen(deletions.add, onError: deletions.addError);
+      } on Exception catch (e) {
+        // The open subscription stays, and the next list retries these.
+        deletions.addError(
+          WatchCommentsFailedException('Failed to watch comment deletions: $e'),
+        );
+        return;
+      }
+      watched.addAll(authors);
+      // Closed only once its successor is open, so no request falls between.
+      unawaited(replaced?.cancel());
     }
+
+    deletions = StreamController<CommentDeletion>(
+      onListen: () => authorsSubscription = commentAuthors.listen(
+        watch,
+        onError: deletions.addError,
+      ),
+      onCancel: () => Future.wait(
+        [authorsSubscription?.cancel(), requests?.cancel()].nonNulls,
+      ),
+    );
+    return deletions.stream;
   }
+
+  /// The relay's deletion requests by [authors] for comments of
+  /// [commentKinds], published from [since].
+  Stream<CommentDeletion> _commentDeletionRequests({
+    required String rootEventId,
+    required List<String> authors,
+    required List<String> commentKinds,
+    required DateTime since,
+  }) => _nostrClient
+      .subscribe(
+        [
+          Filter(
+            kinds: const [_deletionKind],
+            authors: authors,
+            k: commentKinds,
+            since: since.millisecondsSinceEpoch ~/ 1000,
+          ),
+        ],
+        subscriptionId: _watchSubscriptionId(
+          'comment_deletions_watch',
+          rootEventId,
+        ),
+        handleDeletionRequests: false,
+      )
+      .where((event) => event.kind == _deletionKind)
+      .expand(
+        (request) => [
+          for (final tag in request.tags)
+            if (tag.length >= 2 && tag[0] == 'e')
+              CommentDeletion(
+                commentId: tag[1],
+                requesterPubkey: request.pubkey,
+              ),
+        ],
+      )
+      .map(_rememberDeletionRequest);
 
   /// A subscription id of its own for one watch of [rootEventId].
   ///

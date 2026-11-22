@@ -244,6 +244,12 @@ final class CommentsListState extends Equatable {
   Iterable<String> get shownAuthorPubkeys =>
       shownCommentsById.values.map((comment) => comment.authorPubkey);
 
+  /// The authors of every loaded comment, hidden ones included: the only
+  /// accounts whose deletion requests can remove one of them.
+  Set<String> get commentAuthors => {
+    for (final comment in commentsById.values) comment.authorPubkey,
+  };
+
   /// How many loaded comments the video owner hid.
   int get hiddenCommentCount =>
       commentsById.values.where(isHiddenByOwner).length;

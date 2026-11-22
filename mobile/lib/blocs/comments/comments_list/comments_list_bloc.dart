@@ -10,6 +10,7 @@ import 'package:openvine/blocs/comments/comments_list/batched_subscription.dart'
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'comments_list_event.dart';
@@ -897,6 +898,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       _commentDeletionSubscription = _commentsRepository
           .watchCommentDeletions(
             rootEventId: state.rootEventId,
+            commentAuthors: this.stream
+                .map((state) => state.commentAuthors)
+                .startWith(state.commentAuthors),
             includeVideoReplies: _includeVideoReplies,
           )
           .listen(

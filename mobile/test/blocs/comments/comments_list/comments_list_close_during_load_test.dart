@@ -52,6 +52,10 @@ class _LoadObservingBloc extends CommentsListBloc {
 
 void main() {
   group(CommentsListBloc, () {
+    setUpAll(
+      () => registerFallbackValue(const Stream<Set<String>>.empty()),
+    );
+
     group('$CommentsLoadRequested closed before the first page arrives', () {
       late _MockCommentsRepository repository;
       late Completer<CommentThread> firstPage;
@@ -68,6 +72,7 @@ void main() {
       Stream<CommentDeletion> watchCommentDeletions() =>
           repository.watchCommentDeletions(
             rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
             includeVideoReplies: any(named: 'includeVideoReplies'),
           );
 

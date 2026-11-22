@@ -5,120 +5,36 @@ import 'dart:async';
 
 import 'package:comments_repository/comments_repository.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
 import '../helpers/in_memory_relay.dart';
-
-/// Loopback with nothing listening, so the relay information lookup the
-/// client makes on connect fails at once instead of reaching the network.
-const _relayUrl = 'ws://127.0.0.1:1';
-
-const _videoKind = 34236;
-
-/// Bounds every wait, so a regression fails here instead of hanging.
-const _timeout = Duration(seconds: 5);
+import '../helpers/relay_fixtures.dart';
 
 Never _neverToldStoredEnded() =>
     fail('The watch was never told its stored comments ended');
-
-/// A video comments are posted on.
-class _Video {
-  _Video()
-    : id = generatePrivateKey(),
-      authorPubkey = getPublicKey(generatePrivateKey());
-
-  final String id;
-  final String authorPubkey;
-}
-
-/// Someone commenting from another client, straight onto the relay.
-class _Commenter {
-  _Commenter() : _privateKey = generatePrivateKey();
-
-  final String _privateKey;
-
-  String get pubkey => getPublicKey(_privateKey);
-
-  /// A NIP-22 top-level comment on [video].
-  Event comment(_Video video, String text) => Event(pubkey, 1111, [
-    ['E', video.id, '', video.authorPubkey],
-    ['K', '$_videoKind'],
-    ['P', video.authorPubkey],
-    ['e', video.id, '', video.authorPubkey],
-    ['k', '$_videoKind'],
-    ['p', video.authorPubkey],
-  ], text)..sign(_privateKey);
-
-  /// A NIP-09 request to delete the comment [commentId].
-  Event deletion(String commentId) => Event(pubkey, 5, [
-    ['e', commentId],
-    ['k', '1111'],
-  ], '')..sign(_privateKey);
-}
-
-/// Records what a watch has delivered, so a test can wait for one item.
-class _Received<T> {
-  _Received(Stream<T> stream, this._idOf) {
-    _subscription = stream.listen((item) {
-      final id = _idOf(item);
-      ids.add(id);
-      _arrivals.add(id);
-    });
-  }
-
-  final String Function(T item) _idOf;
-  final Set<String> ids = {};
-  final StreamController<String> _arrivals = StreamController.broadcast();
-  late final StreamSubscription<T> _subscription;
-
-  /// Completes once the watch has delivered the item [id].
-  Future<void> waitFor(String id) => ids.contains(id)
-      ? Future.value()
-      : _arrivals.stream
-            .firstWhere((arrived) => arrived == id)
-            .timeout(_timeout, onTimeout: () => fail('Never delivered $id'));
-
-  /// Stops listening to the watch, which ends it.
-  Future<void> cancel() async {
-    await _subscription.cancel();
-    await _arrivals.close();
-  }
-}
 
 void main() {
   group(CommentsRepository, () {
     late InMemoryRelay relay;
     late NostrClient client;
     late CommentsRepository repository;
-    late _Commenter commenter;
+    late TestCommenter commenter;
 
     setUp(() async {
       relay = InMemoryRelay();
-      client = NostrClient(
-        config: NostrClientConfig(
-          signer: LocalNostrSigner(generatePrivateKey()),
-          webSocketChannelFactory: relay,
-        ),
-        relayManagerConfig: RelayManagerConfig(
-          defaultRelayUrl: _relayUrl,
-          storage: InMemoryRelayStorage(),
-          webSocketChannelFactory: relay,
-        ),
-      );
-      await client.initialize();
+      client = await connectTo(relay);
       repository = CommentsRepository(nostrClient: client);
-      commenter = _Commenter();
+      commenter = TestCommenter();
     });
 
     tearDown(() => client.dispose());
 
     /// Opens a comments watch on [video], reporting its own EOSE to [stored].
-    _Received<Comment> watch(_Video video, {Completer<void>? stored}) =>
-        _Received(
+    Received<Comment> watch(TestVideo video, {Completer<void>? stored}) =>
+        Received(
           repository.watchComments(
             rootEventId: video.id,
-            rootEventKind: _videoKind,
+            rootEventKind: testVideoKind,
             onEose: () {
               if (stored != null && !stored.isCompleted) stored.complete();
             },
@@ -127,21 +43,24 @@ void main() {
         );
 
     /// Opens a comments watch on [video] and waits for its own EOSE.
-    Future<_Received<Comment>> watchUntilStored(_Video video) async {
+    Future<Received<Comment>> watchUntilStored(TestVideo video) async {
       final stored = Completer<void>();
       final received = watch(video, stored: stored);
-      await stored.future.timeout(_timeout, onTimeout: _neverToldStoredEnded);
+      await stored.future.timeout(
+        relayWaitTimeout,
+        onTimeout: _neverToldStoredEnded,
+      );
       return received;
     }
 
     /// Ends [watch] the way its owner does when its comments sheet closes.
-    Future<void> endOwner(_Received<Object> watch) => watch.cancel();
+    Future<void> endOwner(Received<Object> watch) => watch.cancel();
 
     group('watchComments', () {
       test(
         'tells each watch of a video when its stored comments end',
         () async {
-          final video = _Video();
+          final video = TestVideo();
           final first = await watchUntilStored(video);
           addTearDown(first.cancel);
 
@@ -151,7 +70,7 @@ void main() {
 
           await expectLater(
             secondStored.future.timeout(
-              _timeout,
+              relayWaitTimeout,
               onTimeout: _neverToldStoredEnded,
             ),
             completes,
@@ -160,7 +79,7 @@ void main() {
       );
 
       test('delivers the stored comments to each watch of a video', () async {
-        final video = _Video();
+        final video = TestVideo();
         final earlier = commenter.comment(video, 'posted before the watches');
         relay.publish(earlier);
         final first = await watchUntilStored(video);
@@ -175,9 +94,9 @@ void main() {
 
       group('when the owner of one watch ends it', () {
         test('keeps a watch on another video live', () async {
-          final ended = await watchUntilStored(_Video());
+          final ended = await watchUntilStored(TestVideo());
           final endedId = relay.requests.single;
-          final keptVideo = _Video();
+          final keptVideo = TestVideo();
           final kept = await watchUntilStored(keptVideo);
           addTearDown(kept.cancel);
           final before = commenter.comment(keptVideo, 'posted before');
@@ -193,7 +112,7 @@ void main() {
         });
 
         test('keeps another watch of the same video live', () async {
-          final video = _Video();
+          final video = TestVideo();
           final ended = await watchUntilStored(video);
           final endedId = relay.requests.single;
           final kept = watch(video);
@@ -211,7 +130,7 @@ void main() {
         });
 
         test('closes the relay subscription of the ended watch', () async {
-          final ended = await watchUntilStored(_Video());
+          final ended = await watchUntilStored(TestVideo());
           final endedId = relay.requests.single;
 
           await endOwner(ended);
@@ -223,15 +142,18 @@ void main() {
     });
 
     group('watchCommentDeletions', () {
-      _Received<CommentDeletion> watchDeletions(_Video video) => _Received(
-        repository.watchCommentDeletions(rootEventId: video.id),
+      Received<CommentDeletion> watchDeletions(TestVideo video) => Received(
+        repository.watchCommentDeletions(
+          rootEventId: video.id,
+          commentAuthors: Stream.value({commenter.pubkey}),
+        ),
         (deletion) => deletion.commentId,
       );
 
       group('when the owner of one watch ends it', () {
         test('keeps a deletion watch on another video live', () async {
-          final keptVideo = _Video();
-          final ended = watchDeletions(_Video());
+          final keptVideo = TestVideo();
+          final ended = watchDeletions(TestVideo());
           final kept = watchDeletions(keptVideo);
           addTearDown(kept.cancel);
           final before = commenter.comment(keptVideo, 'deleted before');
@@ -246,7 +168,7 @@ void main() {
         });
 
         test('keeps another deletion watch of the same video live', () async {
-          final video = _Video();
+          final video = TestVideo();
           final ended = watchDeletions(video);
           final kept = watchDeletions(video);
           addTearDown(kept.cancel);
@@ -262,7 +184,7 @@ void main() {
         });
 
         test('closes the relay subscription of the ended watch', () async {
-          final video = _Video();
+          final video = TestVideo();
           final ended = watchDeletions(video);
           final comment = commenter.comment(video, 'deleted');
           relay.publish(commenter.deletion(comment.id));

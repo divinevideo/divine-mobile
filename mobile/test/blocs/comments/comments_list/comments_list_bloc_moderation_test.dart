@@ -91,6 +91,7 @@ void main() {
       when(
         () => commentsRepository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
@@ -106,6 +107,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Comment>[]);
+      registerFallbackValue(const Stream<Set<String>>.empty());
       registerFallbackValue(_comment('fallback'));
     });
 
