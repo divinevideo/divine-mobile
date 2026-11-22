@@ -372,7 +372,7 @@ class ReleaseCadenceTest(unittest.TestCase):
             )
 
     def test_app_store_waits_48_hours_for_provider_state_and_journal(self):
-        for source in ["review", "version", "saved", "journal", "publication"]:
+        for source in ["review", "version", "saved", "journal"]:
             for elapsed in [DAY, 2 * DAY - 1, 2 * DAY]:
                 with self.subTest(source=source, elapsed=elapsed):
                     s = self.public_snapshot()
@@ -389,8 +389,6 @@ class ReleaseCadenceTest(unittest.TestCase):
                         ]
                     elif source == "saved":
                         state["app_store_submissions"] = [NOW]
-                    elif source == "publication":
-                        state["last_app_store_publication"] = NOW
                     else:
                         state["operations"] = {"prior": operation("app-store", NOW, "acknowledged")}
                     self.assertEqual(
@@ -423,53 +421,69 @@ class ReleaseCadenceTest(unittest.TestCase):
                         elapsed >= 2 * DAY,
                     )
 
-    def test_new_ios_publication_starts_wait_independently_of_android(self):
-        for status in ["READY_FOR_SALE", "READY_FOR_DISTRIBUTION"]:
-            with self.subTest(status=status):
+    def test_store_clearance_and_submission_interval_are_independent(self):
+        levels = {"ios": "app-store"}
+        for elapsed_hours in [24, 60]:
+            with self.subTest(elapsed_hours=elapsed_hours):
                 s = self.public_snapshot()
                 s["ios"]["builds"][0]["public"] = True
-                s["android"] = {"error": "unavailable"}
-                s["ios"]["versions"] = [{"id": "old", "version": "1.0.30", "state": status}]
-                state = observe(s, {})
-                self.assertEqual(state.get("last_app_store_publication"), NOW)
-                self.assertFalse(plan_tick(s, state, {"ios": "app-store"})["actions"])
-                s["now"] += 2 * DAY
+                s["ios"]["review_submissions"] = [
+                    {"attributes": {"state": "COMPLETE", "submittedDate": NOW}}
+                ]
+                previous = {
+                    "id": "previous",
+                    "version": "1.0.30",
+                    "state": "IN_REVIEW",
+                }
+                s["ios"]["versions"] = [previous]
+                s["now"] = NOW + elapsed_hours * HOUR
+                state = {}
+                for pending in ["IN_REVIEW", "PROCESSING_FOR_DISTRIBUTION"]:
+                    previous["state"] = pending
+                    self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+
+                previous["state"] = "READY_FOR_DISTRIBUTION"
+                s["ios"]["observed_at"] = s["now"]
                 state = observe(s, state)
-                self.assertEqual(state["last_app_store_publication"], NOW)
+                if elapsed_hours < 48:
+                    self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+                    s["now"] = NOW + 48 * HOUR - 1
+                    self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+                    s["now"] += 1
                 self.assertEqual(
-                    [a["kind"] for a in plan_tick(s, state, {"ios": "app-store"})["actions"]],
+                    [a["kind"] for a in plan_tick(s, state, levels)["actions"]],
                     ["app-store"],
                 )
-                s["ios"]["versions"][0]["version"] = "1.0.31"
-                self.assertEqual(observe(s, state)["last_app_store_publication"], s["now"])
 
-    def test_old_or_missing_ios_publication_does_not_restart_wait(self):
-        s = snapshot()
-        state = {"highest_app_store_version": "1.0.31", "last_app_store_publication": NOW - DAY}
-        for versions in [[], [{"id": "old", "version": "1.0.30", "state": "READY_FOR_SALE"}],
-                         [{"id": "next", "version": "1.0.32", "state": "IN_REVIEW"}]]:
-            with self.subTest(versions=versions):
-                s["ios"]["versions"] = versions
-                self.assertEqual(observe(s, state)["last_app_store_publication"], NOW - DAY)
+    def test_legacy_publication_clock_cannot_extend_submission_interval(self):
+        s = self.public_snapshot()
+        s["ios"]["builds"][0]["public"] = True
+        s["ios"]["versions"] = [
+            {"id": "previous", "version": "1.0.30", "state": "READY_FOR_SALE"}
+        ]
+        state = {
+            "app_store_submissions": [NOW - 60 * HOUR],
+            "highest_app_store_version": "1.0.30",
+            "last_app_store_publication": NOW,
+        }
+        self.assertEqual(
+            [a["kind"] for a in plan_tick(s, state, {"ios": "app-store"})["actions"]],
+            ["app-store"],
+        )
 
-    def test_ios_publication_wait_starts_after_the_apple_read(self):
+    def test_ios_snapshot_records_when_the_apple_read_completes(self):
         runtime = Runtime.__new__(Runtime)
         runtime.env = {}
         runtime.list_builds = list
-        runtime.candidate = lambda: "a" * 40
-        runtime.source_ci = lambda sha: True
+        runtime.candidate = lambda: None
         clock = [NOW]
-        ios = self.public_snapshot()["ios"]
-        ios["builds"][0]["public"] = True
-        ios["versions"] = [{
-            "id": "old", "version": "1.0.30", "state": "READY_FOR_SALE",
-        }]
 
         def apple_read():
             clock[0] += HOUR + 0.25
-            return ios
+            return self.public_snapshot()["ios"]
 
         runtime.apple_snapshot = apple_read
+        runtime.source_ci = lambda sha: True
         with patch("release_train.runner.time.time", side_effect=lambda: clock[0]), patch(
             "release_train.runner.apple_token", return_value="test-token"
         ):
@@ -477,13 +491,40 @@ class ReleaseCadenceTest(unittest.TestCase):
 
         self.assertEqual(s["now"], NOW)
         self.assertEqual(s["ios"].get("observed_at"), NOW + HOUR + 1)
-        state = observe(s, {})
-        self.assertEqual(state["last_app_store_publication"], NOW + HOUR + 1)
-        s["changes"] = {"ios": False, "android": False}
-        for elapsed in [2 * DAY, HOUR + 2 * DAY, HOUR + 2 * DAY + 1]:
-            with self.subTest(elapsed=elapsed):
-                s["now"] = NOW + elapsed
-                self.assertEqual(
-                    [a["kind"] for a in plan_tick(s, state, {"ios": "app-store"})["actions"]],
-                    ["app-store"] if elapsed == HOUR + 2 * DAY + 1 else [],
-                )
+
+    def test_confirmed_submission_uses_the_write_time_after_a_slow_tick(self):
+        s = self.public_snapshot()
+        s["ios"]["builds"][0]["public"] = True
+        clock = [NOW + HOUR]
+
+        class Apple:
+            def submit_store(self, build, versions, acknowledged, *, notes, reviews):
+                clock[0] += 60.25
+                return "first-version"
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle()
+        runtime.apple = Apple()
+        runtime.claim = lambda *args: None
+        runtime.deploy = lambda *args: None
+        levels = {"ios": "app-store"}
+        state = {}
+        store = Store()
+        plan = plan_tick(s, state, levels)
+        with patch("release_train.runner.time.time", side_effect=lambda: clock[0]):
+            execute_plan(plan, state, s, store, runtime)
+
+        state = store.saves[-1]
+        s["ios"]["versions"] = [
+            {"id": "first-version", "version": "1.0.31", "state": "READY_FOR_SALE"}
+        ]
+        s["ios"]["builds"] = [
+            build() | {"id": "11", "version": "1.0.32", "number": 11}
+        ]
+        s["now"] = NOW + HOUR + 60 + 48 * HOUR
+        self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+        s["now"] += 1
+        self.assertEqual(
+            [a["kind"] for a in plan_tick(s, state, levels)["actions"]],
+            ["app-store"],
+        )

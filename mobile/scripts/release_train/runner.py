@@ -274,7 +274,7 @@ def execute_plan(plan, state, snapshot, store, provider):
             "action": {name: value for name, value in action.items() if name != "release_notes"},
             "status": "started",
             "started_at": (
-                int(time.time()) if public_beta_release
+                int(time.time()) if public_beta_release or action["kind"] == "app-store"
                 else snapshot.get("now", int(time.time()))
             ),
         }
@@ -1328,9 +1328,9 @@ class Runtime:
                 reviews=snapshot["ios"].get("review_submissions", []),
                 notes=notes,
             )
+            state.setdefault("app_store_submissions", []).append(math.ceil(time.time()))
             consume_version_acknowledgements(state, {identifier})
             self.claim(build, "app-store")
-            state.setdefault("app_store_submissions", []).append(snapshot["now"])
             self.deploy("ios-app-store", build, "in_progress", state)
             return {"store_id": identifier}
         if kind == "play-production":

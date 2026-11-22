@@ -195,12 +195,14 @@ uses the same budget whether it is fresh or recovered, with at most one build
 starting public distribution per tick. Completing missing groups for an
 already-public build preserves its original cadence clock.
 
-Production submissions/promotions on each store require at least 48 hours since
-the preceding submission/promotion or a newly observed available production
-release. Accepted operations retain this wait across recovery and acknowledgement.
-The first observation of an existing App Store release conservatively starts a
-fresh 48-hour wait when the Apple read completes. Observing the same or an older
-version leaves that timestamp in place.
+App Store submissions must be at least 48 hours apart. The coordinator checks
+App Store Connect for the prior version's state and leaves pending review or
+publication alone. If the prior version becomes available after 48 hours, the
+next eligible build can submit on that tick. If it becomes available earlier,
+the next submission waits until the interval from the prior submission ends.
+Google Play promotions require at least 48 hours since the preceding promotion
+or newly observed production availability. Accepted operations preserve the
+cadence across recovery and acknowledgement on both stores.
 App Store submission has no additional TestFlight soak requirement and leaves
 an existing review queued unless a real bug requires withdrawal. The coordinator
 keeps polling hourly and crash monitoring/fix work continues independently.

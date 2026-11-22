@@ -150,22 +150,6 @@ def observe(snapshot, previous):
             in STORE_WAITING | {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
         },
     )
-    ios = snapshot.get("ios", {})
-    published = [
-        v["version"]
-        for v in ios.get("versions", [])
-        if v["state"] in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
-    ]
-    if published and not ios.get("error"):
-        highest = max(published, key=parse_version)
-        if parse_version(highest) > parse_version(
-            state.get("highest_app_store_version", "0.0.0")
-        ):
-            state["highest_app_store_version"] = highest
-            state["last_app_store_publication"] = max(
-                ios.get("observed_at", snapshot["now"]),
-                state.get("last_app_store_publication", 0),
-            )
     android = snapshot.get("android", {})
     if not android.get("lifecycle_complete"):
         return state
@@ -466,10 +450,7 @@ def plan_tick(snapshot, state, levels):
                     v["submitted_at"] for v in versions if v.get("submitted_at")
                 ]
                 submitted += state.get("app_store_submissions", [])
-                submitted += [
-                    state.get("last_app_store_publication", 0),
-                    last_operation_started(state, "app-store"),
-                ]
+                submitted.append(last_operation_started(state, "app-store"))
                 highest = max(
                     (
                         parse_version(v["version"])
@@ -496,7 +477,7 @@ def plan_tick(snapshot, state, levels):
                 store_budget = now - max(submitted, default=0) >= PRODUCTION_INTERVAL
                 if not store_budget:
                     reasons.append(
-                        "ios app-store: wait 48 hours after the last submission or observed publication"
+                        "ios app-store: wait 48 hours after the last submission"
                     )
                 if not blocked and eligible and store_budget:
                     action(
