@@ -8741,6 +8741,75 @@ void main() {
         },
       );
 
+      void stubPublishOutcome(PublishOutcome outcome) {
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      /// The one warning naming [relay].
+      String warningFor(String relay) => LogCaptureService()
+          .getRecentLogs()
+          .where(
+            (e) => e.level == LogLevel.warning && e.message.contains(relay),
+          )
+          .map((e) => e.message)
+          .single;
+
+      // "No response" means the relay got the event and stayed silent, so it
+      // may hold it; a relay the publish never reached cannot (#8380).
+      test(
+        'logs an advertised relay the publish never reached as unreachable',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          stubPublishOutcome(
+            const PublishOutcome(
+              eventId: 'eid',
+              acceptedBy: [],
+              rejectedBy: {},
+              noResponseFrom: [],
+              unreachableTargets: ['wss://relay.divine.video'],
+            ),
+          );
+
+          await createRepository(
+            syncState: _FakeDmSyncState(),
+          ).ensureDmRelayListPublished();
+
+          expect(
+            warningFor('wss://relay.divine.video'),
+            contains('(unreachable)'),
+          );
+        },
+      );
+
+      test(
+        'logs an advertised relay that stayed silent as giving no response',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          stubPublishOutcome(
+            const PublishOutcome(
+              eventId: 'eid',
+              acceptedBy: [],
+              rejectedBy: {},
+              noResponseFrom: ['wss://relay.divine.video'],
+            ),
+          );
+
+          await createRepository(
+            syncState: _FakeDmSyncState(),
+          ).ensureDmRelayListPublished();
+
+          expect(
+            warningFor('wss://relay.divine.video'),
+            contains('(no response)'),
+          );
+        },
+      );
+
       test(
         'publishes a kind-10050 advertising the injected stable relay when '
         'absent, and leaves recording it to a later read (#8433)',
@@ -8886,6 +8955,29 @@ void main() {
             ).ensureDmRelayListPublished();
 
             expectCategoryOnlyWarningFor(discovery);
+          },
+        );
+
+        test(
+          'logs a discovery relay the publish never reached as unreachable',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubPublishOutcome(
+              const PublishOutcome(
+                eventId: 'eid',
+                acceptedBy: [divine],
+                rejectedBy: {},
+                noResponseFrom: [],
+                unreachableTargets: [discovery],
+              ),
+            );
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+              dmInboxDiscoveryRelays: const [discovery],
+            ).ensureDmRelayListPublished();
+
+            expect(warningFor(discovery), contains('(unreachable)'));
           },
         );
       });
@@ -9482,6 +9574,37 @@ void main() {
             ).ensureDmRelayListPublished();
 
             expectCategoryOnlyWarningFor('wss://relay.divine.video');
+          },
+        );
+
+        test(
+          'logs a re-send that never reached the relay as unreachable',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubOwnInboxByLeg(
+              pool: answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+              advertised: answeredList(const <Event>[]),
+            );
+            stubPublishOutcome(
+              const PublishOutcome(
+                eventId: 'eid',
+                acceptedBy: [],
+                rejectedBy: {},
+                noResponseFrom: [],
+                unreachableTargets: ['wss://relay.divine.video'],
+              ),
+            );
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+            ).ensureDmRelayListPublished();
+
+            expect(
+              warningFor('wss://relay.divine.video'),
+              contains('(unreachable)'),
+            );
           },
         );
 

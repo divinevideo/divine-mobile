@@ -147,6 +147,16 @@ String _dmContentCorrelation({
   ).convert(utf8.encode(scopedContent)).toString().substring(0, 16);
 }
 
+/// Why [relay] did not accept the publish behind [outcome], for a log line.
+///
+/// "No response" means the relay got the event and stayed silent, so it may
+/// hold it; a relay the publish never reached cannot (#8380).
+String _relayVerdictForLog(PublishOutcome outcome, String relay) =>
+    outcome.rejectionCategories[relay] ??
+    (outcome.unreachableTargets.contains(relay)
+        ? 'unreachable'
+        : 'no response');
+
 /// Tuning for the one-time full-history drain
 /// (`DmRepository.backfillHistoryIfNeeded`).
 ///
@@ -7041,7 +7051,7 @@ class DmRepository {
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
-          '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+          '(${_relayVerdictForLog(outcome, relayUrl)}) — '
           'will retry next login',
           category: LogCategory.system,
         );
@@ -7053,7 +7063,7 @@ class DmRepository {
         // changing its kind policy is visible in a bug report, never retried.
         Log.warning(
           'kind-10050 discovery publish to $url did not land '
-          '(${outcome.rejectionCategories[url] ?? 'no response'}) — '
+          '(${_relayVerdictForLog(outcome, url)}) — '
           'not retried',
           category: LogCategory.system,
         );
@@ -7089,7 +7099,7 @@ class DmRepository {
     if (!outcome.acceptedBy.contains(relayUrl)) {
       Log.warning(
         'kind-10050 re-send to $relayUrl did not land '
-        '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+        '(${_relayVerdictForLog(outcome, relayUrl)}) — '
         'will retry next login',
         category: LogCategory.system,
       );
