@@ -29,8 +29,9 @@ flag is removed; analytics consent remains in Privacy & safety.
 ### 1. Conditional UI Rendering
 
 ```dart
-import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
+import 'package:flutter/widgets.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
 import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 FeatureFlagWidget(
@@ -43,9 +44,10 @@ FeatureFlagWidget(
 ### 2. Programmatic Flag Checking
 
 ```dart
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 class MyWidget extends ConsumerWidget {
@@ -84,7 +86,7 @@ bool getDefault(FeatureFlag flag) {
     case FeatureFlag.debugTools:
       return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
     case FeatureFlag.blueskyPublishing:
-      return false; // Disabled by default
+      return const bool.fromEnvironment('FF_BLUESKY_PUBLISHING');
     // ... other flags
   }
 }
@@ -113,31 +115,7 @@ The service gracefully handles storage errors:
 
 ## Testing
 
-Comprehensive test coverage with 47 tests across:
-- Unit tests for models, services, and providers
-- Widget tests for UI components
-- Integration tests for end-to-end workflows
-- Error scenario testing
-
-### Test Example
-
-```dart
-testWidgets('should show enhanced feature when flag enabled', (tester) async {
-  final mockPrefs = MockSharedPreferences();
-  when(mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
-  
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(mockPrefs),
-      ],
-      child: MyApp(),
-    ),
-  );
-  
-  expect(find.text('Enhanced Camera'), findsOneWidget);
-});
-```
+The widget tests use the Bluesky flag to exercise both enabled and disabled states. The service tests cover reading and writing saved overrides. [Widget tests](../../../test/widgets/feature_flag_widget_test.dart) · [Service tests](../../../test/services/feature_flag_service_test.dart)
 
 ## Best Practices
 
