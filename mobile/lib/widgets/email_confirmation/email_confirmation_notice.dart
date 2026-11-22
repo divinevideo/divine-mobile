@@ -21,9 +21,13 @@ class EmailConfirmationNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Absent only in trees built without the app composition root.
+    final cubit = context.read<EmailConfirmationCubit?>();
+    if (cubit == null) return child;
     return MultiBlocListener(
       listeners: [
         BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
+          bloc: cubit,
           listenWhen: (previous, current) =>
               current.isUnconfirmed &&
               (!previous.isUnconfirmed || previous.account != current.account),
@@ -37,7 +41,7 @@ class EmailConfirmationNotice extends StatelessWidget {
                 duration: const Duration(seconds: 8),
                 actionLabel: l10n.emailConfirmationResendButton,
                 onActionPressed: () => runDetached(
-                  context.read<EmailConfirmationCubit>().resend(),
+                  cubit.resend(),
                   'resend confirmation email',
                   logName: 'EmailConfirmationNotice',
                   category: LogCategory.auth,
@@ -47,6 +51,7 @@ class EmailConfirmationNotice extends StatelessWidget {
           },
         ),
         BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
+          bloc: cubit,
           listenWhen: (previous, current) =>
               previous.resendStatus != current.resendStatus &&
               (current.resendStatus == EmailConfirmationResendStatus.sent ||
