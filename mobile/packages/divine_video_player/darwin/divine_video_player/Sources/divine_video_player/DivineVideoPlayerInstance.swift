@@ -1908,7 +1908,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             realignClipAudioLoop()
         }
         clipAudioSyncTicks = 0
-        clipAudioSyncTimer?.invalidate()
+        startClipAudioSyncIfNeeded()
+    }
+
+    private func startClipAudioSyncIfNeeded() {
+        guard !isBackgrounded, clipAudioLoop != nil, clipAudioSyncTimer == nil else { return }
         clipAudioSyncTimer = Timer.scheduledTimer(
             withTimeInterval: Self.clipAudioSyncInterval,
             repeats: true
@@ -2785,14 +2789,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     func onAppForegrounded() {
         isBackgrounded = false
         textureOutput?.resumeFrameDelivery()
-        if clipAudioLoop != nil && clipAudioSyncTimer == nil {
-            clipAudioSyncTimer = Timer.scheduledTimer(
-                withTimeInterval: Self.clipAudioSyncInterval,
-                repeats: true
-            ) { [weak self] _ in
-                DispatchQueue.main.async { self?.checkClipAudioLoop() }
-            }
-        }
+        startClipAudioSyncIfNeeded()
         if wasPlayingBeforePause || resumesSeekOnForeground {
             player?.play()
             player?.rate = Float(speed)
