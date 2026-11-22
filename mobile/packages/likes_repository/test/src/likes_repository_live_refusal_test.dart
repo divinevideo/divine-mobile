@@ -31,6 +31,15 @@ void main() {
       when(() => client.hasKeys).thenReturn(true);
       when(() => client.unsubscribe(any())).thenAnswer((_) async {});
       when(
+        () => client.readEvents(any(), requireAllRelaysSettled: true),
+      ).thenAnswer(
+        (_) async => const QueryResult(
+          events: [],
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
+        ),
+      );
+      when(
         () => client.subscribe(
           any(),
           subscriptionId: any(named: 'subscriptionId'),
@@ -52,8 +61,7 @@ void main() {
               'rate-limited: slow down',
             );
             final repository = LikesRepository(nostrClient: client);
-            // The startup sync behind the subscription is not stubbed here.
-            unawaited(repository.initialize().catchError((Object _) {}));
+            unawaited(repository.initialize());
             async.flushMicrotasks();
             expect(subscribes, equals(1));
 
@@ -72,8 +80,7 @@ void main() {
           fakeAsync((async) {
             firstError = StateError('socket gone');
             final repository = LikesRepository(nostrClient: client);
-            // The startup sync behind the subscription is not stubbed here.
-            unawaited(repository.initialize().catchError((Object _) {}));
+            unawaited(repository.initialize());
             async
               ..flushMicrotasks()
               ..elapse(const Duration(minutes: 10));
