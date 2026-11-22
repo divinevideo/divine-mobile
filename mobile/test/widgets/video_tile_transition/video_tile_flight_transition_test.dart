@@ -36,11 +36,19 @@ class _Page extends StatelessWidget {
     this.bottomBar = false,
     this.movedOn = false,
     this.safetyOverlay = false,
+    this.overlayActive = false,
+    this.neighbourWarning = false,
     this.warning,
     this.videoId = 'video1',
   });
 
   final String videoId;
+
+  /// Whether the page's safety overlay belongs to the feed's current page.
+  final bool overlayActive;
+
+  /// Whether a warned neighbour page, not the current one, is also built.
+  final bool neighbourWarning;
 
   /// Whether the page has moved on from the tile's video to the next, which
   /// covers it, keeping the tile's built one page above, as a feed does.
@@ -120,17 +128,40 @@ class _Page extends StatelessWidget {
       );
     }
     final warning = this.warning;
-    final Widget video = warning == null
-        ? _Video(videoId: videoId, target: target, warned: safetyOverlay)
+    Widget video = warning == null
+        ? _Video(
+            videoId: videoId,
+            target: target,
+            warned: safetyOverlay,
+            overlayActive: overlayActive,
+          )
         // Behind a repaint boundary of its own, as each video in a feed is,
         // so the warning arriving repaints nothing above the page.
         : RepaintBoundary(
             child: ValueListenableBuilder<bool>(
               valueListenable: warning,
-              builder: (context, warned, _) =>
-                  _Video(videoId: videoId, target: target, warned: warned),
+              builder: (context, warned, _) => _Video(
+                videoId: videoId,
+                target: target,
+                warned: warned,
+                overlayActive: overlayActive,
+              ),
             ),
           );
+    if (neighbourWarning) {
+      video = Stack(
+        fit: StackFit.expand,
+        children: [
+          video,
+          const Offstage(
+            child: VideoTileTransitionTarget.safetyOverlay(
+              videoId: 'neighbour',
+              child: SizedBox.expand(),
+            ),
+          ),
+        ],
+      );
+    }
     if (!bottomBar) return video;
     return Column(
       children: [
@@ -142,17 +173,19 @@ class _Page extends StatelessWidget {
 }
 
 /// The page's black backdrop with its video [target], under a black safety
-/// overlay when [warned].
+/// overlay when [warned], marked as the current page's when [overlayActive].
 class _Video extends StatelessWidget {
   const _Video({
     required this.videoId,
     required this.target,
     required this.warned,
+    required this.overlayActive,
   });
 
   final String videoId;
   final Widget? target;
   final bool warned;
+  final bool overlayActive;
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +199,7 @@ class _Video extends StatelessWidget {
                 ?target,
                 VideoTileTransitionTarget.safetyOverlay(
                   videoId: videoId,
-                  isActive: true,
+                  isActive: overlayActive,
                   child: const ColoredBox(
                     key: ValueKey('warning'),
                     color: Color(0xFF000000),
@@ -195,6 +228,8 @@ class _Harness extends StatelessWidget {
     this.pageBottomBar = false,
     this.pageMovedOn = false,
     this.safetyOverlay = false,
+    this.pageOverlayActive = false,
+    this.pageNeighbourWarning = false,
     this.warning,
     this.disableAnimations = false,
     this.tileAlignment = Alignment.center,
@@ -219,6 +254,8 @@ class _Harness extends StatelessWidget {
   final bool pageBottomBar;
   final bool pageMovedOn;
   final bool safetyOverlay;
+  final bool pageOverlayActive;
+  final bool pageNeighbourWarning;
   final ValueListenable<bool>? warning;
   final bool disableAnimations;
   final Alignment tileAlignment;
@@ -322,6 +359,8 @@ class _Harness extends StatelessWidget {
                     bottomBar: pageBottomBar,
                     movedOn: pageMovedOn,
                     safetyOverlay: safetyOverlay,
+                    overlayActive: pageOverlayActive,
+                    neighbourWarning: pageNeighbourWarning,
                     warning: warning,
                   ),
                 ),
@@ -514,12 +553,43 @@ void main() {
               pageDrawsVideo: true,
               pageVideoId: 'replacement-video',
               safetyOverlay: true,
+              pageOverlayActive: true,
             ),
           );
           await tester.pump(const Duration(milliseconds: 140));
 
           expect(find.byKey(const ValueKey('warning')), findsOneWidget);
           expect(_picture, findsNothing);
+          await tester.pumpAndSettle();
+        },
+      );
+
+      testWidgets(
+        'flies past a warned neighbour that is not the current page',
+        (
+          tester,
+        ) async {
+          final origin = await pumpTile(tester);
+          controller.forward();
+
+          await tester.pumpWidget(
+            _Harness(
+              image: image,
+              animation: controller,
+              origin: origin,
+              pageNeighbourWarning: true,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 140));
+
+          final targets = tester
+              .widget<VideoTileTransitionScope>(
+                find.byType(VideoTileTransitionScope),
+              )
+              .targets;
+          expect(targets.blocksFlightFor('neighbour'), isTrue);
+          expect(targets.hasActiveSafetyOverlay, isFalse);
+          expect(_picture, findsOneWidget);
           await tester.pumpAndSettle();
         },
       );
