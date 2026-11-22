@@ -152,6 +152,14 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         matched = self.verify(xcode_build="27B52")
         self.assertEqual(0, matched.returncode, matched.stderr)
 
+    def test_release_rejects_a_malformed_xcode_build(self) -> None:
+        for value in ("", "Xcode 27.2", "Build version 27B52", "latest"):
+            with self.subTest(value=value):
+                result = self.emit(xcode_build=value)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("invalid release Xcode build", result.stderr)
+                self.assertFalse(self.record.exists())
+
     def test_legacy_ios_patch_accepts_selected_xcode(self) -> None:
         self.assertEqual(0, self.emit().returncode)
         legacy = self.verify(xcode_build="17F42")
