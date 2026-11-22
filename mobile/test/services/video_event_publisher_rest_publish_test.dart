@@ -18,6 +18,7 @@ import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -583,5 +584,79 @@ void main() {
         expect(presenceChecks, 3);
       },
     );
+
+    group('an older revision on the relay', () {
+      // Same author, kind and d tag as `createSignedEvent`, signed earlier
+      // with other content.
+      Event olderRevision() => Event(
+        testPubkey,
+        NIP71VideoKinds.getPreferredAddressableKind(),
+        const [
+          ['d', 'test-video-id'],
+          ['title', 'Plants'],
+        ],
+        'An earlier revision of the plant video',
+        createdAt: 1699990000,
+      );
+
+      test('does not mark an unaccepted upload published', () async {
+        final signedEvent = createSignedEvent();
+        final older = olderRevision();
+        expect(older.id, isNot(signedEvent.id));
+        stubSigning(signedEvent);
+        stubRest(const EventApiTransientFailure('http_503'));
+        stubWebSocket(
+          PublishOutcome(
+            eventId: signedEvent.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const ['wss://trusted.example'],
+          ),
+        );
+        when(
+          () => mockNostrClient.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) async => [older]);
+
+        final result = await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
+
+        expect(result, isFalse);
+        verifyNever(
+          () => mockUploadManager.updateUploadStatus(
+            any(),
+            UploadStatus.published,
+            nostrEventId: any(named: 'nostrEventId'),
+          ),
+        );
+        verifyNever(() => mockVideoEventService.addVideoEvent(any()));
+      });
+
+      test('a scheduled post the relay already published under an earlier '
+          'id is not broadcast again', () async {
+        final scheduled = createSignedEvent();
+        when(
+          () => mockNostrClient.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) async => [olderRevision()]);
+
+        final outcome = await publisher.broadcastScheduledEvent(scheduled);
+
+        expect(outcome, EventPublishOutcome.published);
+        verifyNever(() => mockEventApiClient.publishEvent(any()));
+        verifyNever(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+    });
   });
 }

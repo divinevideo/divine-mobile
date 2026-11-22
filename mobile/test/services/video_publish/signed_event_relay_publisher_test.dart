@@ -539,6 +539,71 @@ void main() {
           expect(outcome, EventPublishOutcome.published);
         });
       });
+
+      group('relay presence', () {
+        // The same address as `_signedEvent`, signed earlier with other
+        // content: what a relay holds after an earlier attempt for the same
+        // upload was stored without the client hearing about it.
+        Event olderRevision() => Event(
+          _pubkey,
+          NIP71VideoKinds.getPreferredAddressableKind(),
+          const [
+            ['d', 'test-video-id'],
+          ],
+          'An earlier revision of the plant video',
+          createdAt: 1699990000,
+        );
+
+        void stubRelayHolds(List<Event> events) {
+          when(
+            () => nostrClient.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).thenAnswer((_) async => events);
+        }
+
+        test('an older revision at the same address is not proof that this '
+            'event was published', () {
+          fakeAsync((async) {
+            final event = _signedEvent();
+            final older = olderRevision();
+            expect(older.id, isNot(event.id));
+            var restAttempts = 0;
+            when(() => eventApiClient.publishEvent(any())).thenAnswer((
+              _,
+            ) async {
+              restAttempts++;
+              return const EventApiTransientFailure('timeout');
+            });
+            stubWebSocket((event) => _rejected(event, 'error: try later'));
+            stubRelayHolds([older]);
+            EventPublishOutcome? outcome;
+
+            unawaited(
+              publisher.publish(event).then((value) => outcome = value),
+            );
+            async.elapse(const Duration(minutes: 1));
+
+            expect(restAttempts, 3, reason: 'no relay accepted this event');
+            expect(outcome, EventPublishOutcome.transientFailure);
+          });
+        });
+
+        test('an older revision at the same address does not skip the send '
+            'on a retry', () async {
+          final event = _signedEvent();
+          stubRelayHolds([olderRevision()]);
+          when(
+            () => eventApiClient.publishEvent(any()),
+          ).thenAnswer((_) async => EventApiAccepted(event.id));
+
+          final outcome = await publisher.publish(event, isRetry: true);
+
+          expect(outcome, EventPublishOutcome.published);
+          verify(() => eventApiClient.publishEvent(event)).called(1);
+        });
+      });
     });
   });
 

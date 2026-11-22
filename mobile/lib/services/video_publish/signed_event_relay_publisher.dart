@@ -160,10 +160,12 @@ class SignedEventRelayPublisher {
   /// an OK-aware WebSocket fallback.
   ///
   /// Behaviour when an [EventApiClient] is configured:
-  /// 1. If [isRetry], first query configured relays by event id and by
-  ///    `author+kind+d-tag`; if the event is already on a relay, report it
-  ///    published and stop (avoids re-publishing a previously accepted
-  ///    event whose `OK` was lost).
+  /// 1. If [isRetry], first query configured relays for this event's id; if
+  ///    a relay already serves it, report it published and stop (avoids
+  ///    re-publishing a previously accepted event whose `OK` was lost). Another
+  ///    event at the same address does not count: relays keep only the latest
+  ///    revision of an address (NIP-01), so it may be the older revision this
+  ///    event replaces (#9306).
   /// 2. Up to 3 attempts of `POST /api/events`. A 200 acceptance is
   ///    published; any other REST result except an account restriction
   ///    falls back to a WebSocket publish that waits for relay `OK` frames.
@@ -560,31 +562,16 @@ class SignedEventRelayPublisher {
     }
   }
 
-  /// Checks whether [event] is already retrievable from the configured relays,
-  /// queried both by event id and by `author+kind+d-tag`.
+  /// Checks whether [event] itself is already retrievable from the configured
+  /// relays, by its id.
   Future<_RelayPresence> _relayPresence(Event event) async {
     try {
-      final dTag = _dTagOf(event);
-      final filters = <Filter>[
+      final found = await _nostrClient.queryEvents([
         Filter(ids: [event.id], limit: 1),
-        if (dTag.isNotEmpty)
-          Filter(
-            authors: [event.pubkey],
-            kinds: [event.kind],
-            d: [dTag],
-            limit: 1,
-          ),
-      ];
-      final found = await _nostrClient.queryEvents(filters, useCache: false);
-      for (final candidate in found) {
-        if (candidate.id == event.id) return _RelayPresence.found;
-        if (candidate.pubkey == event.pubkey &&
-            candidate.kind == event.kind &&
-            _dTagOf(candidate) == dTag) {
-          return _RelayPresence.found;
-        }
-      }
-      return _RelayPresence.notFound;
+      ], useCache: false);
+      return found.any((candidate) => candidate.id == event.id)
+          ? _RelayPresence.found
+          : _RelayPresence.notFound;
     } catch (e) {
       Log.warning(
         'Recovery query failed for ${event.id}: $e',
@@ -593,12 +580,5 @@ class SignedEventRelayPublisher {
       );
       return _RelayPresence.unknown;
     }
-  }
-
-  static String _dTagOf(Event event) {
-    for (final tag in event.tags) {
-      if (tag.length >= 2 && tag[0] == 'd') return tag[1];
-    }
-    return '';
   }
 }
