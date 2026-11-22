@@ -264,6 +264,32 @@ class OriginalDownloadsTest(unittest.TestCase):
         self.assertEqual(self.github.record["assets"][0], original)
         self.assertEqual(len(self.github.record["assets"]), 2)
 
+    def test_release_appearing_during_download_is_not_overwritten(self):
+        publisher, env = self.approved_fixture()
+        def concurrent(url, path):
+            self.download(url, path)
+            self.github.commit = SOURCE
+            self.github.record = {"draft": False, "prerelease": False,
+                "body": "Independently published notes", "assets": [], "target_commitish": SOURCE}
+        with self.assertRaises((ProviderError, ValueError)):
+            publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                       download=concurrent, now=2000000010)
+        self.assertEqual(self.github.calls, [])
+        self.assertEqual(self.github.record["body"], "Independently published notes")
+
+    def test_release_promoted_during_upload_keeps_its_independent_notes(self):
+        publisher, env = self.approved_fixture()
+        original = self.github.upload
+        def concurrent(tag, paths):
+            original(tag, paths)
+            self.github.record.update(draft=False, body="Independently published notes")
+        self.github.upload = concurrent
+        with self.assertRaises((ProviderError, ValueError)):
+            publisher.publish_approved(env, self.ledger, self.cm, self.github,
+                                       download=self.download, now=2000000010)
+        self.assertEqual(self.github.record["body"], "Independently published notes")
+        self.assertNotIn("edit", [c[0] for c in self.github.calls])
+
     def test_signed_artifact_urls_require_the_provider_origin(self):
         publisher, env = self.approved_fixture()
         for url in ("http://api.codemagic.io/file", "https://other.invalid/file",

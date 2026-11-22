@@ -141,7 +141,8 @@ def publish_approved(env, ledger, cm, github, *, download=download_artifact, now
                 files.append(path)
             notes = root / "notes.md"
             notes.write_text(body)
-            publish(github, build["version"], build["sha"], "PRODUCTION", "PRODUCTION", notes, files)
+            publish(github, build["version"], build["sha"], "PRODUCTION", "PRODUCTION", notes, files,
+                    preserve_existing=True)
     verify_release(github, build, record, body)
     record_stable_claim(ledger, build["version"], build["sha"])
     proof = build | {"manifest_sha256": manifest_digest(record), "publication_build_id": env["CM_BUILD_ID"]}

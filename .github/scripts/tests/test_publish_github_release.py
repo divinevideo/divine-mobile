@@ -37,7 +37,9 @@ class FakeGitHub:
         self.calls.append(('upload', tag))
         self.record['assets'] += [dict(name=p.name, digest=release.digest(p)) for p in paths]
 
-    def edit(self, tag, body, beta):
+    def edit(self, tag, body, beta, *, validate=None):
+        if validate is not None and not validate(self.get_release(tag)):
+            return
         self.calls.append(('edit', tag, beta))
         self.record.update(draft=False, prerelease=beta, body=body)
         if self.commit is None:
@@ -356,6 +358,22 @@ class CommandInputTest(unittest.TestCase):
 
 
 class GitHubAdapterTest(unittest.TestCase):
+    def test_edit_validates_its_fresh_record_before_any_patch(self):
+        gh = release.GitHub('owner/repo')
+        fresh = {'id': 42, 'body': 'Independent notes'}
+        seen = []
+        def reject(record):
+            seen.append(record)
+            raise ValueError('Changed notes')
+        with patch.object(gh, 'get_release', return_value=fresh), patch.object(
+            release.subprocess, 'run',
+        ) as execute:
+            with self.assertRaisesRegex(ValueError, 'Changed notes'):
+                gh.edit('1.2.3', 'Finished notes', False, validate=reject)
+            self.assertEqual(seen, [fresh])
+            gh.edit('1.2.3', 'Finished notes', False, validate=lambda record: False)
+            execute.assert_not_called()
+
     def test_edit_surfaces_github_failure_reason(self):
         gh = release.GitHub('owner/repo')
         with patch.object(gh, 'get_release', return_value={'id': 42}), patch.object(
