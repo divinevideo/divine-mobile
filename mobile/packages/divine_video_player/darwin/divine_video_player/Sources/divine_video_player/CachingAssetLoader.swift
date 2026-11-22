@@ -34,6 +34,7 @@ private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDel
     private lazy var defaultSession: URLSession = {
         let queue = OperationQueue()
         queue.name = "co.divine.video_player.caching_asset_loader.default_session"
+        queue.maxConcurrentOperationCount = 1
         return URLSession(
             configuration: .default,
             delegate: self,
@@ -44,6 +45,7 @@ private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDel
     private lazy var ephemeralSession: URLSession = {
         let queue = OperationQueue()
         queue.name = "co.divine.video_player.caching_asset_loader.ephemeral_session"
+        queue.maxConcurrentOperationCount = 1
         let config = URLSessionConfiguration.ephemeral
         config.urlCache = nil
         return URLSession(
