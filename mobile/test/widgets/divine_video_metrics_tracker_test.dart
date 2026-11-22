@@ -294,7 +294,7 @@ void main() {
     });
 
     testWidgets(
-      'increments completed loops without polling fetchLoopCount on seeded metadata or 15s watch ticks',
+      'counts completed loops and refreshes on stale reactivation without watch-tick polling',
       (tester) async {
         final controller = _stubController(
           isPlaying: true,

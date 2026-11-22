@@ -109,7 +109,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
     try {
       final count = await _videosRepository.fetchLoopCount(_video);
       if (isClosed || generation != state.generation) return;
-      _lastSyncedAt = _clock();
+      if (count != null) _lastSyncedAt = _clock();
       emit(
         state.copyWith(
           count: count == null ? null : math.max(state.count ?? 0, count),
@@ -118,8 +118,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
       );
     } on Object catch (error, stackTrace) {
       if (isClosed || generation != state.generation) return;
-      // Playback and optimistic counts remain usable offline. The next tick
-      // retries without an overlapping request or a reset to zero.
+      // Keep the optimistic count while offline and retry on reactivation.
       emit(state.copyWith(isRefreshing: false));
       addError(error, stackTrace);
     }

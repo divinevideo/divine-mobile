@@ -173,6 +173,30 @@ void main() {
       },
     );
 
+    test('retries a stale seed when the server returns no count', () async {
+      var now = DateTime.utc(2026, 11, 22, 12);
+      final cubit = VideoLoopsCubit(
+        video: video,
+        videosRepository: repository,
+        clock: () => now,
+      );
+      addTearDown(cubit.close);
+
+      now = now.add(const Duration(minutes: 5));
+      when(() => repository.fetchLoopCount(video))
+          .thenAnswer((_) async => null);
+      cubit.setActive(true);
+      await pumpEventQueue();
+      verify(() => repository.fetchLoopCount(video)).called(1);
+      expect(cubit.state.count, 10);
+
+      cubit.setActive(false);
+      when(() => repository.fetchLoopCount(video)).thenAnswer((_) async => 25);
+      cubit.setActive(true);
+      await pumpEventQueue();
+      expect(cubit.state.count, 25);
+    });
+
     test('inactive playback neither refreshes nor adds loops', () async {
       final cubit = VideoLoopsCubit(video: video, videosRepository: repository);
       await cubit.refresh();
