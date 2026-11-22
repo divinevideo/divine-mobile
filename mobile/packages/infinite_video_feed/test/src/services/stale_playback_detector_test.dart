@@ -310,5 +310,62 @@ void main() {
         });
       });
     });
+
+    group('heartbeat timer lifecycle', () {
+      test('arms no timer and fires no recovery for an idle controller', () {
+        fakeAsync((async) {
+          final seeks = <(int, int)>[];
+          final controller = FakeController();
+          final det = _makeDetector(seekEvents: seeks)..start(0, controller);
+
+          expect(async.periodicTimerCount, equals(0));
+          _tick(
+            async,
+            StalePlaybackDetector.graceAfterPlay +
+                StalePlaybackDetector.heartbeatThreshold +
+                2,
+          );
+
+          expect(seeks, isEmpty);
+          det.disposeAll();
+        });
+      });
+
+      test(
+        'fires recovery when frozen playing updates arrive faster than '
+        'the heartbeat',
+        () {
+          fakeAsync((async) {
+            final seeks = <(int, int)>[];
+            final controller = FakeController();
+            final det = _makeDetector(seekEvents: seeks)..start(0, controller);
+            // Android reports state every 200 ms, faster than the heartbeat,
+            // so each update must not restart the periodic timer.
+            const updateEvery = Duration(milliseconds: 200);
+            final ticksNeeded =
+                StalePlaybackDetector.graceAfterPlay +
+                StalePlaybackDetector.heartbeatThreshold +
+                1;
+            final updates =
+                (StalePlaybackDetector.interval * ticksNeeded).inMicroseconds ~/
+                    updateEvery.inMicroseconds +
+                1;
+
+            for (var i = 0; i < updates; i++) {
+              controller.pushState(
+                const DivineVideoPlayerState(
+                  status: PlaybackStatus.playing,
+                  position: Duration(milliseconds: 500),
+                ),
+              );
+              async.elapse(updateEvery);
+            }
+
+            expect(seeks, equals([(0, 500)]));
+            det.disposeAll();
+          });
+        },
+      );
+    });
   });
 }
