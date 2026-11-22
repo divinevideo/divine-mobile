@@ -409,10 +409,10 @@ def plan_tick(snapshot, state, levels):
                         and version_ack_key(version) not in ack
                     ):
                         reasons.append(
-                            "ios app-store: rejection hold for "
-                            + version["version"]
-                            + "; resolve the issue then acknowledge ios-version:"
-                            + version["id"]
+                            f"ios app-store: rejection hold for {version['version']}. "
+                            "Verify the fix and reply to App Review before acknowledging "
+                            f"ios-version:{version['id']}. "
+                            "[App Review reply template](https://github.com/divinevideo/divine-mobile/blob/main/mobile/docs/APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection)"
                         )
                 reviews = data.get("review_submissions", [])
                 blocked = blocked or any(

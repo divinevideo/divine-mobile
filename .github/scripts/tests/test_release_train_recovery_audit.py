@@ -316,7 +316,10 @@ class ActionableRejectionSummaryTest(unittest.TestCase):
     def test_rejection_summary_names_exact_acknowledgement_items(self):
         s = rejected_snapshot()
         result = plan_tick(s, soaked_state(), {"ios": "app-store", "android": "off"})
-        self.assertTrue(any("ios-version:v" in reason for reason in result["reasons"]))
+        reason = next(line for line in result["reasons"] if "ios-version:v" in line)
+        self.assertIn("APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection", reason)
+        self.assertIn("reply to App Review before acknowledging ios-version:v", reason)
+        self.assertFalse(any(a["kind"] == "app-store" for a in result["actions"]))
         s["ios"]["builds"] = [build() | {"external": "BETA_REJECTED"}]
         result = plan_tick(s, {}, {"ios": "testflight", "android": "off"})
         self.assertTrue(any("ios-build:10" in reason for reason in result["reasons"]))

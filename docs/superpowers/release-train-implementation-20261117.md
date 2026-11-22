@@ -285,6 +285,10 @@ completed. Preserved artifacts remain subject to Codemagic retention.
 Dispatch `acknowledge` with the exact item from the run summary: an
 `ios-build:<store-id>` beta rejection, `ios-version:<store-id>` store rejection,
 or a failed operation identity. Resolve the provider failure before acknowledging.
+For an App Store rejection, use the [App Review reply template](../../mobile/docs/APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection)
+to address each finding and tell the reviewer how to verify the fix. Reply in
+App Store Connect before acknowledging a rejection that requires resubmission.
+
 The acknowledgement is durable and recorded in the deployment history. Version
 acknowledgements are bound to the observed marketing version as well as the store
 record ID. Positive submission acceptance consumes the grant, and a newer review
