@@ -6660,6 +6660,49 @@ void main() {
         expect(result.videos.map((v) => v.id), unorderedEquals(archiveOrder));
       });
 
+      test(
+        'replaces archive interaction counts with bulk stats and shuffles '
+        'the hydrated page',
+        () async {
+          stubArchive(archivePage(20));
+          when(() => mockFunnelcakeClient.getBulkVideoStats(any())).thenAnswer(
+            (invocation) async {
+              final ids = invocation.positionalArguments.single as List<String>;
+              return BulkVideoStatsResponse(
+                stats: {
+                  for (final id in ids)
+                    id: BulkVideoStatsEntry(
+                      eventId: id,
+                      reactions: 100 + int.parse(id.split('-').last),
+                      comments: 7,
+                      reposts: 3,
+                    ),
+                },
+              );
+            },
+          );
+
+          final result = await buildRepository(
+            random: Random(7),
+          ).getClassicVideos(limit: 20);
+
+          final archiveOrder = [for (var i = 0; i < 20; i++) 'vine-$i'];
+          expect(result.videos.map((v) => v.id), isNot(archiveOrder));
+          expect(
+            result.videos.map((v) => v.id),
+            unorderedEquals(archiveOrder),
+          );
+          for (final video in result.videos) {
+            expect(
+              video.nostrLikeCount,
+              equals(100 + int.parse(video.id.split('-').last)),
+            );
+            expect(video.nostrCommentCount, equals(7));
+            expect(video.nostrRepostCount, equals(3));
+          }
+        },
+      );
+
       test('draws a different slice on each cache-missing fetch', () async {
         stubArchive(archivePage(20));
 
