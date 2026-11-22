@@ -289,11 +289,13 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         name: 'AppLifecycleHandler',
         category: LogCategory.system,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.warning(
-        '📱 Failed to suspend relays in background: $e',
+        '📱 Failed to suspend relays in background',
         name: 'AppLifecycleHandler',
         category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
       );
     }
   }
