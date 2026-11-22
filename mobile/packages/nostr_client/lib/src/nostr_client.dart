@@ -2055,8 +2055,8 @@ class NostrClient {
   /// stream is closed when its last listener cancels; call [subscribe] again
   /// instead of retaining and re-listening to the old stream.
   ///
-  /// Set [closeOnEose] for bounded reads. Their stream closes after every
-  /// serving relay reports EOSE, and the relay subscription is released.
+  /// Set [closeOnEose] for bounded reads. Their stream closes when [onEose]
+  /// would fire, and the relay subscription is released.
   ///
   /// A NIP-09 deletion request (kind 5) the subscription delivers removes the
   /// cached events its own signer wrote. Clear [handleDeletionRequests] for a
@@ -2070,8 +2070,9 @@ class NostrClient {
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has
   /// received so far and the relays whose batch may have stopped at their
-  /// result-size limit; unlike [onEose], an unreachable relay does not hold
-  /// it up. [onStoredEventsStart] fires when a relay sends them again, after a
+  /// result-size limit; an unreachable relay does not hold it up, where it
+  /// can hold [onEose] for the pool's EOSE settle window.
+  /// [onStoredEventsStart] fires when a relay sends them again, after a
   /// reconnect or a REQ re-sent after AUTH. See
   /// [Subscription.onStoredEventsEnd].
   /// Like [onEose], both belong to the call that opens the subscription: a
