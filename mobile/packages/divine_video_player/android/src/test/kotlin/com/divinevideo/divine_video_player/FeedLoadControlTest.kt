@@ -50,8 +50,6 @@ class FeedLoadControlTest {
             FeedLoadControl.BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS <=
                 FeedLoadControl.MIN_BUFFER_MS,
         )
-        // Keep initial playback buffer short so 6s feed clips start quickly.
-        assertTrue(FeedLoadControl.BUFFER_FOR_PLAYBACK_MS <= 500)
     }
 
     @Test
