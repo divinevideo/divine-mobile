@@ -102,44 +102,47 @@ void main() {
     registerFallbackValue(PopularVideosVariant.classic);
   });
 
-  for (final enabled in [false, true]) {
-    test(
-      'cached Home hydrates history and respects seen policy ($enabled)',
-      () async {
-        final viewer = 'a' * 64;
-        final own = _stats('1' * 64, pubkey: viewer).toVideoEvent();
-        final watched = _stats('2' * 64, pubkey: 'b' * 64).toVideoEvent();
-        final fresh = _stats('3' * 64, pubkey: 'b' * 64).toVideoEvent();
-        final blocked = _stats('4' * 64, pubkey: 'c' * 64).toVideoEvent();
-        var historyReady = false;
-        when(() => mockNostr.publicKey).thenReturn(viewer);
-        final repository = VideosRepository(
-          nostrClient: mockNostr,
-          blockFilter: (author) => author == 'c' * 64,
-          seenVideoLookup: enabled
-              ? SeenVideoLookup(
-                  initialize: () async {
-                    await Future<void>.delayed(Duration.zero);
-                    historyReady = true;
-                  },
-                  wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
-                      historyReady && (id == own.id || id == watched.id),
-                )
-              : null,
-        );
-        final result = await repository.applyHomeFeedPreferences([
-          own,
-          watched,
-          fresh,
-          blocked,
-        ]);
-        expect(
-          result.map((video) => video.id),
-          enabled ? [own.id, fresh.id] : [own.id, watched.id, fresh.id],
-        );
-      },
-    );
-  }
+  group('applyHomeFeedPreferences', () {
+    for (final enabled in [false, true]) {
+      test(
+        'cached Home hydrates history and respects seen policy ($enabled)',
+        () async {
+          final viewer = 'a' * 64;
+          final own = _stats('1' * 64, pubkey: viewer).toVideoEvent();
+          final watched = _stats('2' * 64, pubkey: 'b' * 64).toVideoEvent();
+          final fresh = _stats('3' * 64, pubkey: 'b' * 64).toVideoEvent();
+          final blocked = _stats('4' * 64, pubkey: 'c' * 64).toVideoEvent();
+          var historyReady = false;
+          when(() => mockNostr.publicKey).thenReturn(viewer);
+          final repository = VideosRepository(
+            nostrClient: mockNostr,
+            blockFilter: (author) => author == 'c' * 64,
+            seenVideoLookup: enabled
+                ? SeenVideoLookup(
+                    initialize: () async {
+                      await Future<void>.delayed(Duration.zero);
+                      historyReady = true;
+                    },
+                    wasSeenRecently:
+                        (id, {within = seenVideoExclusionWindow}) =>
+                            historyReady && (id == own.id || id == watched.id),
+                  )
+                : null,
+          );
+          final result = await repository.applyHomeFeedPreferences([
+            own,
+            watched,
+            fresh,
+            blocked,
+          ]);
+          expect(
+            result.map((video) => video.id),
+            enabled ? [own.id, fresh.id] : [own.id, watched.id, fresh.id],
+          );
+        },
+      );
+    }
+  });
 
   group('Own videos stay visible after viewing', () {
     final ownPubkey = 'a' * 64;
