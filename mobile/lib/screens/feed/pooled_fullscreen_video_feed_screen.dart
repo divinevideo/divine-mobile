@@ -50,6 +50,7 @@ import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.d
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/reaction_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/reel_dm_reply_bar.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Always centers — including contain-fit (non-portrait) videos.
@@ -99,6 +100,7 @@ class PooledFullscreenVideoFeedArgs {
     this.sourceDetail,
     this.autoOpenComments = false,
     this.onPageChanged,
+    this.tileOrigin,
   });
 
   /// The feed to display, resolved via [feedRepository].
@@ -139,6 +141,10 @@ class PooledFullscreenVideoFeedArgs {
   ///
   /// Used by embedded surfaces to keep the URL in sync.
   final void Function(int index)? onPageChanged;
+
+  /// The grid tile the feed was opened from, which the player grows out of.
+  /// `null` keeps the default page transition.
+  final VideoTileOrigin? tileOrigin;
 }
 
 /// Profile-backed arguments for fullscreen playback.
@@ -155,6 +161,7 @@ class ProfilePooledFullscreenVideoFeedArgs {
     this.initialStableId,
     this.contextTitle,
     this.onPageChanged,
+    this.tileOrigin,
   });
 
   final String userIdHex;
@@ -164,6 +171,9 @@ class ProfilePooledFullscreenVideoFeedArgs {
   final String? initialStableId;
   final String? contextTitle;
   final void Function(int index)? onPageChanged;
+
+  /// See [PooledFullscreenVideoFeedArgs.tileOrigin].
+  final VideoTileOrigin? tileOrigin;
 }
 
 /// Fullscreen video feed screen using FeedVideos.
@@ -1037,6 +1047,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                 // keyboard.
                                                 isActive:
                                                     !_replyComposerFocused,
+                                                // The app bar sits over the video.
+                                                showTopScrim: true,
                                                 videos: state.videos,
                                                 contextTitle:
                                                     widget.contextTitle,

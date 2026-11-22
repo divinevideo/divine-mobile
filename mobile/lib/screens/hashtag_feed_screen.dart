@@ -20,6 +20,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class HashtagFeedScreen extends ConsumerStatefulWidget {
@@ -222,6 +223,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     BuildContext context,
     List<VideoEvent> videoList,
     int index,
+    VideoTileOrigin? tileOrigin,
   ) {
     Log.info(
       '🏷️ HashtagFeedScreen TAP: gridIndex=$index, '
@@ -236,6 +238,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
           feedRepository: ref.read(feedRepositoryProvider),
           initialIndex: index,
           initialVideoId: videoList[index].id,
+          tileOrigin: tileOrigin,
           contextTitle: '#${widget.hashtag}',
           trafficSource: ViewTrafficSource.search,
           sourceDetail: widget.hashtag,
@@ -390,11 +393,19 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
         return ComposableVideoGrid(
           videos: videos,
           useMasonryLayout: true,
-          onVideoTap:
-              widget.onVideoTap ??
-              (videoList, index) {
-                _navigateToFullscreenFeed(context, videoList, index);
-              },
+          onVideoTap: (videoList, index, captureOrigin) {
+            final onVideoTap = widget.onVideoTap;
+            if (onVideoTap != null) {
+              onVideoTap(videoList, index);
+            } else {
+              _navigateToFullscreenFeed(
+                context,
+                videoList,
+                index,
+                captureOrigin(),
+              );
+            }
+          },
           onRefresh: _loadHashtagVideos,
         );
       },

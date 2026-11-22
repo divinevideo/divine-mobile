@@ -321,6 +321,8 @@ void main() {
           expect(args.initialVideoId, videos[2].id);
           expect(args.initialStableId, videos[2].stableId);
           expect(args.seedVideos, videos);
+          // The player grows out of the tapped tile.
+          expect(args.tileOrigin?.videoId, videos[2].id);
         },
       );
 

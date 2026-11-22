@@ -93,6 +93,16 @@ final class VideoSearchState extends Equatable {
     status,
     query,
     videos,
+    // VideoEvent == compares event ids only. Progressive API results can
+    // update archive verdicts for IDs already emitted from cache or relays.
+    [
+      for (final video in videos)
+        (
+          verified: video.isVerifiedArchive,
+          verificationUnknown: video.isArchiveVerificationUnknown,
+          audioReuse: video.archiveAudioReuseEnabled,
+        ),
+    ],
     resultCount ?? -1,
     apiOffset,
     totalApiCount ?? -1,

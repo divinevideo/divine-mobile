@@ -420,22 +420,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Perangkat Masukan Audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Otomatis (direkomendasikan)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Pilih mikrofon terbaik secara otomatis';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pilih Masukan Audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Dikenal';
-
-  @override
   String get contentFiltersAdultContent => 'KONTEN DEWASA';
 
   @override

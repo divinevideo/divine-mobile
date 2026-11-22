@@ -131,30 +131,6 @@ final class DivineCameraPluginTests: XCTestCase {
         )
     }
 
-    // MARK: - listAudioDevices
-
-    func testListAudioDevicesReturnsArray() {
-        let capture = ResultCapture()
-        let call = FlutterMethodCall(
-            methodName: "listAudioDevices",
-            arguments: nil
-        )
-
-        plugin.handle(call, result: capture.flutterResult)
-
-        XCTAssertTrue(capture.called)
-        let devices = capture.value as? [[String: String]]
-        XCTAssertNotNil(
-            devices,
-            "listAudioDevices should return an array"
-        )
-        // Verify shape of each device entry (if any devices exist)
-        for device in devices ?? [] {
-            XCTAssertNotNil(device["id"], "Device should have an id")
-            XCTAssertNotNil(device["name"], "Device should have a name")
-        }
-    }
-
     // MARK: - Unknown method
 
     func testUnknownMethodReturnsNotImplemented() {

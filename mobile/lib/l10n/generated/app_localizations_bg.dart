@@ -488,22 +488,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Аудио вход';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Автоматично (препоръчано)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Автоматично избира най-добрия микрофон';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Избери аудио вход';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Неизвестен микрофон';
-
-  @override
   String get contentFiltersAdultContent => 'СЪДЪРЖАНИЕ ЗА ВЪЗРАСТНИ';
 
   @override

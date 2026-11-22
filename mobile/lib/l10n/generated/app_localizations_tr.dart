@@ -420,22 +420,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Ses Giriş Cihazı';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Otomatik (önerilen)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'En iyi mikrofonu otomatik olarak seçer';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Ses Girişi Seç';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Bilinmeyen Mikrofon';
-
-  @override
   String get contentFiltersAdultContent => 'YETİŞKİN İÇERİĞİ';
 
   @override

@@ -180,6 +180,8 @@ void main() {
       expect(args.source, isA<VideoListViewSource>());
       expect(args.initialIndex, 0);
       expect(args.initialVideoId, 'first');
+      // The player grows out of the tapped tile.
+      expect(args.tileOrigin?.videoId, 'first');
       expect(args.sponsorName, isNull);
       expect(args.trafficSource, ViewTrafficSource.discoveryFeatured);
       expect(args.sourceDetail, 'ft_a1b2c3d4');

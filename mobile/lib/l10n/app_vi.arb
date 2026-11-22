@@ -249,11 +249,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Thiết bị thu âm",
-  "contentPreferencesAutoRecommended": "Tự động (khuyên dùng)",
-  "contentPreferencesAutoSelectsBest": "Tự động chọn micro tốt nhất",
-  "contentPreferencesSelectAudioInput": "Chọn nguồn âm thanh",
-  "contentPreferencesUnknownMicrophone": "Micro không xác định",
   "contentFiltersAdultContent": "NỘI DUNG NGƯỜI LỚN",
   "contentFiltersViolenceGore": "BẠO LỰC & MÁU ME",
   "contentFiltersSubstances": "CHẤT KÍCH THÍCH",

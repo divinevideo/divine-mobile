@@ -249,11 +249,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "آڈیو ان پٹ ڈیوائس",
-  "contentPreferencesAutoRecommended": "خودکار (تجویز کردہ)",
-  "contentPreferencesAutoSelectsBest": "خودبخود بہترین مائکروفون منتخب کرتا ہے",
-  "contentPreferencesSelectAudioInput": "آڈیو ان پٹ منتخب کریں",
-  "contentPreferencesUnknownMicrophone": "نامعلوم مائکروفون",
   "contentFiltersAdultContent": "بالغ مواد",
   "contentFiltersViolenceGore": "تشدد اور خون خرابا",
   "contentFiltersSubstances": "منشیات",

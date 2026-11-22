@@ -234,6 +234,7 @@ const _excludedDerivedGetters = <String>{
   'isVerifiedWeb',
   'hasBasicProof',
   'isOriginalVine',
+  'isClassicVine',
   'countsAsArchiveVine',
   'hasUnknownOriginalDate',
   'isOriginalContent',

@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_liked_videos/profile_liked_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -203,10 +205,11 @@ class _LikedGridTile extends ConsumerWidget {
                     .map((state) => state.hasMoreContent)
                     .startWith(bloc.state.hasMoreContent),
                 onLoadMore: () async =>
-                    bloc.add(const ProfileLikedVideosLoadMoreRequested()),
+                    bloc.addIfOpen(const ProfileLikedVideosLoadMoreRequested()),
               ),
               initialIndex: index,
               initialVideoId: videoEvent.id,
+              tileOrigin: VideoTileOrigin.captureVideo(context, videoEvent),
               trafficSource: ViewTrafficSource.profile,
             ),
           ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
@@ -224,9 +227,12 @@ class _LikedGridTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: VideoTileThumbnailBoundary(
+            key: ValueKey(videoEvent.id),
+            child: ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
           ),
         ),
       ),

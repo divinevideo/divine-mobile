@@ -80,12 +80,17 @@ class GitHub:
         # No --clobber: concurrent platform builds must never replace bytes.
         run('gh', 'release', 'upload', tag, '--repo', self.repo, *map(str, paths))
 
-    def edit(self, tag, body, beta):
+    def edit(self, tag, body, beta, *, validate=None):
         record = self.get_release(tag)
+        if validate is not None and not validate(record):
+            return
         # GitHub selects Latest by date/semantic version. Forcing latest=true
         # here could undo a newer release completed during our artifact upload.
-        payload = dict(name=f'Divine {tag}', body=body, draft=False,
-                       prerelease=beta, make_latest='false' if beta else 'legacy')
+        payload = dict(draft=False, make_latest='false' if beta else 'legacy')
+        if validate is None:
+            payload.update(name=f'Divine {tag}', body=body, prerelease=beta)
+        # Automatic publication set metadata when creating the draft. Do not
+        # write it back over an editor racing this request; verify it afterward.
         result = subprocess.run(
             ['gh', 'api', '--method', 'PATCH',
              f"repos/{self.repo}/releases/{record['id']}", '--input', '-'],
@@ -119,7 +124,7 @@ def unfinished_notes(body):
     return '<!-- DRAFT -->' in body or '# Release notes working draft' in body
 
 
-def publish(gh, version, sha, channel, backend, notes, artifacts):
+def publish(gh, version, sha, channel, backend, notes, artifacts, *, preserve_existing=False):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('Expected a three-part marketing version')
     if not re.fullmatch(r'[0-9a-f]{40}', sha):
@@ -146,10 +151,32 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
                 'An early build for testing. Things may break. '
                 f'Thanks for helping us make Divine better. Backend: {backend.lower()}.\n\n' + body)
     body = body.rstrip() + f'\n\nBuild source: `{sha}`.\n'
+    expected = {p.name: digest(p) for p in artifacts}
+
+    def validate_existing(record, *, complete=False):
+        # The automatic path owns only its exact retained candidate. Recheck
+        # fresh provider reads at mutation boundaries, including edit's read.
+        commit = gh.tag_commit(tag)
+        if (not record or (commit != sha and not (
+                record.get('draft') and commit is None
+                and record.get('target_commitish') == sha))
+                or record.get('prerelease') != beta
+                or record.get('body', '').replace('\r\n', '\n').strip() != body.strip()):
+            raise ValueError('Existing release identity or notes differ; refusing modification')
+        assets = {a['name']: a.get('digest') for a in record['assets']}
+        if (any(name.lower().endswith('.apk') and name not in expected for name in assets)
+                or any(assets[name] != value for name, value in expected.items() if name in assets)
+                or ((complete or not record.get('draft'))
+                    and any(assets.get(name) != value for name, value in expected.items()))):
+            raise ValueError('Existing release artifacts differ; refusing modification')
+        return bool(record.get('draft'))
+
     commit = gh.tag_commit(tag)
     if commit is not None and commit != sha:
         raise ValueError(f'Tag {tag} points to a different commit; do not move a published tag')
     current = gh.get_release(tag)
+    if preserve_existing and current:
+        validate_existing(current)
     if current and commit is None and current.get('target_commitish') != sha:
         raise ValueError('Existing draft targets a different commit; refusing publication')
     if current and beta and not current['prerelease']:
@@ -165,6 +192,13 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
             raise ValueError(f'{path.name} already exists with different bytes or no digest; refusing replacement')
     if current is None:
         gh.create(tag, sha, body, beta)
+    if preserve_existing:
+        fresh = gh.get_release(tag)
+        if validate_existing(fresh):
+            existing = {a['name'] for a in fresh['assets']}
+            missing = [p for p in artifacts if p.name not in existing]
+        else:
+            missing = []
     if missing:
         gh.upload(tag, missing)
     uploaded = gh.get_release(tag)
@@ -173,7 +207,10 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
         raise RuntimeError('Uploaded artifact verification failed; release not promoted')
     if not beta:
         check_newer_release(gh, version)
-    gh.edit(tag, body, beta)
+    if preserve_existing:
+        gh.edit(tag, body, beta, validate=lambda record: validate_existing(record, complete=True))
+    else:
+        gh.edit(tag, body, beta)
     saved = gh.get_release(tag)
     if (saved['draft'] or saved['prerelease'] != beta
             or saved['body'].replace('\r\n', '\n').strip() != body.strip()

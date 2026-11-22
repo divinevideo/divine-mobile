@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/categories/categories_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -96,7 +97,7 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                 const CategoryVideosLoadMore(),
               );
             },
-            onVideoTap: (videos, index) {
+            onVideoTap: (videos, index, captureOrigin) {
               // The live first page can remove a cached tile. Do not open a
               // fullscreen session that its pending refresh could swap out.
               if (_bloc.state.isRefreshingVideos) return;
@@ -112,11 +113,13 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                       hasMore: _bloc.stream
                           .map((state) => state.hasMoreVideos)
                           .startWith(state.hasMoreVideos),
+                      // The pushed feed can outlive this screen's bloc.
                       onLoadMore: () async =>
-                          _bloc.add(const CategoryVideosLoadMore()),
+                          _bloc.addIfOpen(const CategoryVideosLoadMore()),
                     ),
                     initialIndex: index,
                     initialVideoId: videos[index].id,
+                    tileOrigin: captureOrigin(),
                     contextTitle: localizedCategoryName(
                       context.l10n,
                       widget.category.name,
@@ -154,7 +157,7 @@ class CategoryGalleryView extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRetry;
   final ValueChanged<String> onSortChanged;
-  final void Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
   final Future<void> Function() onLoadMore;
   final Future<void> Function() onRefresh;
   final Widget? galleryOverride;
@@ -217,7 +220,7 @@ class _CategoryGalleryBody extends StatelessWidget {
 
   final CategoriesState state;
   final VoidCallback onRetry;
-  final void Function(List<VideoEvent>, int) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
   final Future<void> Function() onLoadMore;
   final Future<void> Function() onRefresh;
   final Widget? galleryOverride;

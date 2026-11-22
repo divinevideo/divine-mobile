@@ -298,6 +298,12 @@ definitions:
         SHOREBIRD_CLI_VERSION=$("$HOME/.shorebird/bin/shorebird" --version | head -1)
         SHOREBIRD_REVISION=$(git -C "$HOME/.shorebird" rev-parse HEAD)
         PROVENANCE_PATH="build/shorebird/${SHOREBIRD_PLATFORM}_provenance.json"
+        set --
+        if [ "$SHOREBIRD_PLATFORM" = ios ]; then
+          XCODE_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :DTXcodeBuild' \
+            build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app/Info.plist)
+          set -- --xcode-build "$XCODE_BUILD"
+        fi
         ruby scripts/shorebird_provenance.rb emit \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "$SHOREBIRD_RELEASE_VERSION" \
@@ -307,7 +313,7 @@ definitions:
           --shorebird-cli-version "$SHOREBIRD_CLI_VERSION" \
           --shorebird-cli-revision "$SHOREBIRD_REVISION" \
           --defines build/shorebird/dart_defines.json \
-          --output "$PROVENANCE_PATH"
+          --output "$PROVENANCE_PATH" "$@"
         bash scripts/shorebird_provenance_store.sh create \
           "$SHOREBIRD_PLATFORM" "$SHOREBIRD_RELEASE_VERSION" "$PROVENANCE_PATH"
     - &fetch_and_verify_shorebird_provenance
@@ -348,6 +354,12 @@ definitions:
           echo "ERROR: could not establish the release's public community configuration shape."
           exit 1
         fi
+        set --
+        if [ "$SHOREBIRD_PLATFORM" = ios ]; then
+          XCODE_BUILD=$(xcodebuild -version | awk '/^Build version / {print $3}')
+          test -n "$XCODE_BUILD"
+          set -- --xcode-build "$XCODE_BUILD"
+        fi
         ruby scripts/shorebird_provenance.rb verify \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "${{ inputs.RELEASE_VERSION }}" \
@@ -357,7 +369,7 @@ definitions:
           --release-commit "${{ inputs.RELEASE_COMMIT }}" \
           --defines build/shorebird/dart_defines.json \
           --record "$PROVENANCE_PATH" \
-          --env-output build/shorebird/patch_source.env
+          --env-output build/shorebird/patch_source.env "$@"
     - &write_shorebird_private_key
       name: Write Shorebird patch private key
       script: |
@@ -421,11 +433,10 @@ definitions:
       name: Build Android APK
       script: |
         set -euo pipefail
-        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
-          echo 'Scheduled Android builds skip direct APKs.'
-          exit 0
-        fi
         . build/shorebird/android_release.env
+        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
+          PROJECT_BUILD_NUMBER=$SHOREBIRD_BUILD_NUMBER
+        fi
         # Deliberately NOT a Shorebird release. Shorebird has no
         # --split-per-abi; its Android artifact is either an AAB or one
         # universal APK. These per-ABI APKs go to Zapstore / direct download,
@@ -560,12 +571,23 @@ definitions:
           echo "Skipping Zapstore: beta builds are distributed through GitHub only"
           exit 0
         fi
-        VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+        if [ "${ANDROID_DISTRIBUTION_COMPLETE:-false}" = true ]; then
+          echo 'This exact Android distribution already has a verified publication receipt.'
+          if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+            printf '%s\n%s\n' "$ANDROID_DISTRIBUTION_VERSION" "$CM_BUILD_ID" > build/distribution/zapstore-succeeded
+          fi
+          exit 0
+        fi
+        VERSION="${ANDROID_DISTRIBUTION_VERSION:-$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')}"
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo 'Invalid Zapstore release version.'
+          exit 1
+        fi
         TAG="$VERSION"
         # zsp fetches the newest GitHub release it can download an APK from,
         # so a stale or missing release would publish someone else's APK under
         # this signing key. Only publish when the newest release is the one
-        # this build just cut. Drafts and betas are excluded, matching zsp.
+        # this job selected. Drafts and betas are excluded, matching zsp.
         REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
           --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')
         if [ "$REMOTE_TAG" != "$TAG" ]; then
@@ -598,6 +620,9 @@ definitions:
         ruby -ryaml -e '
           config = YAML.safe_load(File.read(ARGV.fetch(0)))
           config["release_filter"] = "^#{Regexp.escape(ARGV.fetch(1))}$"
+          unless ENV.fetch("APPROVED_BUILD_NUMBER", "").empty?
+            config["match"] = "^#{Regexp.escape("app-arm64-v8a-release.apk")}$"
+          end
           File.write(ARGV.fetch(2), YAML.dump(config))
         ' zapstore.yaml "$TAG" "$ZAPSTORE_CONFIG"
         # --check proves the arm64 asset resolves before anything is signed.
@@ -609,6 +634,9 @@ definitions:
         SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
           "$ZSP_BIN" publish "$ZAPSTORE_CONFIG" --quiet --skip-preview \
           --skip-certificate-linking
+        if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+          printf '%s\n%s\n' "$TAG" "$CM_BUILD_ID" > "$CM_BUILD_DIR/mobile/build/distribution/zapstore-succeeded"
+        fi
     - &build_ios
       name: Build and sign iOS (Shorebird release)
       script: |
@@ -616,6 +644,7 @@ definitions:
         . build/shorebird/ios_release.env
         BUILD_NAME=$SHOREBIRD_BUILD_NAME
         BUILD_NUMBER=$SHOREBIRD_BUILD_NUMBER
+        xcodebuild -version
         echo "iOS build number: $BUILD_NUMBER (release: $SHOREBIRD_RELEASE_VERSION)"
         # Shorebird wraps `flutter build ipa` with its own engine so the release
         # carries the updater. A plain `flutter build` here would ship a
@@ -625,19 +654,27 @@ definitions:
           --public-key-path=build/shorebird/patch_public_key.pem \
           --export-options-plist=/Users/builder/export_options.plist
 
+        # Check the SDK embedded in the archive that Codemagic will upload.
+        APP_PATH=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        IOS_SDK=$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$APP_PATH/Info.plist")
+        case "$IOS_SDK" in
+          iphoneos27.*) echo "Archived iOS SDK: $IOS_SDK" ;;
+          *) echo "ERROR: expected the iOS 27 SDK in the archive, got $IOS_SDK" >&2; exit 1 ;;
+        esac
+
         # Prove CocoaPods and Xcode copied each manifest into the exact
         # Shorebird archive before later steps can promote its artifacts.
-        bash scripts/check_privacy_manifest_coverage.sh \
-          --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        bash scripts/check_privacy_manifest_coverage.sh --archive "$APP_PATH"
 
         # Prove FIREBASE_ANALYTICS_WITHOUT_ADID reached Swift package
         # resolution: the archive must link FirebaseAnalyticsCore, not the
         # ads-measurement SDK the default product carries (#7303).
-        bash scripts/check_ios_analytics_product.sh \
-          --app build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        bash scripts/check_ios_analytics_product.sh --app "$APP_PATH"
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |
+        set -euo pipefail
+        xcodebuild -version
         # See the Android patch step for why there is no --flutter-version and
         # why the dart-defines must match the release's.
         # See the Android patch step for why both key halves are required.
@@ -978,7 +1015,7 @@ workflows:
           - "YES"
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: "27.2"
       cocoapods: default
       groups:
         - zendesk_credentials
@@ -1082,7 +1119,7 @@ workflows:
           - POC
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: "27.2"
       cocoapods: default
       groups:
         - zendesk_credentials
@@ -1192,7 +1229,8 @@ workflows:
       - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
   # Publish a promoted GitHub release with the existing Codemagic signer.
-  # No APK rebuild, GitHub upload, or Play submission runs in this workflow.
+  # Automated approval inputs first publish the retained APKs to GitHub.
+  # This workflow never rebuilds APKs or submits to Play.
   zapstore-publish:
     name: Publish existing release to Zapstore
     working_directory: mobile
@@ -1206,7 +1244,7 @@ workflows:
         options:
           - "YES"
       RELEASE_CHANNEL:
-        description: Publish only the existing stable GitHub release matching mobile/pubspec.yaml.
+        description: Publish only the exact stable GitHub release selected for this job.
         type: choice
         default: PRODUCTION
         options:
@@ -1215,6 +1253,7 @@ workflows:
       groups:
         - github_credentials
         - zapstore_credentials
+        - store_release_credentials
     triggering:
       events: []
     scripts:
@@ -1225,7 +1264,11 @@ workflows:
             echo "ERROR: Zapstore publication must run from main."
             exit 1
           fi
+      - name: Publish approved Android downloads to GitHub
+        script: python3 scripts/publish_approved_android.py
       - *publish_zapstore
+      - name: Record verified Android distribution
+        script: python3 scripts/publish_approved_android.py record
 
   # Patch workflows ship a Dart-only fix to an already-released build over the
   # air. They publish to Shorebird, not to Play or the App Store, and are
@@ -1260,6 +1303,10 @@ workflows:
           number (e.g. 1.0.9+247). Get it from `shorebird releases list` or the
           Shorebird console — a value with no matching release fails the build.
         type: string
+      XCODE_VERSION:
+        description: Xcode version from the original iOS release build log
+        type: string
+        default: "27.2"
       PATCH_BRANCH:
         description: >-
           Exact remote release-patch branch to build. It must be named
@@ -1284,7 +1331,7 @@ workflows:
           - POC
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: ${{ inputs.XCODE_VERSION }}
       cocoapods: default
       groups:
         - zendesk_credentials

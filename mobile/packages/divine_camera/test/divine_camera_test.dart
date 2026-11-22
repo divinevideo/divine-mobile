@@ -79,14 +79,6 @@ class MockDivineCameraPlatform
   }
 
   @override
-  Future<List<AudioDevice>> listAudioDevices() async {
-    return const [
-      AudioDevice(id: 'mic-1', name: 'Built-in Microphone'),
-      AudioDevice(id: 'mic-2', name: 'External Microphone'),
-    ];
-  }
-
-  @override
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
@@ -338,10 +330,6 @@ void main() {
           () => basePlatform.setVolumeKeysEnabled(enabled: true),
           throwsUnimplementedError,
         );
-      });
-
-      test('listAudioDevices throws', () {
-        expect(() => basePlatform.listAudioDevices(), throwsUnimplementedError);
       });
 
       test('setDualCameraEnabled throws', () {
@@ -1104,18 +1092,6 @@ void main() {
         await DivineCamera.instance.resumeAudioCapture();
 
         expect(mockPlatform.resumeAudioCaptureCalls, 0);
-      });
-    });
-
-    group('listAudioDevices', () {
-      test('returns list of audio devices', () async {
-        final devices = await DivineCamera.instance.listAudioDevices();
-
-        expect(devices, hasLength(2));
-        expect(devices.first.id, equals('mic-1'));
-        expect(devices.first.name, equals('Built-in Microphone'));
-        expect(devices.last.id, equals('mic-2'));
-        expect(devices.last.name, equals('External Microphone'));
       });
     });
 
@@ -2357,49 +2333,6 @@ void main() {
     });
   });
 
-  group(AudioDevice, () {
-    test('fromMap creates instance from platform map', () {
-      final device = AudioDevice.fromMap(const <dynamic, dynamic>{
-        'id': 'mic-1',
-        'name': 'Built-in Microphone',
-      });
-
-      expect(device.id, equals('mic-1'));
-      expect(device.name, equals('Built-in Microphone'));
-    });
-
-    test('toString returns formatted string', () {
-      const device = AudioDevice(id: 'mic-1', name: 'Built-in Microphone');
-
-      expect(
-        device.toString(),
-        equals('AudioDevice(id: mic-1, name: Built-in Microphone)'),
-      );
-    });
-
-    test('equality is based on id', () {
-      const deviceA = AudioDevice(id: 'mic-1', name: 'Mic A');
-      const deviceB = AudioDevice(id: 'mic-1', name: 'Mic B');
-      const deviceC = AudioDevice(id: 'mic-2', name: 'Mic A');
-
-      expect(deviceA, equals(deviceB));
-      expect(deviceA, isNot(equals(deviceC)));
-    });
-
-    test('hashCode is based on id', () {
-      const deviceA = AudioDevice(id: 'mic-1', name: 'Mic A');
-      const deviceB = AudioDevice(id: 'mic-1', name: 'Mic B');
-
-      expect(deviceA.hashCode, equals(deviceB.hashCode));
-    });
-
-    test('is not equal to non-AudioDevice object', () {
-      const device = AudioDevice(id: 'mic-1', name: 'Mic A');
-
-      expect(device, isNot(equals('mic-1')));
-    });
-  });
-
   // MethodChannelDivineCamera Tests
   _runMethodChannelTests();
 }
@@ -2582,46 +2515,6 @@ void _runMethodChannelTests() {
 
       expect(result, isTrue);
       expect(capturedCalls.first.arguments, {'enabled': false});
-    });
-
-    group('listAudioDevices', () {
-      test('returns parsed devices from method channel', () async {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(methodChannelImpl.methodChannel, (
-              methodCall,
-            ) async {
-              capturedCalls.add(methodCall);
-              if (methodCall.method == 'listAudioDevices') {
-                return <Map<dynamic, dynamic>>[
-                  {'id': 'mic-1', 'name': 'Built-in Microphone'},
-                  {'id': 'mic-2', 'name': 'External Mic'},
-                ];
-              }
-              return null;
-            });
-
-        final devices = await methodChannelImpl.listAudioDevices();
-
-        expect(devices, hasLength(2));
-        expect(devices.first.id, equals('mic-1'));
-        expect(devices.first.name, equals('Built-in Microphone'));
-        expect(devices.last.id, equals('mic-2'));
-        expect(devices.last.name, equals('External Mic'));
-      });
-
-      test('returns empty list when platform returns null', () async {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(methodChannelImpl.methodChannel, (
-              methodCall,
-            ) async {
-              capturedCalls.add(methodCall);
-              return null;
-            });
-
-        final devices = await methodChannelImpl.listAudioDevices();
-
-        expect(devices, isEmpty);
-      });
     });
 
     group('handleMethodCall', () {

@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Ses Giriş Cihazı",
-  "contentPreferencesAutoRecommended": "Otomatik (önerilen)",
-  "contentPreferencesAutoSelectsBest": "En iyi mikrofonu otomatik olarak seçer",
-  "contentPreferencesSelectAudioInput": "Ses Girişi Seç",
-  "contentPreferencesUnknownMicrophone": "Bilinmeyen Mikrofon",
   "profileBlockedAccountNotAvailable": "Bu hesap kullanılamıyor",
   "profileInvalidId": "Geçersiz profil kimliği",
   "profileShareText": "{displayName} adlı kişiye Divine'de göz at!\n\n{url}",

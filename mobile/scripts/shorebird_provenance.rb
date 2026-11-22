@@ -8,6 +8,7 @@ require 'open3'
 
 SCHEMA_VERSION = 1
 HEX_SHA = /\A[0-9a-f]{40}\z/
+XCODE_BUILD = /\A[0-9]+[A-Z][0-9]+[a-z]?\z/
 PUBLIC_PEOPLE_LIST_POLICY = 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS'
 
 def abort_with(message)
@@ -103,6 +104,7 @@ def parse_options(arguments)
     opts.on('--flutter-version VALUE') { |value| options[:flutter_version] = value }
     opts.on('--shorebird-cli-version VALUE') { |value| options[:shorebird_cli_version] = value }
     opts.on('--shorebird-cli-revision VALUE') { |value| options[:shorebird_cli_revision] = value }
+    opts.on('--xcode-build VALUE') { |value| options[:xcode_build] = value }
     opts.on('--defines PATH') { |value| options[:defines] = value }
     opts.on('--record PATH') { |value| options[:record] = value }
     opts.on('--output PATH') { |value| options[:output] = value }
@@ -183,6 +185,10 @@ when 'emit'
     'patch_public_key_sha256' => patch_public_key_digest,
     'patchable' => true,
   }
+  if options[:platform] == 'ios' && options.key?(:xcode_build)
+    abort_with('invalid release Xcode build') unless options[:xcode_build].match?(XCODE_BUILD)
+    record['xcode_build'] = options[:xcode_build]
+  end
   record['record_hmac'] = record_hmac(record, fingerprint_key)
 
   File.write(options[:output], JSON.pretty_generate(record) + "\n", mode: 'w', perm: 0o600)
@@ -219,6 +225,16 @@ when 'verify'
   abort_with('patch Flutter version does not match release provenance') unless record['flutter_version'] == options[:flutter_version]
   abort_with('patch Shorebird CLI version does not match release provenance') unless record['shorebird_cli_version'] == options[:shorebird_cli_version]
   abort_with('patch Shorebird CLI revision does not match release provenance') unless record['shorebird_cli_revision'] == options[:shorebird_cli_revision]
+
+  if options[:platform] == 'ios'
+    if record.key?('xcode_build')
+      unless record['xcode_build'] == options[:xcode_build]
+        abort_with("patch Xcode build does not match release provenance (expected #{record['xcode_build']})")
+      end
+    elsif options.key?(:xcode_build)
+      warn('NOTE: this release predates Xcode build recording; verify the selected Xcode version against the original release build log')
+    end
+  end
 
   recorded_key_digest = record['patch_public_key_sha256']
   if recorded_key_digest.nil?

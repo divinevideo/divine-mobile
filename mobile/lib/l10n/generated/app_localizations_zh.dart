@@ -426,21 +426,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => '音频输入设备';
-
-  @override
-  String get contentPreferencesAutoRecommended => '自动（推荐）';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '自动选择最佳麦克风';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '选择音频输入';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '未知麦克风';
-
-  @override
   String get contentFiltersAdultContent => '成人内容';
 
   @override

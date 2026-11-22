@@ -269,11 +269,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "音声入力デバイス",
-  "contentPreferencesAutoRecommended": "自動 (おすすめ)",
-  "contentPreferencesAutoSelectsBest": "最適なマイクを自動で選ぶよ",
-  "contentPreferencesSelectAudioInput": "音声入力を選ぶ",
-  "contentPreferencesUnknownMicrophone": "不明なマイク",
   "profileBlockedAccountNotAvailable": "このアカウントは見れないよ",
   "profileInvalidId": "無効なプロフィール ID",
   "profileShareText": "Divine の {displayName} をチェックしてみて!\n\n{url}",

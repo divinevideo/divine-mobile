@@ -453,22 +453,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Device para sa audio input';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (inirerekomenda)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Awtomatikong pumipili ng pinakamagandang microphone';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pumili ng Audio Input';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Hindi Kilalang Microphone';
-
-  @override
   String get contentFiltersAdultContent => 'NILALAMAN PARA SA MATATANDA';
 
   @override
