@@ -904,7 +904,7 @@ void main() {
       }
 
       blocTest<VideoSearchBloc, VideoSearchState>(
-        'keeps a revision verdict off another revision of the same address',
+        'replaces a cached revision with the complete API revision',
         setUp: () {
           when(
             () => mockVideosRepository.deduplicateVideosPreservingOrder(any()),
@@ -924,8 +924,12 @@ void main() {
             (_) async => (
               videos: [
                 createVideo(
-                  id: 'revision-2',
-                ).copyWith(addressableDTag: 'clip', isVerifiedArchive: true),
+                  id: '2' * 64,
+                ).copyWith(
+                  addressableDTag: 'clip',
+                  isVerifiedArchive: true,
+                  audioEventId: 'd' * 64,
+                ),
               ],
               totalCount: 1,
               hasMore: false,
@@ -937,7 +941,10 @@ void main() {
           status: VideoSearchStatus.success,
           query: 'flutter',
           videos: [
-            createVideo(id: 'revision-1').copyWith(addressableDTag: 'clip'),
+            createVideo(id: '1' * 64).copyWith(
+              addressableDTag: 'clip',
+              audioEventId: 'e' * 64,
+            ),
           ],
           apiOffset: 50,
           hasMore: true,
@@ -946,11 +953,12 @@ void main() {
         skip: 1,
         expect: () => [
           isA<VideoSearchState>()
-              .having((s) => s.videos.single.id, 'id', 'revision-1')
+              .having((s) => s.videos.single.id, 'id', '2' * 64)
+              .having((s) => s.videos.single.audioEventId, 'audio', 'd' * 64)
               .having(
                 (s) => s.videos.single.isVerifiedArchive,
                 'isVerifiedArchive',
-                isFalse,
+                isTrue,
               ),
         ],
       );

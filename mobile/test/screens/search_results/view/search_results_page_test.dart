@@ -327,6 +327,53 @@ void main() {
         expect(cache.isOgViner(second.pubkey), isTrue);
       });
 
+      testWidgets('badges the creator when a later page replaces a revision', (
+        tester,
+      ) async {
+        final first = archiveVideo('a');
+        final cached = archiveVideo('b').copyWith(
+          addressableDTag: 'archived-clip',
+          audioEventId: 'd' * 64,
+        );
+        final replacement = cached.copyWith(
+          id: 'e' * 64,
+          isVerifiedArchive: true,
+          audioEventId: 'f' * 64,
+        );
+        final nextPage =
+            Completer<
+              ({List<VideoEvent> videos, int totalCount, bool hasMore})
+            >();
+        final cache = await mountSearch(
+          tester,
+          [first, cached],
+          nextPage: nextPage.future,
+        );
+        expect(badgeFor(cached), findsNothing);
+        expect(cache.isOgViner(cached.pubkey), isFalse);
+
+        tester
+            .element(find.byType(SearchResultsView))
+            .read<VideoSearchBloc>()
+            .add(const VideoSearchLoadMore());
+        await tester.pump();
+        nextPage.complete((
+          videos: [replacement],
+          totalCount: 2,
+          hasMore: false,
+        ));
+        await tester.pump();
+        await tester.pump();
+
+        final tiles = tester.widgetList<SearchVideoTile>(
+          find.byType(SearchVideoTile),
+        );
+        expect(tiles.map((tile) => tile.video.id), [first.id, replacement.id]);
+        expect(tiles.last.video.audioEventId, replacement.audioEventId);
+        expect(badgeFor(replacement), findsOneWidget);
+        expect(cache.isOgViner(replacement.pubkey), isTrue);
+      });
+
       testWidgets('hydrates a cached result found again on the next API page', (
         tester,
       ) async {

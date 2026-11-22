@@ -367,6 +367,33 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
+      'hides the Classic Vine chip when the server rejected the archive',
+      (tester) async {
+        final video =
+            _makeVideo(
+              publishedAt: '1451606400',
+              rawTags: const {'platform': 'vine'},
+            ).copyWith(
+              videoUrl: 'https://media.divine.video/${'a' * 64}.mp4',
+              isVerifiedArchive: false,
+              isArchiveVerificationUnknown: false,
+            );
+
+        await tester.pumpWidget(
+          buildSubject(
+            child: MetadataExpandedSheet(video: video),
+            theme: VineTheme.theme,
+          ),
+        );
+
+        expect(
+          find.text(_l10n(tester).commentsEmptyClassicVineTitle),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'renders fetched parent context for a video reply',
       (tester) async {
         final video = _makeVideo(
@@ -1043,12 +1070,12 @@ void main() {
   // ---------------------------------------------------------------------------
   group(MetadataBadgesRow, () {
     testWidgetsWithSurfaceSize(
-      'labels a Vine published in 2016 even without server verification',
+      'labels a 2016 Vine while server verification is unavailable',
       (tester) async {
         final video = _makeVideo(
           publishedAt: '1451606400',
           rawTags: const {'platform': 'vine'},
-        );
+        ).copyWith(isArchiveVerificationUnknown: true);
         await tester.pumpWidget(
           buildSubject(child: MetadataBadgesRow(video: video)),
         );
@@ -1066,7 +1093,7 @@ void main() {
       final video = _makeVideo(
         publishedAt: '1700000000',
         rawTags: const {'platform': 'vine'},
-      );
+      ).copyWith(isArchiveVerificationUnknown: true);
       await tester.pumpWidget(
         buildSubject(child: MetadataBadgesRow(video: video)),
       );
