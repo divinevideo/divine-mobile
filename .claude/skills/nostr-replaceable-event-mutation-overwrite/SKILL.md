@@ -69,10 +69,11 @@ timestamp to be ordered by: divinevideo/divine-mobile#8266.
 A read for the current version has three outcomes, not two:
 
 - **found**: replace the newest copy, ordered as in section 2.
-- **absent**: the required network read completed with no matching event, and there is no
-  locally accepted revision to preserve. The mutation can create the first event.
-- **failed**: the read threw or a required relay did not answer. Do not publish even when
-  the read returned an event or a cached copy exists. Keep the edit local and retry later.
+- **absent**: the required network read completed without truncation or a matching event,
+  and there is no locally accepted revision to preserve. The mutation can create the first event.
+- **failed**: the read threw, a required relay did not answer, or the answer may have
+  omitted the newest revision. Keep the edit local and retry later, even if the read returned
+  an older revision or a cached copy exists.
 
 Many clients do not throw on an unfinished read. They return whatever arrived, so a
 `catch` block never sees the failure. Find out how your client reports an unfinished read
@@ -84,13 +85,13 @@ before trusting one. Section 4 covers divine-mobile.
 replacement like this:
 
 ```dart
-final read = await nostrClient.queryEventsDetailed(
+final read = await nostrClient.readEvents(
   [Filter(authors: [pubkey], kinds: const [EventKind.contactList])],
   relayTypes: RelayType.network,
   useCache: false,
   requireAllRelaysSettled: true,
 );
-if (read.timedOut || read.noRelays) {
+if (!read.isComplete || read.possiblyCapped) {
   return false;
 }
 // Select the newest matching revision, then apply the pending edit.
@@ -98,18 +99,24 @@ if (read.timedOut || read.noRelays) {
 
 - `queryEvents` returns only the events and drops both flags. Never use it to read a base
   you are about to replace.
-- A default read can return `timedOut: false` after a `CLOSED`, a dropped socket, or the
-  one-second settle window. Leave `acceptRelayClosedWhenOthersAnswered` disabled for this
-  replacement read.
+- With `queryEventsDetailed`, check `timedOut || noRelays` and set `requireAllRelaysSettled`.
+  A default read can return `timedOut: false` after `CLOSED`, a dropped socket, or the
+  one-second settle window. Leave `acceptRelayClosedWhenOthersAnswered` disabled when the
+  mutation needs the refusing relay's answer.
+- Both `queryEventsDetailed` and `queryEventsOnFreshConnections` drop `possiblyCapped`.
+  When a relay finishes with a `more` hint and no usable event, it can be complete and still
+  have withheld the only matching revision. This example rejects potentially capped reads.
+  Use the cap flag or other evidence that the newest revision was included before publishing.
 - `useCache: false` excludes the database cache. `RelayType.network` also excludes cache
   relays, which can otherwise complete a query without any network relay answering.
 - Full settlement covers relays that took the request. A disconnected relay can be skipped
-  during dispatch while another relay returns a complete answer. If the mutation depends on
-  specific relays, pass those URLs as `requiredRelays` to `queryEventsOnFreshConnections`
-  and check both flags. That method also fails the read when a required relay never takes it.
-- With `readEvents`, use the same network scope and `requireAllRelaysSettled: true`, and
-  require `isComplete`. When a mutation truly needs every matching event, also handle
-  `possiblyCapped`. A list stored in one replaceable event only needs the newest revision.
+  during dispatch while another relay returns a complete answer. For specific required relays,
+  run `readEvents` against each URL using `tempRelays: [url]` and `relayTypes: RelayType.onlyTemp`.
+  Require a complete, usable answer from each. `queryEventsOnFreshConnections` also checks
+  required relay participation when called with `requiredRelays`, but only reports settlement.
+- Keep a global `limit` off the replacement read unless the client applies the same ordering
+  before truncating. `NostrClient` merges with a timestamp-only sort when a limit trims the
+  result, so it can drop the lowest ID among events tied for newest.
 - A settled read can spend the whole timeout waiting for a silent relay. The follow
   repository uses three seconds and withholds the publish if the read expires.
 - Examples of checking the settlement flags: `_refreshCurrentUserContactList` in
@@ -148,14 +155,16 @@ Partial read:
    refuse the read (`CLOSED`) or accept the request and stay silent.
 9. Follow someone and confirm the failed read leaves the publish count at zero. Retry with
    the second relay returning a newer list. Check that the publish preserves it and adds the follow.
-   Also verify that a cache-only answer or a missed required relay cannot authorize a publish.
+   Also verify that a cache-only answer, a missed required relay, or an empty answer with a
+   `more` hint cannot authorize a publish.
 
 ## Example
 
-A follow mutation that assumes `nostr.query` rejects when any required relay fails to
-finish the read. If the client returns partial answers, check its completion status before
-using the events. The illustrative `publishEvent` helper returns the signed revision after
-relay acceptance and rejects if it cannot assign a valid timestamp later than `newerThan`.
+A follow mutation that assumes `nostr.query` rejects when a required relay fails to finish
+or the newest revision may have been omitted. If the client returns partial answers, check
+settlement and truncation before using the events. The illustrative `publishEvent` helper
+returns the signed revision after relay acceptance and rejects if it cannot assign a valid
+timestamp later than `newerThan`.
 The client shares a store of last accepted revisions by account. Follow and unfollow use
 the same TanStack Query v5 scope in the same query client. [Mutation scopes](https://tanstack.com/query/latest/docs/framework/react/guides/mutations#mutation-scopes)
 
@@ -184,7 +193,7 @@ export function useFollowUser(pubkey: string) {
       let events: ContactList[];
       try {
         events = await nostr.query(
-          [{ kinds: [3], authors: [pubkey], limit: 1 }],
+          [{ kinds: [3], authors: [pubkey] }],
           { signal: AbortSignal.timeout(5000) },
         );
       } catch {
