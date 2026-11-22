@@ -454,7 +454,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 result(nil)
                 return
             }
-            textureOutput?.setPlaybackActive(true)
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)
@@ -1554,7 +1553,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 if self.isBackgrounded {
                     self.resumesSeekOnForeground = true
                 } else {
-                    self.textureOutput?.setPlaybackActive(true)
                     self.player?.play()
                     self.player?.rate = Float(self.speed)
                     self.audioOverlayManager.resumeActive(speed: self.speed)
@@ -2049,7 +2047,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         timeControlObservation?.invalidate()
         timeControlObservation = player?.observe(\.timeControlStatus, options: [.new]) {
             [weak self] _, _ in
-            DispatchQueue.main.async { self?.realignClipAudioLoop() }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let player = self.player, player.timeControlStatus != .paused {
+                    self.textureOutput?.playbackDidStart()
+                }
+                self.realignClipAudioLoop()
+            }
         }
     }
 
@@ -2111,7 +2115,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             self.textureOutput?.forceRefresh(for: resumeTime)
             self.syncAudioOverlays()
             if shouldResume {
-                self.textureOutput?.setPlaybackActive(true)
                 self.player?.play()
                 self.player?.rate = Float(self.speed)
                 self.audioOverlayManager.resumeActive(speed: self.speed)
@@ -2791,7 +2794,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
         }
         if wasPlayingBeforePause || resumesSeekOnForeground {
-            textureOutput?.setPlaybackActive(true)
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)

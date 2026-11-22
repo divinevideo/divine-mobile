@@ -326,10 +326,8 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
 
     /// Wakes the frame driver when playback begins so paused/warm players can
     /// idle at 0 Hz without missing the start of playback.
-    func setPlaybackActive(_ active: Bool) {
-        if active {
-            resumeFrameDriverIfNeeded()
-        }
+    func playbackDidStart() {
+        resumeFrameDriverIfNeeded()
     }
 
     /// Synchronously attempts to pull a frame at `time` and push it into
