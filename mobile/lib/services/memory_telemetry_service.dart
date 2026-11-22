@@ -85,7 +85,7 @@ class MemoryTelemetryService {
     required int Function() imageCacheBytes,
     required int Function() imageCacheLiveCount,
     required void Function(MemorySnapshot snapshot, String trigger) emit,
-    this.interval = const Duration(seconds: 30),
+    this.interval = const Duration(minutes: 2),
   }) : _readRssBytes = readRssBytes,
        _readPeakRssBytes = readPeakRssBytes,
        _nativeControllerCount = nativeControllerCount,

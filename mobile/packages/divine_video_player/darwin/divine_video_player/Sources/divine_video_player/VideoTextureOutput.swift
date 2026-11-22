@@ -250,6 +250,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             mediaDataRearmCount = 0
             lastDeliveredItemTime = .invalid
             nextStallRecoveryTime = 0
+            resumeFrameDriverIfNeeded()
             warm.requestNotificationOfMediaDataChange(withAdvanceInterval: 0)
             return
         }
@@ -273,6 +274,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         nextStallRecoveryTime = 0
+        resumeFrameDriverIfNeeded()
 
         // The first `copyPixelBuffer` attempt right after attach often
         // races decoder init (especially on HEVC 10-bit / HDR), and
@@ -318,7 +320,16 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         forceRefreshDeadline = CACurrentMediaTime() + 0.6
         forceWindowFailCount = 0
         forceWindowIsRetry = isRetry
+        resumeFrameDriverIfNeeded()
         videoOutput?.requestNotificationOfMediaDataChange(withAdvanceInterval: 0)
+    }
+
+    /// Wakes the frame driver when playback begins so paused/warm players can
+    /// idle at 0 Hz without missing the start of playback.
+    func setPlaybackActive(_ active: Bool) {
+        if active {
+            resumeFrameDriverIfNeeded()
+        }
     }
 
     /// Synchronously attempts to pull a frame at `time` and push it into
@@ -376,6 +387,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
               videoOutput === self.videoOutput else {
             return
         }
+        resumeFrameDriverIfNeeded()
         // Prefer the stored seek target; fall back to currentTime only when
         // there's no pending seek (e.g. notification from a flush).
         let targetTime: CMTime
@@ -415,9 +427,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// suspension. Must be called on the main thread.
     func suspendFrameDelivery() {
         isFrameDeliveryEnabled = false
-        #if os(iOS)
-        displayLink?.isPaused = true
-        #endif
+        pauseFrameDriver()
     }
 
     /// Re-enables frame delivery when the app returns to the foreground.
@@ -430,9 +440,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         // A paused texture is handed its frame again once, as before the
         // background, in case the engine dropped the copy it held.
         pausedRedelivery.reset()
-        #if os(iOS)
-        displayLink?.isPaused = false
-        #endif
+        resumeFrameDriverIfNeeded()
     }
 
     /// Cleans up the frame driver and unregisters the texture.
@@ -486,8 +494,29 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             target: self,
             selector: #selector(onDisplayLink)
         )
+        if #available(iOS 15.0, *) {
+            // Short-form clips are 30-60 fps; capping below 120 Hz ProMotion
+            // avoids redundant main-thread pixel-buffer polls on every vsync.
+            link.preferredFrameRateRange = CAFrameRateRange(
+                minimum: 15,
+                maximum: 60,
+                preferred: 30
+            )
+        }
         link.add(to: .main, forMode: .common)
         displayLink = link
+    }
+
+    private func pauseFrameDriver() {
+        displayLink?.isPaused = true
+    }
+
+    private func resumeFrameDriverIfNeeded() {
+        guard !isDisposed, isFrameDeliveryEnabled else { return }
+        if displayLink == nil && player != nil {
+            startFrameDriver()
+        }
+        displayLink?.isPaused = false
     }
 
     private func stopFrameDriver() {
@@ -509,6 +538,15 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         ) { [weak self] _ in
             self?.pullAndDeliverFrame()
         }
+    }
+
+    private func pauseFrameDriver() {
+        stopFrameDriver()
+    }
+
+    private func resumeFrameDriverIfNeeded() {
+        guard !isDisposed, isFrameDeliveryEnabled, player != nil else { return }
+        startFrameDriver()
     }
 
     private func stopFrameDriver() {
@@ -658,11 +696,22 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             let playing = player.rate != 0
             guard pausedFramePull.accepts(frameAt: frameTime, playing: playing),
                   pausedRedelivery.delivers(frameAt: frameTime, playing: playing)
-            else { return }
+            else {
+                if !playing && hasDeliveredFirstFrame && !frameEffects.isActive {
+                    pauseFrameDriver()
+                }
+                return
+            }
             deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
+            if !playing && hasDeliveredFirstFrame && !frameEffects.isActive {
+                pauseFrameDriver()
+            }
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)
             redrawEffectsOverHeldFrameIfNeeded(at: itemTime)
+            if player.rate == 0 && hasDeliveredFirstFrame && !frameEffects.isActive {
+                pauseFrameDriver()
+            }
         }
     }
 

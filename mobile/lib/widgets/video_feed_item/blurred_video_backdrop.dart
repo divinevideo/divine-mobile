@@ -43,6 +43,11 @@ class BlurredVideoBackdrop extends StatelessWidget {
     this.videoAspectRatio,
   });
 
+  /// Upper bound on decoded pixel dimensions for the sigma-30 blurred poster
+  /// fallback. Heavy gaussian blur destroys high-frequency detail, so decoding
+  /// a tiny thumbnail saves GPU memory and raster cost with identical output.
+  static const int maxBlurredPosterDecodePx = 96;
+
   final String? url;
 
   /// Absolute path of a local poster file, used when no [url] is available.
@@ -119,17 +124,25 @@ class _BackdropContent extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+          final targetWidth =
+              constraints.hasBoundedWidth && constraints.maxWidth > 0
+              ? (constraints.maxWidth * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
+          final targetHeight =
+              constraints.hasBoundedHeight && constraints.maxHeight > 0
+              ? (constraints.maxHeight * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
           return _blurredPoster(
             VineCachedImage(
               imageUrl: posterUrl,
-              memCacheWidth:
-                  constraints.hasBoundedWidth && constraints.maxWidth > 0
-                  ? (constraints.maxWidth * pixelRatio).ceil()
-                  : null,
-              memCacheHeight:
-                  constraints.hasBoundedHeight && constraints.maxHeight > 0
-                  ? (constraints.maxHeight * pixelRatio).ceil()
-                  : null,
+              memCacheWidth: targetWidth,
+              memCacheHeight: targetHeight,
               resizePolicy: ResizeImagePolicy.fit,
               // Fall back to nothing on error — the parent
               // [ColoredBox(VineTheme.surfaceContainerHigh)] shows through.
@@ -153,13 +166,15 @@ class _BackdropContent extends StatelessWidget {
   }
 
   Widget _blurredPoster(Widget poster) {
-    return ClipRect(
-      // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
-      // keeps the bleeding edge of the blur kernel from leaking
-      // outside the widget's box and over the surrounding chrome.
-      child: ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Opacity(opacity: 0.5, child: poster),
+    return RepaintBoundary(
+      child: ClipRect(
+        // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
+        // keeps the bleeding edge of the blur kernel from leaking
+        // outside the widget's box and over the surrounding chrome.
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Opacity(opacity: 0.5, child: poster),
+        ),
       ),
     );
   }

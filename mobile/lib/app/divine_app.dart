@@ -35,6 +35,7 @@ import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/back_button_handler.dart';
 import 'package:openvine/services/corrupted_video_repair_service.dart';
+import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/memory_pressure_handler.dart';
 import 'package:openvine/services/memory_telemetry_service.dart';
@@ -362,9 +363,11 @@ class _DivineAppState extends ConsumerState<DivineApp>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
+      _memoryTelemetry.stop();
       openVineMediaCache.cancelInFlightDownloads();
       openVineImageCache.cancelInFlightDownloads();
     } else if (state == AppLifecycleState.resumed) {
+      _memoryTelemetry.start();
       openVineMediaCache.resumeDownloads();
       openVineImageCache.resumeDownloads();
     }
@@ -406,26 +409,45 @@ class _DivineAppState extends ConsumerState<DivineApp>
       category: LogCategory.system,
     );
     final crashReporting = ref.read(crashReportingServiceProvider);
-    unawaited(crashReporting.setCustomKey('mem_rss_mb', rssMb));
-    unawaited(crashReporting.setCustomKey('mem_peak_mb', peakMb));
-    unawaited(
-      crashReporting.setCustomKey('img_cache_peak_mb', peakImageCacheMb),
+    _setCrashlyticsKeyIfChanged(crashReporting, 'mem_rss_mb', rssMb);
+    _setCrashlyticsKeyIfChanged(crashReporting, 'mem_peak_mb', peakMb);
+    _setCrashlyticsKeyIfChanged(
+      crashReporting,
+      'img_cache_peak_mb',
+      peakImageCacheMb,
     );
-    unawaited(
-      crashReporting.setCustomKey(
-        'img_cache_live',
-        snapshot.imageCacheLiveCount,
-      ),
+    _setCrashlyticsKeyIfChanged(
+      crashReporting,
+      'img_cache_live',
+      snapshot.imageCacheLiveCount,
     );
-    unawaited(
-      crashReporting.setCustomKey('mem_pressure_events', _memoryPressureEvents),
+    _setCrashlyticsKeyIfChanged(
+      crashReporting,
+      'mem_pressure_events',
+      _memoryPressureEvents,
     );
-    unawaited(
-      crashReporting.setCustomKey('vc_native', snapshot.nativeControllers),
+    _setCrashlyticsKeyIfChanged(
+      crashReporting,
+      'vc_native',
+      snapshot.nativeControllers,
     );
-    unawaited(
-      crashReporting.setCustomKey('ingest_queue_depth', snapshot.queueDepth),
+    _setCrashlyticsKeyIfChanged(
+      crashReporting,
+      'ingest_queue_depth',
+      snapshot.queueDepth,
     );
+  }
+
+  final Map<String, Object> _lastCrashlyticsMemoryKeys = {};
+
+  void _setCrashlyticsKeyIfChanged(
+    CrashReportingService crashReporting,
+    String key,
+    Object value,
+  ) {
+    if (_lastCrashlyticsMemoryKeys[key] == value) return;
+    _lastCrashlyticsMemoryKeys[key] = value;
+    unawaited(crashReporting.setCustomKey(key, value));
   }
 
   static String _memoryGaugeMb(int bytes) =>

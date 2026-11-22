@@ -19,15 +19,25 @@ HttpClient createSecureWebSocketHttpClient() {
   return httpClient;
 }
 
+/// Keepalive RFC 6455 ping interval for non-web relay WebSockets.
+///
+/// Prevents healthy idle sockets from tripping idle-disconnect self-heal loops
+/// and keeps NAT/carrier mappings alive without application-level polling.
+const Duration kRelayWebSocketPingInterval = Duration(seconds: 30);
+
 /// Creates a WebSocket channel for non-web platforms.
 WebSocketChannel createSecureWebSocketChannel(Uri wsUrl) {
   return IOWebSocketChannel.connect(
     wsUrl,
+    pingInterval: kRelayWebSocketPingInterval,
     customClient: createSecureWebSocketHttpClient(),
   );
 }
 
 /// Creates a standard WebSocket channel for non-web platforms
 WebSocketChannel createWebSocketChannel(Uri wsUrl) {
-  return WebSocketChannel.connect(wsUrl);
+  return IOWebSocketChannel.connect(
+    wsUrl,
+    pingInterval: kRelayWebSocketPingInterval,
+  );
 }

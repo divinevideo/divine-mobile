@@ -137,27 +137,43 @@ void main() {
       },
     );
 
-    testWidgets('bounds the network poster decode to physical layout size', (
-      tester,
-    ) async {
-      tester.view
-        ..physicalSize = const Size(800, 1600)
-        ..devicePixelRatio = 2;
-      addTearDown(() {
+    testWidgets(
+      'caps the blurred network poster decode size and isolates paint',
+      (
+        tester,
+      ) async {
         tester.view
-          ..resetPhysicalSize()
-          ..resetDevicePixelRatio();
-      });
-      await tester.pumpWidget(buildWidget());
+          ..physicalSize = const Size(800, 1600)
+          ..devicePixelRatio = 2;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+        });
+        await tester.pumpWidget(buildWidget());
 
-      final image = tester.widget<VineCachedImage>(
-        find.byType(VineCachedImage),
-      );
-      expect(image.imageUrl, equals(testUrl));
-      expect(image.memCacheWidth, 800);
-      expect(image.memCacheHeight, 1600);
-      expect(image.resizePolicy, ResizeImagePolicy.fit);
-    });
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.imageUrl, equals(testUrl));
+        expect(
+          image.memCacheWidth,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(
+          image.memCacheHeight,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(image.resizePolicy, ResizeImagePolicy.fit);
+        expect(
+          find.ancestor(
+            of: find.byType(ImageFiltered),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsWidgets,
+        );
+      },
+    );
 
     testWidgets('uses $BoxFit cover with half opacity', (tester) async {
       await tester.pumpWidget(buildWidget());

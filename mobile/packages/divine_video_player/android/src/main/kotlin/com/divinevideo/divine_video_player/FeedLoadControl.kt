@@ -35,10 +35,10 @@ internal enum class BufferProfile {
  */
 @UnstableApi
 internal object FeedLoadControl {
-    const val MIN_BUFFER_MS = 2_000
+    const val MIN_BUFFER_MS = 1_500
     const val MAX_BUFFER_MS = 10_000
-    const val BUFFER_FOR_PLAYBACK_MS = 1_000
-    const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 2_000
+    const val BUFFER_FOR_PLAYBACK_MS = 350
+    const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 1_000
     const val TARGET_BUFFER_BYTES = 8 * 1024 * 1024
 
     fun build(): LoadControl =

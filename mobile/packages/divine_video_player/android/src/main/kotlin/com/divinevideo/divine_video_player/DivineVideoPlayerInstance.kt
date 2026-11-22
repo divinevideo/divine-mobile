@@ -268,7 +268,16 @@ internal class DivineVideoPlayerInstance(
     private var frameEffectSurfaceSize: Size? = null
 
     /** Decodes the earlier frames frame effects need after a seek. */
-    private val frameEffectsFillExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    /** Lazily allocated only when frame effects are active, avoiding thread churn on feed players. */
+    private var frameEffectsFillExecutor: java.util.concurrent.ExecutorService? = null
+
+    private fun ensureFrameEffectsFillExecutor(): java.util.concurrent.ExecutorService {
+        val existing = frameEffectsFillExecutor
+        if (existing != null && !existing.isShutdown) return existing
+        return java.util.concurrent.Executors.newSingleThreadExecutor().also {
+            frameEffectsFillExecutor = it
+        }
+    }
 
     /**
      * The display size of each clip, read from its file. With the effect
@@ -811,7 +820,11 @@ internal class DivineVideoPlayerInstance(
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
         eventSink = events
-        mainHandler.post(positionUpdater)
+        sendStateUpdate()
+        if (player?.isPlaying == true) {
+            mainHandler.removeCallbacks(positionUpdater)
+            mainHandler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
+        }
     }
 
     override fun onCancel(arguments: Any?) {
@@ -2188,9 +2201,10 @@ internal class DivineVideoPlayerInstance(
             .map { offsetUs -> seekUs - (offsetUs * speed).toLong() }
             .filter { it >= clipStartUs }
         if (targets.isEmpty()) return
-        if (frameEffectsFillExecutor.isShutdown) return
+        val executor = ensureFrameEffectsFillExecutor()
+        if (executor.isShutdown) return
         frameEffectsFillRunning = request
-        frameEffectsFillExecutor.execute {
+        executor.execute {
             val isCancelled = {
                 val newer = frameEffectsFillRequest
                 frameEffectsState !== state || (newer != null &&
@@ -2786,6 +2800,10 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            mainHandler.removeCallbacks(positionUpdater)
+            if (isPlaying && eventSink != null) {
+                mainHandler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
+            }
             pictureAdvancing = false
             mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
             if (isPlaying) {
@@ -3059,6 +3077,7 @@ internal class DivineVideoPlayerInstance(
      * Pauses playback and remembers the previous state.
      */
     fun onAppBackgrounded() {
+        mainHandler.removeCallbacks(positionUpdater)
         wasPlayingBeforePause = player?.isPlaying ?: false
         if (wasPlayingBeforePause) {
             player?.pause()
@@ -3151,7 +3170,8 @@ internal class DivineVideoPlayerInstance(
         frameEffectsState = null
         frameEffectsFillRequest = null
         mainHandler.removeCallbacks(frameEffectsRedraw)
-        frameEffectsFillExecutor.shutdownNow()
+        frameEffectsFillExecutor?.shutdownNow()
+        frameEffectsFillExecutor = null
         seekCompletionResult?.success(null)
         seekCompletionResult = null
         pendingSetClipsResult?.success(null)

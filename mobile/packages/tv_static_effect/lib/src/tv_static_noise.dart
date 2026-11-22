@@ -53,6 +53,7 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   double _elapsed = 0;
   int _frame = -1;
   PainterFactory? _createPainter;
+  ui.FragmentShader? _ownedShader;
   bool _loaded = false;
 
   /// Internal frame rate the shader quantizes to.
@@ -83,8 +84,28 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
 
   Future<void> _loadShader() async {
     try {
-      final loader = widget.shaderLoader ?? _defaultShaderLoader;
-      _createPainter = await loader();
+      if (widget.shaderLoader != null) {
+        _createPainter = await widget.shaderLoader!();
+      } else {
+        final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
+        final shader = program.fragmentShader();
+        if (!mounted) {
+          shader.dispose();
+          return;
+        }
+        _ownedShader = shader;
+        final paint = Paint();
+        // Reuse a single FragmentShader across frames rather than allocating
+        // and leaking a new GPU shader on every 12-fps tick.
+        // ignore: avoid_types_on_closure_parameters
+        _createPainter = ({required double time, required double opacity}) =>
+            _TvStaticPainter(
+              shader: shader,
+              paint: paint,
+              time: time,
+              opacity: opacity,
+            );
+      }
       if (mounted) {
         setState(() => _loaded = true);
       }
@@ -110,6 +131,8 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   @override
   void dispose() {
     _ticker.dispose();
+    _ownedShader?.dispose();
+    _ownedShader = null;
     super.dispose();
   }
 
@@ -133,23 +156,14 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
 /// Asset path for the TV static fragment shader.
 const _shaderAssetPath = 'packages/tv_static_effect/shaders/tv_static.frag';
 
-/// Default shader loader that loads the real GLSL fragment shader.
-Future<PainterFactory> _defaultShaderLoader() async {
-  final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
-  // Explicit types required — Dart does not infer named parameter types
-  // from the return type of the enclosing function.
-  // ignore: avoid_types_on_closure_parameters
-  return ({required double time, required double opacity}) =>
-      _TvStaticPainter(program: program, time: time, opacity: opacity);
-}
-
 class _TvStaticPainter extends CustomPainter {
   _TvStaticPainter({
-    required ui.FragmentProgram program,
+    required ui.FragmentShader shader,
+    required Paint paint,
     required this.time,
     required this.opacity,
-  }) : _shader = program.fragmentShader(),
-       _paint = Paint();
+  }) : _shader = shader,
+       _paint = paint;
 
   final ui.FragmentShader _shader;
   final Paint _paint;

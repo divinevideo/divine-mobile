@@ -272,13 +272,23 @@ void main() {
             _tick(async, 1);
           }
 
-          // Pause → counter resets.
+          // Pause → counter resets and the periodic heartbeat timer stops
+          // so paused videos do not wake the Dart isolate at 4 Hz.
           controller.pushState(
             const DivineVideoPlayerState(status: PlaybackStatus.paused),
           );
           _tick(async, 1);
+          expect(async.periodicTimerCount, equals(0));
 
-          // Resume: any further stall restarts counting from zero.
+          // Resume → heartbeat timer re-arms reactively from stateStream.
+          controller.pushState(
+            const DivineVideoPlayerState(
+              status: PlaybackStatus.playing,
+              position: Duration(milliseconds: 1000),
+            ),
+          );
+          async.flushMicrotasks();
+          expect(async.periodicTimerCount, equals(1));
           expect(seeks, isEmpty);
           det.disposeAll();
         });

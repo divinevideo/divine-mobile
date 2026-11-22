@@ -454,6 +454,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 result(nil)
                 return
             }
+            textureOutput?.setPlaybackActive(true)
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)
@@ -1553,6 +1554,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 if self.isBackgrounded {
                     self.resumesSeekOnForeground = true
                 } else {
+                    self.textureOutput?.setPlaybackActive(true)
                     self.player?.play()
                     self.player?.rate = Float(self.speed)
                     self.audioOverlayManager.resumeActive(speed: self.speed)
@@ -2109,6 +2111,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             self.textureOutput?.forceRefresh(for: resumeTime)
             self.syncAudioOverlays()
             if shouldResume {
+                self.textureOutput?.setPlaybackActive(true)
                 self.player?.play()
                 self.player?.rate = Float(self.speed)
                 self.audioOverlayManager.resumeActive(speed: self.speed)
@@ -2762,6 +2765,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // disposes the engine's players before the shell is destroyed
         // (#9342).
         textureOutput?.suspendFrameDelivery()
+        clipAudioSyncTimer?.invalidate()
+        clipAudioSyncTimer = nil
         wasPlayingBeforePause = player?.rate ?? 0 > 0
         if wasPlayingBeforePause {
             player?.pause()
@@ -2777,7 +2782,16 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     func onAppForegrounded() {
         isBackgrounded = false
         textureOutput?.resumeFrameDelivery()
+        if clipAudioLoop != nil && clipAudioSyncTimer == nil {
+            clipAudioSyncTimer = Timer.scheduledTimer(
+                withTimeInterval: Self.clipAudioSyncInterval,
+                repeats: true
+            ) { [weak self] _ in
+                DispatchQueue.main.async { self?.checkClipAudioLoop() }
+            }
+        }
         if wasPlayingBeforePause || resumesSeekOnForeground {
+            textureOutput?.setPlaybackActive(true)
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)

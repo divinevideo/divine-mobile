@@ -534,6 +534,7 @@ class RelayManager {
   /// status (#7091). A relay that is already being dialled is joined rather
   /// than redialled, so no sweep opens a second socket to it (#8991).
   Future<void> retryDisconnectedRelays() {
+    resumeStatusPolling();
     final inFlight = _retryInFlight;
     if (inFlight != null) return _waitForRetrySweep(inFlight);
     _retryDeadline = clock.now().add(reconnectSweepBudget);
@@ -669,6 +670,7 @@ class RelayManager {
   /// [ForceReconnectOutcome.stillDialling] instead of a normal completion it
   /// would otherwise read as "the reconnect is done and nothing connected".
   Future<ForceReconnectOutcome> forceReconnectAll() {
+    resumeStatusPolling();
     final running = _forceCycle;
     final runningDeadline = _forceCycleDeadline;
     if (running != null &&
@@ -755,6 +757,41 @@ class RelayManager {
     _notifyStatusChange();
     return success;
   }
+
+  /// Suspends all active relay sockets and pauses periodic status polling
+  /// without removing configured relays.
+  ///
+  /// Used when the app stays backgrounded past its grace period so idle
+  /// WebSocket keepalive timers and status polling do not wake the CPU or
+  /// radio. Calling [forceReconnectAll] or [retryDisconnectedRelays] on resume
+  /// restores both connections and polling.
+  void suspendConnections() {
+    if (_disposed) return;
+    _log('Suspending relay connections for background');
+    pauseStatusPolling();
+    List<String>.from(_dials.keys).forEach(_releaseDial);
+    for (final url in List<String>.from(_configuredRelays)) {
+      _relayPool.remove(url);
+      _updateRelayStatus(url, RelayState.disconnected);
+    }
+    _notifyStatusChange();
+  }
+
+  /// Pauses the 5-second periodic status polling timer.
+  void pauseStatusPolling() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = null;
+  }
+
+  /// Resumes the periodic status polling timer if the manager is active.
+  void resumeStatusPolling() {
+    if (!_initialized || _disposed || _statusPollTimer != null) return;
+    _startStatusPolling();
+  }
+
+  /// Whether periodic status polling is currently active.
+  @visibleForTesting
+  bool get isStatusPollingActive => _statusPollTimer?.isActive ?? false;
 
   // ---------------------------------------------------------------------------
   // Disposal

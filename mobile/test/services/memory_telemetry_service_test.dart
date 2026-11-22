@@ -234,6 +234,27 @@ void main() {
         expect(emitted, hasLength(1));
       });
     });
+
+    test('defaultInterval is 2 minutes to limit periodic overhead', () {
+      fakeAsync((async) {
+        final service = MemoryTelemetryService(
+          readRssBytes: () => 1,
+          readPeakRssBytes: _zero,
+          nativeControllerCount: _zero,
+          queueDepth: _zero,
+          imageCacheBytes: _zero,
+          imageCacheLiveCount: _zero,
+          emit: (snapshot, _) => emitted.add(snapshot),
+        )..start();
+
+        async.elapse(const Duration(seconds: 119));
+        expect(emitted, isEmpty);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(emitted, hasLength(1));
+        service.stop();
+      });
+    });
   });
 }
 

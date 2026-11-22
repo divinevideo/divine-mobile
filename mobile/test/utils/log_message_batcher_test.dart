@@ -115,6 +115,24 @@ void main() {
       });
     });
 
+    test('does not arm a background timer while no messages are queued', () {
+      fakeAsync((async) {
+        batcher.initialize();
+        expect(async.pendingTimers, isEmpty);
+
+        batcher.tryBatchMessage(
+          '[EXTERNAL-EVENT] Event abc matches subscription feed',
+          level: LogLevel.debug,
+          category: LogCategory.relay,
+        );
+        expect(async.pendingTimers, hasLength(1));
+
+        async.elapse(const Duration(seconds: 10));
+        expect(async.pendingTimers, isEmpty);
+        expect(logCapture.getRecentLogs(), hasLength(1));
+      });
+    });
+
     test('flushing pending messages keeps the interval armed', () {
       fakeAsync((async) {
         batcher.initialize();

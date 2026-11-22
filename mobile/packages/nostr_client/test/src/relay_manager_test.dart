@@ -2826,5 +2826,41 @@ void main() {
         },
       );
     });
+
+    group('background suspension', () {
+      test(
+        'suspendConnections stops polling, removes pooled sockets, '
+        'and keeps configured relays for resume',
+        () async {
+          final suspendManager = RelayManager(
+            config: _createTestConfig(),
+            relayPool: mockRelayPool,
+            relayFactory: _FakeRelay.new,
+          );
+          addTearDown(suspendManager.dispose);
+
+          await suspendManager.initialize();
+          expect(suspendManager.isStatusPollingActive, isTrue);
+          expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
+
+          suspendManager.suspendConnections();
+
+          expect(suspendManager.isStatusPollingActive, isFalse);
+          expect(
+            suspendManager.configuredRelays,
+            contains(testDefaultRelayUrl),
+          );
+          expect(suspendManager.connectedRelays, isEmpty);
+          verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(
+            greaterThanOrEqualTo(1),
+          );
+
+          await suspendManager.forceReconnectAll();
+
+          expect(suspendManager.isStatusPollingActive, isTrue);
+          expect(suspendManager.connectedRelays, contains(testDefaultRelayUrl));
+        },
+      );
+    });
   });
 }

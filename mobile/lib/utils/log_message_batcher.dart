@@ -27,22 +27,44 @@ class LogMessageBatcher {
   /// Maximum number of similar messages to batch before forcing a flush
   static const int _maxBatchSize = 50;
 
-  /// Initialize the batcher with periodic flushing
+  /// Whether deferred timed flushing has been enabled via [initialize].
+  bool _initialized = false;
+
+  /// Initialize the batcher so queued messages flush after [_flushInterval].
+  ///
+  /// The flush timer is armed lazily only when a batchable message arrives,
+  /// avoiding idle 10-second wakeups when no batchable logs are emitted.
   void initialize() {
-    _flushTimer?.cancel();
-    _flushTimer = Timer.periodic(_flushInterval, (_) => _flushBatches());
+    _initialized = true;
+    if (_batchedMessages.isNotEmpty) {
+      _armFlushTimer();
+    }
   }
 
-  /// Flush pending summaries without stopping periodic batching.
+  void _armFlushTimer() {
+    if (!_initialized || _flushTimer != null) return;
+    _flushTimer = Timer(_flushInterval, () {
+      _flushTimer = null;
+      _flushBatches();
+    });
+  }
+
+  /// Flush pending summaries without disabling future timed batching.
   ///
-  /// Account-scoped lifecycle handlers use this when they unmount. The timer
-  /// belongs to the device-scoped batcher and must survive account swaps.
-  void flush() => _flushBatches();
+  /// Account-scoped lifecycle handlers use this when they unmount. The batcher
+  /// is device-scoped and must stay ready for future batches across swaps.
+  void flush() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    _flushBatches();
+  }
 
   /// Dispose the batcher and clean up resources
   void dispose() {
+    _initialized = false;
     _flushTimer?.cancel();
-    flush();
+    _flushTimer = null;
+    _flushBatches();
     _batchedMessages.clear();
   }
 
@@ -77,6 +99,12 @@ class LogMessageBatcher {
     if (batchInfo.count >= _maxBatchSize) {
       _flushSingleBatch(pattern, batchInfo);
       _batchedMessages.remove(pattern);
+      if (_batchedMessages.isEmpty) {
+        _flushTimer?.cancel();
+        _flushTimer = null;
+      }
+    } else {
+      _armFlushTimer();
     }
 
     return true; // Message was batched
