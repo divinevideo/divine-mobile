@@ -1001,6 +1001,35 @@ void main() {
       });
 
       test(
+        'keeps signed hashtags beyond the limit in a title-only edit',
+        () async {
+          final signedHashtags = [
+            for (var i = 0; i <= HashtagExtractor.maxHashtagsPerVideo; i++)
+              'signedtag$i',
+          ];
+          final opened = _testVideo(
+            extraTags: [
+              for (final hashtag in signedHashtags) ['t', hashtag],
+            ],
+          );
+
+          final result = await updateFromRelay(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(
+              opened,
+            ).copyWith(title: 'Retitled'),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where((tag) => tag.first == 't').map((tag) => tag[1]),
+            signedHashtags,
+          );
+        },
+      );
+
+      test(
         'refuses a concurrent collaborator addition above the limit',
         () async {
           final opened = _testVideo();

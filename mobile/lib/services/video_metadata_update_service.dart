@@ -356,7 +356,15 @@ class VideoMetadataUpdateService {
       }
 
       final video = VideoEvent.fromNostrEvent(latest, permissive: true);
-      final latestEditorState = editorStateFromPublishedVideo(video);
+      // The editor caps its visible tags. The merge starts from all signed
+      // tags so an unrelated edit keeps tags beyond that cap.
+      final latestHashtags = video.hashtags
+          .map(HashtagExtractor.normalizeVideoHashtag)
+          .whereType<String>()
+          .toSet();
+      final latestEditorState = editorStateFromPublishedVideo(
+        video,
+      ).copyWith(tags: latestHashtags);
       // A REST row can omit signed tags even when its event ID matches.
       final edits = _rebaseEdits(
         editorState,
@@ -387,13 +395,12 @@ class VideoMetadataUpdateService {
           );
         }
       }
-      // The merged set only passes the limit when this edit added a tag the
-      // newest revision lacks, and publishing would drop it silently.
       final mergedHashtags = edits.tags
           .map(HashtagExtractor.normalizeVideoHashtag)
           .whereType<String>()
           .toSet();
-      if (mergedHashtags.length > HashtagExtractor.maxHashtagsPerVideo) {
+      if (mergedHashtags.length > HashtagExtractor.maxHashtagsPerVideo &&
+          mergedHashtags.difference(latestHashtags).isNotEmpty) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.concurrentEditsOverLimit,
           'Concurrent edits exceed the hashtag limit',
@@ -455,9 +462,7 @@ class VideoMetadataUpdateService {
         ]);
       }
 
-      for (final hashtag in HashtagExtractor.normalizeVideoHashtags(
-        edits.tags,
-      )) {
+      for (final hashtag in mergedHashtags) {
         tags.add(['t', hashtag]);
       }
 
