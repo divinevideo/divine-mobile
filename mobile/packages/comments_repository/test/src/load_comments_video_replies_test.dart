@@ -327,6 +327,30 @@ void main() {
       },
     );
 
+    test("drops a blocked author's video reply but keeps the rest", () async {
+      const blockedAuthor =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      repository = CommentsRepository(
+        nostrClient: nostr,
+        funnelcakeApiClient: funnel,
+        blockFilter: (pubkey, {rootAuthorPubkey}) => pubkey == blockedAuthor,
+      );
+      stubComments(_commentsPage([_restComment('comment', 1000)]));
+      stubReplies(
+        _replies([
+          _replyRow('kept-reply', 2000),
+          {..._replyRow('blocked-reply', 3000), 'pubkey': blockedAuthor},
+        ]),
+      );
+
+      final thread = await load();
+
+      expect(
+        thread.comments.map((c) => _label(c.id)),
+        unorderedEquals(['comment', 'kept-reply']),
+      );
+    });
+
     test('asks for no more replies than the page holds', () async {
       stubComments(_commentsPage([_restComment('comment', 1000)]));
       stubReplies(_replies(const []));
