@@ -709,6 +709,42 @@ class DivineVideoPlayerInstanceTest {
         assertEquals(false, states.last().containsKey("shownPositionMs"))
     }
 
+    @Test
+    fun `a paused seek reports the displayed frame when the decoder catches up`() {
+        val (_, frames, result) = seekWithSurface(playWhenReady = false)
+        pausePictureTestAt(500L)
+        val states = mutableListOf<Any>()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        assertEquals(null, (states.last() as Map<*, *>)["shownPositionMs"])
+
+        armSeekFrame()
+        frames.renderAt(733_333L)
+
+        assertEquals(533L, (states.last() as Map<*, *>)["shownPositionMs"])
+        verify(exactly = 1) { result.success(null) }
+    }
+
+    @Test
+    fun `a paused seek without a decoder callback reports the position at timeout`() {
+        val timeout = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(timeout), 500L) } returns true
+        val (_, _, result) = seekWithSurface(playWhenReady = false)
+        pausePictureTestAt(200L)
+        val states = mutableListOf<Any>()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        assertEquals(200L, (states.last() as Map<*, *>)["positionMs"])
+
+        every { mockPlayer.currentPosition } returns 500L
+        timeout.captured.run()
+
+        assertEquals(500L, (states.last() as Map<*, *>)["positionMs"])
+        verify(exactly = 1) { result.success(null) }
+    }
+
     // -- rotation --
 
     @Test

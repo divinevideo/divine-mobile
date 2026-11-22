@@ -519,9 +519,9 @@ internal class DivineVideoPlayerInstance(
 
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
     private val seekTimeoutRunnable = Runnable {
-        seekAwaitsFrame = false
-        seekCompletionResult?.success(null)
-        seekCompletionResult = null
+        if (seekCompletionResult == null) return@Runnable
+        if (player?.isPlaying == false) sendStateUpdate()
+        completeSeekIfPending()
     }
 
     /**
@@ -2347,7 +2347,10 @@ internal class DivineVideoPlayerInstance(
     private fun onSeekFrameRendered(generation: Int) {
         if (generation != seekFrameGeneration || !seekAwaitsFrame) return
         seekAwaitsFrame = false
-        if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
+        if (player?.playbackState == Player.STATE_READY) {
+            if (player?.isPlaying == false) sendStateUpdate()
+            completeSeekIfPending()
+        }
     }
 
     /**
