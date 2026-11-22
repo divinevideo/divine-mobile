@@ -69,7 +69,8 @@ class VideoTileOrigin {
            ? Alignment.center
            : image.alignment.resolve(image.textDirection);
 
-  /// Captures a laid-out video tile using the player's fit for [video].
+  /// Captures a laid-out video tile using the player's fit for [video], or
+  /// `null` in the cases [capture] lists.
   ///
   /// A video already marked for a warning uses the plain page transition so
   /// its thumbnail does not grow while the player is loading the warning.

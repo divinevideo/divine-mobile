@@ -39,8 +39,9 @@ const double _gridCacheExtentScreens = 2;
 ///
 /// [captureOrigin] reads the tapped tile, for a player that grows out of it.
 /// Call it during the callback, before navigating, and only to open such a
-/// player: reading the tile copies its picture. It returns `null` in
-/// selection mode, where a tap toggles the tile instead.
+/// player: reading the tile copies its picture. It returns `null` when the
+/// tile should not grow, as [VideoTileOrigin.captureVideo] decides, and in
+/// [ComposableVideoGrid]'s selection mode, where a tap toggles the tile.
 typedef VideoGridTapCallback = void Function(
   List<VideoEvent> videos,
   int index,

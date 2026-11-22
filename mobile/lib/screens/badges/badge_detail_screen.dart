@@ -737,6 +737,8 @@ class _BadgeVideoGrid extends ConsumerWidget {
                         ),
                     itemBuilder: (context, index) {
                       final video = videos[index];
+                      // The item builder's context is the whole grid's; the
+                      // tile origin must be captured from this tile alone.
                       return Builder(
                         builder: (tileContext) => Semantics(
                           label: tileContext.l10n.profileVideoThumbnailLabel(

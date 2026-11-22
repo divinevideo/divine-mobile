@@ -215,9 +215,9 @@ class VideoTileTransitionTargets {
   /// Creates an empty set of targets.
   VideoTileTransitionTargets({this.onSafetyOverlaysChanged});
 
-  /// Called when a safety overlay comes or goes. That happens while the
-  /// page below is built or torn down, so a listener above it must not
-  /// rebuild from the call itself.
+  /// Called when a safety overlay comes or goes, or becomes or stops being
+  /// the current page's. That happens while the page below is built or torn
+  /// down, so a listener above it must not rebuild from the call itself.
   final VoidCallback? onSafetyOverlaysChanged;
 
   // More than one target can show a video at once: the feed stacks a loading

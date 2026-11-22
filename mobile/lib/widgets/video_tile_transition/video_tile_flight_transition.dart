@@ -32,9 +32,9 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// [VideoTileOrigin.letterboxAspectRatio]. The picture is drawn covering the
 /// moving rect, which reproduces the tile's crop at one end and the player's
 /// at the other: the crop's alignment moves from the tile's to the player's
-/// centered one with the rect. When the tile is no longer laid out the
-/// picture flies to the middle of the screen instead; a tile scrolled out of
-/// view but still built keeps its place.
+/// centered one with the rect. When the tile is no longer laid out nothing
+/// flies, and the page only fades; a tile scrolled out of view but still
+/// built keeps its place.
 ///
 /// The picture starts as the tile's own decode and switches to
 /// [VideoTileOrigin.playerSizeImage] whenever that has loaded, usually while
@@ -265,10 +265,11 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     );
   }
 
-  /// A safety overlay came or went in the page, which this widget only sees
-  /// when it rebuilds, and a drag held still does not rebuild it. The page
-  /// is building below it when this is called, so what flies is hidden when
-  /// this frame is painted, and this widget looks again once it is done.
+  /// A safety overlay came, went, or became or stopped being the current
+  /// page's, which this widget only sees when it rebuilds, and a drag held
+  /// still does not rebuild it. The page is building below it when this is
+  /// called, so what flies is hidden when this frame is painted, and this
+  /// widget looks again once it is done.
   void _onSafetyOverlaysChanged() {
     _gate.reconsider();
     if (_safetyCheckScheduled) return;

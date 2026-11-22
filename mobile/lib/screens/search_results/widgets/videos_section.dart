@@ -205,6 +205,9 @@ class SearchVideoTile extends StatelessWidget {
 
   final VideoEvent video;
   final int index;
+
+  /// Called on tap with a reader for this tile's origin; see
+  /// [VideoGridTapCallback] for when to call it.
   final ValueChanged<ValueGetter<VideoTileOrigin?>> onTap;
 
   @override
