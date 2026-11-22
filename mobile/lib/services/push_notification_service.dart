@@ -102,6 +102,11 @@ class PushNotificationService {
   /// retry of the same request re-sends this event, which such a relay answers
   /// as a duplicate instead of storing a second one. A refusal stored nothing,
   /// so the next attempt signs afresh.
+  ///
+  /// One slot per kind keeps only the latest attempt, which holds because
+  /// callers run one attempt of a kind at a time: preferences through
+  /// `NotificationPreferencesService`'s publication chain, registration
+  /// through the session coordinator's single operation.
   final _unconfirmedEvents = <int, ({String request, Event event})>{};
 
   static String _pushControlRequest(
