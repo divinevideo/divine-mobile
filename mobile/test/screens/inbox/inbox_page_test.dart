@@ -568,6 +568,15 @@ void main() {
         await tester.pump();
         await openMessages(tester);
         await tester.pump(settle);
+        // Back on Notifications the pane stays mounted, under a disabled
+        // TickerMode; the forward must not wait for Messages to show again.
+        await tester.tap(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).settingsNotifications,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(kInboxTabTransitionDuration);
         clearInteractions(mockBlocklistRepository);
 
         // Nothing re-filters on its own once the first load has run.
