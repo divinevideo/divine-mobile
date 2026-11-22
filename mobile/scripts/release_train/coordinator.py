@@ -223,9 +223,11 @@ def last_public_beta_release(state):
     """Completion or recovery observation bounds the actual public attachment."""
     return max(
         (
-            max(o.get("started_at", 0), o.get("cadence_at", 0))
+            max(
+                o.get("cadence_at", 0),
+                o.get("started_at", 0) if is_public_beta_release(o["action"]) else 0,
+            )
             for o in state.get("operations", {}).values()
-            if is_public_beta_release(o["action"])
         ),
         default=0,
     )
@@ -340,16 +342,23 @@ def plan_tick(snapshot, state, levels):
                 reasons.append(
                     "ios public: wait twelve hours; at most two releases per rolling day"
                 )
+            operations = state.get("operations", {}).values()
+            known_beta_ids = {
+                o["action"]["build"]["id"]
+                for o in operations
+                if o["action"]["kind"] == "public-beta"
+            }
+            completed_attachment_ids = {
+                o["action"]["build"]["id"]
+                for o in operations
+                if o["action"]["kind"] == "attach-beta-groups" and o["status"] == "done"
+            }
             for b in builds:
-                known_operation = any(
-                    o["action"]["kind"] == "public-beta"
-                    and o["action"].get("build", {}).get("id") == b["id"]
-                    for o in state.get("operations", {}).values()
-                )
                 if (
                     b.get("ci_verified")
                     and not b.get("public_complete", b.get("public"))
-                    and (b.get("groups") or known_operation)
+                    and b["id"] not in completed_attachment_ids
+                    and (b.get("groups") or b["id"] in known_beta_ids)
                     and b.get("external")
                     in BETA_WAITING
                     | {"BETA_APPROVED", "READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
@@ -383,6 +392,7 @@ def plan_tick(snapshot, state, levels):
                 if b.get("valid")
                 and b.get("ci_verified")
                 and not b.get("public")
+                and b["id"] not in completed_attachment_ids
                 and b["number"] > newest_public
                 and b.get("external")
                 in {

@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import release_train_fakes  # noqa: F401 - scripts import path
 from release_train.coordinator import PLAY_PUBLICATION_VERSION, observe, plan_tick
+from release_train.providers import ProviderError
 from release_train.runner import Runtime, execute_plan, reconcile_operations
 from test_release_train_coordinator import NOW, build, snapshot
 from test_release_train_runner import Store
@@ -120,6 +121,71 @@ class ReleaseCadenceTest(unittest.TestCase):
                     [(a["kind"], a["build"]["id"]) for a in actions],
                     [("attach-beta-groups", "11")] if elapsed == 12 * HOUR else [],
                 )
+
+    def test_completed_attachment_cannot_reserve_another_release_slot(self):
+        s = self.public_snapshot()
+        earlier = s["ios"]["builds"][0]
+        next_build = earlier | {"id": "11", "number": 11}
+        # Apple can stop listing the older build in a group after it was removed.
+        s["ios"]["builds"] = [earlier, next_build]
+        first_submit = operation("public-beta", NOW - DAY)
+        first_attachment = operation("attach-beta-groups", NOW - DAY)
+        first_attachment["action"]["build"] = earlier
+        first_attachment["cadence_at"] = NOW - DAY
+        state = {"operations": {
+            "public-beta:ios:10": first_submit,
+            "attach-beta-groups:ios:10": first_attachment,
+        }}
+
+        levels = {"ios": "testflight"}
+        actions = plan_tick(s, state, levels)["actions"]
+        self.assertEqual(
+            [(action["kind"], action["build"]["number"]) for action in actions],
+            [("public-beta", 11)],
+        )
+        s["ios"]["builds"] = [earlier]
+        self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+
+    def test_finishing_fanout_preserves_the_recovered_publication_clock(self):
+        s = self.public_snapshot()
+        recovering = s["ios"]["builds"][0]
+        newer = recovering | {"id": "11", "number": 11}
+        s["ios"]["builds"] = [recovering, newer]
+        earlier = operation("public-beta", NOW - DAY)
+        earlier["cadence_at"] = NOW - DAY
+        state = {"operations": {"public-beta:ios:10": earlier}}
+        levels = {"ios": "testflight"}
+        store = Store()
+
+        class PartialAttachment:
+            def execute(self, action, state, snapshot):
+                raise ProviderError("Fanout interrupted after the public group was added")
+
+        with patch("release_train.runner.time.time", return_value=NOW):
+            execute_plan(plan_tick(s, state, levels), state, s, store, PartialAttachment())
+        state = store.saves[-1]
+        recovering.update(public=True, public_complete=False, groups=["public"])
+        s["now"] = NOW + HOUR
+        reconcile_operations(state, s)
+
+        class CompletedAttachment:
+            def execute(self, action, state, snapshot):
+                return {}
+
+        plan = plan_tick(s, state, levels)
+        self.assertEqual([a["kind"] for a in plan["actions"]], ["attach-beta-groups"])
+        with patch("release_train.runner.time.time", return_value=s["now"]):
+            execute_plan(plan, state, s, store, CompletedAttachment())
+        state = store.saves[-1]
+        recovering["public_complete"] = True
+
+        s["now"] = NOW + 13 * HOUR - 1
+        self.assertEqual(plan_tick(s, state, levels)["actions"], [])
+        s["now"] += 1
+        self.assertEqual(
+            [a["kind"] for a in plan_tick(s, state, levels)["actions"]],
+            ["public-beta"],
+        )
 
     def test_already_public_group_recovery_does_not_consume_release_budget(self):
         for dates in [[], [NOW - HOUR]]:

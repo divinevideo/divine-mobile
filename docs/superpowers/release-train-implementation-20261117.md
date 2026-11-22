@@ -190,14 +190,17 @@ Scheduled iOS builds, including retries, are spaced at least twelve hours apart.
 Public TestFlight releases also require twelve-hour spacing and fewer than two
 beta review submissions in the trailing 24 hours. The durable operation journal
 preserves that spacing when an already-approved build needs no new review or an
-accepted request is recovered after interruption. Completing a build's existing
-group distribution remains resumable without consuming another release slot.
+accepted request is recovered after interruption. First public group attachment
+uses the same budget whether it is fresh or recovered, with at most one build
+starting public distribution per tick. Completing missing groups for an
+already-public build preserves its original cadence clock.
 
 Production submissions/promotions on each store require at least 48 hours since
 the preceding submission/promotion or a newly observed available production
 release. Accepted operations retain this wait across recovery and acknowledgement.
 The first observation of an existing App Store release conservatively starts a
-fresh 48-hour wait; observing the same or an older version does not reset it.
+fresh 48-hour wait when the Apple read completes. Observing the same or an older
+version leaves that timestamp in place.
 App Store submission has no additional TestFlight soak requirement and leaves
 an existing review queued unless a real bug requires withdrawal. The coordinator
 keeps polling hourly and crash monitoring/fix work continues independently.

@@ -267,16 +267,20 @@ def execute_plan(plan, state, snapshot, store, provider):
             state.get("holds", {}).get(channel) is not None for channel in ("android", scope)
         ):
             continue
+        public_beta_release = is_public_beta_release(action)
         operation = state.setdefault("operations", {})[key] = {
             # Notes already live in the immutable source/artifact ledger. Keep
             # only operation identity here, not another full copy on every save.
             "action": {name: value for name, value in action.items() if name != "release_notes"},
             "status": "started",
             "started_at": (
-                int(time.time()) if is_public_beta_release(action)
+                int(time.time()) if public_beta_release
                 else snapshot.get("now", int(time.time()))
             ),
         }
+        if old and "cadence_at" in old:
+            # Retrying missing groups can replace the first attachment's entry.
+            operation["cadence_at"] = old["cadence_at"]
         if action["kind"] == "build":
             state.setdefault("attempts", {}).setdefault(action["platform"], {})[
                 action["sha"]
@@ -311,12 +315,9 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["error"] = str(error)
             state["operations"][key]["status"] = "ambiguous"
             state.setdefault("holds", {})[scope] = key
-        if (
-            is_public_beta_release(action)
-            and state.get("operations", {}).get(key) is operation
-        ):
+        if public_beta_release and state.get("operations", {}).get(key) is operation:
             # A request's duration can vary; its return is the safe clock bound.
-            operation["cadence_at"] = math.ceil(time.time())
+            operation["cadence_at"] = max(operation.get("cadence_at", 0), math.ceil(time.time()))
         store.save(state)
 
 
