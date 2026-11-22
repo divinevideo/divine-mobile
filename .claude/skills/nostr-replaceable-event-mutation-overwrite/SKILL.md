@@ -122,6 +122,10 @@ if (read.timedOut || read.noRelays) {
 Apply this pattern to ALL mutation directions (follow AND unfollow, add AND remove relay,
 update AND clear profile fields). The unfollow path is just as dangerous as follow.
 
+Within a client, serialize edits to the same event from the read through the publish
+acknowledgement. Remember the accepted revision before the next edit starts because a relay
+can acknowledge a publish before serving the revision on a read.
+
 ## Verification
 
 Cold-start overwrite:
@@ -150,8 +154,10 @@ Partial read:
 
 A follow mutation that assumes `nostr.query` rejects when any required relay fails to
 finish the read. If the client returns partial answers, check its completion status before
-using the events. The illustrative `publishEvent` helper rejects if it cannot assign a
-valid timestamp later than `newerThan`.
+using the events. The illustrative `publishEvent` helper returns the signed revision after
+relay acceptance and rejects if it cannot assign a valid timestamp later than `newerThan`.
+The client shares a store of last accepted revisions by account. Follow and unfollow use
+the same TanStack Query v5 scope in the same query client. [Mutation scopes](https://tanstack.com/query/latest/docs/framework/react/guides/mutations#mutation-scopes)
 
 ```typescript
 type ContactList = {
@@ -173,10 +179,8 @@ export function useFollowUser(pubkey: string) {
   const { nostr } = useNostr();
 
   return useMutation({
-    mutationFn: async ({ targetPubkey, currentContactList }: {
-      targetPubkey: string;
-      currentContactList?: ContactList | null;
-    }) => {
+    scope: { id: `contact-list:${pubkey}` },
+    mutationFn: async (targetPubkey: string) => {
       let events: ContactList[];
       try {
         events = await nostr.query(
@@ -187,14 +191,16 @@ export function useFollowUser(pubkey: string) {
         throw new Error('Could not confirm your follow list. Please try again.');
       }
 
-      const base = newest([...events, currentContactList]);
+      const base = newest([...events, lastAcceptedContactList(pubkey)]);
       const tags = [...(base?.tags ?? [])];
       if (tags.some(([kind, value]) => kind === 'p' && value === targetPubkey)) return;
       tags.push(['p', targetPubkey]);
-      return publishEvent(
-        { kind: 3, tags, content: base?.content ?? '' },
+      const accepted = await publishEvent(
+        { pubkey, kind: 3, tags, content: base?.content ?? '' },
         { newerThan: base?.created_at },
       );
+      rememberAcceptedContactList(pubkey, accepted);
+      return accepted;
     },
   });
 }
