@@ -26,17 +26,24 @@ class DivineCameraDesktop extends DivineCameraPlatform
   DivineCameraDesktop({
     required capture.CameraPlatform cameraPlatform,
     DesktopVideoFileInspector? fileInspector,
+    bool? waitForNativeClosing,
   }) : _cameraPlatform = cameraPlatform,
+       _waitForNativeClosing = waitForNativeClosing ?? Platform.isWindows,
        fileInspector = fileInspector ?? DesktopVideoFileInspector();
 
   /// Owns validation of the completed recording's encoded media tracks.
   final DesktopVideoFileInspector fileInspector;
 
   final capture.CameraPlatform _cameraPlatform;
+  // camera_desktop's Windows dispose reply acknowledges the request. Its
+  // cameraClosing event is posted only after releasing the capture engine.
+  final bool _waitForNativeClosing;
+  final _closedCameraIds = <int>{};
   final _deviceSubscriptions = <StreamSubscription<dynamic>>[];
   int? _cameraId;
   final _previewCameraId = ValueNotifier<int?>(null);
   bool _audioEnabled = false;
+  int? _recordingCameraId;
   int _generation = 0;
   Completer<void>? _initializationCancellation;
   Future<void> _pending = Future<void>.value();
@@ -149,6 +156,27 @@ class DivineCameraDesktop extends DivineCameraPlatform
     bool enableAudio = true,
     int? previewHandle,
   }) async {
+    try {
+      return await _openDevice(
+        lens,
+        videoQuality,
+        generation,
+        enableAudio: enableAudio,
+        previewHandle: previewHandle,
+      );
+    } catch (error) {
+      await _retireDevice(error, generation);
+      rethrow;
+    }
+  }
+
+  Future<CameraState> _openDevice(
+    DivineCameraLens lens,
+    DivineVideoQuality videoQuality,
+    int generation, {
+    required bool enableAudio,
+    int? previewHandle,
+  }) async {
     await _releaseDevice(preserveState: previewHandle != null);
     _checkGeneration(generation);
     final cameras = await _cameraPlatform.availableCameras();
@@ -199,17 +227,18 @@ class DivineCameraDesktop extends DivineCameraPlatform
             ),
             onError: reportFailure,
           ),
-      _cameraPlatform
-          .onCameraClosing(cameraId)
-          .listen(
-            (_) => reportFailure(
-              capture.CameraException(
-                'camera_closed',
-                'The camera disconnected.',
-              ),
+      _cameraPlatform.onCameraClosing(cameraId).listen(
+        (_) {
+          _closedCameraIds.add(cameraId);
+          reportFailure(
+            capture.CameraException(
+              'camera_closed',
+              'The camera disconnected.',
             ),
-            onError: reportFailure,
-          ),
+          );
+        },
+        onError: reportFailure,
+      ),
     ]);
     _initializationCancellation = cancellation;
     final subscription = _cameraPlatform
@@ -254,7 +283,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
       return _state;
     } catch (_) {
       await _cancelDeviceSubscriptions();
-      await _cameraPlatform.dispose(cameraId);
+      await _disposeNativeCamera(cameraId);
       rethrow;
     } finally {
       initializing = false;
@@ -309,18 +338,13 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   Future<void> _reconfigureAudio(bool enabled, int generation) async {
     final handle = _state.textureId;
-    try {
-      await _initialize(
-        _resumeLens,
-        _videoQuality,
-        generation,
-        enableAudio: enabled,
-        previewHandle: handle,
-      );
-    } catch (error) {
-      await _retireDevice(error, generation);
-      rethrow;
-    }
+    await _initialize(
+      _resumeLens,
+      _videoQuality,
+      generation,
+      enableAudio: enabled,
+      previewHandle: handle,
+    );
   }
 
   @override
@@ -349,6 +373,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
           (useCache ? null : (await getApplicationDocumentsDirectory()).path);
       _checkGeneration(generation);
       await _cameraPlatform.startVideoRecording(cameraId);
+      _recordingCameraId = cameraId;
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: true);
       if (maxDuration != null) {
@@ -397,6 +422,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
     capture.XFile? stopped;
     try {
       final file = stopped = await _cameraPlatform.stopVideoRecording(cameraId);
+      _recordingCameraId = null;
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: false);
       _isFinalizing = true;
@@ -653,7 +679,9 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   void _failCamera(int cameraId, int generation, Object error) {
     if (_cameraId != cameraId || generation != _generation) return;
-    _generation++;
+    final retiringGeneration = ++_generation;
+    final reportError = onCameraError;
+    final reportAutoStop = onRecordingAutoStopped;
     _recordingLimit?.cancel();
     _recordingLimit = null;
     _resumeOnForeground = false;
@@ -662,10 +690,14 @@ class DivineCameraDesktop extends DivineCameraPlatform
       try {
         await _releaseDevice();
       } finally {
-        try {
-          onCameraError?.call(error);
-        } finally {
-          if (wasRecording) onRecordingAutoStopped?.call(null);
+        if (retiringGeneration == _generation) {
+          try {
+            reportError?.call(error);
+          } finally {
+            if (wasRecording && retiringGeneration == _generation) {
+              reportAutoStop?.call(null);
+            }
+          }
         }
       }
     });
@@ -697,6 +729,8 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   Future<void> _releaseDevice({bool preserveState = false}) async {
     final cameraId = _cameraId;
+    final recordingCameraId = _recordingCameraId;
+    _recordingCameraId = null;
     _cameraId = null;
     _previewCameraId.value = null;
     _audioEnabled = false;
@@ -705,7 +739,51 @@ class DivineCameraDesktop extends DivineCameraPlatform
     _recordingLimit = null;
     if (!preserveState) _state = const CameraState();
     await _cancelDeviceSubscriptions();
-    if (cameraId != null) await _cameraPlatform.dispose(cameraId);
+    if (cameraId != null) {
+      try {
+        if (recordingCameraId == cameraId) {
+          final file = await _cameraPlatform.stopVideoRecording(cameraId);
+          await _discardFile(file.path);
+        }
+      } finally {
+        await _disposeNativeCamera(cameraId);
+      }
+    }
+  }
+
+  Future<void> _disposeNativeCamera(int cameraId) async {
+    final alreadyClosed = _closedCameraIds.remove(cameraId);
+    if (!_waitForNativeClosing || alreadyClosed) {
+      await _cameraPlatform.dispose(cameraId);
+      return;
+    }
+    final released = Completer<void>();
+    final subscription = _cameraPlatform
+        .onCameraClosing(cameraId)
+        .listen(
+          (_) {
+            if (!released.isCompleted) released.complete();
+          },
+          onError: (Object error, StackTrace stack) {
+            if (!released.isCompleted) released.completeError(error, stack);
+          },
+          onDone: () {
+            if (!released.isCompleted) {
+              released.completeError(
+                StateError('Camera release was not confirmed.'),
+              );
+            }
+          },
+        );
+    try {
+      await Future.wait<void>([
+        released.future,
+        _cameraPlatform.dispose(cameraId),
+      ], eagerError: true);
+    } finally {
+      await subscription.cancel();
+      _closedCameraIds.remove(cameraId);
+    }
   }
 
   DivineCameraLens _lens(capture.CameraDescription camera) =>

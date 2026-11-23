@@ -180,6 +180,61 @@ void main() {
     });
 
     group('disposeCamera', () {
+      test('retires a take started while disposal was queued', () async {
+        final directory = await Directory.systemTemp.createTemp(
+          'cancelled native start ',
+        );
+        final file = await File(
+          '${directory.path}/native.mp4',
+        ).writeAsBytes([1, 2, 3]);
+        final gate = Completer<void>();
+        backend
+          ..recordedFile = XFile(file.path)
+          ..startGate = gate;
+        try {
+          await camera.initializeCamera();
+          final starting = camera.startRecording();
+          final cancelled = expectLater(starting, throwsStateError);
+          await backend.startEntered.future;
+          final closing = camera.disposeCamera();
+          gate.complete();
+          await cancelled;
+          await closing;
+          expect(backend.stopCalls, 1);
+          expect(backend.activeCameraIds, isEmpty);
+          expect(file.existsSync(), isFalse);
+        } finally {
+          if (!gate.isCompleted) gate.complete();
+          await camera.disposeCamera();
+          await directory.delete(recursive: true);
+        }
+      });
+
+      test(
+        'drains an active native take and removes its intermediate',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'aborted take ',
+          );
+          final file = await File(
+            '${directory.path}/native.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          backend.recordedFile = XFile(file.path);
+          try {
+            await camera.initializeCamera();
+            expect(await camera.startRecording(), isTrue);
+            expect(file.existsSync(), isTrue);
+            await camera.disposeCamera();
+            expect(backend.stopCalls, 1);
+            expect(backend.activeCameraIds, isEmpty);
+            expect(file.existsSync(), isFalse);
+          } finally {
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
+          }
+        },
+      );
+
       for (final action in ['recording', 'photo']) {
         test('cancels queued $action before native capture starts', () async {
           await camera.initializeCamera(mirrorFrontCameraOutput: false);
@@ -285,6 +340,92 @@ void main() {
     });
 
     group('DivineCamera facade', () {
+      for (final route in ['switch', 'foreground']) {
+        for (final boundary in ['enumerate', 'create', 'initialize']) {
+          test('clears readiness after failed $route $boundary', () async {
+            final previous = DivineCameraPlatform.instance;
+            final facade = DivineCamera.instance;
+            final failures = <Object>[];
+            DivineCameraPlatform.instance = camera;
+            backend.cameras = const [
+              CameraDescription(
+                name: 'front',
+                lensDirection: CameraLensDirection.front,
+                sensorOrientation: 0,
+              ),
+              CameraDescription(
+                name: 'back',
+                lensDirection: CameraLensDirection.back,
+                sensorOrientation: 0,
+              ),
+            ];
+            try {
+              await facade.initialize(lens: DivineCameraLens.front);
+              expect(facade.state.canRecord, isTrue);
+              if (route == 'foreground') {
+                await facade.handleAppLifecycleState(AppLifecycleState.paused);
+              }
+              facade.onCameraError = failures.add;
+              final error = CameraException(
+                'replacement_denied',
+                'Synthetic denial',
+              );
+              switch (boundary) {
+                case 'enumerate':
+                  backend.enumerationError = error;
+                case 'create':
+                  backend.creationError = error;
+                case 'initialize':
+                  backend.initializationError = error;
+              }
+              await expectLater(
+                route == 'switch'
+                    ? facade.switchCamera()
+                    : facade.handleAppLifecycleState(AppLifecycleState.resumed),
+                throwsA(isA<CameraException>()),
+              );
+              expect(backend.activeCameraIds, isEmpty);
+              expect((await camera.getCameraState()).isInitialized, isFalse);
+              expect(facade.state.canRecord, isFalse);
+              expect(failures, [same(error)]);
+            } finally {
+              await facade.dispose();
+              DivineCameraPlatform.instance = previous;
+            }
+          });
+        }
+      }
+
+      test(
+        'a delayed old device failure cannot invalidate a fresh session',
+        () async {
+          final previous = DivineCameraPlatform.instance;
+          final facade = DivineCamera.instance;
+          final failures = <Object>[];
+          final gate = Completer<void>();
+          DivineCameraPlatform.instance = camera;
+          try {
+            await facade.initialize();
+            backend.disposalGate = gate;
+            backend.errors.add(const CameraErrorEvent(7, 'Synthetic unplug'));
+            await backend.disposalEntered.future;
+            facade.onCameraError = failures.add;
+            final reopened = facade.initialize();
+            expect(backend.activeCameraIds, {7});
+            gate.complete();
+            final state = await reopened;
+            expect(state.isInitialized, isTrue);
+            expect(facade.state.canRecord, isTrue);
+            expect(backend.activeCameraIds, {8});
+            expect(failures, isEmpty);
+          } finally {
+            if (!gate.isCompleted) gate.complete();
+            await facade.dispose();
+            DivineCameraPlatform.instance = previous;
+          }
+        },
+      );
+
       test('publishes native device loss and allows a fresh session', () async {
         final original = DivineCameraPlatform.instance;
         final failures = <Object>[];
@@ -332,6 +473,75 @@ void main() {
     });
 
     group('hardware controls', () {
+      for (final streamEnds in [false, true]) {
+        test(
+          'does not reopen after release confirmation '
+          '${streamEnds ? 'ends' : 'fails'}',
+          () async {
+            final gate = Completer<void>();
+            backend
+              ..earlyDisposalAcknowledgement = true
+              ..disposalGate = gate;
+            camera = DivineCameraDesktop(
+              cameraPlatform: backend,
+              fileInspector: fileInspector,
+              waitForNativeClosing: true,
+            );
+            await camera.initializeCamera();
+            final reopening = camera.suspendAudioCapture();
+            final failed = expectLater(reopening, throwsStateError);
+            try {
+              await backend.disposalEntered.future;
+              if (streamEnds) {
+                await backend.closing.close();
+              } else {
+                backend.closing.addError(
+                  StateError('Synthetic release channel failure'),
+                );
+              }
+              await failed;
+              expect(backend.nextCameraId, 8);
+              expect((await camera.getCameraState()).isInitialized, isFalse);
+            } finally {
+              gate.complete();
+              await backend.releaseCompleted.future;
+              await camera.disposeCamera();
+            }
+          },
+        );
+      }
+
+      test(
+        'waits for Windows hardware release before reopening audio',
+        () async {
+          final gate = Completer<void>();
+          backend
+            ..earlyDisposalAcknowledgement = true
+            ..disposalGate = gate;
+          camera = DivineCameraDesktop(
+            cameraPlatform: backend,
+            fileInspector: fileInspector,
+            waitForNativeClosing: true,
+          );
+          await camera.initializeCamera();
+          final reopening = camera.suspendAudioCapture();
+          try {
+            await backend.disposalEntered.future;
+            await pumpEventQueue();
+            expect(backend.nextCameraId, 8);
+            expect(backend.activeCameraIds, {7});
+            gate.complete();
+            await reopening;
+            expect(backend.activeCameraIds, {8});
+            expect(backend.settings!.enableAudio, isFalse);
+          } finally {
+            if (!gate.isCompleted) gate.complete();
+            await reopening;
+            await camera.disposeCamera();
+          }
+        },
+      );
+
       test(
         'rejects an unavailable lens and preserves usable capture',
         () async {
@@ -1480,7 +1690,13 @@ class _CameraBackend extends CameraPlatform {
   final activeCameraIds = <int>{};
   MediaSettings? settings;
   CameraDescription? selectedCamera;
+  CameraException? enumerationError;
+  CameraException? creationError;
   CameraException? initializationError;
+  bool earlyDisposalAcknowledgement = false;
+  Completer<void>? disposalGate;
+  final disposalEntered = Completer<void>();
+  final releaseCompleted = Completer<void>();
   Completer<void>? initializationGate;
   final initializationEntered = Completer<void>();
   Completer<void>? nextInitializationEntered;
@@ -1494,6 +1710,8 @@ class _CameraBackend extends CameraPlatform {
   final stopEntered = Completer<void>();
   int stopCalls = 0;
   int startCalls = 0;
+  Completer<void>? startGate;
+  final startEntered = Completer<void>();
   int photoCalls = 0;
   bool previewPaused = false;
   List<CameraDescription> cameras = const [
@@ -1505,13 +1723,17 @@ class _CameraBackend extends CameraPlatform {
   ];
 
   @override
-  Future<List<CameraDescription>> availableCameras() async => cameras;
+  Future<List<CameraDescription>> availableCameras() async {
+    if (enumerationError case final error?) throw error;
+    return cameras;
+  }
 
   @override
   Future<int> createCameraWithSettings(
     CameraDescription description,
     MediaSettings mediaSettings,
   ) async {
+    if (creationError case final error?) throw error;
     settings = mediaSettings;
     selectedCamera = description;
     final id = nextCameraId++;
@@ -1559,6 +1781,8 @@ class _CameraBackend extends CameraPlatform {
   }) async {
     startCalls++;
     if (recordingError case final error?) throw error;
+    if (!startEntered.isCompleted) startEntered.complete();
+    await startGate?.future;
     recordingCameraId = cameraId;
   }
 
@@ -1568,7 +1792,7 @@ class _CameraBackend extends CameraPlatform {
     if (stopError case final error?) throw error;
     if (!stopEntered.isCompleted) stopEntered.complete();
     await stopGate?.future;
-    return recordedFile!;
+    return recordedFile ?? XFile('/synthetic/unretained-take.mp4');
   }
 
   @override
@@ -1590,7 +1814,22 @@ class _CameraBackend extends CameraPlatform {
 
   @override
   Future<void> dispose(int cameraId) async {
+    final release = _release(cameraId);
+    if (earlyDisposalAcknowledgement) {
+      unawaited(release);
+    } else {
+      await release;
+    }
+  }
+
+  Future<void> _release(int cameraId) async {
+    if (!disposalEntered.isCompleted) disposalEntered.complete();
+    await disposalGate?.future;
     activeCameraIds.remove(cameraId);
+    if (earlyDisposalAcknowledgement && !closing.isClosed) {
+      closing.add(CameraClosingEvent(cameraId));
+    }
+    if (!releaseCompleted.isCompleted) releaseCompleted.complete();
   }
 }
 
