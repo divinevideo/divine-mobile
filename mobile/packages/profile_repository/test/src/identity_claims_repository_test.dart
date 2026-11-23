@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:nostr_client/nostr_client.dart';
@@ -4786,6 +4787,50 @@ void main() {
 
         expect(await before, equals(ConfirmationAccess.unknown));
         verifyFetchCalled(2);
+      });
+    });
+
+    test('a chain of checks each follows the newest one', () async {
+      final first = Completer<bool?>();
+      final second = Completer<bool?>();
+      final third = Completer<bool?>();
+      final answers = [first, second, third];
+      stubVerifier(() => answers.removeAt(0).future);
+      final repo = buildRepo();
+
+      final plain = repo.confirmationAccess();
+      await pumpEventQueue();
+      final refreshed = repo.confirmationAccess(refresh: true);
+      await pumpEventQueue();
+      final newest = repo.confirmationAccess(refresh: true);
+      await pumpEventQueue();
+
+      // The two older checks finish first, each with a different answer.
+      second.complete(null);
+      first.complete(false);
+      await pumpEventQueue();
+      third.complete(true);
+
+      expect(await plain, equals(ConfirmationAccess.has));
+      expect(await refreshed, equals(ConfirmationAccess.has));
+      expect(await newest, equals(ConfirmationAccess.has));
+      expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+      verifyFetchCalled(3);
+    });
+
+    test('a signer that never answers is unknown after 15 seconds', () {
+      fakeAsync((async) {
+        stubVerifier();
+        signAnswer = () => Completer<Event?>().future;
+        ConfirmationAccess? result;
+
+        unawaited(buildRepo().confirmationAccess().then((a) => result = a));
+        async.elapse(const Duration(seconds: 14));
+        expect(result, isNull);
+        async.elapse(const Duration(seconds: 1));
+
+        expect(result, equals(ConfirmationAccess.unknown));
+        verifyFetchCalled(0);
       });
     });
   });

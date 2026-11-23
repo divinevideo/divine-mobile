@@ -233,6 +233,12 @@ class IdentityClaimsRepository {
   /// verifier to drop a cached OAuth verification.
   static const int _nip98EventKind = 27235;
 
+  /// How long [confirmationAccess] waits for the passive signer. A local key
+  /// signs at once; a remote signer that hangs would otherwise hold the
+  /// shared check open, so it gives up as unknown, as the app's other
+  /// passive NIP-98 signing does.
+  static const Duration _passiveSignTimeout = Duration(seconds: 15);
+
   /// Client-side freshness window for verified verdicts, anchored on the
   /// verifier's `checked_at`. Mirrors the service's KV TTL for verified
   /// results (divine-identify-verification-service/src/utils/cache.ts:4).
@@ -278,7 +284,7 @@ class IdentityClaimsRepository {
   Future<ConfirmationAccess>? _confirmationAccessInFlight;
 
   /// The newest [confirmationAccess] check, kept after it finishes. A check a
-  /// refresh overtook answers with this one, so its callers get the newest
+  /// newer one overtook answers with this one, so its callers get the newest
   /// answer even when that answer is unknown and so was not remembered.
   Future<ConfirmationAccess>? _latestConfirmationAccess;
 
@@ -803,13 +809,14 @@ class IdentityClaimsRepository {
   /// [refresh] asks again, for a re-check after a purchase or a refusal.
   /// An [ConfirmationAccess.unknown] answer is a blip, not a fact, so it is
   /// returned but not remembered: the next call asks again.
-  /// Callers of a check a refresh overtook get the refresh's answer.
+  /// Callers of a check a newer one overtook get the newest check's answer.
   ///
   /// Signs only through the passive signer, so it never prompts the user.
   ///
-  /// Never throws: no passive signer, a declined signature, an unreachable
-  /// verifier or one without the endpoint is [ConfirmationAccess.unknown],
-  /// which callers treat like [ConfirmationAccess.has].
+  /// Never throws: no passive signer, a declined signature, a signer that
+  /// does not answer within 15 seconds, an unreachable verifier or one
+  /// without the endpoint is [ConfirmationAccess.unknown], which callers
+  /// treat like [ConfirmationAccess.has].
   Future<ConfirmationAccess> confirmationAccess({bool refresh = false}) {
     if (!refresh) {
       final last = _lastConfirmationAccess;
@@ -821,10 +828,11 @@ class IdentityClaimsRepository {
     check = _askConfirmationAccess().then((access) {
       final latest = _latestConfirmationAccess;
       if (latest != null && !identical(latest, check)) {
-        // A refresh overtook this check. Its answer is older than the one
-        // the refresh asked for, so its callers follow the newest check
-        // instead, whether it is still running or already finished, and
-        // this answer is not remembered.
+        // A newer check overtook this one, usually a refresh, or a plain
+        // call made after a refresh finished unknown. This answer is older,
+        // so its callers follow the newest check instead, whether it is
+        // still running or already finished, and this answer is not
+        // remembered.
         return latest;
       }
       _lastConfirmationAccess = access == ConfirmationAccess.unknown
@@ -847,7 +855,7 @@ class IdentityClaimsRepository {
           ['u', _verifierClient.confirmationAccessUrl],
           ['method', 'GET'],
         ],
-      );
+      ).timeout(_passiveSignTimeout);
       if (event == null) {
         Log.warning(
           'Confirmation access check skipped: the signer declined',
