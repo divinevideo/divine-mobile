@@ -242,11 +242,10 @@ Future<SubtitleFetchResult?> _fetchTranslation({
 
 /// Whether [embedded] captions are the file [primaryRef] names.
 ///
-/// A Blossom ref names its file by SHA-256, and a subtitle save republishes
-/// the video before the subtitle event the embedded copy comes from, so an
-/// embedded copy that hashes to something else predates the video's own
-/// track (#11250). A ref that names no hash cannot be checked and counts as
-/// matching.
+/// A Blossom ref names its file by SHA-256. The embedded copy can still
+/// contain earlier captions after the video is republished (#11250), so a
+/// mismatch makes readers try the file first. A ref that names no hash
+/// counts as matching.
 bool embeddedCaptionsMatchRef(String embedded, String? primaryRef) {
   final segments = primaryRef == null
       ? const <String>[]
@@ -268,8 +267,8 @@ final _contentHash = RegExp(r'^[0-9a-fA-F]{64}$');
 ///
 /// Original strategy (first source with cues wins): embedded content, then
 /// HTTP/relay refs, then the plain Blossom URL with bounded transcription polling.
-/// Embedded content goes after the refs instead when it is older than the file
-/// the first ref names ([embeddedCaptionsMatchRef]), or when [sourcePreference]
+/// Embedded content goes after the refs when its hash differs from the first
+/// ref's file hash ([embeddedCaptionsMatchRef]), or when [sourcePreference]
 /// places refs first for the editor.
 ///
 /// A source that resolves to zero cues does not end the chain — the next

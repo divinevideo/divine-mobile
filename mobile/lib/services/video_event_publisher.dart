@@ -1246,10 +1246,9 @@ class VideoEventPublisher {
     return updatedVideo;
   }
 
-  /// Whether [tag] is a track a subtitle republish in [lang] replaces: a
-  /// captions or subtitles `text-track` in [lang], one naming no type or
-  /// language, or any `text-track` at one of [editedRefs]. One 39307 address
-  /// serves every language, so a kept track there would play this edit.
+  /// Whether [tag] is a caption track in [lang] or without a language, or
+  /// any `text-track` at one of [editedRefs]. One 39307 address serves every
+  /// language, so a kept track there would play this edit.
   static bool _isReplacedTrack(
     List<String> tag, {
     required String lang,
@@ -1266,9 +1265,9 @@ class VideoEventPublisher {
   /// addressable ref `39307:<pubkey>:subtitles:<vineId>`, or `null` on
   /// failure (not authenticated, no addressable id, sign/publish failed).
   ///
-  /// The event takes [video]'s own Nostr timestamp. A republished video is
-  /// stamped after its earlier revisions, so its subtitle event replaces the
-  /// one they referenced even when two saves land in the same second.
+  /// The event takes [video]'s own Nostr timestamp. If concurrent saves read
+  /// the same prior video revision, their timestamps can tie. NIP-01 resolves
+  /// the tie independently for the video and subtitle events.
   ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
