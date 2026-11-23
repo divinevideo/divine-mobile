@@ -55,6 +55,25 @@ void main() {
       });
     }
 
+    test('reports an account without a password before probing it', () async {
+      var probed = false;
+      final oauth = KeycastOAuth(
+        config: config,
+        httpClient: MockClient((request) async {
+          if (request.url.path == '/api/user/account') probed = true;
+          return http.Response(
+            jsonEncode({'error': 'no password', 'code': 'PASSWORD_NOT_SET'}),
+            403,
+          );
+        }),
+      );
+
+      final result = await oauth.exportKey('tok123', 'hunter2');
+
+      expect(result.failure, ExportKeyFailure.passwordNotSet);
+      expect(probed, isFalse);
+    });
+
     test(
       'POSTs the bearer token, password and format, and returns the key',
       () async {

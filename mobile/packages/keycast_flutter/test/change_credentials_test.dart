@@ -50,6 +50,31 @@ void main() {
   group('KeycastOAuth.changePassword', () {
     const path = '/api/user/change-password';
 
+    test(
+      'reports an account without a password, whatever the status',
+      () async {
+        final oauth = KeycastOAuth(
+          config: config,
+          httpClient: clientFor(
+            path,
+            status: 401,
+            body: jsonEncode({
+              'error': 'no password',
+              'code': 'PASSWORD_NOT_SET',
+            }),
+          ),
+        );
+
+        final result = await oauth.changePassword(
+          token: 'tok123',
+          currentPassword: 'hunter2',
+          newPassword: 'hunter22',
+        );
+
+        expect(result.failure, ChangePasswordFailure.passwordNotSet);
+      },
+    );
+
     test('POSTs the bearer token and both passwords', () async {
       late http.Request captured;
       final oauth = KeycastOAuth(
@@ -207,6 +232,28 @@ void main() {
 
   group('KeycastOAuth.changeEmail', () {
     const path = '/api/user/change-email';
+
+    test('reports an account without a password', () async {
+      final oauth = KeycastOAuth(
+        config: config,
+        httpClient: clientFor(
+          path,
+          status: 400,
+          body: jsonEncode({
+            'error': 'no password',
+            'code': 'PASSWORD_NOT_SET',
+          }),
+        ),
+      );
+
+      final result = await oauth.changeEmail(
+        token: 'tok123',
+        newEmail: 'new@example.com',
+        password: 'hunter2',
+      );
+
+      expect(result.failure, ChangeEmailFailure.passwordNotSet);
+    });
 
     test('POSTs the bearer token, the new address and the password', () async {
       late http.Request captured;

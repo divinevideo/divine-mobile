@@ -631,6 +631,90 @@ class KeycastOAuth {
     }
   }
 
+  /// Signs in with an ID token from Google or Apple (headless flow).
+  ///
+  /// Keycast verifies [idToken], whose `nonce` claim must be the SHA-256 of
+  /// [rawNonce], then signs in to the linked account, links an existing
+  /// account with the same verified email, or creates a new one. Pass Apple's
+  /// one-time [authorizationCode] so Keycast can revoke Apple's grant when the
+  /// account is deleted.
+  ///
+  /// Never throws. After success, call [exchangeCode] with the returned code
+  /// and verifier.
+  Future<(SocialLoginResult, String verifier)> headlessSocialLogin({
+    required SocialProvider provider,
+    required String idToken,
+    required String rawNonce,
+    String? authorizationCode,
+    String scope = 'policy:full',
+    String? state,
+  }) async {
+    final verifier = Pkce.generateVerifier();
+    final body = <String, dynamic>{
+      'provider': provider.wireName,
+      'id_token': idToken,
+      'raw_nonce': rawNonce,
+      'authorization_code': ?authorizationCode,
+      'client_id': config.clientId,
+      'redirect_uri': config.redirectUri,
+      'scope': scope,
+      'code_challenge': Pkce.generateChallenge(verifier),
+      'code_challenge_method': 'S256',
+      'state': ?state,
+    };
+
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('${config.serverUrl}/api/headless/social-login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(requestTimeout);
+      return (_socialLoginResultFrom(response), verifier);
+    } on TimeoutException {
+      return (
+        SocialLoginResult.error('Request timed out', code: 'timeout'),
+        verifier,
+      );
+    } catch (e) {
+      return (
+        SocialLoginResult.error('Network error: $e', code: 'network_error'),
+        verifier,
+      );
+    }
+  }
+
+  SocialLoginResult _socialLoginResultFrom(http.Response response) {
+    Map<String, dynamic>? json;
+    try {
+      json = _decodeJsonObject(response.body);
+    } on FormatException {
+      json = null;
+    }
+
+    final statusCode = response.statusCode;
+    if (statusCode == 200 && json != null) {
+      return SocialLoginResult.fromJson(json);
+    }
+
+    // A proxy can answer 429 with its own body, and a server without the
+    // route answers 404 without one; both still need their meaning.
+    final code = statusCode == 429
+        ? 'TOO_MANY_ATTEMPTS'
+        : json?['code'] as String? ??
+              switch (statusCode) {
+                200 => 'invalid_response',
+                404 => 'endpoint_not_found',
+                >= 500 => 'server_error',
+                _ => 'social_login_failed',
+              };
+    final message = json == null
+        ? 'Social sign-in failed (HTTP $statusCode)'
+        : _responseErrorMessage(json, 'Social sign-in failed');
+    return SocialLoginResult.error(message, code: code);
+  }
+
   /// Poll for email verification completion
   ///
   /// Call this after [headlessRegister] to wait for the user to verify their email.
@@ -1024,6 +1108,17 @@ class KeycastOAuth {
   }
 
   /// The server's own message from a JSON error body, or null when absent.
+  /// Whether Keycast refused because the account has no password to check:
+  /// it was created with Google or Apple.
+  static bool _isPasswordNotSet(http.Response response) {
+    try {
+      final json = _decodeJsonObject(response.body);
+      return json['code'] == 'PASSWORD_NOT_SET';
+    } on FormatException {
+      return false;
+    }
+  }
+
   static String? _errorMessageFrom(http.Response response) {
     try {
       final json = _decodeJsonObject(response.body);
@@ -1295,6 +1390,13 @@ class KeycastOAuth {
 
       final message = _errorMessageFrom(response);
 
+      if (_isPasswordNotSet(response)) {
+        return ExportKeyResult.failure(
+          ExportKeyFailure.passwordNotSet,
+          message: message,
+        );
+      }
+
       // Each refusal code covers two unrelated causes — 401 is a wrong password
       // or a stale token, 403 is an unverified email or the verified_minor
       // custody denial — and the response body discriminates neither. Re-asking
@@ -1376,6 +1478,13 @@ class KeycastOAuth {
       }
 
       final message = _errorMessageFrom(response);
+
+      if (_isPasswordNotSet(response)) {
+        return ChangePasswordResult.failure(
+          ChangePasswordFailure.passwordNotSet,
+          message: message,
+        );
+      }
 
       if (response.statusCode == 401) {
         final probe = await _probeAccount(token);
@@ -1460,6 +1569,13 @@ class KeycastOAuth {
       }
 
       final message = _errorMessageFrom(response);
+
+      if (_isPasswordNotSet(response)) {
+        return ChangeEmailResult.failure(
+          ChangeEmailFailure.passwordNotSet,
+          message: message,
+        );
+      }
 
       if (response.statusCode == 401) {
         final probe = await _probeAccount(token);
