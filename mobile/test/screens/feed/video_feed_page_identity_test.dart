@@ -174,6 +174,7 @@ class _SafetyPolicyHome {
 
 Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   WidgetTester tester, {
+  FeedMode initialMode = FeedMode.forYou,
   Stream<String> removals = const Stream.empty(),
   VideosRepository? Function()? currentRepository,
   List<Override> overrides = const [],
@@ -208,7 +209,7 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   );
   await tester.pumpWidget(
     testMaterialApp(
-      home: const Scaffold(body: VideoFeedPage()),
+      home: Scaffold(body: VideoFeedPage(initialMode: initialMode)),
       mockSharedPreferences: preferences,
       mockAuthService: createMockAuthService(
         authState: AuthState.authenticated,
@@ -325,13 +326,20 @@ void main() {
       (
         tester,
       ) async {
-        final home = await _mountSafetyPolicyHome(tester);
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          initialMode: FeedMode.following,
+        );
         final flags = home.container.read(featureFlagServiceProvider);
-        await flags.setFlag(FeatureFlag.debugTools, false);
+        final debugToolsEnabled = flags.isEnabled(FeatureFlag.debugTools);
+        await flags.setFlag(FeatureFlag.debugTools, !debugToolsEnabled);
         await tester.pumpAndSettle();
+        expect(flags.isEnabled(FeatureFlag.debugTools), !debugToolsEnabled);
+        final view = tester.element(find.byType(VideoFeedView));
+        expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
         expect(
-          tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
-          same(home.originalFeed),
+          view.read<VideoPlaybackStatusCubit>(),
+          same(home.originalPlayback),
         );
 
         var previousFeed = home.originalFeed;
