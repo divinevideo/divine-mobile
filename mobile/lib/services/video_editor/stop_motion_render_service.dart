@@ -1,5 +1,5 @@
 // ABOUTME: Assembles captured stop-motion frames into a single silent video
-// ABOUTME: Thin wrapper over pro_video_editor's renderStopMotionToFile
+// ABOUTME: and turns the frames-only clips of a final export into videos
 
 import 'dart:io';
 
