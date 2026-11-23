@@ -503,16 +503,19 @@ void main() {
       group('on an answer naming the first video', () {
         final first = '34236:$_creator:first';
 
-        setUp(
-          () => when(
+        setUp(() {
+          when(
             () => repository.fetchJoined(
               chainRoot: any(named: 'chainRoot'),
               hashtag: any(named: 'hashtag'),
               limit: any(named: 'limit'),
               filter: any(named: 'filter'),
             ),
-          ).thenAnswer((_) async => const VideoResponses()),
-        );
+          ).thenAnswer((_) async => const VideoResponses());
+          when(
+            () => repository.fetchVideoAt(first),
+          ).thenAnswer((_) async => null);
+        });
 
         blocTest<StickerResponsesCubit, StickerResponsesState>(
           'reads the chain the answer joined, not the answer itself',
@@ -792,6 +795,9 @@ void main() {
             () => repository.chainStart(first, hashtag: 'desksetup'),
           ).thenAnswer((_) async => AddYoursChainStart.starts);
           when(
+            () => repository.fetchVideoAt(first),
+          ).thenAnswer((_) async => null);
+          when(
             () => repository.fetchJoined(
               chainRoot: any(named: 'chainRoot'),
               hashtag: any(named: 'hashtag'),
@@ -816,6 +822,112 @@ void main() {
           verify(() => followRepository.getOthersFollowing(_creator)).called(1);
         },
       );
+
+      group('on an answer whose own sticker lets everyone answer', () {
+        final first = '34236:$_creator:first';
+        VideoEvent startingWith(VideoStickerAudience audience) => VideoEvent(
+          id: _hex(90),
+          pubkey: _creator,
+          createdAt: 100,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+          vineId: 'first',
+          addressableDTag: 'first',
+          eventKind: 34236,
+          stickerRegions: [
+            _region(VideoStickerKind.prompt, audience: audience),
+          ],
+        );
+        final answer = _video(7, pubkey: stranger, dTag: 'answer-d');
+
+        setUp(
+          () => when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.starts),
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          "goes by who the chain's first video lets answer",
+          setUp: () {
+            when(
+              () => repository.fetchVideoAt(first),
+            ).thenAnswer(
+              (_) async => startingWith(VideoStickerAudience.following),
+            );
+            when(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
+              ),
+            ).thenAnswer(
+              (_) async => VideoResponses(
+                total: 2,
+                videos: [
+                  _video(3, pubkey: friend),
+                  answer,
+                ],
+              ),
+            );
+            stubCreatorFollows(_creator, [friend]);
+          },
+          build: () => build(
+            _region(VideoStickerKind.prompt, target: first),
+            on: answer,
+            viewer: stranger,
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.canAnswer, isFalse);
+            expect(cubit.state.videos, equals([_video(3, pubkey: friend)]));
+            expect(cubit.state.total, equals(1));
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'reads it as a series when the first video lets only its creator '
+          'answer',
+          setUp: () {
+            when(
+              () => repository.fetchVideoAt(first),
+            ).thenAnswer(
+              (_) async => startingWith(VideoStickerAudience.creator),
+            );
+            when(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
+              ),
+            ).thenAnswer((_) async => const VideoResponses());
+            when(
+              () => repository.fetchSeriesBy(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                author: any(named: 'author'),
+              ),
+            ).thenAnswer((_) async => const VideoResponses());
+          },
+          build: () => build(
+            _region(VideoStickerKind.prompt, target: first),
+            on: answer,
+            viewer: stranger,
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.canAnswer, isFalse);
+            verify(
+              () => repository.fetchSeriesBy(
+                chainRoot: first,
+                hashtag: 'desksetup',
+                author: _creator,
+              ),
+            ).called(1);
+          },
+        );
+      });
 
       group('on a series only its creator adds to', () {
         final first = '34236:$_creator:first';

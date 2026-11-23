@@ -565,6 +565,9 @@ void main() {
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
           ).thenAnswer((_) async => AddYoursChainStart.unconfirmed);
+          when(
+            () => repository.fetchVideoAt(first),
+          ).thenAnswer((_) async => null);
           await pump(tester, answer);
           await tester.pump();
 

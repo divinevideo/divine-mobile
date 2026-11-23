@@ -83,6 +83,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       VideoEvent? seriesStart;
       // Whoever started the chain an Add yours counts owns who may answer it.
       var owner = _video.pubkey;
+      var audience = _region.audience;
       if (_region.kind == VideoStickerKind.replies) {
         final results = await Future.wait<Object>([
           _repository.fetchReplies(
@@ -110,29 +111,44 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         if (chain != null) owner = chain.read.split(':')[1];
         if (chain == null || hashtag == null) {
           responses = const VideoResponses();
-        } else if (_isSeries) {
-          responses = await _repository.fetchSeriesBy(
-            chainRoot: chain.read,
-            hashtag: hashtag,
-            author: owner,
-          );
-          seriesStart = chain.read == chainAddress
-              ? _video
-              : await _repository.fetchVideoAt(chain.read);
         } else {
-          responses = await _repository.fetchJoined(
-            chainRoot: chain.read,
-            hashtag: hashtag,
-            limit: feedLimit,
-            // Before each person's answer is picked; filtering again
-            // below changes nothing.
-            filter: _filter,
+          // The chain's first video says who may answer the chain, so an
+          // answer posted without the audience it inherited cannot open
+          // the chain to everyone. Read alongside the answers, which only
+          // an Only me series reads differently.
+          final isAnswer = chain.read != chainAddress;
+          final results = await Future.wait<Object?>([
+            if (isAnswer) _repository.fetchVideoAt(chain.read),
+            if (audience != VideoStickerAudience.creator)
+              _repository.fetchJoined(
+                chainRoot: chain.read,
+                hashtag: hashtag,
+                limit: feedLimit,
+                // Before each person's answer is picked; filtering again
+                // below changes nothing.
+                filter: _filter,
+              ),
+          ]);
+          final first = isAnswer ? results.first as VideoEvent? : _video;
+          audience = _stricter(
+            audience,
+            _chainAudience(first, chain.read, hashtag),
           );
+          if (_isSeries(audience)) {
+            responses = await _repository.fetchSeriesBy(
+              chainRoot: chain.read,
+              hashtag: hashtag,
+              author: owner,
+            );
+            seriesStart = first;
+          } else {
+            responses = results.last! as VideoResponses;
+          }
         }
       }
       final answerers = await StickerAnswerers.read(
         _followRepository,
-        audience: _region.audience,
+        audience: audience,
         owner: owner,
         viewer: _viewer,
       );
@@ -201,11 +217,40 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
     };
   }
 
-  /// Whether the sticker is an Add yours only its creator may answer, whose
-  /// answers are the parts of their series.
-  bool get _isSeries =>
+  /// Whether the sticker is an Add yours only its creator may answer, by
+  /// [audience], whose answers are the parts of their series.
+  bool _isSeries(VideoStickerAudience audience) =>
       _region.kind == VideoStickerKind.prompt &&
-      _region.audience == VideoStickerAudience.creator;
+      audience == VideoStickerAudience.creator;
+
+  /// Who [first], the first video of the chain at [chainRoot], lets answer
+  /// it: everyone when it was not read or starts no chain with [hashtag].
+  static VideoStickerAudience _chainAudience(
+    VideoEvent? first,
+    String chainRoot,
+    String hashtag,
+  ) =>
+      first?.stickerRegions
+          .where(
+            (region) =>
+                region.promptChainRoot(chainRoot) == chainRoot &&
+                region.promptHashtag == hashtag,
+          )
+          .firstOrNull
+          ?.audience ??
+      VideoStickerAudience.everyone;
+
+  /// The one of [a] and [b] that lets fewer answer.
+  static VideoStickerAudience _stricter(
+    VideoStickerAudience a,
+    VideoStickerAudience b,
+  ) => _narrowness(a) >= _narrowness(b) ? a : b;
+
+  static int _narrowness(VideoStickerAudience audience) => switch (audience) {
+    VideoStickerAudience.everyone => 0,
+    VideoStickerAudience.following => 1,
+    VideoStickerAudience.creator => 2,
+  };
 
   /// The parts of a series in the order they were posted: [start], the video
   /// it starts at, then [answers], with the video the sticker is on among
@@ -251,7 +296,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         curation: curation,
         chainRoot: chainRoot,
         canAnswer: answerers.admits(_viewer),
-        series: _isSeries
+        series: _isSeries(answerers.audience)
             ? _seriesOf(
                 seriesStart == null ? null : _filter([seriesStart]).firstOrNull,
                 shown,

@@ -404,15 +404,21 @@ publishing an answer, so the Divine player holds to it:
 - Only whoever may answer gets the Add yours button. Anyone else sees the
   latest answers' thumbnails and "Watch the series" in place of who joined and
   the button, and a tap opens the answers. On a video with a replies sticker,
-  only whoever may answer is offered a video reply in the comments.
+  only whoever may answer is offered a video reply in the comments. A video
+  reply posted from an older version or another client still shows in the
+  comments, so the editor says which replies the sticker shows, not who can
+  reply.
 - In the series a tap on an Add yours opens, the answers' copies of a sticker
   only some may answer are left out: each answer carries the same sticker,
   and the viewer is watching the series already. It shows in every other
   feed.
 - Who the creator follows is read from their kind 3 contact list. For an Add
   yours, the creator is whoever started the chain the sticker counts, and an
-  answer carries the chain's `audience` on to its own sticker, so nobody joins
-  the chain from an answer who could not join it from its first video.
+  answer carries the chain's `audience` on to its own sticker. The player
+  reads the chain's first video too and goes by the stricter of the two, so
+  an answer published without that `audience` does not open the chain to
+  anyone the first video does not let answer. When the first video cannot be
+  read, the answer's own `audience` holds.
 
 #### Polls
 
