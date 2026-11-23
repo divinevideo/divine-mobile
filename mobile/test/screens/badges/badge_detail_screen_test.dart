@@ -91,6 +91,11 @@ void main() {
         initialLocation: BadgeDetailScreen.pathFor(coordinate),
         routes: [
           GoRoute(
+            path: '/welcome/login-options',
+            builder: (_, _) =>
+                const Scaffold(body: Text('Sign-in destination')),
+          ),
+          GoRoute(
             path: PooledFullscreenVideoFeedScreen.path,
             builder: (_, state) {
               onFullscreenOpened?.call(
