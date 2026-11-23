@@ -18,6 +18,10 @@ add_subdirectory("../native" "${CMAKE_CURRENT_BINARY_DIR}/media")
 add_dependencies(${PLUGIN_NAME} divine_media_worker)
 set(divine_desktop_video_editor_bundled_libraries "" PARENT_SCOPE)
 function(_divine_install_media_worker)
-  install(TARGETS divine_media_worker RUNTIME DESTINATION "data/divine_media" COMPONENT Runtime)
+  # Flutter's Windows install prefix contains $<TARGET_FILE_DIR:...>. Put it
+  # directly in DESTINATION so CMake evaluates it; a relative destination
+  # prepends the unresolved prefix at install time instead.
+  install(TARGETS divine_media_worker
+    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/data/divine_media" COMPONENT Runtime)
 endfunction()
 cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}" CALL _divine_install_media_worker)
