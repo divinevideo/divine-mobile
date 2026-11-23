@@ -1852,6 +1852,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       }
     } on Object catch (e, stackTrace) {
       if (!ownsFailover(e)) return;
+      _subscriptions.recheckPlaybackErrors(index, handledByCommand: true);
       final errorCode = nativePlayerErrorCodeFromError(e);
       if (changesBunny) {
         _log(
@@ -1977,6 +1978,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         guardRetryOwnership('error handling');
         return;
       }
+      _subscriptions.recheckPlaybackErrors(index, handledByCommand: true);
       _log('Processing retry failed index $index source=$source: $e');
       logPlaybackFailure(
         'Processing retry failed',

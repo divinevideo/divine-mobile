@@ -129,7 +129,9 @@ class MediaKitLinuxVideoPlayerBackend
   // A successful property acknowledgement can precede mpv's state observation.
   // Preserve app volume requests across output replacement, including mute.
   double? _requestedVolume;
-  double get _volume => _requestedVolume ?? _player.state.volume / 100;
+  double get _volume =>
+      _requestedVolume ??
+      (_ownsPlayer ? _player.state.volume / 100 : _state.volume);
   bool _hasLoadedMedia = false;
   bool _playerHasOpenedMedia = false;
   bool _ownsPlayer = false;
@@ -224,13 +226,30 @@ class MediaKitLinuxVideoPlayerBackend
             volume: volume,
           ),
         );
-        await _retirePlayer();
-        if (_disposed) {
-          _changingPlayer = false;
-          return;
+        try {
+          await _retirePlayer();
+          if (_disposed) {
+            _changingPlayer = false;
+            return;
+          }
+          _createPlayer();
+          await _player.setVolume(volume * 100);
+        } on Object catch (error) {
+          // Creation and property restoration are one output transaction. A
+          // partially configured replacement must never be reused for playback.
+          _outputFailed = true;
+          _cancelFirstFrame();
+          try {
+            await _retirePlayer();
+          } finally {
+            _changingPlayer = false;
+            if (!_disposed && generation == _acceptedLoadGeneration) {
+              _activeLoadGeneration = generation;
+              _handleError(error);
+            }
+          }
+          rethrow;
         }
-        _createPlayer();
-        await _player.setVolume(volume * 100);
       }
       if (_disposed || generation != _acceptedLoadGeneration) {
         _changingPlayer = false;
@@ -314,6 +333,7 @@ class MediaKitLinuxVideoPlayerBackend
   Future<void> pause() async {
     _ensureReady();
     await _enqueue(() async {
+      _ensurePlayerAvailable();
       await _player.pause();
       _refreshState();
     });
@@ -329,7 +349,7 @@ class MediaKitLinuxVideoPlayerBackend
     await _enqueue(() async {
       await cancellingProbes;
       _cancelFirstFrame();
-      await _player.stop();
+      if (_ownsPlayer) await _player.stop();
       _terminalError = null;
       _hasLoadedMedia = false;
       _clearTimeline();
@@ -369,6 +389,7 @@ class MediaKitLinuxVideoPlayerBackend
   Future<void> setVolume(double volume) async {
     _ensureReady();
     await _enqueue(() async {
+      _ensurePlayerAvailable();
       await _player.setVolume(volume * 100);
       _requestedVolume = volume;
       _emitState(_state.copyWith(volume: volume));
@@ -386,6 +407,7 @@ class MediaKitLinuxVideoPlayerBackend
   Future<void> setPlaybackSpeed(double speed) async {
     _ensureReady();
     await _enqueue(() async {
+      _ensurePlayerAvailable();
       await _player.setRate(speed);
       _emitState(_state.copyWith(playbackSpeed: speed));
     });
@@ -396,6 +418,7 @@ class MediaKitLinuxVideoPlayerBackend
     _ensureReady();
     _isLooping = looping;
     await _enqueue(() async {
+      _ensurePlayerAvailable();
       await _player.setPlaylistMode(
         looping ? PlaylistMode.loop : PlaylistMode.none,
       );
@@ -433,6 +456,7 @@ class MediaKitLinuxVideoPlayerBackend
   @override
   Widget buildView() {
     _ensureReady();
+    if (!_ownsPlayer) return const SizedBox.expand();
     return KeyedSubtree(
       key: ObjectKey(_videoController),
       child: _videoViewBuilder(_videoController),
@@ -790,7 +814,7 @@ class MediaKitLinuxVideoPlayerBackend
   }
 
   void _refreshState() {
-    if (!_initialized || _disposed || _changingPlayer) return;
+    if (!_initialized || _disposed || _changingPlayer || !_ownsPlayer) return;
     final playerState = _player.state;
     if (_terminalError != null &&
         !_outputFailed &&
@@ -923,6 +947,14 @@ class MediaKitLinuxVideoPlayerBackend
     if (_mediaKitInitialized) return;
     _mediaKitInitializer();
     _mediaKitInitialized = true;
+  }
+
+  void _ensurePlayerAvailable() {
+    if (!_ownsPlayer) {
+      throw StateError(
+        'Desktop output is unavailable. Load a source to retry.',
+      );
+    }
   }
 
   void _ensureReady() {

@@ -15,6 +15,44 @@ void main() {
 
     // ------------------------------------------------------------------
     group('subscribeToPlaybackErrors', () {
+      test('a command owns its failure until the next load', () async {
+        final controller = FakeController();
+        addTearDown(controller.dispose);
+        var inFlight = true;
+        final errors = <String?>[];
+        subs
+          ..subscribeToPlaybackErrors(
+            0,
+            controller,
+            isAlreadyError: () => inFlight,
+            onError: (_, message) => errors.add(message),
+          )
+          // A harmless acknowledgement must not hide the next error.
+          ..recheckPlaybackErrors(0, handledByCommand: true);
+        const failure = DivineVideoPlayerState(
+          status: PlaybackStatus.error,
+          errorMessage: 'Synthetic native failure',
+        );
+        controller.pushState(failure);
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+        subs.recheckPlaybackErrors(0, handledByCommand: true);
+        inFlight = false;
+        subs.recheckPlaybackErrors(0);
+        controller.pushState(failure);
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+
+        controller
+          ..pushState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          )
+          ..pushState(failure);
+        await pumpEventQueue();
+
+        expect(errors, ['Synthetic native failure']);
+      });
+
       test('rechecks an outstanding error without another notification', () {
         final controller = FakeController()
           ..pushState(

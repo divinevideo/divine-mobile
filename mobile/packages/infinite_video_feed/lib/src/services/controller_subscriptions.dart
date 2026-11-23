@@ -13,7 +13,7 @@ class ControllerSubscriptions {
   final _dimensions = <int, StreamSubscription<DivineVideoPlayerState>>{};
   final _firstFrame = <int, StreamSubscription<DivineVideoPlayerState>>{};
   final _errors = <int, StreamSubscription<DivineVideoPlayerState>>{};
-  final _errorChecks = <int, void Function()>{};
+  final _errorChecks = <int, void Function({required bool handledByCommand})>{};
   final _autoAdvance = <int, StreamSubscription<DivineVideoPlayerState>>{};
 
   /// Subscribes to runtime playback errors. Calls [onError] with the
@@ -32,9 +32,18 @@ class ControllerSubscriptions {
   }) {
     unawaited(_errors[index]?.cancel());
     var handlingFailure = false;
-    void observe(DivineVideoPlayerState state) {
+    void observe(
+      DivineVideoPlayerState state, {
+      bool handledByCommand = false,
+    }) {
       if (!state.hasError) {
         handlingFailure = false;
+        return;
+      }
+      if (handledByCommand) {
+        // Native failures can be delivered through both a method rejection and
+        // the state stream. The method catch already owns this transition.
+        handlingFailure = true;
         return;
       }
       if (handlingFailure || isAlreadyError()) return;
@@ -46,12 +55,16 @@ class ControllerSubscriptions {
     // Install the listener first, then consume the snapshot without handling
     // its queued broadcast event a second time.
     _errors[index] = controller.stateStream.listen(observe);
-    _errorChecks[index] = () => observe(controller.state);
+    _errorChecks[index] = ({required handledByCommand}) =>
+        observe(controller.state, handledByCommand: handledByCommand);
     recheckPlaybackErrors(index);
   }
 
   /// Reconsiders a current error after a temporary recovery guard clears.
-  void recheckPlaybackErrors(int index) => _errorChecks[index]?.call();
+  /// Set [handledByCommand] when a native rejection already owns the current
+  /// failure, so its stream snapshot cannot trigger the same recovery again.
+  void recheckPlaybackErrors(int index, {bool handledByCommand = false}) =>
+      _errorChecks[index]?.call(handledByCommand: handledByCommand);
 
   /// Subscribes to loop-completion detection. Fires [onLoopCompleted] when
   /// the playback position resets from near the reported duration back to

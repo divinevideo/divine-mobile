@@ -1274,6 +1274,104 @@ void main() {
     });
 
     test(
+      'factory failure clears buffering and rejects retired commands',
+      () async {
+        final player = _FakePlatformPlayer();
+        var creations = 0;
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            if (creations++ > 0) throw StateError('Synthetic creation failure');
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+          videoViewBuilder: (_) => const SizedBox.shrink(),
+        );
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        await backend.setClips([
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 4)),
+        ]);
+        await expectLater(
+          backend.setClips([
+            const VideoClip(
+              uri: 'file:///second.mp4',
+              end: Duration(seconds: 6),
+            ),
+          ]),
+          throwsStateError,
+        );
+
+        final state = states.last.status;
+        bool? rendered;
+        unawaited(backend.firstFrameRendered.then((v) => rendered = v));
+        await pumpEventQueue();
+        await backend.play();
+        final observed = [state, rendered, errors.length, player.playCalls];
+        await expectLater(backend.pause(), throwsStateError);
+        await expectLater(backend.setVolume(0.5), throwsStateError);
+        await expectLater(backend.setPlaybackSpeed(2), throwsStateError);
+        await expectLater(backend.setLooping(looping: true), throwsStateError);
+        expect(backend.buildView(), isA<SizedBox>());
+        await backend.stop();
+        expect(player.stopCalls, 0);
+        await backend.dispose();
+        expect(observed, [PlaybackStatus.error, false, 1, 0]);
+
+        expect(player.disposeCalls, 1);
+      },
+    );
+
+    test(
+      'failed replacement volume restoration preserves mute on retry',
+      () async {
+        final players = <_FakePlatformPlayer>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            final p = _FakePlatformPlayer();
+            if (players.length == 1) {
+              p.volumeError = StateError('native volume');
+            }
+            players.add(p);
+            return Player(platformPlayer: p);
+          },
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (v) => (v as _FakeVideoController).ready.future,
+        );
+        await _withDesktopController(backend, (c) async {
+          const clip = VideoClip(
+            uri: 'file:///synthetic.mp4',
+            end: Duration(seconds: 1),
+          );
+          await c.setSource(clip);
+          await c.setVolume(0);
+          await expectLater(c.setSource(clip), throwsStateError);
+          expect(c.state.hasError, isTrue);
+          expect(await c.firstFrameRendered, isFalse);
+          expect(players.last.disposeCalls, 1);
+          players.last.volumeError = null;
+          await c.setSource(clip);
+          await c.play();
+          expect(
+            [
+              players.last.state.playing,
+              c.state.volume,
+              players.last.state.volume,
+            ],
+            [true, 0.0, 0.0],
+          );
+          expect(players, hasLength(3));
+        });
+      },
+    );
+    test(
       'releases a retired player once when replacement creation fails',
       () async {
         final player = _FakePlatformPlayer();

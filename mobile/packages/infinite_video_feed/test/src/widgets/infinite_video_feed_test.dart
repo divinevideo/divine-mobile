@@ -586,6 +586,79 @@ void main() {
       }
     });
 
+    testWidgets('dual-channel transient failure reaches healthy final source', (
+      tester,
+    ) async {
+      const rawPath =
+          '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const hls = '$raw/hls/master.m3u8';
+      const bunnyRaw = 'https://media-bunny.divine.video$rawPath';
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => hls,
+              bunnyPlaybackPaths: const {rawPath},
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final opening = Completer<void>();
+        harness.setClipsDelays[0] = opening;
+        harness.setClipsFailures[0] = [
+          PlatformException(code: 'service_unavailable'),
+        ];
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'parse_error',
+          'errorMessage': 'Synthetic canonical playback failure',
+        });
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {'status': 'buffering'});
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'service_unavailable',
+          'errorMessage': 'HTTP 503',
+        });
+        await tester.pump();
+        opening.complete();
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {
+          'status': 'playing',
+          'isFirstFrameRendered': true,
+        });
+        await tester.pump();
+
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          hls,
+          bunnyRaw,
+          raw,
+        ]);
+        expect(
+          key.currentState!.errorTypeAt(0),
+          isNull,
+          reason: 'healthy canonical attempted once and reported playing',
+        );
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets('a Bunny error while changing sources resumes on canonical', (
       tester,
     ) async {
