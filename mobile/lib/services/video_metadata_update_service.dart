@@ -217,8 +217,16 @@ sendPostPublishCollaboratorInvites({
       .toSet();
   if (newCollaborators.isEmpty) return const {};
 
-  final videoAddress =
-      '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:${video.stableId}';
+  final videoAddress = video.addressableId;
+  if (videoAddress == null) {
+    return {
+      for (final pubkey in newCollaborators)
+        pubkey: const CollaboratorInviteResult(
+          success: false,
+          error: 'Published video has no address for a collaborator invite',
+        ),
+    };
+  }
   final results = <String, CollaboratorInviteResult>{};
   for (final pubkey in newCollaborators) {
     try {

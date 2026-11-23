@@ -1634,15 +1634,34 @@ void main() {
         expect(capturedCreatedAt, equals(newer + 1));
       });
 
-      test('publishes under the address kind of the video', () async {
-        relaysHold(newerRevision(kind: NIP71VideoKinds.addressableNormalVideo));
+      test('publishes and invites under the video kind', () async {
+        relaysHold(
+          newerRevision(kind: NIP71VideoKinds.addressableNormalVideo),
+        );
         final opened = _testVideo().copyWith(
           eventKind: NIP71VideoKinds.addressableNormalVideo,
         );
 
+        when(
+          () => mockDmRepository.sendMessage(
+            recipientPubkey: collaborator,
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: true,
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: 'rumor-id',
+            messageEventId: 'gift-wrap-id',
+            recipientPubkey: collaborator,
+          ),
+        );
+
         final result = await service.updateVideo(
           originalVideo: opened,
-          editorState: editorStateFromPublishedVideo(opened),
+          editorState: editorStateFromPublishedVideo(
+            opened,
+          ).copyWith(collaboratorPubkeys: const {collaborator}),
           initialCollaboratorPubkeys: const {},
         );
 
@@ -1678,6 +1697,19 @@ void main() {
             createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
+        final invite = verify(
+          () => mockDmRepository.sendMessage(
+            recipientPubkey: collaborator,
+            content: any(named: 'content'),
+            additionalTags: captureAny(named: 'additionalTags'),
+            skipNip04Fallback: true,
+          ),
+        );
+        final inviteTags = invite.captured.single as List<List<String>>;
+        expect(
+          parseCollaboratorInviteRumorTags(inviteTags)?.videoAddress,
+          '34235:$_ownerPubkey:video-d-tag',
+        );
       });
 
       test('does not re-invite a collaborator the newer revision already '
