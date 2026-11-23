@@ -61,7 +61,8 @@ reports its milliseconds, so an absent step metric means the step did not
 happen: `chroma_bake_ms` (keying takes recorded with the color mask),
 `assembly_ms` (stop-motion stills to video, summed over clips), `render_ms`
 (preparing the render, such as fetching sounds, and every native pass),
-`metadata_ms`, `proof_ms` (C2PA and ProofMode signing) and `cover_ms`. A
+`metadata_ms`, `proof_ms` (C2PA and ProofMode signing of the recordings left
+unsigned at capture, then of the output) and `cover_ms`. A
 render that reached its end also reports `output_duration_ms`, `output_width`,
 `output_height` and `output_bytes` (read after signing), so render time per
 second of video can be compared across devices. The features it used are 0/1

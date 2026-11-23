@@ -33,7 +33,8 @@ enum VideoGenerationPhase {
   /// Reading the duration and resolution of the output.
   metadata('metadata_ms'),
 
-  /// Signing the output with C2PA and ProofMode.
+  /// Signing the app's own recordings left unsigned at capture, then the
+  /// output, with C2PA and ProofMode.
   proof('proof_ms'),
 
   /// Taking the cover image from the output.
