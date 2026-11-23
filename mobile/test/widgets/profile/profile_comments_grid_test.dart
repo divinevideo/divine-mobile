@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -431,6 +433,49 @@ void main() {
     });
 
     group('scroll coordination with NestedScrollView', () {
+      testWidgets(
+        'keeps its scroll position measured when replies replace the loading '
+        'state',
+        (tester) async {
+          final states = StreamController<ProfileCommentsState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: const ProfileCommentsState(
+              status: ProfileCommentsStatus.loading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          final controller = PrimaryScrollController.of(
+            tester.element(find.byType(ProfileCommentsGrid)),
+          );
+          expect(controller.position.hasContentDimensions, isTrue);
+
+          states.add(
+            ProfileCommentsState(
+              status: ProfileCommentsStatus.success,
+              videoReplies: [_createVideoComment(id: 'v1')],
+            ),
+          );
+          // A fling in the profile's NestedScrollView can read this position
+          // before the tab is laid out again, so stop the frame after build.
+          await tester.pump(Duration.zero, EnginePhase.build);
+
+          expect(controller.positions, hasLength(1));
+          expect(controller.position.hasContentDimensions, isTrue);
+          await tester.pump();
+          expect(
+            find.text(
+              lookupAppLocalizations(
+                const Locale('en'),
+              ).profileVideoRepliesSection,
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets(
         'uses PrimaryScrollController from NestedScrollView ancestor',
         (tester) async {

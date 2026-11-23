@@ -68,6 +68,10 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
   /// screen supplies.
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -108,7 +112,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         if (state.status == ProfileSavedVideosStatus.initial ||
             state.status == ProfileSavedVideosStatus.syncing ||
             state.status == ProfileSavedVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         // A settled-empty tab is two different outcomes, and the state carries
@@ -118,6 +122,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         if (state.status == ProfileSavedVideosStatus.failure ||
             state.hasUnresolvedSaves) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingSaved,
             physics: widget.physics,
           );
@@ -130,11 +135,13 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
           // every bookmark the viewer has.
           if (state.privateBookmarksLocked) {
             return ProfileTabErrorState(
+              scrollViewKey: _scrollViewKey,
               message: context.l10n.profileSavedPrivateItemsLocked,
               physics: widget.physics,
             );
           }
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoSavedVideosTitle,
             subtitle: context.l10n.profileSavedOwnEmpty,
             physics: widget.physics,
@@ -142,6 +149,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         }
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: widget.physics,
           slivers: [
             if (state.privateBookmarksLocked)

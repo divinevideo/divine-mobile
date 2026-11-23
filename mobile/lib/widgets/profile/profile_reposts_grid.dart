@@ -57,6 +57,10 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -97,7 +101,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         if (state.status == ProfileRepostedVideosStatus.initial ||
             state.status == ProfileRepostedVideosStatus.syncing ||
             state.status == ProfileRepostedVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         // Reposts that failed to resolve land here too: a settled-empty tab
@@ -106,6 +110,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         if (state.status == ProfileRepostedVideosStatus.failure ||
             state.hasUnresolvedReposts) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingReposts,
           );
         }
@@ -114,6 +119,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
 
         if (repostedVideos.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoRepostsTitle,
             subtitle: widget.isOwnProfile
                 ? context.l10n.profileRepostsOwnEmpty
@@ -122,6 +128,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         }
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             ProfileMasonryGrid(

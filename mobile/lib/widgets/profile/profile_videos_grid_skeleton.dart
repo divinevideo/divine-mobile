@@ -16,16 +16,26 @@ import 'package:skeletonizer/skeletonizer.dart';
 /// `NestedScrollView`. A single top-level [Skeletonizer] shimmers every
 /// placeholder cell.
 class ProfileVideosGridSkeleton extends StatelessWidget {
-  const ProfileVideosGridSkeleton({this.cellCount = 12, super.key});
+  const ProfileVideosGridSkeleton({
+    this.cellCount = 12,
+    this.scrollViewKey,
+    super.key,
+  });
 
   /// Number of placeholder thumbnails to render.
   final int cellCount;
+
+  /// Key for the wrapping [CustomScrollView].
+  ///
+  /// See `ProfileTabLoadingState.scrollViewKey`.
+  final GlobalKey? scrollViewKey;
 
   @override
   Widget build(BuildContext context) {
     return Skeletonizer(
       effect: vineSkeletonEffectOf(context),
       child: CustomScrollView(
+        key: scrollViewKey,
         physics: const NeverScrollableScrollPhysics(),
         slivers: [
           SliverPadding(

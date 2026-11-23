@@ -2042,6 +2042,37 @@ void main() {
 
     group('scroll coordination with NestedScrollView', () {
       testWidgets(
+        'keeps its scroll position measured when videos replace the skeleton',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          await tester.pumpWidget(
+            buildSubject(userIdHex: _otherPubkey, isLoading: true),
+          );
+          expect(find.byType(ProfileVideosGridSkeleton), findsOneWidget);
+          final controller = PrimaryScrollController.of(
+            tester.element(find.byType(ProfileVideosGrid)),
+          );
+          expect(controller.position.hasContentDimensions, isTrue);
+
+          // A fling in the profile's NestedScrollView can read this position
+          // before the tab is laid out again, so stop the frame after build.
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _otherPubkey,
+              videos: _createTestVideos(pubkey: _otherPubkey),
+            ),
+            phase: EnginePhase.build,
+          );
+
+          expect(controller.positions, hasLength(1));
+          expect(controller.position.hasContentDimensions, isTrue);
+          await tester.pump();
+          expect(find.byType(ProfileVideosGridSkeleton), findsNothing);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+        },
+      );
+
+      testWidgets(
         'uses PrimaryScrollController from NestedScrollView ancestor',
         (tester) async {
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
