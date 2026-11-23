@@ -91,6 +91,8 @@ When the mode supports it and a timer is set, a countdown runs first. The microp
 
 Then the bloc starts the selected sound, calls `CameraService.startRecording` and keeps the screen awake with `WakelockPlus`. Only Classic passes a `maxDuration`: what is left of `VideoEditorConstants.maxDuration` (6.3 s across all clips). The native side stops at that limit on its own and reports it through `onAutoStopped`. A stop that arrives while the native start is still running is held in `pendingStopAfterStart` and sent once the recording has begun, so a short hold still produces a clip.
 
+Each start is measured by the `recording_start` performance trace (`RecordingTraces` in `lib/observability/recording_traces.dart`), from the tap until the take runs. A countdown is kept out of its duration and reported as `countdown_ms`. A start ignored by the checks above reports nothing.
+
 ### Stop
 
 The clip timer freezes at the tap, not when the native stop returns. `stopRecording()` hands back the file, and `ClipManagerNotifier.addClip` turns it into a `DivineVideoClip`. In Classic a take longer than the remaining time is trimmed in the background. The clip is saved to the clip library right away. Then, detached from the stop handler so a slow pass never delays the next stop:
@@ -101,6 +103,8 @@ The clip timer freezes at the tap, not when the native stop returns. `stopRecord
 In parallel the clip manager signs the take with ProofMode / C2PA (`NativeProofModeService.proofFile`). Once signing settles, `RecordingGalleryBackupService` copies it to the device gallery when the user has turned that on in Settings (off by default).
 
 A second stop result for a file that was already stopped is dropped, so one take never becomes two clips (#10194).
+
+Each stop is measured by the `recording_stop` performance trace, from the stop until the camera has handed over the file. It records what ended the take (`trigger`: the user, the camera's auto-stop, or a reaction teardown) and whether the take was lost (`outcome=no_file`), which the bloc also reports as `RecordingProducedNoVideoException`.
 
 ## Modes
 

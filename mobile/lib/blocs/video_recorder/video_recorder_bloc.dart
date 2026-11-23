@@ -35,6 +35,7 @@ import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
+import 'package:openvine/observability/recording_traces.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -379,6 +380,12 @@ class VideoRecorderBloc
   final CountdownSoundServiceFactory _countdownSoundServiceFactory;
   final AudioPlaybackServiceFactory _audioPlaybackServiceFactory;
   final PerformanceTraceMonitor _performanceMonitor;
+
+  /// Times each take's start and stop. Telemetry, not UI state: it only
+  /// carries the moment a take began over to its stop.
+  late final RecordingTraces _recordingTraces = RecordingTraces(
+    _performanceMonitor,
+  );
   final RecordingStartedCallback? _onRecordingStarted;
   final bool _liveChromaKeySupported;
   final ChromaKeyStillDetector _detectChromaKeyStill;
@@ -435,6 +442,15 @@ class VideoRecorderBloc
 
   bool get _remoteRecordPausedForSound =>
       _readVideoEditorState().selectedSound != null;
+
+  /// The settings the take being started or stopped runs with.
+  RecordingTraceContext get _recordingTraceContext => RecordingTraceContext(
+    mode: state.recorderMode,
+    stabilization: state.videoStabilizationMode,
+    dualCamera: state.isDualCameraEnabled,
+    chromaKey: state.isChromaKeyActive,
+    reaction: _reactionRecordingOwner != null,
+  );
 
   /// Keeps background chroma-key bakes off the hardware while the camera
   /// encodes: held from the moment a take starts, released once it is over.
@@ -1089,6 +1105,35 @@ class VideoRecorderBloc
       return;
     }
 
+    final shouldRunCountdown =
+        state.recorderMode.supportsCountdownTimer &&
+        state.timerDuration != TimerDuration.off;
+    final trace = _recordingTraces.start(
+      _recordingTraceContext,
+      countdown: shouldRunCountdown,
+      sound: _readVideoEditorState().selectedSound?.resolvedSource != null,
+    );
+    try {
+      await _startRecordingFromTap(
+        emit,
+        trace,
+        clipManager: clipManager,
+        remainingDuration: remainingDuration,
+        shouldRunCountdown: shouldRunCountdown,
+      );
+    } finally {
+      // Every path ends the trace itself; this only ends a start that threw.
+      trace.errored();
+    }
+  }
+
+  Future<void> _startRecordingFromTap(
+    Emitter<VideoRecorderBlocState> emit,
+    RecordingStartTrace trace, {
+    required ClipManagerNotifier clipManager,
+    required Duration remainingDuration,
+    required bool shouldRunCountdown,
+  }) async {
     emit(
       state.copyWith(
         isStartingRecording: true,
@@ -1105,9 +1150,6 @@ class VideoRecorderBloc
     bool shouldAbortStart() =>
         isClosed || _isClosing || cancellation?.isCompleted == true;
 
-    final shouldRunCountdown =
-        state.recorderMode.supportsCountdownTimer &&
-        state.timerDuration != TimerDuration.off;
     if (shouldRunCountdown) {
       final seconds = state.timerDuration.duration.inSeconds;
       Log.info(
@@ -1128,7 +1170,7 @@ class VideoRecorderBloc
       }
 
       if (shouldAbortStart()) {
-        _finishCancelledStart(emit);
+        _finishCancelledStart(emit, trace);
         return;
       }
       await _cameraService.setVolumeKeysEnabled(enabled: false);
@@ -1163,6 +1205,8 @@ class VideoRecorderBloc
         unawaited(HapticService.recordingFeedback());
         await _countdownSoundService!.playLongBeepAndWait();
       }
+      // The take is due from here: reopening the mic is part of starting it.
+      trace.countdownEnded();
 
       // Reopen the mic ahead of native recording, if the take is still wanted.
       if (!shouldAbortStart()) await _cameraService.resumeAudioCapture();
@@ -1173,7 +1217,7 @@ class VideoRecorderBloc
     }
 
     if (shouldAbortStart()) {
-      _finishCancelledStart(emit);
+      _finishCancelledStart(emit, trace);
       return;
     }
 
@@ -1181,6 +1225,7 @@ class VideoRecorderBloc
       // Navigation released (or is releasing) the camera before the native
       // start ran — abort to idle instead of recording on a camera that is
       // about to be torn down.
+      trace.aborted();
       emit(
         state.copyWith(
           isStartingRecording: false,
@@ -1191,9 +1236,9 @@ class VideoRecorderBloc
       return;
     }
 
-    await _prepareSoundForPlayback();
+    await trace.measure(.soundPrep, _prepareSoundForPlayback);
     if (shouldAbortStart()) {
-      _finishCancelledStart(emit);
+      _finishCancelledStart(emit, trace);
       return;
     }
 
@@ -1204,7 +1249,7 @@ class VideoRecorderBloc
         ? null
         : Completer<void>();
     try {
-      await _startNativeRecording(emit, clipManager, remainingDuration);
+      await _startNativeRecording(emit, trace, clipManager, remainingDuration);
     } finally {
       if (!state.hasRecordingInFlight) camera?.releaseRetainedCapture();
       pendingStart?.complete();
@@ -1214,6 +1259,7 @@ class VideoRecorderBloc
 
   Future<void> _startNativeRecording(
     Emitter<VideoRecorderBlocState> emit,
+    RecordingStartTrace trace,
     ClipManagerNotifier clipManager,
     Duration remainingDuration,
   ) async {
@@ -1226,13 +1272,17 @@ class VideoRecorderBloc
     );
 
     unawaited(_playSoundPlayback());
-    final success = await _cameraService.startRecording(
-      maxDuration: state.hasRecordingLimit ? remainingDuration : null,
+    final success = await trace.measure(
+      .nativeStart,
+      () => _cameraService.startRecording(
+        maxDuration: state.hasRecordingLimit ? remainingDuration : null,
+      ),
     );
 
     if (state.recordingLockedForNavigation) {
       // The camera was released for navigation while the native start was in
       // flight. Don't latch a recording the user can never stop.
+      trace.aborted();
       await _abortInFlightStartForLock(emit, sessionStarted: success);
       return;
     }
@@ -1246,15 +1296,17 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
       _onRecordingStarted?.call(state.recorderMode);
-      await WakelockPlus.enable();
+      await trace.measure(.wakelock, WakelockPlus.enable);
       if (state.recordingLockedForNavigation) {
         // Navigation locked during the wakelock-enable await, after the native
         // session started. Abort with the same teardown as the in-flight guard
         // above rather than arm a clip manager (60fps timer + stopwatch) that
         // nothing can stop.
+        trace.aborted();
         await _abortInFlightStartForLock(emit, sessionStarted: true);
         return;
       }
+      trace.succeeded();
       if (owner == null || owner.isCurrent()) clipManager.startRecording();
       if (state.pendingStopAfterStart) {
         // A stop was requested while the native start was still in-flight
@@ -1276,6 +1328,7 @@ class VideoRecorderBloc
         emit(state.copyWith(isStartingRecording: false));
       }
     } else {
+      trace.failed();
       Log.warning(
         '⚠️ Recording failed to start or was stopped early',
         name: 'VideoRecorderBloc',
@@ -1291,7 +1344,11 @@ class VideoRecorderBloc
     }
   }
 
-  void _finishCancelledStart(Emitter<VideoRecorderBlocState> emit) {
+  void _finishCancelledStart(
+    Emitter<VideoRecorderBlocState> emit,
+    RecordingStartTrace trace,
+  ) {
+    trace.aborted();
     _reactionStartCancellation = null;
     emit(
       state.copyWith(
@@ -1398,6 +1455,14 @@ class VideoRecorderBloc
             reactionClipManager!.isSessionCurrent(reactionGeneration!));
     bool ownsTimeline() =>
         owner == null || (!_isClosing && ownsOriginalTimeline());
+    final trace = _recordingTraces.stop(
+      _recordingTraceContext,
+      trigger: event._teardown != null
+          ? .teardown
+          : event._isAutoStop
+          ? .auto
+          : .user,
+    );
     emit(state.copyWith(isStoppingRecording: true));
 
     unawaited(HapticService.recordingFeedback());
@@ -1414,8 +1479,10 @@ class VideoRecorderBloc
       if (ownsOriginalTimeline()) {
         (reactionClipManager ?? _readClipManager()).stopRecording();
       }
-      await _stopSoundPlayback();
-      videoResult = event.result ?? await _cameraService.stopRecording();
+      await trace.measure(.soundStop, _stopSoundPlayback);
+      videoResult =
+          event.result ??
+          await trace.measure(.nativeStop, _cameraService.stopRecording);
       // The camera parks a second file only beside a main one. A stop that
       // got none lost the race to an auto-stop, which is queued behind this
       // stop with its own file and takes the second one itself.
@@ -1425,7 +1492,7 @@ class VideoRecorderBloc
       // Best-effort: a wakelock teardown failure must not abort the stop and
       // discard an already-captured clip (videoResult is assigned above), so
       // it is swallowed rather than thrown into the recovery catch.
-      await _disableWakelockSafely();
+      await trace.measure(.wakelock, _disableWakelockSafely);
       clipManager = reactionClipManager ?? _readClipManager();
       remainingDuration = ownsTimeline()
           ? clipManager.remainingDuration
@@ -1441,6 +1508,7 @@ class VideoRecorderBloc
       // future stop bails at the top of this handler, so the recording could
       // never be stopped again. Run best-effort cleanup so the user can
       // recover.
+      trace.errored();
       Log.error(
         '⚠️ Failed to stop recording cleanly - resetting recorder state',
         name: 'VideoRecorderBloc',
@@ -1463,6 +1531,10 @@ class VideoRecorderBloc
       );
       return;
     }
+    trace.finished(
+      file: videoResult != null,
+      secondaryFile: secondaryRecording != null,
+    );
 
     emit(
       state.copyWith(
@@ -3259,7 +3331,7 @@ class VideoRecorderBloc
     // A null video still goes through the stop pipeline: it resets the
     // recorder and reports the empty recording. The camera service already
     // knows the recording ended, so it answers with no file.
-    add(VideoRecorderRecordingStopRequested(result: event.video));
+    add(VideoRecorderRecordingStopRequested._autoStop(event.video));
   }
 
   // === Private helpers ===
