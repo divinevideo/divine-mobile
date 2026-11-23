@@ -3,6 +3,9 @@
 
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _connections = {
@@ -21,28 +24,50 @@ String _lockedVersion(String package) {
   return match.group(1)!;
 }
 
+class _AssetUrls extends RecursiveAstVisitor<void> {
+  _AssetUrls(this.fileName);
+
+  final String fileName;
+  final urls = <String>[];
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    final uri = Uri.tryParse(node.value);
+    if (uri?.pathSegments.lastOrNull == fileName) {
+      urls.add(node.value);
+    }
+  }
+}
+
+List<String> _assetUrls(String path, String fileName) {
+  final source = File(path).readAsStringSync();
+  final visitor = _AssetUrls(fileName);
+  parseString(content: source, path: path).unit.accept(visitor);
+  return visitor.urls;
+}
+
 void main() {
   group('web SQLite asset URLs', () {
     for (final MapEntry(key: name, value: path) in _connections.entries) {
       // web/_headers caches *.wasm for a year, so a stale copy is only skipped
       // when the URL changes with the version.
       test('$name requests sqlite3.wasm at the locked sqlite3 version', () {
-        final source = File(path).readAsStringSync();
-
         expect(
-          source,
-          contains("'sqlite3.wasm?v=${_lockedVersion('sqlite3')}'"),
+          _assetUrls(path, 'sqlite3.wasm'),
+          allOf(
+            isNotEmpty,
+            everyElement('sqlite3.wasm?v=${_lockedVersion('sqlite3')}'),
+          ),
         );
-        expect(source, isNot(contains("'sqlite3.wasm'")));
       });
 
       // A versioned worker URL would start a second shared worker during a
       // deploy, and two workers writing one IndexedDB database can corrupt it.
       test('$name keeps the drift_worker.js URL unversioned', () {
-        final source = File(path).readAsStringSync();
-
-        expect(source, contains("'drift_worker.js'"));
-        expect(source, isNot(contains('drift_worker.js?v=')));
+        expect(
+          _assetUrls(path, 'drift_worker.js'),
+          allOf(isNotEmpty, everyElement('drift_worker.js')),
+        );
       });
     }
   });
