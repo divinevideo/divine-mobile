@@ -302,7 +302,7 @@ void main() {
 
     test('reports an event whose read reached its deadline mid-verify', () {
       fakeAsync((async) {
-        final relay = _FakeRelay('wss://relay.a');
+        final relay = _FakeRelay('wss://relay.a:8443/private?route=example');
         startPool(async, [relay]);
         QueryResult? result;
         startRead('read-1', const Duration(seconds: 5), (r) => result = r);
@@ -325,7 +325,7 @@ void main() {
         expect(drops, hasLength(1));
         expect(drops.single.site.name, 'inFlightEventDrop');
         expect(drops.single.level, RelayDiagnosticLevel.debug);
-        expect(drops.single.relayUrl, 'wss://relay.a');
+        expect(drops.single.relayUrl, 'wss://relay.a:8443');
         expect(
           drops.single.message,
           allOf(contains('query read-1'), contains('kind 1')),

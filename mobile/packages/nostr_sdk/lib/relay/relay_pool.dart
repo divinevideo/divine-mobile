@@ -2217,14 +2217,16 @@ class RelayPool {
     String readType,
     Event event,
   ) {
-    log(
-      'Dropping relay event whose $readType $subId ended during its '
-      'signature check from ${relay.url}: eventId=${event.id}',
-    );
+    // Relay URLs can include credentials or other private routing data.
+    // Report the endpoint's host and port, not the full connection URL.
+    final uri = Uri.tryParse(relay.url);
+    final endpoint = uri == null || uri.host.isEmpty
+        ? '(unknown relay)'
+        : Uri(scheme: uri.scheme, host: uri.host, port: uri.port).toString();
     _diagnose(
       RelayDiagnosticSite.inFlightEventDrop,
       RelayDiagnosticLevel.debug,
-      relay.url,
+      endpoint,
       'Dropped event ${event.id} (kind ${event.kind}) for $readType $subId, '
       "which ended while the event's signature was being checked",
     );
