@@ -61,6 +61,13 @@ class BadgeHoldersState extends Equatable {
   /// is [BadgeHoldersStatus.loaded].
   final List<String> holders;
 
+  /// Whether videos can use the known holder snapshot, including while a
+  /// complete reconciliation is retried after an indexed preview succeeded.
+  bool get hasUsableHolderSnapshot =>
+      holdersStatus == BadgeHoldersStatus.preview ||
+      holdersStatus == BadgeHoldersStatus.loaded ||
+      holders.isNotEmpty;
+
   /// Status of the viewer's subscription.
   final BadgeSubscriptionStatus subscriptionStatus;
 

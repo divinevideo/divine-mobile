@@ -6082,9 +6082,9 @@
   "settingsBadgesTitle": "Lencana",
   "settingsBadgesSubtitle": "Terima anugerah dan semak status lencana yang dikeluarkan.",
   "badgesTitle": "Lencana",
-  "badgeSubscribeAction": "Langgan lencana",
-  "badgeSubscribedAction": "Melanggan",
-  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscribeAction": "Ikuti komuniti",
+  "badgeSubscribedAction": "Mengikuti komuniti",
+  "badgeAcceptedHoldersTitle": "Orang dalam komuniti ini",
   "badgeSubscriptionLoadError": "Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.",
   "badgesLoadError": "Tidak dapat memuatkan lencana",
   "badgesUpdateError": "Tidak dapat mengemas kini lencana",
@@ -7854,5 +7854,23 @@
   "collabRoomPartLengthLabel": "Setiap bahagian",
   "collabRoomSwapOrderHint": "Ketik dua bahagian untuk menukar susunannya.",
   "collabRoomFilmSeriesHint": "Semua orang merakam bahagian sendiri, sehingga {seconds} saat. Bahagian dimainkan satu demi satu.",
-  "collabRoomSeriesReadyHint": "Semua bahagian sudah masuk. Gabungkan sekarang!"
+  "collabRoomSeriesReadyHint": "Semua bahagian sudah masuk. Gabungkan sekarang!",
+  "badgeDiscoveryTitle": "Lencana menyatukan orang ramai",
+  "badgeDiscoveryBody": "Sesiapa sahaja boleh mencipta dan menganugerahkan lencana. Anda memilih lencana yang muncul pada profil anda. Terokai lencana untuk mengenali komunitinya dan mengikuti ahlinya.",
+  "badgeDiscoveryMyBadges": "Lencana saya",
+  "badgeDiscoveryEmpty": "Belum ada komuniti ditemui. Tarik ke bawah untuk mencuba lagi.",
+  "badgeCommunityFollowHint": "Menambahkan video komuniti pada suapan Mengikuti anda. Ikuti orang secara individu.",
+  "badgeOfficialLabel": "Rasmi",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Ketahui lebih lanjut di {website}",
+  "badgeDiscoveryVideosLabel": "Video daripada {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

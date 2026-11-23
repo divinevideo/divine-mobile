@@ -12597,13 +12597,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Prenumerera på märket';
+  String get badgeSubscribeAction => 'Följ gemenskapen';
 
   @override
-  String get badgeSubscribedAction => 'Prenumererar';
+  String get badgeSubscribedAction => 'Följer gemenskapen';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
+  String get badgeAcceptedHoldersTitle => 'Personer i den här gemenskapen';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16791,4 +16791,49 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'Alla delar är klara. Sätt ihop dem!';
+
+  @override
+  String get badgeDiscoveryTitle => 'Märken för människor samman';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Alla kan skapa och dela ut märken. Du väljer vilka som visas på din profil. Utforska ett märke för att lära känna gemenskapen och följa människorna där.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Mina märken';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Inga gemenskaper hittades än. Dra nedåt för att försöka igen.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig.';
+
+  @override
+  String get badgeOfficialLabel => 'Officiellt';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Läs mer på $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Videor från $badgeName';
+  }
 }

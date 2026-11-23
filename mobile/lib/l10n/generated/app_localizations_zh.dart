@@ -11854,13 +11854,13 @@ class AppLocalizationsZh extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => '订阅徽章';
+  String get badgeSubscribeAction => '关注社区';
 
   @override
-  String get badgeSubscribedAction => '已订阅';
+  String get badgeSubscribedAction => '已关注社区';
 
   @override
-  String get badgeAcceptedHoldersTitle => '已接受徽章的人';
+  String get badgeAcceptedHoldersTitle => '社区成员';
 
   @override
   String get badgeSubscriptionLoadError => '无法加载你的徽章订阅。请重试。';
@@ -15795,4 +15795,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '所有部分都到齐了。合成视频吧！';
+
+  @override
+  String get badgeDiscoveryTitle => '徽章让人们相聚';
+
+  @override
+  String get badgeDiscoveryBody =>
+      '任何人都可以创建和颁发徽章。你可以选择在个人资料中展示哪些徽章。探索一个徽章，了解它的社区，并关注其中的人。';
+
+  @override
+  String get badgeDiscoveryMyBadges => '我的徽章';
+
+  @override
+  String get badgeDiscoveryEmpty => '暂未找到社区。下拉重试。';
+
+  @override
+  String get badgeCommunityFollowHint => '将社区视频添加到你的关注动态中。关注个人需要单独操作。';
+
+  @override
+  String get badgeOfficialLabel => '官方';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName，$issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName，$issuerName，$officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '前往$website了解更多';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName的视频';
+  }
 }

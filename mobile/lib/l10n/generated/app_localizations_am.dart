@@ -12297,13 +12297,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'ባጁን ተከተል';
+  String get badgeSubscribeAction => 'ማህበረሰቡን ይከተሉ';
 
   @override
-  String get badgeSubscribedAction => 'ተከትለዋል';
+  String get badgeSubscribedAction => 'ማህበረሰቡን እየተከተሉ ነው';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'ባጁን የተቀበሉ';
+  String get badgeAcceptedHoldersTitle => 'በዚህ ማህበረሰብ ያሉ ሰዎች';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16365,4 +16365,49 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!';
+
+  @override
+  String get badgeDiscoveryTitle => 'ባጆች ሰዎችን ያገናኛሉ';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'ማንኛውም ሰው ባጆችን መፍጠር እና መሸለም ይችላል። በመገለጫዎ ላይ የሚታዩትን እርስዎ ይመርጣሉ። ማህበረሰቡን ለማወቅ እና አባላቱን ለመከተል ባጅ ያስሱ።';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'የእኔ ባጆች';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'እስካሁን ማህበረሰቦች አልተገኙም። እንደገና ለመሞከር ወደ ታች ይጎትቱ።';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'የማህበረሰቡን ቪዲዮዎች ወደሚከተሏቸው ዝርዝር ያክላል። ሰዎችን በተናጠል ይከተሉ።';
+
+  @override
+  String get badgeOfficialLabel => 'ይፋዊ';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'በ$website ላይ ተጨማሪ ይወቁ';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'የ$badgeName ቪዲዮዎች';
+  }
 }

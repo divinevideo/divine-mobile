@@ -12791,13 +12791,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'S’abonner au badge';
+  String get badgeSubscribeAction => 'Suivre la communauté';
 
   @override
-  String get badgeSubscribedAction => 'Abonné';
+  String get badgeSubscribedAction => 'Communauté suivie';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Titulaires ayant accepté le badge';
+  String get badgeAcceptedHoldersTitle => 'Les membres de cette communauté';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -17043,4 +17043,49 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Toutes les parties sont là. Assemble-les !';
+
+  @override
+  String get badgeDiscoveryTitle => 'Les badges rassemblent';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Tout le monde peut créer et décerner des badges. Tu choisis ceux qui apparaissent sur ton profil. Explore un badge pour découvrir sa communauté et suivre ses membres.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Mes badges';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Aucune communauté trouvée pour le moment. Tire vers le bas pour réessayer.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Ajoute les vidéos de la communauté à ton fil Abonnements. Suis les personnes individuellement.';
+
+  @override
+  String get badgeOfficialLabel => 'Officiel';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'En savoir plus sur $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Vidéos de $badgeName';
+  }
 }

@@ -6448,9 +6448,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abonat",
-  "badgeSubscribeAction": "Abonează-te la insignă",
-  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
+  "badgeSubscribedAction": "Urmărești comunitatea",
+  "badgeSubscribeAction": "Urmărește comunitatea",
+  "badgeAcceptedHoldersTitle": "Oameni din această comunitate",
   "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.",
   "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
   "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis",
@@ -6553,5 +6553,23 @@
   "collabRoomPartLengthLabel": "Fiecare parte",
   "collabRoomSwapOrderHint": "Atinge două părți ca să le schimbi ordinea.",
   "collabRoomFilmSeriesHint": "Fiecare își filmează propria parte, de până la {seconds} s. Părțile rulează una după alta.",
-  "collabRoomSeriesReadyHint": "Toate părțile au ajuns. Pune-le cap la cap!"
+  "collabRoomSeriesReadyHint": "Toate părțile au ajuns. Pune-le cap la cap!",
+  "badgeDiscoveryTitle": "Insignele aduc oamenii împreună",
+  "badgeDiscoveryBody": "Oricine poate crea și acorda insigne. Tu alegi care apar pe profilul tău. Explorează o insignă ca să-i cunoști comunitatea și să urmărești oamenii din ea.",
+  "badgeDiscoveryMyBadges": "Insignele mele",
+  "badgeDiscoveryEmpty": "Nu am găsit comunități încă. Trage în jos ca să încerci din nou.",
+  "badgeCommunityFollowHint": "Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual.",
+  "badgeOfficialLabel": "Oficială",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Află mai multe pe {website}",
+  "badgeDiscoveryVideosLabel": "Videoclipuri de la {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

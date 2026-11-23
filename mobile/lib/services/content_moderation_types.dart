@@ -39,6 +39,23 @@ const List<ContentFilterReason> listReportReasons = [
   ContentFilterReason.other,
 ];
 
+/// Reasons for reporting a badge definition, including its artwork.
+///
+/// An age review targets an account, so it belongs on the account's report
+/// form. Copyright and AI-generated content can apply to the badge artwork.
+const List<ContentFilterReason> badgeReportReasons = [
+  ContentFilterReason.spam,
+  ContentFilterReason.harassment,
+  ContentFilterReason.violence,
+  ContentFilterReason.sexualContent,
+  ContentFilterReason.copyright,
+  ContentFilterReason.falseInformation,
+  ContentFilterReason.childSafety,
+  ContentFilterReason.csam,
+  ContentFilterReason.aiGenerated,
+  ContentFilterReason.other,
+];
+
 /// The reasons a room message can be reported for: 8 of the 11, in display
 /// order.
 ///

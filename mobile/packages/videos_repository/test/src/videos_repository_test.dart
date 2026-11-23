@@ -381,6 +381,29 @@ void main() {
       });
     });
 
+    group('isVideoKnownDeleted', () {
+      final video = VideoEvent(
+        id: 'a' * 64,
+        pubkey: 'b' * 64,
+        createdAt: 1704067200,
+        content: '',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200000),
+      );
+      test('defaults to visible without a deletion resolver', () {
+        expect(repository.isVideoKnownDeleted(video), isFalse);
+      });
+      test('reads current deletion state without caching it', () {
+        var deleted = false;
+        final videos = VideosRepository(
+          nostrClient: mockNostrClient,
+          deletedFilter: (_) => deleted,
+        );
+        expect(videos.isVideoKnownDeleted(video), isFalse);
+        deleted = true;
+        expect(videos.isVideoKnownDeleted(video), isTrue);
+      });
+    });
+
     group('refreshAudioReusePolicy', () {
       final video = VideoEvent(
         id: 'video-id',
@@ -518,34 +541,6 @@ void main() {
           throwsA(isA<FunnelcakeNotConfiguredException>()),
         );
       });
-    });
-
-    test('isVideoKnownDeleted delegates to the injected deletion filter', () {
-      final visibleVideo = VideoEvent(
-        id: 'visible-video',
-        pubkey: 'pubkey',
-        createdAt: 1704067200,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-        videoUrl: 'https://example.com/visible.mp4',
-      );
-      final deletedVideo = visibleVideo.copyWith(id: 'deleted-video');
-
-      expect(repository.isVideoKnownDeleted(visibleVideo), isFalse);
-
-      final repositoryWithDeletionFilter = VideosRepository(
-        nostrClient: mockNostrClient,
-        deletedFilter: (video) => video.id == deletedVideo.id,
-      );
-
-      expect(
-        repositoryWithDeletionFilter.isVideoKnownDeleted(visibleVideo),
-        isFalse,
-      );
-      expect(
-        repositoryWithDeletionFilter.isVideoKnownDeleted(deletedVideo),
-        isTrue,
-      );
     });
 
     group('getNewVideos', () {

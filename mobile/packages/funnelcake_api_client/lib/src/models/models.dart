@@ -1,5 +1,6 @@
 export 'audio_reuse_policy.dart';
 export 'badge_definitions_response.dart';
+export 'badge_discovery_response.dart';
 export 'featured_tab_config.dart';
 export 'featured_tab_videos_response.dart';
 export 'notification_activity_update.dart';

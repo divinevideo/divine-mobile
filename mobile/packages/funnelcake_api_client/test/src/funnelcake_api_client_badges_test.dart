@@ -26,6 +26,213 @@ const _badge = <String, dynamic>{
 };
 
 void main() {
+  group('FunnelcakeApiClient.getBadgeDiscovery', () {
+    test('fetches ranked definitions and clips in one request', () async {
+      var calls = 0;
+      final transport = MockClient((request) async {
+        calls++;
+        expect(request.url.path, '/api/badges/discovery');
+        expect(request.url.queryParameters, {'limit': '48'});
+        return http.Response(
+          jsonEncode({
+            'badges': [
+              {
+                'definition': _badge,
+                'holder_count': 12,
+                'follower_count': 7,
+                'videos': [
+                  {
+                    'id': 'a' * 64,
+                    'pubkey': _issuer,
+                    'title': 'Clip',
+                    'thumbnail': '',
+                    'created_at': 1700000000,
+                    'kind': 34236,
+                    'moderation_labels': ['violence'],
+                    'verified_archive': true,
+                    'archive_provenance_available': true,
+                    'tags': <Object>[],
+                  },
+                ],
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+      final result = await client.getBadgeDiscovery();
+      expect(calls, 1);
+      expect(result.single.definition.toJson(), _badge);
+      expect(result.single.holderCount, 12);
+      expect(result.single.followerCount, 7);
+      final clip = result.single.videos.single;
+      expect(clip.id, 'a' * 64);
+      expect(clip.moderationLabels, ['violence']);
+      expect(clip.verifiedArchive, isTrue);
+      expect(clip.archiveProvenanceAvailable, isTrue);
+    });
+
+    test('reports the HTTP error after one request', () async {
+      var calls = 0;
+      final transport = MockClient((_) async {
+        calls++;
+        return http.Response('', 503);
+      });
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+        retryBaseDelay: Duration.zero,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+
+      await expectLater(
+        client.getBadgeDiscovery(),
+        throwsA(isA<FunnelcakeApiException>()),
+      );
+      expect(calls, 1);
+    });
+
+    test('transport failures preserve their cause and stack', () async {
+      final original = StateError('transport failed');
+      final originalStack = StackTrace.fromString('transport-boundary');
+      final transport = MockClient(
+        (_) async => Error.throwWithStackTrace(original, originalStack),
+      );
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(client.dispose);
+      addTearDown(transport.close);
+      try {
+        await client.getBadgeDiscovery();
+        fail('expected transport failure');
+      } on FunnelcakeException catch (error, stackTrace) {
+        expect(
+          error,
+          isA<FunnelcakeException>()
+              .having(
+                (e) => e.message,
+                'message',
+                'Failed to fetch badge discovery',
+              )
+              .having((e) => e.cause, 'cause', same(original)),
+        );
+        expect(stackTrace.toString(), contains('transport-boundary'));
+      }
+    });
+
+    for (final timestamp in [-1, 8640000000001]) {
+      test('rejects unrepresentable preview timestamp $timestamp', () async {
+        final transport = MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'badges': [
+                {
+                  'definition': _badge,
+                  'holder_count': 1,
+                  'follower_count': 0,
+                  'videos': [
+                    {
+                      'id': 'a' * 64,
+                      'pubkey': _issuer,
+                      'created_at': timestamp,
+                    },
+                  ],
+                },
+              ],
+            }),
+            200,
+          ),
+        );
+        final client = FunnelcakeApiClient(
+          baseUrl: 'https://api.example.com',
+          httpClient: transport,
+        );
+        addTearDown(client.dispose);
+        addTearDown(transport.close);
+        await expectLater(
+          client.getBadgeDiscovery(),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.cause.toString(),
+              'cause',
+              contains('Invalid badge preview timestamp'),
+            ),
+          ),
+        );
+      });
+    }
+
+    test(
+      'drops unsafe effective timestamps without losing neighboring clips',
+      () {
+        Map<String, Object> clip(String id, List<List<String>> tags) => {
+          'id': id,
+          'pubkey': _issuer,
+          'title': 'Synthetic clip',
+          'thumbnail': '',
+          'created_at': 1700000000,
+          'kind': 34236,
+          'tags': tags,
+          'moderation_labels': <String>[],
+          'verified_archive': false,
+          'archive_provenance_available': true,
+        };
+        final safeId = 'b' * 64;
+        final result = parseBadgeDiscoveryResponse({
+          'badges': [
+            {
+              'definition': _badge,
+              'holder_count': 1,
+              'follower_count': 0,
+              'videos': [
+                clip('a' * 64, [
+                  ['published_at', '8640000000001'],
+                ]),
+                clip(safeId, [
+                  ['published_at', '8640000000001'],
+                  ['published_at', '1700000001'],
+                ]),
+                clip('c' * 64, [
+                  ['published_at', '-8640000000001'],
+                ]),
+              ],
+            },
+          ],
+        });
+        expect(result.single.videos.single.id, safeId);
+        expect(result.single.videos.single.tags, [
+          ['published_at', '8640000000001'],
+          ['published_at', '1700000001'],
+        ]);
+      },
+    );
+
+    test('a malformed indexed payload is a typed failure', () async {
+      final transport = MockClient(
+        (_) async => http.Response('{"badges":[7]}', 200),
+      );
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: transport,
+      );
+      addTearDown(transport.close);
+      addTearDown(client.dispose);
+      await expectLater(
+        client.getBadgeDiscovery(),
+        throwsA(isA<FunnelcakeException>()),
+      );
+    });
+  });
+
   group('FunnelcakeApiClient.getBadgeDefinitions', () {
     late FunnelcakeApiClient client;
     late MockClient transport;

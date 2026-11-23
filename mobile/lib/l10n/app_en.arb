@@ -10135,9 +10135,15 @@
   "@badgeSubscriptionsPublicNotice": {
     "description": "Disclosure next to the badge subscription button: subscribing publishes the selected badge coordinates publicly on Nostr."
   },
-  "badgeSubscribeAction": "Subscribe to badge",
-  "badgeSubscribedAction": "Subscribed",
-  "badgeAcceptedHoldersTitle": "Accepted holders",
+  "badgeSubscribeAction": "Follow community",
+  "@badgeSubscribeAction": {
+    "description": "Button on a badge page that adds the badge community's videos to the Following feed. It does not follow any person."
+  },
+  "badgeSubscribedAction": "Following community",
+  "@badgeSubscribedAction": {
+    "description": "The Follow community button once the community's videos are in the Following feed; tapping it again stops."
+  },
+  "badgeAcceptedHoldersTitle": "People in this community",
   "badgeSubscriptionLoadError": "Could not load your badge subscriptions. Try again.",
   "@badgeSubscriptionLoadError": {
     "description": "Shown when badge subscription preferences could not be read; retry reloads only subscriptions."
@@ -10216,7 +10222,7 @@
   "badgeDetailShareAction": "Share",
   "badgeDetailShareMessage": "Check out this badge on Divine: {link}",
   "@badgeDetailShareMessage": {
-    "description": "Body of the share sheet when sharing a badge. The link is an naddr reference.",
+    "description": "Body of the share sheet when sharing a badge. The link is a badges.divine.video URL, or a raw badge coordinate when the badge identifier is too long for an naddr.",
     "placeholders": {
       "link": {
         "type": "String"
@@ -13707,13 +13713,21 @@
     "description": "Error shown on the invite page when the system share sheet fails to open. Nothing was sent."
   },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
-  "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
+  "@messagesPublicRoomsDisclosure": {
+    "description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."
+  },
   "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",
-  "@messagesRoomRetiredDraft": {"description": "Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier."},
+  "@messagesRoomRetiredDraft": {
+    "description": "Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier."
+  },
   "messagesRoomRestoreDraft": "Restore draft",
-  "@messagesRoomRestoreDraft": {"description": "Copies a retained earlier-epoch message into the current room composer without publishing it."},
+  "@messagesRoomRestoreDraft": {
+    "description": "Copies a retained earlier-epoch message into the current room composer without publishing it."
+  },
   "messagesRoomDiscardDraft": "Discard draft",
-  "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."},
+  "@messagesRoomDiscardDraft": {
+    "description": "Deletes only this account's retained unconfirmed local room draft."
+  },
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
   "minorAccountReviewVideoSubmittedTitle": "Video submitted",
   "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.",
@@ -14101,5 +14115,62 @@
   "collabRoomSeriesReadyHint": "All parts are in. Put it together!",
   "@collabRoomSeriesReadyHint": {
     "description": "Hint for the host of a Together room once every part is in and the parts play one after another; the button below puts the video together."
+  },
+  "badgeDiscoveryTitle": "Badges bring people together",
+  "badgeDiscoveryBody": "Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.",
+  "badgeDiscoveryMyBadges": "My badges",
+  "badgeDiscoveryEmpty": "No communities found yet. Pull down to try again.",
+  "badgeCommunityFollowHint": "Adds community videos to your Following feed. Follow people individually.",
+  "@badgeCommunityFollowHint": {
+    "description": "Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one."
+  },
+  "badgeOfficialLabel": "Official",
+  "@badgeOfficialLabel": {
+    "description": "Label for a badge issued by the pinned official Divine badge issuer."
+  },
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "@badgeDiscoveryCardLabel": {
+    "description": "Screen reader label for a badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "@badgeDiscoveryOfficialCardLabel": {
+    "description": "Screen reader label for an official Divine badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      },
+      "officialLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryWebsiteLabel": "Learn more at {website}",
+  "@badgeDiscoveryWebsiteLabel": {
+    "description": "Screen reader label for the external badge discovery website link.",
+    "placeholders": {
+      "website": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryVideosLabel": "Videos from {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -6448,9 +6448,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "مشترك",
-  "badgeSubscribeAction": "اشترك في الشارة",
-  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها",
+  "badgeSubscribedAction": "تتم متابعة المجتمع",
+  "badgeSubscribeAction": "متابعة المجتمع",
+  "badgeAcceptedHoldersTitle": "أشخاص في هذا المجتمع",
   "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى.",
   "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
   "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
@@ -6553,5 +6553,23 @@
   "collabRoomPartLengthLabel": "مدة كل جزء",
   "collabRoomSwapOrderHint": "النقر على جزأين لتبديل ترتيبهما.",
   "collabRoomFilmSeriesHint": "يصوّر كل شخص جزءه الخاص، حتى {seconds} ث. وتُعرض الأجزاء واحدًا تلو الآخر.",
-  "collabRoomSeriesReadyHint": "وصلت كل الأجزاء. حان وقت الدمج!"
+  "collabRoomSeriesReadyHint": "وصلت كل الأجزاء. حان وقت الدمج!",
+  "badgeDiscoveryTitle": "الشارات تجمع الناس",
+  "badgeDiscoveryBody": "يمكن لأي شخص إنشاء شارات ومنحها. اختيار الشارات التي تظهر في الملف الشخصي متروك لك. استكشاف شارة يتيح التعرّف على مجتمعها ومتابعة أفراده.",
+  "badgeDiscoveryMyBadges": "شاراتي",
+  "badgeDiscoveryEmpty": "لم يتم العثور على مجتمعات بعد. السحب للأسفل للمحاولة مجددًا.",
+  "badgeCommunityFollowHint": "تُضاف فيديوهات المجتمع إلى موجز المتابَعين. متابعة الأشخاص تتم بشكل منفصل.",
+  "badgeOfficialLabel": "رسمي",
+  "badgeDiscoveryCardLabel": "{badgeName}، {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}، {issuerName}، {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "تعرّف على المزيد على {website}",
+  "badgeDiscoveryVideosLabel": "فيديوهات {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

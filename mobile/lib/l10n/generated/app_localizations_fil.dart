@@ -12690,13 +12690,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Mag-subscribe sa badge';
+  String get badgeSubscribeAction => 'I-follow ang community';
 
   @override
-  String get badgeSubscribedAction => 'Naka-subscribe';
+  String get badgeSubscribedAction => 'Fina-follow ang community';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Mga tumanggap ng badge';
+  String get badgeAcceptedHoldersTitle => 'Mga tao sa community na ito';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -16920,4 +16920,49 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Nandito na lahat ng part. Pagsamahin na!';
+
+  @override
+  String get badgeDiscoveryTitle => 'Pinagsasama ng mga badge ang mga tao';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Kahit sino ay puwedeng gumawa at magbigay ng mga badge. Ikaw ang pipili kung alin ang lalabas sa profile mo. Tingnan ang isang badge para makilala ang community nito at i-follow ang mga tao rito.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Mga badge ko';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Wala pang nakitang community. Hilahin pababa para subukan ulit.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Idinadagdag ang mga video ng community sa Following feed mo. I-follow ang mga tao nang paisa-isa.';
+
+  @override
+  String get badgeOfficialLabel => 'Opisyal';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Alamin pa sa $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Mga video mula sa $badgeName';
+  }
 }

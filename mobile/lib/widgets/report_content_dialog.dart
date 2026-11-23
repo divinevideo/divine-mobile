@@ -120,7 +120,7 @@ class ReportContentDialog extends ConsumerWidget {
   final String moderationEventLabel;
 
   /// The reasons offered, in display order. Every reason by default; a list
-  /// offers [listReportReasons].
+  /// offers [listReportReasons] and a badge offers [badgeReportReasons].
   final List<ContentFilterReason> reasons;
 
   /// Extra text for the report, such as a reported list's title.
@@ -308,6 +308,36 @@ class ReportContentDialog extends ConsumerWidget {
             moderationEventLabel: 'List Event',
             reasons: listReportReasons,
             additionalContext: 'Reported list: "$title" ($coordinate)',
+            addressableCoordinate: coordinate,
+            draggableController: controller,
+            scrollController: scrollController,
+          ),
+        )
+        .whenComplete(controller.dispose);
+  }
+
+  /// Shows the bottom sheet for reporting a badge definition.
+  static Future<void> showForBadge(
+    BuildContext context, {
+    required String eventId,
+    required String authorPubkey,
+    required String coordinate,
+    required String name,
+  }) {
+    final controller = DraggableScrollableController();
+    return context
+        .showVideoPausingVineBottomSheet<void>(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: VineTheme.bottomSheetDismissFloor,
+          draggableController: controller,
+          buildScrollBody: (scrollController) => ReportContentDialog(
+            eventId: eventId,
+            authorPubkey: authorPubkey,
+            moderationKindLabel: 'Badge Report',
+            moderationEventLabel: 'Badge Event',
+            reasons: badgeReportReasons,
+            additionalContext: 'Reported badge: "$name" ($coordinate)',
             addressableCoordinate: coordinate,
             draggableController: controller,
             scrollController: scrollController,

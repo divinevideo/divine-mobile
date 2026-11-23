@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -17,15 +18,20 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
+import 'package:openvine/config/badge_issuers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
-import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
+import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
@@ -35,6 +41,9 @@ import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
+
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 class _MockFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
@@ -72,13 +81,20 @@ void main() {
     /// GoRouter extension — a bare `MaterialApp` would throw there instead of
     /// exercising the flow.
     Widget buildSubject({
+      BadgeCoordinate coordinate = _coordinate,
+      BadgeRepository? detailRepository,
       VideosRepository? videosRepository,
       List<Override> overrides = const [],
       ValueChanged<PooledFullscreenVideoFeedArgs>? onFullscreenOpened,
     }) {
       final router = GoRouter(
-        initialLocation: '/badges/b/badge',
+        initialLocation: BadgeDetailScreen.pathFor(coordinate),
         routes: [
+          GoRoute(
+            path: '/welcome/login-options',
+            builder: (_, _) =>
+                const Scaffold(body: Text('Sign-in destination')),
+          ),
           GoRoute(
             path: PooledFullscreenVideoFeedScreen.path,
             builder: (_, state) {
@@ -95,31 +111,14 @@ void main() {
             ),
           ),
           GoRoute(
-            path: BadgeVideosScreen.path,
-            builder: (_, state) {
-              expect(
-                state.extra,
-                isA<BadgeVideosSeed>().having(
-                  (seed) => seed.coordinate,
-                  'coordinate',
-                  _coordinate,
-                ),
-              );
-              return Scaffold(
-                body: Text(
-                  'badge video destination ${state.pathParameters['naddr']}',
-                ),
-              );
-            },
-          ),
-          GoRoute(
             path: '/badges',
             builder: (_, _) => const Scaffold(body: Text('badge dashboard')),
             routes: [
               GoRoute(
-                path: 'b/badge',
-                builder: (_, _) =>
-                    const BadgeDetailScreen(coordinate: _coordinate),
+                path: 'b/:naddr',
+                builder: (context, state) => BadgeDetailRouteData(
+                  naddr: state.pathParameters['naddr']!,
+                ).build(context, state),
               ),
             ],
           ),
@@ -129,7 +128,9 @@ void main() {
 
       return testProviderScope(
         additionalOverrides: [
-          badgeRepositoryProvider.overrideWithValue(repository),
+          badgeRepositoryProvider.overrideWithValue(
+            detailRepository ?? repository,
+          ),
           contentBlocklistRepositoryProvider.overrideWithValue(
             contentBlocklistRepository,
           ),
@@ -178,6 +179,193 @@ void main() {
       );
       expect(find.text(l10n.badgeDetailNoRecipients), findsOneWidget);
     });
+
+    testWidgets(
+      'a direct badge link requires a signed definition for Official and Report',
+      (tester) async {
+        const coordinate = BadgeCoordinate(
+          pubkey: kDivineBadgeIssuerPubkey,
+          identifier: 'shared',
+        );
+        final unsigned = Event(coordinate.pubkey, EventKind.badgeDefinition, [
+          ['d', coordinate.identifier],
+          ['name', 'Unverified name'],
+        ], '');
+        final client = MockNostrClient();
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Filter());
+        when(
+          () => client.queryEvents(any(), tempRelays: any(named: 'tempRelays')),
+        ).thenAnswer((_) async => []);
+        when(
+          () => client.readEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            maxCollectedEvents: any(named: 'maxCollectedEvents'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              QueryResult(events: [unsigned], endedBy: QueryEnd.complete),
+        );
+        when(
+          () => client.readAllEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        final publicRepository = BadgeRepository(
+          nostrClient: client,
+          sharedPreferences: createMockSharedPreferences(),
+          currentPubkey: () => null,
+          signer: () => throw StateError('guest has no signer'),
+          signEvent: ({
+            required kind,
+            required content,
+            required tags,
+            createdAt,
+          }) async => null,
+        );
+        addTearDown(publicRepository.dispose);
+        await tester.pumpWidget(
+          buildSubject(
+            coordinate: coordinate,
+            detailRepository: publicRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.badgeDetailMissing), findsOneWidget);
+        expect(find.text('Unverified name'), findsNothing);
+        expect(find.text(l10n.badgeOfficialLabel), findsNothing);
+        expect(
+          find.bySemanticsLabel(l10n.videoActionReportLabel),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('submits a report for the complete badge definition target', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final definition = _definition();
+      final reporting = _MockContentReportingService();
+      Future<ReportResult> reportBadge() => reporting.reportContent(
+        eventId: definition.event.id,
+        authorPubkey: definition.event.pubkey,
+        reason: ContentFilterReason.spam,
+        details: any(named: 'details'),
+        moderationContent: any(named: 'moderationContent'),
+        moderationTags: any(named: 'moderationTags'),
+        additionalContext:
+            'Reported badge: "${definition.name}" (${_coordinate.value})',
+        addressableCoordinate: _coordinate.value,
+      );
+      when(reportBadge).thenAnswer(
+        (_) async => ReportResult.createSuccess(
+          'report-id',
+          delivery: ReportDelivery.queued,
+        ),
+      );
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: definition, isOwner: false),
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            contentReportingServiceProvider.overrideWith(
+              (_) async => reporting,
+            ),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: _pubkey(2),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoActionReportLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      final form = tester.widget<ReportContentDialog>(
+        find.byType(ReportContentDialog),
+      );
+      expect(form.eventId, definition.event.id);
+      expect(form.authorPubkey, definition.event.pubkey);
+      expect(form.addressableCoordinate, _coordinate.value);
+      expect(form.additionalContext, contains(definition.name));
+      expect(form.publishesPublicReport, isTrue);
+      expect(
+        form.reasons,
+        ContentFilterReason.values.where(
+          (reason) => reason != ContentFilterReason.underageUser,
+        ),
+      );
+      expect(find.text(l10n.reportReasonUnderageUser), findsNothing);
+
+      await tester.tap(find.text(l10n.reportReasonSpam));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+      verify(reportBadge).called(1);
+    });
+
+    testWidgets('asks signed-out viewers to sign in before reporting', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoActionReportLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign-in destination'), findsOneWidget);
+      expect(find.byType(ReportContentDialog), findsNothing);
+    });
+
+    for (final official in [false, true]) {
+      testWidgets(
+        'labels only the pinned issuer Official (official: $official)',
+        (
+          tester,
+        ) async {
+          when(() => repository.loadBadgeDetail(any())).thenAnswer(
+            (_) async => _detail(
+              definition: _definition(
+                pubkey: official ? kDivineBadgeIssuerPubkey : null,
+              ),
+              isOwner: false,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.badgeOfficialLabel),
+            official ? findsOneWidget : findsNothing,
+          );
+        },
+      );
+    }
 
     testWidgets('offers accepting to a recipient who has not accepted', (
       tester,
@@ -673,6 +861,70 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('late holder failure keeps the playable video preview', (
+      tester,
+    ) async {
+      final holders = Completer<Set<String>>();
+      final client = _MockFunnelcakeClient();
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      final replacement = _MockVideosRepository();
+      final replacementPager = _MockBadgeVideoPager();
+      final activeRepository = StateProvider<VideosRepository>((_) => videos);
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) => holders.future);
+      when(() => repository.withoutHiddenPubkeys(any()))
+          .thenReturn([_pubkey(3)]);
+      when(
+        () => client.getBadgeHolderPreview(
+          creatorPubkey: any(named: 'creatorPubkey'),
+          dTag: any(named: 'dTag'),
+        ),
+      ).thenAnswer((_) async => [_pubkey(3)]);
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+      when(() => replacement.createBadgeVideoPager(any()))
+          .thenReturn(replacementPager);
+      when(replacementPager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => replacementPager.hasMore).thenReturn(false);
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            funnelcakeApiClientProvider.overrideWithValue(client),
+            videosRepositoryProvider.overrideWith(
+              (ref) => ref.watch(activeRepository),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+      holders.completeError(
+        const BadgeReadIncompleteException('holder reconciliation'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(BadgeDetailScreen)),
+      ).read(activeRepository.notifier).state = replacement;
+      await tester.pumpAndSettle();
+      verify(() => replacement.createBadgeVideoPager({_pubkey(3)})).called(1);
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+    });
+
     testWidgets('inline holder grid excludes broken videos', (tester) async {
       final videos = _MockVideosRepository();
       final pager = _MockBadgeVideoPager();
@@ -1057,7 +1309,7 @@ void main() {
       );
     }
 
-    testWidgets('puts badge actions and videos before holders and issuer', (
+    testWidgets('puts playable thumbnails before compact follow and holders', (
       tester,
     ) async {
       final videos = _MockVideosRepository();
@@ -1086,15 +1338,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final subscribe = find.text(l10n.badgeSubscribeAction);
-      final watch = find.text(l10n.profileVideosLabel);
       final thumbnail = find.byType(VideoThumbnailWidget);
       final holders = find.text(l10n.badgeAcceptedHoldersTitle);
       final issuer = find.text(l10n.badgeDetailMadeBy);
       expect(subscribe.hitTestable(), findsOneWidget);
-      expect(watch.hitTestable(), findsOneWidget);
+      expect(find.text(l10n.profileVideosLabel), findsNothing);
       expect(
-        tester.getBottomLeft(subscribe).dy,
-        lessThan(tester.getTopLeft(thumbnail).dy),
+        tester.getBottomLeft(thumbnail).dy,
+        lessThan(tester.getTopLeft(subscribe).dy),
       );
       expect(
         tester.getBottomLeft(thumbnail).dy,
@@ -1109,23 +1360,6 @@ void main() {
       expect(
         tester.getTopLeft(holders).dy,
         lessThan(tester.getTopLeft(issuer).dy),
-      );
-    });
-
-    testWidgets('opens the badge video page from the visible watch action', (
-      tester,
-    ) async {
-      when(() => repository.loadBadgeDetail(any())).thenAnswer(
-        (_) async => _detail(definition: _definition(), isOwner: false),
-      );
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.profileVideosLabel).hitTestable(), findsOneWidget);
-      await tester.tap(find.text(l10n.profileVideosLabel));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('badge video destination ${_coordinate.toNaddr()}'),
-        findsOneWidget,
       );
     });
 
@@ -1155,6 +1389,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text(l10n.badgeSubscriptionsPublicNotice), findsOneWidget);
+      expect(find.text(l10n.badgeCommunityFollowHint), findsOneWidget);
     });
 
     testWidgets('offers a retry when the lookup fails', (tester) async {
@@ -1200,9 +1435,9 @@ BadgeRecipientViewData _recipient({bool isViewer = false}) {
   );
 }
 
-Nip58BadgeDefinition _definition() {
+Nip58BadgeDefinition _definition({String? pubkey}) {
   return Nip58BadgeDefinition(
-    event: _event(kind: EventKind.badgeDefinition),
+    event: _event(kind: EventKind.badgeDefinition, pubkey: pubkey),
     coordinate: _coordinate.value,
     dTag: _coordinate.identifier,
     name: 'Scene Stealer',
@@ -1217,10 +1452,10 @@ Nip58BadgeAward _award() {
   );
 }
 
-Event _event({required int kind}) {
+Event _event({required int kind, String? pubkey}) {
   return Event.fromJson({
     'id': '1'.padLeft(64, '0'),
-    'pubkey': _pubkey(1),
+    'pubkey': pubkey ?? _pubkey(1),
     'created_at': 1000,
     'kind': kind,
     'tags': <List<String>>[],

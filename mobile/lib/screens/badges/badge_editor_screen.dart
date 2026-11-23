@@ -16,6 +16,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_actions_sheet.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart';
+import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -37,7 +38,7 @@ class BadgeEditorScreen extends ConsumerWidget {
 
   /// Path that opens the editor for [coordinate].
   static String editPathFor(BadgeCoordinate coordinate) =>
-      '/badges/b/${coordinate.toNaddr()}/edit';
+      '/badges/b/${badgeRouteReference(coordinate)}/edit';
 
   /// Creates the badge editor screen.
   const BadgeEditorScreen({this.coordinate, super.key});

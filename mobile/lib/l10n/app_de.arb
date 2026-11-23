@@ -6448,9 +6448,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abonniert",
-  "badgeSubscribeAction": "Abzeichen abonnieren",
-  "badgeAcceptedHoldersTitle": "Personen mit angenommenem Abzeichen",
+  "badgeSubscribedAction": "Du folgst der Community",
+  "badgeSubscribeAction": "Community folgen",
+  "badgeAcceptedHoldersTitle": "Menschen in dieser Community",
   "badgeSubscriptionLoadError": "Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut.",
   "minorAccountReviewVideoSubmittedBody": "Dein Video wurde zur Prüfung eingereicht.",
   "minorAccountReviewVideoSubmittedTitle": "Video eingereicht",
@@ -6553,5 +6553,23 @@
   "collabRoomPartLengthLabel": "Jeder Teil",
   "collabRoomSwapOrderHint": "Tippe zwei Teile an, um ihre Reihenfolge zu tauschen.",
   "collabRoomFilmSeriesHint": "Alle filmen ihren eigenen Teil, bis zu {seconds} s. Die Teile laufen nacheinander.",
-  "collabRoomSeriesReadyHint": "Alle Teile sind da. Setz sie zusammen!"
+  "collabRoomSeriesReadyHint": "Alle Teile sind da. Setz sie zusammen!",
+  "badgeDiscoveryTitle": "Abzeichen bringen Menschen zusammen",
+  "badgeDiscoveryBody": "Alle können Abzeichen erstellen und verleihen. Du entscheidest, welche in deinem Profil erscheinen. Entdecke ein Abzeichen, lerne seine Community kennen und folge ihren Mitgliedern.",
+  "badgeDiscoveryMyBadges": "Meine Abzeichen",
+  "badgeDiscoveryEmpty": "Noch keine Communitys gefunden. Zieh nach unten, um es erneut zu versuchen.",
+  "badgeCommunityFollowHint": "Fügt Community-Videos zu deinem „Folge ich“-Feed hinzu. Personen folgst du einzeln.",
+  "badgeOfficialLabel": "Offiziell",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Mehr erfahren auf {website}",
+  "badgeDiscoveryVideosLabel": "Videos von {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -6448,9 +6448,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abone olundu",
-  "badgeSubscribeAction": "Rozete abone ol",
-  "badgeAcceptedHoldersTitle": "Rozeti kabul edenler",
+  "badgeSubscribedAction": "Topluluk takip ediliyor",
+  "badgeSubscribeAction": "Topluluğu takip et",
+  "badgeAcceptedHoldersTitle": "Bu topluluktaki insanlar",
   "badgeSubscriptionLoadError": "Rozet aboneliklerin yüklenemedi. Tekrar dene.",
   "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
   "minorAccountReviewVideoSubmittedTitle": "Video gönderildi",
@@ -6553,5 +6553,23 @@
   "collabRoomPartLengthLabel": "Her bölüm",
   "collabRoomSwapOrderHint": "Sıralarını değiştirmek için iki bölüme dokun.",
   "collabRoomFilmSeriesHint": "Herkes kendi bölümünü en fazla {seconds} sn çeker. Bölümler art arda oynar.",
-  "collabRoomSeriesReadyHint": "Tüm bölümler geldi. Birleştir!"
+  "collabRoomSeriesReadyHint": "Tüm bölümler geldi. Birleştir!",
+  "badgeDiscoveryTitle": "Rozetler insanları bir araya getirir",
+  "badgeDiscoveryBody": "Herkes rozet oluşturup verebilir. Profilinde hangilerinin görüneceğini sen seçersin. Bir rozeti keşfederek topluluğunu tanı ve içindeki insanları takip et.",
+  "badgeDiscoveryMyBadges": "Rozetlerim",
+  "badgeDiscoveryEmpty": "Henüz topluluk bulunamadı. Tekrar denemek için aşağı çek.",
+  "badgeCommunityFollowHint": "Topluluk videolarını Takip Edilenler akışına ekler. İnsanları ayrı ayrı takip et.",
+  "badgeOfficialLabel": "Resmî",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website} adresinde daha fazla bilgi edinin",
+  "badgeDiscoveryVideosLabel": "{badgeName} videoları",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

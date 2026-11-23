@@ -6448,9 +6448,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Volgend",
-  "badgeSubscribeAction": "Badge volgen",
-  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
+  "badgeSubscribedAction": "Je volgt deze community",
+  "badgeSubscribeAction": "Community volgen",
+  "badgeAcceptedHoldersTitle": "Mensen in deze community",
   "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.",
   "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
   "minorAccountReviewVideoSubmittedTitle": "Video ingediend",
@@ -6553,5 +6553,23 @@
   "collabRoomPartLengthLabel": "Elk deel",
   "collabRoomSwapOrderHint": "Tik op twee delen om hun volgorde te wisselen.",
   "collabRoomFilmSeriesHint": "Iedereen filmt een eigen deel, tot {seconds} s. De delen spelen na elkaar af.",
-  "collabRoomSeriesReadyHint": "Alle delen zijn binnen. Voeg ze samen!"
+  "collabRoomSeriesReadyHint": "Alle delen zijn binnen. Voeg ze samen!",
+  "badgeDiscoveryTitle": "Badges brengen mensen samen",
+  "badgeDiscoveryBody": "Iedereen kan badges maken en uitreiken. Jij kiest welke op je profiel staan. Ontdek een badge, leer de community kennen en volg de mensen erin.",
+  "badgeDiscoveryMyBadges": "Mijn badges",
+  "badgeDiscoveryEmpty": "Nog geen communities gevonden. Trek omlaag om het opnieuw te proberen.",
+  "badgeCommunityFollowHint": "Voegt communityvideo’s toe aan je Volgend-feed. Volg mensen afzonderlijk.",
+  "badgeOfficialLabel": "Officieel",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Meer informatie op {website}",
+  "badgeDiscoveryVideosLabel": "Video’s van {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

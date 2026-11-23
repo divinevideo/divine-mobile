@@ -6885,9 +6885,9 @@
   "settingsBadgesTitle": "బ్యాడ్జ్‌లు",
   "settingsBadgesSubtitle": "అవార్డులను అంగీకరించండి మరియు జారీ చేయబడిన బ్యాడ్జ్ స్థితిని తనిఖీ చేయండి.",
   "badgesTitle": "బ్యాడ్జ్‌లు",
-  "badgeSubscribeAction": "బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి",
-  "badgeSubscribedAction": "సబ్‌స్క్రైబ్ చేశారు",
-  "badgeAcceptedHoldersTitle": "బ్యాడ్జ్‌ను అంగీకరించినవారు",
+  "badgeSubscribeAction": "కమ్యూనిటీని ఫాలో అవ్వండి",
+  "badgeSubscribedAction": "కమ్యూనిటీని ఫాలో అవుతున్నారు",
+  "badgeAcceptedHoldersTitle": "ఈ కమ్యూనిటీలోని వ్యక్తులు",
   "badgeSubscriptionLoadError": "మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "badgesLoadError": "బ్యాడ్జ్‌లను లోడ్ చేయడం సాధ్యపడలేదు",
   "badgesUpdateError": "బ్యాడ్జ్‌ని అప్‌డేట్ చేయడం సాధ్యపడలేదు",
@@ -9477,5 +9477,23 @@
   "collabRoomPartLengthLabel": "ప్రతి భాగం",
   "collabRoomSwapOrderHint": "క్రమాన్ని మార్చడానికి రెండు భాగాలను తాకండి.",
   "collabRoomFilmSeriesHint": "ప్రతి ఒక్కరూ తమ భాగాన్ని {seconds} సె. వరకు చిత్రీకరిస్తారు. భాగాలు ఒకదాని తర్వాత ఒకటి ప్లే అవుతాయి.",
-  "collabRoomSeriesReadyHint": "అన్ని భాగాలు వచ్చాయి. వాటిని కలపండి!"
+  "collabRoomSeriesReadyHint": "అన్ని భాగాలు వచ్చాయి. వాటిని కలపండి!",
+  "badgeDiscoveryTitle": "బ్యాడ్జ్‌లు ప్రజలను కలుపుతాయి",
+  "badgeDiscoveryBody": "ఎవరైనా బ్యాడ్జ్‌లను సృష్టించి అందించవచ్చు. మీ ప్రొఫైల్‌లో ఏవి కనిపించాలో మీరే ఎంచుకుంటారు. ఒక బ్యాడ్జ్‌ను అన్వేషించి, దాని కమ్యూనిటీని తెలుసుకుని, అందులోని వ్యక్తులను ఫాలో అవ్వండి.",
+  "badgeDiscoveryMyBadges": "నా బ్యాడ్జ్‌లు",
+  "badgeDiscoveryEmpty": "ఇంకా కమ్యూనిటీలు కనుగొనబడలేదు. మళ్లీ ప్రయత్నించడానికి కిందికి లాగండి.",
+  "badgeCommunityFollowHint": "కమ్యూనిటీ వీడియోలను మీ ఫాలోయింగ్ ఫీడ్‌కు జోడిస్తుంది. వ్యక్తులను విడివిడిగా ఫాలో అవ్వండి.",
+  "badgeOfficialLabel": "అధికారికం",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "{website}లో మరింత తెలుసుకోండి",
+  "badgeDiscoveryVideosLabel": "{badgeName} వీడియోలు",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

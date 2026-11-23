@@ -7,5 +7,6 @@ export 'src/badge_account_state_closed_exception.dart';
 export 'src/badge_coordinate.dart';
 export 'src/badge_read_incomplete_exception.dart';
 export 'src/badge_repository.dart';
+export 'src/indexed_badge_discovery.dart';
 export 'src/nip58_badge_models.dart';
 export 'src/nip58_badge_parser.dart';
