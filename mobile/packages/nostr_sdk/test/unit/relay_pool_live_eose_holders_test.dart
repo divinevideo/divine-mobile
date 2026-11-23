@@ -188,6 +188,40 @@ void main() {
       });
     });
 
+    test('waits for fresh EOSE when all relay connections are replaced', () {
+      fakeAsync((fake) {
+        async = fake;
+        final live = _Relay('wss://live.example');
+        final silent = _Relay('wss://silent.example');
+        final subId = subscribe([live, silent]);
+        settle(live.deliver(['EOSE', subId]));
+        final halfWindow = window ~/ 2;
+        async.elapse(halfWindow);
+
+        final replacements = [
+          for (final relay in [live, silent])
+            _Relay(relay.url)..connectGate = Completer<void>(),
+        ];
+        for (final relay in replacements) {
+          nostr.relayPool.remove(relay.url);
+          settle(nostr.relayPool.add(relay, autoSubscribe: true));
+        }
+        async.elapse(halfWindow);
+        expect(eoseCalls, 0, reason: 'the replacements are still connecting');
+
+        for (final relay in replacements) {
+          relay.connectGate!.complete();
+        }
+        async.flushMicrotasks();
+        async.elapse(window);
+        expect(eoseCalls, 0, reason: 'neither replacement has sent EOSE');
+
+        settle(replacements.first.deliver(['EOSE', subId]));
+        async.elapse(window);
+        expect(eoseCalls, 1);
+      });
+    });
+
     group('when a relay replays its REQ after AUTH', () {
       void authenticate(_Relay relay) {
         settle(relay.deliver(['AUTH', 'test-challenge']));
@@ -367,11 +401,11 @@ void main() {
           final subId = refusedSubscription();
           bool isSettleTimer(FakeTimer timer) => timer.duration == window;
 
-          // Removing the answering relay from the pool leaves its timer armed.
-          nostr.relayPool.remove(live.url);
+          // Removing the silent relay leaves the answering relay's timer armed.
+          nostr.relayPool.remove(refuser.url);
           expect(async.pendingTimers.where(isSettleTimer), hasLength(1));
 
-          settle(refuser.deliver(['CLOSED', subId, 'error: shutting down']));
+          settle(live.deliver(['CLOSED', subId, 'error: shutting down']));
 
           expect(async.pendingTimers.where(isSettleTimer), isEmpty);
         });

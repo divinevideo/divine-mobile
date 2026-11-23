@@ -962,6 +962,9 @@ class RelayPool {
   /// and a counter that restarted could match it to the new socket's
   /// challenge.
   void _forgetRelayBookkeeping(String url) {
+    for (final subId in _subscriptionEoseRelays.keys.toList()) {
+      _withdrawLiveEose(subId, url);
+    }
     _lastSilentRepairAt.remove(url);
     _authHandshakeStartedAt.remove(url);
     _authGateClosed.remove(url);
@@ -1033,12 +1036,11 @@ class RelayPool {
   /// its subscriber why.
   void _endRefusedSubscription(String subId, String reason) {
     _subscriptionSilenceProbes.remove(subId)?.cancel();
-    _subscriptionEoseSettleTimers.remove(subId)?.cancel();
+    _clearLiveEoseWindow(subId);
     _subscriptionEoseFired.remove(subId);
     _liveRequestResends.remove(subId);
     _refusedAwaitingReplay.remove(subId);
     final subscription = _subscriptions.remove(subId);
-    _subscriptionEoseRelays.remove(subId);
     _storedEventsPhases.remove(subId);
     _subscriptionSentAt.remove(subId);
     if (subscription != null) {
@@ -2333,6 +2335,10 @@ class RelayPool {
     final eosed = _subscriptionEoseRelays[subId];
     if (onEose == null || eosed == null || eosed.isEmpty) return;
     final holders = _getRelaysWithSubscription(subId);
+    if (holders.isEmpty) {
+      _clearLiveEoseWindow(subId);
+      return;
+    }
     final owing = [
       for (final relay in holders.values)
         if (eosed[relay.url] != _liveRequestVersion(relay, subId)) relay.url,
@@ -2358,8 +2364,7 @@ class RelayPool {
         'Live subscription $subId ended its EOSE wait without this relay',
       );
     }
-    _subscriptionEoseSettleTimers.remove(subId)?.cancel();
-    _subscriptionEoseRelays.remove(subId);
+    _clearLiveEoseWindow(subId);
     _subscriptionEoseFired.add(subId);
     onEose();
   }
@@ -2373,6 +2378,19 @@ class RelayPool {
         _maybeFireLiveEose(subId, settleWindowElapsed: true);
       },
     );
+  }
+
+  void _clearLiveEoseWindow(String subId) {
+    _subscriptionEoseRelays.remove(subId);
+    _subscriptionEoseSettleTimers.remove(subId)?.cancel();
+  }
+
+  /// A replayed REQ must draw a fresh EOSE once all previous answers are gone.
+  void _withdrawLiveEose(String subId, String relayUrl) {
+    final eosed = _subscriptionEoseRelays[subId];
+    if (eosed == null) return;
+    eosed.remove(relayUrl);
+    if (eosed.isEmpty) _clearLiveEoseWindow(subId);
   }
 
   /// Restarts [subId]'s armed EOSE settle window because [relay], which holds
@@ -3011,15 +3029,10 @@ class RelayPool {
         }
         if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
-        }
-        // A refusal removes that relay's EOSE. If no answer is left, the next
-        // EOSE gets a full window. A replay with no serving relay also starts
-        // fresh, even if the previous connection used the same URL.
-        final eosed = _subscriptionEoseRelays[subscriptionId];
-        eosed?.remove(relay.url);
-        if (awaitsReplay || (eosed?.isEmpty ?? false)) {
-          _subscriptionEoseRelays.remove(subscriptionId);
-          _subscriptionEoseSettleTimers.remove(subscriptionId)?.cancel();
+          // The replacement's replay must draw a new EOSE.
+          _clearLiveEoseWindow(subscriptionId);
+        } else {
+          _withdrawLiveEose(subscriptionId, relay.url);
         }
         _storedEventsPhaseAnswered(
           relay,
@@ -3273,12 +3286,10 @@ class RelayPool {
   void unsubscribe(String id) {
     _subscriptionSilenceProbes.remove(id)?.cancel();
     _refusedAwaitingReplay.remove(id);
-    _subscriptionEoseSettleTimers.remove(id)?.cancel();
+    _clearLiveEoseWindow(id);
     _subscriptionEoseFired.remove(id);
     _liveRequestResends.remove(id);
     final subscription = _subscriptions.remove(id);
-    // Clean up EOSE tracking for this subscription
-    _subscriptionEoseRelays.remove(id);
     _storedEventsPhases.remove(id);
     if (subscription != null) {
       // A relay that still holds this REQ never served it, so offer it to the
