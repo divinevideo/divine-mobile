@@ -36,5 +36,16 @@ void main() {
       expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(ClipRRect), findsOneWidget);
     });
+
+    testWidgets('blurs by default off the web', (tester) async {
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: CenterPlaybackControl(state: CenterPlaybackControlState.play),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsOneWidget);
+    });
   });
 }

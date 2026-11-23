@@ -29,8 +29,8 @@ class CenterPlaybackControl extends StatelessWidget {
 
   /// Whether to wrap the translucent pill in a [BackdropFilter] blur.
   ///
-  /// Defaults to `false` on web, where backdrop blur forces an expensive
-  /// multi-pass WebGL shader compilation over video platform views.
+  /// Defaults to `false` on web, where the filter cannot blur the `<video>`
+  /// platform view beneath the pill and its shader is costly to compile.
   final bool useBackdropBlur;
 
   @override
