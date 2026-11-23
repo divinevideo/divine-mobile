@@ -27,15 +27,12 @@ class EmailConfirmationNotice extends StatefulWidget {
 }
 
 class _EmailConfirmationNoticeState extends State<EmailConfirmationNotice> {
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _reminder;
-
-  /// The account the open reminder was shown for.
-  String? _reminderAccount;
+  ({String account, String email, VoidCallback dismiss})? _reminder;
 
   void _closeReminder() {
-    _reminder?.close();
+    final reminder = _reminder;
     _reminder = null;
-    _reminderAccount = null;
+    reminder?.dismiss();
   }
 
   void _showReminder(
@@ -49,27 +46,56 @@ class _EmailConfirmationNoticeState extends State<EmailConfirmationNotice> {
     if (messenger == null) return;
     final l10n = context.l10n;
     _closeReminder();
-    final reminder = messenger.showSnackBar(
-      DivineSnackbarContainer.snackBar(
-        l10n.emailConfirmationNotice(email),
+
+    var cancelled = false;
+    var visible = false;
+    late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
+    controller;
+    void dismiss() {
+      cancelled = true;
+      // A ScaffoldMessenger controller may only close the first snackbar.
+      if (visible && messenger.mounted) controller.close();
+    }
+
+    controller = messenger.showSnackBar(
+      SnackBar(
         duration: const Duration(seconds: 8),
-        actionLabel: l10n.emailConfirmationResendButton,
-        onActionPressed: () => runDetached(
-          cubit.resend(account: account),
-          'resend confirmation email',
-          logName: 'EmailConfirmationNotice',
-          category: LogCategory.auth,
+        backgroundColor: VineTheme.transparent,
+        elevation: 0,
+        padding: EdgeInsets.zero,
+        behavior: SnackBarBehavior.floating,
+        onVisible: () {
+          visible = true;
+          if (cancelled) dismiss();
+        },
+        content: BlocBuilder<EmailConfirmationCubit, EmailConfirmationState>(
+          bloc: cubit,
+          builder: (context, current) {
+            if (cancelled ||
+                current.account != account ||
+                current.email != email ||
+                !current.isUnconfirmed) {
+              return const SizedBox.shrink();
+            }
+            return DivineSnackbarContainer(
+              label: l10n.emailConfirmationNotice(email),
+              actionLabel: l10n.emailConfirmationResendButton,
+              onActionPressed: () => runDetached(
+                cubit.resend(account: account),
+                'resend confirmation email',
+                logName: 'EmailConfirmationNotice',
+                category: LogCategory.auth,
+              ),
+            );
+          },
         ),
       ),
     );
-    _reminder = reminder;
-    _reminderAccount = account;
+    _reminder = (account: account, email: email, dismiss: dismiss);
     runDetached(
-      reminder.closed.then((_) {
-        if (identical(_reminder, reminder)) {
-          _reminder = null;
-          _reminderAccount = null;
-        }
+      controller.closed.then((_) {
+        visible = false;
+        if (identical(_reminder?.dismiss, dismiss)) _reminder = null;
       }),
       'forget closed confirmation reminder',
       logName: 'EmailConfirmationNotice',
@@ -129,17 +155,22 @@ class _EmailConfirmationNoticeState extends State<EmailConfirmationNotice> {
         BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
           bloc: cubit,
           listener: (context, state) {
-            final reminderIsStale =
-                _reminder != null &&
-                (state.account != _reminderAccount || !state.isUnconfirmed);
-            if (reminderIsStale) _closeReminder();
+            final reminder = _reminder;
+            if (reminder != null &&
+                (state.account != reminder.account ||
+                    state.email != reminder.email ||
+                    !state.isUnconfirmed)) {
+              _closeReminder();
+            }
           },
         ),
         BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
           bloc: cubit,
           listenWhen: (previous, current) =>
               current.isUnconfirmed &&
-              (!previous.isUnconfirmed || previous.account != current.account),
+              (!previous.isUnconfirmed ||
+                  previous.account != current.account ||
+                  previous.email != current.email),
           listener: (context, state) => _showReminder(cubit, state),
         ),
         BlocListener<EmailConfirmationCubit, EmailConfirmationState>(

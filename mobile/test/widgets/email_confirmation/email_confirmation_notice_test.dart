@@ -86,6 +86,36 @@ void main() {
       expect(find.text(l10n.emailConfirmationNotice(_email)), findsNothing);
     });
 
+    testWidgets(
+      'drops a queued reminder when the account changes',
+      (tester) async {
+        final states = StreamController<EmailConfirmationState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: const EmailConfirmationState(account: _account),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
+            .showSnackBar(const SnackBar(content: Text('Other feedback')));
+        await tester.pumpAndSettle();
+        states.add(_unconfirmed);
+        await tester.pumpAndSettle();
+
+        states.add(const EmailConfirmationState(account: _otherAccount));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Other feedback'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.emailConfirmationNotice(_email)), findsNothing);
+        expect(find.text(l10n.emailConfirmationResendButton), findsNothing);
+      },
+    );
+
     testWidgets('resends only for the account the reminder names', (
       tester,
     ) async {
