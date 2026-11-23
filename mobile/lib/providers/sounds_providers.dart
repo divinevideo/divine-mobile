@@ -787,15 +787,14 @@ class _SoundCoverCache {
     if (unknown.isNotEmpty) {
       // Asked alongside the covers, and about as quick, so rows wait no longer.
       final refusals = _refusedAmong(unknown);
-      final notServed = _takeServedSources(unknown);
+      final covers = <String, SoundCover?>{};
+      final sources = <String, VideoEvent>{};
+      final notServed = _takeServedSources(unknown, covers, sources);
       if (notServed.isNotEmpty) {
         try {
-          final (:covers, :sources) = await _sourceVideoCovers(
-            _videos,
-            notServed,
-          );
-          _covers.addAll(covers);
-          _sources.addAll(sources);
+          final fromRelays = await _sourceVideoCovers(_videos, notServed);
+          covers.addAll(fromRelays.covers);
+          sources.addAll(fromRelays.sources);
         } on Object catch (e) {
           Log.warning(
             'Could not look up sound covers: $e',
@@ -804,7 +803,11 @@ class _SoundCoverCache {
           );
         }
       }
+      // Other lists share the cache and must not see covers before the policy
+      // lookup finishes.
       _refused.addAll(await refusals);
+      _covers.addAll(covers);
+      _sources.addAll(sources);
     }
     return {
       for (final reference in references)
@@ -820,16 +823,20 @@ class _SoundCoverCache {
   /// return it, and one Funnelcake shows the public none of is gone for
   /// everyone: neither is looked up on the relays, where it would only come
   /// back.
-  Set<String> _takeServedSources(Set<String> references) {
+  Set<String> _takeServedSources(
+    Set<String> references,
+    Map<String, SoundCover?> covers,
+    Map<String, VideoEvent> sources,
+  ) {
     final served = _sounds.sourceVideosFromIndex(references);
     for (final MapEntry(key: reference, value: event) in served.entries) {
       final video = event == null
           ? null
           : _videos.visibleVideoFromEvent(event, includeFeedShape: false);
-      _covers[reference] = video == null
+      covers[reference] = video == null
           ? null
           : SoundCover.fromSourceVideo(video);
-      if (video != null) _sources[reference] = video;
+      if (video != null) sources[reference] = video;
     }
     return references.difference(served.keys.toSet());
   }

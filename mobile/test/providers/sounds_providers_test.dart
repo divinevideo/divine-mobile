@@ -1773,6 +1773,41 @@ void main() {
 
         setUp(() => registerFallbackValue(sentVideo));
 
+        test('overlapping lists wait for the reuse policy before showing a '
+            'cover', () async {
+          final sounds = soundsFrom(const [verticalReference]);
+          final container = buildContainer(sounds);
+          final policyRequested = Completer<void>();
+          final policies = Completer<Map<String, AudioReusePolicy>>();
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              sentVideo,
+              includeFeedShape: false,
+            ),
+          ).thenReturn(sourceVideo(authorA, 'clip-a'));
+          when(
+            () => videosRepository.refreshAudioReusePolicies(any()),
+          ).thenAnswer((_) {
+            if (!policyRequested.isCompleted) policyRequested.complete();
+            return policies.future;
+          });
+
+          final trending = container.read(trendingSoundCoversProvider.future);
+          await policyRequested.future;
+          final saved = container.read(
+            savedSoundSourcesProvider(SoundSourceReferences(sounds)).future,
+          );
+          policies.complete({
+            verticalReference: const AudioReusePolicy(allowAudioReuse: false),
+          });
+
+          expect(await trending, {verticalReference: null});
+          expect(await saved, {verticalReference: null});
+        });
+
         test('takes them and asks the relays only about the rest', () async {
           final container = buildContainer(
             soundsFrom(const [
