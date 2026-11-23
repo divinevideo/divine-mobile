@@ -343,20 +343,25 @@ void main() {
       late DivineVideoPlayerController controller;
       late Future<void> opened;
       late Future<DivineVideoPlayerState> failed;
+      final created = StreamController<Player>.broadcast();
+      addTearDown(created.close);
       try {
         await tester.runAsync(() async {
           MediaKit.ensureInitialized();
-          player = _headlessPlayer();
           DivineVideoPlayerController.linuxBackendFactory = () =>
               MediaKitLinuxVideoPlayerBackend(
-                playerFactory: () => player,
-                videoControllerFactory: (player) => video.VideoController(
-                  player,
-                  configuration: const video.VideoControllerConfiguration(
-                    vo: 'null',
-                    hwdec: 'no',
-                  ),
-                ),
+                playerFactory: () => player = _headlessPlayer(),
+                videoControllerFactory: (player) {
+                  final output = video.VideoController(
+                    player,
+                    configuration: const video.VideoControllerConfiguration(
+                      vo: 'null',
+                      hwdec: 'no',
+                    ),
+                  );
+                  created.add(player);
+                  return output;
+                },
               );
           controller = DivineVideoPlayerController();
           await controller.initialize();
@@ -397,6 +402,45 @@ void main() {
           expect(await controller.firstFrameRendered, isFalse);
           expect(controller.state.status, PlaybackStatus.error);
           expect(calls, contains('VideoOutputManager.Create'));
+        });
+
+        await tester.runAsync(() async {
+          await controller.stop();
+          final replacement = created.stream.first;
+          failed = controller.stateStream.firstWhere(
+            (state) => state.status == PlaybackStatus.error,
+          );
+          opened = controller.setSource(
+            VideoClip(
+              uri: File(
+                'test/fixtures/desktop_silent_portrait.mp4',
+              ).absolute.uri.toString(),
+              end: const Duration(seconds: 1),
+            ),
+          );
+          await replacement.timeout(const Duration(seconds: 5));
+        });
+        await tester.pump();
+        await tester.runAsync(() async {
+          await opened.timeout(const Duration(seconds: 5));
+          final error = await failed.timeout(const Duration(seconds: 3));
+          expect(
+            error.errorMessage,
+            contains('synthetic_output_create_failed'),
+          );
+          await controller.play();
+
+          expect(player.state.playing, isFalse);
+          expect(
+            await controller.firstFrameRendered.timeout(
+              const Duration(seconds: 2),
+            ),
+            isFalse,
+          );
+          expect(
+            calls.where((call) => call == 'VideoOutputManager.Create'),
+            hasLength(2),
+          );
         });
         expect(tester.takeException(), isNull);
       } finally {

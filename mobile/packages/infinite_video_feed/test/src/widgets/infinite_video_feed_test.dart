@@ -4,6 +4,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1127,6 +1130,76 @@ void main() {
   });
 
   group(InfiniteVideoFeed, () {
+    test('reports support for Windows and rejects unsupported targets', () {
+      try {
+        debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+        expect(InfiniteVideoFeed.isSupported, isFalse);
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        expect(InfiniteVideoFeed.isSupported, isTrue);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('records a frame only after a cancelled output is replaced', (
+      tester,
+    ) async {
+      final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+      final originalForce = DivineVideoPlayerController.debugForceLinuxBackend;
+      final backend = _DesktopReadinessBackend();
+      DivineVideoPlayerController.debugForceLinuxBackend = true;
+      DivineVideoPlayerController.linuxBackendFactory = () => backend;
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final metrics = <FeedFirstFrameMetric>[];
+      final subscription = FeedFirstFrameMetrics.events
+          .where((metric) => metric.videoId == videoId)
+          .listen(metrics.add);
+      addTearDown(subscription.cancel);
+      addTearDown(() {
+        DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+        DivineVideoPlayerController.debugForceLinuxBackend = originalForce;
+      });
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo(videoId)],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(backend.played, isTrue);
+        expect(metrics, isEmpty);
+        backend.frame.complete(false);
+        await tester.pump();
+        await tester.pump();
+
+        expect(metrics, isEmpty, reason: 'no output rendered a frame');
+        backend
+          ..frame = Completer<bool>()
+          ..emitState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          );
+        await tester.pump();
+        expect(metrics, isEmpty);
+        backend.frame.complete(true);
+        backend.emitState(
+          const DivineVideoPlayerState(isFirstFrameRendered: true),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(metrics, hasLength(1));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    });
+
     test('isSupported can be evaluated', () {
       expect(InfiniteVideoFeed.isSupported, isA<bool>());
     });
@@ -5684,4 +5757,46 @@ void main() {
       );
     });
   });
+}
+
+class _DesktopReadinessBackend extends Fake
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
+  Completer<bool> frame = Completer<bool>();
+  bool played = false;
+  late void Function(DivineVideoPlayerState) emitState;
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
+
+  @override
+  Future<void> initialize({
+    required void Function(DivineVideoPlayerState) onStateChanged,
+    required void Function(Object) onError,
+  }) async {
+    emitState = onStateChanged;
+  }
+
+  @override
+  Future<void> setClips(
+    List<VideoClip> clips, {
+    Duration? startPosition,
+  }) async {}
+
+  @override
+  Future<void> setLooping({required bool looping}) async {}
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> play() async => played = true;
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Widget buildView() => const SizedBox.shrink();
+
+  @override
+  Future<void> dispose() async {}
 }

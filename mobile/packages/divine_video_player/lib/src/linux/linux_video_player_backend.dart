@@ -237,7 +237,9 @@ class MediaKitLinuxVideoPlayerBackend
       }
       // Player streams can emit during the duration probe. Publish one coherent
       // timeline only after all source durations and offsets are available.
-      if (_firstFrameCompleter.isCompleted && !_hasLoadedMedia) {
+      if (_firstFrameCompleter.isCompleted &&
+          !_hasLoadedMedia &&
+          !_outputFailed) {
         _firstFrameCompleter = Completer<bool>();
       }
       _clips

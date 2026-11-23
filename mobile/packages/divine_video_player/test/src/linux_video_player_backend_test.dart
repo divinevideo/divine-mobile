@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart' hide AudioTrack;
@@ -15,6 +14,53 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group('public firstFrameRendered', () {
+    test('preserves failure during replacement volume restoration', () async {
+      final players = <_FakePlatformPlayer>[];
+      final outputs = <_FakeVideoController>[];
+      final gate = Completer<void>();
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          if (players.isNotEmpty) player.volumeReady = gate.future;
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) {
+          final output = _FakeVideoController();
+          outputs.add(output);
+          return output;
+        },
+        videoControllerReady: (output) =>
+            (output as _FakeVideoController).ready.future,
+      );
+      await _withDesktopController(backend, (controller) async {
+        await controller.setSource(
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 1)),
+        );
+        final replacing = controller.setSource(
+          const VideoClip(uri: 'file:///second.mp4', end: Duration(seconds: 2)),
+        );
+        await pumpEventQueue();
+        try {
+          expect(players, hasLength(2));
+          outputs.last.ready.completeError(StateError('Replacement failed'));
+          await pumpEventQueue();
+          final failed = controller.firstFrameRendered;
+          expect(await failed, isFalse);
+          gate.complete();
+          await replacing;
+
+          expect(controller.state.status, PlaybackStatus.error);
+          expect(controller.firstFrameRendered, same(failed));
+          expect(await controller.firstFrameRendered, isFalse);
+        } finally {
+          if (!gate.isCompleted) gate.complete();
+          await replacing;
+        }
+      });
+    });
+
     test('preserves the active wait until replacement acceptance', () async {
       final players = <_FakePlatformPlayer>[];
       final outputs = <_FakeVideoController>[];
@@ -2012,9 +2058,9 @@ Future<void> _withDesktopController(
   LinuxVideoPlayerBackend backend,
   Future<void> Function(DivineVideoPlayerController) action,
 ) async {
-  final originalPlatform = debugDefaultTargetPlatformOverride;
+  final originalForce = DivineVideoPlayerController.debugForceLinuxBackend;
   final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
-  debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+  DivineVideoPlayerController.debugForceLinuxBackend = true;
   DivineVideoPlayerController.linuxBackendFactory = () => backend;
   final controller = DivineVideoPlayerController();
   try {
@@ -2023,7 +2069,7 @@ Future<void> _withDesktopController(
   } finally {
     await controller.dispose();
     DivineVideoPlayerController.linuxBackendFactory = originalFactory;
-    debugDefaultTargetPlatformOverride = originalPlatform;
+    DivineVideoPlayerController.debugForceLinuxBackend = originalForce;
   }
 }
 

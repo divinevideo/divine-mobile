@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend.dart';
@@ -107,6 +109,84 @@ void main() {
   }
 
   group(DivineVideoPlayer, () {
+    testWidgets('ignores a retired output that reports a late frame', (
+      tester,
+    ) async {
+      final player = await initLinuxController();
+      addTearDown(player.dispose);
+      final backend = _FakeLinuxBackend.instance!;
+      final retired = backend.frame;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(
+              controller: player,
+              placeholder: const Text('Waiting for current output'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Waiting for current output'), findsOneWidget);
+      backend
+        ..frame = Completer<bool>()
+        ..emitState(
+          const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+        );
+      retired.complete(true);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Waiting for current output'), findsOneWidget);
+      backend.emitState(
+        const DivineVideoPlayerState(isFirstFrameRendered: true),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Waiting for current output'), findsNothing);
+    });
+
+    testWidgets('keeps a cancelled poster until a later output renders', (
+      tester,
+    ) async {
+      final player = await initLinuxController();
+      addTearDown(player.dispose);
+      final backend = _FakeLinuxBackend.instance!;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(
+              controller: player,
+              placeholder: const Text('Waiting for video'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend.frame.complete(false);
+      await tester.pump();
+      await tester.pump();
+
+      expect(player.state.isFirstFrameRendered, isFalse);
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend
+        ..frame = Completer<bool>()
+        ..emitState(
+          const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+        );
+      await tester.pump();
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend.emitState(
+        const DivineVideoPlayerState(isFirstFrameRendered: true),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Waiting for video'), findsNothing);
+    });
+
     testWidgets(
       'updates a mounted desktop surface and removes it on disposal',
       (tester) async {
@@ -718,13 +798,18 @@ void main() {
   });
 }
 
-class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
+class _FakeLinuxBackend
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
   _FakeLinuxBackend() {
     instance = this;
   }
 
   static _FakeLinuxBackend? instance;
   String viewLabel = 'Linux player view';
+  Completer<bool> frame = Completer<bool>();
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
 
   late void Function(DivineVideoPlayerState state) _onStateChanged;
 
@@ -736,7 +821,10 @@ class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
     _onStateChanged = onStateChanged;
   }
 
-  void emitState(DivineVideoPlayerState state) => _onStateChanged(state);
+  void emitState(DivineVideoPlayerState state) {
+    if (state.isFirstFrameRendered && !frame.isCompleted) frame.complete(true);
+    _onStateChanged(state);
+  }
 
   @override
   Widget buildView() => Text(viewLabel);
