@@ -2572,6 +2572,18 @@ class VideosRepository {
     return out;
   }
 
+  /// Reapplies content and seen-video filtering to a persisted Home window.
+  ///
+  /// Waits for history hydration before serving cached For You, Following,
+  /// or Classics videos. New and profile feeds retain watched videos and
+  /// should use [applyContentPreferences] instead.
+  Future<List<VideoEvent>> applyHomeFeedPreferences(
+    List<VideoEvent> videos,
+  ) async {
+    await _seenVideoLookup?.ensureInitialized();
+    return _withoutSeenVideos(applyContentPreferences(videos));
+  }
+
   /// Transforms raw Nostr events to VideoEvents and filters invalid ones.
   ///
   /// Applies two-stage filtering:

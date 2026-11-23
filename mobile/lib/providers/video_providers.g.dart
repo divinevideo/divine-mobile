@@ -1008,9 +1008,9 @@ String _$videoLocalStorageHash() => r'0be44203ec8edf59105a013aae374c07637a3ba0';
 /// Works without authentication for public feeds.
 ///
 /// Rebuilds (yielding a fresh in-memory cache) when content filter, aspect
-/// ratio, or Divine-host filter preferences change. The version providers
-/// act as rebuild triggers since the underlying services are long-lived
-/// ChangeNotifiers that don't themselves cause provider invalidation.
+/// ratio, Divine-host, or seen-video filter preferences change. Version and
+/// flag-state providers trigger rebuilds because the underlying services are
+/// long-lived ChangeNotifiers that keep their identity when preferences change.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1028,9 +1028,9 @@ final videosRepositoryProvider = VideosRepositoryProvider._();
 /// Works without authentication for public feeds.
 ///
 /// Rebuilds (yielding a fresh in-memory cache) when content filter, aspect
-/// ratio, or Divine-host filter preferences change. The version providers
-/// act as rebuild triggers since the underlying services are long-lived
-/// ChangeNotifiers that don't themselves cause provider invalidation.
+/// ratio, Divine-host, or seen-video filter preferences change. Version and
+/// flag-state providers trigger rebuilds because the underlying services are
+/// long-lived ChangeNotifiers that keep their identity when preferences change.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1053,9 +1053,9 @@ final class VideosRepositoryProvider
   /// Works without authentication for public feeds.
   ///
   /// Rebuilds (yielding a fresh in-memory cache) when content filter, aspect
-  /// ratio, or Divine-host filter preferences change. The version providers
-  /// act as rebuild triggers since the underlying services are long-lived
-  /// ChangeNotifiers that don't themselves cause provider invalidation.
+  /// ratio, Divine-host, or seen-video filter preferences change. Version and
+  /// flag-state providers trigger rebuilds because the underlying services are
+  /// long-lived ChangeNotifiers that keep their identity when preferences change.
   ///
   /// Uses:
   /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1096,7 +1096,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'6f608be410c29f3a369d699964ea7dd8ebbdfbde';
+String _$videosRepositoryHash() => r'8441220dce98f68c4f5ee5ae4305c5a98461f268';
 
 /// Provider for LikesRepository instance
 ///

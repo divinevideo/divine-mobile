@@ -955,9 +955,9 @@ VideoLocalStorage videoLocalStorage(Ref ref) {
 /// Works without authentication for public feeds.
 ///
 /// Rebuilds (yielding a fresh in-memory cache) when content filter, aspect
-/// ratio, or Divine-host filter preferences change. The version providers
-/// act as rebuild triggers since the underlying services are long-lived
-/// ChangeNotifiers that don't themselves cause provider invalidation.
+/// ratio, Divine-host, or seen-video filter preferences change. Version and
+/// flag-state providers trigger rebuilds because the underlying services are
+/// long-lived ChangeNotifiers that keep their identity when preferences change.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -983,8 +983,11 @@ VideosRepository videosRepository(Ref ref) {
   final seenVideosService = ref.watch(seenVideosServiceProvider);
   final clientSeenFilteringEnabled = () {
     try {
-      final flagService = ref.watch(featureFlagServiceProvider);
-      return flagService.isEnabled(FeatureFlag.clientSeenFiltering);
+      // The service keeps its identity when flags change. Watch the resolved
+      // flag so toggling it replaces this repository and its feed cache.
+      return ref.watch(
+        isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
+      );
     } catch (_) {
       return true;
     }

@@ -50,6 +50,13 @@ class _MockBadgeAuthService extends Mock implements AuthService {}
 class _MockBadgeBlocklist extends Mock implements ContentBlocklistRepository {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {
+  // These bloc tests supply content policy through the existing stub and
+  // have no seen-history service. Cache reads use that same supplied policy.
+  @override
+  Future<List<VideoEvent>> applyHomeFeedPreferences(
+    List<VideoEvent> videos,
+  ) async => applyContentPreferences(videos);
+
   @override
   bool isVideoKnownDeleted(VideoEvent video) => false;
 }
