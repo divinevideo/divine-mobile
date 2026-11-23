@@ -64,6 +64,24 @@ void main() {
       expect(find.text(l10n.emailConfirmationNotice(_email)), findsOneWidget);
     });
 
+    testWidgets(
+      'reminds an account restored with a cached unconfirmed status',
+      (
+        tester,
+      ) async {
+        whenListen(
+          cubit,
+          const Stream<EmailConfirmationState>.empty(),
+          initialState: _unconfirmed,
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationNotice(_email)), findsOneWidget);
+      },
+    );
+
     testWidgets('closes the reminder when another account signs in', (
       tester,
     ) async {

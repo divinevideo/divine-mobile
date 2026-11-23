@@ -29,6 +29,21 @@ class EmailConfirmationNotice extends StatefulWidget {
 class _EmailConfirmationNoticeState extends State<EmailConfirmationNotice> {
   ({String account, String email, VoidCallback dismiss})? _reminder;
 
+  @override
+  void initState() {
+    super.initState();
+    final cubit = context.read<EmailConfirmationCubit?>();
+    if (cubit == null) return;
+    final initial = cubit.state;
+    if (!initial.isUnconfirmed) return;
+    // Restored accounts can have a cached verdict before listeners mount.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _reminder == null && cubit.state == initial) {
+        _showReminder(cubit, initial);
+      }
+    });
+  }
+
   void _closeReminder() {
     final reminder = _reminder;
     _reminder = null;
