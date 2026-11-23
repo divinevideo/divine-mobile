@@ -2097,6 +2097,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Đến lượt bạn';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Xem loạt video';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Xem loạt video: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11790,6 +11798,34 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Ai có thể trả lời';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Mọi người';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Bạn bè';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Chỉ mình tôi';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Chỉ những người bạn theo dõi mới có thể tham gia. Người khác sẽ thấy nhãn dán khi đã có ai tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Nhãn dán chỉ hiển thị phản hồi bằng video từ những người bạn theo dõi. Người khác sẽ thấy nhãn dán khi một trong số họ đã phản hồi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Chỉ bạn mới có thể tham gia. Người khác sẽ không thấy nhãn dán cho đến khi bạn tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Nhãn dán chỉ hiển thị phản hồi bằng video của chính bạn. Người khác sẽ không thấy nhãn dán cho đến khi bạn phản hồi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

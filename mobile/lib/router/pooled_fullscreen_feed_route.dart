@@ -66,6 +66,7 @@ Widget buildPooledFullscreenFeed(BuildContext context, GoRouterState state) {
       sponsorName: extra.sponsorName,
       trafficSource: extra.trafficSource,
       sourceDetail: extra.sourceDetail,
+      isAddYoursSeries: extra.isAddYoursSeries,
       autoOpenComments: extra.autoOpenComments,
       onPageChanged: extra.onPageChanged,
     );

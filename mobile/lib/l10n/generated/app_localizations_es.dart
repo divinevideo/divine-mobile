@@ -2155,6 +2155,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sumá el tuyo';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Mirá la serie';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Mirá la serie: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11959,6 +11967,34 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Muestra quiénes respondieron a este video con un video. Al tocarlo, se ven las respuestas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Quién puede responder';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Todo el mundo';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Amistades';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Solo yo';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Solo las personas que seguís pueden sumar el suyo. El resto ve el sticker cuando alguien ya lo haya hecho.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'El sticker solo muestra respuestas en video de las personas que seguís. El resto lo ve cuando alguna de ellas haya respondido.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Solo vos podés sumar el tuyo. Nadie más ve el sticker hasta que lo hagas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'El sticker solo muestra tus propias respuestas en video. Nadie más lo ve hasta que respondas.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

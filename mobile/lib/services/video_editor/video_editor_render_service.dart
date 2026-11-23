@@ -1169,7 +1169,7 @@ class VideoEditorRenderService {
   /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
   /// it hides whatever is composited before it, in its place in the list.
   /// An audio visualizer is drawn by the export from [audioEnergies], see
-  /// [audioVisualizerImageLayer].
+  /// [audioVisualizerImageLayer]. A layer [isLeftOutOfFrames] is left out.
   ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
@@ -1190,8 +1190,9 @@ class VideoEditorRenderService {
     );
     return [
       for (final item in capturedLayers)
-        if (!excludeDetachedClips ||
-            !DetachedClipLayerData.isDetachedClipLayer(item.layer))
+        if ((!excludeDetachedClips ||
+                !DetachedClipLayerData.isDetachedClipLayer(item.layer)) &&
+            !isLeftOutOfFrames(item.layer))
           ..._imageLayersFor(
             item,
             bodySize: bodySize,

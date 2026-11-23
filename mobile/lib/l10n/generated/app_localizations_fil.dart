@@ -2128,6 +2128,14 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Ikaw naman';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Panoorin ang series';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Panoorin ang series: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11929,6 +11937,35 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Ipinapakita kung sino ang nag-reply sa video na ito gamit ang video. I-tap ito ng viewers para mapanood ang mga reply.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle =>
+      'Sino ang puwedeng sumagot';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Lahat';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Friends';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Ako lang';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Ang mga fina-follow mo lang ang puwedeng sumali. Makikita ng iba ang sticker kapag may sumali na.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Mga video reply lang ng mga fina-follow mo ang ipinapakita ng sticker. Makikita ito ng iba kapag may nag-reply na sa kanila.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Ikaw lang ang puwedeng sumali. Walang ibang makakakita ng sticker hangga\'t hindi ka sumasali.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Ang sarili mong mga video reply lang ang ipinapakita ng sticker. Walang ibang makakakita nito hangga\'t hindi ka nagre-reply.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

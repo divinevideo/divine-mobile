@@ -2066,6 +2066,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sıra sende';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Seriyi izle';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Seriyi izle: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11750,6 +11758,34 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Bu videoya videoyla yanıt verenleri gösterir. İzleyenler dokunup yanıtları izler.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Kimler yanıt verebilir';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Herkes';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Arkadaşlar';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Yalnızca ben';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Yalnızca takip ettiğin kişiler katılabilir. Diğer herkes, biri katıldığında çıkartmayı görür.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Çıkartma yalnızca takip ettiğin kişilerin video yanıtlarını gösterir. Diğer herkes, onlardan biri yanıt verdiğinde çıkartmayı görür.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Yalnızca sen katılabilirsin. Sen katılana kadar çıkartmayı başka kimse görmez.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Çıkartma yalnızca senin video yanıtlarını gösterir. Sen yanıt verene kadar çıkartmayı başka kimse görmez.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

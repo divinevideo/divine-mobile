@@ -2131,6 +2131,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'آپ کی باری';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'سیریز دیکھیں';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'سیریز دیکھیں: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11840,6 +11848,34 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'جواب دینے کی اجازت';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'سب';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'دوست';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'صرف میں';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'صرف آپ کے فالو کردہ اکاؤنٹس حصہ لے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی حصہ لے لے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'اسٹیکر صرف آپ کے فالو کردہ اکاؤنٹس کے ویڈیو جوابات دکھاتا ہے۔ باقی سب کو یہ تب نظر آتا ہے جب ان میں سے کوئی جواب دے دے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'حصہ لینا صرف آپ کے لیے ہے۔ آپ کے حصہ لینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'اسٹیکر صرف آپ کے اپنے ویڈیو جوابات دکھاتا ہے۔ آپ کے جواب دینے تک کسی اور کو یہ نظر نہیں آتا۔';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

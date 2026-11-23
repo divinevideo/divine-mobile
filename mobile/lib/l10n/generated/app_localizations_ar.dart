@@ -2139,6 +2139,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'دورك';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'مشاهدة السلسلة';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'مشاهدة السلسلة: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11838,6 +11846,34 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'يعرض ردود الفيديو على هذا الفيديو. عند لمسه يمكن مشاهدة الردود.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'صلاحية الرد';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'الجميع';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'دائرة الأصدقاء';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'أنا فقط';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'المشاركة متاحة فقط للحسابات التي يتابعها حسابك. يظهر الملصق للآخرين بعد أول مشاركة.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'لا يعرض الملصق إلا ردود الفيديو من الحسابات التي يتابعها حسابك. يظهر للآخرين بعد أول رد من أحدها.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'المشاركة متاحة لك وحدك. لن يظهر الملصق لأحد قبل مشاركتك.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'لا يعرض الملصق إلا ردودك بالفيديو. لن يظهر لأحد قبل ردك.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

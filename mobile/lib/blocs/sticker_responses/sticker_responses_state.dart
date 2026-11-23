@@ -24,6 +24,9 @@ class StickerResponsesState extends Equatable {
     this.videos = const [],
     this.curation = const RepliesCuration(),
     this.chainRoot,
+    this.canAnswer = true,
+    this.audience = VideoStickerAudience.everyone,
+    this.series = const [],
   });
 
   final StickerResponsesStatus status;
@@ -48,6 +51,24 @@ class StickerResponsesState extends Equatable {
   /// did not answer may hold the first video it names.
   final String? chainRoot;
 
+  /// Whether the viewer may answer: always, unless only some may answer the
+  /// sticker, when it is known once the responses are read.
+  final bool canAnswer;
+
+  /// The audience resolved when loading the sticker's answers.
+  final VideoStickerAudience audience;
+
+  /// The parts of an Add yours only its creator may answer, in the order
+  /// they were posted: the video the series starts at, then each answer, the
+  /// video the sticker is on among them. Empty for any other sticker, whose
+  /// responses open as [videos] list them.
+  final List<VideoEvent> series;
+
+  /// Whether the viewer sees the sticker: whoever may answer it, and everyone
+  /// else once someone did. Anyone sees one everyone may answer.
+  bool get isShown =>
+      canAnswer || (status == StickerResponsesStatus.loaded && total > 0);
+
   StickerResponsesState copyWith({
     StickerResponsesStatus? status,
     int? total,
@@ -55,6 +76,8 @@ class StickerResponsesState extends Equatable {
     List<VideoEvent>? videos,
     RepliesCuration? curation,
     String? chainRoot,
+    bool? canAnswer,
+    List<VideoEvent>? series,
   }) => StickerResponsesState(
     status: status ?? this.status,
     total: total ?? this.total,
@@ -62,6 +85,9 @@ class StickerResponsesState extends Equatable {
     videos: videos ?? this.videos,
     curation: curation ?? this.curation,
     chainRoot: chainRoot ?? this.chainRoot,
+    canAnswer: canAnswer ?? this.canAnswer,
+    audience: audience,
+    series: series ?? this.series,
   );
 
   @override
@@ -72,5 +98,8 @@ class StickerResponsesState extends Equatable {
     videos,
     curation,
     chainRoot,
+    canAnswer,
+    audience,
+    series,
   ];
 }

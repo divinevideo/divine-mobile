@@ -101,6 +101,7 @@ class PooledFullscreenVideoFeedArgs {
     this.autoOpenComments = false,
     this.onPageChanged,
     this.tileOrigin,
+    this.isAddYoursSeries = false,
   });
 
   /// The feed to display, resolved via [feedRepository].
@@ -131,6 +132,9 @@ class PooledFullscreenVideoFeedArgs {
 
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
+
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// Whether to open the comments sheet immediately after the first frame.
   ///
@@ -210,6 +214,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.onActiveVideoChanged,
     this.dmReplyContext,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -227,6 +232,12 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   final String? sponsorName;
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
+
+  /// Whether the feed is the series an Add yours collects, opened from its
+  /// sticker: each answer carries the same sticker, and one only the player
+  /// draws, which only some may answer, is left out here and shown in the
+  /// other feeds.
+  final bool isAddYoursSeries;
 
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null on feed/profile opens.
@@ -350,6 +361,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         sponsorName: sponsorName,
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
+        isAddYoursSeries: isAddYoursSeries,
         autoOpenComments: autoOpenComments,
         focusCommentId: focusCommentId,
         onPageChanged: onPageChanged,
@@ -387,6 +399,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.initialVideoKey,
     this.loadMoreOnEndSwipe = false,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -401,6 +414,9 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
 
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
+
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// When true, opens the comments sheet immediately after the first frame.
   ///
@@ -1067,6 +1083,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                     _trafficSourceForVideo,
                                                 sourceDetail:
                                                     widget.sourceDetail,
+                                                isAddYoursSeries:
+                                                    widget.isAddYoursSeries,
                                                 onActiveVideoChanged: (video, index) {
                                                   ref
                                                       .read(

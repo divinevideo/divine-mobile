@@ -2059,6 +2059,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Giliranmu';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Tonton serinya';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Tonton serinya: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11742,6 +11750,35 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Menampilkan siapa saja yang membalas video ini dengan video. Penonton mengetuknya untuk menonton balasannya.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle =>
+      'Siapa yang bisa menjawab';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Semua orang';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Teman';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Hanya aku';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Hanya orang yang kamu ikuti yang bisa ikut. Orang lain melihat stikernya setelah ada yang ikut.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Stiker hanya menampilkan balasan video dari orang yang kamu ikuti. Orang lain melihatnya setelah salah satu dari mereka membalas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Hanya kamu yang bisa ikut. Orang lain tidak akan melihat stikernya sampai kamu ikut.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Stiker hanya menampilkan balasan video darimu sendiri. Orang lain tidak akan melihatnya sampai kamu membalas.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

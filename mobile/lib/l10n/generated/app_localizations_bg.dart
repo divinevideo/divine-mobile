@@ -2161,6 +2161,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Твой ред';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Гледай поредицата';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Гледай поредицата: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11945,6 +11953,34 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Показва видео отговорите на това видео. Зрителите го докосват, за да ги гледат.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Кой може да отговаря';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Всички';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Близки';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Само аз';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Само хората, които следваш, могат да се включат. Всички останали виждат стикера, щом някой се включи.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Стикерът показва само видео отговори от хората, които следваш. Всички останали го виждат, щом някой от тях отговори.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Само ти можеш да се включиш. Никой друг не вижда стикера, докато не го направиш.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Стикерът показва само твоите видео отговори. Никой друг не го вижда, докато не отговориш.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
