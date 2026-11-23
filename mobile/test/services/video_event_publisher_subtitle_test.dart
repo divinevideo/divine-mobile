@@ -24,6 +24,8 @@ import 'package:videos_repository/videos_repository.dart'
         LatestVideoRevisionUnknown,
         VideosRepository;
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockUploadManager extends Mock implements UploadManager {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -926,7 +928,7 @@ void main() {
         when(
           () => mockVideosRepository.fetchLatestVideoRevision(any()),
         ).thenAnswer((_) async {
-          signedIn = 'f' * 64;
+          signedIn = syntheticOtherTestPubkey;
           return LatestVideoRevisionFound(newest());
         });
         await LogCaptureService().clearAllLogs();
@@ -956,7 +958,9 @@ void main() {
       });
 
       test('returns null for a video the account does not own', () async {
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn('f' * 64);
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenReturn(syntheticOtherTestPubkey);
         relaysAnswer(LatestVideoRevisionFound(newest()));
 
         final result = await publisher.republishWithSubtitles(
@@ -990,7 +994,10 @@ void main() {
               tags: any(named: 'tags'),
               createdAt: any(named: 'createdAt'),
             ),
-          ).thenAnswer((_) async => Event('f' * 64, 34236, [], 'Wrong author'));
+          ).thenAnswer(
+            (_) async =>
+                Event(syntheticOtherTestPubkey, 34236, [], 'Wrong author'),
+          );
 
           final result = parentWrite
               ? await republishMirrored(

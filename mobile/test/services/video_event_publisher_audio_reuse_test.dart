@@ -16,6 +16,8 @@ import 'package:videos_repository/videos_repository.dart'
         LatestVideoRevisionUnknown,
         VideosRepository;
 
+import '../helpers/test_pubkeys.dart';
+
 class _Auth extends Mock implements AuthService {}
 
 class _Nostr extends Mock implements NostrClient {}
@@ -294,7 +296,7 @@ void main() {
       var account = owner;
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => account);
       when(() => videos.fetchLatestVideoRevision(any())).thenAnswer((_) async {
-        account = 'c' * 64;
+        account = syntheticOtherTestPubkey;
         return LatestVideoRevisionFound(
           revision(id: 'd' * 64, createdAt: 4102444800, content: 'Newer'),
         );

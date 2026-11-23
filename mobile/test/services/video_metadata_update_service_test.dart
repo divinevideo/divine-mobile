@@ -238,7 +238,8 @@ void main() {
               createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer(
-            (_) async => Event('f' * 64, 34236, [], 'Different author'),
+            (_) async =>
+                Event(syntheticOtherTestPubkey, 34236, [], 'Different author'),
           );
 
           final result = await updateFromRelay(
@@ -1160,7 +1161,7 @@ void main() {
             ),
           ).thenAnswer((_) async {
             when(() => mockAuthService.currentPublicKeyHex)
-                .thenReturn('f' * 64);
+                .thenReturn(syntheticOtherTestPubkey);
             return const BlossomUploadResult(success: false);
           });
 
@@ -2604,7 +2605,7 @@ void main() {
           when(() => mockRelayPublisher.publishViaWebSocket(any()))
               .thenAnswer((_) async {
                 when(() => mockAuthService.currentPublicKeyHex)
-                    .thenReturn('f' * 64);
+                    .thenReturn(syntheticOtherTestPubkey);
                 return EventPublishOutcome.published;
               });
 

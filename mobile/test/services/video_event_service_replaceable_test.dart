@@ -10,6 +10,8 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_event_service.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
@@ -484,7 +486,7 @@ void main() {
       service.addVideoUpdateListener(updates.add);
       final republished = VideoEvent.fromNostrEvent(
         sdk.Event(
-          'f' * 64,
+          syntheticOtherTestPubkey,
           NIP71VideoKinds.addressableShortVideo,
           [
             ['d', 'rest-only-video'],
