@@ -651,7 +651,7 @@ void main() {
     });
 
     group('fetchSeriesBy', () {
-      test("reads every part one person added to a chain, the newest "
+      test('reads every part one person added to a chain, the newest '
           'first, from the relays alone', () async {
         relayAnswers([
           _answer(301, createdAt: 1000, pubkey: _creator),
