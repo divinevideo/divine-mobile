@@ -14101,5 +14101,13 @@
   "collabRoomSeriesReadyHint": "All parts are in. Put it together!",
   "@collabRoomSeriesReadyHint": {
     "description": "Hint for the host of a Together room once every part is in and the parts play one after another; the button below puts the video together."
+  },
+  "settingsDiscordTitle": "Join our Discord server",
+  "@settingsDiscordTitle": {
+    "description": "Settings row title that opens an invite link to the official Divine Discord server."
+  },
+  "settingsDiscordSubtitle": "Talk to the Divine team and community",
+  "@settingsDiscordSubtitle": {
+    "description": "Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community."
   }
 }

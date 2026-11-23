@@ -52,6 +52,7 @@ import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   static const routeName = 'settings';
@@ -550,6 +551,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: context.l10n.settingsHelpAboutSubtitle,
                     onTap: () => context.push(HelpAboutSettingsScreen.path),
                   ),
+                  DivineListTile(
+                    icon: DivineIconName.chats,
+                    title: context.l10n.settingsDiscordTitle,
+                    subtitle: context.l10n.settingsDiscordSubtitle,
+                    trailingIcon: DivineIconName.arrowUpRight,
+                    trailingIconSize: 20,
+                    onTap: () => _openDiscord(context),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 _VersionTile(appVersion: _appVersion),
@@ -557,6 +566,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+Future<void> _openDiscord(BuildContext context) async {
+  final pageName = context.l10n.settingsDiscordTitle;
+  var opened = false;
+  try {
+    opened = await launchUrl(
+      Uri.parse(AppConstants.discordInviteUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (e, stackTrace) {
+    Log.error(
+      'Failed to open Discord invite link',
+      name: 'SettingsScreen',
+      category: LogCategory.ui,
+      error: e,
+      stackTrace: stackTrace,
+    );
+  }
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.supportCouldNotOpenPage(pageName),
+        error: true,
       ),
     );
   }

@@ -15795,4 +15795,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '所有部分都到齐了。合成视频吧！';
+
+  @override
+  String get settingsDiscordTitle => 'Join our Discord server';
+
+  @override
+  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
 }

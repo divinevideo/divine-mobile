@@ -17105,4 +17105,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Toate părțile au ajuns. Pune-le cap la cap!';
+
+  @override
+  String get settingsDiscordTitle => 'Join our Discord server';
+
+  @override
+  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
 }

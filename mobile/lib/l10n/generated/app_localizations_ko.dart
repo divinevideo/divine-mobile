@@ -16008,4 +16008,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '모든 파트가 모였어요. 합쳐 보세요!';
+
+  @override
+  String get settingsDiscordTitle => 'Join our Discord server';
+
+  @override
+  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
 }

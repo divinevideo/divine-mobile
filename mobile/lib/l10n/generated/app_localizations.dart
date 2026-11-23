@@ -28058,6 +28058,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All parts are in. Put it together!'**
   String get collabRoomSeriesReadyHint;
+
+  /// Settings row title that opens an invite link to the official Divine Discord server.
+  ///
+  /// In en, this message translates to:
+  /// **'Join our Discord server'**
+  String get settingsDiscordTitle;
+
+  /// Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to the Divine team and community'**
+  String get settingsDiscordSubtitle;
 }
 
 class _AppLocalizationsDelegate

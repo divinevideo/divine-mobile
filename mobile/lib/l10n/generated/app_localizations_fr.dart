@@ -17043,4 +17043,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Toutes les parties sont là. Assemble-les !';
+
+  @override
+  String get settingsDiscordTitle => 'Join our Discord server';
+
+  @override
+  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
 }

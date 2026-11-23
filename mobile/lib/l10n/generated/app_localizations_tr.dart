@@ -16696,4 +16696,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'Tüm bölümler geldi. Birleştir!';
+
+  @override
+  String get settingsDiscordTitle => 'Join our Discord server';
+
+  @override
+  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
 }
