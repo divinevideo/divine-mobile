@@ -148,10 +148,11 @@ class ConversationListBloc
     // Recover the full DM history once per install. After a reinstall the
     // live subscription's first-open window (limit:50) only persists the
     // most-recent conversations; this idempotent, one-time, background
-    // drain backfills the rest so the list is complete. Triggered here (on
-    // inbox open) because relay discovery has reliably finished by the time
-    // the user navigates to Messages — fetching against the full relay
-    // pool, not the divine-only pool present at cold start. See #4953.
+    // drain backfills the rest so the list is complete. Triggered here, when
+    // the inbox's Messages tab first opens (InboxPage provides this bloc
+    // lazily, #11020) or the message requests page opens, because relay
+    // discovery has reliably finished by then — fetching against the full
+    // relay pool, not the divine-only pool present at cold start. See #4953.
     unawaited(_dmRepository.backfillHistoryIfNeeded());
 
     // Replay any gift wraps that failed decryption on a previous pass (e.g.
@@ -1052,6 +1053,10 @@ class ConversationListBloc
     ConversationListProfileRepositoryChanged event,
     Emitter<ConversationListState> emit,
   ) {
+    // The inbox can forward a repository in the frame its re-key closes this
+    // bloc, so the event may run after close(): subscribing then would leak,
+    // and the add() below would throw.
+    if (isClosed) return;
     if (identical(_profileRepository, event.profileRepository)) return;
     _profileRepository = event.profileRepository;
     _subscribeToVanishedPubkeys();

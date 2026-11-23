@@ -131,7 +131,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // against an owner-scoped instance.
     if (_dmRepository.userPubkey.isEmpty) return;
 
-    // Arm the one-time history drain here too, not just on inbox open.
+    // Arm the one-time history drain here too, not just when Messages opens.
     // Profile → Message reaches a thread without ever passing through
     // Messages, so on a reinstall this can be the first DM surface the user
     // touches. Until the drain arms, `hasAttemptedHistoryRecovery` is false

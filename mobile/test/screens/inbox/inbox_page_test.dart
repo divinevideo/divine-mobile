@@ -12,14 +12,17 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/inbox_view.dart';
+import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -188,6 +191,111 @@ void main() {
       });
     });
 
+    setUpAll(() => registerFallbackValue(<DmConversation>[]));
+
+    /// The bloc filters every list it loads, so a test that opens Messages
+    /// has to answer for the blocklist.
+    void stubBlocklistFilters() {
+      when(
+        () => mockBlocklistRepository.filterBlockedConversations(
+          any(),
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<DmConversation>,
+      );
+      when(
+        () => mockBlocklistRepository.filterBlockedRequests(
+          any(),
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<DmConversation>,
+      );
+      when(
+        () => mockBlocklistRepository.runtimeBlockedUsers,
+      ).thenReturn(const <String>{});
+      when(
+        () => mockBlocklistRepository.shouldFilterFromDms(any()),
+      ).thenReturn(false);
+    }
+
+    void stubInbox(_MockDmRepository repo, {required String userPubkey}) {
+      when(
+        () => repo.watchAcceptedConversations(limit: any(named: 'limit')),
+      ).thenAnswer((_) => Stream.value(const []));
+      when(
+        () => repo.watchPotentialRequests(),
+      ).thenAnswer((_) => Stream.value(const []));
+      when(() => repo.userPubkey).thenReturn(userPubkey);
+      when(
+        () => repo.userPubkeyStream,
+      ).thenAnswer((_) => Stream.value(userPubkey));
+      when(
+        () => repo.historyRecoveryStream,
+      ).thenAnswer((_) => const Stream<bool>.empty());
+      when(() => repo.isRecoveringHistory).thenReturn(false);
+      when(
+        () => repo.hasCompletedHistoryRecoveryBefore,
+      ).thenReturn(true);
+      when(() => repo.backfillHistoryIfNeeded()).thenAnswer((_) async {});
+      when(() => repo.retryPendingDecryptions()).thenAnswer((_) async {});
+      when(() => repo.startListening()).thenAnswer((_) async {});
+      when(() => repo.stopListening()).thenAnswer((_) async {});
+    }
+
+    Widget buildApp(
+      DmRepository readyRepo, {
+      ProfileRepository? readyProfileRepo,
+    }) {
+      return testMaterialApp(
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<DmUnreadCountCubit>.value(
+              value: mockDmUnreadCountCubit,
+            ),
+          ],
+          child: const InboxPage(),
+        ),
+        mockAuthService: mockAuthService,
+        mockFollowRepository: mockFollowRepository,
+        additionalOverrides: [
+          dmRepositoryProvider.overrideWith(
+            (ref) => ref.watch(_dmRepoSwap) == 0 ? mockDmRepository : readyRepo,
+          ),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            mockBlocklistRepository,
+          ),
+          // This fixture exercises dependency handoff, not notifications.
+          // Profile readiness must not create a real authenticated HTTP client.
+          notificationRepositoryProvider.overrideWithValue(null),
+          // Nullable-gated in production: null until Nostr is ready.
+          profileRepositoryProvider.overrideWith(
+            (ref) => ref.watch(_profileRepoSwap) == 0 ? null : readyProfileRepo,
+          ),
+          profileReadRepositoryProvider.overrideWith(
+            (ref) => ref.watch(_profileRepoSwap) == 0 ? null : readyProfileRepo,
+          ),
+          goRouterProvider.overrideWithValue(mockGoRouter),
+        ],
+      );
+    }
+
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(
+          tester.element(find.byType(InboxPage)),
+          listen: false,
+        );
+
+    Future<void> openMessages(WidgetTester tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.inboxMessagesTab));
+      await tester.pump();
+      await tester.pump(kInboxTabTransitionDuration);
+    }
+
     // The keepAlive `dmRepositoryProvider` rebuilds a brand-new DmRepository
     // on the identityKnown -> nostrReady transition. The first instance can
     // read owner-scoped local history, but only the ready instance receives
@@ -196,70 +304,6 @@ void main() {
     // ValueKey rebind fix in inbox_page.dart. See
     // .claude/rules/state_management.md.
     group('rebinds ConversationListBloc when dmRepositoryProvider flips', () {
-      void stubInbox(_MockDmRepository repo, {required String userPubkey}) {
-        when(
-          () => repo.watchAcceptedConversations(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value(const []));
-        when(
-          () => repo.watchPotentialRequests(),
-        ).thenAnswer((_) => Stream.value(const []));
-        when(() => repo.userPubkey).thenReturn(userPubkey);
-        when(
-          () => repo.userPubkeyStream,
-        ).thenAnswer((_) => Stream.value(userPubkey));
-        when(
-          () => repo.historyRecoveryStream,
-        ).thenAnswer((_) => const Stream<bool>.empty());
-        when(() => repo.isRecoveringHistory).thenReturn(false);
-        when(
-          () => repo.hasCompletedHistoryRecoveryBefore,
-        ).thenReturn(true);
-        when(() => repo.backfillHistoryIfNeeded()).thenAnswer((_) async {});
-        when(() => repo.retryPendingDecryptions()).thenAnswer((_) async {});
-        when(() => repo.startListening()).thenAnswer((_) async {});
-        when(() => repo.stopListening()).thenAnswer((_) async {});
-      }
-
-      Widget buildApp(
-        DmRepository readyRepo, {
-        ProfileRepository? readyProfileRepo,
-      }) {
-        return testMaterialApp(
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<DmUnreadCountCubit>.value(
-                value: mockDmUnreadCountCubit,
-              ),
-            ],
-            child: const InboxPage(),
-          ),
-          mockAuthService: mockAuthService,
-          mockFollowRepository: mockFollowRepository,
-          additionalOverrides: [
-            dmRepositoryProvider.overrideWith(
-              (ref) =>
-                  ref.watch(_dmRepoSwap) == 0 ? mockDmRepository : readyRepo,
-            ),
-            contentBlocklistRepositoryProvider.overrideWithValue(
-              mockBlocklistRepository,
-            ),
-            // This fixture exercises dependency handoff, not notifications.
-            // Profile readiness must not create a real authenticated HTTP client.
-            notificationRepositoryProvider.overrideWithValue(null),
-            // Nullable-gated in production: null until Nostr is ready.
-            profileRepositoryProvider.overrideWith(
-              (ref) =>
-                  ref.watch(_profileRepoSwap) == 0 ? null : readyProfileRepo,
-            ),
-            profileReadRepositoryProvider.overrideWith(
-              (ref) =>
-                  ref.watch(_profileRepoSwap) == 0 ? null : readyProfileRepo,
-            ),
-            goRouterProvider.overrideWithValue(mockGoRouter),
-          ],
-        );
-      }
-
       ConversationListBloc readBloc(WidgetTester tester) =>
           BlocProvider.of<ConversationListBloc>(
             tester.element(find.byType(InboxView)),
@@ -355,6 +399,7 @@ void main() {
         (tester) async {
           when(() => mockDmUnreadCountCubit.state).thenReturn(0);
           stubInbox(mockDmRepository, userPubkey: testPubkey);
+          stubBlocklistFilters();
           final readyProfileRepo = _MockProfileRepository();
           // The bloc subscribes to the vanished set on every repository swap,
           // so the incoming instance has to answer for it.
@@ -366,6 +411,8 @@ void main() {
             buildApp(mockDmRepository, readyProfileRepo: readyProfileRepo),
           );
           await tester.pump();
+          // The handoff is forwarded from inside the Messages pane (#11020).
+          await openMessages(tester);
 
           final conversationBloc = readBloc(tester);
           final followingBloc = BlocProvider.of<MyFollowingBloc>(
@@ -405,6 +452,153 @@ void main() {
           expect(conversationBloc.isClosed, isFalse);
         },
       );
+    });
+
+    // ConversationListBloc._onStarted starts the DM history restore, and
+    // BlocProvider is lazy, so whatever reads the bloc first decides when the
+    // restore starts. These watch the repository instead of reading the bloc,
+    // which would create it (#11020).
+    group('starts the DM history restore when Messages first opens', () {
+      late _MockDmRepository readyRepo;
+      late _MockProfileRepository readyProfileRepo;
+
+      setUp(() {
+        when(() => mockDmUnreadCountCubit.state).thenReturn(0);
+        stubBlocklistFilters();
+        stubInbox(mockDmRepository, userPubkey: testPubkey);
+        readyRepo = _MockDmRepository();
+        stubInbox(readyRepo, userPubkey: testPubkey);
+        readyProfileRepo = _MockProfileRepository();
+        when(
+          readyProfileRepo.watchVanishedPubkeys,
+        ).thenAnswer((_) => Stream.value(const <String>{}));
+      });
+
+      testWidgets('not while the inbox shows Notifications', (tester) async {
+        await tester.pumpWidget(
+          buildApp(readyRepo, readyProfileRepo: readyProfileRepo),
+        );
+        await tester.pump();
+
+        verifyNever(() => mockDmRepository.backfillHistoryIfNeeded());
+
+        await openMessages(tester);
+
+        verify(() => mockDmRepository.backfillHistoryIfNeeded()).called(1);
+      });
+
+      testWidgets('not when the blocklist changes before Messages opens', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildApp(readyRepo, readyProfileRepo: readyProfileRepo),
+        );
+        await tester.pump();
+
+        containerOf(tester).read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+
+        verifyNever(() => mockDmRepository.backfillHistoryIfNeeded());
+
+        await openMessages(tester);
+
+        verify(() => mockDmRepository.backfillHistoryIfNeeded()).called(1);
+      });
+
+      testWidgets(
+        'not when the profile repository resolves before Messages opens',
+        (tester) async {
+          await tester.pumpWidget(
+            buildApp(readyRepo, readyProfileRepo: readyProfileRepo),
+          );
+          await tester.pump();
+
+          containerOf(tester).read(_profileRepoSwap.notifier).state = 1;
+          await tester.pump();
+
+          verifyNever(() => mockDmRepository.backfillHistoryIfNeeded());
+
+          await openMessages(tester);
+
+          verify(() => mockDmRepository.backfillHistoryIfNeeded()).called(1);
+          // Seeded with the repository current at creation, not the null the
+          // inbox mounted with.
+          verify(readyProfileRepo.watchVanishedPubkeys).called(1);
+        },
+      );
+
+      testWidgets(
+        'not on either repository when the session hands both over before '
+        'Messages opens',
+        (tester) async {
+          await tester.pumpWidget(
+            buildApp(readyRepo, readyProfileRepo: readyProfileRepo),
+          );
+          await tester.pump();
+
+          // Production hands both over in one flush (identityKnown ->
+          // nostrReady), so flip them together.
+          final container = containerOf(tester);
+          container.read(_dmRepoSwap.notifier).state = 1;
+          container.read(_profileRepoSwap.notifier).state = 1;
+          await tester.pump();
+
+          verifyNever(() => readyRepo.backfillHistoryIfNeeded());
+          verifyNever(() => mockDmRepository.backfillHistoryIfNeeded());
+
+          await openMessages(tester);
+
+          verify(() => readyRepo.backfillHistoryIfNeeded()).called(1);
+          verifyNever(() => mockDmRepository.backfillHistoryIfNeeded());
+        },
+      );
+    });
+
+    group('once Messages is open', () {
+      testWidgets('forwards a blocklist change to $ConversationListBloc', (
+        tester,
+      ) async {
+        when(() => mockDmUnreadCountCubit.state).thenReturn(0);
+        stubBlocklistFilters();
+        stubInbox(mockDmRepository, userPubkey: testPubkey);
+        // Past the bloc's recompute debounce, so a filter pass has finished.
+        const settle = Duration(milliseconds: 300);
+
+        await tester.pumpWidget(buildApp(mockDmRepository));
+        await tester.pump();
+        await openMessages(tester);
+        await tester.pump(settle);
+        // Back on Notifications the pane stays mounted, under a disabled
+        // TickerMode; the forward must not wait for Messages to show again.
+        await tester.tap(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).settingsNotifications,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(kInboxTabTransitionDuration);
+        clearInteractions(mockBlocklistRepository);
+
+        // Nothing re-filters on its own once the first load has run.
+        await tester.pump(settle);
+        verifyNever(
+          () => mockBlocklistRepository.filterBlockedConversations(
+            any(),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        );
+
+        containerOf(tester).read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        await tester.pump(settle);
+
+        verify(
+          () => mockBlocklistRepository.filterBlockedConversations(
+            any(),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).called(greaterThanOrEqualTo(1));
+      });
     });
   });
 }
