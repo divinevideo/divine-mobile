@@ -224,8 +224,9 @@ class AppleMusicApiClient {
           .timeout(_timeout);
     } on TimeoutException {
       throw const AppleMusicApiException('Apple Music request timed out');
-    } on http.ClientException catch (error) {
-      throw AppleMusicApiException('Apple Music network error: $error');
+    } on http.ClientException {
+      // The transport error can carry the request URI and its search term.
+      throw const AppleMusicApiException('Apple Music network error');
     }
   }
 

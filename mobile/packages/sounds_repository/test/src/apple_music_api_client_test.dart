@@ -98,10 +98,7 @@ void main() {
 
       test('reads the songs of the first chart, in order', () async {
         final client = _clientAnswering(
-          _chart([
-            _songJson(),
-            _songJson(id: '2', name: 'Slow Morning'),
-          ]),
+          _chart([_songJson(), _songJson(id: '2', name: 'Slow Morning')]),
         );
 
         final songs = await client.fetchTopSongs(storefront: 'us');
@@ -281,9 +278,7 @@ void main() {
 
     group('a failed request', () {
       test('carries the status the catalog answered with', () async {
-        final client = _clientAnswering({
-          'errors': <Object?>[],
-        }, status: 401);
+        final client = _clientAnswering({'errors': <Object?>[]}, status: 401);
 
         await expectLater(
           client.fetchTopSongs(storefront: 'us'),
@@ -318,22 +313,31 @@ void main() {
         );
       });
 
-      test('is reported when the connection fails', () async {
+      test('reports a connection failure without the search URI', () async {
+        const term = 'private-label-for-test';
         final client = AppleMusicApiClient(
           developerToken: _token,
           httpClient: MockClient(
-            (_) async => throw http.ClientException('connection closed'),
+            (request) async =>
+                throw http.ClientException('connection closed', request.url),
           ),
         );
 
         await expectLater(
-          client.searchSongs(storefront: 'us', term: 'a'),
+          client.searchSongs(storefront: 'us', term: term),
           throwsA(
-            isA<AppleMusicApiException>().having(
-              (error) => error.message,
-              'message',
-              contains('connection closed'),
-            ),
+            isA<AppleMusicApiException>()
+                .having((error) => error.statusCode, 'statusCode', isNull)
+                .having(
+                  (error) => error.message,
+                  'message',
+                  contains('network error'),
+                )
+                .having(
+                  (error) => error.toString(),
+                  'diagnostic',
+                  isNot(contains(term)),
+                ),
           ),
         );
       });
@@ -341,9 +345,7 @@ void main() {
       test('is reported when the answer is not JSON', () async {
         final client = AppleMusicApiClient(
           developerToken: _token,
-          httpClient: MockClient(
-            (_) async => http.Response('<html>', 200),
-          ),
+          httpClient: MockClient((_) async => http.Response('<html>', 200)),
         );
 
         await expectLater(
