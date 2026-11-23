@@ -1831,6 +1831,30 @@ void main() {
             );
           });
 
+          for (final (part, lastReference) in const [
+            ('d tag', '34236:$videoPubkey:last'),
+            ('public key', '34236:$otherVideoPubkey:clip'),
+            ('kind', '34235:$videoPubkey:clip'),
+          ]) {
+            test('says nothing when the last a tag differs from the first '
+                'only in its $part', () async {
+              answerIndex([
+                sent(
+                  testEventId1,
+                  event: soundEvent(
+                    testEventId1,
+                    videoTags: [reference, lastReference],
+                  ),
+                  sourceEvent: videoEvent(),
+                ),
+              ]);
+
+              await lists.fetchNewestSounds();
+
+              expect(lists.sourceVideosFromIndex([lastReference]), isEmpty);
+            });
+          }
+
           test('says nothing when the video sent is another one', () async {
             answerIndex([
               sent(testEventId1, sourceEvent: videoEvent(dTag: 'other')),
