@@ -572,7 +572,18 @@ void main() {
             vineId: 'first',
             addressableDTag: 'first',
             eventKind: 34236,
-            nostrEventTags: [restricted(addYours).toTag()],
+            nostrEventTags: [
+              const VideoStickerRegion(
+                kind: VideoStickerKind.prompt,
+                target: '',
+                centerX: 0.5,
+                centerY: 0.5,
+                width: 0.8,
+                height: 0.5,
+                label: 'Show your desk\ndesksetup',
+                audience: VideoStickerAudience.following,
+              ).toTag(),
+            ],
           );
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
