@@ -28770,6 +28770,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Email confirmed. DMs are unlocked.'**
   String get emailConfirmationDone;
+
+  /// Pop-up after a confirmation link opened in the app, when the signed-in account is not known to be the one it confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed.'**
+  String get emailConfirmationLinkConfirmed;
+
+  /// Own-profile pill and prompt title for an email/password account that no longer has an email (another person confirmed the address it had claimed).
+  ///
+  /// In en, this message translates to:
+  /// **'Add an email'**
+  String get emailConfirmationAddEmailTitle;
+
+  /// Body of the own-profile prompt for an email/password account with no email.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has no email right now. Add one so you can always get back in.'**
+  String get emailConfirmationAddEmailSubtitle;
+
+  /// Button opening the change-email screen from the add-an-email prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email'**
+  String get emailConfirmationAddEmailButton;
+
+  /// Pop-up when an account that has not confirmed its email tries to send a direct message, for example from the share sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to send messages.'**
+  String get emailConfirmationSendBlocked;
+
+  /// Pop-up when an account that has not confirmed its email hits the hourly limit on posts, comments or reports.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the hourly limit for new accounts. Confirm your email to lift it.'**
+  String get emailConfirmationCapReached;
 }
 
 class _AppLocalizationsDelegate

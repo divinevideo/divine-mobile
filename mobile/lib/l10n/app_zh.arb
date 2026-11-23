@@ -7933,5 +7933,11 @@
   "emailConfirmationResendFailed": "这封没发出去，稍后再试试。",
   "emailConfirmationMessagesTitle": "确认邮箱后即可开始发私信",
   "emailConfirmationMessagesBody": "点击我们发送到 {email} 的链接，私信就全归你啦。",
-  "emailConfirmationDone": "邮箱已确认，私信已解锁。"
+  "emailConfirmationDone": "邮箱已确认，私信已解锁。",
+  "emailConfirmationLinkConfirmed": "邮箱已确认。",
+  "emailConfirmationAddEmailTitle": "添加邮箱",
+  "emailConfirmationAddEmailSubtitle": "你的账号目前没有绑定邮箱。添加一个，确保你随时都能回到自己的账号。",
+  "emailConfirmationAddEmailButton": "添加邮箱",
+  "emailConfirmationSendBlocked": "确认邮箱后才能发私信。",
+  "emailConfirmationCapReached": "新账号每小时的上限就是这些。确认邮箱即可解除限制。"
 }

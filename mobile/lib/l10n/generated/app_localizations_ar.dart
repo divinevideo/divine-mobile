@@ -17216,4 +17216,25 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'تم تأكيد البريد الإلكتروني.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'إضافة بريد إلكتروني';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'لا يوجد بريد إلكتروني في هذا الحساب حاليًا. بإضافة بريد تبقى العودة إلى الحساب ممكنة دائمًا.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'إضافة بريد إلكتروني';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'تأكيد البريد الإلكتروني مطلوب لإرسال الرسائل.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'هذا هو الحد المسموح به في الساعة للحسابات الجديدة. تأكيد البريد الإلكتروني يرفع هذا الحد.';
 }

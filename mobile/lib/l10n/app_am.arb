@@ -6693,5 +6693,11 @@
   "emailConfirmationResendFailed": "መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "emailConfirmationMessagesTitle": "መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ",
   "emailConfirmationMessagesBody": "ወደ {email} የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።",
-  "emailConfirmationDone": "ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።"
+  "emailConfirmationDone": "ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።",
+  "emailConfirmationLinkConfirmed": "ኢሜይሉ ተረጋግጧል።",
+  "emailConfirmationAddEmailTitle": "ኢሜይል ያክሉ",
+  "emailConfirmationAddEmailSubtitle": "መለያዎ አሁን ኢሜይል የለውም። ሁልጊዜ ተመልሰው መግባት እንዲችሉ አንድ ያክሉ።",
+  "emailConfirmationAddEmailButton": "ኢሜይል ያክሉ",
+  "emailConfirmationSendBlocked": "መልእክቶችን ለመላክ ኢሜይልዎን ያረጋግጡ።",
+  "emailConfirmationCapReached": "ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።"
 }

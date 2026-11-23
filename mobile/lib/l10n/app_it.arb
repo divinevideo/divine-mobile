@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Invio non riuscito. Riprova tra poco.",
   "emailConfirmationMessagesTitle": "Conferma la tua email per iniziare a scrivere messaggi",
   "emailConfirmationMessagesBody": "Tocca il link che abbiamo inviato a {email}. Poi i messaggi sono tutti tuoi.",
-  "emailConfirmationDone": "Email confermata. Messaggi sbloccati."
+  "emailConfirmationDone": "Email confermata. Messaggi sbloccati.",
+  "emailConfirmationLinkConfirmed": "Email confermata.",
+  "emailConfirmationAddEmailTitle": "Aggiungi un'email",
+  "emailConfirmationAddEmailSubtitle": "Al momento il tuo account non ha un'email. Aggiungine una per poter sempre rientrare.",
+  "emailConfirmationAddEmailButton": "Aggiungi email",
+  "emailConfirmationSendBlocked": "Conferma la tua email per inviare messaggi.",
+  "emailConfirmationCapReached": "Hai raggiunto il limite orario per i nuovi account. Conferma la tua email per toglierlo."
 }

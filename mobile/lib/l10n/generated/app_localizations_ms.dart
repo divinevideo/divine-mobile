@@ -17179,4 +17179,25 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => 'E-mel disahkan. Mesej sudah dibuka.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mel disahkan.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Tambah e-mel';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Akaun anda tiada e-mel buat masa ini. Tambah satu supaya anda sentiasa boleh kembali ke akaun anda.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Tambah e-mel';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Sahkan e-mel anda untuk menghantar mesej.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini.';
 }

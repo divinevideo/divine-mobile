@@ -17338,4 +17338,25 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'Имейлът е потвърден. Съобщенията са отключени.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Имейлът е потвърден.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Добави имейл';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'В момента акаунтът ти няма имейл. Добави такъв, за да можеш винаги да влезеш обратно.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Добави имейл';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Потвърди имейла си, за да изпращаш съобщения.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Това е лимитът на час за нови акаунти. Потвърди имейла си, за да го махнеш.';
 }

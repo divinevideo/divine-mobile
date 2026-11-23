@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Gönderemedik. Biraz sonra tekrar dene.",
   "emailConfirmationMessagesTitle": "Mesajlaşmaya başlamak için e-postanı doğrula",
   "emailConfirmationMessagesBody": "{email} adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.",
-  "emailConfirmationDone": "E-posta doğrulandı. Mesajların kilidi açıldı."
+  "emailConfirmationDone": "E-posta doğrulandı. Mesajların kilidi açıldı.",
+  "emailConfirmationLinkConfirmed": "E-posta doğrulandı.",
+  "emailConfirmationAddEmailTitle": "E-posta ekle",
+  "emailConfirmationAddEmailSubtitle": "Hesabında şu anda e-posta yok. Her zaman geri dönebilmek için bir tane ekle.",
+  "emailConfirmationAddEmailButton": "E-posta ekle",
+  "emailConfirmationSendBlocked": "Mesaj göndermek için e-postanı doğrula.",
+  "emailConfirmationCapReached": "Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula."
 }

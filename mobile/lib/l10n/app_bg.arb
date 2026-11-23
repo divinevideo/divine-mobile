@@ -6757,5 +6757,11 @@
   "emailConfirmationResendFailed": "Не успяхме да го изпратим. Опитай пак след малко.",
   "emailConfirmationMessagesTitle": "Потвърди имейла си, за да пишеш съобщения",
   "emailConfirmationMessagesBody": "Натисни връзката, която изпратихме до {email}. После съобщенията са изцяло твои.",
-  "emailConfirmationDone": "Имейлът е потвърден. Съобщенията са отключени."
+  "emailConfirmationDone": "Имейлът е потвърден. Съобщенията са отключени.",
+  "emailConfirmationLinkConfirmed": "Имейлът е потвърден.",
+  "emailConfirmationAddEmailTitle": "Добави имейл",
+  "emailConfirmationAddEmailSubtitle": "В момента акаунтът ти няма имейл. Добави такъв, за да можеш винаги да влезеш обратно.",
+  "emailConfirmationAddEmailButton": "Добави имейл",
+  "emailConfirmationSendBlocked": "Потвърди имейла си, за да изпращаш съобщения.",
+  "emailConfirmationCapReached": "Това е лимитът на час за нови акаунти. Потвърди имейла си, за да го махнеш."
 }

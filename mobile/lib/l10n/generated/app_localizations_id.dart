@@ -17071,4 +17071,25 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'Email dikonfirmasi. Pesan sudah terbuka.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email dikonfirmasi.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Tambahkan email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Saat ini akunmu tidak punya email. Tambahkan email supaya kamu selalu bisa masuk lagi.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Tambah email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Konfirmasi emailmu untuk mengirim pesan.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini.';
 }

@@ -14622,5 +14622,29 @@
   "emailConfirmationDone": "Email confirmed. DMs are unlocked.",
   "@emailConfirmationDone": {
     "description": "Pop-up when a signed-in account opens its email confirmation link in the app."
+  },
+  "emailConfirmationLinkConfirmed": "Email confirmed.",
+  "@emailConfirmationLinkConfirmed": {
+    "description": "Pop-up after a confirmation link opened in the app, when the signed-in account is not known to be the one it confirmed."
+  },
+  "emailConfirmationAddEmailTitle": "Add an email",
+  "@emailConfirmationAddEmailTitle": {
+    "description": "Own-profile pill and prompt title for an email/password account that no longer has an email (another person confirmed the address it had claimed)."
+  },
+  "emailConfirmationAddEmailSubtitle": "Your account has no email right now. Add one so you can always get back in.",
+  "@emailConfirmationAddEmailSubtitle": {
+    "description": "Body of the own-profile prompt for an email/password account with no email."
+  },
+  "emailConfirmationAddEmailButton": "Add email",
+  "@emailConfirmationAddEmailButton": {
+    "description": "Button opening the change-email screen from the add-an-email prompt."
+  },
+  "emailConfirmationSendBlocked": "Confirm your email to send messages.",
+  "@emailConfirmationSendBlocked": {
+    "description": "Pop-up when an account that has not confirmed its email tries to send a direct message, for example from the share sheet."
+  },
+  "emailConfirmationCapReached": "That's the hourly limit for new accounts. Confirm your email to lift it.",
+  "@emailConfirmationCapReached": {
+    "description": "Pop-up when an account that has not confirmed its email hits the hourly limit on posts, comments or reports."
   }
 }

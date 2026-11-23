@@ -16409,4 +16409,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => '이메일 인증 완료. 이제 메시지를 쓸 수 있어요.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '이메일 인증 완료.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '이메일 추가하기';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '지금은 계정에 이메일이 없어요. 언제든 계정에 다시 들어올 수 있도록 이메일을 추가해주세요.';
+
+  @override
+  String get emailConfirmationAddEmailButton => '이메일 추가';
+
+  @override
+  String get emailConfirmationSendBlocked => '메시지를 보내려면 이메일을 인증해주세요.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      '새 계정의 시간당 한도에 도달했어요. 이메일을 인증하면 한도가 풀려요.';
 }

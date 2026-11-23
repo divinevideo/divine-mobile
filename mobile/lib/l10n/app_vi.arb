@@ -7933,5 +7933,11 @@
   "emailConfirmationResendFailed": "Chưa gửi được. Thử lại sau chút nhé.",
   "emailConfirmationMessagesTitle": "Xác nhận email để bắt đầu nhắn tin",
   "emailConfirmationMessagesBody": "Bấm vào liên kết bọn mình đã gửi đến {email}. Sau đó tha hồ nhắn tin.",
-  "emailConfirmationDone": "Đã xác nhận email. Tin nhắn đã được mở khóa."
+  "emailConfirmationDone": "Đã xác nhận email. Tin nhắn đã được mở khóa.",
+  "emailConfirmationLinkConfirmed": "Đã xác nhận email.",
+  "emailConfirmationAddEmailTitle": "Thêm email",
+  "emailConfirmationAddEmailSubtitle": "Tài khoản của bạn hiện không có email. Thêm một email để bạn luôn vào lại được nhé.",
+  "emailConfirmationAddEmailButton": "Thêm email",
+  "emailConfirmationSendBlocked": "Xác nhận email để gửi tin nhắn.",
+  "emailConfirmationCapReached": "Đó là giới hạn mỗi giờ cho tài khoản mới. Xác nhận email để gỡ giới hạn nhé."
 }

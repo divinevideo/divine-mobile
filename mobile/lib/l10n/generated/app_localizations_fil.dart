@@ -17332,4 +17332,25 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'Na-confirm na ang email. Naka-unlock na ang mga mensahe.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Na-confirm na ang email.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Magdagdag ng email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Walang email ang account mo ngayon. Magdagdag ka ng isa para lagi kang makakabalik.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Magdagdag ng email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'I-confirm ang email mo para makapagpadala ng mga mensahe.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Iyan na ang limit kada oras para sa mga bagong account. I-confirm ang email mo para matanggal ito.';
 }

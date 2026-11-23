@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "L'envoi n'a pas marché. Réessaie dans un instant.",
   "emailConfirmationMessagesTitle": "Confirme ton e-mail pour envoyer des messages",
   "emailConfirmationMessagesBody": "Appuie sur le lien envoyé à {email}. Ensuite, les messages sont à toi.",
-  "emailConfirmationDone": "E-mail confirmé. Les messages sont débloqués."
+  "emailConfirmationDone": "E-mail confirmé. Les messages sont débloqués.",
+  "emailConfirmationLinkConfirmed": "E-mail confirmé.",
+  "emailConfirmationAddEmailTitle": "Ajoute un e-mail",
+  "emailConfirmationAddEmailSubtitle": "Ton compte n'a pas d'e-mail pour l'instant. Ajoutes-en un pour pouvoir toujours y revenir.",
+  "emailConfirmationAddEmailButton": "Ajouter un e-mail",
+  "emailConfirmationSendBlocked": "Confirme ton e-mail pour envoyer des messages.",
+  "emailConfirmationCapReached": "C'est la limite horaire pour les nouveaux comptes. Confirme ton e-mail pour la lever."
 }

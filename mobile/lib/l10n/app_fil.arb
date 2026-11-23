@@ -5677,5 +5677,11 @@
   "emailConfirmationResendFailed": "Hindi namin naipadala. Subukan ulit mamaya.",
   "emailConfirmationMessagesTitle": "I-confirm ang email mo para makapagsimulang mag-message",
   "emailConfirmationMessagesBody": "I-tap ang link na pinadala namin sa {email}. Tapos, sa'yo na ang mga mensahe.",
-  "emailConfirmationDone": "Na-confirm na ang email. Naka-unlock na ang mga mensahe."
+  "emailConfirmationDone": "Na-confirm na ang email. Naka-unlock na ang mga mensahe.",
+  "emailConfirmationLinkConfirmed": "Na-confirm na ang email.",
+  "emailConfirmationAddEmailTitle": "Magdagdag ng email",
+  "emailConfirmationAddEmailSubtitle": "Walang email ang account mo ngayon. Magdagdag ka ng isa para lagi kang makakabalik.",
+  "emailConfirmationAddEmailButton": "Magdagdag ng email",
+  "emailConfirmationSendBlocked": "I-confirm ang email mo para makapagpadala ng mga mensahe.",
+  "emailConfirmationCapReached": "Iyan na ang limit kada oras para sa mga bagong account. I-confirm ang email mo para matanggal ito."
 }

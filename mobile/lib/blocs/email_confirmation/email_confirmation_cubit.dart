@@ -22,44 +22,98 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
 
   final EmailConfirmationRepository _repository;
 
-  /// Forgets the previous account and checks [account], the signed-in
-  /// account's public key, or nobody when it is null.
+  /// Points the cubit at [account], the signed-in account's public key, or
+  /// nobody when it is null, then checks it with Keycast.
+  ///
+  /// Starts from the last answer remembered for the account, so an account
+  /// known to be unconfirmed is locked from the first frame rather than only
+  /// once the network answers.
   Future<void> loadFor(String? account) async {
     if (account == state.account) return refresh();
-    emitIfOpen(EmailConfirmationState(account: account));
+    emitIfOpen(
+      account == null
+          ? const EmailConfirmationState()
+          : EmailConfirmationState.fromConfirmation(
+              account,
+              _repository.remembered(account),
+            ),
+    );
     await refresh();
   }
 
   /// Re-checks the confirmation with Keycast.
   ///
   /// An unknown answer keeps the last known state, so a dropped connection
-  /// neither unlocks DMs nor hides the note.
+  /// neither unlocks DMs nor hides the note. Confirmation only moves forward:
+  /// an answer saying an address is unconfirmed is dropped once that same
+  /// address is known to be confirmed, because it was read before the link
+  /// was clicked.
   Future<void> refresh() async {
     final account = state.account;
     if (account == null) return;
     final confirmation = await _repository.fetchStatus();
     if (state.account != account) return;
     if (confirmation.kind == EmailConfirmationKind.unknown) return;
+    final isStale =
+        state.status == EmailConfirmationStatus.confirmed &&
+        confirmation.kind == EmailConfirmationKind.unconfirmed &&
+        confirmation.email == state.email;
+    if (isStale) return;
     emitIfOpen(
-      state.copyWith(
-        status: confirmation.kind == EmailConfirmationKind.unconfirmed
-            ? EmailConfirmationStatus.unconfirmed
-            : EmailConfirmationStatus.confirmed,
-        email: confirmation.email,
+      EmailConfirmationState.fromConfirmation(
+        account,
+        confirmation,
+        resendStatus: state.resendStatus,
       ),
     );
+    await _repository.remember(account, confirmation);
+  }
+
+  /// Keycast refused to sign a direct message because it sees this account's
+  /// email as unconfirmed.
+  ///
+  /// Keycast is the authority, so the account locks again even if the app
+  /// had it as confirmed, and then re-checks.
+  Future<void> markUnconfirmedByKeycast() async {
+    final account = state.account;
+    final email = state.email;
+    if (account == null) return;
+    if (email != null && !state.isUnconfirmed) {
+      final confirmation = EmailConfirmation.unconfirmed(email);
+      emitIfOpen(
+        EmailConfirmationState.fromConfirmation(
+          account,
+          confirmation,
+          resendStatus: state.resendStatus,
+        ),
+      );
+      await _repository.remember(account, confirmation);
+    }
+    await refresh();
+  }
+
+  /// Keycast refused a post, comment or report because this account used up
+  /// the hourly allowance that applies until it confirms its email.
+  void reportCapReached() {
+    if (state.account == null) return;
+    emitIfOpen(state.copyWith(capRefusals: state.capRefusals + 1));
   }
 
   /// Asks Keycast to send a fresh confirmation link.
-  Future<void> resend() async {
-    final account = state.account;
-    if (account == null) return;
+  ///
+  /// When [account] is given, the request is dropped unless that account is
+  /// still the signed-in one, so a reminder left over from a previous account
+  /// cannot resend for whoever signed in after it.
+  Future<void> resend({String? account}) async {
+    final current = state.account;
+    if (current == null) return;
+    if (account != null && account != current) return;
     if (state.resendStatus == EmailConfirmationResendStatus.sending) return;
     emitIfOpen(
       state.copyWith(resendStatus: EmailConfirmationResendStatus.sending),
     );
     final accepted = await _repository.resend();
-    if (state.account != account) return;
+    if (state.account != current) return;
     emitIfOpen(
       state.copyWith(
         resendStatus: accepted

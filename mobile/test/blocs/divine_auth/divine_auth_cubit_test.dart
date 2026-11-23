@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -18,6 +19,9 @@ import 'package:unified_logger/unified_logger.dart';
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockEmailConfirmationRepository extends Mock
+    implements EmailConfirmationRepository {}
 
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
@@ -40,6 +44,7 @@ class _RecordingBlocObserver extends BlocObserver {
 
 void main() {
   setUpAll(() {
+    registerFallbackValue(const EmailConfirmation.unknown());
     registerFallbackValue(_FakeKeycastSession());
     registerFallbackValue(
       const OAuthConfig(
@@ -75,11 +80,15 @@ void main() {
       );
     });
 
-    DivineAuthCubit buildCubit({String? appVersion}) {
+    DivineAuthCubit buildCubit({
+      String? appVersion,
+      EmailConfirmationRepository? emailConfirmationRepository,
+    }) {
       return DivineAuthCubit(
         oauthClient: mockOAuth,
         authService: mockAuthService,
         pendingVerificationService: mockPendingVerification,
+        emailConfirmationRepository: emailConfirmationRepository,
         appVersion: appVersion,
         validationMessages: AuthValidationMessages.englishDefaults,
       );
@@ -304,6 +313,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -345,6 +355,7 @@ void main() {
                 email: testEmail,
                 password: testPassword,
                 scope: 'policy:full',
+                instantAccess: true,
               ),
             ).called(1);
             verify(
@@ -367,6 +378,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -399,6 +411,7 @@ void main() {
                 email: testEmail,
                 password: testPassword,
                 scope: 'policy:full',
+                instantAccess: true,
               ),
             ).called(1);
           },
@@ -421,6 +434,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -468,6 +482,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -511,6 +526,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -555,6 +571,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -598,6 +615,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -653,6 +671,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (HeadlessLoginResult(success: true), testVerifier),
@@ -689,6 +708,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -740,6 +760,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -786,6 +807,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -823,6 +845,144 @@ void main() {
           ],
           errors: () => [isA<Exception>()],
         );
+      });
+
+      group('confirmation status', () {
+        late _MockEmailConfirmationRepository confirmations;
+        const pubkey =
+            'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+
+        setUp(() {
+          confirmations = _MockEmailConfirmationRepository();
+          when(
+            () => confirmations.remember(any(), any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockOAuth.exchangeCode(
+              code: any(named: 'code'),
+              verifier: any(named: 'verifier'),
+            ),
+          ).thenAnswer(
+            (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+          );
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+        });
+
+        test(
+          'records an instant sign-up as unconfirmed before signing in',
+          () async {
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: pubkey,
+                  verificationRequired: false,
+                  code: testCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            final cubit = buildCubit(emailConfirmationRepository: confirmations)
+              ..initialize()
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+
+            await cubit.submit();
+
+            verifyInOrder([
+              () => confirmations.remember(
+                pubkey,
+                const EmailConfirmation.unconfirmed(testEmail),
+              ),
+              () => mockAuthService.signInWithDivineOAuth(any()),
+            ]);
+            await cubit.close();
+          },
+        );
+
+        test('records what sign-in reports about the email', () async {
+          when(
+            () => mockOAuth.headlessLogin(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              HeadlessLoginResult(
+                success: true,
+                code: testCode,
+                pubkey: pubkey,
+                emailVerified: false,
+              ),
+              testVerifier,
+            ),
+          );
+          final cubit = buildCubit(emailConfirmationRepository: confirmations)
+            ..initialize(isSignIn: true)
+            ..updateEmail(testEmail)
+            ..updatePassword(testPassword);
+
+          await cubit.submit();
+
+          verify(
+            () => mockOAuth.headlessLogin(
+              email: testEmail,
+              password: testPassword,
+              scope: any(named: 'scope'),
+              instantAccess: true,
+            ),
+          ).called(1);
+          verifyInOrder([
+            () => confirmations.remember(
+              pubkey,
+              const EmailConfirmation.unconfirmed(testEmail),
+            ),
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ]);
+          await cubit.close();
+        });
+
+        test('records nothing when the server does not report it', () async {
+          when(
+            () => mockOAuth.headlessLogin(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              HeadlessLoginResult(
+                success: true,
+                code: testCode,
+                pubkey: pubkey,
+              ),
+              testVerifier,
+            ),
+          );
+          final cubit = buildCubit(emailConfirmationRepository: confirmations)
+            ..initialize(isSignIn: true)
+            ..updateEmail(testEmail)
+            ..updatePassword(testPassword);
+
+          await cubit.submit();
+
+          verifyNever(() => confirmations.remember(any(), any()));
+          await cubit.close();
+        });
       });
 
       group('sign up', () {

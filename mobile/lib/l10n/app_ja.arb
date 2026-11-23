@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "送信できませんでした。少し時間をおいてもう一度お試しください。",
   "emailConfirmationMessagesTitle": "メールアドレスを認証して、メッセージを始めましょう",
   "emailConfirmationMessagesBody": "{email} に送ったリンクをタップしてください。それでメッセージが使えるようになります。",
-  "emailConfirmationDone": "メールアドレスの認証が完了しました。メッセージが使えるようになりました。"
+  "emailConfirmationDone": "メールアドレスの認証が完了しました。メッセージが使えるようになりました。",
+  "emailConfirmationLinkConfirmed": "メールアドレスの認証が完了しました。",
+  "emailConfirmationAddEmailTitle": "メールアドレスを追加",
+  "emailConfirmationAddEmailSubtitle": "現在、アカウントにメールアドレスが登録されていません。いつでもアカウントに戻れるよう、メールアドレスを追加してください。",
+  "emailConfirmationAddEmailButton": "メールアドレスを追加",
+  "emailConfirmationSendBlocked": "メッセージを送信するには、メールアドレスを認証してください。",
+  "emailConfirmationCapReached": "新しいアカウントの1時間あたりの上限に達しました。メールアドレスを認証すると、上限が解除されます。"
 }

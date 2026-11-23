@@ -7933,5 +7933,11 @@
   "emailConfirmationResendFailed": "Tidak dapat dihantar. Cuba lagi sekejap lagi.",
   "emailConfirmationMessagesTitle": "Sahkan e-mel anda untuk mula menghantar mesej",
   "emailConfirmationMessagesBody": "Ketik pautan yang kami hantar ke {email}. Selepas itu, mesej milik anda sepenuhnya.",
-  "emailConfirmationDone": "E-mel disahkan. Mesej sudah dibuka."
+  "emailConfirmationDone": "E-mel disahkan. Mesej sudah dibuka.",
+  "emailConfirmationLinkConfirmed": "E-mel disahkan.",
+  "emailConfirmationAddEmailTitle": "Tambah e-mel",
+  "emailConfirmationAddEmailSubtitle": "Akaun anda tiada e-mel buat masa ini. Tambah satu supaya anda sentiasa boleh kembali ke akaun anda.",
+  "emailConfirmationAddEmailButton": "Tambah e-mel",
+  "emailConfirmationSendBlocked": "Sahkan e-mel anda untuk menghantar mesej.",
+  "emailConfirmationCapReached": "Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini."
 }

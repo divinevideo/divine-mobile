@@ -17105,4 +17105,25 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'E-posta doğrulandı. Mesajların kilidi açıldı.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-posta doğrulandı.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Hesabında şu anda e-posta yok. Her zaman geri dönebilmek için bir tane ekle.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Mesaj göndermek için e-postanı doğrula.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula.';
 }

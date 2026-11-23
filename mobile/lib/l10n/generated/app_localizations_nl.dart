@@ -17274,4 +17274,25 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'E-mail bevestigd. Berichten zijn ontgrendeld.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mail bevestigd.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Voeg een e-mail toe';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Je account heeft nu geen e-mail. Voeg er een toe, zodat je altijd weer in je account komt.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'E-mail toevoegen';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Bevestig je e-mail om berichten te sturen.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen.';
 }

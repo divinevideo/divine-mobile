@@ -16192,4 +16192,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => '邮箱已确认，私信已解锁。';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '邮箱已确认。';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '添加邮箱';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '你的账号目前没有绑定邮箱。添加一个，确保你随时都能回到自己的账号。';
+
+  @override
+  String get emailConfirmationAddEmailButton => '添加邮箱';
+
+  @override
+  String get emailConfirmationSendBlocked => '确认邮箱后才能发私信。';
+
+  @override
+  String get emailConfirmationCapReached => '新账号每小时的上限就是这些。确认邮箱即可解除限制。';
 }

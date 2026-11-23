@@ -17300,4 +17300,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => 'Email confirmed. DMs are unlocked.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confirmed.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Add an email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Your account has no email right now. Add one so you can always get back in.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Add email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirm your email to send messages.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'That\'s the hourly limit for new accounts. Confirm your email to lift it.';
 }

@@ -8,6 +8,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -33,6 +36,7 @@ void main() {
       when(() => cubit.state).thenReturn(const EmailConfirmationState());
       when(() => cubit.loadFor(any())).thenAnswer((_) async {});
       when(() => cubit.refresh()).thenAnswer((_) async {});
+      when(cubit.markUnconfirmedByKeycast).thenAnswer((_) async {});
       authService = _MockAuthService();
       authStates = StreamController<AuthState>.broadcast();
       addTearDown(authStates.close);
@@ -70,6 +74,32 @@ void main() {
 
       verify(() => cubit.loadFor(null)).called(1);
       verifyNever(() => cubit.loadFor(_account));
+    });
+
+    testWidgets('routes Keycast refusals to the cubit', (tester) async {
+      when(() => authService.authState).thenReturn(AuthState.authenticated);
+      when(
+        () => authService.authenticationSource,
+      ).thenReturn(AuthenticationSource.divineOAuth);
+      await tester.pumpWidget(buildSubject());
+
+      final rpc = KeycastRpc(
+        nostrApi: 'https://login.divine.video/api/nostr',
+        accessToken: 'token',
+        httpClient: MockClient(
+          (_) async => http.Response(
+            '{"error":"limit","code":"UNCONFIRMED_RATE_LIMITED"}',
+            429,
+          ),
+        ),
+      );
+      await expectLater(
+        rpc.getPublicKey,
+        throwsA(isA<UnconfirmedRateLimitedException>()),
+      );
+      await tester.pump();
+
+      verify(cubit.reportCapReached).called(1);
     });
 
     testWidgets('forgets the account on sign-out', (tester) async {

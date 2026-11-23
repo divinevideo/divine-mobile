@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Gagal mengirim. Coba lagi sebentar lagi.",
   "emailConfirmationMessagesTitle": "Konfirmasi emailmu untuk mulai kirim pesan",
   "emailConfirmationMessagesBody": "Ketuk tautan yang kami kirim ke {email}. Setelah itu, kamu bebas kirim pesan.",
-  "emailConfirmationDone": "Email dikonfirmasi. Pesan sudah terbuka."
+  "emailConfirmationDone": "Email dikonfirmasi. Pesan sudah terbuka.",
+  "emailConfirmationLinkConfirmed": "Email dikonfirmasi.",
+  "emailConfirmationAddEmailTitle": "Tambahkan email",
+  "emailConfirmationAddEmailSubtitle": "Saat ini akunmu tidak punya email. Tambahkan email supaya kamu selalu bisa masuk lagi.",
+  "emailConfirmationAddEmailButton": "Tambah email",
+  "emailConfirmationSendBlocked": "Konfirmasi emailmu untuk mengirim pesan.",
+  "emailConfirmationCapReached": "Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini."
 }

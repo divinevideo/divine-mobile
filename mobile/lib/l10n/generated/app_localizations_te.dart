@@ -17564,4 +17564,25 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ఇమెయిల్ నిర్ధారించబడింది.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ఇమెయిల్‌ను జోడించండి';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'ప్రస్తుతం మీ ఖాతాకు ఇమెయిల్ లేదు. ఎప్పుడైనా తిరిగి లోపలికి రాగలిగేలా ఒక ఇమెయిల్‌ను జోడించండి.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ఇమెయిల్ జోడించండి';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'సందేశాలు పంపడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'కొత్త ఖాతాలకు గంటకు ఉన్న పరిమితి ఇదే. దాన్ని తొలగించడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.';
 }

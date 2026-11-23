@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -28,9 +29,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     required AuthService authService,
     required PendingVerificationService pendingVerificationService,
     required AuthValidationMessages validationMessages,
+    EmailConfirmationRepository? emailConfirmationRepository,
     bool requirePasswordConfirmation = false,
     String? appVersion,
   }) : _oauthClient = oauthClient,
+       _emailConfirmationRepository = emailConfirmationRepository,
        _authService = authService,
        _pendingVerificationService = pendingVerificationService,
        _validationMessages = validationMessages,
@@ -42,6 +45,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final AuthService _authService;
   final PendingVerificationService _pendingVerificationService;
   final AuthValidationMessages _validationMessages;
+  final EmailConfirmationRepository? _emailConfirmationRepository;
   final bool _requirePasswordConfirmation;
   final String? _appVersion;
 
@@ -217,6 +221,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       email: email,
       password: password,
       scope: 'policy:full',
+      instantAccess: true,
     );
 
     if (!result.success || result.code == null) {
@@ -237,8 +242,30 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       return;
     }
 
+    final pubkey = result.pubkey;
+    final emailVerified = result.emailVerified;
+    if (pubkey != null && emailVerified != null) {
+      await _rememberConfirmation(
+        pubkey,
+        EmailConfirmation.fromSignIn(
+          email: email,
+          emailVerified: emailVerified,
+        ),
+      );
+    }
+
     // Exchange code for tokens
     await _exchangeCodeAndLogin(result.code!, verifier);
+  }
+
+  /// Records what Keycast just said about [pubkey]'s email before the session
+  /// starts, so the app knows an unconfirmed account is unconfirmed from its
+  /// first frame instead of waiting for a status check.
+  Future<void> _rememberConfirmation(
+    String pubkey,
+    EmailConfirmation confirmation,
+  ) async {
+    await _emailConfirmationRepository?.remember(pubkey, confirmation);
   }
 
   /// Translates the client-layer [KeycastLoginFailure] into the UI-facing
@@ -313,6 +340,10 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         'Account created; signing in before email confirmation',
         name: 'DivineAuthCubit',
         category: LogCategory.auth,
+      );
+      await _rememberConfirmation(
+        result.pubkey,
+        EmailConfirmation.unconfirmed(email),
       );
       await _exchangeCodeAndLogin(result.code!, verifier);
       return;

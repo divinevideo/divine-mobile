@@ -17359,4 +17359,25 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'E-mail confirmado. Mensagens desbloqueadas.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mail confirmado.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Adicione um e-mail';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Sua conta está sem e-mail no momento. Adicione um para sempre conseguir voltar.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Adicionar e-mail';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirme seu e-mail para mandar mensagens.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Esse é o limite por hora para contas novas. Confirme seu e-mail para liberar.';
 }

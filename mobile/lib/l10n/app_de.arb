@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Das hat nicht geklappt. Versuch es gleich noch mal.",
   "emailConfirmationMessagesTitle": "Bestätige deine E-Mail, um Nachrichten zu schreiben",
   "emailConfirmationMessagesBody": "Tippe auf den Link, den wir an {email} geschickt haben. Dann kann's mit Nachrichten losgehen.",
-  "emailConfirmationDone": "E-Mail bestätigt. Nachrichten sind freigeschaltet."
+  "emailConfirmationDone": "E-Mail bestätigt. Nachrichten sind freigeschaltet.",
+  "emailConfirmationLinkConfirmed": "E-Mail bestätigt.",
+  "emailConfirmationAddEmailTitle": "E-Mail hinzufügen",
+  "emailConfirmationAddEmailSubtitle": "Dein Konto hat gerade keine E-Mail. Füge eine hinzu, damit du immer wieder in dein Konto kommst.",
+  "emailConfirmationAddEmailButton": "E-Mail hinzufügen",
+  "emailConfirmationSendBlocked": "Bestätige deine E-Mail, um Nachrichten zu senden.",
+  "emailConfirmationCapReached": "Das ist das Stundenlimit für neue Konten. Bestätige deine E-Mail, um es aufzuheben."
 }

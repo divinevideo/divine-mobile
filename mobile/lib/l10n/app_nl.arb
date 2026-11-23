@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Versturen lukte niet. Probeer het zo nog eens.",
   "emailConfirmationMessagesTitle": "Bevestig je e-mail om berichten te sturen",
   "emailConfirmationMessagesBody": "Tik op de link die we naar {email} hebben gestuurd. Dan zijn berichten helemaal van jou.",
-  "emailConfirmationDone": "E-mail bevestigd. Berichten zijn ontgrendeld."
+  "emailConfirmationDone": "E-mail bevestigd. Berichten zijn ontgrendeld.",
+  "emailConfirmationLinkConfirmed": "E-mail bevestigd.",
+  "emailConfirmationAddEmailTitle": "Voeg een e-mail toe",
+  "emailConfirmationAddEmailSubtitle": "Je account heeft nu geen e-mail. Voeg er een toe, zodat je altijd weer in je account komt.",
+  "emailConfirmationAddEmailButton": "E-mail toevoegen",
+  "emailConfirmationSendBlocked": "Bevestig je e-mail om berichten te sturen.",
+  "emailConfirmationCapReached": "Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen."
 }

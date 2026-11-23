@@ -17514,4 +17514,25 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'Email confirmat. Mesajele sunt deblocate.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confirmat.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Adaugă un email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Contul tău nu are acum niciun email. Adaugă unul ca să te poți întoarce mereu în cont.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Adaugă email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirmă-ți emailul ca să trimiți mesaje.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici.';
 }

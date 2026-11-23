@@ -6640,5 +6640,11 @@
   "emailConfirmationResendFailed": "Det gick inte att skicka. Försök igen om en stund.",
   "emailConfirmationMessagesTitle": "Bekräfta din e-post för att börja skicka meddelanden",
   "emailConfirmationMessagesBody": "Tryck på länken vi skickade till {email}. Sen är meddelandena dina.",
-  "emailConfirmationDone": "E-post bekräftad. Meddelanden är upplåsta."
+  "emailConfirmationDone": "E-post bekräftad. Meddelanden är upplåsta.",
+  "emailConfirmationLinkConfirmed": "E-post bekräftad.",
+  "emailConfirmationAddEmailTitle": "Lägg till e-post",
+  "emailConfirmationAddEmailSubtitle": "Ditt konto har ingen e-post just nu. Lägg till en e-postadress så att du alltid kan ta dig tillbaka in.",
+  "emailConfirmationAddEmailButton": "Lägg till e-post",
+  "emailConfirmationSendBlocked": "Bekräfta din e-post för att skicka meddelanden.",
+  "emailConfirmationCapReached": "Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den."
 }

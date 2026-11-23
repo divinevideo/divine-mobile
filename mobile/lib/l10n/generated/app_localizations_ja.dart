@@ -16390,4 +16390,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => 'メールアドレスの認証が完了しました。メッセージが使えるようになりました。';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'メールアドレスの認証が完了しました。';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'メールアドレスを追加';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '現在、アカウントにメールアドレスが登録されていません。いつでもアカウントに戻れるよう、メールアドレスを追加してください。';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'メールアドレスを追加';
+
+  @override
+  String get emailConfirmationSendBlocked => 'メッセージを送信するには、メールアドレスを認証してください。';
+
+  @override
+  String get emailConfirmationCapReached =>
+      '新しいアカウントの1時間あたりの上限に達しました。メールアドレスを認証すると、上限が解除されます。';
 }

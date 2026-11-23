@@ -17182,4 +17182,25 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ای میل کی تصدیق ہو گئی۔';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'آپ کے اکاؤنٹ میں ابھی کوئی ای میل نہیں ہے۔ ایک ای میل شامل کریں تاکہ آپ ہمیشہ واپس آ سکیں۔';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'پیغامات بھیجنے کے لیے اپنی ای میل کی تصدیق کریں۔';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔';
 }

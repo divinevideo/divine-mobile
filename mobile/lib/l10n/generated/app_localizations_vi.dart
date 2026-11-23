@@ -17122,4 +17122,24 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'Đã xác nhận email. Tin nhắn đã được mở khóa.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Đã xác nhận email.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Thêm email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Tài khoản của bạn hiện không có email. Thêm một email để bạn luôn vào lại được nhé.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Thêm email';
+
+  @override
+  String get emailConfirmationSendBlocked => 'Xác nhận email để gửi tin nhắn.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Đó là giới hạn mỗi giờ cho tài khoản mới. Xác nhận email để gỡ giới hạn nhé.';
 }

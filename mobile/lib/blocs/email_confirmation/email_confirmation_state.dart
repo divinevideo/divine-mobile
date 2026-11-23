@@ -8,8 +8,11 @@ enum EmailConfirmationStatus {
   /// The account signed in before confirming its email.
   unconfirmed,
 
-  /// The email is confirmed, or there is no email to confirm.
+  /// The email is confirmed.
   confirmed,
+
+  /// The account has no email, so it cannot be recovered by email.
+  noEmail,
 }
 
 /// Progress of a "resend the confirmation email" request.
@@ -22,37 +25,65 @@ class EmailConfirmationState extends Equatable {
     this.status = EmailConfirmationStatus.unknown,
     this.email,
     this.resendStatus = EmailConfirmationResendStatus.idle,
+    this.capRefusals = 0,
   });
+
+  /// The state for [account] described by [confirmation].
+  factory EmailConfirmationState.fromConfirmation(
+    String account,
+    EmailConfirmation confirmation, {
+    EmailConfirmationResendStatus resendStatus =
+        EmailConfirmationResendStatus.idle,
+  }) => EmailConfirmationState(
+    account: account,
+    status: switch (confirmation.kind) {
+      EmailConfirmationKind.unknown => EmailConfirmationStatus.unknown,
+      EmailConfirmationKind.unconfirmed => EmailConfirmationStatus.unconfirmed,
+      EmailConfirmationKind.confirmed => EmailConfirmationStatus.confirmed,
+      EmailConfirmationKind.missing => EmailConfirmationStatus.noEmail,
+    },
+    email: confirmation.email,
+    resendStatus: resendStatus,
+  );
 
   /// Public key (hex) of the account this state describes.
   final String? account;
 
   final EmailConfirmationStatus status;
 
-  /// The address awaiting confirmation, when [status] is unconfirmed.
+  /// The address this state is about, when the account has one.
   final String? email;
 
   final EmailConfirmationResendStatus resendStatus;
 
+  /// How many times Keycast has refused a post, comment or report for this
+  /// account because it has not confirmed its email. Each new refusal is one
+  /// reminder of why.
+  final int capRefusals;
+
   /// Whether the account must confirm its email before using DMs.
   bool get isUnconfirmed => status == EmailConfirmationStatus.unconfirmed;
 
+  /// Whether the account has no email to sign in or recover with.
+  bool get hasNoEmail => status == EmailConfirmationStatus.noEmail;
+
   EmailConfirmationState copyWith({
-    EmailConfirmationStatus? status,
-    String? email,
     EmailConfirmationResendStatus? resendStatus,
-  }) {
-    final nextStatus = status ?? this.status;
-    return EmailConfirmationState(
-      account: account,
-      status: nextStatus,
-      email: nextStatus == EmailConfirmationStatus.unconfirmed
-          ? email ?? this.email
-          : null,
-      resendStatus: resendStatus ?? this.resendStatus,
-    );
-  }
+    int? capRefusals,
+  }) => EmailConfirmationState(
+    account: account,
+    status: status,
+    email: email,
+    resendStatus: resendStatus ?? this.resendStatus,
+    capRefusals: capRefusals ?? this.capRefusals,
+  );
 
   @override
-  List<Object?> get props => [account, status, email, resendStatus];
+  List<Object?> get props => [
+    account,
+    status,
+    email,
+    resendStatus,
+    capRefusals,
+  ];
 }

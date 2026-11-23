@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 
@@ -17,6 +18,7 @@ final emailConfirmationRepositoryProvider =
         readAccessToken: ref
             .watch(authServiceProvider)
             .activeAccountKeycastToken,
+        preferences: ref.watch(sharedPreferencesProvider),
       );
     });
 

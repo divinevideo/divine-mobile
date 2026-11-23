@@ -17201,4 +17201,25 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get emailConfirmationDone =>
       'E-post bekräftad. Meddelanden är upplåsta.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-post bekräftad.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Ditt konto har ingen e-post just nu. Lägg till en e-postadress så att du alltid kan ta dig tillbaka in.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Bekräfta din e-post för att skicka meddelanden.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den.';
 }

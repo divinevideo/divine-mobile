@@ -16767,4 +16767,24 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get emailConfirmationDone => 'ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ኢሜይሉ ተረጋግጧል።';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'መለያዎ አሁን ኢሜይል የለውም። ሁልጊዜ ተመልሰው መግባት እንዲችሉ አንድ ያክሉ።';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationSendBlocked => 'መልእክቶችን ለመላክ ኢሜይልዎን ያረጋግጡ።';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።';
 }
