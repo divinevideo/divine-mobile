@@ -46,19 +46,19 @@ class _ScreenFrameTraceScopeState extends ConsumerState<ScreenFrameTraceScope> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _view = View.of(context);
+    final state = WidgetsBinding.instance.lifecycleState;
     _trace ??= ScreenFrameTrace(
       ref.read(performanceMonitoringServiceProvider),
       screen: widget.screen,
       refreshRate: () => _view?.display.refreshRate ?? 0,
-      foreground: ScreenFrameTrace.isForeground(
-        WidgetsBinding.instance.lifecycleState,
-      ),
-      covered: !TickerMode.getValuesNotifier(context).value.enabled,
+      foreground: ScreenFrameTrace.isForeground(state),
+      covered:
+          _canReadCoverage(state) &&
+          !TickerMode.getValuesNotifier(context).value.enabled,
       timings: widget.timings ?? const SchedulerFrameTimingsSource(),
     );
     _lifecycle ??= AppLifecycleListener(
-      onStateChange: (state) =>
-          _trace?.setForeground(ScreenFrameTrace.isForeground(state)),
+      onStateChange: _onLifecycleChanged,
     );
     _watchTickerMode();
   }
@@ -82,8 +82,27 @@ class _ScreenFrameTraceScopeState extends ConsumerState<ScreenFrameTraceScope> {
 
   void _onTickerModeChanged() {
     final tickerMode = _tickerMode;
-    if (tickerMode == null) return;
+    if (tickerMode == null ||
+        !_canReadCoverage(WidgetsBinding.instance.lifecycleState)) {
+      return;
+    }
     _trace?.setCovered(!tickerMode.value.enabled);
+  }
+
+  // The app can mute every route's tickers while inactive, even though the
+  // top route is still visible. Keep the last known coverage until resume.
+  bool _canReadCoverage(AppLifecycleState? state) =>
+      state == null || state == AppLifecycleState.resumed;
+
+  void _onLifecycleChanged(AppLifecycleState state) {
+    _trace?.setForeground(ScreenFrameTrace.isForeground(state));
+    if (state == AppLifecycleState.resumed) {
+      // Read after the app-wide ticker mode has been restored. A covered
+      // route can remain muted and never get a notifier event on resume.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onTickerModeChanged();
+      });
+    }
   }
 
   @override

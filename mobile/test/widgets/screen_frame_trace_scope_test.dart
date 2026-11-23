@@ -69,15 +69,20 @@ void main() {
 
     List<RecordedPerformanceTrace> traces() => monitoring.recorder.traces;
 
-    Widget app(Widget home) => ProviderScope(
+    Widget app(Widget home, {ValueNotifier<bool>? appTickers}) => ProviderScope(
       overrides: [
         performanceMonitoringServiceProvider.overrideWithValue(monitoring),
       ],
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: Navigator(
-          onGenerateRoute: (_) => PageRouteBuilder<void>(
-            pageBuilder: (_, _, _) => home,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: appTickers ?? const AlwaysStoppedAnimation(true),
+          builder: (_, enabled, child) =>
+              TickerMode(enabled: enabled, child: child!),
+          child: Navigator(
+            onGenerateRoute: (_) => PageRouteBuilder<void>(
+              pageBuilder: (_, _, _) => home,
+            ),
           ),
         ),
       ),
@@ -166,16 +171,22 @@ void main() {
           AppLifecycleState.resumed,
         ),
       );
-      await tester.pumpWidget(app(tracedScreen()));
+      final appTickers = ValueNotifier(true);
+      addTearDown(appTickers.dispose);
+      await tester.pumpWidget(app(tracedScreen(), appTickers: appTickers));
       timings.reportFrames(1, 20);
       await tester.pump(const Duration(seconds: 2));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      // The app-wide lifecycle widget mutes tickers on Android and iOS.
+      appTickers.value = false;
+      await tester.pump();
+      expect(timings.callbacks, hasLength(1));
+      expect(traces(), isEmpty);
       timings
         ..frameNumber = 20
         ..drawingFrame = false;
 
-      tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
 
       expect(traces(), hasLength(1));
       expect(traces().single.attributes['end'], 'background');
@@ -184,6 +195,8 @@ void main() {
       tester.binding
         ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
         ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      appTickers.value = true;
+      await tester.pump();
 
       expect(timings.callbacks, hasLength(1));
     });
