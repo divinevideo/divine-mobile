@@ -317,9 +317,8 @@ class DivineCameraDesktop extends DivineCameraPlatform
         enableAudio: enabled,
         previewHandle: handle,
       );
-    } catch (_) {
-      _state = const CameraState();
-      _previewCameraId.value = null;
+    } catch (error) {
+      await _retireDevice(error, generation);
       rethrow;
     }
   }
@@ -395,8 +394,9 @@ class DivineCameraDesktop extends DivineCameraPlatform
     _recordingLimit = null;
     final cameraId = _requireCamera();
     final generation = _generation;
+    capture.XFile? stopped;
     try {
-      final file = await _cameraPlatform.stopVideoRecording(cameraId);
+      final file = stopped = await _cameraPlatform.stopVideoRecording(cameraId);
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: false);
       _isFinalizing = true;
@@ -407,13 +407,18 @@ class DivineCameraDesktop extends DivineCameraPlatform
         directory: _recordingOutputDirectory,
         lens: _state.lens,
       );
-    } catch (_) {
-      await _releaseDevice();
+    } catch (error) {
+      try {
+        if (stopped != null) await _discardFile(stopped.path);
+      } finally {
+        await _retireDevice(error, generation);
+      }
       rethrow;
     }
   }
 
   Future<VideoRecordingResult> _finishTake(_StoppedTake take) async {
+    String? retained;
     try {
       final metadata = await fileInspector.inspect(take.file.path);
       _checkGeneration(take.generation);
@@ -424,7 +429,10 @@ class DivineCameraDesktop extends DivineCameraPlatform
               'Check microphone access.',
         );
       }
-      final path = await _retainFile(take.file, directory: take.directory);
+      final path = retained = await _retainFile(
+        take.file,
+        directory: take.directory,
+      );
       _checkGeneration(take.generation);
       return VideoRecordingResult(
         filePath: path,
@@ -433,9 +441,16 @@ class DivineCameraDesktop extends DivineCameraPlatform
         height: metadata.height,
         lens: take.lens,
       );
-    } catch (_) {
-      if (take.generation == _generation && _cameraId == take.cameraId) {
-        await _releaseDevice();
+    } catch (error) {
+      try {
+        await _discardFile(take.file.path);
+        if (retained != null && retained != take.file.path) {
+          await _discardFile(retained);
+        }
+      } finally {
+        if (take.generation == _generation && _cameraId == take.cameraId) {
+          await _retireDevice(error, take.generation);
+        }
       }
       rethrow;
     } finally {
@@ -511,24 +526,33 @@ class DivineCameraDesktop extends DivineCameraPlatform
       _checkGeneration(generation);
       if (_state.isRecording) return null;
       final file = await _cameraPlatform.takePicture(_requireCamera());
-      _checkGeneration(generation);
-      final dimensions = await _photoDimensions(file.path);
-      _checkGeneration(generation);
-      final directory =
-          outputDirectory ??
-          (useCache ? null : (await getApplicationDocumentsDirectory()).path);
-      _checkGeneration(generation);
-      final path = await _retainFile(
-        file,
-        directory: directory,
-        extension: 'jpg',
-      );
-      _checkGeneration(generation);
-      return PhotoCaptureResult(
-        filePath: path,
-        width: dimensions.width,
-        height: dimensions.height,
-      );
+      String? retained;
+      try {
+        _checkGeneration(generation);
+        final dimensions = await _photoDimensions(file.path);
+        _checkGeneration(generation);
+        final directory =
+            outputDirectory ??
+            (useCache ? null : (await getApplicationDocumentsDirectory()).path);
+        _checkGeneration(generation);
+        final path = retained = await _retainFile(
+          file,
+          directory: directory,
+          extension: 'jpg',
+        );
+        _checkGeneration(generation);
+        return PhotoCaptureResult(
+          filePath: path,
+          width: dimensions.width,
+          height: dimensions.height,
+        );
+      } catch (_) {
+        await _discardFile(file.path);
+        if (retained != null && retained != file.path) {
+          await _discardFile(retained);
+        }
+        rethrow;
+      }
     });
   }
 
@@ -562,8 +586,28 @@ class DivineCameraDesktop extends DivineCameraPlatform
         'divine-${DateTime.now().microsecondsSinceEpoch}-'
         '${_outputSequence++}.$suffix';
     final target = File.fromUri(Directory(directory).uri.resolve(name));
-    await file.saveTo(target.path);
-    return target.path;
+    try {
+      await file.saveTo(target.path);
+      await _discardFile(file.path);
+      return target.path;
+    } catch (_) {
+      await _discardFile(target.path);
+      rethrow;
+    }
+  }
+
+  Future<void> _discardFile(String path) async {
+    final file = File(path);
+    if (file.existsSync()) await file.delete();
+  }
+
+  Future<void> _retireDevice(Object error, int generation) async {
+    if (generation == _generation) _resumeOnForeground = false;
+    try {
+      await _releaseDevice();
+    } finally {
+      if (generation == _generation) onCameraError?.call(error);
+    }
   }
 
   @override

@@ -56,6 +56,7 @@ void main() {
                       2,
                       3,
                     ]);
+              final expectedBytes = await source.readAsBytes();
               backend
                 ..photoFile = XFile(source.path)
                 ..recordedFile = XFile(source.path);
@@ -72,8 +73,9 @@ void main() {
               expect(path, isNot(source.path));
               expect(
                 await File(path).readAsBytes(),
-                await source.readAsBytes(),
+                expectedBytes,
               );
+              expect(source.existsSync(), isFalse);
               await camera.disposeCamera();
               expect(File(path).existsSync(), isTrue);
             } finally {
@@ -1146,6 +1148,7 @@ void main() {
             .copy(
               '${directory.path}/native.jpg',
             );
+        final expectedBytes = await file.readAsBytes();
         backend.photoFile = XFile(file.path);
         final destination = Directory('${directory.path}/photos');
         await camera.initializeCamera(mirrorFrontCameraOutput: false);
@@ -1156,7 +1159,8 @@ void main() {
 
         expect(File(result!.filePath).parent.path, destination.path);
         expect(result.filePath.endsWith('.jpg'), isTrue);
-        expect(await result.file.readAsBytes(), await file.readAsBytes());
+        expect(await result.file.readAsBytes(), expectedBytes);
+        expect(file.existsSync(), isFalse);
         expect(result.width, 128);
         expect(result.height, 240);
         await camera.disposeCamera();
@@ -1185,6 +1189,248 @@ void main() {
             expect(destination.existsSync(), isFalse);
           } finally {
             await camera.disposeCamera();
+          }
+        },
+      );
+    });
+
+    group('public rejection state', () {
+      test('retires a file returned after native stop was cancelled', () async {
+        final directory = await Directory.systemTemp.createTemp(
+          'cancelled native stop ',
+        );
+        final source = await File(
+          '${directory.path}/native.mp4',
+        ).writeAsBytes([1, 2, 3]);
+        final gate = Completer<void>();
+        backend
+          ..recordedFile = XFile(source.path)
+          ..stopGate = gate;
+        try {
+          await camera.initializeCamera();
+          await camera.startRecording();
+          final stopping = camera.stopRecording();
+          final rejected = expectLater(stopping, throwsStateError);
+          await backend.stopEntered.future;
+          final closing = camera.disposeCamera();
+          gate.complete();
+          await closing;
+          await rejected;
+          expect(source.existsSync(), isFalse);
+          expect(backend.activeCameraIds, isEmpty);
+        } finally {
+          if (!gate.isCompleted) gate.complete();
+          await camera.disposeCamera();
+          await directory.delete(recursive: true);
+        }
+      });
+      for (final reopen in [false, true]) {
+        test(
+          'clears readiness on failed ${reopen ? 'reopen' : 'stop'}',
+          () async {
+            final previous = DivineCameraPlatform.instance;
+            final facade = DivineCamera.instance;
+            try {
+              DivineCameraPlatform.instance = camera;
+              await facade.initialize();
+              if (reopen) {
+                await facade.suspendAudioCapture();
+                backend.initializationError = CameraException(
+                  'audio_denied',
+                  'Synthetic denial',
+                );
+                await expectLater(
+                  facade.resumeAudioCapture(),
+                  throwsA(isA<CameraException>()),
+                );
+              } else {
+                expect(await facade.startRecording(), isTrue);
+                backend.stopError = CameraException(
+                  'stop_failed',
+                  'Synthetic failure',
+                );
+                await expectLater(
+                  facade.stopRecording(),
+                  throwsA(isA<CameraException>()),
+                );
+              }
+              expect(facade.state.isInitialized, isFalse);
+              expect(facade.state.canRecord, isFalse);
+              expect(backend.activeCameraIds, isEmpty);
+            } finally {
+              await facade.dispose();
+              DivineCameraPlatform.instance = previous;
+            }
+          },
+        );
+      }
+
+      test(
+        'a cancelled audio reopen preserves the next foreground resume',
+        () async {
+          await camera.initializeCamera();
+          await camera.suspendAudioCapture();
+          final gate = Completer<void>();
+          backend
+            ..initializationGate = gate
+            ..nextInitializationEntered = Completer<void>();
+          final opening = camera.resumeAudioCapture();
+          final rejected = expectLater(opening, throwsStateError);
+          await backend.nextInitializationEntered!.future;
+          await camera.pausePreview();
+          await rejected;
+          backend.initializationGate = null;
+          gate.complete();
+          await pumpEventQueue();
+          await camera.resumePreview();
+          expect((await camera.getCameraState()).isInitialized, isTrue);
+          expect(backend.activeCameraIds, hasLength(1));
+          await camera.disposeCamera();
+        },
+      );
+      for (final photo in [false, true]) {
+        test(
+          'retires cancelled ${photo ? 'photo' : 'video'} source and copy',
+          () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'cancelled retained copy ',
+            );
+            final source = photo
+                ? await (await fixtureFile(
+                    'desktop_still_portrait.jpg',
+                  )).copy('${directory.path}/native.jpg')
+                : await File(
+                    '${directory.path}/native.mp4',
+                  ).writeAsBytes([1, 2, 3]);
+            final gate = _CopyGateFile(source.path);
+            backend
+              ..recordedFile = gate
+              ..photoFile = gate;
+            try {
+              await camera.initializeCamera();
+              if (!photo) {
+                await camera.startRecording(
+                  outputDirectory: '${directory.path}/draft',
+                );
+              }
+              final operation = photo
+                  ? camera.capturePhoto(
+                      outputDirectory: '${directory.path}/draft',
+                    )
+                  : camera.stopRecording();
+              final rejected = expectLater(operation, throwsStateError);
+              await gate.copied.future;
+              final closing = camera.disposeCamera();
+              gate.finish.complete();
+              await closing;
+              await rejected;
+              expect(
+                directory.listSync(recursive: true).whereType<File>(),
+                isEmpty,
+              );
+              expect(backend.activeCameraIds, isEmpty);
+            } finally {
+              if (!gate.finish.isCompleted) gate.finish.complete();
+              await camera.disposeCamera();
+              await directory.delete(recursive: true);
+            }
+          },
+        );
+      }
+
+      test(
+        'copy failure removes both an incomplete target and rejected take',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'failed retained copy ',
+          );
+          final source = await File(
+            '${directory.path}/native.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          backend.recordedFile = _CopyGateFile(
+            source.path,
+            failAfterCopy: true,
+          );
+          try {
+            await camera.initializeCamera();
+            await camera.startRecording(
+              outputDirectory: '${directory.path}/draft',
+            );
+            await expectLater(
+              camera.stopRecording(),
+              throwsA(isA<FileSystemException>()),
+            );
+            expect(
+              directory.listSync(recursive: true).whereType<File>(),
+              isEmpty,
+            );
+            expect(backend.activeCameraIds, isEmpty);
+          } finally {
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
+          }
+        },
+      );
+      test(
+        'retires rejected media and clears public readiness with the device',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'rejected public take ',
+          );
+          final source = await File(
+            '${directory.path}/native.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          backend.recordedFile = XFile(source.path);
+          fileInspector.metadata = const DesktopVideoMetadata(
+            duration: Duration(seconds: 1),
+            width: 128,
+            height: 240,
+            hasAudio: false,
+          );
+          final previous = DivineCameraPlatform.instance;
+          final facade = DivineCamera.instance;
+          try {
+            DivineCameraPlatform.instance = camera;
+            await facade.initialize();
+            expect(await facade.startRecording(), isTrue);
+            await expectLater(
+              facade.stopRecording(),
+              throwsA(isA<CameraException>()),
+            );
+            expect(backend.activeCameraIds, isEmpty);
+            expect(facade.state.isInitialized, isFalse);
+            expect(facade.state.canRecord, isFalse);
+            expect(source.existsSync(), isFalse);
+          } finally {
+            await facade.dispose();
+            DivineCameraPlatform.instance = previous;
+            await directory.delete(recursive: true);
+          }
+        },
+      );
+
+      test(
+        'transfers persistent media without leaving its native intermediate',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'transferred take ',
+          );
+          final source = await File(
+            '${directory.path}/native.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          backend.recordedFile = XFile(source.path);
+          try {
+            await camera.initializeCamera();
+            await camera.startRecording(
+              outputDirectory: '${directory.path}/draft',
+            );
+            final result = (await camera.stopRecording())!;
+            await camera.disposeCamera();
+            expect(await File(result.filePath).readAsBytes(), [1, 2, 3]);
+            expect(source.existsSync(), isFalse);
+          } finally {
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
           }
         },
       );
@@ -1244,6 +1490,8 @@ class _CameraBackend extends CameraPlatform {
   XFile? photoFile;
   CameraException? recordingError;
   CameraException? stopError;
+  Completer<void>? stopGate;
+  final stopEntered = Completer<void>();
   int stopCalls = 0;
   int startCalls = 0;
   int photoCalls = 0;
@@ -1318,6 +1566,8 @@ class _CameraBackend extends CameraPlatform {
   Future<XFile> stopVideoRecording(int cameraId) async {
     stopCalls++;
     if (stopError case final error?) throw error;
+    if (!stopEntered.isCompleted) stopEntered.complete();
+    await stopGate?.future;
     return recordedFile!;
   }
 
@@ -1351,4 +1601,21 @@ class _DocumentPaths extends PathProviderPlatform {
 
   @override
   Future<String?> getApplicationDocumentsPath() async => documents;
+}
+
+class _CopyGateFile extends XFile {
+  _CopyGateFile(super.path, {this.failAfterCopy = false});
+  final bool failAfterCopy;
+  final copied = Completer<void>();
+  final finish = Completer<void>();
+
+  @override
+  Future<void> saveTo(String path) async {
+    await super.saveTo(path);
+    copied.complete();
+    if (failAfterCopy) {
+      throw const FileSystemException('Synthetic copy failure');
+    }
+    await finish.future;
+  }
 }
