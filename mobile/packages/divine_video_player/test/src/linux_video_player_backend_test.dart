@@ -15,6 +15,81 @@ void main() {
 
   group(MediaKitLinuxVideoPlayerBackend, () {
     test(
+      'keeps video progress when the audio output device is unavailable',
+      () async {
+        final player = _FakePlatformPlayer();
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: player),
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 4)),
+        ]);
+        player.emitPlaybackError(
+          'Could not open/initialize audio device -> no sound.',
+        );
+        player.emitState(
+          player.state.copyWith(
+            playing: true,
+            position: 2.seconds,
+            width: 128,
+            height: 240,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(states.last.status, PlaybackStatus.playing);
+        expect(states.last.position, 2.seconds);
+        expect(errors, isEmpty);
+      },
+    );
+
+    test(
+      'does not fail a newer source when a cancelled probe fails late',
+      () async {
+        final probe = Completer<Duration>();
+        final probing = Completer<void>();
+        final states = <DivineVideoPlayerState>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+          durationProbe: (_) {
+            probing.complete();
+            return probe.future;
+          },
+        );
+        await backend.initialize(onStateChanged: states.add, onError: (_) {});
+        addTearDown(backend.dispose);
+        final oldLoad = backend.setClips([
+          const VideoClip(uri: 'file:///old.mp4'),
+        ]);
+        await probing.future;
+        await backend.setClips([
+          const VideoClip(uri: 'file:///new.mp4', end: Duration(seconds: 4)),
+        ]);
+        probe.completeError(StateError('Retired duration lookup failed'));
+
+        await oldLoad;
+
+        expect(states.last.status, PlaybackStatus.ready);
+        expect(states.last.errorMessage, isNull);
+      },
+    );
+
+    test(
       'keeps an acknowledged mute before the SDK observes its volume',
       () async {
         final players = <_FakePlatformPlayer>[];

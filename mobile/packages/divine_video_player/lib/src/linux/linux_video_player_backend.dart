@@ -482,6 +482,14 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
     void report(Object error) {
       if (isCurrent() && _activeLoadGeneration == _loadGeneration) {
+        if (_isAudioOutputUnavailable(error)) {
+          Log.warning(
+            'Desktop audio output is unavailable; video playback continues.',
+            name: 'divine_video_player',
+            category: LogCategory.video,
+          );
+          return;
+        }
         _handleError(error);
       }
     }
@@ -542,7 +550,14 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         continue;
       }
 
-      final sourceDuration = await (_durationProbe ?? _probeDuration)(clip.uri);
+      final Duration sourceDuration;
+      try {
+        sourceDuration = await (_durationProbe ?? _probeDuration)(clip.uri);
+      } on Object {
+        // A retired lookup does not own the current source's error state.
+        if (_disposed || generation != _loadGeneration) return [];
+        rethrow;
+      }
       if (_disposed || generation != _loadGeneration) return [];
       if (clip.start > sourceDuration) {
         throw ArgumentError.value(
@@ -613,7 +628,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }
 
   static Future<void> _defaultVideoControllerReady(Object controller) {
-    if (controller is _DisabledVideoController) return Future.value();
+    if (controller is _DisabledVideoController) {
+      // Audio-only diagnostic output never produces a visual frame.
+      return Completer<void>().future;
+    }
     final video = controller as media_kit.VideoController;
     final disposed = Completer<void>();
     video.player.platform?.release.add(() async {
@@ -808,6 +826,12 @@ class _DisabledVideoController {
   const _DisabledVideoController();
 }
 
+// mpv continues decoding video after this specific cplayer diagnostic. Keep
+// genuine decoder/source failures terminal instead of clearing every SDK error.
+bool _isAudioOutputUnavailable(Object error) =>
+    error is String &&
+    error.trim() == 'Could not open/initialize audio device -> no sound.';
+
 /// Owns a temporary player and cancels unfinished duration reads.
 class _DurationProbe {
   _DurationProbe(this.player);
@@ -833,7 +857,11 @@ class _DurationProbe {
 
     _subscription = player.stream.duration.listen(receive, onError: fail);
     _errors = player.stream.error.listen(
-      (message) => fail(StateError(message), StackTrace.current),
+      (message) {
+        if (!_isAudioOutputUnavailable(message)) {
+          fail(StateError(message), StackTrace.current);
+        }
+      },
       onError: fail,
     );
     _timeout = Timer(const Duration(seconds: 10), () {
