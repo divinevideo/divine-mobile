@@ -1,5 +1,5 @@
-// ABOUTME: Router config that survives route state go_router cannot decode
-// ABOUTME: Guards the RouteMatchListCodec crash behind #7869
+// ABOUTME: Router config that survives two go_router crashes: route state it
+// ABOUTME: cannot decode (#7869) and a system back with no route matched
 
 import 'dart:async';
 
@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/router/empty_match_back_button_dispatcher.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -32,6 +33,9 @@ final routerConfigProvider = Provider<RouterConfig<RouteMatchList>>(
 /// the URI, so the fallback navigates to that location. In the known failure
 /// (#7869) that location no longer matches a route either, so the user lands
 /// on the not-found page instead of losing the app.
+///
+/// Its back button dispatcher is an [EmptyMatchSafeBackButtonDispatcher], so a
+/// system back on that not-found page does not throw either.
 RouterConfig<RouteMatchList> restorationSafeRouterConfig(
   GoRouter router, {
   CrashReporter crashReporter = const SilentCrashReporter(),
@@ -43,7 +47,7 @@ RouterConfig<RouteMatchList> restorationSafeRouterConfig(
       crashReporter: crashReporter,
     ),
     routerDelegate: router.routerDelegate,
-    backButtonDispatcher: router.backButtonDispatcher,
+    backButtonDispatcher: EmptyMatchSafeBackButtonDispatcher(router),
   );
 }
 

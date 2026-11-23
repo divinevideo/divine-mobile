@@ -166,11 +166,19 @@ final class LinkifiedTextNavigation {
     );
   }
 
+  /// Closes the modal holding [context], then runs [navigate] from the root.
+  ///
+  /// Does nothing once that modal is no longer the current route. A mention
+  /// navigates only after a profile lookup, by which time the modal may be
+  /// closing, dismissed by the viewer or popped by an earlier tap. Popping
+  /// then removes the page beneath it, and popping the last page leaves
+  /// go_router with no matches.
   static void _afterModalPop(
     BuildContext context, {
     required void Function(BuildContext hostContext) navigate,
     VoidCallback? beforeNavigate,
   }) {
+    if (ModalRoute.isCurrentOf(context) != true) return;
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     beforeNavigate?.call();
     Navigator.of(context).pop();
