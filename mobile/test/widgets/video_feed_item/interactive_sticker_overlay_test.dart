@@ -590,6 +590,7 @@ void main() {
           ).thenAnswer((_) async => AddYoursChainStart.starts);
           when(() => repository.fetchVideoAt(first))
               .thenAnswer((_) async => root);
+          when(() => followRepository.followingPubkeys).thenReturn([]);
           await pump(tester, answer);
           await tester.pump();
 
