@@ -185,18 +185,23 @@ class VideoRecorderRoute extends ConsumerWidget {
       );
     }
     final selection = initialSound;
-    if (selection == null) return recorder;
-    return RecorderSoundSelectionGate(
-      selection: selection,
-      apply: (value) {
-        if (ref.read(authServiceProvider).currentPublicKeyHex !=
-            value.ownerPubkey) {
-          throw StateError('Recorder sound account changed');
-        }
-        ref
-            .read(videoEditorProvider.notifier)
-            .selectRecorderAudioTrack(value.sound);
-      },
+    if (selection != null) {
+      recorder = RecorderSoundSelectionGate(
+        selection: selection,
+        apply: (value) {
+          if (ref.read(authServiceProvider).currentPublicKeyHex !=
+              value.ownerPubkey) {
+            throw StateError('Recorder sound account changed');
+          }
+          ref
+              .read(videoEditorProvider.notifier)
+              .selectRecorderAudioTrack(value.sound);
+        },
+        child: recorder,
+      );
+    }
+    return ScreenFrameTraceScope(
+      screen: .recorder,
       child: recorder,
     );
   }
