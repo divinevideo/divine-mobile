@@ -402,7 +402,252 @@ void main() {
       );
     });
 
+    group('SDK task handoff', () {
+      test(
+        'owns a direct method-channel task through file retirement',
+        () async {
+          final values = await editor.methodChannel
+              .invokeMethod<List<Uint8List>>('getThumbnails', {'id': 'direct'});
+          expect(values, [
+            [1, 2, 3],
+            [2, 3, 4],
+          ]);
+          expect(root.listSync(), isEmpty);
+        },
+      );
+      test(
+        'rejects a direct channel collision without cancelling the SDK owner',
+        () async {
+          final started = editor.progressStreamById('fixture-block').first;
+          final rendering = editor.renderVideo(
+            VideoRenderData(
+              id: 'fixture-block',
+              videoSegments: [VideoSegment(video: video)],
+            ),
+          );
+          final cancelled = expectLater(
+            rendering,
+            throwsA(isA<RenderCanceledException>()),
+          );
+          try {
+            await started;
+            await expectLater(
+              editor.methodChannel.invokeMethod('getThumbnails', {
+                'id': 'fixture-block',
+              }),
+              throwsA(
+                isA<PlatformException>().having(
+                  (error) => error.code,
+                  'code',
+                  'TASK_ALREADY_EXISTS',
+                ),
+              ),
+            );
+            expect(root.listSync(), hasLength(1));
+          } finally {
+            await editor.cancel('fixture-block');
+            await cancelled;
+          }
+          expect(root.listSync(), isEmpty);
+        },
+      );
+      test('rejects empty IDs before preparing media', () async {
+        await expectLater(
+          editor.renderVideo(
+            VideoRenderData(
+              id: '',
+              videoSegments: [VideoSegment(video: video)],
+            ),
+          ),
+          throwsA(
+            isA<PlatformException>().having(
+              (error) => error.code,
+              'code',
+              'INVALID_REQUEST',
+            ),
+          ),
+        );
+        expect(locations, 0);
+      });
+      test(
+        'forwards each ID-bearing request and retires failed leases',
+        () async {
+          const id = 'fixture-unsupported';
+          final still = File('${root.path}/still.png');
+          await still.writeAsBytes([1, 2, 3]);
+          final stopMotion = StopMotionRenderData(
+            id: id,
+            frames: [StopMotionFrame(image: EditorLayerImage.file(still))],
+          );
+          final extraction = AudioExtractConfigs(id: id, video: video);
+          final waveform = WaveformConfigs(id: id, video: video);
+          final merge = AudioMergeConfigs(
+            id: id,
+            segments: [
+              AudioMergeSegment(
+                video: video,
+                startTime: Duration.zero,
+                endTime: const Duration(seconds: 1),
+              ),
+            ],
+          );
+          final split = SplitVideoModel(
+            id: id,
+            video: video,
+            splitPosition: const Duration(milliseconds: 500),
+            startOutputPath: '${root.path}/first.mp4',
+            endOutputPath: '${root.path}/second.mp4',
+          );
+          final operations = <Future<Object?> Function()>[
+            () => editor.renderStopMotion(stopMotion),
+            () => editor.renderStopMotionToFile(
+              '${root.path}/stop-motion.mp4',
+              stopMotion,
+            ),
+            () => editor.splitVideo(split),
+            () => editor.getKeyFrames(
+              KeyFramesConfigs(
+                id: id,
+                video: video,
+                outputSize: const Size(64, 64),
+                maxOutputFrames: 1,
+              ),
+            ),
+            () => editor.getSingleThumbnail(
+              SingleThumbnailConfigs(
+                id: id,
+                video: video,
+                outputSize: const Size(64, 64),
+                position: ThumbnailPosition.first,
+              ),
+            ),
+            () => editor.extractAudio(extraction),
+            () =>
+                editor.extractAudioToFile('${root.path}/audio.wav', extraction),
+            () => editor.mergeAudioToFile('${root.path}/merged.wav', merge),
+            () => editor.getWaveform(waveform),
+          ];
+          for (final operation in operations) {
+            await expectLater(
+              operation(),
+              throwsA(
+                isA<PlatformException>().having(
+                  (error) => error.code,
+                  'code',
+                  'DESKTOP_MEDIA_UNSUPPORTED',
+                ),
+              ),
+            );
+          }
+          expect(locations, operations.length);
+          expect(root.listSync().map((file) => file.path), [still.path]);
+        },
+      );
+    });
+
     group('frame readers', () {
+      group('shared task ownership', () {
+        final duplicate = isA<PlatformException>().having(
+          (error) => error.code,
+          'code',
+          'TASK_ALREADY_EXISTS',
+        );
+        for (final luma in [false, true]) {
+          for (final toFile in [false, true]) {
+            test(
+              'preparing ${luma ? 'luma' : 'thumbnail'} rejects render '
+              '${toFile ? 'file' : 'bytes'}',
+              () async {
+                final source = Completer<String>();
+                final deferred = _PreparingVideo(source.future);
+                final stream = luma
+                    ? editor.getLumaFrameStream(
+                        LumaFrameConfigs(
+                          id: 'fixture-block',
+                          video: deferred,
+                          outputSize: const Size(64, 64),
+                        ),
+                      )
+                    : editor.getThumbnailStream(
+                        ThumbnailConfigs(
+                          id: 'fixture-block',
+                          video: deferred,
+                          outputSize: const Size(64, 64),
+                          timestamps: const [Duration.zero],
+                        ),
+                      );
+                final subscription = stream.listen(
+                  (_) => fail('Preparation must not produce a frame.'),
+                );
+                try {
+                  final data = VideoRenderData(
+                    id: 'fixture-block',
+                    videoSegments: [VideoSegment(video: video)],
+                  );
+                  final rendering = toFile
+                      ? editor.renderVideoToFile(
+                          '${root.path}/duplicate.mp4',
+                          data,
+                        )
+                      : editor.renderVideo(data);
+                  await expectLater(
+                    rendering.timeout(const Duration(milliseconds: 200)),
+                    throwsA(duplicate),
+                  );
+                  expect(locations, 0);
+                  expect(root.listSync(), isEmpty);
+                } finally {
+                  await subscription.cancel();
+                  source.complete(await video.contentOrSafeFilePath());
+                }
+              },
+            );
+          }
+          test(
+            'preparing render rejects a ${luma ? 'luma' : 'thumbnail'} stream',
+            () async {
+              final source = Completer<String>();
+              final rendering = editor.renderVideo(
+                VideoRenderData(
+                  id: 'shared',
+                  videoSegments: [
+                    VideoSegment(video: _PreparingVideo(source.future)),
+                  ],
+                ),
+              );
+              final cancelled = expectLater(
+                rendering,
+                throwsA(isA<RenderCanceledException>()),
+              );
+              try {
+                final stream = luma
+                    ? editor.getLumaFrameStream(
+                        LumaFrameConfigs(
+                          id: 'shared',
+                          video: video,
+                          outputSize: const Size(64, 64),
+                        ),
+                      )
+                    : editor.getThumbnailStream(
+                        ThumbnailConfigs(
+                          id: 'shared',
+                          video: video,
+                          outputSize: const Size(64, 64),
+                          timestamps: const [Duration.zero],
+                        ),
+                      );
+                await expectLater(stream.toList(), throwsA(duplicate));
+                expect(locations, 0);
+              } finally {
+                await editor.cancel('shared');
+                source.complete(await video.contentOrSafeFilePath());
+                await cancelled;
+              }
+            },
+          );
+        }
+      });
+
       ThumbnailConfigs thumbnails({String id = 'thumbnails'}) =>
           ThumbnailConfigs(
             id: id,

@@ -13,7 +13,7 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class DesktopProVideoEditor extends MethodChannelProVideoEditor {
   /// Creates a backend that owns [client] until [dispose].
   DesktopProVideoEditor({required this.client}) {
-    _transport = _EditorWorkerChannel(client);
+    _transport = _EditorWorkerChannel(client, _tasks);
     _progress = client.progress.listen((event) {
       final id = _transport.publicTaskId(event.taskId);
       if (id != null) {
@@ -28,6 +28,7 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
   late final StreamSubscription<MediaWorkerProgress> _progress;
   Future<void>? _disposing;
   final _frameTasks = <String, _FrameTask>{};
+  final _tasks = _EditorTasks();
 
   @override
   MethodChannel get methodChannel => _transport;
@@ -65,6 +66,134 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
   );
 
   @override
+  Future<Uint8List> renderVideo(
+    VideoRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.renderVideo(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<String> renderVideoToFile(
+    String filePath,
+    VideoRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.renderVideoToFile(
+      filePath,
+      value,
+      nativeLogLevel: nativeLogLevel,
+    ),
+  );
+
+  @override
+  Future<Uint8List> renderStopMotion(
+    StopMotionRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.renderStopMotion(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<String> renderStopMotionToFile(
+    String filePath,
+    StopMotionRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.renderStopMotionToFile(
+      filePath,
+      value,
+      nativeLogLevel: nativeLogLevel,
+    ),
+  );
+
+  @override
+  Future<List<String>> splitVideo(
+    SplitVideoModel value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.splitVideo(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<List<Uint8List>> getThumbnails(
+    ThumbnailConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.getThumbnails(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<List<Uint8List>> getKeyFrames(
+    KeyFramesConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.getKeyFrames(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<Uint8List?> getSingleThumbnail(
+    SingleThumbnailConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.getSingleThumbnail(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<Uint8List> extractAudio(
+    AudioExtractConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.extractAudio(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
+  Future<String> extractAudioToFile(
+    String filePath,
+    AudioExtractConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.extractAudioToFile(
+      filePath,
+      value,
+      nativeLogLevel: nativeLogLevel,
+    ),
+  );
+
+  @override
+  Future<AudioMergeResult> mergeAudioToFile(
+    String filePath,
+    AudioMergeConfigs configs, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    configs.id,
+    () => super.mergeAudioToFile(
+      filePath,
+      configs,
+      nativeLogLevel: nativeLogLevel,
+    ),
+  );
+
+  @override
+  Future<WaveformData> getWaveform(
+    WaveformConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => _tasks.start(
+    value.id,
+    () => super.getWaveform(value, nativeLogLevel: nativeLogLevel),
+  );
+
+  @override
   Future<void> cancel(String taskId) async {
     final task = _frameTasks[taskId];
     if (task != null) {
@@ -90,33 +219,31 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
       var registered = false;
       try {
         if (_disposing != null) throw MediaWorkerFailure('disposed');
-        if (id.isEmpty) throw PlatformException(code: 'INVALID_REQUEST');
-        if (_frameTasks.containsKey(id) || _transport.hasTask(id)) {
-          throw PlatformException(code: 'TASK_ALREADY_EXISTS');
-        }
-        _frameTasks[id] = task;
-        registered = true;
-        final path = await Future.any<String>([
-          video.contentOrSafeFilePath(),
-          task.cancelledSignal.future.then<String>((_) {
-            throw const RenderCanceledException();
-          }),
-        ]);
-        if (task.cancelled) throw const RenderCanceledException();
-        await _transport.execute<Object?>(
-          method,
-          {...arguments, 'inputPath': path},
-          onTask: (key) {
-            task.workerId = key;
-          },
-          onEvent: (output) async {
-            await task.waitUntilResumed();
-            if (task.cancelled) return;
-            final value = await _transport.frame(output, luma: luma);
-            await task.waitUntilResumed();
-            if (!task.cancelled) controller.add(parse(value));
-          },
-        );
+        await _tasks.start<void>(id, () async {
+          _frameTasks[id] = task;
+          registered = true;
+          final path = await Future.any<String>([
+            video.contentOrSafeFilePath(),
+            task.cancelledSignal.future.then<String>((_) {
+              throw const RenderCanceledException();
+            }),
+          ]);
+          if (task.cancelled) throw const RenderCanceledException();
+          await _transport.execute<Object?>(
+            method,
+            {...arguments, 'inputPath': path},
+            onTask: (key) {
+              task.workerId = key;
+            },
+            onEvent: (output) async {
+              await task.waitUntilResumed();
+              if (task.cancelled) return;
+              final value = await _transport.frame(output, luma: luma);
+              await task.waitUntilResumed();
+              if (!task.cancelled) controller.add(parse(value));
+            },
+          );
+        });
       } on Object catch (error, stack) {
         if (!task.unsubscribed) {
           controller.addError(
@@ -172,16 +299,16 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
 }
 
 class _EditorWorkerChannel extends MethodChannel {
-  _EditorWorkerChannel(this.client) : super('video.divine/editor_worker');
+  _EditorWorkerChannel(this.client, this.tasks)
+    : super('video.divine/editor_worker');
 
   final MediaWorkerClient client;
+  final _EditorTasks tasks;
   final _publicTasks = <String, String>{};
   final _workerTasks = <String, String>{};
   int _sequence = 0;
 
   String? publicTaskId(String workerId) => _publicTasks[workerId];
-
-  bool hasTask(String id) => _workerTasks.containsKey(id);
 
   @override
   Future<T?> invokeMethod<T>(String method, [dynamic arguments]) =>
@@ -217,64 +344,66 @@ class _EditorWorkerChannel extends MethodChannel {
     if (_workerTasks.containsKey(publicId)) {
       throw PlatformException(code: 'TASK_ALREADY_EXISTS');
     }
-    final key = 'request-${++_sequence}';
-    if (publicId is String) {
-      _publicTasks[key] = publicId;
-      _workerTasks[publicId] = key;
-    }
-    try {
-      onTask?.call(key);
-      final value = await client.execute(
-        method,
-        args,
-        taskId: key,
-        onEvent: onEvent,
-        consume: (output) async {
-          if (method == 'renderVideo') {
-            final artifact = await _artifact(output);
-            if (destination == null) return artifact.readAsBytes();
-            return _commit(artifact, destination as String);
-          }
-          if (method == 'getThumbnails') {
-            final values = output.value;
-            if (values is! List) throw const FormatException();
-            return Future.wait(
-              values.map((value) async {
-                if (value == null) return Uint8List(0);
-                final file = await _artifact(
-                  MediaWorkerOutput(value, output.directory),
-                );
-                return file.readAsBytes();
-              }),
-            );
-          }
-          if (method == 'getMetadata') return _metadata(output.value);
-          if (method == 'hasAudioTrack' && output.value is! bool) {
-            throw const FormatException();
-          }
-          return output.value;
-        },
-      );
-      if (value != null && value is! T) throw const FormatException();
-      return value as T?;
-    } on MediaWorkerFailure catch (failure) {
-      final code = switch (failure.code) {
-        'cancelled' => MethodChannelProVideoEditor.renderCanceledErrorCode,
-        'encoder' => MethodChannelProVideoEditor.encoderNotSupportedErrorCode,
-        _ => 'DESKTOP_MEDIA_${failure.code.toUpperCase()}',
-      };
-      throw PlatformException(
-        code: code,
-        message: 'Desktop media task failed.',
-      );
-    } on FileSystemException {
-      throw PlatformException(code: 'DESKTOP_MEDIA_STORAGE');
-    } on FormatException {
-      throw PlatformException(code: 'DESKTOP_MEDIA_PROTOCOL');
-    } finally {
-      _publicTasks.remove(key);
-      if (_workerTasks[publicId] == key) _workerTasks.remove(publicId);
-    }
+    return tasks.worker<T?>(publicId as String?, () async {
+      final key = 'request-${++_sequence}';
+      if (publicId is String) {
+        _publicTasks[key] = publicId;
+        _workerTasks[publicId] = key;
+      }
+      try {
+        onTask?.call(key);
+        final value = await client.execute(
+          method,
+          args,
+          taskId: key,
+          onEvent: onEvent,
+          consume: (output) async {
+            if (method == 'renderVideo') {
+              final artifact = await _artifact(output);
+              if (destination == null) return artifact.readAsBytes();
+              return _commit(artifact, destination as String);
+            }
+            if (method == 'getThumbnails') {
+              final values = output.value;
+              if (values is! List) throw const FormatException();
+              return Future.wait(
+                values.map((value) async {
+                  if (value == null) return Uint8List(0);
+                  final file = await _artifact(
+                    MediaWorkerOutput(value, output.directory),
+                  );
+                  return file.readAsBytes();
+                }),
+              );
+            }
+            if (method == 'getMetadata') return _metadata(output.value);
+            if (method == 'hasAudioTrack' && output.value is! bool) {
+              throw const FormatException();
+            }
+            return output.value;
+          },
+        );
+        if (value != null && value is! T) throw const FormatException();
+        return value as T?;
+      } on MediaWorkerFailure catch (failure) {
+        final code = switch (failure.code) {
+          'cancelled' => MethodChannelProVideoEditor.renderCanceledErrorCode,
+          'encoder' => MethodChannelProVideoEditor.encoderNotSupportedErrorCode,
+          _ => 'DESKTOP_MEDIA_${failure.code.toUpperCase()}',
+        };
+        throw PlatformException(
+          code: code,
+          message: 'Desktop media task failed.',
+        );
+      } on FileSystemException {
+        throw PlatformException(code: 'DESKTOP_MEDIA_STORAGE');
+      } on FormatException {
+        throw PlatformException(code: 'DESKTOP_MEDIA_PROTOCOL');
+      } finally {
+        _publicTasks.remove(key);
+        if (_workerTasks[publicId] == key) _workerTasks.remove(publicId);
+      }
+    });
   }
 
   Future<Map<String, Object?>> frame(
@@ -402,5 +531,33 @@ class _FrameTask {
     while (_paused != null && !cancelled) {
       await _paused!.future;
     }
+  }
+}
+
+// The SDK prepares sources before invoking its method channel. Carry the same
+// lease through those awaits so the channel can distinguish its own handoff
+// from another operation reusing that public ID. No registry is process-global.
+class _EditorTasks {
+  final _owners = <String, Object>{};
+
+  Future<T> start<T>(String id, Future<T> Function() action) async {
+    if (id.isEmpty) throw PlatformException(code: 'INVALID_REQUEST');
+    if (_owners.containsKey(id)) {
+      throw PlatformException(code: 'TASK_ALREADY_EXISTS');
+    }
+    final owner = Object();
+    _owners[id] = owner;
+    try {
+      return await runZoned(action, zoneValues: {this: owner});
+    } finally {
+      _owners.remove(id);
+    }
+  }
+
+  Future<T> worker<T>(String? id, Future<T> Function() action) {
+    if (id == null) return action();
+    final owner = _owners[id];
+    if (owner != null && identical(Zone.current[this], owner)) return action();
+    return start(id, action);
   }
 }
