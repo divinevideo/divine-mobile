@@ -180,6 +180,12 @@ class RelayPool {
   /// says nothing about whether the key may read.
   static const _inconclusiveAuthRejections = {'rate-limited', 'invalid'};
 
+  /// What strfry before 1.1 says, in a NOTICE, when it gets a COUNT.
+  static const _unknownCommandNotice = 'ERROR: bad msg: unknown cmd';
+
+  /// What memlay says when it gets a COUNT.
+  static const _unknownCountCommandNotice = 'Unknown message type: COUNT';
+
   /// Relay url -> queries in [_queriesParkedForAuth] that the relay ended with
   /// an `auth`-hinted `EOSE` rather than `CLOSED`, so their subscription is
   /// still open on the relay and needs a `CLOSE` if they are ended.
@@ -2766,6 +2772,10 @@ class RelayPool {
         relay.url,
         'Relay NOTICE: ${relayNoticeForDiagnostics(message)}',
       );
+      final namesCount = message == _unknownCountCommandNotice;
+      if (namesCount || message == _unknownCommandNotice) {
+        relay.handleCountUnknownCommandNotice(message, namesCount: namesCount);
+      }
 
       if (onNotice != null) {
         onNotice!(relay.url, message);
@@ -4370,9 +4380,14 @@ class RelayPool {
   /// not be written is dropped, not queued: replayed on the next connection,
   /// its answer would reach nobody.
   ///
+  /// A relay that already refused COUNT on the same socket
+  /// ([Relay.countUnsupported]) is skipped. A missing NIP-45 advertisement
+  /// is inconclusive because some relays answer COUNT without listing it.
+  ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered
-  /// in time, whether by timing out or refusing with CLOSED.
+  /// in time, whether by timing out, refusing with CLOSED or replying that
+  /// they do not know COUNT, or when all readable relays were already skipped.
   ///
   /// Parameters:
   /// - [filters]: The filters to count events for (same format as REQ)
@@ -4436,12 +4451,20 @@ class RelayPool {
     // Send COUNT to all relays in parallel, return the largest count.
     // Different relays may have different subsets of data, so the highest
     // count is the most accurate.
-    final eligibleRelays = relaysToTry
+    final readableRelays = relaysToTry
         .where((r) => r.relayStatus.readAccess)
         .toList();
 
-    if (eligibleRelays.isEmpty) {
+    if (readableRelays.isEmpty) {
       throw CountNotSentException('No relay can take COUNT');
+    }
+
+    final eligibleRelays = readableRelays
+        .where((r) => !r.countUnsupported)
+        .toList();
+
+    if (eligibleRelays.isEmpty) {
+      throw CountNotSupportedException('No relay supports COUNT');
     }
 
     var acceptedByAny = false;
@@ -4493,7 +4516,8 @@ class RelayPool {
           );
           return null;
         } on CountNotSupportedException catch (e) {
-          // A CLOSED refusal, which the CLOSED handler has already reported.
+          // A CLOSED refusal or an unknown-command NOTICE, which its handler
+          // has already reported.
           log('📊 COUNT refused by ${relay.url}: $e');
           return null;
         } catch (e) {
