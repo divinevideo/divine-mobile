@@ -10795,7 +10795,7 @@ abstract class AppLocalizations {
   /// **'This conversation is closed.'**
   String get dmRetiredThreadClosedTitle;
 
-  /// Neutral name shown in place of the official "Divine Moderation" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`.
+  /// Neutral name shown in place of the official "Divine Moderation" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`. It is shown on one line and cut at the end when it is too long. Where the language allows, put the word for "former" early: if the cut removes it, what is left reads as the moderation account itself. It stands in for a person's name, so it also appears inside strings that take a name, such as "Block {name}?" and "{name} and 2 others".
   ///
   /// In en, this message translates to:
   /// **'Former moderation account'**
