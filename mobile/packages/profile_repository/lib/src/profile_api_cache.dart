@@ -181,16 +181,25 @@ class ProfileApiCache {
   ) async {
     try {
       final response = await client.getBulkProfiles(pubkeys);
+      final omitted = <MapEntry<String, Completer<UserProfileResult?>>>[];
       for (final entry in batch.entries) {
         final result = response.profiles[entry.key];
+        // The bulk endpoint omits an account with a pending vanish request;
+        // only the single endpoint reports it.
+        if (result == null) {
+          omitted.add(entry);
+          continue;
+        }
         _remember(entry.key, result);
         if (!entry.value.isCompleted) entry.value.complete(result);
-      }
-      for (final entry in batch.entries) {
         if (identical(_inFlight[entry.key], entry.value.future)) {
           _inFlight.remove(entry.key)?.ignore();
         }
       }
+      await Future.wait([
+        for (final entry in omitted)
+          _completeSingleFromQueue(client, entry.key, entry.value),
+      ]);
     } on Object catch (_) {
       // Fall back to individual GETs so a transient bulk endpoint error
       // (e.g. HTTP 500) never drops queued profile loads.
@@ -236,13 +245,23 @@ class ProfileApiCache {
     }
     try {
       final response = await request;
+      final omittedClaims = <String, Completer<UserProfileResult?>>{};
       for (final pubkey in pubkeys) {
         final result = response.profiles[pubkey];
-        _remember(pubkey, result);
         final queued = claimedQueued[pubkey];
+        // As in a batch: only the single endpoint reports a pending vanish.
+        if (queued != null && result == null) {
+          omittedClaims[pubkey] = queued;
+          continue;
+        }
+        _remember(pubkey, result);
         if (queued != null && !queued.isCompleted) {
           queued.complete(result);
         }
+      }
+      for (final entry in omittedClaims.entries) {
+        claimedQueued.remove(entry.key);
+        unawaited(_completeSingleFromQueue(client, entry.key, entry.value));
       }
       return response;
     } on Object catch (error, stackTrace) {

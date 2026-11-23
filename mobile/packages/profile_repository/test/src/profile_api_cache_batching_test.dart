@@ -233,6 +233,99 @@ void main() {
     );
 
     test(
+      'asks GET /api/users/<pubkey> for a pubkey the bulk response omits',
+      () async {
+        final requests = <String>[];
+        final pk1 = _pk(1);
+        final pk2 = _pk(2);
+        final httpClient = MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          if (request.url.path == '/api/users/bulk') {
+            return http.Response(
+              jsonEncode({
+                'users': [_userJson(pk1)],
+                'missing': <String>[],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'pubkey': pk2,
+              'has_vanish_request': true,
+              'profile': null,
+            }),
+            200,
+          );
+        });
+        addTearDown(httpClient.close);
+        final cache = ProfileApiCache(
+          client: FunnelcakeApiClient(
+            baseUrl: 'https://profiles.example.test',
+            httpClient: httpClient,
+            retryBaseDelay: Duration.zero,
+          ),
+          batchWindow: const Duration(milliseconds: 10),
+        );
+        addTearDown(cache.dispose);
+
+        final results = await Future.wait([
+          cache.getProfile(pk1),
+          cache.getProfile(pk2),
+        ]);
+
+        expect(results[0], isA<UserProfileFound>());
+        expect(results[1], isA<UserProfileVanished>());
+        expect(requests, ['POST /api/users/bulk', 'GET /api/users/$pk2']);
+      },
+    );
+
+    test(
+      'asks GET for a claimed queued pubkey the bulk response omits',
+      () async {
+        final requests = <String>[];
+        final pk1 = _pk(1);
+        final pk2 = _pk(2);
+        final httpClient = MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          if (request.url.path == '/api/users/bulk') {
+            return http.Response(
+              jsonEncode({
+                'users': [_userJson(pk1)],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'pubkey': pk2,
+              'has_vanish_request': true,
+              'profile': null,
+            }),
+            200,
+          );
+        });
+        addTearDown(httpClient.close);
+        final cache = ProfileApiCache(
+          client: FunnelcakeApiClient(
+            baseUrl: 'https://profiles.example.test',
+            httpClient: httpClient,
+            retryBaseDelay: Duration.zero,
+          ),
+          batchWindow: const Duration(milliseconds: 50),
+        );
+        addTearDown(cache.dispose);
+
+        final single = cache.getProfile(pk2);
+        final bulk = await cache.getBulkProfiles([pk1, pk2]);
+
+        expect(bulk?.profiles.keys, [pk1]);
+        expect(await single, isA<UserProfileVanished>());
+        expect(requests, ['POST /api/users/bulk', 'GET /api/users/$pk2']);
+      },
+    );
+
+    test(
       'dispose cancels batch timer and completes queued callers with null',
       () async {
         var requestCount = 0;
