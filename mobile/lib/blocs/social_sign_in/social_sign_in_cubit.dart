@@ -1,5 +1,5 @@
-// ABOUTME: Runs a Google or Apple sign-in from the welcome and sign-in
-// ABOUTME: screens: terms, provider token, Keycast session, app sign-in.
+// ABOUTME: Runs a Google or Apple sign-in from the welcome screen: terms,
+// ABOUTME: provider token, Keycast session, app sign-in.
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

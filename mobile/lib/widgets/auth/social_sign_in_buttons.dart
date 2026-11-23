@@ -1,5 +1,5 @@
-// ABOUTME: "Continue with Apple / Google" buttons for the welcome and sign-in
-// ABOUTME: screens, and the scope that provides their SocialSignInCubit.
+// ABOUTME: "Continue with Apple / Google" buttons for the welcome screen, and
+// ABOUTME: the scope that provides their SocialSignInCubit.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,21 +39,11 @@ class SocialSignInScope extends ConsumerWidget {
   }
 }
 
-/// One full-width button per provider this device offers, followed by
-/// [bottomSpacing]. Renders nothing when no provider is offered.
+/// One full-width button per provider this device offers, followed by the
+/// same gap the welcome screen leaves between its buttons. Renders nothing
+/// when no provider is offered.
 class SocialSignInButtons extends StatelessWidget {
-  const SocialSignInButtons({
-    this.enabled = true,
-    this.bottomSpacing = 12,
-    super.key,
-  });
-
-  /// False while another sign-in on the same screen is running. The buttons
-  /// also disable themselves while their own sign-in runs.
-  final bool enabled;
-
-  /// Gap below the last button.
-  final double bottomSpacing;
+  const SocialSignInButtons({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +64,7 @@ class SocialSignInButtons extends StatelessWidget {
       builder: (context, state) {
         if (state.availableProviders.isEmpty) return const SizedBox.shrink();
         return Padding(
-          padding: EdgeInsets.only(bottom: bottomSpacing),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Column(
             spacing: 12,
             children: [
@@ -82,7 +72,7 @@ class SocialSignInButtons extends StatelessWidget {
                 _ProviderButton(
                   provider: provider,
                   isLoading: state.isBusy && state.activeProvider == provider,
-                  enabled: enabled && !state.isBusy,
+                  enabled: !state.isBusy,
                 ),
             ],
           ),
@@ -106,24 +96,29 @@ class _ProviderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final (label, icon, semanticIdentifier) = switch (provider) {
+    // Apple allows only a white button on a dark background (black on a
+    // light one), with its logo in the text colour. Google's quieter
+    // outlined style keeps the green "create account" button in front, and
+    // its G must keep its own colours.
+    final (label, icon, type, semanticIdentifier) = switch (provider) {
       SocialProvider.apple => (
         l10n.authContinueWithApple,
         DivineIconName.appleSignIn,
+        DivineButtonType.contrast,
         SemanticIds.authContinueWithAppleButton,
       ),
       SocialProvider.google => (
         l10n.authContinueWithGoogle,
         DivineIconName.googleSignIn,
+        DivineButtonType.outline,
         SemanticIds.authContinueWithGoogleButton,
       ),
     };
     return DivineButton(
       label: label,
-      type: DivineButtonType.contrast,
+      type: type,
       expanded: true,
       leadingIcon: icon,
-      // Google's G keeps its colours; Apple's logo takes the text colour.
       tintLeadingIcon: provider != SocialProvider.google,
       isLoading: isLoading,
       semanticIdentifier: semanticIdentifier,

@@ -126,8 +126,8 @@ enum FeatureFlag {
   // TODO(#11392): Remove once sign-in with Google and Apple is live.
   socialSignIn(
     'Google and Apple Sign-In',
-    'Offer Continue with Google and Continue with Apple on the welcome and '
-        'sign-in screens. Needs a Keycast that accepts their tokens.',
+    'Offer Continue with Google and Continue with Apple on the welcome '
+        'screen. Needs a Keycast that accepts their tokens.',
     audience: FeatureFlagAudience.internal,
   );
 
