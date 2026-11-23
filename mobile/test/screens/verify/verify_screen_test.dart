@@ -1196,9 +1196,10 @@ void main() {
     });
 
     group('Divine Confirmation', () {
-      final secondRepository = _MockIdentityClaimsRepository();
+      late _MockIdentityClaimsRepository secondRepository;
 
       setUp(() {
+        secondRepository = _MockIdentityClaimsRepository();
         for (final repo in [repository, secondRepository]) {
           when(repo.supportedPlatforms).thenAnswer(
             (_) async => const [
@@ -1258,19 +1259,17 @@ void main() {
         );
 
         Future<void> pumpApp(WidgetTester tester) async {
-          for (final repo in [repository]) {
-            when(repo.supportedPlatforms).thenAnswer(
-              (_) async => const [
-                VerifierPlatform(
-                  key: 'twitter',
-                  label: 'Twitter / X',
-                  supported: true,
-                  oauth: true,
-                  signinRequires: SigninRequirement.confirmation,
-                ),
-              ],
-            );
-          }
+          when(repository.supportedPlatforms).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: true,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ],
+          );
           when(
             () => repository.claimsWithVerdicts(any()),
           ).thenAnswer((_) async => needsIt);
