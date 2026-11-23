@@ -9,6 +9,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -19,8 +20,6 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
-import 'package:videos_repository/videos_repository.dart'
-    show LatestVideoRevisionFound, VideosRepository;
 
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
@@ -37,7 +36,7 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -124,9 +123,15 @@ void main() {
     ).thenReturn(null);
     when(() => mockVideoEventService.updateVideoEvent(any())).thenReturn(null);
     // The relays' newest revision is the one being edited.
-    final videosRepository = _MockVideosRepository();
-    when(() => videosRepository.fetchLatestVideoRevision(any())).thenAnswer(
-      (_) async => LatestVideoRevisionFound(
+    final nostrClient = _MockNostrClient();
+    when(
+      () => nostrClient.readCurrentVersion(
+        kind: any(named: 'kind'),
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
+      ),
+    ).thenAnswer(
+      (_) async => CurrentVersionFound(
         Event.fromJson({
           'id': 'event-id',
           'pubkey': ownerPubkey,
@@ -149,7 +154,7 @@ void main() {
       relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
-      videosRepository: videosRepository,
+      nostrClient: nostrClient,
       collaboratorInviteService: CollaboratorInviteService(
         dmRepository: mockDmRepository,
         l10n: lookupAppLocalizations(const Locale('en')),

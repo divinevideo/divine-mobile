@@ -69,7 +69,11 @@ void main() {
         ).thenAnswer((_) async => LatestVideoRevisionFound(different));
 
         expect(
-          await newestVideoRevision(repository, opened, logName: 'test'),
+          await newestVideoRevision(
+            repository.fetchLatestVideoRevision,
+            opened,
+            logName: 'test',
+          ),
           isNull,
         );
         verifyNever(() => repository.fetchLatestVideoRevision(any()));
@@ -82,7 +86,7 @@ void main() {
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
 
       await newestVideoRevision(
-        repository,
+        repository.fetchLatestVideoRevision,
         _video(eventKind: 34235),
         logName: 'test',
       );
@@ -120,7 +124,11 @@ void main() {
       ).thenAnswer((_) async => LatestVideoRevisionFound(different));
 
       expect(
-        await newestVideoRevision(repository, opened, logName: 'test'),
+        await newestVideoRevision(
+          repository.fetchLatestVideoRevision,
+          opened,
+          logName: 'test',
+        ),
         isNull,
       );
       verifyNever(() => repository.fetchLatestVideoRevision(any()));
@@ -142,7 +150,11 @@ void main() {
       ).thenAnswer((_) async => LatestVideoRevisionFound(ambiguous));
 
       expect(
-        await newestVideoRevision(repository, _video(), logName: 'test'),
+        await newestVideoRevision(
+          repository.fetchLatestVideoRevision,
+          _video(),
+          logName: 'test',
+        ),
         isNull,
       );
     });
@@ -152,7 +164,11 @@ void main() {
         () => repository.fetchLatestVideoRevision(any()),
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
 
-      await newestVideoRevision(repository, _video(), logName: 'test');
+      await newestVideoRevision(
+        repository.fetchLatestVideoRevision,
+        _video(),
+        logName: 'test',
+      );
 
       verify(
         () => repository.fetchLatestVideoRevision('34236:$_owner:my-video'),
@@ -168,7 +184,7 @@ void main() {
       ).thenAnswer((_) async => LatestVideoRevisionFound(newest));
 
       final result = await newestVideoRevision(
-        repository,
+        repository.fetchLatestVideoRevision,
         _video(),
         logName: 'test',
       );
@@ -192,7 +208,7 @@ void main() {
 
       final opened = _video().copyWith(eventCreatedAt: 1700000001);
       final result = await newestVideoRevision(
-        repository,
+        repository.fetchLatestVideoRevision,
         opened,
         logName: 'test',
       );
@@ -218,7 +234,7 @@ void main() {
       });
 
       Future<Event?> readFrom(String openedId) => newestVideoRevision(
-        repository,
+        repository.fetchLatestVideoRevision,
         _video().copyWith(id: openedId, eventCreatedAt: 1700000000),
         logName: 'test',
       );
@@ -259,7 +275,7 @@ void main() {
         ).thenAnswer((_) async => revision);
 
         final result = await newestVideoRevision(
-          repository,
+          repository.fetchLatestVideoRevision,
           _video(),
           logName: 'test',
         );

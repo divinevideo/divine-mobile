@@ -2144,17 +2144,10 @@ class VideosRepository {
   /// The newest revision the relays hold at the video [addressableId]
   /// (`kind:pubkey:d-tag`), for a caller about to replace it.
   ///
-  /// Every relay must settle and the local cache is skipped: a republish
-  /// built from an older revision outranks the newer one and deletes what
-  /// only it held (#11250). A read that did not finish is
-  /// [LatestVideoRevisionUnknown], never an empty answer. A relay's terminal
-  /// `CLOSED` refusal counts as settled once another relay has sent `EOSE`,
-  /// so one relay that always refuses reads cannot block every edit; a newer
-  /// revision held only by a relay that refused is then missed. Silence, a
-  /// dropped socket, and `rate-limited`, `auth-required`, `error:` or
-  /// unclassified refusals still leave the read unfinished. Only events at
-  /// exactly that address whose id and signature verify count, and no viewer
-  /// preference filters them out.
+  /// Reads from every configured relay without the local cache, as required
+  /// before replacing an event (#11250). An incomplete read is retried on
+  /// fresh connections. A refusal or any other missing answer on that retry
+  /// leaves the revision [LatestVideoRevisionUnknown].
   ///
   /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
   /// 34236 address.
@@ -2170,40 +2163,12 @@ class VideosRepository {
         'is not a video address',
       );
     }
-    final read = await _nostrClient.queryEventsDetailed(
-      [
-        Filter(
-          kinds: [address.kind],
-          authors: [address.pubkey],
-          d: [address.dTag],
-        ),
-      ],
-      useCache: false,
-      requireAllRelaysSettled: true,
-      acceptRelayClosedWhenOthersAnswered: true,
+    final read = await _nostrClient.readCurrentVersion(
+      kind: address.kind,
+      pubkey: address.pubkey,
+      dTag: address.dTag,
     );
-    if (read.timedOut || read.noRelays) {
-      return const LatestVideoRevisionUnknown();
-    }
-    Event? newest;
-    for (final event in read.events) {
-      if (event.kind != address.kind ||
-          event.pubkey != address.pubkey ||
-          event.dTagValue != address.dTag ||
-          !event.isValid ||
-          !event.isSigned) {
-        continue;
-      }
-      if (newest == null ||
-          event.createdAt > newest.createdAt ||
-          (event.createdAt == newest.createdAt &&
-              event.id.compareTo(newest.id) < 0)) {
-        newest = event;
-      }
-    }
-    return newest == null
-        ? const LatestVideoRevisionAbsent()
-        : LatestVideoRevisionFound(newest);
+    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// The video addresses among [addressableIds], in their order: Kind 34236

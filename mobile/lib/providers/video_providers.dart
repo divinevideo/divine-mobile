@@ -848,16 +848,17 @@ VideoEventResolver videoEventResolver(Ref ref) {
 /// Service that orchestrates the video-metadata-edit republish flow.
 @riverpod
 VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
+  final nostrClient = ref.watch(nostrServiceProvider);
   return VideoMetadataUpdateService(
     authService: ref.watch(authServiceProvider),
     blossomService: ref.watch(blossomUploadServiceProvider),
     relayPublisher: SignedEventRelayPublisher(
-      nostrClient: ref.watch(nostrServiceProvider),
+      nostrClient: nostrClient,
       trustedRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
-    videosRepository: ref.watch(videosRepositoryProvider),
+    nostrClient: nostrClient,
     collaboratorInviteService: CollaboratorInviteService(
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),

@@ -145,7 +145,7 @@ class SubtitleRepository {
       throw SubtitleEditException('Subtitle edits are limited to short videos');
     }
     final newest = await newestVideoRevision(
-      _videosRepository,
+      _videosRepository.fetchLatestVideoRevision,
       video,
       logName: 'SubtitleRepository',
     );

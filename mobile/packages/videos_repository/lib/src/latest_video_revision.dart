@@ -1,6 +1,7 @@
 // ABOUTME: Result of reading the newest revision at a video address before
 // ABOUTME: replacing it: found, absent, or unknown when a relay never settled.
 
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// What the relays hold at a video address, read so the caller can replace
@@ -8,6 +9,14 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 sealed class LatestVideoRevision {
   /// Base constructor for the three outcomes.
   const LatestVideoRevision();
+
+  /// Adapts the canonical settled read without treating failure as absence.
+  factory LatestVideoRevision.fromCurrentVersion(CurrentVersionRead read) =>
+      switch (read) {
+        CurrentVersionFound(:final event) => LatestVideoRevisionFound(event),
+        CurrentVersionAbsent() => const LatestVideoRevisionAbsent(),
+        CurrentVersionFailed() => const LatestVideoRevisionUnknown(),
+      };
 }
 
 /// The read settled, and [event] is the newest signed revision it returned.

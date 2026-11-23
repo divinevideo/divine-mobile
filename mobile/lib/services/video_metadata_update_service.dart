@@ -13,7 +13,9 @@ import 'package:models/models.dart'
         VideoEvent,
         clipSourceCreditTagMarker,
         withSoundCreditLines;
-import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
+import 'package:nostr_client/nostr_client.dart'
+    show Nip89ClientTag, NostrClient;
+import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -33,7 +35,8 @@ import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart' show VideosRepository;
+import 'package:videos_repository/videos_repository.dart'
+    show LatestVideoRevision, LatestVideoRevisionUnknown;
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
 sealed class VideoUpdateResult {
@@ -271,14 +274,14 @@ class VideoMetadataUpdateService {
     required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
-    required VideosRepository videosRepository,
+    required NostrClient nostrClient,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
        _blossomService = blossomService,
        _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
-       _videosRepository = videosRepository,
+       _nostrClient = nostrClient,
        _collaboratorInviteService = collaboratorInviteService;
 
   final AuthService _authService;
@@ -286,7 +289,7 @@ class VideoMetadataUpdateService {
   final SignedEventRelayPublisher _relayPublisher;
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
-  final VideosRepository _videosRepository;
+  final NostrClient _nostrClient;
   final CollaboratorInviteService _collaboratorInviteService;
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
@@ -323,7 +326,7 @@ class VideoMetadataUpdateService {
       }
 
       var latest = await newestVideoRevision(
-        _videosRepository,
+        _readLatestRevision,
         originalVideo,
         logName: 'VideoMetadataUpdateService',
       );
@@ -357,7 +360,7 @@ class VideoMetadataUpdateService {
         // A subtitle or sound may have been published while Blossom was
         // uploading. Use the last revision we saw as the floor for this read.
         latest = await newestVideoRevision(
-          _videosRepository,
+          _readLatestRevision,
           beforeUpload.copyWith(eventCreatedAt: latest.createdAt),
           logName: 'VideoMetadataUpdateService',
         );
@@ -732,6 +735,17 @@ class VideoMetadataUpdateService {
   static bool _isHttpUrl(String? url) {
     if (url == null || url.isEmpty) return false;
     return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  Future<LatestVideoRevision> _readLatestRevision(String addressableId) async {
+    final address = AId.fromString(addressableId);
+    if (address == null) return const LatestVideoRevisionUnknown();
+    final read = await _nostrClient.readCurrentVersion(
+      kind: address.kind,
+      pubkey: address.pubkey,
+      dTag: address.dTag,
+    );
+    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// Replaces the stale copies of a video whose edit was refused with

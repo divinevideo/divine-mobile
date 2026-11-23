@@ -1068,7 +1068,7 @@ class VideoEventPublisher {
       );
     }
     final latest = await newestVideoRevision(
-      _videosRepositoryGetter?.call(),
+      _videosRepositoryGetter?.call().fetchLatestVideoRevision,
       existingEvent,
       logName: _logName,
     );
@@ -1168,7 +1168,7 @@ class VideoEventPublisher {
     }
     final latest = ownsVideo()
         ? await newestVideoRevision(
-            _videosRepositoryGetter?.call(),
+            _videosRepositoryGetter?.call().fetchLatestVideoRevision,
             existingEvent,
             logName: _logName,
           )

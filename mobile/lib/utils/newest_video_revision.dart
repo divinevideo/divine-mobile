@@ -6,20 +6,20 @@ import 'package:nostr_sdk/event.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart'
     show
+        LatestVideoRevision,
         LatestVideoRevisionAbsent,
         LatestVideoRevisionFound,
-        LatestVideoRevisionUnknown,
-        VideosRepository;
+        LatestVideoRevisionUnknown;
 
-/// The newest signed revision [repository] reads at [video]'s address.
-/// Returns null when the video has no unambiguous address, the repository is
+/// The newest signed revision [readRevision] reads at [video]'s address.
+/// Returns null when the video has no unambiguous address, the reader is
 /// unavailable, the read does not settle with a revision, or the opened
 /// revision wins under NIP-01 ordering. The reason is logged under [logName].
 ///
 /// A video's copy in hand can be older than the relays' newest revision, and
 /// a replacement built from it deletes whatever only the newer one carried.
 Future<Event?> newestVideoRevision(
-  VideosRepository? repository,
+  Future<LatestVideoRevision> Function(String addressableId)? readRevision,
   VideoEvent video, {
   required String logName,
 }) async {
@@ -32,15 +32,15 @@ Future<Event?> newestVideoRevision(
     );
     return null;
   }
-  if (repository == null) {
+  if (readRevision == null) {
     Log.warning(
-      'Not republishing $address: no repository to read its newest revision',
+      'Not republishing $address: no reader for its newest revision',
       name: logName,
       category: LogCategory.video,
     );
     return null;
   }
-  switch (await repository.fetchLatestVideoRevision(address)) {
+  switch (await readRevision(address)) {
     case LatestVideoRevisionFound(:final event):
       if (_hasConflictingIdentifiers(event.tags)) {
         Log.warning(
