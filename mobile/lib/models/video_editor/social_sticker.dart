@@ -965,11 +965,19 @@ class SocialStickerData extends Equatable {
       prompt: text('prompt'),
       chainRoot: text('chainRoot'),
       audience: kind.takesVideoAnswers
-          ? VideoStickerAudience.values.asNameMap()[meta['audience']] ??
-                VideoStickerAudience.everyone
+          ? _draftAudience(meta['audience'])
           : VideoStickerAudience.everyone,
     );
   }
+
+  /// Who may answer, as a draft saved it: everyone when it names no one,
+  /// and only the creator when it names an audience this version does not
+  /// know, so a draft from a newer version stays out of the frames instead
+  /// of being drawn in for everyone.
+  static VideoStickerAudience _draftAudience(Object? saved) => saved == null
+      ? VideoStickerAudience.everyone
+      : VideoStickerAudience.values.asNameMap()[saved] ??
+            VideoStickerAudience.creator;
 
   /// The sticker [layer] shows, read from whichever of its two meta slots
   /// holds it.

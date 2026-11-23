@@ -739,6 +739,17 @@ void main() {
         expect(question.toMeta(), isNot(contains('audience')));
       });
 
+      test('keep a draft out of the frames when it names an audience this '
+          'version does not know', () {
+        final draft = SocialStickerData.fromMeta({
+          ...addYours.toMeta(),
+          'audience': 'mutuals',
+        });
+
+        expect(draft?.audience, equals(VideoStickerAudience.creator));
+        expect(draft?.isLeftOutOfFrames, isTrue);
+      });
+
       test('come back from a tag published without a look when only some '
           'may answer', () {
         final region = VideoStickerRegion.fromTag(
