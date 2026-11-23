@@ -128,9 +128,12 @@ class RelayPool {
 
   final Set<String> _queryFanoutInProgress = {};
 
-  /// Which relay connections have sent EOSE for each live subscription since
-  /// its [Subscription.onEose] last fired.
-  final Map<String, Map<String, int>> _subscriptionEoseRelays = {};
+  /// Which REQs have drawn EOSE for each live subscription since its
+  /// [Subscription.onEose] last fired.
+  final Map<String, Map<String, (int, int)>> _subscriptionEoseRelays = {};
+
+  /// REQ resends after AUTH, keyed by subscription id and relay URL.
+  final Map<String, Map<String, int>> _liveRequestResends = {};
 
   /// Armed [subscriptionEoseSettleWindow] timers, keyed by subscription id.
   final Map<String, Timer> _subscriptionEoseSettleTimers = {};
@@ -1032,6 +1035,7 @@ class RelayPool {
     _subscriptionSilenceProbes.remove(subId)?.cancel();
     _subscriptionEoseSettleTimers.remove(subId)?.cancel();
     _subscriptionEoseFired.remove(subId);
+    _liveRequestResends.remove(subId);
     _refusedAwaitingReplay.remove(subId);
     final subscription = _subscriptions.remove(subId);
     _subscriptionEoseRelays.remove(subId);
@@ -1988,6 +1992,12 @@ class RelayPool {
     // A queued frame may be dispatched after the relay reconnected: it still
     // belongs to the socket it arrived on.
     final receivedOnGeneration = relay.connectionGeneration;
+    final subId = json.length > 1 && json[1] is String
+        ? json[1] as String
+        : null;
+    final answeredRequest = messageType == 'EOSE' && subId != null
+        ? _liveRequestVersion(relay, subId)
+        : null;
 
     // #5863: when an off-main verify worker is wired, serialize the frames
     // that carry or terminate a query per subscription so the asynchronous
@@ -2001,19 +2011,19 @@ class RelayPool {
     // [_dispatchTypedFrame] logs and drops it without awaiting. With no
     // worker the original synchronous path runs unchanged.
     if (_verifyWorker != null &&
-        json.length > 1 &&
-        json[1] is String &&
+        subId != null &&
         (messageType == 'EVENT' ||
             messageType == 'EOSE' ||
             messageType == 'CLOSED')) {
       return _enqueueOrdered(
         relay,
-        json[1] as String,
+        subId,
         () => _dispatchTypedFrame(
           relay,
           json,
           messageType,
           receivedOnGeneration: receivedOnGeneration,
+          answeredRequest: answeredRequest,
         ),
       );
     }
@@ -2022,6 +2032,7 @@ class RelayPool {
       json,
       messageType,
       receivedOnGeneration: receivedOnGeneration,
+      answeredRequest: answeredRequest,
     );
   }
 
@@ -2191,7 +2202,11 @@ class RelayPool {
   /// Records that the pool re-sent [subId]'s REQ to [relay] on its current
   /// connection. The relay answers it again, after replaying its stored
   /// events.
-  void _storedEventsPhaseResent(Relay relay, String subId) {
+  void _recordLiveRequestResent(Relay relay, String subId) {
+    if (_subscriptions[subId]?.onEose != null) {
+      final resends = _liveRequestResends.putIfAbsent(subId, () => {});
+      resends.update(relay.url, (count) => count + 1, ifAbsent: () => 1);
+    }
     final phase = _storedEventsPhases[subId];
     if (phase == null) return;
     phase.expected.add(relay.url);
@@ -2319,8 +2334,8 @@ class RelayPool {
     if (onEose == null || eosed == null || eosed.isEmpty) return;
     final holders = _getRelaysWithSubscription(subId);
     final owing = [
-      for (final entry in holders.entries)
-        if (eosed[entry.key] != entry.value.connectionGeneration) entry.key,
+      for (final relay in holders.values)
+        if (eosed[relay.url] != _liveRequestVersion(relay, subId)) relay.url,
     ];
     // The timer is not on the ordered frame chain. Do not close a bounded
     // read while an owing relay's already-received frames await verification.
@@ -2371,7 +2386,7 @@ class RelayPool {
     if (armed == null) return;
     if (!_relayHoldsLiveRequest(relay, subId)) return;
     if (_subscriptionEoseRelays[subId]?[relay.url] ==
-        relay.connectionGeneration) {
+        _liveRequestVersion(relay, subId)) {
       return;
     }
     _subscriptionEoseSettleTimers.remove(subId);
@@ -2384,6 +2399,10 @@ class RelayPool {
       (identical(_relays[relay.url], relay) ||
           identical(_tempRelays[relay.url], relay) ||
           identical(_cacheRelays[relay.url], relay));
+
+  /// Identifies the current REQ across reconnects and resends on one socket.
+  (int, int) _liveRequestVersion(Relay relay, String subId) =>
+      (relay.connectionGeneration, _liveRequestResends[subId]?[relay.url] ?? 0);
 
   /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
   /// on the connection of [generation]. The frame may have taken a slot of
@@ -2404,6 +2423,7 @@ class RelayPool {
     List<dynamic> json,
     String messageType, {
     required int receivedOnGeneration,
+    required (int, int)? answeredRequest,
   }) async {
     if (messageType == 'EVENT') {
       try {
@@ -2632,10 +2652,10 @@ class RelayPool {
           eoseFrame: json,
         );
         if (_subscriptions[subId]?.onEose != null &&
-            receivedOnGeneration == relay.connectionGeneration &&
+            answeredRequest != null &&
+            answeredRequest == _liveRequestVersion(relay, subId) &&
             _relayHoldsLiveRequest(relay, subId)) {
-          (_subscriptionEoseRelays[subId] ??= {})[relay.url] =
-              receivedOnGeneration;
+          (_subscriptionEoseRelays[subId] ??= {})[relay.url] = answeredRequest;
           _maybeFireLiveEose(subId);
         }
       }
@@ -2770,7 +2790,7 @@ class RelayPool {
                 '🔐 AUTH post-auth: sending ${subscription.id} '
                 '${relay.url}',
               );
-              _storedEventsPhaseResent(relay, subscription.id);
+              _recordLiveRequestResent(relay, subscription.id);
               relay.send(subscription.toJson());
             }
           } else {
@@ -3255,6 +3275,7 @@ class RelayPool {
     _refusedAwaitingReplay.remove(id);
     _subscriptionEoseSettleTimers.remove(id)?.cancel();
     _subscriptionEoseFired.remove(id);
+    _liveRequestResends.remove(id);
     final subscription = _subscriptions.remove(id);
     // Clean up EOSE tracking for this subscription
     _subscriptionEoseRelays.remove(id);

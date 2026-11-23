@@ -45,7 +45,7 @@ class Subscription {
   Function onEvent;
 
   /// Callback invoked when EOSE (End of Stored Events) has been received from
-  /// every relay serving this subscription on its current connection.
+  /// every relay serving this subscription's current REQ.
   ///
   /// The first time, the relays that still owe EOSE after another relay sent
   /// one hold it only while they keep sending this subscription events: once

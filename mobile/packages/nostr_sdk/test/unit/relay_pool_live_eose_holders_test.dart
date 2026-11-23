@@ -17,6 +17,7 @@ class _Relay extends Relay {
   _Relay(String url, {this.reachable = true}) : super(url, RelayStatus(url));
 
   bool reachable;
+  String? authEventId;
 
   /// When set, [doConnect] waits for it, so the relay stays connecting.
   Completer<void>? connectGate;
@@ -42,7 +43,12 @@ class _Relay extends Relay {
     bool queueIfFailed = true,
     bool skipReconnect = false,
     DateTime? deadline,
-  }) async => reachable;
+  }) async {
+    if (message.length > 1 && message[0] == 'AUTH' && message[1] is Map) {
+      authEventId = (message[1] as Map)['id'] as String?;
+    }
+    return reachable;
+  }
 
   void drop() {
     relayStatus.connected = ClientConnected.disconnect;
@@ -179,6 +185,56 @@ void main() {
 
         settle(live.deliver(['EOSE', subId]));
         expect(eoseCalls, 1);
+      });
+    });
+
+    group('when a relay replays its REQ after AUTH', () {
+      void authenticate(_Relay relay) {
+        settle(relay.deliver(['AUTH', 'test-challenge']));
+        expect(relay.authEventId, isNotNull);
+        settle(relay.deliver(['OK', relay.authEventId, true, '']));
+        expect(relay.relayStatus.authed, isTrue);
+      }
+
+      test('continues waiting while the relay sends its replay', () {
+        fakeAsync((fake) {
+          async = fake;
+          final replaying = _Relay('wss://replaying.example');
+          final silent = _Relay('wss://silent.example');
+          final subId = subscribe([replaying, silent]);
+          settle(replaying.deliver(['EOSE', subId]));
+          final halfWindow = window ~/ 2;
+          async.elapse(halfWindow);
+
+          authenticate(replaying);
+          settle(replaying.deliver(['EVENT', subId, _comment(1)]));
+          async.elapse(halfWindow);
+          expect(eoseCalls, 0);
+
+          settle(replaying.deliver(['EOSE', subId]));
+          async.elapse(halfWindow);
+          expect(eoseCalls, 1);
+        });
+      });
+
+      test('does not treat a queued EOSE as an answer to the replay', () {
+        fakeAsync((fake) {
+          async = fake;
+          final worker = _HeldVerifyWorker();
+          nostr.relayPool.eventVerifyWorker = worker;
+          final relay = _Relay('wss://relay.example');
+          final subId = subscribe([relay]);
+          settle(relay.deliver(['EVENT', subId, _comment(1)]));
+          settle(relay.deliver(['EOSE', subId]));
+
+          authenticate(relay);
+          worker.release.complete();
+          async.flushMicrotasks();
+          expect(eoseCalls, 0);
+
+          settle(relay.deliver(['EOSE', subId]));
+          expect(eoseCalls, 1);
+        });
       });
     });
 
