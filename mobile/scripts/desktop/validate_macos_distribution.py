@@ -97,6 +97,14 @@ def verify_profile(bundle: Path, bundle_id: str, team: str, entitlements: dict) 
         raise ValueError("provisioning profile does not authorize the signing certificate")
 
 
+def verify_notarization(bundle: Path) -> None:
+    # Fetching ticket status does not itself enforce a notarized requirement.
+    run_tool(
+        ["codesign", "--verify", "--check-notarization", "-R=notarized", str(bundle)],
+        "an Apple notarization ticket is required for the distribution app",
+    )
+
+
 def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> None:
     with (bundle / "Contents" / "Info.plist").open("rb") as source:
         info = plistlib.load(source)
@@ -139,6 +147,8 @@ def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> No
 
     verify_profile(bundle, expected_bundle_id, expected_team_id, entitlements)
 
+    # Local policy may permit this code without an Apple notarization ticket.
+    verify_notarization(bundle)
     run_tool(
         ["spctl", "--assess", "--type", "execute", str(bundle)],
         "Gatekeeper rejected the distribution app; verify notarization",

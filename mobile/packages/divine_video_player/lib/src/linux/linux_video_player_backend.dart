@@ -128,7 +128,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _ownsPlayer = false;
   bool _changingPlayer = false;
   bool _outputReady = false;
+  bool _outputFailed = false;
   Object? _terminalError;
+  Object? _deferredSourceError;
   int _loadGeneration = 0;
   int? _activeLoadGeneration = 0;
   int? _reportedErrorGeneration;
@@ -168,7 +170,28 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     // the global timeline coordinate space.
     await _cancelDurationProbes();
     if (_disposed || generation != _loadGeneration) return;
-    final sourceDurations = await _resolveClipDurations(nextClips, generation);
+    final List<Duration> sourceDurations;
+    try {
+      sourceDurations = await _resolveClipDurations(nextClips, generation);
+    } on Object catch (error) {
+      if (!_disposed && generation == _loadGeneration) {
+        // Validation did not replace the native source. Restore its frame and
+        // error ownership, including output readiness arriving during probing.
+        _activeLoadGeneration = generation;
+        if (_hasLoadedMedia) {
+          if (_deferredSourceError case final sourceError?) {
+            _deferredSourceError = null;
+            _handleError(sourceError);
+          } else {
+            _refreshState();
+            _reportOutputReady();
+          }
+        } else {
+          _handleError(error);
+        }
+      }
+      rethrow;
+    }
     if (_disposed || generation != _loadGeneration) return;
     final nextDurations = <Duration>[];
     final nextOffsets = <Duration>[];
@@ -184,7 +207,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
     await _enqueue(() async {
       if (generation != _loadGeneration) return;
-      if (_playerHasOpenedMedia || _terminalError != null) {
+      if (_playerHasOpenedMedia || _outputFailed || _terminalError != null) {
         _changingPlayer = true;
         final volume = _volume;
         await _retirePlayer();
@@ -280,6 +303,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       await cancellingProbes;
       await _player.stop();
       _terminalError = null;
+      _deferredSourceError = null;
       _hasLoadedMedia = false;
       _clips.clear();
       _clipSpeeds.clear();
@@ -425,7 +449,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     WidgetsBinding.instance.ensureVisualUpdate();
     _playerHasOpenedMedia = false;
     _outputReady = false;
+    _outputFailed = false;
     _terminalError = null;
+    _deferredSourceError = null;
     _reportedErrorGeneration = null;
     final generation = ++_playerGeneration;
     _listenToPlayer();
@@ -438,6 +464,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         },
         onError: (Object error) {
           if (_disposed || generation != _playerGeneration) return;
+          _outputFailed = true;
           _terminalError = error;
           _reportOutputReady();
         },
@@ -481,7 +508,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
 
     void report(Object error) {
-      if (isCurrent() && _activeLoadGeneration == _loadGeneration) {
+      if (isCurrent() && _activeLoadGeneration != null) {
         if (_isAudioOutputUnavailable(error)) {
           Log.warning(
             'Desktop audio output is unavailable; video playback continues.',
@@ -490,7 +517,13 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
           );
           return;
         }
-        _handleError(error);
+        if (_activeLoadGeneration == _loadGeneration) {
+          _handleError(error);
+        } else if (_hasLoadedMedia) {
+          // Keep the still-owned source's failure until its pending replacement
+          // succeeds. A rejected replacement must not erase this observation.
+          _deferredSourceError = error;
+        }
       }
     }
 

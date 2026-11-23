@@ -21,6 +21,66 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group('native desktop media', () {
+    test(
+      'preserves a rendered source after replacement validation fails',
+      () async {
+        MediaKit.ensureInitialized();
+        final player = Player();
+        final native = player.platform! as NativePlayer;
+        await native.setProperty('vo', 'null');
+        await native.setProperty('vid', 'auto');
+        await native.setProperty('ao', 'null');
+        final source = File(
+          'test/fixtures/desktop_silent_portrait.mp4',
+        ).absolute;
+        final missing = File('test/fixtures/absent-replacement.mp4').absolute;
+        var first = true;
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final rendered = Completer<void>();
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          playerFactory: () {
+            if (first) {
+              first = false;
+              return player;
+            }
+            return Player();
+          },
+          videoControllerFactory: (_) => Object(),
+          videoControllerReady: (_) => rendered.future,
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          VideoClip(
+            uri: source.uri.toString(),
+            end: const Duration(seconds: 1),
+          ),
+        ]);
+        await backend.setLooping(looping: true);
+        rendered.complete();
+        await backend.play();
+        await pumpEventQueue();
+        expect(states.last.isFirstFrameRendered, isTrue);
+
+        await expectLater(
+          backend.setClips([VideoClip(uri: missing.uri.toString())]),
+          throwsStateError,
+        );
+        await player.stream.position
+            .firstWhere((position) => position > Duration.zero)
+            .timeout(const Duration(seconds: 4));
+
+        expect(player.state.playing, isTrue);
+        expect(states.last.status, PlaybackStatus.playing);
+        expect(states.last.isFirstFrameRendered, isTrue);
+        expect(errors, isEmpty);
+      },
+    );
+
     testWidgets('keeps the thumbnail when video output is disabled', (
       tester,
     ) async {

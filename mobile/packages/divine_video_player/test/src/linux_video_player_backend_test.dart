@@ -15,6 +15,147 @@ void main() {
 
   group(MediaKitLinuxVideoPlayerBackend, () {
     test(
+      'retains a current-source failure if replacement validation also fails',
+      () async {
+        final player = _FakePlatformPlayer();
+        final output = _FakeVideoController();
+        final probe = Completer<Duration>();
+        final probing = Completer<void>();
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: player),
+          videoControllerFactory: (_) => output,
+          videoControllerReady: (_) => output.ready.future,
+          durationProbe: (_) {
+            probing.complete();
+            return probe.future;
+          },
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(
+            uri: 'file:///current.mp4',
+            end: Duration(seconds: 4),
+          ),
+        ]);
+        output.ready.complete();
+        await backend.play();
+        final replacement = backend.setClips([
+          const VideoClip(uri: 'file:///replacement.mp4'),
+        ]);
+        final rejected = expectLater(replacement, throwsStateError);
+        await probing.future;
+        player.emitPlaybackError('Current source became unreadable');
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+        probe.completeError(StateError('Replacement unavailable'));
+        await rejected;
+
+        expect(states.last.status, PlaybackStatus.error);
+        expect(
+          errors.single.toString(),
+          contains('Current source became unreadable'),
+        );
+      },
+    );
+
+    test(
+      'restores an active source after replacement validation fails',
+      () async {
+        final player = _FakePlatformPlayer();
+        final output = _FakeVideoController();
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        var created = false;
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            if (created) {
+              return Player(
+                platformPlayer: _FakePlatformPlayer(
+                  probeError: 'Missing replacement',
+                ),
+              );
+            }
+            created = true;
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) => output,
+          videoControllerReady: (_) => output.ready.future,
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(
+            uri: 'file:///current.mp4',
+            end: Duration(seconds: 4),
+          ),
+        ]);
+        output.ready.complete();
+        await backend.play();
+        await pumpEventQueue();
+        expect(states.last.isFirstFrameRendered, isTrue);
+        await expectLater(
+          backend.setClips([const VideoClip(uri: 'file:///missing.mp4')]),
+          throwsStateError,
+        );
+
+        expect(states.last.isFirstFrameRendered, isTrue);
+        expect(states.last.status, PlaybackStatus.playing);
+        player.emitPlaybackError('Current source read failure');
+        await pumpEventQueue();
+        expect(
+          errors.single.toString(),
+          contains('Current source read failure'),
+        );
+        expect(states.last.status, PlaybackStatus.error);
+      },
+    );
+
+    test(
+      'recreates a failed initial output after stop and renders its retry',
+      () async {
+        final outputs = <_FakeVideoController>[];
+        final states = <DivineVideoPlayerState>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+          videoControllerFactory: (_) {
+            final output = _FakeVideoController();
+            outputs.add(output);
+            return output;
+          },
+          videoControllerReady: (output) =>
+              (output as _FakeVideoController).ready.future,
+        );
+        await backend.initialize(onStateChanged: states.add, onError: (_) {});
+        addTearDown(backend.dispose);
+        outputs.single.ready.completeError(StateError('Initial output failed'));
+        await pumpEventQueue();
+        expect(states.last.status, PlaybackStatus.error);
+        await backend.stop();
+        await backend.setClips([
+          const VideoClip(uri: 'file:///retry.mp4', end: Duration(seconds: 4)),
+        ]);
+
+        expect(outputs, hasLength(2));
+        outputs.last.ready.complete();
+        await pumpEventQueue();
+        expect(states.last.isFirstFrameRendered, isTrue);
+        expect(states.last.status, PlaybackStatus.ready);
+      },
+    );
+
+    test(
       'keeps video progress when the audio output device is unavailable',
       () async {
         final player = _FakePlatformPlayer();

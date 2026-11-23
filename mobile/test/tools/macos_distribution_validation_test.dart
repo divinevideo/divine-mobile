@@ -36,7 +36,12 @@ void main() {
         r'''
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "$1" == --verify ]]; then exit "${VERIFY_EXIT:-0}"; fi
+if [[ "$1" == --verify ]]; then
+  if [[ " $* " == *' --check-notarization '* ]]; then
+    exit "${NOTARIZATION_EXIT:-0}"
+  fi
+  exit "${VERIFY_EXIT:-0}"
+fi
 if [[ "$2" == --extract-certificates=* ]]; then
   printf '%s' 'test-cert' > "${2#--extract-certificates=}0"
 elif [[ "$2" == --extract-certificates ]]; then
@@ -118,6 +123,18 @@ fi
       expect(result.stderr, contains('signature verification'));
     });
 
+    test(
+      'rejects a missing notarization ticket despite local policy approval',
+      () async {
+        final result = await validate(
+          overrides: {'ASSESS_EXIT': '0', 'NOTARIZATION_EXIT': '1'},
+        );
+
+        expect(result.exitCode, isNot(0));
+        expect(result.stderr, contains('notarization ticket'));
+      },
+    );
+
     test('rejects a keychain access group for another app', () async {
       await entitlements.writeAsString('''
 <plist version="1.0"><dict>
@@ -190,6 +207,42 @@ fi
       expect(result.exitCode, 0, reason: '${result.stderr}');
     }, skip: !Platform.isMacOS);
 
+    test('rejects actual valid ad hoc code without an Apple ticket', () async {
+      final binary = await File('/usr/bin/true')
+          .copy('${temporaryDirectory.path}/synthetic-app');
+      final signing = await Process.run('/usr/bin/codesign', [
+        '--force',
+        '--sign',
+        '-',
+        binary.path,
+      ]);
+      expect(signing.exitCode, 0, reason: '${signing.stderr}');
+      final integrity = await Process.run('/usr/bin/codesign', [
+        '--verify',
+        '--strict',
+        binary.path,
+      ]);
+      expect(integrity.exitCode, 0, reason: '${integrity.stderr}');
+      const probe = '''
+import runpy, sys
+from pathlib import Path
+tool = runpy.run_path("scripts/desktop/validate_macos_distribution.py")
+try:
+    tool["verify_notarization"](Path(sys.argv[1]))
+except ValueError:
+    sys.exit(0)
+sys.exit(1)
+''';
+      final result = await Process.run('python3', ['-c', probe, binary.path]);
+
+      expect(
+        result.exitCode,
+        0,
+        reason:
+            'Valid code without a notarization ticket was accepted. ${result.stderr}',
+      );
+    }, skip: !Platform.isMacOS);
+
     for (final authorized in [true, false]) {
       test(
         'checks associated-domains wildcard authorization ($authorized)',
@@ -232,13 +285,15 @@ fi
       });
     }
 
-    for (final (publish, unsigned) in [
-      (true, true),
-      (true, false),
-      (false, true),
+    for (final (publish, unsigned, notarized) in [
+      (true, true, false),
+      (true, false, true),
+      (true, false, false),
+      (false, true, false),
     ]) {
       test(
-        'DMG workflow validates input (publish: $publish, unsigned: $unsigned)',
+        'DMG workflow validates input '
+        '(publish: $publish, unsigned: $unsigned, notarized: $notarized)',
         () async {
           final project = loadYaml(
             await File('../codemagic.yaml').readAsString(),
@@ -288,6 +343,7 @@ fi
             environment: {
               ...environment,
               'DMG_MARKER': marker.path,
+              'NOTARIZATION_EXIT': notarized ? '0' : '1',
               if (unsigned)
                 'TEST_SIGNATURE': 'Signature=adhoc\nTeamIdentifier=not set',
             },
@@ -295,10 +351,10 @@ fi
 
           expect(
             result.exitCode,
-            publish && unsigned ? isNot(0) : 0,
+            publish && (unsigned || !notarized) ? isNot(0) : 0,
             reason: '${result.stderr}',
           );
-          expect(marker.existsSync(), publish && !unsigned);
+          expect(marker.existsSync(), publish && !unsigned && notarized);
         },
       );
     }
