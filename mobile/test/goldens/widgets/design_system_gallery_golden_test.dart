@@ -15,7 +15,7 @@ void main() {
     testWidgets('button types', (tester) async {
       await _pumpGallery(
         tester,
-        size: const Size(360, 560),
+        size: const Size(360, 640),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
