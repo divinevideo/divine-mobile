@@ -23,13 +23,16 @@ const _legacyVersionKey = 'moor_db_version_$_databaseName';
 ///
 /// Hosts SQLite in a worker when browser support allows it. The legacy SQLite
 /// file includes local writes such as queued DMs, not just relay-backed cache.
-QueryExecutor openConnection() {
+QueryExecutor openConnection({Uri? assetBase}) {
   return DatabaseConnection.delayed(
     Future(() async {
       final probe = await WasmDatabase.probe(
         databaseName: _databaseName,
-        sqlite3Uri: Uri.parse('sqlite3.wasm'),
-        driftWorkerUri: Uri.parse('drift_worker.js'),
+        sqlite3Uri:
+            assetBase?.resolve('sqlite3.wasm') ?? Uri.parse('sqlite3.wasm'),
+        driftWorkerUri:
+            assetBase?.resolve('drift_worker.js') ??
+            Uri.parse('drift_worker.js'),
       );
       // Preserve Drift's usual preference for any existing durable database.
       final available = WasmStorageImplementation.values.where(
