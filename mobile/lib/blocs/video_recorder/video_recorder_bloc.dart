@@ -36,6 +36,7 @@ import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/observability/camera_startup_trace.dart';
+import 'package:openvine/observability/camera_switch_trace.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -810,6 +811,11 @@ class VideoRecorderBloc
   ) async {
     if (_refusesRebindMidTake('Camera switch')) return;
 
+    final trace = CameraSwitchTrace(
+      _performanceMonitor,
+      kind: CameraSwitchKind.flip,
+      dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+    );
     // Flag the switch up front so the preview blurs its frozen last frame
     // while the native camera rebinds. `_emitCameraSync` rebuilds the state
     // from scratch and drops this flag once the new lens is live; the
@@ -817,6 +823,7 @@ class VideoRecorderBloc
     emit(state.copyWith(isSwitchingCamera: true));
     try {
       final success = await _cameraService.switchCamera();
+      trace.switched(success: success);
 
       if (!success) {
         Log.warning(
@@ -843,6 +850,7 @@ class VideoRecorderBloc
       if (!emit.isDone) {
         emit(state.copyWith(isSwitchingCamera: false));
       }
+      trace.finish(lens: _cameraService.currentLens.name);
     }
   }
 
@@ -904,26 +912,40 @@ class VideoRecorderBloc
       return;
     }
 
-    final success = await _cameraService.setLens(event.lens);
-    if (!success) {
-      Log.warning(
-        '⚠️ Failed to set lens to ${event.lens.displayName}',
+    // Picking the lens already live is no switch, and would report one that
+    // took no time.
+    final trace = event.lens == _cameraService.currentLens
+        ? null
+        : CameraSwitchTrace(
+            _performanceMonitor,
+            kind: CameraSwitchKind.lens,
+            dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+          );
+    try {
+      final success = await _cameraService.setLens(event.lens);
+      trace?.switched(success: success);
+      if (!success) {
+        Log.warning(
+          '⚠️ Failed to set lens to ${event.lens.displayName}',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+        return;
+      }
+
+      await _saveCurrentLensPreference();
+
+      Log.info(
+        '🔄 Lens switched to ${event.lens.displayName} - zoom reset to 1.0x',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
-      return;
+
+      emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
+      _emitCameraSync(emit);
+    } finally {
+      trace?.finish(lens: _cameraService.currentLens.name);
     }
-
-    await _saveCurrentLensPreference();
-
-    Log.info(
-      '🔄 Lens switched to ${event.lens.displayName} - zoom reset to 1.0x',
-      name: 'VideoRecorderBloc',
-      category: LogCategory.video,
-    );
-
-    emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
-    _emitCameraSync(emit);
   }
 
   Future<void> _onZoomLevelSet(

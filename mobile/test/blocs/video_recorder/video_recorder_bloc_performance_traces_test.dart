@@ -260,4 +260,97 @@ void main() {
       });
     });
   });
+
+  group('camera_switch trace', () {
+    setUp(stubRecorder);
+
+    test('times a flip until the recorder shows the new camera', () {
+      fakeAsync((async) {
+        var lens = DivineCameraLens.back;
+        final switched = Completer<bool>();
+        final lensSaved = Completer<bool>();
+        when(() => cameraService.currentLens).thenAnswer((_) => lens);
+        when(
+          () => cameraService.switchCamera(),
+        ).thenAnswer((_) => switched.future);
+        when(
+          () => prefs.setString(any(), any()),
+        ).thenAnswer((_) => lensSaved.future);
+        final bloc = buildBloc()..add(const VideoRecorderCameraSwitched());
+
+        async.elapse(const Duration(milliseconds: 300));
+        lens = DivineCameraLens.front;
+        switched.complete(true);
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 40));
+        lensSaved.complete(true);
+        async.flushMicrotasks();
+
+        final trace = tracesNamed('camera_switch').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes, {
+          'kind': 'flip',
+          'outcome': 'success',
+          'dual_camera': 'off',
+          'lens': 'front',
+        });
+        expect(trace.metrics, {'total_ms': 340, 'switch_ms': 300});
+        expect(bloc.state.isSwitchingCamera, isFalse);
+
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'reports a lens the camera refused as failed',
+      setUp: () => when(
+        () => cameraService.setLens(DivineCameraLens.front),
+      ).thenAnswer((_) async => false),
+      build: buildBloc,
+      act: (bloc) =>
+          bloc.add(const VideoRecorderLensSet(DivineCameraLens.front)),
+      verify: (_) {
+        final trace = tracesNamed('camera_switch').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes, {
+          'kind': 'lens',
+          'outcome': 'failed',
+          'dual_camera': 'off',
+          'lens': 'back',
+        });
+        expect(trace.metrics.keys, containsAll(['total_ms', 'switch_ms']));
+      },
+    );
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'reports a switch that threw as an error',
+      setUp: () => when(
+        () => cameraService.switchCamera(),
+      ).thenThrow(StateError('camera rebind failed')),
+      build: buildBloc,
+      act: (bloc) => bloc.add(const VideoRecorderCameraSwitched()),
+      errors: () => [isA<StateError>()],
+      verify: (_) {
+        final trace = tracesNamed('camera_switch').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes['outcome'], 'error');
+        expect(trace.metrics.keys, ['total_ms']);
+      },
+    );
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'reports nothing when the lens picked is already live',
+      setUp: () => when(
+        () => cameraService.setLens(DivineCameraLens.back),
+      ).thenAnswer((_) async => true),
+      build: buildBloc,
+      act: (bloc) =>
+          bloc.add(const VideoRecorderLensSet(DivineCameraLens.back)),
+      verify: (_) {
+        verify(() => cameraService.setLens(DivineCameraLens.back)).called(1);
+        expect(tracesNamed('camera_switch'), isEmpty);
+      },
+    );
+  });
 }
