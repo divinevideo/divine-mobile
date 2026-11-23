@@ -2552,6 +2552,28 @@ void main() {
         );
 
         test(
+          'a refusal marks the platform as needing Confirmation when its '
+          'list entry did not say so',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            expect(cubit.state.platform.signinRequires, isNull);
+
+            await cubit.approveSignIn();
+
+            // So the screen offers Confirmation, not a sign-in the verifier
+            // refuses the same way, once this one is cancelled.
+            expect(
+              cubit.state.platform.signinRequires,
+              SigninRequirement.confirmation,
+            );
+            expect(cubit.state.platform.key, _twitter.key);
+            expect(cubit.state.platform.supportsOAuth, isTrue);
+          },
+        );
+
+        test(
           'confirmation_required with the flag off drops the sign-in [D3a]',
           () async {
             whenConfirm().thenThrow(required());

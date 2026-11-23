@@ -349,6 +349,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
             supported: platform.supported,
             oauth: false,
             signinExpiresAfterDays: platform.signinExpiresAfterDays,
+            signinRequires: platform.signinRequires,
           ),
         ),
       );
@@ -499,6 +500,21 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           // "has" still brings the sign-in back, and an answer to a read
           // asked before the refusal is older and is dropped.
           _accessRefreshes++;
+          // The refusal also says the platform's sign-in needs
+          // Confirmation, which a stale or failed platform list may not.
+          final platform = state.platform;
+          emitIfOpen(
+            state.copyWith(
+              platform: VerifierPlatform(
+                key: platform.key,
+                label: platform.label,
+                supported: platform.supported,
+                oauth: platform.oauth,
+                signinExpiresAfterDays: platform.signinExpiresAfterDays,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ),
+          );
           return _failKeepingSignIn(
             pendingPurchase
                 ? VerifyConnectError.confirmationPending
