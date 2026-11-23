@@ -846,14 +846,12 @@ ClassicFeedSession _homeClassicSession(
         .read(analyticsServiceIdentityStreamProvider)
         .doOnData((current) => analytics = current)
         .switchMap((current) => current.privacyChanges),
-    // Same predicates as the Home list, so the session's index stays valid
-    // for the videos Home displays.
+    isUnavailable: isUnavailable,
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
       return repository
           .applyContentPreferences(videos)
           .where((video) => !repository.isVideoKnownDeleted(video))
-          .where((video) => !isUnavailable(video.id))
           .toList();
     },
   )..setActive(active: false);

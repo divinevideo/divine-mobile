@@ -230,6 +230,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final snapshot = _classicSession?.state ?? event.snapshot;
     final videos = _withoutRemovedVideos(
       _removalRepository.applyContentPreferences(snapshot.videos),
+      // The session keeps the playing prefix stable during live marks.
+      filterUnavailable: _classicSession == null,
     );
     final activeKey = state.videos.isEmpty
         ? null
@@ -1878,10 +1880,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) {
     final videoId = event.videoId.toLowerCase();
-    final index = state.videos.indexWhere(
+    final classicSession = state.source.type == VideoFeedSourceType.classic
+        ? _classicSession
+        : null;
+    final snapshot = classicSession?.state;
+    final index = (snapshot?.videos ?? state.videos).indexWhere(
       (video) => video.id.toLowerCase() == videoId,
     );
-    if (index <= state.currentIndex) return;
+    if (index <= (snapshot?.currentIndex ?? state.currentIndex)) return;
+    if (classicSession != null) {
+      classicSession.reapplyFilters();
+      return;
+    }
     _onVideoRemoved(VideoFeedVideoRemoved(event.videoId), emit);
   }
 
@@ -1889,8 +1899,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// media was confirmed unavailable. Block and mute sweeps share the bus but
   /// are reversible, so an unblocked author's video may come back on a later
   /// read.
-  List<VideoEvent> _withoutRemovedVideos(Iterable<VideoEvent> videos) {
-    final isUnavailable = _unavailableFilter;
+  List<VideoEvent> _withoutRemovedVideos(
+    Iterable<VideoEvent> videos, {
+    bool filterUnavailable = true,
+  }) {
+    final isUnavailable = filterUnavailable ? _unavailableFilter : null;
     return videos
         .where((video) => !_removalRepository.isVideoKnownDeleted(video))
         .where((video) => isUnavailable == null || !isUnavailable(video.id))
@@ -2048,7 +2061,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           : validVideos;
       final displayedVideos =
           source.type == VideoFeedSourceType.classic && _classicSession != null
-          ? _withoutRemovedVideos(_classicSession.state.videos)
+          ? _withoutRemovedVideos(
+              _classicSession.state.videos,
+              filterUnavailable: false,
+            )
           : source.type == VideoFeedSourceType.newVideos
           ? filterNewFeedVideos(mergedVideos)
           : mergedVideos;

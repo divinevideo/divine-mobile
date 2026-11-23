@@ -545,6 +545,87 @@ void main() {
     );
 
     testWidgets(
+      'Classics drops unavailable videos ahead without moving the active slot',
+      (tester) async {
+        final trackerLoaded = Completer<BrokenVideoTracker>();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            adaptiveClassicsEnabledProvider.overrideWithValue(true),
+            brokenVideoTrackerProvider.overrideWith(
+              (_) => trackerLoaded.future,
+            ),
+          ],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(
+            videos: [
+              for (final digit in '1234'.split('')) _removalVideo(digit),
+            ],
+            paginationCursor: 'next',
+            hasMore: true,
+          ),
+        );
+
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        home.originalFeed.add(const VideoFeedActiveIndexChanged(1));
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos[1], _removalVideo('2'));
+
+        final tracker = BrokenVideoTracker(ownerPubkey: _policyViewer);
+        addTearDown(tracker.dispose);
+        await tester.runAsync(() async {
+          await tracker.initialize();
+          for (final digit in '124'.split('')) {
+            await tracker.markVideoBroken(
+              digit * 64,
+              'Marked in an earlier session',
+            );
+          }
+        });
+        trackerLoaded.complete(tracker);
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.videos, [
+          _removalVideo('1'),
+          _removalVideo('2'),
+          _removalVideo('3'),
+        ]);
+        expect(home.originalFeed.state.currentIndex, 1);
+
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.videos, [_removalVideo('3')]);
+        expect(home.originalFeed.state.currentIndex, 0);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
       'same-account repository replacement keeps Home alive and follows removals',
       (tester) async {
         final oldRemovals = StreamController<String>.broadcast();
