@@ -717,6 +717,7 @@ class VideoMetadataUpdateService {
   static bool _isLegacyThumbnailTag(List<String> tag) =>
       tag.length >= 2 &&
       (tag.first == 'thumb' ||
+          tag.first == 'thumbnail' ||
           tag.first == 'image' ||
           (tag.first == 'r' && tag.length >= 3 && tag[2] == 'thumbnail'));
 

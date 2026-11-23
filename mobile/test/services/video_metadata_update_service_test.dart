@@ -1357,6 +1357,7 @@ void main() {
           newerRevision(
             extraTags: const [
               hls,
+              ['thumbnail', oldCover],
               ['thumb', oldCover],
               ['image', oldCover],
               ['r', oldCover, 'thumbnail'],
@@ -1389,6 +1390,10 @@ void main() {
             thumbnailUrl,
           ),
         );
+        final indexedVideo = VideoStats.fromJson({
+          'tags': capturedTags,
+        }).toVideoEvent();
+        expect(indexedVideo.thumbnailUrl, thumbnailUrl);
         expect(
           capturedTags,
           containsAll([
