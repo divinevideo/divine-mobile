@@ -2569,6 +2569,36 @@ void main() {
         expect(offset(), greaterThan(0));
       });
 
+      testWidgets('Use a proof post jumps there at once with reduced motion', (
+        tester,
+      ) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        refuseForConfirmation();
+        await pump(
+          tester,
+          platform: twitterGated,
+          readConfirmationAccess: answering([ConfirmationAccess.unknown]),
+          size: const Size(800, 300),
+        );
+        final list = find.byType(Scrollable).first;
+        double offset() => tester.state<ScrollableState>(list).position.pixels;
+        await refuseAndOpenSheet(tester);
+        final useProof = sheetButton(l10n.verifyConfirmationSheetUseProof);
+        await tester.ensureVisible(useProof);
+        await tester.pumpAndSettle();
+        await tester.tap(useProof);
+        // No time passes: an animated scroll would still be at its start.
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        expect(offset(), greaterThan(0));
+      });
+
       // Carried from Task 5: the renewal kept a sign-in for another handle
       // while the proof form shows the renewed one.
       testWidgets('Use a proof post in a renewal drops the other handle and '

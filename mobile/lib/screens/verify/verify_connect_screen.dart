@@ -339,10 +339,13 @@ class _VerifyConnectViewState extends State<VerifyConnectView> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final label = _proofSectionKey.currentContext;
           if (label == null || !label.mounted) return;
+          final reduceMotion = MediaQuery.disableAnimationsOf(label);
           runDetached(
             Scrollable.ensureVisible(
               label,
-              duration: const Duration(milliseconds: 300),
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 300),
             ),
             'scroll to the proof post',
             logName: 'VerifyConnectView',
