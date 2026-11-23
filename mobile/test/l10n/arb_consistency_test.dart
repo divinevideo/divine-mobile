@@ -648,6 +648,7 @@ const _knownUntranslatedDebt = <String>{
   'verifyConfirmationSheetTitle',
   'verifyConfirmationSheetSubtitle',
   'verifyConfirmationSheetUseProof',
+  'verifyLinkNeedsConfirmationSemanticLabel',
   'verifyOneTapWithConfirmationBadge',
   'verifyRenewConfirmation',
   'verifyRenewConfirmationSemanticLabel',

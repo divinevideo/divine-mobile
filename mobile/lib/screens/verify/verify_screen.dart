@@ -432,6 +432,17 @@ class _VerifyContent extends StatelessWidget {
       platform: platformKey,
       replacing: replacing?.identity,
     ).push<VerifyConnectResult>(context);
+    // The flow may have re-checked Divine Confirmation (on coming back from
+    // the Confirmation screen), whether or not it linked anything; the
+    // badges take that answer from the repository.
+    if (!cubit.isClosed) {
+      runDetached(
+        cubit.rereadConfirmationAccess(),
+        'reread Divine Confirmation access after connect',
+        logName: 'VerifyView',
+        category: LogCategory.auth,
+      );
+    }
     if (result == null || !context.mounted) return;
     final linked = result.linked;
 

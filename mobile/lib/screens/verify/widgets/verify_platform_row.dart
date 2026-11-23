@@ -34,7 +34,11 @@ class VerifyPlatformRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Semantics(
         button: true,
-        label: l10n.verifyLinkSemanticLabel(label),
+        // The badge below is hidden from screen readers, so the requirement
+        // it shows is part of the row's label.
+        label: needsConfirmation
+            ? l10n.verifyLinkNeedsConfirmationSemanticLabel(label)
+            : l10n.verifyLinkSemanticLabel(label),
         child: Material(
           color: context.vineColors.surface,
           borderRadius: BorderRadius.circular(16),

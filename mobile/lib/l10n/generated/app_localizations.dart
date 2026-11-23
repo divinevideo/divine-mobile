@@ -24735,6 +24735,12 @@ abstract class AppLocalizations {
   /// **'Link your {platform} account'**
   String verifyLinkSemanticLabel(String platform);
 
+  /// Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link your {platform} account. Signing in needs Divine Confirmation'**
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform);
+
   /// Small marker on platforms that can be linked by signing in, without posting a proof.
   ///
   /// In en, this message translates to:

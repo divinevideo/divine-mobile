@@ -118,36 +118,52 @@ class VerifyCubit extends Cubit<VerifyState> {
     _refreshingQuietly = true;
     final generation = _listGeneration;
     try {
-      final claims = await _repository.claimsWithVerdicts(_pubkey);
-      if (isClosed) return;
-      // A link or unlink landed while the read was out. The read may predate
-      // it, or come from a relay that hasn't caught up, and would put back a
-      // row the user just removed. The next load reconciles.
-      if (generation == _listGeneration) {
+      try {
+        final claims = await _repository.claimsWithVerdicts(_pubkey);
+        if (isClosed) return;
+        // A link or unlink landed while the read was out. The read may
+        // predate it, or come from a relay that hasn't caught up, and would
+        // put back a row the user just removed. The next load reconciles.
+        if (generation == _listGeneration) {
+          emit(
+            state.copyWith(
+              claims: claims.claims,
+              verifiedKeys: claims.verifiedKeys,
+              verifierReachable: claims.verifierReachable,
+              signInCodes: claims.signInCodes,
+            ),
+          );
+        }
+      } on Object catch (error, stackTrace) {
+        if (isClosed) return;
+        addError(error, stackTrace);
         emit(
           state.copyWith(
-            claims: claims.claims,
-            verifiedKeys: claims.verifiedKeys,
-            verifierReachable: claims.verifierReachable,
-            signInCodes: claims.signInCodes,
+            error: VerifyError.load,
+            errorAttempt: state.errorAttempt + 1,
           ),
         );
       }
-      await _loadConfirmationAccess(state.platforms, refresh: true);
-    } on Object catch (error, stackTrace) {
+      // Asked either way: coming back from the Confirmation screen is what
+      // this refresh is for, and the access read never throws.
       if (isClosed) return;
-      addError(error, stackTrace);
-      emit(
-        state.copyWith(
-          error: VerifyError.load,
-          errorAttempt: state.errorAttempt + 1,
-        ),
-      );
+      await _loadConfirmationAccess(state.platforms, refresh: true);
     } finally {
       _refreshingQuietly = false;
     }
   }
 
+  /// Reads Divine Confirmation access without forcing a re-check (the
+  /// remembered answer, if any), for the return from the connect screen. A
+  /// re-check made there (on coming back from the Confirmation screen) is
+  /// shared through the repository, so the badges catch up with it.
+  Future<void> rereadConfirmationAccess() =>
+      _loadConfirmationAccess(state.platforms, refresh: false);
+
+  // A plain read can still be out when a refresh starts ([load] then
+  // [refreshQuietly]). No generation guard is needed: the reader resolves a
+  // read a newer one overtook to the newest answer, so whichever lands last
+  // writes the same value.
   Future<void> _loadConfirmationAccess(
     List<VerifierPlatform> platforms, {
     required bool refresh,

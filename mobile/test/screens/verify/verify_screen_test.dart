@@ -94,6 +94,7 @@ void main() {
     setUp(() {
       cubit = _MockVerifyCubit();
       when(cubit.load).thenAnswer((_) async {});
+      when(cubit.rereadConfirmationAccess).thenAnswer((_) async {});
       when(() => cubit.isClosed).thenReturn(false);
       when(() => cubit.removeClaim(any())).thenAnswer((_) async {});
       originalReporter = detachedFailureReporter;
@@ -663,6 +664,24 @@ void main() {
       verifyNever(() => cubit.claimLinked(any()));
     });
 
+    testWidgets('takes the remembered access answer when the flow returns, '
+        'linked or not', (tester) async {
+      await pump(tester, ready());
+
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      verifyNever(cubit.rereadConfirmationAccess);
+      tester.state<NavigatorState>(find.byType(Navigator).last).pop();
+      await tester.pumpAndSettle();
+      verify(cubit.rereadConfirmationAccess).called(1);
+
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('finish link'));
+      await tester.pumpAndSettle();
+      verify(cubit.rereadConfirmationAccess).called(1);
+    });
+
     testWidgets('explains the handshake on demand', (tester) async {
       await pump(tester, ready());
 
@@ -745,6 +764,31 @@ void main() {
         // A platform the verifier does not gate stays "One tap".
         expect(badgeText('Twitter / X'), equals(l10n.verifyOneTapBadge));
         expect(badgeOn('GitHub'), findsNothing);
+      });
+
+      // The badge itself is hidden from screen readers, so the row's label
+      // carries the requirement.
+      testWidgets('a screen reader hears that a gated platform needs '
+          'Confirmation', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pump(
+          tester,
+          offers(),
+          oauthUsable: true,
+          confirmationSignIn: true,
+        );
+
+        expect(
+          find.bySemanticsLabel(
+            l10n.verifyLinkNeedsConfirmationSemanticLabel('Bluesky'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(l10n.verifyLinkSemanticLabel('Twitter / X')),
+          findsOneWidget,
+        );
+        semantics.dispose();
       });
 
       for (final access in [

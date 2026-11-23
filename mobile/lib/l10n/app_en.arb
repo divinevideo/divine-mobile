@@ -11727,6 +11727,16 @@
       }
     }
   },
+  "verifyLinkNeedsConfirmationSemanticLabel": "Link your {platform} account. Signing in needs Divine Confirmation",
+  "@verifyLinkNeedsConfirmationSemanticLabel": {
+    "description": "Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Bluesky"
+      }
+    }
+  },
   "verifyOneTapBadge": "One tap",
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."

@@ -160,13 +160,15 @@ void main() {
       );
 
       blocTest<VerifyCubit, VerifyState>(
-        'keeps the list and reports the failure when the read fails',
+        'keeps the list, reports the failure and still asks for access '
+        'afresh when the read fails',
         build: () => build(confirmationSignIn: true),
         seed: readyState,
         setUp: () {
           when(
             () => repository.claimsWithVerdicts(any()),
           ).thenThrow(StateError('relay down'));
+          accessAnswer = ConfirmationAccess.has;
         },
         errors: () => [isA<StateError>()],
         act: (cubit) => cubit.refreshQuietly(),
@@ -176,7 +178,32 @@ void main() {
               .having((s) => s.claims, 'claims', [_github, _twitter])
               .having((s) => s.error, 'error', VerifyError.load)
               .having((s) => s.errorAttempt, 'attempt', 1),
+          isA<VerifyState>()
+              .having((s) => s.claims, 'claims', [_github, _twitter])
+              .having(
+                (s) => s.confirmationAccess,
+                'access',
+                ConfirmationAccess.has,
+              ),
         ],
+        verify: (_) => expect(accessReads, equals([true])),
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'rereadConfirmationAccess takes the remembered answer without '
+        'asking afresh',
+        build: () => build(confirmationSignIn: true),
+        seed: readyState,
+        setUp: () => accessAnswer = ConfirmationAccess.has,
+        act: (cubit) => cubit.rereadConfirmationAccess(),
+        expect: () => [
+          isA<VerifyState>().having(
+            (s) => s.confirmationAccess,
+            'access',
+            ConfirmationAccess.has,
+          ),
+        ],
+        verify: (_) => expect(accessReads, equals([false])),
       );
 
       test('an unlink made while it runs stays unlinked', () async {
