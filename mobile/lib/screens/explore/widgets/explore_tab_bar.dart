@@ -35,9 +35,9 @@ class ExploreTabBar extends StatelessWidget {
     final tabSurface = colors.isLight
         ? colors.surface
         : colors.surfaceContainerHigh;
-    // Material is required for TabBar ink splashes. Web video elements already
-    // carry `pointer-events: none` in web/index.html, so no PointerInterceptor
-    // platform view is needed here.
+    // Material is required for TabBar ink splashes. web/index.html sets
+    // `pointer-events: none` on every platform view, so the tabs need no
+    // PointerInterceptor.
     return Material(
       color: VineTheme.transparent,
       child: Stack(

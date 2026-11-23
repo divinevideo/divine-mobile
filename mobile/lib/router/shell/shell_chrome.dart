@@ -82,9 +82,8 @@ class ShellChrome extends StatelessWidget {
         ? statusBarColumn.onRight
         : usesRail && isRtl;
     final navAtBottom = !navOnLeft && !navOnRight;
-    // Web video elements already carry `pointer-events: none` in web/index.html,
-    // so wrapping navigation in PointerInterceptor would only spawn an extra
-    // HtmlElementView that splits CanvasKit into multiple WebGL overlays.
+    // web/index.html sets `pointer-events: none` on every platform view
+    // (videos included), so taps reach this nav without a PointerInterceptor.
     final navigation = VineBottomNav(
       currentIndex: currentIndex,
       // `/following/new` renders inside the home branch, so Home reads

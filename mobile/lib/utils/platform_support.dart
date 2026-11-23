@@ -9,14 +9,12 @@ bool get isNativeMobilePlatform =>
     (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS);
 
-/// Whether Firebase Core config can initialize on the current platform.
+/// Whether this app has a real Firebase project on the current platform.
 ///
-/// Firebase is configured for Android, iOS, and macOS only. Linux and Windows
-/// have no configured Firebase app (`DefaultFirebaseOptions.currentPlatform`
-/// throws on Linux and holds placeholders on Windows), and `DefaultFirebaseOptions.web`
-/// likewise holds placeholder credentials — initializing it on web only pulls
-/// four Firebase JS SDKs during blocking startup and triggers failing HTTP 400
-/// requests on every navigation.
+/// Only Android, iOS and macOS do. `DefaultFirebaseOptions.currentPlatform`
+/// throws on Linux and returns placeholders on Windows and web; initializing
+/// Firebase with the web placeholders loads the Firebase JS SDKs during
+/// startup and fails their requests with HTTP 400.
 ///
 /// Uses [defaultTargetPlatform] instead of `dart:io`'s `Platform` so the
 /// check is safe on web builds.

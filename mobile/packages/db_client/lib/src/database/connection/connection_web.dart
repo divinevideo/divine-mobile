@@ -1,5 +1,5 @@
-// ABOUTME: Web-specific database connection using Drift's WasmDatabase
-// ABOUTME: Runs SQLite off the main thread in a Web Worker backed by OPFS/IndexedDB
+// ABOUTME: Web database connection through Drift's WasmDatabase: SQLite in a
+// ABOUTME: Web Worker on OPFS or IndexedDB, in memory when neither is usable
 
 import 'dart:js_interop';
 
@@ -30,9 +30,9 @@ void _clearLegacyLocalStorageDb() {
 
 /// Open a database connection for web platform.
 ///
-/// Uses [WasmDatabase.open] with `sqlite3.wasm` and `drift_worker.js` so SQLite
-/// runs in a Web Worker backed by OPFS/IndexedDB instead of blocking the UI
-/// thread or serializing the whole database into `localStorage`.
+/// Uses [WasmDatabase.open], which hosts SQLite in a Web Worker on OPFS or
+/// IndexedDB when the browser allows it and otherwise falls back to an
+/// in-memory database on the main thread that does not survive a reload.
 QueryExecutor openConnection() {
   return LazyDatabase(() async {
     _clearLegacyLocalStorageDb();
@@ -45,17 +45,17 @@ QueryExecutor openConnection() {
   });
 }
 
-/// Get path to shared database file
-/// On web, this returns a logical name for IndexedDB
+/// On web, returns the Drift database name: an OPFS directory or an IndexedDB
+/// database, whichever [WasmDatabase.open] picked.
 Future<String> getSharedDatabasePath() async {
-  return 'divine_db'; // IndexedDB database name
+  return 'divine_db';
 }
 
 /// Native at-rest encryption is unsupported on web.
 ///
-/// Web at-rest encryption is deferred behind the OPFS migration (#373). The
-/// app guards encryption with `kIsWeb`, so this is never reached at runtime —
-/// it exists only so app code compiles for web. See the native variant.
+/// Web at-rest encryption is not implemented. The app guards encryption with
+/// `kIsWeb`, so this is never reached at runtime — it exists only so app code
+/// compiles for web. See the native variant.
 QueryExecutor openEncryptedConnection({
   required String rawKeyHex,
   String? databasePath,

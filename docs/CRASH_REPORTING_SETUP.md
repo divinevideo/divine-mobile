@@ -18,10 +18,9 @@ reporting. The active Firebase project is **`openvine-co`** (bundle id
 | Android | `openvine-co` — `firebase_options.dart`, `android/app/google-services.json` | ⚠️ R8 mapping upload wired via Gradle; native-symbol upload configured but unverified | Production |
 | Web / Windows / Linux | none | — | Not supported; init is gated off |
 
-`isFirebaseSupported` (`mobile/lib/utils/platform_support.dart`) is a
-coarse-grained platform helper for Firebase-backed services. Crash reporting is
-currently initialized only when startup passes both `isFirebaseSupported` and
-`!kIsWeb`, so web remains intentionally gated off in app startup.
+`isFirebaseSupported` (`mobile/lib/utils/platform_support.dart`) is false on
+web, Windows and Linux, which have no real Firebase project, so crash
+reporting, performance monitoring and push all skip Firebase there.
 
 > **macOS note:** `firebase_options.dart` currently gives macOS the same appId
 > as iOS (`1:972941478875:ios:…`). Confirm this is intentional; a distinct
