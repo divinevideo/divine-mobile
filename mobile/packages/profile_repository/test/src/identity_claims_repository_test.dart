@@ -4818,6 +4818,43 @@ void main() {
       verifyFetchCalled(3);
     });
 
+    // Mirrors the verifier, which reuses a "no" for 60 s and a "yes" for
+    // five minutes: a purchase made elsewhere shows on the next screen open
+    // after that, and a stale "no" is the costlier one.
+    for (final (answer, expected, lifetime, label) in [
+      (false, ConfirmationAccess.hasNot, const Duration(seconds: 60), '60 s'),
+      (true, ConfirmationAccess.has, const Duration(minutes: 5), '5 min'),
+    ]) {
+      test('a remembered ${expected.name} lasts $label, then the next '
+          'call asks again', () {
+        fakeAsync((async) {
+          stubVerifier(() async => answer);
+          final repo = buildRepo();
+          ConfirmationAccess? result;
+          void ask() =>
+              unawaited(repo.confirmationAccess().then((a) => result = a));
+
+          ask();
+          async.flushMicrotasks();
+          expect(result, equals(expected));
+          verifyFetchCalled(1);
+
+          async.elapse(lifetime - const Duration(seconds: 1));
+          ask();
+          async.flushMicrotasks();
+          expect(result, equals(expected));
+          verifyFetchCalled(0);
+
+          async.elapse(const Duration(seconds: 1));
+          stubFetch(() async => !answer);
+          ask();
+          async.flushMicrotasks();
+          expect(result, isNot(equals(expected)));
+          verifyFetchCalled(1);
+        });
+      });
+    }
+
     test('a signer that never answers is unknown after 15 seconds', () {
       fakeAsync((async) {
         stubVerifier();

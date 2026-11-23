@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -239,6 +240,14 @@ class IdentityClaimsRepository {
   /// passive NIP-98 signing does.
   static const Duration _passiveSignTimeout = Duration(seconds: 15);
 
+  /// How long [confirmationAccess] reuses a definite answer, the same as the
+  /// verifier reuses its own: a purchase made on another device shows on the
+  /// next check after that. A stale "no" hides sign-in from someone who has
+  /// paid, so it is kept for the shorter time; a stale "yes" only shows a
+  /// sign-in the verifier still refuses at confirm.
+  static const Duration _hasNotLifetime = Duration(seconds: 60);
+  static const Duration _hasLifetime = Duration(minutes: 5);
+
   /// Client-side freshness window for verified verdicts, anchored on the
   /// verifier's `checked_at`. Mirrors the service's KV TTL for verified
   /// results (divine-identify-verification-service/src/utils/cache.ts:4).
@@ -274,10 +283,14 @@ class IdentityClaimsRepository {
   /// gets the newer answer rather than the one before it.
   Future<List<VerifierPlatform>>? _platformsInFlight;
 
-  /// The last answer [confirmationAccess] got, kept until a refresh replaces
-  /// it. It is dropped when the signed-in account changes (the repository is
-  /// rebuilt); the server is the backstop.
+  /// The last definite answer [confirmationAccess] got, reused until it is
+  /// older than its lifetime or a refresh replaces it. It is dropped when the
+  /// signed-in account changes (the repository is rebuilt); the server is the
+  /// backstop.
   ConfirmationAccess? _lastConfirmationAccess;
+
+  /// When [_lastConfirmationAccess] was answered.
+  DateTime? _lastConfirmationAccessAt;
 
   /// The [confirmationAccess] check in flight, shared so screens asking at
   /// the same time sign and send one request between them.
@@ -804,9 +817,10 @@ class IdentityClaimsRepository {
   /// Whether the signed-in user holds Divine Confirmation, as the verifier
   /// answers a NIP-98 request signed by this repository's signer.
   ///
-  /// Remembers the last definite answer ([ConfirmationAccess.has] or
-  /// [ConfirmationAccess.hasNot]) and shares a check already in flight;
-  /// [refresh] asks again, for a re-check after a purchase or a refusal.
+  /// Remembers the last definite answer as long as the verifier does:
+  /// [ConfirmationAccess.has] for five minutes, [ConfirmationAccess.hasNot]
+  /// for 60 seconds. Shares a check already in flight. [refresh] asks again,
+  /// for a re-check after a purchase or a refusal.
   /// An [ConfirmationAccess.unknown] answer is a blip, not a fact, so it is
   /// returned but not remembered: the next call asks again.
   /// Callers of a check a newer one overtook get the newest check's answer.
@@ -820,7 +834,13 @@ class IdentityClaimsRepository {
   Future<ConfirmationAccess> confirmationAccess({bool refresh = false}) {
     if (!refresh) {
       final last = _lastConfirmationAccess;
-      if (last != null) return Future.value(last);
+      final at = _lastConfirmationAccessAt;
+      if (last != null && at != null) {
+        final lifetime = last == ConfirmationAccess.has
+            ? _hasLifetime
+            : _hasNotLifetime;
+        if (clock.now().difference(at) < lifetime) return Future.value(last);
+      }
       final inFlight = _confirmationAccessInFlight;
       if (inFlight != null) return inFlight;
     }
@@ -838,6 +858,7 @@ class IdentityClaimsRepository {
       _lastConfirmationAccess = access == ConfirmationAccess.unknown
           ? null
           : access;
+      _lastConfirmationAccessAt = clock.now();
       _confirmationAccessInFlight = null;
       return access;
     });
