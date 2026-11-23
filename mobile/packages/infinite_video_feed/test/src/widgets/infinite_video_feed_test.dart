@@ -5666,6 +5666,149 @@ void main() {
       });
     });
 
+    group('errors during source recovery', () {
+      testWidgets(
+        'exhausts processing retries when each play reports processing',
+        (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const [0]);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          Completer<void>? playing;
+          const processing = <Object?, Object?>{
+            'status': 'error',
+            'errorCode': 'media_processing',
+            'errorMessage': 'HTTP 202',
+          };
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('persistent_processing')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  errorBuilder: (_, _, _, error) =>
+                      Text('VIDEO_ERROR:${error.name}'),
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            await harness.sendEvent(0, processing);
+            await tester.pump();
+            for (final seconds in [1, 2, 3, 5, 8]) {
+              playing = Completer<void>();
+              harness.callDelays['player_0:play'] = playing;
+              await tester.pump(Duration(seconds: seconds));
+              await tester.pump();
+              await harness.sendEvent(0, const <Object?, Object?>{
+                'status': 'buffering',
+              });
+              await harness.sendEvent(0, processing);
+              await tester.pump();
+              playing.complete();
+              await tester.pump();
+              await tester.pump();
+            }
+
+            expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
+            expect(find.text('VIDEO_ERROR:generic'), findsOneWidget);
+            expect(harness.countCalls('play'), 6);
+          } finally {
+            if (playing != null && !playing.isCompleted) playing.complete();
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump(const Duration(seconds: 9));
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
+      for (final processing in [false, true]) {
+        final recovery = processing ? 'processing' : 'fallback';
+        for (final repeated in [false, true]) {
+          testWidgets(
+            'shows auth failure during $recovery play '
+            'with repeat notification $repeated',
+            (tester) async {
+              DivineVideoPlayerController.resetIdCounterForTesting();
+              final harness = _NativePlayerHarness(tester);
+              await harness.install(playerIds: const [0]);
+              final key = GlobalKey<InfiniteVideoFeedState>();
+              final playing = Completer<void>();
+              const url =
+                  'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+              try {
+                await tester.pumpWidget(
+                  _wrapFeed(
+                    InfiniteVideoFeed(
+                      key: key,
+                      videos: [_makeVideo('recovery', videoUrl: url)],
+                      cache: cache,
+                      prefetchCount: 0,
+                      preloadGracePeriod: Duration.zero,
+                      errorBuilder: (_, _, _, error) =>
+                          Text('VIDEO_ERROR:${error.name}'),
+                    ),
+                  ),
+                );
+                await tester.pump();
+                await tester.pump();
+                expect(harness.countCalls('play'), 1);
+                harness.callDelays['player_0:play'] = playing;
+                await harness.sendEvent(0, <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': processing ? 'media_processing' : 'parse_error',
+                  'errorMessage': processing
+                      ? 'HTTP 202'
+                      : 'Synthetic parse failure',
+                });
+                if (processing) {
+                  await tester.pump(const Duration(milliseconds: 1100));
+                }
+                await tester.pump();
+                expect(harness.countCalls('play'), 2);
+                await harness.sendEvent(0, const <Object?, Object?>{
+                  'status': 'buffering',
+                });
+                const failure = <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': 'auth_required',
+                  'errorMessage': 'HTTP 401',
+                };
+                await harness.sendEvent(0, failure);
+                await tester.pump();
+                expect(key.currentState!.errorTypeAt(0), isNull);
+                playing.complete();
+                await tester.pump();
+                if (repeated) {
+                  await harness.sendEvent(0, failure);
+                  await tester.pump();
+                }
+                await tester.pump();
+
+                expect(
+                  key.currentState!.errorTypeAt(0),
+                  VideoErrorType.ageRestricted,
+                );
+                expect(find.text('VIDEO_ERROR:ageRestricted'), findsOneWidget);
+                expect(harness.countCalls('setClips'), 2);
+              } finally {
+                if (!playing.isCompleted) playing.complete();
+                await tester.pumpWidget(const SizedBox.shrink());
+                await tester.pump();
+                await harness.dispose();
+              }
+            },
+          );
+        }
+      }
+    });
+
     group('runtime processing retry', () {
       testWidgets(
         'does not drive a stale controller after the slot is reinitialized',

@@ -13,6 +13,7 @@ class ControllerSubscriptions {
   final _dimensions = <int, StreamSubscription<DivineVideoPlayerState>>{};
   final _firstFrame = <int, StreamSubscription<DivineVideoPlayerState>>{};
   final _errors = <int, StreamSubscription<DivineVideoPlayerState>>{};
+  final _errorChecks = <int, void Function()>{};
   final _autoAdvance = <int, StreamSubscription<DivineVideoPlayerState>>{};
 
   /// Subscribes to runtime playback errors. Calls [onError] with the
@@ -36,9 +37,8 @@ class ControllerSubscriptions {
         handlingFailure = false;
         return;
       }
-      if (handlingFailure) return;
+      if (handlingFailure || isAlreadyError()) return;
       handlingFailure = true;
-      if (isAlreadyError()) return;
       onError(state.errorCode, state.errorMessage);
     }
 
@@ -46,8 +46,12 @@ class ControllerSubscriptions {
     // Install the listener first, then consume the snapshot without handling
     // its queued broadcast event a second time.
     _errors[index] = controller.stateStream.listen(observe);
-    observe(controller.state);
+    _errorChecks[index] = () => observe(controller.state);
+    recheckPlaybackErrors(index);
   }
+
+  /// Reconsiders a current error after a temporary recovery guard clears.
+  void recheckPlaybackErrors(int index) => _errorChecks[index]?.call();
 
   /// Subscribes to loop-completion detection. Fires [onLoopCompleted] when
   /// the playback position resets from near the reported duration back to
@@ -161,6 +165,7 @@ class ControllerSubscriptions {
     unawaited(_dimensions.remove(index)?.cancel());
     unawaited(_firstFrame.remove(index)?.cancel());
     unawaited(_errors.remove(index)?.cancel());
+    _errorChecks.remove(index);
     unawaited(_autoAdvance.remove(index)?.cancel());
   }
 
@@ -178,6 +183,7 @@ class ControllerSubscriptions {
       unawaited(s.cancel());
     }
     _errors.clear();
+    _errorChecks.clear();
     for (final s in _autoAdvance.values) {
       unawaited(s.cancel());
     }

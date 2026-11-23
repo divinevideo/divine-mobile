@@ -24,6 +24,61 @@ void main() {
 
   group('native desktop media', () {
     test(
+      'a stop during native retirement cannot inherit a later frame',
+      () async {
+        MediaKit.ensureInitialized();
+        final players = <Player>[];
+        final outputs = <Completer<void>>[];
+        final errors = <Object>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          playerFactory: () {
+            final player = _headlessPlayer();
+            players.add(player);
+            return player;
+          },
+          videoControllerFactory: (_) {
+            final output = Completer<void>();
+            outputs.add(output);
+            return output;
+          },
+          videoControllerReady: (output) => (output as Completer<void>).future,
+        );
+        await backend.initialize(onStateChanged: (_) {}, onError: errors.add);
+        addTearDown(backend.dispose);
+        final clip = VideoClip(
+          uri: File(
+            'test/fixtures/desktop_silent_portrait.mp4',
+          ).absolute.uri.toString(),
+          end: const Duration(seconds: 1),
+        );
+        await backend.setClips([clip]);
+        final retiring = Completer<void>();
+        final gate = Completer<void>();
+        players.first.platform!.release.add(() async {
+          retiring.complete();
+          await gate.future;
+        });
+        final replacing = backend.setClips([clip]);
+        try {
+          await retiring.future.timeout(const Duration(seconds: 5));
+          final stopping = backend.stop();
+          gate.complete();
+          await Future.wait<void>([replacing, stopping]);
+          final stopped = backend.firstFrameRendered;
+          await backend.setClips([clip]);
+          outputs.last.complete();
+
+          expect(await backend.firstFrameRendered, isTrue);
+          expect(await stopped, isFalse);
+          expect(errors, isEmpty);
+        } finally {
+          if (!gate.isCompleted) gate.complete();
+          await replacing;
+        }
+      },
+    );
+
+    test(
       'retains a validated source when newer validation rejects '
       'during retirement',
       () async {

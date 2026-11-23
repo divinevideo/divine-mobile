@@ -1886,6 +1886,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } finally {
       if (identical(_controllers[index], controller)) {
         _failoverInFlight.remove(index);
+        if (mounted) _subscriptions.recheckPlaybackErrors(index);
       }
     }
     if (retryUnavailableBunny && ownsFailover()) {
@@ -1970,7 +1971,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           _staleDetector.resetGrace();
         }
       }
-      _processingRetryAttempts.remove(index);
+      if (!controller.state.hasError) _processingRetryAttempts.remove(index);
     } on Object catch (e, stackTrace) {
       if (!ownsRetry()) {
         guardRetryOwnership('error handling');
@@ -1998,6 +1999,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } finally {
       if (ownsRetry()) {
         _processingRetryInFlight.remove(index);
+        _subscriptions.recheckPlaybackErrors(index);
       }
     }
     if (retryProcessingAgain && ownsRetry()) {

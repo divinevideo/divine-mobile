@@ -14,6 +14,46 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group('public firstFrameRendered', () {
+    test('a stop during retirement cannot inherit a later frame', () async {
+      final players = <_FakePlatformPlayer>[];
+      final outputs = <_FakeVideoController>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) {
+          final output = _FakeVideoController();
+          outputs.add(output);
+          return output;
+        },
+        videoControllerReady: (output) =>
+            (output as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+      addTearDown(backend.dispose);
+      const clip = VideoClip(
+        uri: 'file:///first.mp4',
+        end: Duration(seconds: 1),
+      );
+      await backend.setClips([clip]);
+      final gate = Completer<void>();
+      players.single.disposalGate = gate;
+      final replacing = backend.setClips([clip]);
+      await players.first.disposalStarted.future;
+      final stopping = backend.stop();
+      gate.complete();
+      await Future.wait<void>([replacing, stopping]);
+      final stopped = backend.firstFrameRendered;
+      await backend.setClips([clip]);
+      outputs.last.ready.complete();
+
+      expect(await backend.firstFrameRendered, isTrue);
+      expect(await stopped, isFalse);
+    });
+
     for (final transition in ['stop', 'replacement']) {
       testWidgets('keeps a fresh poster during $transition retirement', (
         tester,

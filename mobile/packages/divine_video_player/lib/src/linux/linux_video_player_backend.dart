@@ -328,6 +328,7 @@ class MediaKitLinuxVideoPlayerBackend
     final cancellingProbes = _cancelDurationProbes();
     await _enqueue(() async {
       await cancellingProbes;
+      _cancelFirstFrame();
       await _player.stop();
       _terminalError = null;
       _hasLoadedMedia = false;
