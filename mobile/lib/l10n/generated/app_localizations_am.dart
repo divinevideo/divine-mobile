@@ -15165,6 +15165,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsHelpAboutSubtitle => 'ድጋፍ፣ ሕጋዊ መረጃ እና የመተግበሪያ ዝርዝሮች';
 
   @override
+  String get settingsDiscordTitle => 'የDiscord ሰርቨራችንን ይቀላቀሉ';
+
+  @override
+  String get settingsDiscordSubtitle => 'ከDivine ቡድን እና ማኅበረሰብ ጋር ይወያዩ';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordን መክፈት አልተቻለም';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -16365,13 +16374,4 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

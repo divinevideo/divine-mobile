@@ -15557,6 +15557,16 @@ class AppLocalizationsSv extends AppLocalizations {
       'Support, juridisk information och appdetaljer';
 
   @override
+  String get settingsDiscordTitle => 'Gå med i vår Discord-server';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Prata med Divine-teamet och communityn';
+
+  @override
+  String get settingsDiscordOpenError => 'Det gick inte att öppna Discord';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -16791,13 +16801,4 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'Alla delar är klara. Sätt ihop dem!';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

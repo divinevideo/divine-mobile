@@ -15540,6 +15540,16 @@ class AppLocalizationsMs extends AppLocalizations {
       'Sokongan, maklumat undang-undang dan butiran aplikasi';
 
   @override
+  String get settingsDiscordTitle => 'Sertai pelayan Discord kami';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Berbual dengan pasukan dan komuniti Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord tidak dapat dibuka';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -16775,13 +16785,4 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Semua bahagian sudah masuk. Gabungkan sekarang!';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

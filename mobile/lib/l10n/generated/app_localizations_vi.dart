@@ -15482,6 +15482,16 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hỗ trợ, thông tin pháp lý và chi tiết ứng dụng';
 
   @override
+  String get settingsDiscordTitle => 'Tham gia máy chủ Discord của chúng mình';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Trò chuyện với đội ngũ và cộng đồng Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Không thể mở Discord';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -16716,13 +16726,4 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'Đã có đủ các phần. Ghép lại thôi!';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

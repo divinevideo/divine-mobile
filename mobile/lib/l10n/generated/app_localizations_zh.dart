@@ -14628,6 +14628,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHelpAboutSubtitle => '支持、法律信息和应用详情';
 
   @override
+  String get settingsDiscordTitle => '加入我们的 Discord 服务器';
+
+  @override
+  String get settingsDiscordSubtitle => '与 Divine 团队和社区交流';
+
+  @override
+  String get settingsDiscordOpenError => '无法打开 Discord';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -15795,13 +15804,4 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '所有部分都到齐了。合成视频吧！';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

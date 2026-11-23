@@ -12612,6 +12612,18 @@
   "settingsAppPreferencesSubtitle": "Appearance, language, storage, and advanced options",
   "settingsConnectionsSubtitle": "Apps, relays, media servers, and permissions",
   "settingsHelpAboutSubtitle": "Support, legal information, and app details",
+  "settingsDiscordTitle": "Join our Discord server",
+  "@settingsDiscordTitle": {
+    "description": "Settings row title that opens an invite link to the official Divine Discord server."
+  },
+  "settingsDiscordSubtitle": "Talk to the Divine team and community",
+  "@settingsDiscordSubtitle": {
+    "description": "Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community."
+  },
+  "settingsDiscordOpenError": "Could not open Discord",
+  "@settingsDiscordOpenError": {
+    "description": "Error snackbar shown when the official Divine Discord invite link could not be launched."
+  },
   "@listLoopsCount": {
     "description": "Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.",
     "placeholders": {
@@ -14101,17 +14113,5 @@
   "collabRoomSeriesReadyHint": "All parts are in. Put it together!",
   "@collabRoomSeriesReadyHint": {
     "description": "Hint for the host of a Together room once every part is in and the parts play one after another; the button below puts the video together."
-  },
-  "settingsDiscordTitle": "Join our Discord server",
-  "@settingsDiscordTitle": {
-    "description": "Settings row title that opens an invite link to the official Divine Discord server."
-  },
-  "settingsDiscordSubtitle": "Talk to the Divine team and community",
-  "@settingsDiscordSubtitle": {
-    "description": "Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community."
-  },
-  "settingsDiscordOpenError": "Could not open Discord",
-  "@settingsDiscordOpenError": {
-    "description": "Error snackbar shown when the official Divine Discord invite link could not be launched."
   }
 }

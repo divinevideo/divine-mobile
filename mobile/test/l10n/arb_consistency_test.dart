@@ -969,10 +969,6 @@ const _knownUntranslatedDebt = <String>{
   // Warning when search text looks like a private key (#10260); translations
   // in the next human pass.
   'searchPrivateKeyWarning',
-  // Settings Discord community link row; translations in the next human pass.
-  'settingsDiscordTitle',
-  'settingsDiscordSubtitle',
-  'settingsDiscordOpenError',
 };
 
 const _profileBadgeSheetKeys = <String>{

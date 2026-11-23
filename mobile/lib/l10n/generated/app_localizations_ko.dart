@@ -14825,6 +14825,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsHelpAboutSubtitle => '지원, 법률 정보 및 앱 세부 정보';
 
   @override
+  String get settingsDiscordTitle => 'Discord 서버에 참여하기';
+
+  @override
+  String get settingsDiscordSubtitle => 'Divine 팀과 커뮤니티 사람들과 이야기해 보세요';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord를 열 수 없어요';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -16008,13 +16017,4 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '모든 파트가 모였어요. 합쳐 보세요!';
-
-  @override
-  String get settingsDiscordTitle => 'Join our Discord server';
-
-  @override
-  String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
-
-  @override
-  String get settingsDiscordOpenError => 'Could not open Discord';
 }

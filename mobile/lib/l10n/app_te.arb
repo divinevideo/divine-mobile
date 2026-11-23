@@ -9025,6 +9025,9 @@
   "settingsAppPreferencesSubtitle": "రూపం, భాష, నిల్వ, అధునాతన ఎంపికలు",
   "settingsConnectionsSubtitle": "యాప్‌లు, రిలేలు, మీడియా సర్వర్లు, అనుమతులు",
   "settingsHelpAboutSubtitle": "సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు",
+  "settingsDiscordTitle": "మా Discord సర్వర్‌లో చేరండి",
+  "settingsDiscordSubtitle": "Divine బృందం, కమ్యూనిటీ సభ్యులతో మాట్లాడండి",
+  "settingsDiscordOpenError": "Discordను తెరవలేకపోయాం",
   "listLoopsCount": "{count, plural, =1{{formatted} లూప్} other{{formatted} లూప్‌లు}}",
   "@listLoopsCount": {
     "placeholders": {
