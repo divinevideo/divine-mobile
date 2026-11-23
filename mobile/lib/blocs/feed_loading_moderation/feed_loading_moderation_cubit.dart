@@ -15,7 +15,7 @@ import 'package:openvine/services/video_moderation_status_service.dart';
 /// Otherwise the state remains [FeedLoadingModerationStatus.loading] for the
 /// lifetime of the cubit.
 ///
-/// Call [start] immediately after the cubit is constructed.
+/// Call [start] once a playback source fails or stalls during loading.
 class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// Creates the cubit and resolves the video's sha256 from [explicitSha256]
   /// or [videoUrl]. No request is started until [start] is called.
@@ -24,16 +24,11 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// `false` for [videoUrl], or when no sha256 can be resolved, [start]
   /// is a no-op and the cubit stays in the [FeedLoadingModerationStatus.loading]
   /// state forever (meaning no moderation overlay is shown).
-  ///
-  /// [start] waits [checkDelay] before querying; [Duration.zero] or less
-  /// queries immediately.
   FeedLoadingModerationCubit({
     required VideoModerationStatusService service,
     required String? explicitSha256,
     required String? videoUrl,
-    Duration checkDelay = defaultCheckDelay,
   }) : _service = service,
-       _checkDelay = checkDelay,
        _sha256 = VideoModerationStatusService.shouldCheckModeration(videoUrl)
            ? VideoModerationStatusService.resolveSha256(
                explicitSha256: explicitSha256,
@@ -42,24 +37,15 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
            : null,
        super(const FeedLoadingModerationState());
 
-  /// Default delay before hitting the moderation API while a video is loading.
-  ///
-  /// Cached and fast-starting videos unmount the loading overlay well before
-  /// this threshold, avoiding a wasted HTTP round-trip on every swipe.
-  static const defaultCheckDelay = Duration(milliseconds: 1200);
-
   final VideoModerationStatusService _service;
-  final Duration _checkDelay;
 
   /// The resolved, normalised sha256 for this video, or `null` when the
   /// moderation check is not applicable.
   final String? _sha256;
 
-  Timer? _delayTimer;
   bool _started = false;
 
-  /// Starts the moderation check after the constructor's `checkDelay`
-  /// ([defaultCheckDelay] unless overridden).
+  /// Starts the moderation check immediately.
   ///
   /// No-ops when there is no resolvable sha256 for this video, or when already
   /// started or closed.
@@ -67,21 +53,7 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
     final sha256 = _sha256;
     if (sha256 == null || _started || isClosed) return;
     _started = true;
-    if (_checkDelay <= Duration.zero) {
-      unawaited(_checkModeration(sha256));
-      return;
-    }
-    _delayTimer = Timer(_checkDelay, () {
-      _delayTimer = null;
-      unawaited(_checkModeration(sha256));
-    });
-  }
-
-  @override
-  Future<void> close() {
-    _delayTimer?.cancel();
-    _delayTimer = null;
-    return super.close();
+    unawaited(_checkModeration(sha256));
   }
 
   Future<void> _checkModeration(String sha256) async {

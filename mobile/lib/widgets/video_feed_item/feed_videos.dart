@@ -580,34 +580,44 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             ),
           );
         },
-        loadingBuilder: (context, index, {required bool isSquare}) {
-          if (index < 0 || index >= widget.videos.length) {
-            return const SizedBox.shrink();
-          }
-          final video = widget.videos[index];
-          final aspectRatio = backdropAspectRatio(video.width, video.height);
-          return VideoTileTransitionTarget(
-            key: const ValueKey('loading-layer'),
-            videoId: video.id,
-            aspectRatio: aspectRatio,
-            coversViewport: videoCoversFeedViewport(
-              aspectRatio: aspectRatio,
-              shouldPortraitExpand: fillsViewport,
-            ),
-            child: _FeedLoadingOrRestrictedOverlay(
-              video: video,
-              index: index,
-              feedMode: widget.contextTitle,
-              // The feed only knows a video is square once its player has
-              // read the stream. Until then the dimension tags already say
-              // so, and the poster must sit where the video will, rather
-              // than fill the screen and jump into its band on first frame.
-              isSquare: isSquare || aspectRatio == 1,
-              shouldPortraitExpand: fillsViewport,
-              onSkip: () => _skipPooledVideoAt(index),
-            ),
-          );
-        },
+        loadingBuilder:
+            (
+              context,
+              index, {
+              required bool isSquare,
+              required bool hasSourceFailure,
+            }) {
+              if (index < 0 || index >= widget.videos.length) {
+                return const SizedBox.shrink();
+              }
+              final video = widget.videos[index];
+              final aspectRatio = backdropAspectRatio(
+                video.width,
+                video.height,
+              );
+              return VideoTileTransitionTarget(
+                key: const ValueKey('loading-layer'),
+                videoId: video.id,
+                aspectRatio: aspectRatio,
+                coversViewport: videoCoversFeedViewport(
+                  aspectRatio: aspectRatio,
+                  shouldPortraitExpand: fillsViewport,
+                ),
+                child: _FeedLoadingOrRestrictedOverlay(
+                  video: video,
+                  index: index,
+                  feedMode: widget.contextTitle,
+                  // The feed only knows a video is square once its player has
+                  // read the stream. Until then the dimension tags already say
+                  // so, and the poster must sit where the video will, rather
+                  // than fill the screen and jump into its band on first frame.
+                  isSquare: isSquare || aspectRatio == 1,
+                  shouldPortraitExpand: fillsViewport,
+                  hasSourceFailure: hasSourceFailure,
+                  onSkip: () => _skipPooledVideoAt(index),
+                ),
+              );
+            },
         errorBuilder: (context, index, onRetry, errorType) {
           if (index < 0 || index >= widget.videos.length) {
             return const SizedBox.shrink();
@@ -1869,14 +1879,13 @@ class _LetterboxBackdrop extends StatelessWidget {
   }
 }
 
-/// Shows [VideoLoadingPlaceholder] initially.
+/// Shows [VideoLoadingPlaceholder] while a video loads.
 ///
-/// If the video is still loading after the moderation-check delay, the
-/// moderation API is queried via [FeedLoadingModerationCubit]. Cached
-/// videos load immediately and never reach the delay, so no unnecessary
-/// API calls are made. Once the moderation check returns a restricted
-/// status the view switches to [VerifyingAwareVideoErrorOverlay] without
-/// waiting for the native player to time out with a 404.
+/// Healthy initial loads skip `/check-result` completely. Once a playback
+/// source fails or stalls while loading continues ([hasSourceFailure]),
+/// [FeedLoadingModerationCubit] queries the moderation API immediately (`0ms`)
+/// so restricted or age-gated media surfaces [VerifyingAwareVideoErrorOverlay]
+/// without waiting for every fallback URL to fail or time out.
 class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
   const _FeedLoadingOrRestrictedOverlay({
     required this.video,
@@ -1884,6 +1893,7 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.hasSourceFailure,
     required this.onSkip,
   });
 
@@ -1892,42 +1902,50 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final bool hasSourceFailure;
   final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the moderation service so the BlocProvider rebuilds (and the
-    // captured cubit is closed and re-created) if the provider's identity
-    // ever flips. The ValueKey gates the BlocProvider lifecycle on the
-    // service identity. See .claude/rules/state_management.md → "Bridging
-    // Riverpod-provided dependencies into BlocProvider".
+    // captured cubit is closed and re-created) if the provider's identity or
+    // the video at this slot changes. See .claude/rules/state_management.md →
+    // "Bridging Riverpod-provided dependencies into BlocProvider".
     final service = ref.watch(videoModerationStatusServiceProvider);
     return BlocProvider<FeedLoadingModerationCubit>(
-      key: ValueKey(service),
-      create: (_) => FeedLoadingModerationCubit(
-        service: service,
-        explicitSha256: video.sha256,
-        videoUrl: video.videoUrl,
-      )..start(),
+      key: ValueKey((service, video.id)),
+      create: (_) {
+        final cubit = FeedLoadingModerationCubit(
+          service: service,
+          explicitSha256: video.sha256,
+          videoUrl: video.videoUrl,
+        );
+        if (hasSourceFailure) {
+          cubit.start();
+        }
+        return cubit;
+      },
       child: _FeedLoadingOrRestrictedOverlayView(
         video: video,
         index: index,
         feedMode: feedMode,
         isSquare: isSquare,
         shouldPortraitExpand: shouldPortraitExpand,
+        hasSourceFailure: hasSourceFailure,
         onSkip: onSkip,
       ),
     );
   }
 }
 
-class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
+class _FeedLoadingOrRestrictedOverlayView extends ConsumerStatefulWidget {
   const _FeedLoadingOrRestrictedOverlayView({
     required this.video,
     required this.index,
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.hasSourceFailure,
     required this.onSkip,
   });
 
@@ -1936,10 +1954,34 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final bool hasSourceFailure;
   final VoidCallback onSkip;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FeedLoadingOrRestrictedOverlayView> createState() =>
+      _FeedLoadingOrRestrictedOverlayViewState();
+}
+
+class _FeedLoadingOrRestrictedOverlayViewState
+    extends ConsumerState<_FeedLoadingOrRestrictedOverlayView> {
+  @override
+  void didUpdateWidget(
+    covariant _FeedLoadingOrRestrictedOverlayView oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.hasSourceFailure && widget.hasSourceFailure) {
+      context.read<FeedLoadingModerationCubit>().start();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final video = widget.video;
+    final index = widget.index;
+    final feedMode = widget.feedMode;
+    final isSquare = widget.isSquare;
+    final shouldPortraitExpand = widget.shouldPortraitExpand;
+    final onSkip = widget.onSkip;
     return BlocListener<FeedLoadingModerationCubit, FeedLoadingModerationState>(
       listenWhen: (previous, current) =>
           previous.status != current.status && current.isAgeRestricted,
