@@ -2351,17 +2351,17 @@ class RelayPool {
       if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
       return;
     }
-    for (final url in owing) {
-      log(
-        '📡 $url sent nothing for subscription $subId for '
-        '${subscriptionEoseSettleWindow.inMilliseconds}ms after another relay '
-        'sent EOSE; firing onEose without it',
-      );
+    if (owing.isNotEmpty) {
+      final message =
+          'Live subscription $subId ended its EOSE wait after '
+          '${subscriptionEoseSettleWindow.inMilliseconds}ms of silence from '
+          '${owing.length} relay(s)';
+      log(message);
       _diagnose(
         RelayDiagnosticSite.requestSettlement,
         RelayDiagnosticLevel.info,
-        url,
-        'Live subscription $subId ended its EOSE wait without this relay',
+        RelayDiagnostic.poolScope,
+        message,
       );
     }
     _clearLiveEoseWindow(subId);
