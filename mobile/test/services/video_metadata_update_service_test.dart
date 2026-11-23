@@ -2605,7 +2605,7 @@ void main() {
           when(() => mockRelayPublisher.publishViaWebSocket(any()))
               .thenAnswer((_) async {
                 when(() => mockAuthService.currentPublicKeyHex)
-                    .thenReturn(syntheticOtherTestPubkey);
+                    .thenReturn(syntheticTestPubkey);
                 return EventPublishOutcome.published;
               });
 
