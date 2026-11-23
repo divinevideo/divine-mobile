@@ -11967,7 +11967,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Só as pessoas que você segue podem responder com um vídeo. As demais veem o sticker assim que alguém responder.';
+      'O sticker só mostra respostas em vídeo das pessoas que você segue. As demais o veem assim que uma delas responder.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11975,7 +11975,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Só você pode responder com um vídeo. Ninguém mais vê o sticker até você responder.';
+      'O sticker só mostra as suas respostas em vídeo. Ninguém mais o vê até você responder.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

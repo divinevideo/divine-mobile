@@ -11303,7 +11303,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'フォローしている人だけが動画で返信できます。ほかの人には、誰かが返信するとステッカーが表示されます。';
+      'ステッカーには、フォローしている人の動画返信だけが表示されます。ほかの人には、そのうちの誰かが返信するとステッカーが表示されます。';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11311,7 +11311,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      '動画で返信できるのはあなただけです。あなたが返信するまで、ほかの人にはステッカーは表示されません。';
+      'ステッカーには、あなた自身の動画返信だけが表示されます。あなたが返信するまで、ほかの人にはステッカーは表示されません。';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

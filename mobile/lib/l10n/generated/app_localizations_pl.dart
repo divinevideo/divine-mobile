@@ -12100,7 +12100,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Odpowiadać filmem mogą tylko osoby, które obserwujesz. Reszta widzi naklejkę, gdy ktoś już odpowie.';
+      'Naklejka pokazuje tylko odpowiedzi filmem od osób, które obserwujesz. Reszta widzi ją, gdy któraś z tych osób odpowie.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -12108,7 +12108,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Odpowiadać filmem możesz tylko ty. Dla reszty naklejka pozostaje niewidoczna, dopóki nie odpowiesz.';
+      'Naklejka pokazuje tylko twoje odpowiedzi filmem. Dla reszty pozostaje niewidoczna, dopóki nie odpowiesz.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

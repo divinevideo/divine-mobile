@@ -11957,7 +11957,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Ang mga fina-follow mo lang ang puwedeng mag-reply gamit ang video. Makikita ng iba ang sticker kapag may nag-reply na.';
+      'Mga video reply lang ng mga fina-follow mo ang ipinapakita ng sticker. Makikita ito ng iba kapag may nag-reply na sa kanila.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11965,7 +11965,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Ikaw lang ang puwedeng mag-reply gamit ang video. Walang ibang makakakita ng sticker hangga\'t hindi ka nagre-reply.';
+      'Ang sarili mong mga video reply lang ang ipinapakita ng sticker. Walang ibang makakakita nito hangga\'t hindi ka nagre-reply.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

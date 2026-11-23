@@ -11873,7 +11873,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Bara personer du följer kan svara med en video. Alla andra ser klistermärket så fort någon har svarat.';
+      'Klistermärket visar bara videosvar från personer du följer. Alla andra ser det så fort någon av dem har svarat.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11881,7 +11881,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Bara du kan svara med en video. Ingen annan ser klistermärket förrän du har svarat.';
+      'Klistermärket visar bara dina egna videosvar. Ingen annan ser det förrän du har svarat.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

@@ -11874,7 +11874,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Hanya orang yang anda ikuti boleh membalas dengan video. Orang lain melihat pelekat selepas ada yang membalas.';
+      'Pelekat hanya memaparkan balasan video daripada orang yang anda ikuti. Orang lain melihatnya selepas salah seorang daripada mereka membalas.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11882,7 +11882,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Hanya anda boleh membalas dengan video. Orang lain tidak akan melihat pelekat sehingga anda membalas.';
+      'Pelekat hanya memaparkan balasan video anda sendiri. Orang lain tidak akan melihatnya sehingga anda membalas.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

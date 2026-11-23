@@ -12106,7 +12106,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Doar persoanele pe care le urmărești pot răspunde cu un videoclip. Restul văd stickerul imediat ce răspunde cineva.';
+      'Stickerul arată doar răspunsurile video ale persoanelor pe care le urmărești. Restul îl văd imediat ce răspunde una dintre ele.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -12114,7 +12114,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Doar tu poți răspunde cu un videoclip. Nimeni altcineva nu vede stickerul până nu răspunzi.';
+      'Stickerul arată doar propriile tale răspunsuri video. Nimeni altcineva nu îl vede până nu răspunzi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

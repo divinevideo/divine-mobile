@@ -11187,7 +11187,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      '只有你关注的人可以用视频回复。其他人会在有人回复后看到这个贴纸。';
+      '贴纸只显示你关注的人发布的视频回复。其他人会在其中有人回复后看到这个贴纸。';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11195,7 +11195,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      '只有你可以用视频回复。在你回复之前，其他人看不到这个贴纸。';
+      '贴纸只显示你自己的视频回复。在你回复之前，其他人看不到这个贴纸。';
 
   @override
   String get videoEditorInteractiveCardAreaHint => '这个贴纸会留在这个框内，方便观众点按';

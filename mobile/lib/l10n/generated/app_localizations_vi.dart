@@ -11817,7 +11817,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Chỉ những người bạn theo dõi mới có thể phản hồi bằng video. Người khác sẽ thấy nhãn dán khi đã có ai phản hồi.';
+      'Nhãn dán chỉ hiển thị phản hồi bằng video từ những người bạn theo dõi. Người khác sẽ thấy nhãn dán khi một trong số họ đã phản hồi.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11825,7 +11825,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Chỉ bạn mới có thể phản hồi bằng video. Người khác sẽ không thấy nhãn dán cho đến khi bạn phản hồi.';
+      'Nhãn dán chỉ hiển thị phản hồi bằng video của chính bạn. Người khác sẽ không thấy nhãn dán cho đến khi bạn phản hồi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

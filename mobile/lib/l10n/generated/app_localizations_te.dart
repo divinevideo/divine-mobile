@@ -12165,7 +12165,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'మీరు ఫాలో అయ్యేవారు మాత్రమే వీడియోతో ప్రత్యుత్తరం ఇవ్వగలరు. ఎవరైనా ప్రత్యుత్తరం ఇచ్చిన తర్వాత మిగతా వారందరికీ స్టిక్కర్ కనిపిస్తుంది.';
+      'మీరు ఫాలో అయ్యేవారి వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. వారిలో ఎవరైనా ప్రత్యుత్తరం ఇచ్చిన తర్వాత మిగతా వారందరికీ అది కనిపిస్తుంది.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -12173,7 +12173,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'మీరు మాత్రమే వీడియోతో ప్రత్యుత్తరం ఇవ్వగలరు. మీరు ప్రత్యుత్తరం ఇచ్చే వరకు ఇంకెవరికీ స్టిక్కర్ కనిపించదు.';
+      'మీ వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. మీరు ప్రత్యుత్తరం ఇచ్చే వరకు ఇంకెవరికీ అది కనిపించదు.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

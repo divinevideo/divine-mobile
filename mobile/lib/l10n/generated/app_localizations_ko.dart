@@ -11325,7 +11325,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      '내가 팔로우하는 사람만 영상으로 답글을 달 수 있어요. 다른 사람에게는 누군가 답글을 달면 스티커가 보여요.';
+      '스티커에는 내가 팔로우하는 사람의 영상 답글만 보여요. 다른 사람에게는 그중 누군가 답글을 달면 스티커가 보여요.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11333,7 +11333,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      '나만 영상으로 답글을 달 수 있어요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+      '스티커에는 내 영상 답글만 보여요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

@@ -11865,7 +11865,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'الرد بفيديو متاح فقط للحسابات التي يتابعها حسابك. يظهر الملصق للآخرين بعد أول رد.';
+      'لا يعرض الملصق إلا ردود الفيديو من الحسابات التي يتابعها حسابك. يظهر للآخرين بعد أول رد من أحدها.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11873,7 +11873,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'الرد بفيديو متاح لك وحدك. لن يظهر الملصق لأحد قبل ردك.';
+      'لا يعرض الملصق إلا ردودك بالفيديو. لن يظهر لأحد قبل ردك.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

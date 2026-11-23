@@ -11594,7 +11594,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'የሚከተሏቸው ሰዎች ብቻ በቪዲዮ ምላሽ መስጠት ይችላሉ። ሌሎች ሁሉ አንድ ሰው ምላሽ ከሰጠ በኋላ ተለጣፊውን ያያሉ።';
+      'ተለጣፊው የሚያሳየው እርስዎ ከሚከተሏቸው ሰዎች የመጡ የቪዲዮ ምላሾችን ብቻ ነው። ሌሎች ሁሉ ከእነሱ አንዱ ምላሽ ከሰጠ በኋላ ያዩታል።';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11602,7 +11602,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'በቪዲዮ ምላሽ መስጠት የሚችሉት እርስዎ ብቻ ነዎት። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም ተለጣፊውን አያይም።';
+      'ተለጣፊው የሚያሳየው የእርስዎን የቪዲዮ ምላሾች ብቻ ነው። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም አያየውም።';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

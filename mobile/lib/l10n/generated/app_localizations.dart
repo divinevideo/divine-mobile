@@ -20213,10 +20213,10 @@ abstract class AppLocalizations {
   /// **'Only people you follow can join in. Everyone else sees the sticker once someone has.'**
   String get videoEditorSocialStickerAudienceFollowingAddYoursNote;
 
-  /// Help line under the choice when only people the creator follows may reply with a video. The sticker is then left out of the video and shows to everyone else once someone replied.
+  /// Help line under the choice when the replies sticker shows only the video replies of people the creator follows. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. The sticker is left out of the video and shows to everyone else once one of those people replied.
   ///
   /// In en, this message translates to:
-  /// **'Only people you follow can reply with a video. Everyone else sees the sticker once someone has.'**
+  /// **'The sticker shows only video replies from people you follow. Everyone else sees it once one of them has replied.'**
   String get videoEditorSocialStickerAudienceFollowingRepliesNote;
 
   /// Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined.
@@ -20225,10 +20225,10 @@ abstract class AppLocalizations {
   /// **'Only you can join in. Nobody else sees the sticker until you do.'**
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote;
 
-  /// Help line under the choice when only the creator may reply to their own video with a video. Nobody else sees the sticker until the creator replied.
+  /// Help line under the choice when the replies sticker shows only the creator's own video replies. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. Nobody else sees the sticker until the creator replied.
   ///
   /// In en, this message translates to:
-  /// **'Only you can reply with a video. Nobody else sees the sticker until you do.'**
+  /// **'The sticker shows only your own video replies. Nobody else sees it until you have replied.'**
   String get videoEditorSocialStickerAudienceCreatorRepliesNote;
 
   /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.

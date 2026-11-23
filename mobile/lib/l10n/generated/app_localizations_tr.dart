@@ -11777,7 +11777,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Yalnızca takip ettiğin kişiler videoyla yanıt verebilir. Diğer herkes, biri yanıt verdiğinde çıkartmayı görür.';
+      'Çıkartma yalnızca takip ettiğin kişilerin video yanıtlarını gösterir. Diğer herkes, onlardan biri yanıt verdiğinde çıkartmayı görür.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11785,7 +11785,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Yalnızca sen videoyla yanıt verebilirsin. Sen yanıt verene kadar çıkartmayı başka kimse görmez.';
+      'Çıkartma yalnızca senin video yanıtlarını gösterir. Sen yanıt verene kadar çıkartmayı başka kimse görmez.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

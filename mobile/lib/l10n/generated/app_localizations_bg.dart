@@ -11972,7 +11972,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Само хората, които следваш, могат да отговарят с видео. Всички останали виждат стикера, щом някой отговори.';
+      'Стикерът показва само видео отговори от хората, които следваш. Всички останали го виждат, щом някой от тях отговори.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11980,7 +11980,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Само ти можеш да отговаряш с видео. Никой друг не вижда стикера, докато не отговориш.';
+      'Стикерът показва само твоите видео отговори. Никой друг не го вижда, докато не отговориш.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

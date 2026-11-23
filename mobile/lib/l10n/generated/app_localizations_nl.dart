@@ -11917,7 +11917,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'Alleen mensen die je volgt kunnen met een video reageren. Alle anderen zien de sticker zodra iemand heeft gereageerd.';
+      'De sticker toont alleen videoreacties van mensen die je volgt. Alle anderen zien hem zodra een van hen heeft gereageerd.';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11925,7 +11925,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'Alleen jij kunt met een video reageren. Niemand anders ziet de sticker tot je hebt gereageerd.';
+      'De sticker toont alleen je eigen videoreacties. Niemand anders ziet hem tot je hebt gereageerd.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

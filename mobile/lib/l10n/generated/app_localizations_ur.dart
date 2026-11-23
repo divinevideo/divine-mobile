@@ -11867,7 +11867,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
-      'صرف آپ کے فالو کردہ اکاؤنٹس ویڈیو سے جواب دے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی جواب دے دے۔';
+      'اسٹیکر صرف آپ کے فالو کردہ اکاؤنٹس کے ویڈیو جوابات دکھاتا ہے۔ باقی سب کو یہ تب نظر آتا ہے جب ان میں سے کوئی جواب دے دے۔';
 
   @override
   String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
@@ -11875,7 +11875,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
-      'ویڈیو سے جواب دینا صرف آپ کے لیے ہے۔ آپ کے جواب دینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
+      'اسٹیکر صرف آپ کے اپنے ویڈیو جوابات دکھاتا ہے۔ آپ کے جواب دینے تک کسی اور کو یہ نظر نہیں آتا۔';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
