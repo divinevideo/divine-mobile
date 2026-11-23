@@ -15,8 +15,12 @@ choosing an optimization.
 | Startup readiness | `startup_milestone` | Custom **`elapsed_ms`** from startup monitor initialization to `first_frame`, `auth_shell_ready`, `ui_ready`, or `video_ready`. `video_ready` is the first rendered native frame of any fullscreen-feed video after launch, and it also ends `startup_phase` `total` |
 | Fullscreen video playback | `video_first_frame` | Custom **`ttff_ms`**, activation to rendered native first frame; `cache=hit/miss`, `position=initial/subsequent`; optional controller/source/playback milestones measured from activation |
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
-| Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached; `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
-| Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness and video generation duration/outcome |
+| Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached, and `pre_route_ms` for an editor opened with the recorder's "Next" (the wait from the tap to the route); `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
+| Opening the recorder's camera | `camera_startup` | Live trace from the recorder asking the camera to open until it is fitted to the recorder mode. `init_ms` until the camera opened (on iOS its first preview frame, on Android the attached preview surface), `mode_apply_ms` for dual-camera capture and stabilization, `total_ms`; `lens`, `quality`, `outcome=success/failed/error`, and `dual_camera=on/off` on success. A camera that does not open ends the trace at `init_ms` |
+| Video preparation (existing) | `video_generation` | Video generation duration/outcome |
+| Flipping the camera or changing the lens | `camera_switch` | Live trace from the tap until the recorder shows the new camera. `switch_ms` for the native switch (on both platforms it completes on the incoming camera's first frame), `total_ms` until the frozen preview lifts; `kind=flip/lens`, `outcome=success/failed/error`, `dual_camera=on/off`, `lens` live afterwards |
+| Processing a recorded take | `clip_postprocess` | Live trace per take, from the stop handing it over until its detached background work ends. `copy_ms`, `duration_ms`, `thumbnail_ms`, `ghost_frame_ms`, `library_save_ms`, and `chroma_key_bake_ms` (from the end of the enrichment until the keyed take is saved) for the steps reached, `total_ms`; `outcome=success/save_failed/superseded/error`, `chroma_key=yes/no` |
+| Finishing a stop-motion session | `stop_motion_assemble` | Live trace of turning the session's stills into a clip before the editor opens. `total_ms`, `frames` (stills in the session); `outcome=success/failed`, `append=yes/no` |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
 | Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results` or `empty` when the relays answered, `fallback` when they did not and the picker showed its cached matches instead (`reason` = `timed_out`, `no_relays` or `relay_error`), `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
 
@@ -37,6 +41,18 @@ startup measurements are buffered by the existing startup service and exported
 once after Firebase initialization. The playback observer subscribes once at the
 app root and cancels with its provider container. It emits once per completed
 video activation, not once per rendered frame.
+
+**The recorder traces are live traces, emitted once per user action.** Read
+their duration or `total_ms`, the same span measured in Dart. Until this
+release `camera_startup` ended when the camera opened; it now ends once the
+recorder has fitted the camera to its mode, so compare `init_ms` across that
+boundary, not the trace duration. Startups that fail or throw still end when
+the camera returns. `clip_postprocess` measures work that is detached from the
+stop, so a slow sample never held up the next take, and its
+`chroma_key_bake_ms` includes any time the bake was held back while the next
+take recorded. Picking the lens that is already live emits no `camera_switch`.
+One sample per startup, switch, take or assemble adds little to the shared
+event budget described below.
 
 **`editor_ready` is a live trace, emitted once per editor open.** It starts in
 the editor screen's first build and stops at the first terminal outcome, so its
