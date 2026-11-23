@@ -819,8 +819,9 @@ class IdentityClaimsRepository {
   ///
   /// Remembers the last definite answer as long as the verifier does:
   /// [ConfirmationAccess.has] for five minutes, [ConfirmationAccess.hasNot]
-  /// for 60 seconds. Shares a check already in flight. [refresh] asks again,
-  /// for a re-check after a purchase or a refusal.
+  /// for 60 seconds. Shares a check already in flight, ahead of a remembered
+  /// answer, so a call made during a refresh gets the refresh's answer.
+  /// [refresh] asks again, for a re-check after a purchase or a refusal.
   /// An [ConfirmationAccess.unknown] answer is a blip, not a fact, so it is
   /// returned but not remembered: the next call asks again.
   /// Callers of a check a newer one overtook get the newest check's answer.
@@ -833,6 +834,8 @@ class IdentityClaimsRepository {
   /// treat like [ConfirmationAccess.has].
   Future<ConfirmationAccess> confirmationAccess({bool refresh = false}) {
     if (!refresh) {
+      final inFlight = _confirmationAccessInFlight;
+      if (inFlight != null) return inFlight;
       final last = _lastConfirmationAccess;
       final at = _lastConfirmationAccessAt;
       if (last != null && at != null) {
@@ -841,8 +844,6 @@ class IdentityClaimsRepository {
             : _hasNotLifetime;
         if (clock.now().difference(at) < lifetime) return Future.value(last);
       }
-      final inFlight = _confirmationAccessInFlight;
-      if (inFlight != null) return inFlight;
     }
     late final Future<ConfirmationAccess> check;
     check = _askConfirmationAccess().then((access) {

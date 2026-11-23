@@ -4754,6 +4754,29 @@ void main() {
       expect(signed, hasLength(1));
     });
 
+    test('a call during a refresh gets the refresh, not the remembered '
+        'answer', () async {
+      stubVerifier(() async => false);
+      final repo = buildRepo();
+      expect(
+        await repo.confirmationAccess(),
+        equals(ConfirmationAccess.hasNot),
+      );
+
+      // A purchase landed: the refresh will say yes, but it is still out
+      // when the dashboard asks again.
+      final answer = Completer<bool?>();
+      stubFetch(() => answer.future);
+      final refreshed = repo.confirmationAccess(refresh: true);
+      await pumpEventQueue();
+      final during = repo.confirmationAccess();
+      answer.complete(true);
+
+      expect(await refreshed, equals(ConfirmationAccess.has));
+      expect(await during, equals(ConfirmationAccess.has));
+      verifyFetchCalled(2);
+    });
+
     group('a check a refresh overtook follows the refresh', () {
       late Completer<bool?> stale;
       late Completer<bool?> fresh;
