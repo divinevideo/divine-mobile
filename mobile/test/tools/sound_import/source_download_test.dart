@@ -2,6 +2,7 @@
 // ABOUTME: and gives up after its attempts, instead of hanging the whole import.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -10,8 +11,10 @@ import 'package:http/testing.dart';
 
 import '../../../tools/sound_import/source_download.dart';
 
+class _LoopbackHttpOverrides extends HttpOverrides {}
+
 void main() {
-  group('downloadSource', () {
+  group('SourceDownloader.download', () {
     late Directory work;
     late File file;
 
@@ -21,14 +24,20 @@ void main() {
     });
     tearDown(() => work.deleteSync(recursive: true));
 
-    Future<void> download(MockClient client) => downloadSource(
-      client,
-      'https://example.com/click.wav',
-      file,
-      userAgent: 'test',
-      idleTimeout: const Duration(milliseconds: 50),
-      pauseBefore: (_) => Duration.zero,
-    );
+    SourceDownloader downloaderWith(http.Client Function() createClient) {
+      final downloader = SourceDownloader(createClient: createClient);
+      addTearDown(downloader.close);
+      return downloader;
+    }
+
+    Future<void> download(MockClient client) =>
+        downloaderWith(() => client).download(
+          'https://example.com/click.wav',
+          file,
+          userAgent: 'test',
+          idleTimeout: const Duration(milliseconds: 50),
+          pauseBefore: (_) => Duration.zero,
+        );
 
     test('tries again when the connection stops sending', () async {
       var requests = 0;
@@ -57,6 +66,121 @@ void main() {
 
       expect(requests, equals(downloadAttempts));
       expect(work.listSync(), isEmpty);
+    });
+
+    for (final route in ['direct', 'redirected']) {
+      test('closes a $route connection stalled before its response headers', () async {
+        final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+        final sockets = <Socket>[];
+        addTearDown(() async {
+          for (final socket in sockets) {
+            socket.destroy();
+          }
+          await server.close();
+        });
+        final downloader = downloaderWith(
+          () => HttpOverrides.runWithHttpOverrides(
+            http.Client.new,
+            _LoopbackHttpOverrides(),
+          ),
+        );
+        final firstClosed = Completer<void>();
+        server.listen((socket) {
+          sockets.add(socket);
+          if (sockets.length == 1) {
+            socket.listen(
+              (_) {},
+              onDone: () {
+                firstClosed.complete();
+                socket.destroy();
+              },
+            );
+            return;
+          }
+          // The first request never gets headers. A separate connection answers
+          // the retry so we can check for closure before the downloader exits.
+          socket.listen((_) {});
+          socket.add(
+            ascii.encode(
+              'HTTP/1.1 200 OK\r\n'
+              'Content-Length: 3\r\n'
+              'Connection: close\r\n\r\n'
+              'abc',
+            ),
+          );
+        });
+
+        final target = Uri.http(
+          '${server.address.address}:${server.port}',
+          '/click.wav',
+        );
+        var source = target;
+        if (route == 'redirected') {
+          final redirect = await HttpServer.bind(
+            InternetAddress.loopbackIPv4,
+            0,
+          );
+          addTearDown(() => redirect.close(force: true));
+          redirect.listen((request) {
+            unawaited(request.response.redirect(target));
+          });
+          source = Uri.http(
+            '${redirect.address.address}:${redirect.port}',
+            '/source.wav',
+          );
+        }
+
+        await downloader.download(
+          source.toString(),
+          file,
+          userAgent: 'test',
+          idleTimeout: const Duration(milliseconds: 300),
+          pauseBefore: (_) => Duration.zero,
+        );
+
+        expect(sockets, hasLength(2));
+        expect(file.readAsStringSync(), 'abc');
+        await firstClosed.future.timeout(const Duration(seconds: 1));
+      });
+    }
+
+    test('reports a partial-file write error only to its caller', () async {
+      Directory('${file.path}.part').createSync();
+      final body = StreamController<List<int>>();
+      addTearDown(() {
+        unawaited(body.close());
+      });
+      final client = MockClient.streaming(
+        (_, _) async => http.StreamedResponse(body.stream, 200),
+      );
+      final downloader = downloaderWith(() => client);
+      final uncaught = <Object>[];
+      final result = Completer<Object?>();
+      unawaited(
+        runZonedGuarded(() async {
+          try {
+            await downloader.download(
+              'https://example.com/click.wav',
+              file,
+              userAgent: 'test',
+              idleTimeout: const Duration(milliseconds: 300),
+            );
+            result.complete(null);
+          } on Object catch (error) {
+            result.complete(error);
+          }
+        }, (error, _) => uncaught.add(error)),
+      );
+      // The first chunk triggers the write. Keep the body open so the
+      // failure can happen before the downloader asks the sink to close.
+      body.add([1, 2, 3]);
+
+      expect(
+        await result.future.timeout(const Duration(seconds: 5)),
+        isA<FileSystemException>(),
+      );
+      expect(uncaught, isEmpty);
+      expect(file.existsSync(), isFalse);
     });
   });
 }

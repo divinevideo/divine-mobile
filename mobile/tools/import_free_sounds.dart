@@ -246,7 +246,7 @@ Future<void> _prepare(Directory work, ArgResults args) async {
   final sources = Directory('${work.path}/src')..createSync(recursive: true);
   final outputs = Directory('${work.path}/out')..createSync(recursive: true);
   final pipeline = AudioPipeline();
-  final client = http.Client();
+  final downloader = SourceDownloader();
   var lastDownload = DateTime.fromMillisecondsSinceEpoch(0);
   try {
     for (final (index, candidate) in batch.indexed) {
@@ -260,8 +260,7 @@ Future<void> _prepare(Directory work, ArgResults args) async {
           final wait = interval - DateTime.now().difference(lastDownload);
           if (wait > Duration.zero) await Future<void>.delayed(wait);
           lastDownload = DateTime.now();
-          await downloadSource(
-            client,
+          await downloader.download(
             candidate.downloadUrl,
             sourceFile,
             userAgent: _userAgent,
@@ -328,7 +327,7 @@ Future<void> _prepare(Directory work, ArgResults args) async {
       state.save();
     }
   } finally {
-    client.close();
+    downloader.close();
   }
   _printSummary(state);
 }
