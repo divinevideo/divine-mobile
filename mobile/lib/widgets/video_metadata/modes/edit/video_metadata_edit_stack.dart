@@ -61,8 +61,8 @@ class _VideoMetadataEditStackState extends State<VideoMetadataEditStack> {
   }
 }
 
-/// Inner widget that seeds the isolated [videoEditorProvider] from [video]
-/// and renders the edit scaffold.
+/// Seeds the isolated [videoEditorProvider] from [editorBaseline] and renders
+/// the edit scaffold with the current [video].
 class _VideoMetadataEditStackContent extends ConsumerStatefulWidget {
   const _VideoMetadataEditStackContent({
     required this.video,
