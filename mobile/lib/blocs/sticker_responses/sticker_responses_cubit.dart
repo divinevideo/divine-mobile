@@ -254,14 +254,22 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
 
   /// The parts of a series in the order they were posted: [start], the video
   /// it starts at, then [answers], with the video the sticker is on among
-  /// them even when it is older than those read.
-  List<VideoEvent> _seriesOf(VideoEvent? start, List<VideoEvent> answers) {
+  /// them even when it is older than those read, if it passes the same feed
+  /// and audience filters as the other parts.
+  List<VideoEvent> _seriesOf(
+    VideoEvent? start,
+    List<VideoEvent> answers,
+    StickerAnswerers answerers,
+  ) {
     bool isVideo(VideoEvent part) =>
         part.id == _video.id ||
         (_video.addressableId != null &&
             part.addressableId == _video.addressableId);
     final included = (start != null && isVideo(start)) || answers.any(isVideo);
-    final parts = [...answers, if (!included) _video]
+    final current = !included && answerers.admits(_video.pubkey)
+        ? _filter([_video]).firstOrNull
+        : null;
+    final parts = [...answers, ?current]
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return [?start, ...parts];
   }
@@ -300,6 +308,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             ? _seriesOf(
                 seriesStart == null ? null : _filter([seriesStart]).firstOrNull,
                 shown,
+                answerers,
               )
             : const [],
       ),

@@ -1065,6 +1065,37 @@ void main() {
             equals([part(1, 150), part(2, 200), part(3, 300)]),
           ),
         );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'does not reinsert the current part when the feed filter removes it',
+          setUp: () {
+            when(
+              () => repository.chainStart(first, hashtag: 'desksetup'),
+            ).thenAnswer((_) async => AddYoursChainStart.starts);
+            when(
+              () => repository.fetchVideoAt(first),
+            ).thenAnswer((_) async => start);
+            stubParts([part(3, 300), part(2, 200), part(1, 150)]);
+            filter = (videos) => [
+              for (final video in videos)
+                if (video.id != _hex(1)) video,
+            ];
+          },
+          build: () => build(
+            _region(
+              VideoStickerKind.prompt,
+              target: first,
+              audience: VideoStickerAudience.creator,
+            ),
+            on: part(1, 150),
+            viewer: _hex(9),
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) => expect(
+            cubit.state.series,
+            equals([start, part(2, 200), part(3, 300)]),
+          ),
+        );
       });
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(
