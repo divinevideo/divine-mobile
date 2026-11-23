@@ -43,6 +43,7 @@ from release_train.providers import (
     request_json,
     verify_bundle,
 )
+from release_train.store_review import screen as screen_store_review
 from release_train.versions import parse_version
 
 STATE_PATH = "coordinator/state-v1.json"
@@ -1536,6 +1537,11 @@ def main(env=os.environ):
                         record["number"]
                     )
     plan = plan_tick(snapshot, state, levels)
+    store_review_approval = (
+        env.get("RELEASE_APPROVE_STORE_REVIEW", "")
+        if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" else ""
+    )
+    screen_store_review(plan, snapshot, store_review_approval, dry=dry)
     if not dry:
         runtime.store.save(state)
         audit_snapshot = dict(snapshot)

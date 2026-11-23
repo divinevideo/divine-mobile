@@ -119,6 +119,44 @@ and a separate no-bypass update/deletion ruleset for `release-candidate/*`.
 The normal workflow token has contents read, actions read, checks read, and
 deployments write. Third-party Actions are pinned to commit SHAs.
 
+## Production store review preflight
+
+When the train selects a production candidate, it compares that build’s
+verified source commit with the currently published build on the same store.
+The Actions summary names the checks to run before App Store submission or
+Play production promotion. A dry run reports the same source findings without
+submitting. TestFlight and Play internal testing stay available to test fixes.
+
+- **Apple** blocks the return of unsupported audio or Bluetooth background
+  modes, which caused review trouble before. Changes to supported devices or
+  store assets prompt an iPad screenshot check. Permission purpose strings,
+  entitlements, privacy manifests and export declarations prompt a review of
+  the applicable App Store Connect answers. Use the documented past
+  [Apple review resolutions](../../mobile/docs/APPLE_REVIEW_RESPONSE.md#appendix-a-historical-review-resolutions)
+  and the [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+- **Google Play** flags Android manifest, app Gradle and listing changes for
+  checking the merged bundle’s permissions, target API and App content
+  declarations. The production track edit must pass the
+  [Android Publisher edit validation](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/validate)
+  before the coordinator commits it. A refused validation leaves the build
+  available for retry after the issue is fixed. Check Play Console’s
+  [pre-review checks](https://support.google.com/googleplay/android-developer/answer/14807773)
+  when reviewing the listing and the candidate.
+- **Both stores** flag changes to known moderation, reviewer access, account
+  deletion, consent and legal/support code. Exercise the affected flows on the
+  selected build and update reviewer access instructions or disclosures as needed.
+
+Fix confirmed problems before submitting. When the flagged flows and store
+listing are ready, copy the summary’s `approve_store_review` value into a
+manual `Store release train` dispatch with `dry_run=false`. The confirmation
+applies to one platform, build, production baseline and set of findings in
+that run. If the next candidate or baseline changes, use its new report. Missing
+provenance and known regressions require a fix before the train can proceed.
+
+The source comparison is a targeted check. Actual screenshots, reviewer login,
+console declarations, remotely enabled features and live moderation still need
+verification on the candidate when applicable.
+
 ## Bootstrap and activation
 
 Dispatch with `setup_codemagic=true`, `dry_run=true` to preview, then

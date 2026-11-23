@@ -29,7 +29,7 @@ class ProviderError(RuntimeError):
 
 
 class BeforeStoreMutationError(ProviderError):
-    """Preparation failed before any store write was attempted."""
+    """Preparation failed before any submission or publication write was attempted."""
 
 
 class DeferredReview(ProviderError):
@@ -384,7 +384,17 @@ class Play:
 
         notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
         edit = self.edit()
-        self.track(edit, "production", number, notes=notes)
+        try:
+            self.track(edit, "production", number, notes=notes)
+            self.call("POST", f"/edits/{edit}:validate")
+        except ProviderError as error:
+            # An uncommitted edit cannot send a release for review. Discard it
+            # without letting a cleanup failure hide the validation result.
+            try:
+                self.call("DELETE", f"/edits/{edit}")
+            except ProviderError:
+                pass
+            raise BeforeStoreMutationError(str(error)) from None
         return self.commit(edit)
 
     def upload(self, path, number, digest, *, notes):

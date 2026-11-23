@@ -10,6 +10,7 @@ from unittest.mock import patch
 import release_train_fakes  # adds repository scripts to sys.path
 from release_train.providers import (
     Apple,
+    BeforeStoreMutationError,
     DeferredReview,
     Play,
     ProviderError,
@@ -52,6 +53,26 @@ class ProviderTest(unittest.TestCase):
         self.assertEqual(payload["releases"][0]["versionCodes"], ["123"])
         self.assertEqual(payload["releases"][0]["status"], "completed")
         self.assertFalse(any(c[0] == "DELETE" for c in http.calls))
+        self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "POST"])
+        self.assertTrue(http.calls[2][1].endswith("/edits/edit:validate"))
+        self.assertIn(":commit?", http.calls[3][1])
+
+    def test_play_validation_failure_discards_edit_without_committing(self):
+        for cleanup in [{}, ProviderError("cleanup failed")]:
+            with self.subTest(cleanup=cleanup):
+                http = FakeHTTP()
+                http.responses = [{"id": "edit"}, {}, ProviderError("invalid"), cleanup]
+                with self.assertRaisesRegex(BeforeStoreMutationError, "validate edit"):
+                    Play("token", request=http).promote(123, notes=play_notes())
+                self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "DELETE"])
+                self.assertNotIn(":commit", " ".join(call[1] for call in http.calls))
+
+    def test_play_commit_failure_is_not_reclassified_as_a_preflight_failure(self):
+        http = FakeHTTP()
+        http.responses = [{"id": "edit"}, {}, {}, DeferredReview("in review")]
+        with self.assertRaises(DeferredReview):
+            Play("token", request=http).promote(123, notes=play_notes())
+        self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "POST"])
 
     def test_digest_mismatch_and_missing_artifact_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
