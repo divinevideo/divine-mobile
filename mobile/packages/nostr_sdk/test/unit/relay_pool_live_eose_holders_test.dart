@@ -265,6 +265,8 @@ void main() {
           worker.release.complete();
           async.flushMicrotasks();
           expect(eoseCalls, 0);
+          async.elapse(window);
+          expect(eoseCalls, 0, reason: 'the replay has not been answered');
 
           settle(relay.deliver(['EOSE', subId]));
           expect(eoseCalls, 1);
