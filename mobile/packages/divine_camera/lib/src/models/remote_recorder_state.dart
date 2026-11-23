@@ -1,5 +1,5 @@
 // ABOUTME: Model for the recorder state mirrored on a remote control
-// ABOUTME: Sent to the Apple Watch so its shutter and clip budget stay in sync
+// ABOUTME: Sent to watch remotes to keep their shutter and clip budget in sync
 
 /// What a remote control needs to mirror the recorder it triggers.
 ///

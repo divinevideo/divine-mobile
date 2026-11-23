@@ -130,8 +130,8 @@ typedef ReadSharedPreferences = SharedPreferences Function();
 /// Reports the recorder mode only after media capture actually starts.
 typedef RecordingStartedCallback = void Function(VideoRecorderMode mode);
 
-/// Tells remote controls (the Apple Watch app) what the recorder is doing, or
-/// that it is not on screen when `state` is null.
+/// Tells remote controls (the Apple Watch and Wear OS apps) what the recorder
+/// is doing, or that it is not on screen when `state` is null.
 typedef RemoteRecorderStatePublisher = Future<void> Function(
   RemoteRecorderState? state,
 );
@@ -564,7 +564,7 @@ class VideoRecorderBloc
     );
   }
 
-  /// The iPhone's shot budget as clip time, so a remote fills its progress
+  /// The phone's shot budget as clip time, so a remote fills its progress
   /// the way the recorder's shot counter does: stills taken against the most
   /// this session fits, each held for the composition's hold.
   ///
@@ -3369,7 +3369,7 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    // WatchConnectivity can still deliver a tap after the sheet pauses the
+    // A watch can still deliver a tap after the sheet pauses the
     // native volume and media handlers.
     if (!_remotePreviewReady || state.isRemoteRecordPaused) return;
 

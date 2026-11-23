@@ -531,8 +531,8 @@ class DivineCamera {
     return _platform.setVolumeKeysEnabled(enabled: enabled);
   }
 
-  /// Tells remote controls (the Apple Watch app) what the recorder is
-  /// doing, so they can mirror its shutter and clip budget.
+  /// Tells remote controls (the Apple Watch and Wear OS apps) what the
+  /// recorder is doing, so they can mirror its shutter and clip budget.
   ///
   /// Pass `null` when the recorder is no longer on screen. Platforms
   /// without such a remote ignore the call.
