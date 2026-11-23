@@ -264,6 +264,25 @@ void main() {
         });
       });
 
+      test('disarms the settle window when every relay then refuses the '
+          'REQ with CLOSED', () {
+        fakeAsync((fake) {
+          async = fake;
+          window = const Duration(seconds: 13);
+          nostr.relayPool.subscriptionEoseSettleWindow = window;
+          final subId = refusedSubscription();
+          bool isSettleTimer(FakeTimer timer) => timer.duration == window;
+
+          // Dropping the answering relay's EOSE leaves the window armed.
+          settle(live.deliver(['CLOSED', subId, 'error: shutting down']));
+          expect(async.pendingTimers.where(isSettleTimer), hasLength(1));
+
+          settle(refuser.deliver(['CLOSED', subId, 'error: shutting down']));
+
+          expect(async.pendingTimers.where(isSettleTimer), isEmpty);
+        });
+      });
+
       test('arms no settle window once the pool is closing', () {
         fakeAsync((fake) {
           async = fake;
