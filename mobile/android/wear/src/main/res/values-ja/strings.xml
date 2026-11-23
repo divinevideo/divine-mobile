@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">録画を開始</string>
+    <string name="divine_watch_stop_recording">録画を停止</string>
+    <string name="divine_watch_notification_channel">カメラリモート</string>
+</resources>

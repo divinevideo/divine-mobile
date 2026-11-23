@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The shutter in the proportions of the record button: shown on the watch
+     face while the phone's camera is open. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M9.75,3H14.25A6.75,6.75 0 0 1 21,9.75V14.25A6.75,6.75 0 0 1 14.25,21H9.75A6.75,6.75 0 0 1 3,14.25V9.75A6.75,6.75 0 0 1 9.75,3Z"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.75,6H14.25A3.75,3.75 0 0 1 18,9.75V14.25A3.75,3.75 0 0 1 14.25,18H9.75A3.75,3.75 0 0 1 6,14.25V9.75A3.75,3.75 0 0 1 9.75,6Z" />
+</vector>

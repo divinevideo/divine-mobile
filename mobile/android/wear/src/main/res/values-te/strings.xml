@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">రికార్డింగ్ ప్రారంభించండి</string>
+    <string name="divine_watch_stop_recording">రికార్డింగ్‌ను ఆపివేయండి</string>
+    <string name="divine_watch_notification_channel">కెమెరా రిమోట్</string>
+</resources>

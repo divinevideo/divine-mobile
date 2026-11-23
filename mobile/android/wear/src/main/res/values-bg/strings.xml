@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">Започни записа</string>
+    <string name="divine_watch_stop_recording">Спрете записа</string>
+    <string name="divine_watch_notification_channel">Дистанционно за камерата</string>
+</resources>
