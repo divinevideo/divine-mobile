@@ -1,4 +1,4 @@
-// ABOUTME: Regression coverage for #8408 — the receive path's persist writes
+// ABOUTME: Regression coverage for #8408 — both receive paths' persist writes
 // ABOUTME: must run inside one transaction, and roll back when one throws.
 
 import 'dart:async';
@@ -311,6 +311,61 @@ void main() {
           expect(recovered.single.content, 'hello');
         },
       );
+    });
+
+    group('for a NIP-04 message', () {
+      const eventId =
+          'e1c2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f9a3';
+
+      Future<void> deliverNip04() async {
+        relay.add(
+          Event.fromJson({
+            'id': eventId,
+            'pubkey': _peer,
+            'created_at': _baseCreatedAt,
+            'kind': EventKind.directMessage,
+            'tags': [
+              ['p', _owner],
+            ],
+            'content': 'legacy hello',
+            'sig': '',
+          }),
+        );
+        await settle();
+      }
+
+      test('runs the conversation upsert inside it', () async {
+        await deliverNip04();
+
+        expect((await storedMessages()).map((m) => m.id), [eventId]);
+        expect(
+          conversationsDao.membership['upsertConversation'],
+          isTrue,
+          reason:
+              'the kind-4 upsert ran outside the transaction that carries '
+              'its message insert',
+        );
+      });
+
+      test('rolls the insert back and leaves the event replayable', () async {
+        conversationsDao.failUpsert = true;
+        await deliverNip04();
+
+        expect(conversationsDao.membership['upsertConversation'], isTrue);
+        // A kind 4 is its own envelope, so its id is the dedup key. A
+        // committed insert would make every replay skip at the re-check, and
+        // the receive path's catch only logs, so nothing else would retry it.
+        expect(await storedMessages(), isEmpty);
+        expect(
+          await messagesDao.hasGiftWrap(eventId, ownerPubkey: _owner),
+          isFalse,
+        );
+
+        conversationsDao.failUpsert = false;
+        await deliverNip04();
+
+        expect((await storedMessages()).map((m) => m.id), [eventId]);
+      });
     });
   });
 }

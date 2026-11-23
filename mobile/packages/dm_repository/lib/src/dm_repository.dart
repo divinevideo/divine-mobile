@@ -8850,12 +8850,17 @@ class DmRepository {
           error: e,
           stackTrace: stackTrace,
         );
-        // Publish landed but local persistence failed — degraded
-        // state. Don't rethrow: the caller still gets the success
-        // result. The retry sweep will not pick this row up again
-        // because the publish succeeded; missing local persistence
-        // surfaces only as a sender-side gap until the self-wrap
-        // arrives via the receive pipeline.
+        // The publish landed but the local persist failed. The transaction
+        // rolled the queue transition back with the message, so the row
+        // keeps its status and the retry sweep re-drives it; receivers drop
+        // the replay by its rumor id. The attempt spends retry budget, so a
+        // persist failure that keeps recurring stops being republished once
+        // the budget runs out. The row then shows as failed with Resend,
+        // although the recipient has the message. The charge is a write of
+        // its own, so if the database cannot record it either, the sweep
+        // keeps re-driving the row. Don't rethrow: the caller still gets the
+        // success result.
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.
