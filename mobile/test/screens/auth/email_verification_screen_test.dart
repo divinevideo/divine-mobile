@@ -1967,7 +1967,41 @@ void main() {
     );
 
     testWidgets(
-      'announces unlocked DMs only once the signed-in account is confirmed',
+      'announces unlocked DMs when the signed-in account becomes confirmed',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final confirmation = _MockEmailConfirmationCubit();
+        const account =
+            'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+        var status = EmailConfirmationStatus.unconfirmed;
+        when(() => confirmation.state).thenAnswer(
+          (_) => EmailConfirmationState(
+            account: account,
+            status: status,
+            email: 'you@example.com',
+          ),
+        );
+        when(confirmation.refresh).thenAnswer((_) async {
+          status = EmailConfirmationStatus.confirmed;
+        });
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+
+        await pumpVerificationScreen(
+          tester,
+          token: 'verification-token',
+          emailConfirmationCubit: confirmation,
+        );
+        await tester.pumpAndSettle();
+
+        verify(confirmation.refresh).called(1);
+        expect(find.text(l10n.emailConfirmationDone), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'uses neutral copy when the signed-in account was already confirmed',
       (tester) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
         final confirmation = _MockEmailConfirmationCubit();
@@ -1991,7 +2025,8 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(confirmation.refresh).called(1);
-        expect(find.text(l10n.emailConfirmationDone), findsOneWidget);
+        expect(find.text(l10n.emailConfirmationDone), findsNothing);
+        expect(find.text(l10n.emailConfirmationLinkConfirmed), findsOneWidget);
       },
     );
 

@@ -440,16 +440,22 @@ class _EmailVerificationScreenState
   /// Says what the link did once the signed-in account has been re-checked.
   ///
   /// The link names no account, and it may have confirmed someone else's
-  /// address, so DMs are only announced as unlocked when the signed-in
-  /// account itself now reads as confirmed.
+  /// address, so announce an unlock only if the same account moves from
+  /// unconfirmed to confirmed.
   static Future<void> _announceLinkConfirmation(
     EmailConfirmationCubit? confirmation,
     ScaffoldMessengerState messenger,
     AppLocalizations l10n,
   ) async {
+    final before = confirmation?.state;
     await confirmation?.refresh();
+    if (!messenger.mounted) return;
+    final after = confirmation?.state;
     final unlocked =
-        confirmation?.state.status == EmailConfirmationStatus.confirmed;
+        before?.isUnconfirmed == true &&
+        before?.account != null &&
+        before?.account == after?.account &&
+        after?.status == EmailConfirmationStatus.confirmed;
     messenger.showSnackBar(
       DivineSnackbarContainer.snackBar(
         unlocked
