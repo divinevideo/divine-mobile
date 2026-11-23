@@ -158,6 +158,47 @@ void main() {
       );
     });
 
+    test(
+      'editing a restricted sound does not offer the mixed audio for reuse',
+      () async {
+        final result = await service.updateVideo(
+          originalVideo: _testVideo(
+            extraTags: const [
+              ['allow_audio_reuse', 'true'],
+            ],
+          ),
+          editorState: VideoEditorProviderState(
+            allowAudioReuse: true,
+            selectedSound: AudioEvent(
+              id: 'external_provider_test_sound',
+              pubkey: AudioEvent.externalProviderMarker,
+              createdAt: 1700000000,
+              externalSource: AudioExternalSource(
+                provider: 'catalog',
+                providerSoundId: '42',
+                providerName: 'Catalog',
+                sourceUrl: 'https://example.com/sound/42',
+                previewUrl: 'https://example.com/42.mp3',
+                license: AudioLicenseMetadata(
+                  type: 'test',
+                  name: 'Test',
+                  url: 'https://example.com/terms',
+                  allowsCommercialUse: false,
+                  allowsDerivatives: false,
+                  requiresAttribution: false,
+                ),
+              ),
+            ),
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedTags.where((tag) => tag.first == 'allow_audio_reuse'), [
+          ['allow_audio_reuse', 'false'],
+        ]);
+      },
+    );
+
     test('replaces the video-reuse marker with the edited choice', () async {
       final result = await service.updateVideo(
         originalVideo: _testVideo(

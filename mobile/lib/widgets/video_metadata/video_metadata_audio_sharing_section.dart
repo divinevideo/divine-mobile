@@ -24,8 +24,8 @@ class VideoMetadataAudioSharingSection extends ConsumerWidget {
     final editorState = ref.watch(videoEditorProvider);
     final sound = editorState.audioForAttribution;
     final external = sound?.externalSource;
-    final derivativesAllowed = external?.license.allowsDerivatives ?? true;
-    final allowAudioReuse = editorState.allowAudioReuse && derivativesAllowed;
+    final derivativesAllowed = !editorState.soundForbidsDerivatives;
+    final allowAudioReuse = editorState.offersAudioReuse;
     final needsAttribution =
         allowAudioReuse &&
         external == null &&
@@ -34,7 +34,7 @@ class VideoMetadataAudioSharingSection extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final current = ref.read(videoEditorProvider);
         final currentSound = current.audioForAttribution;
-        if (!current.allowAudioReuse ||
+        if (!current.offersAudioReuse ||
             current.audioShareAttribution != null ||
             currentSound?.externalSource != null) {
           return;
