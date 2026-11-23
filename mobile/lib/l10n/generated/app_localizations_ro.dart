@@ -2189,6 +2189,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Rândul tău';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Doar cercul de prieteni';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Doar pentru cine l-a creat';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12079,6 +12085,34 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Cine poate răspunde';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Oricine';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Cercul de prieteni';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Doar eu';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Doar persoanele pe care le urmărești pot participa. Restul văd stickerul imediat ce participă cineva.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Doar persoanele pe care le urmărești pot răspunde cu un videoclip. Restul văd stickerul imediat ce răspunde cineva.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Doar tu poți participa. Nimeni altcineva nu vede stickerul până nu participi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Doar tu poți răspunde cu un videoclip. Nimeni altcineva nu vede stickerul până nu răspunzi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

@@ -2143,6 +2143,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Jouw beurt';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Alleen vrienden';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Alleen de maker';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11890,6 +11896,34 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Laat zien wie met een video op deze video heeft gereageerd. Kijkers tikken erop om de reacties te bekijken.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Wie kan antwoorden';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Iedereen';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Vrienden';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Alleen ik';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Alleen mensen die je volgt kunnen meedoen. Alle anderen zien de sticker zodra iemand heeft meegedaan.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Alleen mensen die je volgt kunnen met een video reageren. Alle anderen zien de sticker zodra iemand heeft gereageerd.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Alleen jij kunt meedoen. Niemand anders ziet de sticker tot je hebt meegedaan.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Alleen jij kunt met een video reageren. Niemand anders ziet de sticker tot je hebt gereageerd.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

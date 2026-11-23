@@ -18,6 +18,7 @@ import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_surface_performance_telemetry.dart';
+import 'package:openvine/blocs/video_reply_gate/video_reply_gate_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -1065,6 +1067,48 @@ class _CommentsScreenBody extends StatelessWidget {
   }
 }
 
+/// Whether the viewer may reply to [video] with a video, passed to
+/// [builder]: anyone may, unless its replies sticker lets only some answer.
+/// Who may is read only then.
+class _VideoReplyGateScope extends ConsumerWidget {
+  const _VideoReplyGateScope({required this.video, required this.builder});
+
+  final VideoEvent? video;
+  final Widget Function(BuildContext context, bool mayReplyWithVideo) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final video = this.video;
+    if (video == null || !VideoReplyGateCubit.isGated(video)) {
+      return builder(context, true);
+    }
+    final followRepository = ref.watch(followRepositoryProvider);
+    final viewer = ref.watch(nostrSessionProvider).pubkey;
+    return BlocProvider(
+      // Another account may answer or not.
+      key: ValueKey((followRepository, viewer, video.id)),
+      create: (_) {
+        final cubit = VideoReplyGateCubit(
+          followRepository: followRepository,
+          video: video,
+          viewer: viewer,
+        );
+        runDetached(
+          cubit.check(),
+          'read who may reply with a video',
+          logName: 'CommentsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
+      child: BlocBuilder<VideoReplyGateCubit, VideoReplyGate>(
+        builder: (context, gate) =>
+            builder(context, gate == VideoReplyGate.allowed),
+      ),
+    );
+  }
+}
+
 /// Main comment input widget that reads from [CommentComposerBloc] state.
 ///
 /// Public-by-test only: production callers should use [CommentsScreen.show].
@@ -1169,134 +1213,150 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<CommentComposerBloc, CommentComposerState>(
-      listenWhen: (prev, next) =>
-          prev.activeReplyCommentId != next.activeReplyCommentId ||
-          prev.activeEditCommentId != next.activeEditCommentId,
-      listener: (context, state) {
-        // Focus input when reply or edit is activated.
-        if (state.activeReplyCommentId != null ||
-            state.activeEditCommentId != null) {
-          _focusNode.requestFocus();
-        }
-      },
-      buildWhen: (prev, next) =>
-          prev.mainInputText != next.mainInputText ||
-          prev.replyInputText != next.replyInputText ||
-          prev.activeReplyCommentId != next.activeReplyCommentId ||
-          prev.activeEditCommentId != next.activeEditCommentId ||
-          prev.editInputText != next.editInputText ||
-          prev.mentionSuggestions != next.mentionSuggestions,
-      builder: (context, state) {
-        final isReplyMode = state.activeReplyCommentId != null;
-        final isEditMode = state.activeEditCommentId != null;
-        final inputText = isEditMode
-            ? state.editInputText
-            : isReplyMode
-            ? state.replyInputText
-            : state.mainInputText;
-
-        // Sync controller with state.
-        if (_controller.text != inputText) {
-          _controller.text = inputText;
-          _controller.selection = TextSelection.collapsed(
-            offset: inputText.length,
-          );
-        }
-
-        // Get display name of user being replied to.
-        String? replyToDisplayName;
-        String? replyToAuthorPubkey;
-        if (isReplyMode) {
-          final listState = context.read<CommentsListBloc>().state;
-          final replyComment =
-              listState.commentsById[state.activeReplyCommentId!];
-          if (replyComment != null) {
-            replyToAuthorPubkey = replyComment.authorPubkey;
-            final profile = ref
-                .watch(userProfileReactiveProvider(replyToAuthorPubkey))
-                .value;
-            replyToDisplayName =
-                profile?.bestDisplayName ??
-                UserProfile.generatedNameFor(replyToAuthorPubkey);
-          }
-        }
-
-        return CommentInput(
-          controller: _controller,
-          focusNode: _focusNode,
-          replyToDisplayName: replyToDisplayName,
-          isEditing: isEditMode,
-          mentionSuggestions: state.mentionSuggestions,
-          onMentionQuery: (query) {
-            if (query.isEmpty) {
-              context.read<CommentComposerBloc>().add(
-                const MentionSuggestionsCleared(),
-              );
-            } else {
-              context.read<CommentComposerBloc>().add(
-                MentionSearchRequested(query),
-              );
-            }
-          },
-          onMentionSelected: (pubkey, displayName, start, end) {
-            context.read<CommentComposerBloc>()
-              ..add(
-                MentionRegistered(
-                  displayName: displayName,
-                  pubkey: pubkey,
-                  start: start,
-                  end: end,
-                ),
-              )
-              ..add(const MentionSuggestionsCleared());
-          },
-          onVideoReplyPressed:
-              ref.watch(isFeatureEnabledProvider(FeatureFlag.videoReplies))
-              ? () => _openVideoReplyCamera(context, state, replyToAuthorPubkey)
-              : null,
-          onChanged: (text) {
-            context.read<CommentComposerBloc>().add(
-              CommentTextChanged(text, commentId: state.activeReplyCommentId),
-            );
-          },
-          onSubmit: () {
-            final composer = context.read<CommentComposerBloc>();
-            if (isEditMode) {
-              composer.add(const CommentEditSubmitted());
-            } else if (isReplyMode) {
-              // Guard against the parent comment having been removed from the
-              // store between reply-mode entry and submit (block-by-author
-              // cleanup, kind-5 delete, or list still loading). Submitting
-              // with parentAuthorPubkey=null produces a malformed NIP-22
-              // reply (E tag without matching P tag). Cancel reply mode
-              // instead so the user can re-target a still-visible comment.
-              if (replyToAuthorPubkey == null) {
-                composer.add(CommentReplyToggled(state.activeReplyCommentId!));
-                return;
+    return _VideoReplyGateScope(
+      video: widget.video,
+      builder: (context, mayReplyWithVideo) =>
+          BlocConsumer<CommentComposerBloc, CommentComposerState>(
+            listenWhen: (prev, next) =>
+                prev.activeReplyCommentId != next.activeReplyCommentId ||
+                prev.activeEditCommentId != next.activeEditCommentId,
+            listener: (context, state) {
+              // Focus input when reply or edit is activated.
+              if (state.activeReplyCommentId != null ||
+                  state.activeEditCommentId != null) {
+                _focusNode.requestFocus();
               }
-              composer.add(
-                CommentSubmitted(
-                  parentCommentId: state.activeReplyCommentId,
-                  parentAuthorPubkey: replyToAuthorPubkey,
-                ),
+            },
+            buildWhen: (prev, next) =>
+                prev.mainInputText != next.mainInputText ||
+                prev.replyInputText != next.replyInputText ||
+                prev.activeReplyCommentId != next.activeReplyCommentId ||
+                prev.activeEditCommentId != next.activeEditCommentId ||
+                prev.editInputText != next.editInputText ||
+                prev.mentionSuggestions != next.mentionSuggestions,
+            builder: (context, state) {
+              final isReplyMode = state.activeReplyCommentId != null;
+              final isEditMode = state.activeEditCommentId != null;
+              final inputText = isEditMode
+                  ? state.editInputText
+                  : isReplyMode
+                  ? state.replyInputText
+                  : state.mainInputText;
+
+              // Sync controller with state.
+              if (_controller.text != inputText) {
+                _controller.text = inputText;
+                _controller.selection = TextSelection.collapsed(
+                  offset: inputText.length,
+                );
+              }
+
+              // Get display name of user being replied to.
+              String? replyToDisplayName;
+              String? replyToAuthorPubkey;
+              if (isReplyMode) {
+                final listState = context.read<CommentsListBloc>().state;
+                final replyComment =
+                    listState.commentsById[state.activeReplyCommentId!];
+                if (replyComment != null) {
+                  replyToAuthorPubkey = replyComment.authorPubkey;
+                  final profile = ref
+                      .watch(userProfileReactiveProvider(replyToAuthorPubkey))
+                      .value;
+                  replyToDisplayName =
+                      profile?.bestDisplayName ??
+                      UserProfile.generatedNameFor(replyToAuthorPubkey);
+                }
+              }
+
+              return CommentInput(
+                controller: _controller,
+                focusNode: _focusNode,
+                replyToDisplayName: replyToDisplayName,
+                isEditing: isEditMode,
+                mentionSuggestions: state.mentionSuggestions,
+                onMentionQuery: (query) {
+                  if (query.isEmpty) {
+                    context.read<CommentComposerBloc>().add(
+                      const MentionSuggestionsCleared(),
+                    );
+                  } else {
+                    context.read<CommentComposerBloc>().add(
+                      MentionSearchRequested(query),
+                    );
+                  }
+                },
+                onMentionSelected: (pubkey, displayName, start, end) {
+                  context.read<CommentComposerBloc>()
+                    ..add(
+                      MentionRegistered(
+                        displayName: displayName,
+                        pubkey: pubkey,
+                        start: start,
+                        end: end,
+                      ),
+                    )
+                    ..add(const MentionSuggestionsCleared());
+                },
+                onVideoReplyPressed:
+                    mayReplyWithVideo &&
+                        ref.watch(
+                          isFeatureEnabledProvider(FeatureFlag.videoReplies),
+                        )
+                    ? () => _openVideoReplyCamera(
+                        context,
+                        state,
+                        replyToAuthorPubkey,
+                      )
+                    : null,
+                onChanged: (text) {
+                  context.read<CommentComposerBloc>().add(
+                    CommentTextChanged(
+                      text,
+                      commentId: state.activeReplyCommentId,
+                    ),
+                  );
+                },
+                onSubmit: () {
+                  final composer = context.read<CommentComposerBloc>();
+                  if (isEditMode) {
+                    composer.add(const CommentEditSubmitted());
+                  } else if (isReplyMode) {
+                    // Guard against the parent comment having been removed from the
+                    // store between reply-mode entry and submit (block-by-author
+                    // cleanup, kind-5 delete, or list still loading). Submitting
+                    // with parentAuthorPubkey=null produces a malformed NIP-22
+                    // reply (E tag without matching P tag). Cancel reply mode
+                    // instead so the user can re-target a still-visible comment.
+                    if (replyToAuthorPubkey == null) {
+                      composer.add(
+                        CommentReplyToggled(state.activeReplyCommentId!),
+                      );
+                      return;
+                    }
+                    composer.add(
+                      CommentSubmitted(
+                        parentCommentId: state.activeReplyCommentId,
+                        parentAuthorPubkey: replyToAuthorPubkey,
+                      ),
+                    );
+                  } else {
+                    composer.add(const CommentSubmitted());
+                  }
+                },
+                onCancelReply: () {
+                  context.read<CommentComposerBloc>().add(
+                    CommentReplyToggled(state.activeReplyCommentId!),
+                  );
+                },
+                onCancelEdit: () {
+                  context.read<CommentComposerBloc>().add(
+                    const CommentEditModeCancelled(),
+                  );
+                },
               );
-            } else {
-              composer.add(const CommentSubmitted());
-            }
-          },
-          onCancelReply: () {
-            context.read<CommentComposerBloc>().add(
-              CommentReplyToggled(state.activeReplyCommentId!),
-            );
-          },
-          onCancelEdit: () {
-            context.read<CommentComposerBloc>().add(
-              const CommentEditModeCancelled(),
-            );
-          },
-        );
-      },
+            },
+          ),
     );
   }
 

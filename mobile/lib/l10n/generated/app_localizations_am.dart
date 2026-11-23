@@ -2082,6 +2082,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'ለጓደኞች ብቻ';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'ለዚህ መለያ ብቻ';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11567,6 +11573,34 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'ማን መመለስ ይችላል';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'ሁሉም';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'ጓደኞች';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'እኔ ብቻ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'የሚከተሏቸው ሰዎች ብቻ ሊሳተፉ ይችላሉ። ሌሎች ሁሉ አንድ ሰው ከተሳተፈ በኋላ ተለጣፊውን ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'የሚከተሏቸው ሰዎች ብቻ በቪዲዮ ምላሽ መስጠት ይችላሉ። ሌሎች ሁሉ አንድ ሰው ምላሽ ከሰጠ በኋላ ተለጣፊውን ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'እርስዎ ብቻ መሳተፍ ይችላሉ። እርስዎ እስኪሳተፉ ድረስ ሌላ ማንም ተለጣፊውን አያይም።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'በቪዲዮ ምላሽ መስጠት የሚችሉት እርስዎ ብቻ ነዎት። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም ተለጣፊውን አያይም።';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

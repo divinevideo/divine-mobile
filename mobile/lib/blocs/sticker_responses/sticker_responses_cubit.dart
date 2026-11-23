@@ -5,9 +5,11 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart'
     show VideoEvent, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/sticker_responses/sticker_answerers.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
 part 'sticker_responses_state.dart';
@@ -24,23 +26,46 @@ typedef StickerResponsesFilter = List<VideoEvent> Function(
 /// content filters, since they show on someone else's video and open in a
 /// feed; the replies the video's creator hid, and those of the accounts they
 /// blocked, are left out too, and the reply they pinned comes first.
+///
+/// When only some may answer the sticker, see [VideoStickerRegion.audience],
+/// only their responses count, and [StickerResponsesState.canAnswer] tells
+/// whether [viewer] is one of them.
 class StickerResponsesCubit extends Cubit<StickerResponsesState>
     with CloseGuardedEmit<StickerResponsesState> {
   StickerResponsesCubit({
     required VideoResponsesRepository repository,
     required StickerResponsesFilter filter,
+    required FollowRepository followRepository,
     required VideoEvent video,
     required VideoStickerRegion region,
+    String? viewer,
   }) : _repository = repository,
        _filter = filter,
+       _followRepository = followRepository,
        _video = video,
        _region = region,
-       super(const StickerResponsesState());
+       _viewer = viewer,
+       super(
+         StickerResponsesState(
+           // The owner may always answer, which they see before anything is
+           // read: a replies sticker's, or an Add yours's starting its chain.
+           canAnswer:
+               !region.audience.isRestricted ||
+               (viewer != null &&
+                   viewer.toLowerCase() == video.pubkey.toLowerCase() &&
+                   (region.kind == VideoStickerKind.replies ||
+                       region.target.isEmpty)),
+         ),
+       );
 
   final VideoResponsesRepository _repository;
   final StickerResponsesFilter _filter;
+  final FollowRepository _followRepository;
   final VideoEvent _video;
   final VideoStickerRegion _region;
+
+  /// The hex public key of the signed-in viewer, or `null` signed out.
+  final String? _viewer;
 
   /// The most responses read, enough for the feed a tap opens.
   static const int feedLimit = 50;
@@ -53,6 +78,8 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       final VideoResponses responses;
       var curation = const RepliesCuration();
       String? chainRoot;
+      // Whoever started the chain an Add yours counts owns who may answer it.
+      var owner = _video.pubkey;
       if (_region.kind == VideoStickerKind.replies) {
         final results = await Future.wait<Object>([
           _repository.fetchReplies(
@@ -77,6 +104,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             ? null
             : await _chain(chainAddress, hashtag);
         chainRoot = chain?.join;
+        if (chain != null) owner = chain.read.split(':')[1];
         responses = chain == null || hashtag == null
             ? const VideoResponses()
             : await _repository.fetchJoined(
@@ -88,7 +116,18 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
                 filter: _filter,
               );
       }
-      _emitShown(responses, curation, chainRoot: chainRoot);
+      final answerers = await StickerAnswerers.read(
+        _followRepository,
+        audience: _region.audience,
+        owner: owner,
+        viewer: _viewer,
+      );
+      _emitShown(
+        responses,
+        curation,
+        answerers: answerers,
+        chainRoot: chainRoot,
+      );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: StickerResponsesStatus.failure));
@@ -150,20 +189,32 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   void _emitShown(
     VideoResponses responses,
     RepliesCuration curation, {
+    required StickerAnswerers answerers,
     String? chainRoot,
   }) {
-    final shown = curation.apply(_filter(responses.videos));
+    final shown = [
+      for (final response in curation.apply(_filter(responses.videos)))
+        if (answerers.admits(response.pubkey)) response,
+    ];
+    final restricted = answerers.audience.isRestricted;
     // What is left out among those read is left out of the count too; the
-    // rest of the count was not read, so it stays as it is.
+    // rest of the count was not read, so it stays as it is. Who answered
+    // among the rest is not known when only some may answer: those read
+    // count, and more may follow.
     final leftOut = responses.videos.length - shown.length;
     emitIfOpen(
       StickerResponsesState(
         status: StickerResponsesStatus.loaded,
-        total: math.max(shown.length, responses.total - leftOut),
-        totalIsAtLeast: responses.totalIsAtLeast,
+        total: restricted
+            ? shown.length
+            : math.max(shown.length, responses.total - leftOut),
+        totalIsAtLeast:
+            responses.totalIsAtLeast ||
+            (restricted && responses.total > responses.videos.length),
         videos: shown,
         curation: curation,
         chainRoot: chainRoot,
+        canAnswer: answerers.admits(_viewer),
       ),
     );
   }

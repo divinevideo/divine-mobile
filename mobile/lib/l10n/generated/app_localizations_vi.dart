@@ -2097,6 +2097,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Đến lượt bạn';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Chỉ bạn bè';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Chỉ người tạo';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11790,6 +11796,34 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Ai có thể trả lời';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Mọi người';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Bạn bè';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Chỉ mình tôi';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Chỉ những người bạn theo dõi mới có thể tham gia. Người khác sẽ thấy nhãn dán khi đã có ai tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Chỉ những người bạn theo dõi mới có thể phản hồi bằng video. Người khác sẽ thấy nhãn dán khi đã có ai phản hồi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Chỉ bạn mới có thể tham gia. Người khác sẽ không thấy nhãn dán cho đến khi bạn tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Chỉ bạn mới có thể phản hồi bằng video. Người khác sẽ không thấy nhãn dán cho đến khi bạn phản hồi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

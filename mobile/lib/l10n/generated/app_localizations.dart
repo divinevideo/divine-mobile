@@ -3583,6 +3583,18 @@ abstract class AppLocalizations {
   /// **'Add yours'**
   String get videoStickerAddYoursButton;
 
+  /// Shown on an Add yours sticker in place of its join button, to a viewer the creator does not follow, when only people the creator follows may join. Short: it fits a button.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends only'**
+  String get videoStickerAddYoursFollowingOnly;
+
+  /// Shown on an Add yours sticker in place of its join button, to any viewer but the creator, when only the creator may join. Short: it fits a button.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator only'**
+  String get videoStickerAddYoursCreatorOnly;
+
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
   /// In en, this message translates to:
@@ -20170,6 +20182,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
   String get videoEditorSocialStickerRepliesNote;
+
+  /// Heading over the choice of who may answer an Add yours or replies sticker with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can answer'**
+  String get videoEditorSocialStickerAudienceTitle;
+
+  /// Choice: anyone may answer the sticker. The default; the sticker is drawn into the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get videoEditorSocialStickerAudienceEveryone;
+
+  /// Choice: only the people the creator follows may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get videoEditorSocialStickerAudienceFollowing;
+
+  /// Choice: only the creator may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only me'**
+  String get videoEditorSocialStickerAudienceCreator;
+
+  /// Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only people you follow can join in. Everyone else sees the sticker once someone has.'**
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote;
+
+  /// Help line under the choice when only people the creator follows may reply with a video. The sticker is then left out of the video and shows to everyone else once someone replied.
+  ///
+  /// In en, this message translates to:
+  /// **'Only people you follow can reply with a video. Everyone else sees the sticker once someone has.'**
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote;
+
+  /// Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can join in. Nobody else sees the sticker until you do.'**
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote;
+
+  /// Help line under the choice when only the creator may reply to their own video with a video. Nobody else sees the sticker until the creator replied.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can reply with a video. Nobody else sees the sticker until you do.'**
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote;
 
   /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
   ///

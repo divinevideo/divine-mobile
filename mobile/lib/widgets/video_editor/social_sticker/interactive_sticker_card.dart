@@ -115,6 +115,7 @@ class InteractiveStickerCard extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.joinLockedLabel,
     super.key,
   });
 
@@ -122,6 +123,10 @@ class InteractiveStickerCard extends StatelessWidget {
 
   /// Whether the card is drawn again over itself in a video's frames.
   final bool overFrames;
+
+  /// Who alone may join an Add yours, shown in place of its button to a
+  /// viewer who may not; `null` shows the button.
+  final String? joinLockedLabel;
 
   /// Who joined or replied, or `null` to show no one.
   final StickerResponses? responses;
@@ -167,6 +172,7 @@ class InteractiveStickerCard extends StatelessWidget {
                 responses: responses,
                 onJoin: onJoin,
                 onOpenResponses: onOpenResponses,
+                lockedLabel: joinLockedLabel,
               ),
               _ => _Replies(
                 data: data,
@@ -195,6 +201,7 @@ class InteractiveStickerCopy extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.joinLockedLabel,
     super.key,
   });
 
@@ -203,6 +210,9 @@ class InteractiveStickerCopy extends StatelessWidget {
   final VoidCallback? onAnswer;
   final VoidCallback? onJoin;
   final VoidCallback? onOpenResponses;
+
+  /// See [InteractiveStickerCard.joinLockedLabel].
+  final String? joinLockedLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +226,7 @@ class InteractiveStickerCopy extends StatelessWidget {
           onAnswer: onAnswer,
           onJoin: onJoin,
           onOpenResponses: onOpenResponses,
+          joinLockedLabel: joinLockedLabel,
         ),
       ),
     );
@@ -291,6 +302,7 @@ class _AddYours extends StatelessWidget {
     required this.responses,
     required this.onJoin,
     required this.onOpenResponses,
+    required this.lockedLabel,
   });
 
   final SocialStickerData data;
@@ -298,11 +310,15 @@ class _AddYours extends StatelessWidget {
   final VoidCallback? onJoin;
   final VoidCallback? onOpenResponses;
 
+  /// Who alone may join, shown on a muted pill instead of the button.
+  final String? lockedLabel;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final responses = this.responses;
     final latest = responses?.latest ?? const <StickerResponsePreview>[];
+    final lockedLabel = this.lockedLabel;
     // The count goes under the avatars, where it has all the room the button
     // leaves: beside them, most languages cut it short.
     final joined = SizedBox(
@@ -335,17 +351,21 @@ class _AddYours extends StatelessWidget {
       height: interactiveCardRowHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: VineTheme.vineGreen,
+          color: lockedLabel == null
+              ? VineTheme.vineGreen
+              : interactiveCardInk.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(interactiveCardRowHeight / 2),
         ),
         child: Padding(
           padding: const .symmetric(horizontal: 32),
           child: Center(
             child: StickerTextLine(
-              text: l10n.videoStickerAddYoursButton,
-              style: interactiveCardTextStyle(
-                42,
-              ).copyWith(color: interactiveCardColor),
+              text: lockedLabel ?? l10n.videoStickerAddYoursButton,
+              style: interactiveCardTextStyle(42).copyWith(
+                color: lockedLabel == null
+                    ? interactiveCardColor
+                    : interactiveCardInk.withValues(alpha: 0.5),
+              ),
             ),
           ),
         ),

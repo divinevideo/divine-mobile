@@ -24,6 +24,7 @@ class StickerResponsesState extends Equatable {
     this.videos = const [],
     this.curation = const RepliesCuration(),
     this.chainRoot,
+    this.canAnswer = true,
   });
 
   final StickerResponsesStatus status;
@@ -48,6 +49,15 @@ class StickerResponsesState extends Equatable {
   /// did not answer may hold the first video it names.
   final String? chainRoot;
 
+  /// Whether the viewer may answer: always, unless only some may answer the
+  /// sticker, when it is known once the responses are read.
+  final bool canAnswer;
+
+  /// Whether the viewer sees the sticker: whoever may answer it, and everyone
+  /// else once someone did. Anyone sees one everyone may answer.
+  bool get isShown =>
+      canAnswer || (status == StickerResponsesStatus.loaded && total > 0);
+
   StickerResponsesState copyWith({
     StickerResponsesStatus? status,
     int? total,
@@ -55,6 +65,7 @@ class StickerResponsesState extends Equatable {
     List<VideoEvent>? videos,
     RepliesCuration? curation,
     String? chainRoot,
+    bool? canAnswer,
   }) => StickerResponsesState(
     status: status ?? this.status,
     total: total ?? this.total,
@@ -62,6 +73,7 @@ class StickerResponsesState extends Equatable {
     videos: videos ?? this.videos,
     curation: curation ?? this.curation,
     chainRoot: chainRoot ?? this.chainRoot,
+    canAnswer: canAnswer ?? this.canAnswer,
   );
 
   @override
@@ -72,5 +84,6 @@ class StickerResponsesState extends Equatable {
     videos,
     curation,
     chainRoot,
+    canAnswer,
   ];
 }

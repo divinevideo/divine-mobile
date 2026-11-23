@@ -1963,6 +1963,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerAddYoursButton => 'あなたの番';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => '友だちのみ';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => '作成者のみ';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11276,6 +11282,34 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'この動画に動画で返信した人を表示します。視聴者がタップすると返信を見られます。';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '回答できる人';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '全員';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '友だち';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '自分のみ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'フォローしている人だけが参加できます。ほかの人には、誰かが参加するとステッカーが表示されます。';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'フォローしている人だけが動画で返信できます。ほかの人には、誰かが返信するとステッカーが表示されます。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '参加できるのはあなただけです。あなたが参加するまで、ほかの人にはステッカーは表示されません。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '動画で返信できるのはあなただけです。あなたが返信するまで、ほかの人にはステッカーは表示されません。';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

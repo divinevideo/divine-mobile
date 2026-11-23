@@ -2131,6 +2131,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'آپ کی باری';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'صرف دوستوں کے لیے';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'صرف اس اکاؤنٹ کے لیے';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11840,6 +11846,34 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'جواب دینے کی اجازت';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'سب';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'دوست';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'صرف میں';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'صرف آپ کے فالو کردہ اکاؤنٹس حصہ لے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی حصہ لے لے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'صرف آپ کے فالو کردہ اکاؤنٹس ویڈیو سے جواب دے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی جواب دے دے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'حصہ لینا صرف آپ کے لیے ہے۔ آپ کے حصہ لینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'ویڈیو سے جواب دینا صرف آپ کے لیے ہے۔ آپ کے جواب دینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

@@ -2175,6 +2175,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoStickerAddYoursButton => 'మీ వంతు';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'స్నేహితులకు మాత్రమే';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'సృష్టికర్తకు మాత్రమే';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12138,6 +12144,34 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'ఎవరు సమాధానం ఇవ్వగలరు';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'అందరూ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'స్నేహితులు';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'నేను మాత్రమే';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'మీరు ఫాలో అయ్యేవారు మాత్రమే పాల్గొనగలరు. ఎవరైనా పాల్గొన్న తర్వాత మిగతా వారందరికీ స్టిక్కర్ కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'మీరు ఫాలో అయ్యేవారు మాత్రమే వీడియోతో ప్రత్యుత్తరం ఇవ్వగలరు. ఎవరైనా ప్రత్యుత్తరం ఇచ్చిన తర్వాత మిగతా వారందరికీ స్టిక్కర్ కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'మీరు మాత్రమే పాల్గొనగలరు. మీరు పాల్గొనే వరకు ఇంకెవరికీ స్టిక్కర్ కనిపించదు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'మీరు మాత్రమే వీడియోతో ప్రత్యుత్తరం ఇవ్వగలరు. మీరు ప్రత్యుత్తరం ఇచ్చే వరకు ఇంకెవరికీ స్టిక్కర్ కనిపించదు.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

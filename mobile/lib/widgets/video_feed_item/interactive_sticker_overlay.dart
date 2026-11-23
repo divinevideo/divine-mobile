@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
-    show VideoEvent, VideoStickerKind, VideoStickerRegion;
+    show VideoEvent, VideoStickerAudience, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/add_yours_context.dart';
@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
@@ -34,6 +35,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Only the active video reads who joined or replied, so the videos the feed
 /// loads ahead ask for nothing. [onInteraction] is called when the viewer
 /// taps it, so the feed does not move on under them.
+///
+/// An Add yours or replies sticker only some may answer is in no frame: it
+/// shows once the video plays, to whoever may answer and to everyone else
+/// once someone did, and only they may join an Add yours.
 class InteractiveStickerOverlay extends ConsumerWidget {
   const InteractiveStickerOverlay({
     required this.region,
@@ -56,6 +61,8 @@ class InteractiveStickerOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!isActive) {
+      // Nothing in the frames to cover, and who may see it is not read yet.
+      if (data.isLeftOutOfFrames) return const SizedBox.shrink();
       return IgnorePointer(child: InteractiveStickerCopy(data: data));
     }
     final viewer = ref.watch(nostrSessionProvider).pubkey;
@@ -77,18 +84,29 @@ class InteractiveStickerOverlay extends ConsumerWidget {
       );
     }
     final repository = ref.watch(videoResponsesRepositoryProvider);
+    final followRepository = ref.watch(followRepositoryProvider);
     // Rebuilt when the viewer's blocks, mutes or content filters change, so
     // the responses are read again under the new policy.
     final filter = ref.watch(stickerResponsesFilterProvider);
     return BlocProvider(
-      // Another account has its own blocks, and the creator their own view.
-      key: ValueKey((repository, filter, region, video.id)),
+      // Another account has its own blocks, may answer or not, and the
+      // creator has their own view.
+      key: ValueKey((
+        repository,
+        followRepository,
+        filter,
+        viewer,
+        region,
+        video.id,
+      )),
       create: (_) {
         final cubit = StickerResponsesCubit(
           repository: repository,
           filter: filter,
+          followRepository: followRepository,
           video: video,
           region: region,
+          viewer: viewer,
         );
         runDetached(
           cubit.load(),
@@ -165,6 +183,9 @@ class _ResponsesSticker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = context.watch<StickerResponsesCubit>().state;
+    if (data.isLeftOutOfFrames && !state.isShown) {
+      return const SizedBox.shrink();
+    }
     final responses = state.status == StickerResponsesStatus.loaded
         ? StickerResponses(
             count: state.total,
@@ -192,11 +213,18 @@ class _ResponsesSticker extends ConsumerWidget {
     return InteractiveStickerCopy(
       data: data,
       responses: responses,
-      // Once the chain it joins is known.
-      onJoin: isAddYours && state.chainRoot != null
+      // Once the chain it joins is known, and by whoever may answer.
+      onJoin: isAddYours && state.chainRoot != null && state.canAnswer
           ? () {
               onInteraction?.call();
               _join(context, ref, chainRoot: state.chainRoot!);
+            }
+          : null,
+      joinLockedLabel: isAddYours && !state.canAnswer
+          ? switch (data.audience) {
+              VideoStickerAudience.creator =>
+                context.l10n.videoStickerAddYoursCreatorOnly,
+              _ => context.l10n.videoStickerAddYoursFollowingOnly,
             }
           : null,
       onOpenResponses: () {
@@ -221,6 +249,7 @@ class _ResponsesSticker extends ConsumerWidget {
           chainRoot: chainRoot,
           prompt: data.prompt ?? '',
           hashtag: hashtag,
+          audience: data.audience,
         ),
       );
     runDetached(

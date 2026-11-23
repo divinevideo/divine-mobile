@@ -2193,6 +2193,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Twoja kolej';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Tylko dla bliskich';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Tylko dla tego konta';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12073,6 +12079,34 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Pokazuje odpowiedzi wideo na ten film. Stuknięcie otwiera odpowiedzi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Kto może odpowiadać';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Każda osoba';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Krąg znajomych';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Tylko ja';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Dołączyć mogą tylko osoby, które obserwujesz. Reszta widzi naklejkę, gdy ktoś już dołączy.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Odpowiadać filmem mogą tylko osoby, które obserwujesz. Reszta widzi naklejkę, gdy ktoś już odpowie.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Dołączyć możesz tylko ty. Dla reszty naklejka pozostaje niewidoczna, dopóki tego nie zrobisz.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Odpowiadać filmem możesz tylko ty. Dla reszty naklejka pozostaje niewidoczna, dopóki nie odpowiesz.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

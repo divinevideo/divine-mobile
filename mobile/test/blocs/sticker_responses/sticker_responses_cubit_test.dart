@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
@@ -10,6 +11,8 @@ import 'package:video_responses_repository/video_responses_repository.dart';
 
 class _MockVideoResponsesRepository extends Mock
     implements VideoResponsesRepository {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
 
 String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
@@ -27,38 +30,49 @@ VideoEvent _video(int id, {String? pubkey, String? dTag, int? eventKind}) =>
       eventKind: eventKind,
     );
 
-VideoStickerRegion _region(VideoStickerKind kind, {String target = ''}) =>
-    VideoStickerRegion(
-      kind: kind,
-      target: target,
-      centerX: 0.5,
-      centerY: 0.5,
-      width: 0.6,
-      height: 0.3,
-      label: kind == VideoStickerKind.prompt
-          ? 'Show your desk\ndesksetup'
-          : 'Reply with a video',
-    );
+VideoStickerRegion _region(
+  VideoStickerKind kind, {
+  String target = '',
+  VideoStickerAudience audience = VideoStickerAudience.everyone,
+}) => VideoStickerRegion(
+  kind: kind,
+  target: target,
+  centerX: 0.5,
+  centerY: 0.5,
+  width: 0.6,
+  height: 0.3,
+  label: kind == VideoStickerKind.prompt
+      ? 'Show your desk\ndesksetup'
+      : 'Reply with a video',
+  audience: audience,
+);
 
 void main() {
   group(StickerResponsesCubit, () {
     late _MockVideoResponsesRepository repository;
+    late _MockFollowRepository followRepository;
     late StickerResponsesFilter filter;
     final root = _video(100, pubkey: _creator, dTag: 'root-d');
     final rootAddress = root.addressableId!;
 
     setUp(() {
       repository = _MockVideoResponsesRepository();
+      followRepository = _MockFollowRepository();
       filter = (videos) => videos;
     });
 
-    StickerResponsesCubit build(VideoStickerRegion region, {VideoEvent? on}) =>
-        StickerResponsesCubit(
-          repository: repository,
-          filter: (videos) => filter(videos),
-          video: on ?? root,
-          region: region,
-        );
+    StickerResponsesCubit build(
+      VideoStickerRegion region, {
+      VideoEvent? on,
+      String? viewer,
+    }) => StickerResponsesCubit(
+      repository: repository,
+      filter: (videos) => filter(videos),
+      followRepository: followRepository,
+      video: on ?? root,
+      region: region,
+      viewer: viewer,
+    );
 
     group('load', () {
       blocTest<StickerResponsesCubit, StickerResponsesState>(
@@ -649,6 +663,182 @@ void main() {
           const StickerResponsesState(status: StickerResponsesStatus.failure),
         ],
         errors: () => [isA<RepliesCurationUnavailableException>()],
+      );
+    });
+
+    group('when only some may answer', () {
+      final friend = _video(1).pubkey;
+      final stranger = _video(2).pubkey;
+
+      void stubReplies(VideoResponses replies) {
+        when(
+          () => repository.fetchReplies(
+            videoId: any(named: 'videoId'),
+            videoAddress: any(named: 'videoAddress'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => replies);
+        when(
+          () => repository.fetchCuration(
+            creatorPubkey: any(named: 'creatorPubkey'),
+            videoAddress: any(named: 'videoAddress'),
+          ),
+        ).thenAnswer((_) async => const RepliesCuration());
+      }
+
+      void stubCreatorFollows(String owner, List<String> follows) =>
+          when(
+            () => followRepository.getOthersFollowing(owner),
+          ).thenAnswer(
+            (_) async =>
+                FollowingSnapshot(pubkeys: follows, count: follows.length),
+          );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'counts only the replies of the people the creator follows, and '
+        'lets a viewer they follow answer',
+        setUp: () {
+          stubReplies(
+            VideoResponses(total: 60, videos: [_video(1), _video(2)]),
+          );
+          stubCreatorFollows(_creator, [friend]);
+        },
+        build: () => build(
+          _region(
+            VideoStickerKind.replies,
+            audience: VideoStickerAudience.following,
+          ),
+          viewer: friend,
+        ),
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(cubit.state.videos, equals([_video(1)]));
+          // Who answered among the replies not read is not known.
+          expect(cubit.state.total, equals(1));
+          expect(cubit.state.totalIsAtLeast, isTrue);
+          expect(cubit.state.canAnswer, isTrue);
+          expect(cubit.state.isShown, isTrue);
+        },
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'shows the sticker to anyone else only once someone answered',
+        setUp: () {
+          stubReplies(const VideoResponses());
+          stubCreatorFollows(_creator, [friend]);
+        },
+        build: () => build(
+          _region(
+            VideoStickerKind.replies,
+            audience: VideoStickerAudience.following,
+          ),
+          viewer: stranger,
+        ),
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(cubit.state.status, equals(StickerResponsesStatus.loaded));
+          expect(cubit.state.canAnswer, isFalse);
+          expect(cubit.state.isShown, isFalse);
+        },
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        "counts only the creator's own replies when only they may answer",
+        setUp: () => stubReplies(
+          VideoResponses(
+            total: 2,
+            videos: [
+              _video(1),
+              _video(3, pubkey: _creator),
+            ],
+          ),
+        ),
+        build: () => build(
+          _region(
+            VideoStickerKind.replies,
+            audience: VideoStickerAudience.creator,
+          ),
+          viewer: _creator,
+        ),
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(cubit.state.videos, equals([_video(3, pubkey: _creator)]));
+          expect(cubit.state.canAnswer, isTrue);
+          // Their own follows are not read for it.
+          verifyNever(() => followRepository.getOthersFollowing(any()));
+        },
+      );
+
+      test("shows the creator's sticker to them before it is read", () {
+        final region = _region(
+          VideoStickerKind.replies,
+          audience: VideoStickerAudience.creator,
+        );
+        final own = build(region, viewer: _creator);
+        final other = build(region, viewer: stranger);
+        addTearDown(own.close);
+        addTearDown(other.close);
+
+        expect(own.state.isShown, isTrue);
+        expect(other.state.isShown, isFalse);
+      });
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        "lets those the chain's creator follows join an answer's Add yours, "
+        "not those the answer's creator follows",
+        setUp: () {
+          final first = '34236:$_creator:first';
+          when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.starts);
+          when(
+            () => repository.fetchJoined(
+              chainRoot: any(named: 'chainRoot'),
+              hashtag: any(named: 'hashtag'),
+              limit: any(named: 'limit'),
+              filter: any(named: 'filter'),
+            ),
+          ).thenAnswer((_) async => const VideoResponses());
+          stubCreatorFollows(_creator, [friend]);
+        },
+        build: () => build(
+          _region(
+            VideoStickerKind.prompt,
+            target: '34236:$_creator:first',
+            audience: VideoStickerAudience.following,
+          ),
+          on: _video(7, pubkey: stranger, dTag: 'answer-d'),
+          viewer: friend,
+        ),
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(cubit.state.canAnswer, isTrue);
+          verify(() => followRepository.getOthersFollowing(_creator)).called(1);
+        },
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'fails, showing the sticker to no one else, when who the creator '
+        'follows could not be read',
+        setUp: () {
+          stubReplies(VideoResponses(total: 1, videos: [_video(1)]));
+          when(
+            () => followRepository.getOthersFollowing(_creator),
+          ).thenThrow(Exception('timed out'));
+        },
+        build: () => build(
+          _region(
+            VideoStickerKind.replies,
+            audience: VideoStickerAudience.following,
+          ),
+          viewer: friend,
+        ),
+        act: (cubit) => cubit.load(),
+        errors: () => [isA<Exception>()],
+        verify: (cubit) {
+          expect(cubit.state.status, equals(StickerResponsesStatus.failure));
+          expect(cubit.state.isShown, isFalse);
+        },
       );
     });
   });

@@ -1979,6 +1979,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerAddYoursButton => '轮到你了';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => '仅限好友';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => '仅限创作者';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11160,6 +11166,34 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       '显示谁用视频回复了这个视频。观众点一下就能观看这些回复。';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '谁可以回应';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '所有人';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '好友';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '仅自己';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '只有你关注的人可以参与。其他人会在有人参与后看到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '只有你关注的人可以用视频回复。其他人会在有人回复后看到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '只有你可以参与。在你参与之前，其他人看不到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '只有你可以用视频回复。在你回复之前，其他人看不到这个贴纸。';
 
   @override
   String get videoEditorInteractiveCardAreaHint => '这个贴纸会留在这个框内，方便观众点按';

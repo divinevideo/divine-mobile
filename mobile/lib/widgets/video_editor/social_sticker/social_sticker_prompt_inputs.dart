@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_audience_picker.dart';
 
 /// What a question asks, an Add yours prompts or a replies sticker is
 /// titled, with a note on where the answers go; an Add yours also takes the
@@ -50,6 +51,10 @@ class _SocialStickerPromptFieldsState extends State<SocialStickerPromptFields> {
       (SocialStickerCubit cubit) => cubit.state.data.kind,
     );
     final isAddYours = kind == SocialStickerKind.addYours;
+    // An answer keeps who may answer the chain it joins.
+    final answersChain = context.select(
+      (SocialStickerCubit cubit) => cubit.state.data.chainRoot != null,
+    );
     final cubit = context.read<SocialStickerCubit>();
     return BlocListener<SocialStickerCubit, SocialStickerState>(
       // The hashtag follows the prompt until the creator writes their own.
@@ -109,6 +114,8 @@ class _SocialStickerPromptFieldsState extends State<SocialStickerPromptFields> {
               _ => l10n.videoEditorSocialStickerQuestionNote,
             },
           ),
+          if (kind.takesVideoAnswers && !answersChain)
+            const SocialStickerAudiencePicker(),
         ],
       ),
     );

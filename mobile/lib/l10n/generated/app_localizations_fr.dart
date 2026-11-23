@@ -2173,6 +2173,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'À ton tour';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Réservé aux proches';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Réservé à qui l\'a créé';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12019,6 +12025,34 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Montre qui a répondu à cette vidéo par une vidéo. En le touchant, on regarde les réponses.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Qui peut répondre';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Tout le monde';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Proches';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Moi uniquement';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Seules les personnes que tu suis peuvent participer. Les autres voient le sticker dès que quelqu\'un l\'a fait.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Seules les personnes que tu suis peuvent répondre par une vidéo. Les autres voient le sticker dès que quelqu\'un a répondu.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Il n\'y a que toi qui peux participer. Personne d\'autre ne voit le sticker avant que tu l\'aies fait.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Il n\'y a que toi qui peux répondre par une vidéo. Personne d\'autre ne voit le sticker avant que tu aies répondu.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

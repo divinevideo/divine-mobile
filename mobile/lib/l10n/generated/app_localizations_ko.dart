@@ -1974,6 +1974,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoStickerAddYoursButton => '나도 참여';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => '친구만';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => '제작자만';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11298,6 +11304,34 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '답할 수 있는 사람';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '모두';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '친구';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '나만';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '내가 팔로우하는 사람만 참여할 수 있어요. 다른 사람에게는 누군가 참여하면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '내가 팔로우하는 사람만 영상으로 답글을 달 수 있어요. 다른 사람에게는 누군가 답글을 달면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '나만 참여할 수 있어요. 내가 참여하기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '나만 영상으로 답글을 달 수 있어요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>

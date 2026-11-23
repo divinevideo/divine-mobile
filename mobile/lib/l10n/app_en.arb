@@ -1501,6 +1501,14 @@
   "@videoStickerAddYoursButton": {
     "description": "Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name."
   },
+  "videoStickerAddYoursFollowingOnly": "Friends only",
+  "@videoStickerAddYoursFollowingOnly": {
+    "description": "Shown on an Add yours sticker in place of its join button, to a viewer the creator does not follow, when only people the creator follows may join. Short: it fits a button."
+  },
+  "videoStickerAddYoursCreatorOnly": "Creator only",
+  "@videoStickerAddYoursCreatorOnly": {
+    "description": "Shown on an Add yours sticker in place of its join button, to any viewer but the creator, when only the creator may join. Short: it fits a button."
+  },
   "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
   "@videoStickerAddYoursJoined": {
     "description": "On an Add yours sticker in the player: how many people answered its prompt with a video.",
@@ -9385,6 +9393,38 @@
   "videoEditorSocialStickerRepliesNote": "Shows who replied to this video with a video. Viewers tap it to watch the replies.",
   "@videoEditorSocialStickerRepliesNote": {
     "description": "Help line in the replies sticker sheet."
+  },
+  "videoEditorSocialStickerAudienceTitle": "Who can answer",
+  "@videoEditorSocialStickerAudienceTitle": {
+    "description": "Heading over the choice of who may answer an Add yours or replies sticker with a video."
+  },
+  "videoEditorSocialStickerAudienceEveryone": "Everyone",
+  "@videoEditorSocialStickerAudienceEveryone": {
+    "description": "Choice: anyone may answer the sticker. The default; the sticker is drawn into the video."
+  },
+  "videoEditorSocialStickerAudienceFollowing": "Friends",
+  "@videoEditorSocialStickerAudienceFollowing": {
+    "description": "Choice: only the people the creator follows may answer the sticker."
+  },
+  "videoEditorSocialStickerAudienceCreator": "Only me",
+  "@videoEditorSocialStickerAudienceCreator": {
+    "description": "Choice: only the creator may answer the sticker."
+  },
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "Only people you follow can join in. Everyone else sees the sticker once someone has.",
+  "@videoEditorSocialStickerAudienceFollowingAddYoursNote": {
+    "description": "Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined."
+  },
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "Only people you follow can reply with a video. Everyone else sees the sticker once someone has.",
+  "@videoEditorSocialStickerAudienceFollowingRepliesNote": {
+    "description": "Help line under the choice when only people the creator follows may reply with a video. The sticker is then left out of the video and shows to everyone else once someone replied."
+  },
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "Only you can join in. Nobody else sees the sticker until you do.",
+  "@videoEditorSocialStickerAudienceCreatorAddYoursNote": {
+    "description": "Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined."
+  },
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "Only you can reply with a video. Nobody else sees the sticker until you do.",
+  "@videoEditorSocialStickerAudienceCreatorRepliesNote": {
+    "description": "Help line under the choice when only the creator may reply to their own video with a video. Nobody else sees the sticker until the creator replied."
   },
   "videoEditorInteractiveCardAreaHint": "This sticker stays in this box so viewers can tap it",
   "@videoEditorInteractiveCardAreaHint": {

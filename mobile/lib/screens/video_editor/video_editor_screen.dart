@@ -1023,6 +1023,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       prompt: addYours.prompt,
       hashtag: addYours.hashtag,
       chainRoot: addYours.chainRoot,
+      audience: addYours.audience,
     );
     if (!sticker.isComplete) return;
     Log.debug(

@@ -2,6 +2,7 @@
 // ABOUTME: prompt and the hashtag every answer in the chain shares.
 
 import 'package:equatable/equatable.dart';
+import 'package:models/models.dart' show VideoStickerAudience;
 
 /// The Add yours sticker a video is recorded to answer.
 ///
@@ -12,6 +13,7 @@ class AddYoursContext extends Equatable {
     required this.chainRoot,
     required this.prompt,
     required this.hashtag,
+    this.audience = VideoStickerAudience.everyone,
   });
 
   /// The address of the chain's first video, `<kind>:<pubkey>:<d>`.
@@ -23,6 +25,10 @@ class AddYoursContext extends Equatable {
   /// The hashtag every answer in the chain carries, without its `#`.
   final String hashtag;
 
+  /// Who may answer, as the chain was started: the answer keeps it, so
+  /// nobody else joins the chain from there.
+  final VideoStickerAudience audience;
+
   @override
-  List<Object?> get props => [chainRoot, prompt, hashtag];
+  List<Object?> get props => [chainRoot, prompt, hashtag, audience];
 }

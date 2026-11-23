@@ -2151,6 +2151,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sua vez';
 
   @override
+  String get videoStickerAddYoursFollowingOnly => 'Só amizades';
+
+  @override
+  String get videoStickerAddYoursCreatorOnly => 'Só quem criou';
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11940,6 +11946,34 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Mostra quem respondeu a este vídeo com um vídeo. Quem assiste toca nele para ver as respostas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Quem pode responder';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Todo mundo';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Amizades';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Só eu';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Só as pessoas que você segue podem participar. As demais veem o sticker assim que alguém participar.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Só as pessoas que você segue podem responder com um vídeo. As demais veem o sticker assim que alguém responder.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Só você pode participar. Ninguém mais vê o sticker até você participar.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Só você pode responder com um vídeo. Ninguém mais vê o sticker até você responder.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
