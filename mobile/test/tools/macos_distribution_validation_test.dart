@@ -65,6 +65,8 @@ fi
             bundle.path,
             '--bundle-id',
             'co.openvine.app',
+            '--team-id',
+            'TESTTEAM',
           ],
           environment: {...environment, ...?overrides},
         );
@@ -113,6 +115,26 @@ fi
       expect(result.stderr, contains('keychain access group'));
     });
 
+    test(
+      'rejects another signing team with its own valid keychain group',
+      () async {
+        await entitlements.writeAsString('''
+<plist version="1.0"><dict>
+<key>keychain-access-groups</key><array>
+<string>OTHERTEAM.co.openvine.app</string>
+</array></dict></plist>
+''');
+        final result = await validate(
+          overrides: {
+            'TEST_SIGNATURE': 'Authority=Developer ID Application: Test\nTeamIdentifier=OTHERTEAM',
+          },
+        );
+
+        expect(result.exitCode, isNot(0));
+        expect(result.stderr, contains('signing team'));
+      },
+    );
+
     test('rejects the wrong bundle identity', () async {
       await File('${bundle.path}/Contents/Info.plist').writeAsString('''
 <plist version="1.0"><dict>
@@ -132,52 +154,72 @@ fi
       expect(result.stderr, contains('Gatekeeper'));
     });
 
-    for (final unsigned in [true, false]) {
-      test('DMG workflow validates its input (unsigned: $unsigned)', () async {
-        final project = loadYaml(
-          await File('../codemagic.yaml').readAsString(),
-        ) as YamlMap;
-        final definitions = project['definitions'] as YamlMap;
-        final scripts = definitions['scripts'] as YamlList;
-        final phase = scripts.cast<YamlMap>().singleWhere(
-          (script) => script['name'] == 'Package macOS DMG',
-        );
-        final contents = Directory(
-          '${temporaryDirectory.path}/build/macos/Build/Products/Release/'
-          'Divine.app/Contents',
-        );
-        await contents.create(recursive: true);
-        await File('${bundle.path}/Contents/Info.plist').copy(
-          '${contents.path}/Info.plist',
-        );
-        await Link('${temporaryDirectory.path}/scripts').create(
-          Directory('scripts').absolute.path,
-        );
-        final hdiutil = File('${temporaryDirectory.path}/hdiutil');
-        final marker = File('${temporaryDirectory.path}/dmg-created');
-        await hdiutil.writeAsString(
-          '#!/usr/bin/env bash\ntouch "\$DMG_MARKER"\n',
-        );
-        await Process.run('chmod', ['+x', hdiutil.path]);
-        final result = await Process.run(
-          'bash',
-          ['-c', phase['script'] as String],
-          workingDirectory: temporaryDirectory.path,
-          environment: {
-            ...environment,
-            'DMG_MARKER': marker.path,
-            if (unsigned)
-              'TEST_SIGNATURE': 'Signature=adhoc\nTeamIdentifier=not set',
-          },
-        );
+    for (final (publish, unsigned) in [
+      (true, true),
+      (true, false),
+      (false, true),
+    ]) {
+      test(
+        'DMG workflow validates input (publish: $publish, unsigned: $unsigned)',
+        () async {
+          final project = loadYaml(
+            await File('../codemagic.yaml').readAsString(),
+          ) as YamlMap;
+          final definitions = project['definitions'] as YamlMap;
+          final scripts = definitions['scripts'] as YamlList;
+          final phase = scripts.cast<YamlMap>().singleWhere(
+            (script) => script['name'] == 'Package macOS DMG',
+          );
+          final contents = Directory(
+            '${temporaryDirectory.path}/build/macos/Build/Products/Release/'
+            'Divine.app/Contents',
+          );
+          await contents.create(recursive: true);
+          final configuration = File(
+            '${temporaryDirectory.path}/macos/Runner/Configs/Release.xcconfig',
+          );
+          await configuration.parent.create(recursive: true);
+          await configuration.writeAsString(
+            'DIVINE_RELEASE_DEVELOPMENT_TEAM = TESTTEAM\n',
+          );
+          await File('${bundle.path}/Contents/Info.plist').copy(
+            '${contents.path}/Info.plist',
+          );
+          await Link('${temporaryDirectory.path}/scripts').create(
+            Directory('scripts').absolute.path,
+          );
+          final hdiutil = File('${temporaryDirectory.path}/hdiutil');
+          final marker = File('${temporaryDirectory.path}/dmg-created');
+          await hdiutil.writeAsString(
+            '#!/usr/bin/env bash\ntouch "\$DMG_MARKER"\n',
+          );
+          await Process.run('chmod', ['+x', hdiutil.path]);
+          final result = await Process.run(
+            'bash',
+            [
+              '-c',
+              (phase['script'] as String).replaceAll(
+                r'${{ inputs.PUBLISH_TO_GITHUB }}',
+                publish ? 'YES' : 'NO',
+              ),
+            ],
+            workingDirectory: temporaryDirectory.path,
+            environment: {
+              ...environment,
+              'DMG_MARKER': marker.path,
+              if (unsigned)
+                'TEST_SIGNATURE': 'Signature=adhoc\nTeamIdentifier=not set',
+            },
+          );
 
-        expect(
-          result.exitCode,
-          unsigned ? isNot(0) : 0,
-          reason: '${result.stderr}',
-        );
-        expect(marker.existsSync(), !unsigned);
-      });
+          expect(
+            result.exitCode,
+            publish && unsigned ? isNot(0) : 0,
+            reason: '${result.stderr}',
+          );
+          expect(marker.existsSync(), publish && !unsigned);
+        },
+      );
     }
     // The fixtures exercise POSIX shell scripts and macOS signing commands.
   }, skip: Platform.isWindows);

@@ -15,7 +15,7 @@ def run_tool(arguments: list[str], failure: str) -> str:
     return result.stdout + result.stderr
 
 
-def validate(bundle: Path, expected_bundle_id: str) -> None:
+def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> None:
     with (bundle / "Contents" / "Info.plist").open("rb") as source:
         info = plistlib.load(source)
     if info.get("CFBundleIdentifier") != expected_bundle_id:
@@ -33,6 +33,8 @@ def validate(bundle: Path, expected_bundle_id: str) -> None:
     team = fields.get("TeamIdentifier", "")
     if fields.get("Signature") == "adhoc" or not team or team == "not set":
         raise ValueError("a usable signed team identity is required")
+    if team != expected_team_id:
+        raise ValueError("signing team does not match the configured distribution app")
     if not any(
         line.startswith("Authority=Developer ID Application:")
         for line in signature.splitlines()
@@ -63,9 +65,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle", type=Path)
     parser.add_argument("--bundle-id", required=True)
+    parser.add_argument("--team-id", required=True)
     arguments = parser.parse_args()
     try:
-        validate(arguments.bundle, arguments.bundle_id)
+        validate(arguments.bundle, arguments.bundle_id, arguments.team_id)
     except (OSError, ValueError, plistlib.InvalidFileException) as error:
         print(f"macOS distribution validation failed: {error}", file=sys.stderr)
         return 1
