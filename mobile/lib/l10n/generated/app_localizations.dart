@@ -3583,17 +3583,17 @@ abstract class AppLocalizations {
   /// **'Add yours'**
   String get videoStickerAddYoursButton;
 
-  /// Shown on an Add yours sticker in place of its join button, to a viewer the creator does not follow, when only people the creator follows may join. Short: it fits a button.
+  /// Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails.
   ///
   /// In en, this message translates to:
-  /// **'Friends only'**
-  String get videoStickerAddYoursFollowingOnly;
+  /// **'Watch the series'**
+  String get videoStickerAddYoursWatchSeries;
 
-  /// Shown on an Add yours sticker in place of its join button, to any viewer but the creator, when only the creator may join. Short: it fits a button.
+  /// Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.
   ///
   /// In en, this message translates to:
-  /// **'Creator only'**
-  String get videoStickerAddYoursCreatorOnly;
+  /// **'Watch the series: {prompt}'**
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt);
 
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///

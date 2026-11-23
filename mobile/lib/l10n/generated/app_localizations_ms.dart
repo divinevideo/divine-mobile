@@ -2107,10 +2107,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Giliran anda';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Rakan sahaja';
+  String get videoStickerAddYoursWatchSeries => 'Tonton siri ini';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Pencipta sahaja';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Tonton siri ini: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

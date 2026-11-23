@@ -401,9 +401,10 @@ publishing an answer, so the Divine player holds to it:
   is read, it shows nothing.
 - It counts and shows only the answers of whoever may answer, and from those
   read only: the count is then a floor.
-- Only whoever may answer gets the Add yours button; anyone else sees who may
-  in its place. On a video with a replies sticker, only they are offered a
-  video reply in the comments.
+- Only whoever may answer gets the Add yours button. Anyone else sees the
+  latest answers' thumbnails and "Watch the series" in place of who joined and
+  the button, and a tap opens the answers. On a video with a replies sticker,
+  only whoever may answer is offered a video reply in the comments.
 - Who the creator follows is read from their kind 3 contact list. For an Add
   yours, the creator is whoever started the chain the sticker counts, and an
   answer carries the chain's `audience` on to its own sticker, so nobody joins

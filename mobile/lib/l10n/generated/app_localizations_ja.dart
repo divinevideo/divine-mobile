@@ -1963,10 +1963,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerAddYoursButton => 'あなたの番';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => '友だちのみ';
+  String get videoStickerAddYoursWatchSeries => 'シリーズを見る';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => '作成者のみ';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'シリーズを見る：$prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

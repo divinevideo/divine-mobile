@@ -2059,10 +2059,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Giliranmu';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Khusus teman';
+  String get videoStickerAddYoursWatchSeries => 'Tonton serinya';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Khusus kreator';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Tonton serinya: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

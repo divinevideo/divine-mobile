@@ -2151,10 +2151,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sua vez';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Só amizades';
+  String get videoStickerAddYoursWatchSeries => 'Assista à série';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Só quem criou';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Assista à série: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

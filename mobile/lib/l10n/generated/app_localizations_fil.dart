@@ -2128,10 +2128,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Ikaw naman';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Friends lang';
+  String get videoStickerAddYoursWatchSeries => 'Panoorin ang series';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Creator lang';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Panoorin ang series: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

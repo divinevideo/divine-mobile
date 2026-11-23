@@ -1501,13 +1501,18 @@
   "@videoStickerAddYoursButton": {
     "description": "Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name."
   },
-  "videoStickerAddYoursFollowingOnly": "Friends only",
-  "@videoStickerAddYoursFollowingOnly": {
-    "description": "Shown on an Add yours sticker in place of its join button, to a viewer the creator does not follow, when only people the creator follows may join. Short: it fits a button."
+  "videoStickerAddYoursWatchSeries": "Watch the series",
+  "@videoStickerAddYoursWatchSeries": {
+    "description": "Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails."
   },
-  "videoStickerAddYoursCreatorOnly": "Creator only",
-  "@videoStickerAddYoursCreatorOnly": {
-    "description": "Shown on an Add yours sticker in place of its join button, to any viewer but the creator, when only the creator may join. Short: it fits a button."
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "Watch the series: {prompt}",
+  "@videoStickerAddYoursWatchSeriesSemanticLabel": {
+    "description": "Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
   },
   "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
   "@videoStickerAddYoursJoined": {

@@ -2139,10 +2139,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'دورك';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'لدائرة الأصدقاء فقط';
+  String get videoStickerAddYoursWatchSeries => 'مشاهدة السلسلة';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'لهذا الحساب فقط';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'مشاهدة السلسلة: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

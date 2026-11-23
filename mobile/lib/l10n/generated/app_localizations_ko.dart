@@ -1974,10 +1974,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoStickerAddYoursButton => '나도 참여';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => '친구만';
+  String get videoStickerAddYoursWatchSeries => '시리즈 보기';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => '제작자만';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '시리즈 보기: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

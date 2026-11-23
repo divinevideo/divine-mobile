@@ -2126,10 +2126,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Din tur';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Bara vänner';
+  String get videoStickerAddYoursWatchSeries => 'Se serien';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Bara skaparen';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Se serien: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

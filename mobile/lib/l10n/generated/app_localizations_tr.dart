@@ -2066,10 +2066,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sıra sende';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Yalnızca arkadaşlar';
+  String get videoStickerAddYoursWatchSeries => 'Seriyi izle';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Yalnızca içerik sahibi';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Seriyi izle: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

@@ -2173,10 +2173,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'À ton tour';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Réservé aux proches';
+  String get videoStickerAddYoursWatchSeries => 'Voir la série';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Réservé à qui l\'a créé';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Voir la série : $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

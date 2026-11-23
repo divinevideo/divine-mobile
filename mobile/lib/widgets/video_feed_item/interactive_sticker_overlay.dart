@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
-    show VideoEvent, VideoStickerAudience, VideoStickerKind, VideoStickerRegion;
+    show VideoEvent, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/add_yours_context.dart';
@@ -220,13 +220,8 @@ class _ResponsesSticker extends ConsumerWidget {
               _join(context, ref, chainRoot: state.chainRoot!);
             }
           : null,
-      joinLockedLabel: isAddYours && !state.canAnswer
-          ? switch (data.audience) {
-              VideoStickerAudience.creator =>
-                context.l10n.videoStickerAddYoursCreatorOnly,
-              _ => context.l10n.videoStickerAddYoursFollowingOnly,
-            }
-          : null,
+      // Anyone who may not join is invited to watch the series instead.
+      watchOnly: isAddYours && !state.canAnswer,
       onOpenResponses: () {
         onInteraction?.call();
         _open(context, ref, state.videos);

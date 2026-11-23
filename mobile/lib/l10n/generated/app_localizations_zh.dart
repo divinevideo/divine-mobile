@@ -1979,10 +1979,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerAddYoursButton => '轮到你了';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => '仅限好友';
+  String get videoStickerAddYoursWatchSeries => '观看系列';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => '仅限创作者';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '观看系列：$prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

@@ -2097,10 +2097,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Đến lượt bạn';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Chỉ bạn bè';
+  String get videoStickerAddYoursWatchSeries => 'Xem loạt video';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Chỉ người tạo';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Xem loạt video: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

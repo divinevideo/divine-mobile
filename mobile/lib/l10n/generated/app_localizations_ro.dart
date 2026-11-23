@@ -2189,10 +2189,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Rândul tău';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Doar cercul de prieteni';
+  String get videoStickerAddYoursWatchSeries => 'Urmărește seria';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Doar pentru cine l-a creat';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Urmărește seria: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

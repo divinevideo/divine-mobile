@@ -2163,10 +2163,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Du bist dran';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Nur Freundeskreis';
+  String get videoStickerAddYoursWatchSeries => 'Serie ansehen';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Nur Creator';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Serie ansehen: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

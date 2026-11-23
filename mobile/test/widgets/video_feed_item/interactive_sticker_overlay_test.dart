@@ -604,29 +604,24 @@ void main() {
           expect(find.text('Reply with a video'), findsNothing);
         });
 
-        testWidgets('shows it to someone the creator does not follow once '
-            'someone they follow joined, without a way to join', (
-          tester,
-        ) async {
+        testWidgets('invites someone the creator does not follow to watch '
+            'the series once someone they follow joined, without a way to '
+            'join', (tester) async {
           creatorFollows([_reply(3).pubkey]);
           await pump(tester, restricted(addYours));
           await tester.pump();
 
-          // Who joined among the twelve not read is not known.
-          expect(
-            find.text(l10n(tester).videoStickerAddYoursJoinedAtLeast('1+')),
-            findsOneWidget,
-          );
           expect(
             find.text(l10n(tester).videoStickerAddYoursButton),
             findsNothing,
           );
           await tester.tap(
-            find.text(l10n(tester).videoStickerAddYoursFollowingOnly),
+            find.text(l10n(tester).videoStickerAddYoursWatchSeries),
           );
           await tester.pumpAndSettle();
 
-          expect(pushed, isEmpty);
+          expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
+          expect(addYoursWhileOpen, isNull);
         });
 
         testWidgets('lets someone the creator follows join, and their answer '

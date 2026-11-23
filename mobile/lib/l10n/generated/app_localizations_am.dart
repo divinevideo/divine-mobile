@@ -2082,10 +2082,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'ለጓደኞች ብቻ';
+  String get videoStickerAddYoursWatchSeries => 'ተከታታዩን ይመልከቱ';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'ለዚህ መለያ ብቻ';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'ተከታታዩን ይመልከቱ፦ $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

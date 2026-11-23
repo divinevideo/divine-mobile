@@ -2193,10 +2193,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Twoja kolej';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Tylko dla bliskich';
+  String get videoStickerAddYoursWatchSeries => 'Obejrzyj serię';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Tylko dla tego konta';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Obejrzyj serię: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

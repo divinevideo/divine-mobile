@@ -2131,10 +2131,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'آپ کی باری';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'صرف دوستوں کے لیے';
+  String get videoStickerAddYoursWatchSeries => 'سیریز دیکھیں';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'صرف اس اکاؤنٹ کے لیے';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'سیریز دیکھیں: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

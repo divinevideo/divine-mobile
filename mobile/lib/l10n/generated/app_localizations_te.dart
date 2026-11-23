@@ -2175,10 +2175,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoStickerAddYoursButton => 'మీ వంతు';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'స్నేహితులకు మాత్రమే';
+  String get videoStickerAddYoursWatchSeries => 'సిరీస్ చూడండి';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'సృష్టికర్తకు మాత్రమే';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'సిరీస్ చూడండి: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {

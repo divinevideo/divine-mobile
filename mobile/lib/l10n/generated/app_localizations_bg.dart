@@ -2161,10 +2161,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Твой ред';
 
   @override
-  String get videoStickerAddYoursFollowingOnly => 'Само за близки';
+  String get videoStickerAddYoursWatchSeries => 'Гледай поредицата';
 
   @override
-  String get videoStickerAddYoursCreatorOnly => 'Само за този профил';
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Гледай поредицата: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
