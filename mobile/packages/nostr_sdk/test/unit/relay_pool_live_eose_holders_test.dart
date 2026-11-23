@@ -248,6 +248,27 @@ void main() {
         });
       });
 
+      test('starts a fresh window after the sole EOSE relay refuses', () {
+        fakeAsync((fake) {
+          async = fake;
+          final first = _Relay('wss://first.example');
+          final second = _Relay('wss://second.example');
+          final silent = _Relay('wss://silent.example');
+          final subId = subscribe([first, second, silent]);
+          settle(first.deliver(['EOSE', subId]));
+          final halfWindow = window ~/ 2;
+          async.elapse(halfWindow);
+
+          settle(first.deliver(['CLOSED', subId, 'error: shutting down']));
+          settle(second.deliver(['EOSE', subId]));
+          async.elapse(halfWindow);
+          expect(eoseCalls, 0);
+
+          async.elapse(halfWindow);
+          expect(eoseCalls, 1);
+        });
+      });
+
       test('disarms the settle window when the subscription is torn '
           'down', () {
         fakeAsync((fake) {
@@ -264,8 +285,7 @@ void main() {
         });
       });
 
-      test('disarms the settle window when every relay then refuses the '
-          'REQ with CLOSED', () {
+      test('disarms the settle window when the last holder refuses the REQ', () {
         fakeAsync((fake) {
           async = fake;
           window = const Duration(seconds: 13);
@@ -273,8 +293,8 @@ void main() {
           final subId = refusedSubscription();
           bool isSettleTimer(FakeTimer timer) => timer.duration == window;
 
-          // Dropping the answering relay's EOSE leaves the window armed.
-          settle(live.deliver(['CLOSED', subId, 'error: shutting down']));
+          // Removing the answering relay from the pool leaves its timer armed.
+          nostr.relayPool.remove(live.url);
           expect(async.pendingTimers.where(isSettleTimer), hasLength(1));
 
           settle(refuser.deliver(['CLOSED', subId, 'error: shutting down']));

@@ -2977,8 +2977,13 @@ class RelayPool {
         }
         if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
-          // Nothing is serving this REQ. A previous connection's EOSE must
-          // not start the settle window for the replacement's replay.
+        }
+        // A refusal removes that relay's EOSE. If no answer is left, the next
+        // EOSE gets a full window. A replay with no serving relay also starts
+        // fresh, even if the previous connection used the same URL.
+        final eosed = _subscriptionEoseRelays[subscriptionId];
+        eosed?.remove(relay.url);
+        if (awaitsReplay || (eosed?.isEmpty ?? false)) {
           _subscriptionEoseRelays.remove(subscriptionId);
           _subscriptionEoseSettleTimers.remove(subscriptionId)?.cancel();
         }
@@ -2989,11 +2994,6 @@ class RelayPool {
           completesBatch: false,
           dropsRequest: true,
         );
-        // A relay that reported EOSE and then refused the REQ leaves the
-        // tally with it. Left in, its EOSE would stand in for a relay that
-        // is still streaming stored events, and a bounded read would close
-        // on a partial result.
-        _subscriptionEoseRelays[subscriptionId]?.remove(relay.url);
         _maybeFireLiveEose(subscriptionId);
         return;
       }
