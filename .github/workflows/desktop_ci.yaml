@@ -74,6 +74,12 @@ jobs:
             libasound2-dev libsqlite3-dev
       - name: Resolve dependencies
         run: flutter pub get
+      - name: Verify macOS tooling against native signing commands
+        if: matrix.platform == 'macos'
+        run: |
+          flutter test --no-pub \
+            test/tools/unsigned_macos_build_test.dart \
+            test/tools/macos_distribution_validation_test.dart
       - name: Build production desktop entrypoint
         run: |
           if [[ "${{ matrix.platform }}" == macos ]]; then

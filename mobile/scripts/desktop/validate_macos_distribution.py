@@ -23,6 +23,19 @@ def permits(claim: str, allowed: str) -> bool:
     )
 
 
+def signing_certificate(bundle: Path) -> bytes:
+    with tempfile.TemporaryDirectory(prefix="divine-signing-certificate-") as temporary:
+        prefix = str(Path(temporary) / "certificate-")
+        run_tool(
+            ["codesign", "--display", f"--extract-certificates={prefix}", str(bundle)],
+            "provisioning profile signing certificate could not be inspected",
+        )
+        certificate = Path(f"{prefix}0")
+        if not certificate.is_file():
+            raise ValueError("provisioning profile signing certificate is missing")
+        return certificate.read_bytes()
+
+
 def verify_profile(bundle: Path, bundle_id: str, team: str, entitlements: dict) -> None:
     profile_path = next(
         (
@@ -60,7 +73,13 @@ def verify_profile(bundle: Path, bundle_id: str, team: str, entitlements: dict) 
         ):
             continue
         authorization = allowed.get(key)
-        if isinstance(claims, list) and isinstance(authorization, list):
+        if (
+            key == "com.apple.developer.associated-domains"
+            and authorization == "*"
+            and isinstance(claims, list)
+        ):
+            authorized = all(isinstance(claim, str) for claim in claims)
+        elif isinstance(claims, list) and isinstance(authorization, list):
             authorized = all(
                 any(
                     isinstance(pattern, str) and permits(claim, pattern)
@@ -74,19 +93,8 @@ def verify_profile(bundle: Path, bundle_id: str, team: str, entitlements: dict) 
             raise ValueError(
                 "provisioning profile does not authorize a restricted entitlement"
             )
-    with tempfile.TemporaryDirectory(prefix="divine-signing-certificate-") as temporary:
-        prefix = str(Path(temporary) / "certificate-")
-        run_tool(
-            ["codesign", "--display", "--extract-certificates", prefix, str(bundle)],
-            "provisioning profile signing certificate could not be inspected",
-        )
-        certificate = Path(f"{prefix}0")
-        if not certificate.is_file() or certificate.read_bytes() not in profile.get(
-            "DeveloperCertificates", []
-        ):
-            raise ValueError(
-                "provisioning profile does not authorize the signing certificate"
-            )
+    if signing_certificate(bundle) not in profile.get("DeveloperCertificates", []):
+        raise ValueError("provisioning profile does not authorize the signing certificate")
 
 
 def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> None:

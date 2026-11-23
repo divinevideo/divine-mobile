@@ -37,8 +37,10 @@ void main() {
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "$1" == --verify ]]; then exit "${VERIFY_EXIT:-0}"; fi
-if [[ " $* " == *' --extract-certificates '* ]]; then
-  printf '%s' 'test-cert' > "${3}0"
+if [[ "$2" == --extract-certificates=* ]]; then
+  printf '%s' 'test-cert' > "${2#--extract-certificates=}0"
+elif [[ "$2" == --extract-certificates ]]; then
+  exit 1
 elif [[ " $* " == *' --entitlements '* ]]; then
   cat "$TEST_ENTITLEMENTS"
 else
@@ -175,6 +177,45 @@ fi
       expect(result.stderr, contains('provisioning profile'));
     });
 
+    test('extracts a real macOS signing certificate', () async {
+      const probe =
+          'import runpy; from pathlib import Path; '
+          'tool = runpy.run_path("scripts/desktop/validate_macos_distribution.py"); '
+          'assert tool["signing_certificate"](Path("/usr/bin/codesign"))';
+      final result = await Process.run(
+        'python3',
+        ['-c', probe],
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+    }, skip: !Platform.isMacOS);
+
+    for (final authorized in [true, false]) {
+      test(
+        'checks associated-domains wildcard authorization ($authorized)',
+        () async {
+          await entitlements.writeAsString('''
+<plist version="1.0"><dict>
+<key>keychain-access-groups</key><array>
+<string>TESTTEAM.co.openvine.app</string></array>
+<key>com.apple.developer.associated-domains</key><array>
+<string>applinks:divine.video</string><string>applinks:www.divine.video</string>
+</array></dict></plist>
+''');
+          await profile.writeAsString(
+            _profile(allowAssociatedDomains: authorized),
+          );
+          final result = await validate();
+
+          expect(
+            result.exitCode,
+            authorized ? 0 : isNot(0),
+            reason: '${result.stderr}',
+          );
+        },
+      );
+    }
+
     for (final (name, content) in [
       ('team', _profile(team: 'OTHERTEAM')),
       ('app', _profile(identifier: 'TESTTEAM.other.app')),
@@ -271,6 +312,7 @@ String _profile({
   String group = 'TESTTEAM.*',
   String certificate = 'dGVzdC1jZXJ0',
   bool expired = false,
+  bool allowAssociatedDomains = false,
 }) {
   final expiry = DateTime.utc(
     DateTime.now().year + (expired ? -1 : 1),
@@ -283,6 +325,7 @@ String _profile({
 <key>Entitlements</key><dict>
 <key>com.apple.application-identifier</key><string>$identifier</string>
 <key>keychain-access-groups</key><array><string>$group</string></array>
+${allowAssociatedDomains ? '<key>com.apple.developer.associated-domains</key><string>*</string>' : ''}
 </dict></dict></plist>
 ''';
 }
