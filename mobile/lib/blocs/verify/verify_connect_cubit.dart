@@ -104,11 +104,6 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   // own newer answer, whenever the older read lands.
   int _accessRefreshes = 0;
 
-  // Whether the last access answer taken since the last refusal for Divine
-  // Confirmation was "has". A refusal then is a purchase the gate hasn't
-  // caught up with, rather than no purchase at all.
-  bool _accessHeldSinceRefusal = false;
-
   // About ten seconds of waiting for a sign-in the verifier hasn't seen yet,
   // however long each answer takes.
   static const _confirmAttempts = 5;
@@ -484,9 +479,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       switch (error.refusal) {
         case SignInRefusal.confirmationRequired:
           // A refusal right after access read "has" is a purchase the gate
-          // hasn't caught up with. Either way, the next refusal starts over.
-          final pendingPurchase = _accessHeldSinceRefusal;
-          _accessHeldSinceRefusal = false;
+          // hasn't caught up with. The refusal below sets access to "no",
+          // so the next refusal starts over.
+          final pendingPurchase =
+              state.confirmationAccess == ConfirmationAccess.has;
           // With the flag on, the sign-in stays so it can be approved once
           // Confirmation is bought, without signing in at the platform
           // again. With it off there is nowhere to buy, and a waiting
@@ -640,7 +636,6 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       access = ConfirmationAccess.unknown;
     }
     if (isClosed || refreshes != _accessRefreshes) return;
-    _accessHeldSinceRefusal = access == ConfirmationAccess.has;
     emit(state.copyWith(confirmationAccess: access));
   }
 
