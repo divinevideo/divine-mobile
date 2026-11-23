@@ -153,9 +153,9 @@ applies to one platform, build, production baseline and set of findings in
 that run. If the next candidate or baseline changes, use its new report. Missing
 provenance and known regressions require a fix before the train can proceed.
 
-The source comparison is a targeted check. Actual screenshots, reviewer login,
-console declarations, remotely enabled features and live moderation still need
-verification on the candidate when applicable.
+Check screenshots, reviewer login and declarations changed directly in the
+store consoles as part of the console change. Exercise remotely enabled
+features and live moderation on the candidate when applicable.
 
 ## Bootstrap and activation
 

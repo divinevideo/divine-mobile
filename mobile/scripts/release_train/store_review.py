@@ -5,12 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import plistlib
-import re
 import subprocess
 from xml.parsers.expat import ExpatError
 
 from release_train.providers import ProviderError
-from release_train.release_notes import ROOT, SHA, production_baseline
+from release_train.release_notes import ROOT, SHA, production_build
 
 APPLE = 'https://developer.apple.com/app-store/review/guidelines/'
 PLAY = 'https://support.google.com/googleplay/android-developer/answer/9859455'
@@ -71,24 +70,21 @@ def ios_findings(base, source, paths):
                 'Verify iOS permission prompts, background use, sign-in and '
                 f'export declarations as applicable. {APPLE}'
             )
+    if any(path.endswith('/InfoPlist.strings') for path in paths):
+        findings.append(f'Verify the localized iOS permission prompts explain the app’s actual use. {APPLE}')
     if any(path.endswith(('.xcprivacy', '.entitlements')) for path in paths):
         findings.append(
             'Check iOS privacy manifests and entitlements against the app and '
             f'App Store Connect disclosures. {APPLE}'
         )
 
-    def device_families(commit):
-        project = git('show', f'{commit}:{IOS_PROJECT}')
-        return sorted(
-            b''.join(value.split())
-            for value in re.findall(rb'TARGETED_DEVICE_FAMILY\s*=\s*([^;]+);', project)
-        )
-
-    if (IOS_PROJECT in paths and device_families(base) != device_families(source)) or any(
-        path.startswith('mobile/ios/fastlane/') for path in paths
-    ):
+    device_settings_changed = git(
+        'diff', '--name-only', '--no-renames', '-G', 'TARGETED_DEVICE_FAMILY',
+        base, source, '--', IOS_PROJECT, ':(glob)mobile/ios/**/*.xcconfig',
+    )
+    if device_settings_changed or any(path.startswith('mobile/ios/fastlane/') for path in paths):
         findings.append(
-            'Apple 2.3.3: verify iPad screenshots are genuine captures for the '
+            'Under Apple guideline 2.3.3, verify iPad screenshots are genuine captures for the '
             f'supported devices and match the current app. {APPLE}'
         )
     return findings
@@ -129,6 +125,10 @@ def findings_for(platform, base, source):
         'mobile/lib/services/content_reporting', 'mobile/lib/services/blocklist',
         'mobile/lib/widgets/report_', 'mobile/lib/screens/settings/moderation',
         'mobile/lib/services/content_moderation', 'mobile/packages/content_blocklist_repository/lib/',
+        'mobile/lib/blocs/report/', 'mobile/lib/widgets/video_feed_item/actions/report_',
+        'mobile/lib/blocs/other_profile/', 'mobile/lib/widgets/profile/unavailable_profile_actions',
+        'mobile/lib/widgets/profile/blocked_user_screen', 'mobile/lib/services/report_retry_service',
+        'mobile/lib/providers/moderation_providers', 'mobile/lib/blocs/dm/conversation_actions/',
     )) for path in paths):
         findings.append(
             'Test the changed moderation flows on the candidate, including '
@@ -140,7 +140,8 @@ def findings_for(platform, base, source):
         'mobile/lib/screens/settings/support_center', 'mobile/lib/screens/minor_account',
         'mobile/lib/blocs/minor_consent_', 'mobile/lib/blocs/analytics_consent/',
         'mobile/lib/services/account_deletion_', 'mobile/lib/blocs/account_deletion_',
-        'mobile/lib/constants/terms_acceptance_',
+        'mobile/lib/constants/terms_acceptance_', 'mobile/lib/services/auth_service',
+        'mobile/lib/router/routes/auth_routes', 'mobile/lib/blocs/divine_auth/',
     )) for path in paths):
         policy = APPLE if platform == 'ios' else PLAY
         findings.append(
@@ -158,15 +159,21 @@ def check_candidate(action, snapshot, approval):
         raise ProviderError('candidate source provenance is missing. Verify the store build identity.')
     label = f"{build['version']}+{build['number']} ({source})"
     try:
-        base = production_baseline(platform, snapshot.get(platform, {}))['sha']
-        findings = findings_for(platform, base, source)
+        baseline = production_build(platform, snapshot.get(platform, {}))
+        number = baseline.get('number')
+        if type(number) is not int or number < 1:
+            raise ProviderError('published build number is missing. Reconcile release provenance.')
+        findings = findings_for(platform, baseline['sha'], source)
     except ProviderError as error:
         raise ProviderError(f'{label}: {error}') from None
-    label += f' against production {base}'
+    label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
     if not findings:
         return f'{label}: no issues detected by the source preflight.'
     digest = hashlib.sha256(json.dumps([
-        platform, build['version'], build['number'], source, base, findings,
+        platform,
+        [build['version'], build['number'], source, build.get('id')],
+        [baseline['version'], number, baseline['sha'], baseline.get('id')],
+        findings,
     ]).encode()).hexdigest()
     token = f'{platform}-{digest}'
     if approval == token:

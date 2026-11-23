@@ -61,9 +61,13 @@ class ProviderTest(unittest.TestCase):
         for cleanup in [{}, ProviderError("cleanup failed")]:
             with self.subTest(cleanup=cleanup):
                 http = FakeHTTP()
-                http.responses = [{"id": "edit"}, {}, ProviderError("invalid"), cleanup]
-                with self.assertRaisesRegex(BeforeStoreMutationError, "validate edit"):
+                diagnostic = {"code": 400, "message": "private provider detail"}
+                invalid = ProviderError("invalid", diagnostic=diagnostic)
+                http.responses = [{"id": "edit"}, {}, invalid, cleanup]
+                with self.assertRaisesRegex(BeforeStoreMutationError, "validate edit") as failure:
                     Play("token", request=http).promote(123, notes=play_notes())
+                self.assertEqual(failure.exception.diagnostic, diagnostic)
+                self.assertNotIn(diagnostic["message"], str(failure.exception))
                 self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "DELETE"])
                 self.assertNotIn(":commit", " ".join(call[1] for call in http.calls))
 

@@ -50,7 +50,7 @@ class StoreReviewTest(unittest.TestCase):
     def snapshot(self, base):
         return {
             'ios': {'versions': [{'state': 'READY_FOR_DISTRIBUTION', 'version': '1.0.1', 'build_id': 'live'}],
-                    'builds': [{'id': 'live', 'version': '1.0.1', 'sha': base}]},
+                    'builds': [{'id': 'live', 'number': 1, 'version': '1.0.1', 'sha': base}]},
             'android': {'production': [{'number': 1, 'version': '1.0.1', 'sha': base}]},
         }
 
@@ -87,6 +87,18 @@ class StoreReviewTest(unittest.TestCase):
         self.write('mobile/lib/main.dart', 'new candidate')
         new_candidate = self.action('ios', self.commit())
         self.assertFalse(self.screen([new_candidate], approval=approval)['actions'])
+
+    def test_replacement_production_build_at_the_same_sha_invalidates_confirmation(self):
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        action = self.action('android', self.commit())
+        report = self.screen([action])
+        approval = report['errors'][0].split('approve_store_review=')[1].split('`')[0]
+        snapshot = self.snapshot(self.base)
+        snapshot['android']['production'][0]['number'] = 3
+        plan = {'actions': [action], 'errors': [], 'reasons': []}
+        store_review.screen(plan, snapshot, approval, dry=False)
+        self.assertFalse(plan['actions'])
+        self.assertIn('production 1.0.1+3', plan['errors'][0])
 
     def test_unaffected_production_and_beta_remain_eligible(self):
         self.write('mobile/android/app/src/main/AndroidManifest.xml', '<manifest><uses-permission/></manifest>')
@@ -133,6 +145,17 @@ class StoreReviewTest(unittest.TestCase):
         self.assertIn('report', plan['errors'][0])
         self.assertIn('iPad screenshots', plan['errors'][0])
 
+    def test_device_coverage_change_is_flagged_when_configuration_values_trade_places(self):
+        project = 'mobile/ios/Runner.xcodeproj/project.pbxproj'
+        self.write(project, 'Runner Release {\n    TARGETED_DEVICE_FAMILY = 1;\n}\n'
+                   'Widget Release {\n    TARGETED_DEVICE_FAMILY = "1,2";\n}\n')
+        base = self.commit()
+        self.write(project, 'Runner Release {\n    TARGETED_DEVICE_FAMILY = "1,2";\n}\n'
+                   'Widget Release {\n    TARGETED_DEVICE_FAMILY = 1;\n}\n')
+        plan = self.screen([self.action('ios', self.commit())], baseline=base)
+        self.assertFalse(plan['actions'])
+        self.assertIn('iPad screenshots', plan['errors'][0])
+
     def test_account_deletion_backend_changes_prompt_both_stores(self):
         self.write('mobile/lib/services/account_deletion_service.dart', 'changed request')
         candidate = self.commit()
@@ -140,6 +163,26 @@ class StoreReviewTest(unittest.TestCase):
         plan = self.screen(actions)
         self.assertFalse(plan['actions'])
         self.assertTrue(all('account deletion' in error for error in plan['errors']))
+
+    def test_primary_reporting_blocking_and_reviewer_access_changes_are_flagged(self):
+        cases = {
+            'mobile/lib/blocs/report/report_submission_cubit.dart': 'moderation flows',
+            'mobile/lib/widgets/video_feed_item/actions/report_action_button.dart': 'moderation flows',
+            'mobile/lib/widgets/profile/unavailable_profile_actions.dart': 'moderation flows',
+            'mobile/lib/services/auth_service.dart': 'reviewer access',
+            'mobile/lib/router/routes/auth_routes.dart': 'reviewer access',
+        }
+        baseline = self.base
+        for path, finding in cases.items():
+            with self.subTest(path=path):
+                self.write(path, 'changed policy-sensitive behavior')
+                source = self.commit()
+                actions = [self.action('ios', source), self.action('android', source)]
+                plan = self.screen(actions, baseline=baseline)
+                baseline = source
+                self.assertFalse(plan['actions'])
+                self.assertEqual(len(plan['errors']), 2)
+                self.assertTrue(all(finding in error for error in plan['errors']))
 
     def test_main_releases_only_when_live_dispatch_confirms_the_exact_build(self):
         self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')

@@ -394,7 +394,7 @@ class Play:
                 self.call("DELETE", f"/edits/{edit}")
             except ProviderError:
                 pass
-            raise BeforeStoreMutationError(str(error)) from None
+            raise BeforeStoreMutationError(str(error), diagnostic=error.diagnostic) from None
         return self.commit(edit)
 
     def upload(self, path, number, digest, *, notes):
