@@ -16,9 +16,10 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// 32 × 32 blurhash bilinearly stretched — visually equivalent to a heavy
 /// gaussian blur of the poster at zero per-frame raster cost. The
 /// runtime-blur fallback ([ImageFiltered], sigma 30) only runs for videos
-/// without a blurhash; that fullscreen blur pass over the live video
-/// texture was a major raster-thread cost (on-device: Impeller janked
-/// every frame), so the blurhash path is strongly preferred.
+/// without a blurhash, and not on web (see [useRuntimeBlur]); that fullscreen
+/// blur pass over the live video texture was a major raster-thread cost
+/// (on-device: Impeller janked every frame), so the blurhash path is strongly
+/// preferred.
 ///
 /// When [videoAspectRatio] is known, the backdrop paints only in the letterbox
 /// bars — one `RepaintBoundary`-isolated fill per bar, from the screen edge up
@@ -48,7 +49,8 @@ class BlurredVideoBackdrop extends StatelessWidget {
   /// Largest decoded width or height for the blurred poster fallback. The
   /// heavy blur removes the detail a larger decode would carry, so this saves
   /// decode time and image memory with no visible difference. The blur's own
-  /// raster cost scales with the widget, not the image.
+  /// raster cost scales with the widget, not the image. Where [useRuntimeBlur]
+  /// is off the dimmed poster shows at this resolution.
   static const int maxBlurredPosterDecodePx = 96;
 
   final String? url;
@@ -63,12 +65,10 @@ class BlurredVideoBackdrop extends StatelessWidget {
   /// paints fullscreen — the safe fallback when dimensions are unknown.
   final double? videoAspectRatio;
 
-  /// Whether to apply a runtime GPU Gaussian blur when falling back to a poster
-  /// image without a [blurhash].
+  /// Whether to blur the poster at runtime when there is no [blurhash].
   ///
-  /// Defaults to `false` on web, where a 30 px WebGL blur shader over video
-  /// platform views causes shader compilation stalls; renders a dimmed poster
-  /// instead.
+  /// Defaults to `false` on web, where compiling the 30 px blur shader stalls
+  /// WebGL; the poster is then dimmed but not blurred.
   final bool useRuntimeBlur;
 
   @override
@@ -117,14 +117,15 @@ class BlurredVideoBackdrop extends StatelessWidget {
 }
 
 /// The blurred fill itself, without any letterbox clip. Prefers the cheap
-/// stretched-blurhash path and falls back to a runtime gaussian of the poster.
+/// stretched-blurhash path and falls back to the poster, blurred at runtime
+/// when [useRuntimeBlur] is on.
 class _BackdropContent extends StatelessWidget {
   const _BackdropContent({
+    required this.useRuntimeBlur,
     this.url,
     this.filePath,
     this.blurhash,
     this.isolatePosterPaint = false,
-    this.useRuntimeBlur = true,
   });
 
   final String? url;
@@ -160,7 +161,7 @@ class _BackdropContent extends StatelessWidget {
                   BlurredVideoBackdrop.maxBlurredPosterDecodePx,
                 )
               : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
-          return _blurredPoster(
+          return _posterFallback(
             VineCachedImage(
               imageUrl: posterUrl,
               memCacheWidth: targetWidth,
@@ -175,7 +176,7 @@ class _BackdropContent extends StatelessWidget {
       );
     }
     if (posterPath != null && posterPath.isNotEmpty) {
-      return _blurredPoster(
+      return _posterFallback(
         ClipThumbnailImage(
           path: posterPath,
           fit: BoxFit.cover,
@@ -187,7 +188,7 @@ class _BackdropContent extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _blurredPoster(Widget poster) {
+  Widget _posterFallback(Widget poster) {
     final Widget fallbackPoster;
     if (useRuntimeBlur) {
       fallbackPoster = ClipRect(
