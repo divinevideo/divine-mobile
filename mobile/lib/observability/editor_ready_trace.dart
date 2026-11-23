@@ -25,8 +25,28 @@ enum EditorEntry {
   }
 }
 
+/// The moment the creator asked for the editor, carried to the editor route
+/// in its `extra` so `editor_ready` can report what passed before the route
+/// was entered.
+///
+/// Leaving the recorder waits on sign-in, the clip deletion still pending and
+/// analytics before it pushes the editor, which the editor's own clock cannot
+/// see.
+class EditorOpenRequest {
+  EditorOpenRequest() : _stopwatch = clock.stopwatch()..start();
+
+  final Stopwatch _stopwatch;
+
+  /// Milliseconds since the creator asked for the editor.
+  int get elapsedMs => _stopwatch.elapsedMilliseconds;
+}
+
 /// One `editor_ready` trace, from the moment the editor route is entered
 /// until the editor can be used.
+///
+/// When the editor was asked for with an [EditorOpenRequest], `pre_route_ms`
+/// adds how long that took before the route; `total_ms` still starts at the
+/// route.
 ///
 /// The editor is usable once it shows its clips (at once for clips handed
 /// over by the recorder or the Library; for a draft, once the draft, its
@@ -40,14 +60,19 @@ enum EditorEntry {
 /// exactly once: `ready`, `failed` (the editor or its preview could not
 /// load), or `left` (the editor closed before it became usable).
 class EditorReadyTrace {
-  EditorReadyTrace(PerformanceTraceMonitor monitor, {required this.entry})
-    : _operation = PerformanceOperation(monitor, traceName);
+  EditorReadyTrace(
+    PerformanceTraceMonitor monitor, {
+    required this.entry,
+    EditorOpenRequest? openRequest,
+  }) : _operation = PerformanceOperation(monitor, traceName),
+       _preRouteMs = openRequest?.elapsedMs;
 
   static const traceName = 'editor_ready';
 
   final EditorEntry entry;
   final PerformanceOperation _operation;
   final Stopwatch _stopwatch = clock.stopwatch()..start();
+  final int? _preRouteMs;
 
   _EditorPreview? _preview;
   int? _clipCount;
@@ -124,6 +149,7 @@ class EditorReadyTrace {
       'clips_loaded_ms': ?_clipsLoadedMs,
       'player_ready_ms': ?_playerReadyMs,
       'first_frame_ms': ?_firstFrameMs,
+      'pre_route_ms': ?_preRouteMs,
     };
     // Builds that do not report to Firebase still show the sample here.
     Log.info(

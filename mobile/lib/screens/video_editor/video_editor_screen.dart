@@ -133,6 +133,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     this.draftId,
     this.fromLibrary = false,
     this.analyticsSession,
+    this.openRequest,
   });
 
   /// Optional draft ID to load an existing draft.
@@ -144,6 +145,9 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
 
   /// Continues the funnel of the reaction that opened this editor.
   final CreationAnalyticsSession? analyticsSession;
+
+  /// When the recorder asked for this editor, timed into `editor_ready`.
+  final EditorOpenRequest? openRequest;
 
   /// Route name for this screen.
   static const routeName = 'video-editor';
@@ -282,6 +286,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         hasDraft: widget.draftId != null,
         fromLibrary: widget.fromLibrary,
       ),
+      openRequest: widget.openRequest,
     );
     _creationAnalyticsTracker = ref.read(creationAnalyticsTrackerProvider);
     if (widget.analyticsSession case final session?) {
