@@ -8,7 +8,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:models/models.dart' show VideoEvent;
+import 'package:models/models.dart' show NostrHexUtils, VideoEvent;
 
 /// Merges raw video tags with primary-wins semantics on duplicate keys
 /// (`{...secondary, ...primary}`), except `views` and distinct viewers: the
@@ -97,6 +97,17 @@ VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
       ? republished.sha256 == existing.sha256
       : republished.videoUrl != null &&
             republished.videoUrl == existing.videoUrl;
+  final captionRef = republished.textTrackRef;
+  final captionUrl = Uri.tryParse(captionRef ?? '');
+  // An unchanged content-addressed file can still use the indexed fallback.
+  // A mutable relay address can hold different captions under the same ref.
+  final sameCaptionFile =
+      captionRef == existing.textTrackRef &&
+      captionUrl != null &&
+      captionUrl.hasAuthority &&
+      NostrHexUtils.isValidHex32(
+        captionUrl.pathSegments.lastOrNull?.split('.').first,
+      );
   return republished.copyWith(
     createdAt: preserveTimestamp ? existing.createdAt : null,
     timestamp: preserveTimestamp ? existing.timestamp : null,
@@ -106,6 +117,9 @@ VideoEvent mergeRepublishedVideo(VideoEvent existing, VideoEvent republished) {
     nostrRepostCount: republished.nostrRepostCount ?? existing.nostrRepostCount,
     authorName: republished.authorName ?? existing.authorName,
     authorAvatar: republished.authorAvatar ?? existing.authorAvatar,
+    textTrackContent:
+        republished.textTrackContent ??
+        (sameCaptionFile ? existing.textTrackContent : null),
     rawTags: mergeVideoRawTagsPrimaryWins(republished.rawTags, {
       for (final key in const ['views', 'unique_views', 'unique_viewers'])
         key: ?existing.rawTags[key],

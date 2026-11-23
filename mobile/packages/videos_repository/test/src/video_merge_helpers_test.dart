@@ -180,6 +180,60 @@ void main() {
       expect(merged.archiveAudioReuseEnabled, isFalse);
     });
 
+    group('embedded captions', () {
+      final primary = 'https://media.divine.video/${'a' * 64}.vtt';
+      const oldCues = 'WEBVTT\n\n00:00.000 --> 00:01.000\nExisting captions';
+
+      test(
+        'keeps the indexed cues when the edited video uses the same file',
+        () {
+          final existing = video(id: 'old', createdAt: 1000).copyWith(
+            textTrackRef: primary,
+            textTrackContent: oldCues,
+          );
+          final republished = video(id: 'new', createdAt: 2000).copyWith(
+            textTrackRef: primary,
+          );
+
+          expect(
+            mergeRepublishedVideo(existing, republished).textTrackContent,
+            oldCues,
+          );
+        },
+      );
+
+      test('drops the indexed cues when the caption file changes', () {
+        final existing = video(id: 'old', createdAt: 1000).copyWith(
+          textTrackRef: primary,
+          textTrackContent: oldCues,
+        );
+        final republished = video(id: 'new', createdAt: 2000).copyWith(
+          textTrackRef: 'https://media.divine.video/${'b' * 64}.vtt',
+        );
+
+        expect(
+          mergeRepublishedVideo(existing, republished).textTrackContent,
+          isNull,
+        );
+      });
+
+      test('does not carry indexed cues across a mutable relay reference', () {
+        const ref = '39307:author:subtitles:video';
+        final existing = video(id: 'old', createdAt: 1000).copyWith(
+          textTrackRef: ref,
+          textTrackContent: oldCues,
+        );
+        final republished = video(id: 'new', createdAt: 2000).copyWith(
+          textTrackRef: ref,
+        );
+
+        expect(
+          mergeRepublishedVideo(existing, republished).textTrackContent,
+          isNull,
+        );
+      });
+    });
+
     test('keeps a like count the republished copy already has', () {
       final merged = mergeRepublishedVideo(
         video(id: 'old', createdAt: 1000, nostrLikeCount: 7),
