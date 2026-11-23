@@ -33,6 +33,16 @@ typedef IdentityEventSigner =
       int? createdAt,
     });
 
+/// Signs a NIP-98 HTTP auth event (kind 27235) with [content] and [tags]
+/// without asking the user. Returns null when that can't be done without a
+/// prompt. The kind is fixed by the wiring, not passed in, so this signer can
+/// only ever sign HTTP auth.
+typedef PassiveHttpAuthSigner =
+    Future<Event?> Function({
+      required String content,
+      required List<List<String>> tags,
+    });
+
 /// The claims already on the identity event could not be read, so a write
 /// would have replaced them with an incomplete set.
 ///
@@ -216,7 +226,7 @@ class IdentityClaimsRepository {
     IdentityVerificationsDao? identityVerificationsDao,
     NostrClient? nostrClient,
     IdentityEventSigner? signEvent,
-    IdentityEventSigner? signPassively,
+    PassiveHttpAuthSigner? signPassively,
     IdentityEventsDao? identityEventsDao,
   }) : _verifierClient = verifierClient,
        _verificationsDao = identityVerificationsDao,
@@ -257,7 +267,7 @@ class IdentityClaimsRepository {
   final IdentityVerificationsDao? _verificationsDao;
   final NostrClient? _nostrClient;
   final IdentityEventSigner? _signEvent;
-  final IdentityEventSigner? _signPassively;
+  final PassiveHttpAuthSigner? _signPassively;
   final IdentityEventsDao? _identityEventsDao;
 
   /// Tags this instance last published per pubkey.
@@ -871,7 +881,6 @@ class IdentityClaimsRepository {
     if (sign == null) return ConfirmationAccess.unknown;
     try {
       final event = await sign(
-        kind: _nip98EventKind,
         content: '',
         tags: [
           ['u', _verifierClient.confirmationAccessUrl],

@@ -10,6 +10,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/known_account.dart';
@@ -591,17 +592,11 @@ IdentityClaimsRepository identityClaimsRepository(Ref ref) {
     signEvent: authService.createAndSignEvent,
     // Checks that run on screen open must not launch an external signer
     // (NIP-55) or a bunker prompt over the app.
-    signPassively:
-        ({
-          required kind,
-          required content,
-          required tags,
-          createdAt,
-        }) => authService.createAndSignEvent(
-          kind: kind,
+    signPassively: ({required content, required tags}) =>
+        authService.createAndSignEvent(
+          kind: EventKind.httpAuth,
           content: content,
           tags: tags,
-          createdAt: createdAt,
           allowUserInteraction: false,
         ),
     identityEventsDao: database.identityEventsDao,

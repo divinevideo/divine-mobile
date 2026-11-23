@@ -4490,7 +4490,7 @@ void main() {
     const accessUrl = 'https://verifier.example/auth/confirmation-access';
     late _MockVerifierClient client;
     late _MockNostrClient nostrClient;
-    late List<({int kind, String content, List<List<String>> tags})> signed;
+    late List<({String content, List<List<String>> tags})> signed;
     late Future<Event?> Function() signAnswer;
     late int interactiveSigns;
 
@@ -4510,16 +4510,10 @@ void main() {
       verifierClient: client,
       nostrClient: nostrClient,
       signEvent: signInteractively,
-      signPassively:
-          ({
-            required kind,
-            required content,
-            required tags,
-            createdAt,
-          }) {
-            signed.add((kind: kind, content: content, tags: tags));
-            return signAnswer();
-          },
+      signPassively: ({required content, required tags}) {
+        signed.add((content: content, tags: tags));
+        return signAnswer();
+      },
     );
 
     void stubFetch(Future<bool?> Function() answer) {
@@ -4574,7 +4568,6 @@ void main() {
       await buildRepo().confirmationAccess();
 
       expect(signed, hasLength(1));
-      expect(signed.single.kind, equals(27235));
       expect(signed.single.content, isEmpty);
       expect(
         signed.single.tags,
