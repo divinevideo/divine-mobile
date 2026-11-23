@@ -549,11 +549,20 @@ class VideoEventPublisher {
       // Written as true or false, so an edit keeps an explicit decline.
       tags.add(['allow_video_reuse', offersVideoReuse.toString()]);
 
+      // Editor-only provider tracks have no pre-existing Nostr event id, so
+      // they cannot be selected by the draft's Nostr-attribution fallback.
+      // Give their provenance to the same primary credit bridge used by the
+      // recorder, while preserving an explicit selected sound's precedence.
+      final audioForCredit =
+          selectedAudio ??
+          creditedSounds
+              .where((sound) => sound.isExternalProviderSound)
+              .firstOrNull;
       final audio = await _audioPublisher.resolveForPublish(
         upload: upload,
         videoDTag: dTag,
         allowAudioReuse: offersAudioReuse,
-        selectedAudio: selectedAudio,
+        selectedAudio: audioForCredit,
         audioShareAttribution: audioShareAttribution,
         selectedAudioEventId: selectedAudioEventId,
         selectedAudioRelay: selectedAudioRelay,
