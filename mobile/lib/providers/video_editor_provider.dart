@@ -1791,7 +1791,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     // well after the user backs out (dispose cancels via cancelRenderVideo, but
     // the future still completes), by which point this notifier may be disposed
     // and `ref.read` would throw — the captured instance stays valid. The trace
-    // is operation-scoped: this render owns the returned handle, so an
+    // is operation-scoped: this render owns its VideoGenerationTrace, so an
     // overlapping render gets its own trace instead of stopping or
     // re-attributing this one, and start stays fire-and-forget so render
     // dispatch is synchronous (the overlapping-render test relies on that).
