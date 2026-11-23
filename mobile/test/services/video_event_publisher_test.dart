@@ -1003,6 +1003,72 @@ void main() {
       );
     });
 
+    group('mixed sound reuse policy at publication', () {
+      for (final (restrictedAt, expectedReuse) in [
+        ('none', true),
+        ('selected', false),
+        ('secondary', false),
+      ]) {
+        test(
+          'applies $restrictedAt license to restored draft choices',
+          () async {
+            stubSignAndPublish();
+            AudioEvent sound(String id, bool allowsDerivatives) => AudioEvent(
+              id: 'external_provider_$id',
+              pubkey: AudioEvent.externalProviderMarker,
+              createdAt: 0,
+              url: 'https://example.com/$id.mp3',
+              externalSource: AudioExternalSource(
+                provider: 'catalog',
+                providerSoundId: id,
+                providerName: 'Catalog',
+                sourceUrl: 'https://example.com/sounds/$id',
+                license: AudioLicenseMetadata(
+                  type: 'test',
+                  name: 'Test',
+                  url: 'https://example.com/terms',
+                  allowsCommercialUse: false,
+                  allowsDerivatives: allowsDerivatives,
+                  requiresAttribution: false,
+                ),
+              ),
+            );
+            final selected = sound('selected', restrictedAt != 'selected');
+            final secondary = sound('secondary', restrictedAt != 'secondary');
+            final result = await publisher.publishVideoEvent(
+              allowVideoReuse: true,
+              allowAudioReuse: true,
+              upload: createUpload(),
+              selectedAudio: selected,
+              selectedAudioEventId: selected.id,
+              creditedSounds: [selected, secondary],
+            );
+            expect(result, isTrue);
+            expect(
+              capturedTags,
+              containsAll([
+                ['allow_audio_reuse', '$expectedReuse'],
+                ['allow_video_reuse', '$expectedReuse'],
+              ]),
+            );
+            final audioTags =
+                verify(
+                      () => authService.createAndSignEvent(
+                        kind: audioEventKind,
+                        content: any(named: 'content'),
+                        tags: captureAny(named: 'tags'),
+                      ),
+                    ).captured.single
+                    as List<List<String>>;
+            expect(
+              audioTags,
+              contains(equals(['allow_audio_reuse', '$expectedReuse'])),
+            );
+          },
+        );
+      }
+    });
+
     test('provider license can forbid further reuse', () async {
       stubSignAndPublish();
       final sound = AudioEvent(

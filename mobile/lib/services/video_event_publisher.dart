@@ -538,13 +538,21 @@ class VideoEventPublisher {
         for (final region in stickerRegions)
           if (!region.kind.isPoll) region,
       ]);
+      // A saved draft or queued job can bypass the editor's computed choices.
+      // Enforce every mixed sound's restriction before publishing either the
+      // video's permission tag or a reusable audio event.
+      final soundForbidsDerivatives = [?selectedAudio, ...creditedSounds].any(
+        (sound) => sound.externalSource?.license.allowsDerivatives == false,
+      );
+      final offersAudioReuse = allowAudioReuse && !soundForbidsDerivatives;
+      final offersVideoReuse = allowVideoReuse && !soundForbidsDerivatives;
       // Written as true or false, so an edit keeps an explicit decline.
-      tags.add(['allow_video_reuse', allowVideoReuse.toString()]);
+      tags.add(['allow_video_reuse', offersVideoReuse.toString()]);
 
       final audio = await _audioPublisher.resolveForPublish(
         upload: upload,
         videoDTag: dTag,
-        allowAudioReuse: allowAudioReuse,
+        allowAudioReuse: offersAudioReuse,
         selectedAudio: selectedAudio,
         audioShareAttribution: audioShareAttribution,
         selectedAudioEventId: selectedAudioEventId,
