@@ -277,6 +277,11 @@ class IdentityClaimsRepository {
   /// the same time sign and send one request between them.
   Future<ConfirmationAccess>? _confirmationAccessInFlight;
 
+  /// The newest [confirmationAccess] check, kept after it finishes. A check a
+  /// refresh overtook answers with this one, so its callers get the newest
+  /// answer even when that answer is unknown and so was not remembered.
+  Future<ConfirmationAccess>? _latestConfirmationAccess;
+
   /// Parses NIP-39 identity claims out of the given identity-event tag
   /// list (kind 10011, or kind 0 for pre-migration profiles).
   ///
@@ -814,12 +819,13 @@ class IdentityClaimsRepository {
     }
     late final Future<ConfirmationAccess> check;
     check = _askConfirmationAccess().then((access) {
-      if (!identical(_confirmationAccessInFlight, check)) {
+      final latest = _latestConfirmationAccess;
+      if (latest != null && !identical(latest, check)) {
         // A refresh overtook this check. Its answer is older than the one
-        // the refresh asked for, so its callers follow the newest instead,
-        // and it is not remembered.
-        return _confirmationAccessInFlight ??
-            Future.value(_lastConfirmationAccess ?? access);
+        // the refresh asked for, so its callers follow the newest check
+        // instead, whether it is still running or already finished, and
+        // this answer is not remembered.
+        return latest;
       }
       _lastConfirmationAccess = access == ConfirmationAccess.unknown
           ? null
@@ -827,7 +833,7 @@ class IdentityClaimsRepository {
       _confirmationAccessInFlight = null;
       return access;
     });
-    return _confirmationAccessInFlight = check;
+    return _confirmationAccessInFlight = _latestConfirmationAccess = check;
   }
 
   Future<ConfirmationAccess> _askConfirmationAccess() async {

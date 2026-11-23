@@ -4774,6 +4774,19 @@ void main() {
         expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
         verifyFetchCalled(2);
       });
+
+      // An unknown refresh is not remembered, but it is still the newest
+      // answer: the older "no" must not turn an unavailable check into an
+      // offer.
+      test('when the refresh finishes unknown before the overtaken check '
+          'says no', () async {
+        fresh.complete(null);
+        expect(await refreshed, equals(ConfirmationAccess.unknown));
+        stale.complete(false);
+
+        expect(await before, equals(ConfirmationAccess.unknown));
+        verifyFetchCalled(2);
+      });
     });
   });
 }
