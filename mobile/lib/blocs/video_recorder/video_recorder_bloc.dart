@@ -35,6 +35,7 @@ import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
+import 'package:openvine/observability/camera_startup_trace.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -561,14 +562,16 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
 
-    // Operation-scoped trace: this init owns the returned handle, so a
-    // concurrent init gets its own trace instead of stopping or re-attributing
-    // this one. Start is fire-and-forget so it doesn't add a platform round-trip
-    // to the exact startup path this trace measures; stop is fire-and-forget so
-    // it doesn't gate preview bring-up. The handle is still stopped in `finally`,
-    // tagged with the outcome so the console can filter startups that never
-    // reached a live preview.
-    final trace = _performanceMonitor.startOperationTrace('camera_startup');
+    // Operation-scoped trace: this init owns it, so a concurrent init gets its
+    // own trace instead of stopping or re-attributing this one. Start and stop
+    // are fire-and-forget, so the trace adds no platform round-trip to the
+    // startup it measures. A camera that does not open ends it in `finally`,
+    // tagged with the outcome; an open one ends it once the mode is applied.
+    final startup = CameraStartupTrace(
+      _performanceMonitor,
+      lens: initialLens.name,
+      quality: event.videoQuality.value,
+    );
 
     Object? initError;
     try {
@@ -595,16 +598,10 @@ class VideoRecorderBloc
       initError = e;
       addError(e, stackTrace);
     } finally {
-      trace
-        ..putAttribute('lens', initialLens.name)
-        ..putAttribute('quality', event.videoQuality.value)
-        ..putAttribute(
-          'outcome',
-          initError != null
-              ? 'error'
-              : (_cameraService.isInitialized ? 'success' : 'failed'),
-        );
-      unawaited(trace.stop());
+      startup.cameraInitFinished(
+        threw: initError != null,
+        opened: _cameraService.isInitialized,
+      );
     }
 
     if (initError != null) {
@@ -641,7 +638,13 @@ class VideoRecorderBloc
     // A mode switched to while the camera was starting could not reach it,
     // and the camera opens with one camera even where dual capture was left
     // on.
-    await _applyCameraForRecorderMode(emit);
+    try {
+      await _applyCameraForRecorderMode(emit);
+    } finally {
+      startup.modeApplied(
+        dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+      );
+    }
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
