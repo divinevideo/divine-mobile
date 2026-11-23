@@ -234,8 +234,8 @@ StartupCoordinator createStartupCoordinator(
   );
 
   if (!kIsWeb) {
-    // Web loads live feeds directly over HTTPS; skip downloading and decoding
-    // the bundled offline seed JSON during first boot.
+    // On web, loading the bundled seed JSON is an HTTP download and `compute`
+    // decodes it on the main thread, both on the first-boot path.
     coordinator.registerService(
       name: 'SeedDataPreload',
       phase: StartupPhase.deferred,

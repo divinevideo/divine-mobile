@@ -56,8 +56,7 @@ const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 // REST phases, and the search that confirms the owner is discoverable.
 const _usernameOwnerSearchTimeout = Duration(seconds: 3);
 
-// /api/users/bulk accepts at most 100 pubkeys per request.
-const _searchProfileRecheckBatchSize = 100;
+const int _searchProfileRecheckBatchSize = ProfileApiCache.maxBulkBatchSize;
 
 // Divine usernames resolve as `<username>@divine.video` and are published as
 // `_@<username>.divine.video`.
@@ -3334,7 +3333,7 @@ class ProfileRepository implements ProfileReader {
   /// Does nothing when the API is unavailable. API and cache errors propagate
   /// so callers can decide when to retry this background refresh.
   Future<void> refreshStatsForPubkeys(List<String> pubkeys) async {
-    const batchSize = 100;
+    const batchSize = ProfileApiCache.maxBulkBatchSize;
     for (var start = 0; start < pubkeys.length; start += batchSize) {
       final end = start + batchSize < pubkeys.length
           ? start + batchSize

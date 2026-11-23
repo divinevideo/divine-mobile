@@ -493,7 +493,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         isActive: isFeedActive,
         // On web, each live HtmlElementView <video> splits the CanvasKit
         // layer tree into an extra WebGL overlay surface and triggers shader
-        // recompilation during swipes. Keep only the active video mounted.
+        // recompilation during swipes. Initialize only the active video's
+        // player, not its neighbours'.
         keepPreviousAlive: !kIsWeb,
         keepNextAlive: !kIsWeb,
         releaseNeighboursWhenInactive:
@@ -1356,8 +1357,8 @@ class __OverlayState extends ConsumerState<_Overlay> {
           videoId: video.id,
           isActive: widget.isActive,
           child: ContentWarningBlurOverlay(
-            // Display uses the merged (creator + community) labels so the blur
-            // names every warning. Hide-similar must persist ONLY the
+            // Display uses the merged (creator + community) labels so the
+            // overlay names every warning. Hide-similar must persist ONLY the
             // creator/trusted labels: an unverified community-only warning
             // must never become a persisted global hide (#4771 warn-only v1).
             labels: labels,
