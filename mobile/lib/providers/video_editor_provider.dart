@@ -34,6 +34,7 @@ import 'package:openvine/models/video_editor/ideas_transcript.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata/schedule_time_policy.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
+import 'package:openvine/observability/video_generation_trace.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -1790,32 +1791,40 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     // well after the user backs out (dispose cancels via cancelRenderVideo, but
     // the future still completes), by which point this notifier may be disposed
     // and `ref.read` would throw — the captured instance stays valid. The trace
-    // is operation-scoped: this render owns the returned handle, so an
+    // is operation-scoped: this render owns its VideoGenerationTrace, so an
     // overlapping render gets its own trace instead of stopping or
     // re-attributing this one, and start stays fire-and-forget so render
     // dispatch is synchronous (the overlapping-render test relies on that).
     final performance = ref.read(performanceMonitoringServiceProvider);
     final clipManager = ref.read(clipManagerProvider.notifier);
-    final trace = performance.startOperationTrace('video_generation');
-    final clipCount = _clips.length;
-    final aspectRatio = _clips.isEmpty
-        ? null
-        : _clips.first.targetAspectRatio.name;
-    void tagOutcome(String outcome) => trace.putAttribute('outcome', outcome);
+    final clips = _clips;
+    final trace = VideoGenerationTrace(
+      performance,
+      clipCount: clips.length,
+      aspectRatio: clips.isEmpty ? null : clips.first.targetAspectRatio.name,
+    );
     final editRevision = _editRevision;
 
     try {
       final renderParameters = _buildRenderParameters();
+      trace.recordFeatures(
+        () => VideoGenerationFeatures.of(
+          clips: clips,
+          parameters: renderParameters,
+        ),
+      );
 
-      final clips = _clips;
       final result = await VideoEditorRenderService.renderVideoToClip(
         // A take whose recorded key failed to bake is keyed now, never
         // exported raw. Awaited only then: without one, the render must still
         // be dispatched synchronously.
         clips: clips.any((clip) => clip.hasPendingCaptureChromaKey)
-            ? await bakePendingCapturedChromaKeys(
-                clips,
-                clipManager.bakeCapturedChromaKey,
+            ? await trace.time(
+                .chromaBake,
+                () => bakePendingCapturedChromaKeys(
+                  clips,
+                  clipManager.bakeCapturedChromaKey,
+                ),
               )
             : clips,
         parameters: renderParameters,
@@ -1826,25 +1835,26 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         coverTimestamp: state.customThumbnailPath == null
             ? state.thumbnailTimestamp
             : null,
+        recorder: trace,
       );
 
       // A newer render was started or the user cancelled while this one was
       // running — tag this render's own trace so the console can exclude
       // non-completing renders from the generation-time distribution.
       if (generation != _renderGeneration) {
-        tagOutcome('incomplete');
+        trace.tagOutcome(.incomplete);
         return;
       }
-
-      tagOutcome('success');
 
       final (finalRenderedClip, proofManifestJson) = result;
 
       // The edit changed while this render ran, for example a take's proof
       // landed, so its video is out of date. It is left to finish rather than
       // cancelled because cancelling does not stop its signing step, and two
-      // renders would then sign the same recordings at once.
+      // renders would then sign the same recordings at once. Tagged stale, not
+      // success: the user waits for this render and the next one.
       if (editRevision != _editRevision) {
+        trace.tagOutcome(.stale);
         Log.info(
           '🔄 Edit changed during the render, rendering again',
           name: 'VideoEditorNotifier',
@@ -1863,6 +1873,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         return;
       }
 
+      trace.tagOutcome(.success);
       Log.info(
         '✅ Video rendered successfully - duration: '
         '${finalRenderedClip.duration.inSeconds}s',
@@ -1894,18 +1905,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     } on VideoRenderFailedException catch (error) {
       // A newer render owns the processing flag now — leave it alone.
       if (generation != _renderGeneration) {
-        tagOutcome('incomplete');
+        trace.tagOutcome(.incomplete);
         return;
       }
-      trace.putAttribute('failure_reason', error.traceValue);
       // A cancel without a generation bump is teardown cancelling in-flight
       // native tasks, not a render that could not produce a video — it belongs
       // in the same bucket as a superseded render. The retry affordance still
       // comes up, since the export genuinely did not finish.
-      tagOutcome(
+      trace.tagOutcome(
         error.reason == VideoRenderFailureReason.canceled
-            ? 'incomplete'
-            : 'failed',
+            ? .incomplete
+            : .failed,
+        failureReason: error.traceValue,
       );
       Log.warning(
         '⚠️ Video render produced no video: ${error.traceValue}',
@@ -1920,11 +1931,13 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     } catch (error, stackTrace) {
       // A newer render owns the processing flag now — leave it alone.
       if (generation != _renderGeneration) {
-        tagOutcome('incomplete');
+        trace.tagOutcome(.incomplete);
         return;
       }
-      tagOutcome('error');
-      trace.putAttribute('failure_reason', error.runtimeType.toString());
+      trace.tagOutcome(
+        .error,
+        failureReason: error.runtimeType.toString(),
+      );
       // Surface the failure (e.g. a hung/failed C2PA proof step) as an error +
       // retry so the user can restart the render instead of being stuck on the
       // processing overlay (#6058).
@@ -1937,14 +1950,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       );
       state = state.copyWith(isProcessing: false, renderFailed: true);
     } finally {
-      // This render owns its trace handle, so tag and stop it unconditionally.
-      // Stop fire-and-forget so a trace.stop() platform round-trip doesn't gate
-      // the render's completion.
-      trace.putAttribute('clip_count', '$clipCount');
-      if (aspectRatio != null) {
-        trace.putAttribute('aspect_ratio', aspectRatio);
-      }
-      unawaited(trace.stop());
+      // This render owns its trace, so it reports it unconditionally. The
+      // stop is fire-and-forget, so its platform round-trip does not gate the
+      // render's completion.
+      trace.finish();
     }
   }
 
