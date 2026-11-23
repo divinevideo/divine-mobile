@@ -39,6 +39,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
@@ -277,10 +278,13 @@ class VideoRecorderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final part = fromEditor ? ref.watch(collabRoomPartProvider) : null;
     final collabPart = part?.isActive ?? false;
-    final view = VideoRecorderView(
-      fromEditor: fromEditor,
-      entryPoint: entryPoint,
-      collabPart: collabPart,
+    final view = ScreenFrameTraceScope(
+      screen: .recorder,
+      child: VideoRecorderView(
+        fromEditor: fromEditor,
+        entryPoint: entryPoint,
+        collabPart: collabPart,
+      ),
     );
     return _VideoRecorderBlocScope(
       child: switch (cropGuideAspectRatio) {
