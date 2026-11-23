@@ -391,6 +391,8 @@ void main() {
           replacement.connectGate!.complete();
           async.flushMicrotasks();
           expect(replacement.hasSubscriptionById(subId), isTrue);
+          async.elapse(window);
+          expect(eoseCalls, 0, reason: 'the replacement has not sent EOSE');
           settle(replacement.deliver(['EOSE', subId]));
 
           expect(eoseCalls, equals(1));

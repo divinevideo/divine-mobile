@@ -2318,12 +2318,6 @@ class RelayPool {
     final eosed = _subscriptionEoseRelays[subId];
     if (onEose == null || eosed == null || eosed.isEmpty) return;
     final holders = _getRelaysWithSubscription(subId);
-    // A refusal can leave no relay holding the REQ while one still connecting
-    // or replaying may yet take it and answer, so wait for that relay.
-    if (holders.isEmpty && _aRelayIsStillReplaying) {
-      if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
-      return;
-    }
     final owing = holders.difference(eosed);
     // The timer is not on the ordered frame chain. Do not close a bounded
     // read while an owing relay's already-received frames await verification.
@@ -2983,6 +2977,10 @@ class RelayPool {
         }
         if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
+          // Nothing is serving this REQ. A previous connection's EOSE must
+          // not start the settle window for the replacement's replay.
+          _subscriptionEoseRelays.remove(subscriptionId);
+          _subscriptionEoseSettleTimers.remove(subscriptionId)?.cancel();
         }
         _storedEventsPhaseAnswered(
           relay,
