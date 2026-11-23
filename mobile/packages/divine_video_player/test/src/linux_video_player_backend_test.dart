@@ -15,6 +15,107 @@ void main() {
 
   group(MediaKitLinuxVideoPlayerBackend, () {
     test(
+      'keeps a validated replacement when a newer request rejects '
+      'during retirement',
+      () async {
+        final players = <_FakePlatformPlayer>[];
+        final outputs = <_FakeVideoController>[];
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            final player = _FakePlatformPlayer();
+            players.add(player);
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) {
+            final output = _FakeVideoController();
+            outputs.add(output);
+            return output;
+          },
+          videoControllerReady: (output) =>
+              (output as _FakeVideoController).ready.future,
+          durationProbe: (_) =>
+              Future<Duration>.error(StateError('Replacement unreadable')),
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 2)),
+        ]);
+        outputs.single.ready.complete();
+        await backend.play();
+        final gate = Completer<void>();
+        players.first.disposalGate = gate;
+        final replacing = backend.setClips([
+          const VideoClip(uri: 'file:///second.mp4', end: Duration(seconds: 3)),
+        ]);
+        await players.first.disposalStarted.future;
+        final retiringState = states.last;
+        await expectLater(
+          backend.setClips([const VideoClip(uri: 'file:///missing.mp4')]),
+          throwsStateError,
+        );
+        gate.complete();
+        await replacing;
+
+        expect(
+          players.last.lastOpenedPlaylist?.medias.single.uri,
+          endsWith('/second.mp4'),
+        );
+        expect(states.last.duration, const Duration(seconds: 3));
+        expect(states.last.status, PlaybackStatus.ready);
+        expect(errors, isEmpty);
+        expect(retiringState.status, PlaybackStatus.buffering);
+        expect(retiringState.clipCount, 0);
+        expect(retiringState.duration, Duration.zero);
+        outputs.last.ready.complete();
+        await pumpEventQueue();
+        expect(states.last.isFirstFrameRendered, isTrue);
+      },
+    );
+
+    test(
+      'does not acquire another native player after disposal starts '
+      'during retirement',
+      () async {
+        final players = <_FakePlatformPlayer>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            final player = _FakePlatformPlayer();
+            players.add(player);
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (output) =>
+              (output as _FakeVideoController).ready.future,
+        );
+        await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+        await backend.setClips([
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 2)),
+        ]);
+        final gate = Completer<void>();
+        players.first.disposalGate = gate;
+        final replacing = backend.setClips([
+          const VideoClip(uri: 'file:///second.mp4', end: Duration(seconds: 3)),
+        ]);
+        await players.first.disposalStarted.future;
+        final closing = backend.dispose();
+        gate.complete();
+        await replacing;
+        await closing;
+
+        expect(players, hasLength(1));
+        expect(players.single.disposeCalls, 1);
+      },
+    );
+
+    test(
       'retains a current-source failure if replacement validation also fails',
       () async {
         final player = _FakePlatformPlayer();
@@ -53,7 +154,10 @@ void main() {
         await probing.future;
         player.emitPlaybackError('Current source became unreadable');
         await pumpEventQueue();
-        expect(errors, isEmpty);
+        expect(
+          errors.single.toString(),
+          contains('Current source became unreadable'),
+        );
         probe.completeError(StateError('Replacement unavailable'));
         await rejected;
 
@@ -272,7 +376,7 @@ void main() {
     );
 
     test(
-      'does not attribute old source errors to the replacement output',
+      'does not let current-source errors mask replacement output errors',
       () async {
         final players = <_FakePlatformPlayer>[];
         final outputs = <_FakeVideoController>[];
@@ -311,10 +415,12 @@ void main() {
           const VideoClip(uri: 'file:///two.mp4'),
         ]);
         await probing.future;
-        players.first.emitPlaybackError('Retired source decoder failure');
+        players.first.emitPlaybackError('Active source decoder failure');
         await pumpEventQueue();
+        expect(errors, ['Active source decoder failure']);
         probe.complete(4.seconds);
         await replacement;
+        expect(states.last.errorMessage, isNull);
         final outputError = StateError('Replacement renderer failed');
         outputs.last.ready.completeError(outputError);
         await pumpEventQueue();
@@ -324,7 +430,7 @@ void main() {
           states.last.errorMessage,
           contains('Replacement renderer failed'),
         );
-        expect(errors, [same(outputError)]);
+        expect(errors, ['Active source decoder failure', same(outputError)]);
       },
     );
 

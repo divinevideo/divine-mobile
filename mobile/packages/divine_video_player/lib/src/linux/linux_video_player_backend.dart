@@ -130,8 +130,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _outputReady = false;
   bool _outputFailed = false;
   Object? _terminalError;
-  Object? _deferredSourceError;
   int _loadGeneration = 0;
+  // Only validated requests can supersede a native commit already in progress.
+  int _acceptedLoadGeneration = 0;
   int? _activeLoadGeneration = 0;
   int? _reportedErrorGeneration;
   int _playerGeneration = 0;
@@ -158,9 +159,6 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }) async {
     _ensureReady();
     final generation = ++_loadGeneration;
-    if (_state.isFirstFrameRendered) {
-      _emitState(_state.copyWith(isFirstFrameRendered: false));
-    }
     final nextClips = List<VideoClip>.of(clips);
     final nextSpeeds = nextClips.map((clip) => clip.playbackSpeed).toList();
 
@@ -174,21 +172,13 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     try {
       sourceDurations = await _resolveClipDurations(nextClips, generation);
     } on Object catch (error) {
-      if (!_disposed && generation == _loadGeneration) {
-        // Validation did not replace the native source. Restore its frame and
-        // error ownership, including output readiness arriving during probing.
-        _activeLoadGeneration = generation;
-        if (_hasLoadedMedia) {
-          if (_deferredSourceError case final sourceError?) {
-            _deferredSourceError = null;
-            _handleError(sourceError);
-          } else {
-            _refreshState();
-            _reportOutputReady();
-          }
-        } else {
-          _handleError(error);
-        }
+      if (!_disposed &&
+          generation == _loadGeneration &&
+          !_hasLoadedMedia &&
+          !_changingPlayer) {
+        // Rejection must not replace a playable source or cancel a previously
+        // validated native commit. Its caller still receives the rejection.
+        _handleError(error);
       }
       rethrow;
     }
@@ -205,16 +195,30 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       nextOffsets.add(offset);
       offset += duration;
     }
+    _acceptedLoadGeneration = generation;
     await _enqueue(() async {
-      if (generation != _loadGeneration) return;
+      if (generation != _acceptedLoadGeneration) return;
       if (_playerHasOpenedMedia || _outputFailed || _terminalError != null) {
         _changingPlayer = true;
         final volume = _volume;
+        _activeLoadGeneration = null;
+        _hasLoadedMedia = false;
+        _clearTimeline();
+        _emitState(
+          const DivineVideoPlayerState().copyWith(
+            status: PlaybackStatus.buffering,
+            volume: volume,
+          ),
+        );
         await _retirePlayer();
+        if (_disposed) {
+          _changingPlayer = false;
+          return;
+        }
         _createPlayer();
         await _player.setVolume(volume * 100);
       }
-      if (_disposed || generation != _loadGeneration) {
+      if (_disposed || generation != _acceptedLoadGeneration) {
         _changingPlayer = false;
         return;
       }
@@ -257,7 +261,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       );
 
       await _player.open(playlist, play: false);
-      if (_disposed || generation != _loadGeneration) return;
+      if (_disposed || generation != _acceptedLoadGeneration) return;
       await _player.setPlaylistMode(
         _isLooping ? PlaylistMode.loop : PlaylistMode.none,
       );
@@ -296,20 +300,15 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   @override
   Future<void> stop() async {
     _ensureReady();
-    _loadGeneration++;
+    _acceptedLoadGeneration = ++_loadGeneration;
     _activeLoadGeneration = null;
     final cancellingProbes = _cancelDurationProbes();
     await _enqueue(() async {
       await cancellingProbes;
       await _player.stop();
       _terminalError = null;
-      _deferredSourceError = null;
       _hasLoadedMedia = false;
-      _clips.clear();
-      _clipSpeeds.clear();
-      _clipDurations.clear();
-      _clipOffsets.clear();
-      _currentClipIndex = 0;
+      _clearTimeline();
       _emitState(const DivineVideoPlayerState().copyWith(volume: _volume));
     });
   }
@@ -420,7 +419,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
-    _loadGeneration++;
+    _acceptedLoadGeneration = ++_loadGeneration;
     await _cancelDurationProbes();
     await _mutations;
     await _retirePlayer();
@@ -451,7 +450,6 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _outputReady = false;
     _outputFailed = false;
     _terminalError = null;
-    _deferredSourceError = null;
     _reportedErrorGeneration = null;
     final generation = ++_playerGeneration;
     _listenToPlayer();
@@ -473,14 +471,12 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }
 
   void _reportOutputReady() {
-    if (_disposed ||
-        _changingPlayer ||
-        _activeLoadGeneration != _loadGeneration) {
+    if (_disposed || _changingPlayer || _activeLoadGeneration == null) {
       return;
     }
     if (_terminalError case final error?) {
-      if (_reportedErrorGeneration != _loadGeneration) {
-        _reportedErrorGeneration = _loadGeneration;
+      if (_reportedErrorGeneration != _activeLoadGeneration) {
+        _reportedErrorGeneration = _activeLoadGeneration;
         _handleError(error);
       }
     } else if (_outputReady && !_state.isFirstFrameRendered) {
@@ -517,13 +513,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
           );
           return;
         }
-        if (_activeLoadGeneration == _loadGeneration) {
-          _handleError(error);
-        } else if (_hasLoadedMedia) {
-          // Keep the still-owned source's failure until its pending replacement
-          // succeeds. A rejected replacement must not erase this observation.
-          _deferredSourceError = error;
-        }
+        _handleError(error);
       }
     }
 
@@ -808,6 +798,14 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     if (value <= Duration.zero) return Duration.zero;
     if (value >= max) return max;
     return value;
+  }
+
+  void _clearTimeline() {
+    _clips.clear();
+    _clipSpeeds.clear();
+    _clipDurations.clear();
+    _clipOffsets.clear();
+    _currentClipIndex = 0;
   }
 
   void _emitState(DivineVideoPlayerState newState) {

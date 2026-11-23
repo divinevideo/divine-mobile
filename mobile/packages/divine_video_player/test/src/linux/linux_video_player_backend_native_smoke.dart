@@ -22,6 +22,96 @@ void main() {
 
   group('native desktop media', () {
     test(
+      'retains a validated source when newer validation rejects '
+      'during retirement',
+      () async {
+        MediaKit.ensureInitialized();
+        final players = <Player>[];
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          playerFactory: () {
+            final player = Player();
+            players.add(player);
+            return player;
+          },
+          videoControllerFactory: (_) => Object(),
+          videoControllerReady: (_) => Completer<void>().future,
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        final firstNative = players.first.platform! as NativePlayer;
+        await firstNative.setProperty('vo', 'null');
+        await firstNative.setProperty('vid', 'auto');
+        await firstNative.setProperty('ao', 'null');
+        final first = File(
+          'test/fixtures/desktop_silent_portrait.mp4',
+        ).absolute;
+        final second = File(
+          'test/fixtures/desktop_audio_portrait.mp4',
+        ).absolute;
+        final missing = File('test/fixtures/absent-overlap.mp4').absolute;
+        await backend.setClips([
+          VideoClip(uri: first.uri.toString(), end: const Duration(seconds: 1)),
+        ]);
+        await backend.setLooping(looping: true);
+        final firstProgress = players.first.stream.position.firstWhere(
+          (position) => position > Duration.zero,
+        );
+        await backend.play();
+        await firstProgress.timeout(const Duration(seconds: 5));
+        final retiring = Completer<void>();
+        final gate = Completer<void>();
+        firstNative.release.add(() async {
+          retiring.complete();
+          await gate.future;
+        });
+        final replacing = backend.setClips([
+          VideoClip(
+            uri: second.uri.toString(),
+            end: const Duration(milliseconds: 900),
+          ),
+        ]);
+        await retiring.future.timeout(const Duration(seconds: 5));
+        try {
+          // NativePlayer uses a static command lock. Start validation while
+          // retirement is held, then release it so both players can proceed.
+          final rejected = expectLater(
+            backend.setClips([VideoClip(uri: missing.uri.toString())]),
+            throwsStateError,
+          );
+          gate.complete();
+          await Future.wait<void>([replacing, rejected]);
+        } finally {
+          if (!gate.isCompleted) gate.complete();
+          await replacing;
+        }
+
+        final native = players.last.platform! as NativePlayer;
+        expect(await native.getProperty('playlist-count'), '1');
+        expect(
+          players.last.state.playlist.medias.single.uri,
+          Media(second.uri.toString()).uri,
+        );
+        expect(states.last.clipCount, 1);
+        expect(states.last.duration, const Duration(milliseconds: 900));
+        await native.setProperty('vo', 'null');
+        await native.setProperty('ao', 'null');
+        await native.setProperty('vid', 'auto');
+        final progressing = players.last.stream.position.firstWhere(
+          (position) => position > Duration.zero,
+        );
+        await backend.play();
+        await progressing.timeout(const Duration(seconds: 5));
+        expect(states.last.status, PlaybackStatus.playing);
+        expect(errors, isEmpty);
+      },
+    );
+
+    test(
       'preserves a rendered source after replacement validation fails',
       () async {
         MediaKit.ensureInitialized();
