@@ -111,6 +111,12 @@ internal class FrameEffectsState {
 
     /** The offsets the effects ask for, published by the GL thread once it built them. */
     @Volatile var historyOffsetsUs: LongArray = LongArray(0)
+
+    /**
+     * The largest size any effect keeps its earlier frames at, which frames
+     * decoded after a seek are decoded at, so each effect gets them at least
+     * as sharp as it asked.
+     */
     @Volatile var historyScale = 1f
 
     /** The [configVersion] [historyOffsetsUs] and [historyScale] belong to. */
@@ -244,6 +250,20 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
 
         private data class Entry(val timeUs: Long, val slot: Int)
 
+        /**
+         * The frames the player showed, kept at one size for the effects
+         * that ask for it; see [FrameEffectsHistoryPlan].
+         */
+        private class Store(val scale: Float) {
+            var maxOffsetUs = 0L
+            var width = 0
+            var height = 0
+            val entries = ArrayList<Entry>()
+            val slotTextures = ArrayList<Int>()
+            val slotFbos = ArrayList<Int>()
+            val freeSlots = ArrayDeque<Int>()
+        }
+
         private class Decoded(val targetUs: Long, val frameUs: Long, val texture: Int)
 
         private val copy = GlProgram(VERTEX_SHADER, COPY_SHADER)
@@ -251,7 +271,6 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
         /** The configs [effects] were built from, one per effect. */
         private var configs: List<FrameEffectsState.Config> = emptyList()
         private var version = -1
-        private var maxOffsetUs = 0L
 
         /** The seek [anchorUs] belongs to, and the last seek a flush followed. */
         private var seek: FrameEffectsState.Seek? = null
@@ -269,12 +288,9 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
 
         private var width = 0
         private var height = 0
-        private var historyWidth = 0
-        private var historyHeight = 0
-        private val history = ArrayList<Entry>()
-        private val slotTextures = ArrayList<Int>()
-        private val slotFbos = ArrayList<Int>()
-        private val freeSlots = ArrayDeque<Int>()
+        private var stores: List<Store> = emptyList()
+        /** Per effect, the store in [stores] its earlier frames come from. */
+        private var storeOfEffect: List<Int?> = emptyList()
         private var decodedClip = FrameEffectsState.NO_CLIP
         private val decoded = ArrayList<Decoded>()
         private val tempTextures = intArrayOf(NONE, NONE)
@@ -285,7 +301,7 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                 width = inputWidth
                 height = inputHeight
                 deleteTextures()
-                updateHistorySize()
+                updateStoreSizes()
             }
             return Size(inputWidth, inputHeight)
         }
@@ -318,10 +334,11 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                         } else {
                             focusTemp(n % 2)
                         }
+                        val store = storeOfEffect.getOrNull(i)?.let { stores.getOrNull(it) }
                         val earlier = effect.historyOffsetsUs.map { offset ->
                             val backUs = (offset * speed).toLong()
                             val limit = presentationTimeUs - backUs + TOLERANCE_US
-                            history.lastOrNull { it.timeUs <= limit }?.let { slotTextures[it.slot] }
+                            store?.entries?.lastOrNull { it.timeUs <= limit }?.let { store.slotTextures[it.slot] }
                                 ?: sourceUs?.let { decodedTexture(it - backUs) }
                         }
                         val startUs = configs.getOrNull(i)?.startUs ?: 0L
@@ -335,8 +352,10 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                 // a trail and bounds the history: a fast clip at a high frame
                 // rate would otherwise keep a hundred frames and more.
                 val keepIntervalUs = (KEEP_INTERVAL_US * speed).toLong()
-                if (maxOffsetUs > 0 && history.none { abs(it.timeUs - presentationTimeUs) < keepIntervalUs }) {
-                    keep(inputTexId, presentationTimeUs, speed)
+                for (store in stores) {
+                    if (store.entries.none { abs(it.timeUs - presentationTimeUs) < keepIntervalUs }) {
+                        keep(store, inputTexId, presentationTimeUs, speed)
+                    }
                 }
                 GlUtil.focusFramebufferUsingCurrentContext(outputFbo, width, height)
                 GlUtil.checkGlError()
@@ -357,9 +376,7 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                 seek = current
                 anchorUs = presentationTimeUs
                 clearHistory()
-            } else if (history.isNotEmpty() &&
-                presentationTimeUs < history.last().timeUs - REDRAW_SLACK_US
-            ) {
+            } else if (newestKeptUs()?.let { presentationTimeUs < it - REDRAW_SLACK_US } == true) {
                 // A new clip or loop starts its stream over, and the time in
                 // the file no longer follows from the anchor.
                 clearHistory()
@@ -437,31 +454,43 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                 effect
             }
             val offsets = effects.filterNotNull().flatMap { it.historyOffsetsUs.toList() }
-            maxOffsetUs = offsets.maxOrNull() ?: 0L
             state.historyOffsetsUs = offsets.distinct().sorted().toLongArray()
-            val scale = effects.filterNotNull().minOfOrNull { it.historyScale } ?: 1f
-            state.historyScale = scale.coerceIn(0.05f, 1f)
-            // The frames kept so far stay useful: the history is keyed by time.
-            updateHistorySize()
+            val plan = FrameEffectsHistoryPlan.of(
+                effects.map { effect -> effect?.let { it.historyOffsetsUs to it.historyScale } },
+            )
+            // A store already kept at a size keeps its frames: they are keyed by time.
+            val kept = plan.scales.map { scale -> stores.firstOrNull { it.scale == scale } ?: Store(scale) }
+            stores.filter { it !in kept }.forEach { deleteSlots(it) }
+            kept.forEachIndexed { index, store -> store.maxOffsetUs = plan.maxOffsetsUs[index] }
+            stores = kept
+            storeOfEffect = plan.storeOfEffect
+            state.historyScale = plan.largestScale
+            updateStoreSizes()
             state.publishedConfigVersion = current
             state.onConfigPublished?.invoke()
         }
 
-        private fun updateHistorySize() {
-            val scale = state.historyScale
-            val w = maxOf(1, Math.round(width * scale))
-            val h = maxOf(1, Math.round(height * scale))
-            if (w != historyWidth || h != historyHeight) {
-                deleteSlots()
-                historyWidth = w
-                historyHeight = h
+        private fun updateStoreSizes() {
+            for (store in stores) {
+                val w = maxOf(1, Math.round(width * store.scale))
+                val h = maxOf(1, Math.round(height * store.scale))
+                if (w != store.width || h != store.height) {
+                    deleteSlots(store)
+                    store.width = w
+                    store.height = h
+                }
             }
         }
 
         private fun clearHistory() {
-            for (entry in history) freeSlots += entry.slot
-            history.clear()
+            for (store in stores) {
+                for (entry in store.entries) store.freeSlots += entry.slot
+                store.entries.clear()
+            }
         }
+
+        /** When the newest frame kept at any size was shown, or null when none is kept. */
+        private fun newestKeptUs(): Long? = stores.mapNotNull { it.entries.lastOrNull()?.timeUs }.maxOrNull()
 
         /** Swaps in the frames decoded last, each bitmap uploaded once. */
         private fun applyFill() {
@@ -488,17 +517,18 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             return ids[0]
         }
 
-        /** Copies the frame into a history slot and drops what no later frame needs. */
-        private fun keep(inputTexId: Int, timeUs: Long, speed: Float) {
-            val slot = freeSlots.removeFirstOrNull() ?: newSlot()
-            GlUtil.focusFramebufferUsingCurrentContext(slotFbos[slot], historyWidth, historyHeight)
+        /** Copies the frame into a slot of [store] and drops what no later frame needs from it. */
+        private fun keep(store: Store, inputTexId: Int, timeUs: Long, speed: Float) {
+            val slot = store.freeSlots.removeFirstOrNull() ?: newSlot(store)
+            GlUtil.focusFramebufferUsingCurrentContext(store.slotFbos[slot], store.width, store.height)
             drawCopy(inputTexId)
-            val index = history.indexOfFirst { it.timeUs > timeUs }.let { if (it < 0) history.size else it }
-            history.add(index, Entry(timeUs, slot))
-            val limit = timeUs - (maxOffsetUs * speed).toLong() + TOLERANCE_US
-            val oldestNeeded = history.indexOfLast { it.timeUs <= limit }
-            repeat(maxOf(0, oldestNeeded)) { freeSlots += history.removeAt(0).slot }
-            while (history.size > MAX_FRAMES) freeSlots += history.removeAt(0).slot
+            val entries = store.entries
+            val index = entries.indexOfFirst { it.timeUs > timeUs }.let { if (it < 0) entries.size else it }
+            entries.add(index, Entry(timeUs, slot))
+            val limit = timeUs - (store.maxOffsetUs * speed).toLong() + TOLERANCE_US
+            val oldestNeeded = entries.indexOfLast { it.timeUs <= limit }
+            repeat(maxOf(0, oldestNeeded)) { store.freeSlots += entries.removeAt(0).slot }
+            while (entries.size > MAX_FRAMES) store.freeSlots += entries.removeAt(0).slot
         }
 
         private fun drawCopy(textureId: Int) {
@@ -518,20 +548,20 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             GlUtil.focusFramebufferUsingCurrentContext(tempFbos[index], width, height)
         }
 
-        private fun newSlot(): Int {
-            val texture = GlUtil.createTexture(historyWidth, historyHeight, false)
-            slotTextures += texture
-            slotFbos += GlUtil.createFboForTexture(texture)
-            return slotTextures.size - 1
+        private fun newSlot(store: Store): Int {
+            val texture = GlUtil.createTexture(store.width, store.height, false)
+            store.slotTextures += texture
+            store.slotFbos += GlUtil.createFboForTexture(texture)
+            return store.slotTextures.size - 1
         }
 
-        private fun deleteSlots() {
-            for (fbo in slotFbos) GlUtil.deleteFbo(fbo)
-            for (texture in slotTextures) GlUtil.deleteTexture(texture)
-            slotFbos.clear()
-            slotTextures.clear()
-            freeSlots.clear()
-            history.clear()
+        private fun deleteSlots(store: Store) {
+            for (fbo in store.slotFbos) GlUtil.deleteFbo(fbo)
+            for (texture in store.slotTextures) GlUtil.deleteTexture(texture)
+            store.slotFbos.clear()
+            store.slotTextures.clear()
+            store.freeSlots.clear()
+            store.entries.clear()
         }
 
         private fun deleteDecoded() {
@@ -541,7 +571,7 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
         }
 
         private fun deleteTextures() {
-            deleteSlots()
+            stores.forEach { deleteSlots(it) }
             deleteDecoded()
             for (i in 0..1) {
                 if (tempFbos[i] != NONE) GlUtil.deleteFbo(tempFbos[i])
@@ -619,6 +649,50 @@ internal const val MAX_DECODED_DRIFT_US = 150_000L
  * While scrubbing, the frames decoded for where the playhead just was serve
  * the next positions.
  */
+/**
+ * Where the frame effects' earlier frames are kept: one store per size they
+ * ask for, each back as far as the furthest of its effects reaches.
+ *
+ * Each effect gets its earlier frames at the size it asked for, as each
+ * stage of pro_video_editor's export keeps its own: an effect that compares
+ * the frame with an earlier one needs that frame whole, and a smaller copy
+ * kept for another effect would show its lost detail as change. Separate
+ * stores also keep only as far back as their own effects reach.
+ */
+internal class FrameEffectsHistoryPlan(
+    /** The size of each store, relative to the video, from 0.05 to 1, largest first. */
+    val scales: List<Float>,
+    /** How far back each store reaches, in µs of playback. */
+    val maxOffsetsUs: List<Long>,
+    /** Per effect, the store in [scales] its earlier frames come from; null for none. */
+    val storeOfEffect: List<Int?>,
+) {
+    /** The largest size kept, which frames decoded after a seek are decoded at; 1 when none is. */
+    val largestScale: Float get() = scales.firstOrNull() ?: 1f
+
+    companion object {
+        /**
+         * The plan for effects asking for these offsets at these sizes, in
+         * order; null for an effect that is not there.
+         */
+        fun of(requests: List<Pair<LongArray, Float>?>): FrameEffectsHistoryPlan {
+            val wanted = requests.map { request ->
+                request?.takeIf { it.first.isNotEmpty() }?.let { (offsets, scale) ->
+                    scale.coerceIn(0.05f, 1f) to offsets.max()
+                }
+            }
+            val scales = wanted.filterNotNull().map { it.first }.distinct().sortedDescending()
+            return FrameEffectsHistoryPlan(
+                scales = scales,
+                maxOffsetsUs = scales.map { scale ->
+                    wanted.filterNotNull().filter { it.first == scale }.maxOf { it.second }
+                },
+                storeOfEffect = wanted.map { it?.let { (scale, _) -> scales.indexOf(scale) } },
+            )
+        }
+    }
+}
+
 internal fun nearestDecodedFrame(frames: List<Pair<Long, Long>>, sourceUs: Long): Int? =
     frames.indices
         .filter { i ->

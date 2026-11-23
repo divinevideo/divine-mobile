@@ -6912,6 +6912,26 @@
   "@videoEditorEffectEcho": {
     "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
   },
+  "videoEditorEffectTimeSplit": "Time Split",
+  "@videoEditorEffectTimeSplit": {
+    "description": "Name of a video effect: the red, green and blue of the picture come from slightly different moments, so still parts keep their colours and moving parts get rainbow ghosts."
+  },
+  "videoEditorEffectLongExposure": "Long Exposure",
+  "@videoEditorEffectLongExposure": {
+    "description": "Name of a video effect: bright parts of the picture leave trails of light, like a long-exposure photo of a torch or a sparkler."
+  },
+  "videoEditorEffectMotionOnly": "Motion Only",
+  "@videoEditorEffectMotionOnly": {
+    "description": "Name of a video effect: still parts of the picture go dark and only what moves stays visible, glowing."
+  },
+  "videoEditorEffectStutter": "Stutter",
+  "@videoEditorEffectStutter": {
+    "description": "Name of a video effect: the picture holds each frame a little longer, so it plays choppily at a few frames a second."
+  },
+  "videoEditorEffectTimeWarp": "Time Warp",
+  "@videoEditorEffectTimeWarp": {
+    "description": "Name of a video effect: each band of the picture, from top to bottom, comes from a slightly earlier moment, so moving people bend and stretch."
+  },
   "videoEditorEffectFisheye": "Fisheye",
   "@videoEditorEffectFisheye": {
     "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
@@ -7178,7 +7198,11 @@
   },
   "videoEditorEffectCategoryMotion": "Motion",
   "@videoEditorEffectCategoryMotion": {
-    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail."
+    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or streak."
+  },
+  "videoEditorEffectCategoryTime": "Time",
+  "@videoEditorEffectCategoryTime": {
+    "description": "Name of a group in the video effects picker: effects built from earlier frames as well as the current one, so they only show where something moves, such as an echo trail, rainbow ghosts or held frames."
   },
   "videoEditorEffectCategoryParticles": "Particles",
   "@videoEditorEffectCategoryParticles": {
@@ -7319,6 +7343,14 @@
   "videoEditorEffectsFlashingNotDuplicated": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.",
   "@videoEditorEffectsFlashingNotDuplicated": {
     "description": "Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced."
+  },
+  "videoEditorEffectsTimeReplaced": "One Time effect at a time. Two together would look different once exported, so we swapped out the other one here.",
+  "@videoEditorEffectsTimeReplaced": {
+    "description": "Snack bar after a Time video effect (echo, time split, long exposure, motion only, stutter, time warp) replaced another Time effect where the two overlapped on the timeline. Explains, without technical terms, that two of them together would render differently in the exported video than in the preview. 'Time' is the effects picker group named by videoEditorEffectCategoryTime."
+  },
+  "videoEditorEffectsTimeNotDuplicated": "One Time effect at a time. Two together would look different once exported.",
+  "@videoEditorEffectsTimeNotDuplicated": {
+    "description": "Snack bar when the user tries to duplicate a Time video effect: the copy would play on top of the original, so it is not duplicated. Same reason as videoEditorEffectsTimeReplaced."
   },
   "videoEditorEffectsOnBeat": "On the beat",
   "@videoEditorEffectsOnBeat": {

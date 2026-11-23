@@ -4963,6 +4963,243 @@ final class DeviceStorageSpaceTests: XCTestCase {
   }
 }
 
+/// The Time effects' kernels against the formulas the Android shaders use,
+/// with earlier frames handed in as the export and the preview hand them: one
+/// image per offset, at the frame's extent, or `nil` before the clip has played
+/// that far.
+final class TimeVideoEffectsTests: XCTestCase {
+  private let width = 72
+  private let height = 128
+  private let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+  /// The current frame: red and green hold each pixel's position, blue is a
+  /// checkerboard. Every value is a multiple of 1/256, which the kernels'
+  /// half-float textures hold exactly.
+  private func frameColor(_ px: Double, _ py: Double) -> [Double] {
+    let x = Int(px)
+    let y = Int(py)
+    return [
+      Double(x * 256 / width) / 256, Double(y * 256 / height) / 256,
+      (x / 12 + y / 12) % 2 == 0 ? 0 : 1,
+    ]
+  }
+
+  /// An earlier frame `k` frames back, for the effects that keep them whole:
+  /// the current frame moved `4 × k` pixels to the right and `3 × k` up, as if
+  /// the picture moved, so every channel differs.
+  private func movedColor(_ k: Int) -> (Double, Double) -> [Double] {
+    { px, py in self.frameColor(max(0.5, px - Double(4 * k)), max(0.5, py - Double(3 * k))) }
+  }
+
+  /// An earlier frame for the effects that keep them at half size: plain
+  /// ramps, which survive being scaled down and read back with bilinear
+  /// filtering unchanged, each of its own brightness.
+  private func rampColor(_ k: Int) -> (Double, Double) -> [Double] {
+    { px, py in
+      let base = Double(k + 1) / 8
+      return [
+        min(1, base + 0.3 * px / Double(self.width)),
+        min(1, base * 0.8 + 0.4 * py / Double(self.height)), 1 - base,
+      ]
+    }
+  }
+
+  private func image(_ shade: (Double, Double) -> [Double]) -> CIImage {
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        let color = shade(Double(x) + 0.5, Double(y) + 0.5)
+        // A bitmap's first row is the top of the image, Core Image's y = 0
+        // the bottom.
+        let d: Int = ((height - 1 - y) * width + x) * 4
+        for k in 0..<3 { pixels[d + k] = Float(color[k]) }
+      }
+    }
+    return CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+  }
+
+  /// The largest difference between `output` and `expected` over the pixels
+  /// at least `border` from the edge; the half-size frames clamp at the edge.
+  private func worst(
+    _ output: CIImage, _ expected: (Double, Double) -> [Double], border: Int = 0
+  ) -> Double {
+    var drawn = [Float](repeating: 0, count: width * height * 4)
+    drawn.withUnsafeMutableBytes {
+      context.render(
+        output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+        bounds: CGRect(x: 0, y: 0, width: width, height: height), format: .RGBAf,
+        colorSpace: nil)
+    }
+    var worst: Double = 0
+    for y in border..<(height - border) {
+      for x in border..<(width - border) {
+        let want = expected(Double(x) + 0.5, Double(y) + 0.5)
+        for k in 0..<3 {
+          let got = Double(drawn[((height - 1 - y) * width + x) * 4 + k])
+          worst = max(worst, abs(got - want[k]))
+        }
+      }
+    }
+    return worst
+  }
+
+  private func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
+    return t * t * (3 - 2 * t)
+  }
+
+  private func luma(_ c: [Double]) -> Double { c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114 }
+
+  func testTimeSplitTakesGreenAndBlueFromTheEarlierFrames() {
+    let frame = image(frameColor)
+    let history: [CIImage?] = [image(movedColor(3)), image(movedColor(6))]
+    for intensity in [1.0, 0.4] {
+      let effect = TimeSplitVideoEffect(params: ["intensity": intensity])
+      XCTAssertEqual(
+        effect.historyOffsetsUs, [100_000, 200_000], "100 ms and 200 ms, three and six frames")
+      XCTAssertEqual(effect.historyScale, 1)
+      let output = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 0)
+      let difference = worst(output) { px, py in
+        let now = self.frameColor(px, py)
+        let split = [now[0], self.movedColor(3)(px, py)[1], self.movedColor(6)(px, py)[2]]
+        return (0..<3).map { now[$0] + (split[$0] - now[$0]) * intensity }
+      }
+      XCTAssertLessThan(difference, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testTimeSplitLeavesTheFrameAsItIsBeforeTheClipHasPlayedFarEnough() {
+    let frame = image(frameColor)
+    let effect = TimeSplitVideoEffect(params: ["intensity": 1.0])
+    let output = effect.render(frame, history: [nil, nil], timeUs: 0, effectTimeUs: 0)
+    XCTAssertLessThan(worst(output, frameColor), 0.003)
+  }
+
+  func testTimeSplitOnTheBeatOnlySplitsOnEachHit() {
+    let frame = image(frameColor)
+    let history: [CIImage?] = [image(movedColor(3)), image(movedColor(6))]
+    let effect = TimeSplitVideoEffect(params: ["intensity": 1.0, "beatsUs": [400_000]])
+    let before = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 100_000)
+    XCTAssertLessThan(worst(before, frameColor), 0.003, "before the first beat")
+    let onHit = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 400_000)
+    XCTAssertGreaterThan(worst(onHit, frameColor), 0.1, "on the beat")
+  }
+
+  func testMotionOnlyDarkensWhatStaysAndLightsWhatMoved() {
+    let frame = image(frameColor)
+    let history: [CIImage?] = [image(movedColor(1))]
+    for intensity in [1.0, 0.5] {
+      let effect = MotionOnlyVideoEffect(params: ["intensity": intensity])
+      XCTAssertEqual(effect.historyOffsetsUs, [33_333], "one frame back")
+      let output = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 0)
+      let difference = worst(output) { px, py in
+        let now = self.frameColor(px, py)
+        let before = self.movedColor(1)(px, py)
+        let distance = sqrt((0..<3).map { pow(now[$0] - before[$0], 2) }.reduce(0, +))
+        let moved = self.smoothstep(0.05, 0.15, distance)
+        return (0..<3).map { k -> Double in
+          let glow = min(now[k] * (1 + 0.5 * intensity) + 0.1 * intensity, 1)
+          let dark = now[k] * (1 - intensity)
+          return dark + (glow - dark) * moved
+        }
+      }
+      XCTAssertLessThan(difference, 0.004, "intensity \(intensity)")
+    }
+  }
+
+  func testLongExposureKeepsTheBrightestOfTheFrameAndItsBrightEarlierFrames() {
+    let frame = image(frameColor)
+    for (intensity, copies) in [(1.0, 6), (0.3, 3)] {
+      let effect = LongExposureVideoEffect(params: ["intensity": intensity])
+      XCTAssertEqual(
+        effect.historyOffsetsUs, (1...copies).map { TimeVideoEffects.frameOffsetUs(2 * $0) })
+      XCTAssertEqual(effect.historyScale, 0.5)
+      let history: [CIImage?] = (0..<copies).map { image(rampColor($0)) }
+      let output = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 0)
+      let threshold = 0.7 - 0.25 * intensity
+      let difference = worst(output, { px, py in
+        var color = self.frameColor(px, py)
+        for k in 0..<copies {
+          let earlier = self.rampColor(k)(px, py)
+          let bright = self.smoothstep(threshold, threshold + 0.25, self.luma(earlier))
+          let weight = pow(0.7 + 0.25 * intensity, Double(k + 1))
+          color = (0..<3).map { max(color[$0], earlier[$0] * bright * weight) }
+        }
+        return color
+      }, border: 3)
+      XCTAssertLessThan(difference, 0.004, "intensity \(intensity)")
+    }
+  }
+
+  func testTimeWarpShowsEachBandFromAMomentFurtherBack() {
+    let frame = image(frameColor)
+    for (intensity, copies) in [(1.0, 7), (0.45, 4)] {
+      let effect = TimeWarpVideoEffect(params: ["intensity": intensity])
+      XCTAssertEqual(
+        effect.historyOffsetsUs, (1...copies).map { TimeVideoEffects.frameOffsetUs(2 * $0) })
+      XCTAssertEqual(effect.historyScale, 0.5)
+      let history: [CIImage?] = (0..<copies).map { image(rampColor($0)) }
+      let output = effect.render(frame, history: history, timeUs: 0, effectTimeUs: 0)
+      let depth = 7 * intensity
+      let difference = worst(output, { px, py in
+        let t = (1 - py / Double(self.height)) * depth
+        func band(_ k: Double) -> Double { 1 - self.smoothstep(0.35, 0.65, abs(t - k)) }
+        var color = self.frameColor(px, py).map { $0 * band(0) }
+        for k in 0..<copies {
+          let earlier = self.rampColor(k)(px, py)
+          color = (0..<3).map { color[$0] + earlier[$0] * band(Double(k + 1)) }
+        }
+        return color
+      }, border: 3)
+      XCTAssertLessThan(difference, 0.004, "intensity \(intensity)")
+    }
+  }
+
+  func testStutterHoldsTheFirstFrameOfEachHold() {
+    let frame = image(frameColor)
+    let history: [CIImage?] = (1...4).map { image(movedColor($0)) }
+    // At 6 frames a second each hold lasts five frames: back 0, 1, 2, 3, 4.
+    let effect = StutterVideoEffect(params: ["intensity": 1.0])
+    XCTAssertEqual(effect.historyOffsetsUs, [33_333, 66_666, 100_000, 133_333])
+    XCTAssertEqual(effect.historyScale, 1)
+    for (frames, back) in [(0, 0), (3, 3), (4, 4), (5, 0), (7, 2)] {
+      let output = effect.render(
+        frame, history: history, timeUs: 0,
+        effectTimeUs: TimeVideoEffects.frameOffsetUs(frames))
+      XCTAssertTrue(output === (back == 0 ? frame : history[back - 1]), "frame \(frames)")
+    }
+    // A frame the clip has not played far enough back for is shown as it is.
+    let early = effect.render(
+      frame, history: [nil, nil, nil, nil], timeUs: 0,
+      effectTimeUs: TimeVideoEffects.frameOffsetUs(3))
+    XCTAssertTrue(early === frame)
+  }
+
+  func testStutterOnTheBeatOnlyHoldsFramesForHalfASecondAfterEachBeat() {
+    let beat = TimeVideoEffects.frameOffsetUs(3)
+    for (frames, back) in [(2, 0), (3, 0), (5, 2), (8, 0), (9, 1), (18, 0)] {
+      XCTAssertEqual(
+        StutterHolds.framesBack(
+          intensity: 1, beatsUs: [beat], effectTimeUs: TimeVideoEffects.frameOffsetUs(frames)),
+        back, "frame \(frames)")
+    }
+  }
+
+  func testStutterPlaysAtTwelveFramesASecondAtTheLowestIntensity() {
+    let backs = (0..<10).map {
+      StutterHolds.framesBack(
+        intensity: 0, beatsUs: nil, effectTimeUs: TimeVideoEffects.frameOffsetUs($0))
+    }
+    // Holds of three and two frames in turn, 2.5 on average.
+    XCTAssertEqual(backs, [0, 1, 2, 0, 1, 0, 1, 2, 0, 1])
+  }
+}
+
 final class CameraPurposeLocalizationTests: XCTestCase {
   func testEveryDeclaredLanguageBundlesItsOwnCameraPurpose() throws {
     let app = Bundle.main

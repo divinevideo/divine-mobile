@@ -9616,6 +9616,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ecou';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Timp despicat';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Expunere lungă';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Doar mișcare';
+
+  @override
+  String get videoEditorEffectStutter => 'Sacadat';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsiune temporală';
+
+  @override
   String get videoEditorEffectFisheye => 'Ochi de pește';
 
   @override
@@ -9817,6 +9832,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Mișcare';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Timp';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particule';
 
   @override
@@ -9923,6 +9941,14 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export, așa că l-am înlocuit aici pe celălalt.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Pe ritm';

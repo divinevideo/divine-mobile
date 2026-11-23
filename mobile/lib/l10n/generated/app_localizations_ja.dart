@@ -8939,6 +8939,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectEcho => 'エコー';
 
   @override
+  String get videoEditorEffectTimeSplit => 'タイムスプリット';
+
+  @override
+  String get videoEditorEffectLongExposure => '長時間露光';
+
+  @override
+  String get videoEditorEffectMotionOnly => '動きだけ';
+
+  @override
+  String get videoEditorEffectStutter => 'コマ落とし';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'タイムワープ';
+
+  @override
   String get videoEditorEffectFisheye => '魚眼';
 
   @override
@@ -9140,6 +9155,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'モーション';
 
   @override
+  String get videoEditorEffectCategoryTime => '時間';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'パーティクル';
 
   @override
@@ -9245,6 +9263,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わるので、ここではもう一方を置き換えました。';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わります。';
 
   @override
   String get videoEditorEffectsOnBeat => 'ビートに合わせる';
