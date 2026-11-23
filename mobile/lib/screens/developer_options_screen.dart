@@ -29,6 +29,7 @@ import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_format_preference.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/developer/storage_footprint_section.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
 import 'package:profile_repository/profile_repository.dart'
@@ -417,10 +418,13 @@ class _DeveloperOptionsScreenState
                           color: context.vineColors.accentPositive,
                         )
                       : null,
-                  onTap: () => unawaited(
+                  onTap: () => runDetached(
                     ref
                         .read(confirmationAccessOverrideProvider.notifier)
                         .set(value),
+                    'set the Confirmation access override',
+                    logName: 'DeveloperOptionsScreen',
+                    category: LogCategory.system,
                   ),
                 );
               }),
