@@ -626,7 +626,7 @@ extension VineThemeColorsContext on BuildContext {
 /// aesthetic with proper color scheme and typography.
 class VineTheme {
   // ==========================================================================
-  // Typography - Google Fonts
+  // Typography
   // ==========================================================================
 
   /// Font family name for Bricolage Grotesque.
@@ -639,7 +639,8 @@ class VineTheme {
   /// Bundled body/label font family name (declared in the app's pubspec).
   static const fontFamilyInter = 'Inter';
 
-  /// Bundled monospace caption/code font family name (declared in pubspec).
+  /// Bundled monospace caption/code font family name (declared in the app's
+  /// pubspec).
   static const fontFamilyChivoMono = 'ChivoMono';
 
   /// When `true`, typography helpers return direct [TextStyle]s pointing at
@@ -647,7 +648,8 @@ class VineTheme {
   ///
   /// Defaults to `kIsWeb`: on web, calling `GoogleFonts.*` on every widget
   /// build triggers per-build font-resolution lookups and runtime
-  /// `fonts.gstatic.com` checks even though every weight is already bundled.
+  /// `fonts.gstatic.com` checks, while the app's pubspec already bundles every
+  /// family and weight these helpers use (`test/web/web_bootstrap_test.dart`).
   /// Native keeps `google_fonts` so existing native typography and Linux
   /// golden references stay pixel-identical.
   @visibleForTesting
@@ -1542,6 +1544,8 @@ class VineTheme {
         : seeded.copyWith(primary: vineGreen, onPrimary: onPrimary);
     return ThemeData(
       brightness: brightness,
+      // Web text without a VineTheme style uses the bundled Inter, which has
+      // weights 400 and 600 only.
       fontFamily: kIsWeb ? fontFamilyInter : null,
       primarySwatch: _createMaterialColor(vineGreen),
       primaryColor: vineGreen,

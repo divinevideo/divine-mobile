@@ -685,6 +685,22 @@ void main() {
         },
       );
 
+      testWidgets('bundled styles keep the google_fonts metrics', (
+        tester,
+      ) async {
+        final previous = VineTheme.useBundledFonts;
+        addTearDown(() => VineTheme.useBundledFonts = previous);
+
+        for (final (name, font) in _fontHelpers) {
+          VineTheme.useBundledFonts = false;
+          final remote = font(color: VineTheme.vineGreen);
+          VineTheme.useBundledFonts = true;
+          final bundled = font(color: VineTheme.vineGreen);
+
+          expect(_metrics(bundled), equals(_metrics(remote)), reason: name);
+        }
+      });
+
       testWidgets('captionPillFont accepts a color override', (tester) async {
         final style = VineTheme.captionPillFont(color: VineTheme.vineGreen);
         expect(style.color, VineTheme.vineGreen);
@@ -840,3 +856,38 @@ void main() {
     });
   });
 }
+
+/// Every public [VineTheme] typography helper.
+final _fontHelpers = <(String, TextStyle Function({Color? color}))>[
+  ('displayLargeFont', VineTheme.displayLargeFont),
+  ('displayMediumFont', VineTheme.displayMediumFont),
+  ('displaySmallFont', VineTheme.displaySmallFont),
+  ('headlineLargeFont', VineTheme.headlineLargeFont),
+  ('headlineMediumFont', VineTheme.headlineMediumFont),
+  ('headlineSmallFont', VineTheme.headlineSmallFont),
+  ('titleLargeFont', VineTheme.titleLargeFont),
+  ('statNumberFont', VineTheme.statNumberFont),
+  ('titleMediumFont', VineTheme.titleMediumFont),
+  ('titleSmallFont', VineTheme.titleSmallFont),
+  ('titleTinyFont', VineTheme.titleTinyFont),
+  ('bodyLargeFont', VineTheme.bodyLargeFont),
+  ('bodyMediumFont', VineTheme.bodyMediumFont),
+  ('bodySmallFont', VineTheme.bodySmallFont),
+  ('bodyTinyFont', VineTheme.bodyTinyFont),
+  ('labelLargeFont', VineTheme.labelLargeFont),
+  ('labelMediumFont', VineTheme.labelMediumFont),
+  ('labelSmallFont', VineTheme.labelSmallFont),
+  ('captionPillFont', VineTheme.captionPillFont),
+  ('codeFont', VineTheme.codeFont),
+  ('tabTextStyle', VineTheme.tabTextStyle),
+];
+
+/// What a style renders with, apart from its font family.
+List<Object?> _metrics(TextStyle style) => [
+  style.fontSize,
+  style.fontWeight,
+  style.height,
+  style.letterSpacing,
+  style.fontFeatures,
+  style.color,
+];
