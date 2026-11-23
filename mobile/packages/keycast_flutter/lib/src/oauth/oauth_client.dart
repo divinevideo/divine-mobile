@@ -518,11 +518,17 @@ class KeycastOAuth {
   ///
   /// Returns [HeadlessLoginResult] with authorization code directly (no polling needed).
   /// After login, call [exchangeCode] with the returned code and verifier.
+  ///
+  /// [instantAccess] - Ask Keycast to sign in an account whose email is not
+  /// confirmed yet. Without it, such an account is refused with
+  /// [KeycastLoginFailure.emailNotVerified], which is what older app builds
+  /// rely on.
   Future<(HeadlessLoginResult, String verifier)> headlessLogin({
     required String email,
     required String password,
     String scope = 'policy:social',
     String? state,
+    bool instantAccess = false,
   }) async {
     final verifier = Pkce.generateVerifier();
     final challenge = Pkce.generateChallenge(verifier);
@@ -540,6 +546,10 @@ class KeycastOAuth {
 
       if (state != null) {
         body['state'] = state;
+      }
+
+      if (instantAccess) {
+        body['instant_access'] = true;
       }
 
       final response = await _client

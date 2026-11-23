@@ -14,6 +14,7 @@ import 'package:keycast_flutter/src/models/exceptions.dart';
 import 'package:keycast_flutter/src/models/keycast_session.dart';
 import 'package:keycast_flutter/src/oauth/oauth_config.dart';
 import 'package:keycast_flutter/src/rpc/keycast_rpc.dart';
+import 'package:keycast_flutter/src/rpc/policy_refusal.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 void main() {
@@ -490,6 +491,91 @@ void main() {
     });
 
     group('error handling', () {
+      test('an unconfirmed-email cap refusal is typed and reported', () async {
+        mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'You have hit the limit',
+              'code': 'UNCONFIRMED_RATE_LIMITED',
+            }),
+            429,
+            headers: {'retry-after': '120'},
+          );
+        });
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: mockClient,
+        );
+        final reported = KeycastPolicyRefusals.stream.first;
+
+        await expectLater(
+          rpc.getPublicKey,
+          throwsA(
+            isA<UnconfirmedRateLimitedException>().having(
+              (error) => error.retryAfter,
+              'retryAfter',
+              const Duration(seconds: 120),
+            ),
+          ),
+        );
+        final refusal = await reported;
+        expect(refusal.kind, KeycastPolicyRefusalKind.unconfirmedRateLimited);
+        expect(refusal.retryAfter, const Duration(seconds: 120));
+      });
+
+      test('an unconfirmed-email DM refusal is typed and reported', () async {
+        mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'Confirm your email to send direct messages.',
+              'code': 'EMAIL_NOT_CONFIRMED',
+            }),
+            403,
+          );
+        });
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: mockClient,
+        );
+        final reported = KeycastPolicyRefusals.stream.first;
+
+        await expectLater(
+          rpc.getPublicKey,
+          throwsA(isA<EmailNotConfirmedException>()),
+        );
+        expect(
+          (await reported).kind,
+          KeycastPolicyRefusalKind.emailNotConfirmed,
+        );
+      });
+
+      test('another 403 stays a plain RpcException', () async {
+        mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'error': 'Operation denied by policy'}),
+            403,
+          );
+        });
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: mockClient,
+        );
+
+        await expectLater(
+          rpc.getPublicKey,
+          throwsA(
+            allOf(
+              isA<RpcException>(),
+              isNot(isA<EmailNotConfirmedException>()),
+              isNot(isA<UnconfirmedRateLimitedException>()),
+            ),
+          ),
+        );
+      });
+
       test('throws RpcException on error response', () async {
         mockClient = MockClient((request) async {
           return http.Response(jsonEncode({'error': 'signing_failed'}), 200);

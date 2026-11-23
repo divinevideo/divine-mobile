@@ -725,6 +725,34 @@ void main() {
     });
 
     group('headlessLogin', () {
+      test('sends instant_access only when asked for', () async {
+        final bodies = <Map<String, dynamic>>[];
+        final mockClient = MockClient((request) async {
+          bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'code': 'auth_code',
+              'pubkey': 'pk',
+              'email_verified': false,
+            }),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        await oauth.headlessLogin(email: 'a@example.com', password: 'pw');
+        final (result, _) = await oauth.headlessLogin(
+          email: 'a@example.com',
+          password: 'pw',
+          instantAccess: true,
+        );
+
+        expect(bodies.first, isNot(contains('instant_access')));
+        expect(bodies.last['instant_access'], isTrue);
+        expect(result.emailVerified, isFalse);
+      });
+
       test('returns success result on 200 response', () async {
         final mockClient = MockClient((request) async {
           expect(request.url.path, '/api/headless/login');
