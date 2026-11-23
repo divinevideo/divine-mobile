@@ -196,16 +196,33 @@ final class VideoRecorderRecordingStartRequested extends VideoRecorderEvent {
 /// Registered with `transformer: sequential()` — see
 /// [VideoRecorderRecordingStartRequested].
 final class VideoRecorderRecordingStopRequested extends VideoRecorderEvent {
-  const VideoRecorderRecordingStopRequested({this.result}) : _teardown = null;
+  const VideoRecorderRecordingStopRequested({this.result})
+    : _teardown = null,
+      _isAutoStop = false;
 
   const VideoRecorderRecordingStopRequested._forTeardown(this._teardown)
-    : result = null;
+    : result = null,
+      _isAutoStop = false;
+
+  /// The camera ended the take on its own, handing over [result] when it
+  /// captured anything.
+  const VideoRecorderRecordingStopRequested._autoStop(this.result)
+    : _teardown = null,
+      _isAutoStop = true;
 
   final EditorVideo? result;
   final Completer<void>? _teardown;
 
+  /// Whether the camera ended the take rather than the user. Telemetry only:
+  /// a stop handles a camera's result the same way whoever asked for it.
+  final bool _isAutoStop;
+
   @override
-  List<Object?> get props => [result, if (_teardown != null) _teardown];
+  List<Object?> get props => [
+    result,
+    if (_teardown != null) _teardown,
+    if (_isAutoStop) _isAutoStop,
+  ];
 }
 
 /// A long-press gesture began — captures the current zoom as the base that
