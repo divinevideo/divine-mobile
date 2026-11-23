@@ -152,6 +152,8 @@ class ChangeEmailCubit extends Cubit<ChangeEmailState> {
         ChangeEmailFailureReason.wrongPassword,
       ChangeEmailFailure.invalidEmail => ChangeEmailFailureReason.invalidEmail,
       ChangeEmailFailure.needsSignIn => ChangeEmailFailureReason.needsSignIn,
+      ChangeEmailFailure.passwordNotSet =>
+        ChangeEmailFailureReason.passwordNotSet,
       ChangeEmailFailure.rateLimited => ChangeEmailFailureReason.rateLimited,
       ChangeEmailFailure.network => ChangeEmailFailureReason.network,
       ChangeEmailFailure.server ||

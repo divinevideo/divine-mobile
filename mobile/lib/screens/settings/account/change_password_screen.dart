@@ -267,6 +267,8 @@ String changePasswordFailureMessage(
       l10n.accountCredentialsNeedsSignIn,
     ChangePasswordFailureReason.rateLimited =>
       l10n.accountCredentialsRateLimited,
+    ChangePasswordFailureReason.passwordNotSet =>
+      l10n.accountCredentialsPasswordNotSet,
     ChangePasswordFailureReason.network => l10n.accountCredentialsNetwork,
     ChangePasswordFailureReason.unknown => l10n.accountCredentialsUnknown,
   };

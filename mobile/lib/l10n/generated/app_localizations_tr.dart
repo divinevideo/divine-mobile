@@ -3531,6 +3531,28 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir şeyler ters gitti. Lütfen tekrar dene.';
 
   @override
+  String get authContinueWithApple => 'Apple ile devam et';
+
+  @override
+  String get authContinueWithGoogle => 'Google ile devam et';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Bu giriş seçeneği bu cihazda kullanılamıyor.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Bu e-postayla zaten bir Divine hesabı var. E-posta ve parolanla giriş yap.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Hesabını oluşturmak için e-postana ihtiyacımız var. Giriş yaparken paylaş ya da e-posta ve parola kullan.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Bu e-posta henüz doğrulanmadı. Önce Google veya Apple\'da doğrula, sonra tekrar dene.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Geçen sefer nasıl giriş yaptığını hatırlamıyor musun? ';
 
@@ -15000,6 +15022,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Oturumun doldu. Bu değişikliği yapmak için tekrar giriş yap.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Google veya Apple ile giriş yaptın, bu yüzden henüz bir parolan yok. Giriş ekranındaki “Parolanı mı unuttun?” ile bir tane belirle.';
 
   @override
   String get accountCredentialsRateLimited =>

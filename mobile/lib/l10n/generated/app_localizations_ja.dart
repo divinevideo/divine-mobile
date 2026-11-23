@@ -3367,6 +3367,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authSignInErrorGeneric => '問題が発生しました。もう一度お試しください。';
 
   @override
+  String get authContinueWithApple => 'Appleで続ける';
+
+  @override
+  String get authContinueWithGoogle => 'Googleで続ける';
+
+  @override
+  String get authSocialSignInUnavailable => 'このサインイン方法はこのデバイスでは利用できません。';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'このメールアドレスにはすでに Divine アカウントがあります。メールアドレスとパスワードでサインインしてください。';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'アカウントの作成にはメールアドレスが必要です。サインイン時に共有するか、メールアドレスとパスワードを使ってください。';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'このメールアドレスはまだ認証されていません。先に Google または Apple で認証してから、もう一度お試しください。';
+
+  @override
   String get authSignInOptionsHintPrefix => '前回どうやってログインしたか分かりませんか? ';
 
   @override
@@ -14356,6 +14377,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'セッションが切れました。もう一度ログインしてから変更してください。';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Google または Apple でサインインしているため、まだパスワードがありません。サインイン画面の「パスワードを忘れた?」から設定してください。';
 
   @override
   String get accountCredentialsRateLimited => '試行が多すぎます。数分待ってからどうぞ。';

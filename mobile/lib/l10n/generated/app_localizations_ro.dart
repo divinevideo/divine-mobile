@@ -3708,6 +3708,28 @@ class AppLocalizationsRo extends AppLocalizations {
   String get authSignInErrorGeneric => 'Ceva n-a mers bine. Încearcă din nou.';
 
   @override
+  String get authContinueWithApple => 'Continuă cu Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Continuă cu Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Această opțiune de conectare nu e disponibilă pe acest dispozitiv.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Există deja un cont Divine cu acest e-mail. Conectează-te cu e-mailul și parola.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Avem nevoie de e-mailul tău ca să-ți creăm contul. Partajează-l la conectare sau folosește e-mail și parolă.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Acest e-mail nu e încă verificat. Verifică-l mai întâi la Google sau Apple, apoi încearcă din nou.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Nu știi sigur cum te-ai conectat data trecută? ';
 
@@ -15383,6 +15405,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Sesiunea a expirat. Autentifică-te din nou ca să faci schimbarea.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Te-ai conectat cu Google sau Apple, așa că încă nu ai parolă. Setează una din „Ai uitat parola?” pe ecranul de conectare.';
 
   @override
   String get accountCredentialsRateLimited =>

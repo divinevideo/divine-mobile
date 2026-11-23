@@ -122,6 +122,13 @@ enum FeatureFlag {
         'instead of cropped ones, more grid columns, rotation on large '
         'screens, and side navigation with comments beside the video in '
         'landscape.',
+  ),
+  // TODO(#11392): Remove once sign-in with Google and Apple is live.
+  socialSignIn(
+    'Google and Apple Sign-In',
+    'Offer Continue with Google and Continue with Apple on the welcome and '
+        'sign-in screens. Needs a Keycast that accepts their tokens.',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(

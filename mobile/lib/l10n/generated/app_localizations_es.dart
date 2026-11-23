@@ -3636,6 +3636,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authSignInErrorGeneric => 'Algo salió mal. Inténtalo de nuevo.';
 
   @override
+  String get authContinueWithApple => 'Continuar con Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Esta forma de iniciar sesión no está disponible en este dispositivo.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Ya existe una cuenta de Divine con este email. Iniciá sesión con tu email y contraseña.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Necesitamos tu email para crear tu cuenta. Compartilo al iniciar sesión o usá email y contraseña.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Ese email todavía no está verificado. Verificalo primero en Google o Apple y probá de nuevo.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       '¿No sabes cómo entraste la última vez? ';
 
@@ -15252,6 +15274,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Tu sesión caducó. Inicia sesión otra vez para hacer este cambio.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Iniciaste sesión con Google o Apple, así que todavía no tenés contraseña. Creá una con “¿Olvidaste tu contraseña?” en la pantalla de inicio de sesión.';
 
   @override
   String get accountCredentialsRateLimited =>

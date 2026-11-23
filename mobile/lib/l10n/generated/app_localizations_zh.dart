@@ -3369,6 +3369,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authSignInErrorGeneric => '出了点问题，请重试。';
 
   @override
+  String get authContinueWithApple => '通过 Apple 继续';
+
+  @override
+  String get authContinueWithGoogle => '通过 Google 继续';
+
+  @override
+  String get authSocialSignInUnavailable => '此设备不支持这种登录方式。';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      '这个邮箱已经有 Divine 账号了。请用邮箱和密码登录。';
+
+  @override
+  String get authSocialSignInEmailMissing => '创建账号需要你的邮箱。登录时请共享邮箱，或改用邮箱和密码。';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      '这个邮箱还没有验证。请先在 Google 或 Apple 完成验证，再试一次。';
+
+  @override
   String get authSignInOptionsHintPrefix => '不记得上次是怎么登录的？';
 
   @override
@@ -14183,6 +14203,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountCredentialsNeedsSignIn => '登录状态已过期。请重新登录后再更改。';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      '你是通过 Google 或 Apple 登录的，所以还没有密码。请在登录界面点“忘记密码？”设置一个。';
 
   @override
   String get accountCredentialsRateLimited => '尝试次数太多，过几分钟再试。';

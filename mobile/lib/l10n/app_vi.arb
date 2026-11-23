@@ -1782,6 +1782,12 @@
     "description": "Shown when a network/transport problem prevents a sign-in verdict."
   },
   "authSignInErrorGeneric": "Có gì đó không ổn. Vui lòng thử lại.",
+  "authContinueWithApple": "Tiếp tục với Apple",
+  "authContinueWithGoogle": "Tiếp tục với Google",
+  "authSocialSignInUnavailable": "Cách đăng nhập này không khả dụng trên thiết bị này.",
+  "authSocialSignInAccountLinkRequired": "Email này đã có tài khoản Divine. Hãy đăng nhập bằng email và mật khẩu của bạn.",
+  "authSocialSignInEmailMissing": "Chúng tôi cần email của bạn để tạo tài khoản. Hãy chia sẻ email khi đăng nhập, hoặc dùng email và mật khẩu.",
+  "authSocialSignInEmailNotVerified": "Email này chưa được xác minh. Hãy xác minh với Google hoặc Apple trước, rồi thử lại.",
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
@@ -7224,6 +7230,7 @@
   "accountSettingsChangePassword": "Đổi mật khẩu",
   "accountSettingsChangePasswordSubtitle": "Chọn mật khẩu mới để đăng nhập",
   "accountCredentialsNeedsSignIn": "Phiên đăng nhập đã hết hạn. Đăng nhập lại để thực hiện thay đổi này.",
+  "accountCredentialsPasswordNotSet": "Bạn đã đăng nhập bằng Google hoặc Apple nên chưa có mật khẩu. Hãy tạo mật khẩu qua “Quên mật khẩu?” trên màn hình đăng nhập.",
   "accountCredentialsRateLimited": "Thử quá nhiều lần. Đợi vài phút nhé.",
   "accountCredentialsNetwork": "Không kết nối được với Divine. Kiểm tra kết nối rồi thử lại.",
   "accountCredentialsUnknown": "Chưa được. Thử lại nhé.",

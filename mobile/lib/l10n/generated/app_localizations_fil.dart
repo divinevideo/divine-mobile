@@ -3608,6 +3608,28 @@ class AppLocalizationsFil extends AppLocalizations {
   String get authSignInErrorGeneric => 'May nangyaring mali. Subukan ulit.';
 
   @override
+  String get authContinueWithApple => 'Magpatuloy gamit ang Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Magpatuloy gamit ang Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Hindi available ang sign-in option na ito sa device na ito.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'May Divine account na ang email na ito. Mag-sign in gamit ang email at password mo.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Kailangan namin ang email mo para ma-set up ang account mo. I-share ito pag nag-sign in ka, o gumamit ng email at password.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Hindi pa verified ang email na ito. I-verify muna ito sa Google o Apple, tapos subukan ulit.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Hindi sigurado kung paano ka nakapasok noong huli? ';
 
@@ -15208,6 +15230,10 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Nag-expire ang session mo. Mag-sign in ulit para gawin ito.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Nag-sign in ka gamit ang Google o Apple, kaya wala ka pang password. Mag-set ng isa gamit ang “Nakalimutan ang password?” sa sign-in screen.';
 
   @override
   String get accountCredentialsRateLimited =>

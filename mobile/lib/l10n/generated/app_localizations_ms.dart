@@ -3579,6 +3579,28 @@ class AppLocalizationsMs extends AppLocalizations {
   String get authSignInErrorGeneric => 'Sesuatu telah berlaku. Sila cuba lagi.';
 
   @override
+  String get authContinueWithApple => 'Teruskan dengan Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Teruskan dengan Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Pilihan log masuk ini tidak tersedia pada peranti ini.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'E-mel ini sudah mempunyai akaun Divine. Log masuk dengan e-mel dan kata laluan anda.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Kami memerlukan e-mel anda untuk menyediakan akaun anda. Kongsikannya semasa log masuk, atau gunakan e-mel dan kata laluan.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'E-mel ini belum disahkan. Sahkan dahulu dengan Google atau Apple, kemudian cuba lagi.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Tidak pasti bagaimana anda masuk kali terakhir? ';
 
@@ -15068,6 +15090,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Sesi anda tamat. Log masuk semula untuk buat perubahan ini.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Anda log masuk dengan Google atau Apple, jadi belum ada kata laluan. Tetapkan satu melalui “Lupa kata laluan?” pada skrin log masuk.';
 
   @override
   String get accountCredentialsRateLimited =>

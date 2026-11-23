@@ -3515,6 +3515,28 @@ class AppLocalizationsId extends AppLocalizations {
   String get authSignInErrorGeneric => 'Ada yang salah. Coba lagi.';
 
   @override
+  String get authContinueWithApple => 'Lanjutkan dengan Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Lanjutkan dengan Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Opsi masuk ini tidak tersedia di perangkat ini.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Email ini sudah punya akun Divine. Masuk dengan email dan kata sandimu.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Kami butuh emailmu untuk menyiapkan akunmu. Bagikan saat masuk, atau pakai email dan kata sandi.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Email ini belum terverifikasi. Verifikasi dulu di Google atau Apple, lalu coba lagi.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Tidak yakin bagaimana kamu masuk terakhir kali? ';
 
@@ -14965,6 +14987,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Sesimu habis. Masuk lagi untuk melakukan perubahan ini.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Kamu masuk dengan Google atau Apple, jadi belum ada kata sandi. Buat lewat “Lupa kata sandi?” di layar masuk.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -2111,6 +2111,12 @@
     "description": "Shown when a network/transport problem prevents a sign-in verdict."
   },
   "authSignInErrorGeneric": "ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "authContinueWithApple": "Appleతో కొనసాగండి",
+  "authContinueWithGoogle": "Googleతో కొనసాగండి",
+  "authSocialSignInUnavailable": "ఈ సైన్ ఇన్ ఎంపిక ఈ పరికరంలో అందుబాటులో లేదు.",
+  "authSocialSignInAccountLinkRequired": "ఈ ఇమెయిల్‌తో ఇప్పటికే Divine ఖాతా ఉంది. మీ ఇమెయిల్ మరియు పాస్‌వర్డ్‌తో సైన్ ఇన్ చేయండి.",
+  "authSocialSignInEmailMissing": "మీ ఖాతాను సెటప్ చేయడానికి మాకు మీ ఇమెయిల్ అవసరం. సైన్ ఇన్ చేసేటప్పుడు దాన్ని షేర్ చేయండి, లేదా ఇమెయిల్ మరియు పాస్‌వర్డ్ ఉపయోగించండి.",
+  "authSocialSignInEmailNotVerified": "ఈ ఇమెయిల్ ఇంకా ధృవీకరించబడలేదు. ముందుగా Google లేదా Appleలో దాన్ని ధృవీకరించి, మళ్లీ ప్రయత్నించండి.",
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
@@ -8635,6 +8641,7 @@
   "accountSettingsChangePassword": "పాస్‌వర్డ్ మార్చండి",
   "accountSettingsChangePasswordSubtitle": "సైన్ ఇన్ చేయడానికి కొత్త పాస్‌వర్డ్‌ని ఎంచుకోండి",
   "accountCredentialsNeedsSignIn": "మీ సెషన్ అయిపోయింది. ఈ మార్పు చేయడానికి మళ్లీ సైన్ ఇన్ చేయండి.",
+  "accountCredentialsPasswordNotSet": "మీరు Google లేదా Appleతో సైన్ ఇన్ చేశారు, కాబట్టి ఇంకా పాస్‌వర్డ్ లేదు. సైన్ ఇన్ స్క్రీన్‌లోని “పాస్‌వర్డ్ మర్చిపోయారా?” ద్వారా ఒకటి సెట్ చేయండి.",
   "@accountCredentialsNeedsSignIn": {
     "description": "Shown when the session can no longer authorize an email or password change."
   },

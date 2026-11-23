@@ -305,6 +305,8 @@ String changeEmailFailureMessage(
     ChangeEmailFailureReason.wrongPassword => l10n.changeEmailWrongPassword,
     ChangeEmailFailureReason.invalidEmail => l10n.authEmailInvalid,
     ChangeEmailFailureReason.needsSignIn => l10n.accountCredentialsNeedsSignIn,
+    ChangeEmailFailureReason.passwordNotSet =>
+      l10n.accountCredentialsPasswordNotSet,
     ChangeEmailFailureReason.rateLimited => l10n.accountCredentialsRateLimited,
     ChangeEmailFailureReason.network => l10n.accountCredentialsNetwork,
     ChangeEmailFailureReason.unknown => l10n.accountCredentialsUnknown,

@@ -3657,6 +3657,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Something went wrong. Please try again.';
 
   @override
+  String get authContinueWithApple => 'Continue with Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Continue with Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'This sign-in option isn\'t available on this device.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'This email already has a Divine account. Sign in with your email and password.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'We need your email to set up your account. Share it when you sign in, or use email and password.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'That email isn\'t verified yet. Verify it with Google or Apple first, then try again.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Not sure how you got in last time? ';
 
@@ -15163,6 +15185,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Your session ran out. Sign in again to make this change.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'You signed in with Google or Apple, so there\'s no password yet. Set one with “Forgot password?” on the sign-in screen.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show AndroidPlugin;
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
+import 'package:openvine/blocs/social_sign_in/social_sign_in_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_result.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/forgot_password_dialog.dart';
+import 'package:openvine/widgets/auth/social_sign_in_buttons.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 import 'package:openvine/widgets/rounded_icon_button.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -54,26 +56,28 @@ class LoginOptionsScreen extends ConsumerWidget {
       pendingVerificationServiceProvider,
     );
 
-    return BlocProvider(
-      create: (_) =>
-          DivineAuthCubit(
-            oauthClient: oauthClient,
-            authService: authService,
-            pendingVerificationService: pendingVerificationService,
-            validationMessages: AuthValidationMessages.fromL10n(l10n),
-          )..initialize(
-            isSignIn: true,
-            initialEmail: initialEmail,
-            initialGeneralError: initialError,
+    return SocialSignInScope(
+      child: BlocProvider(
+        create: (_) =>
+            DivineAuthCubit(
+              oauthClient: oauthClient,
+              authService: authService,
+              pendingVerificationService: pendingVerificationService,
+              validationMessages: AuthValidationMessages.fromL10n(l10n),
+            )..initialize(
+              isSignIn: true,
+              initialEmail: initialEmail,
+              initialGeneralError: initialError,
+            ),
+        child: _CommitAutofillOnAuthenticated(
+          // Re-sample the flag on each auth event rather than passing the
+          // service's own state enum through, so this screen stays clear of
+          // service-layer types (scripts/check_ui_service_boundary.sh).
+          authenticated: authService.authStateStream.map(
+            (_) => authService.isAuthenticated,
           ),
-      child: _CommitAutofillOnAuthenticated(
-        // Re-sample the flag on each auth event rather than passing the
-        // service's own state enum through, so this screen stays clear of
-        // service-layer types (scripts/check_ui_service_boundary.sh).
-        authenticated: authService.authStateStream.map(
-          (_) => authService.isAuthenticated,
+          child: const _LoginOptionsView(),
         ),
-        child: const _LoginOptionsView(),
       ),
     );
   }
@@ -346,7 +350,14 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
   @override
   Widget build(BuildContext context) {
     final isSubmitting = widget.state.isSubmitting;
-    final isDisabled = isSubmitting || _isConnectingAmber || _isConnectingNip07;
+    final isSocialSignInBusy = context.select(
+      (SocialSignInCubit cubit) => cubit.state.isBusy,
+    );
+    final isDisabled =
+        isSubmitting ||
+        _isConnectingAmber ||
+        _isConnectingNip07 ||
+        isSocialSignInBusy;
     final isNip07Available = ref.watch(authServiceProvider).isNip07Available;
 
     return CustomScrollView(
@@ -396,6 +407,14 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
                 ),
 
                 const SizedBox(height: 40),
+
+                SocialSignInButtons(
+                  enabled:
+                      !isSubmitting &&
+                      !_isConnectingAmber &&
+                      !_isConnectingNip07,
+                  bottomSpacing: 24,
+                ),
 
                 // Email + Password wrapped for password manager autofill.
                 AutofillGroup(
