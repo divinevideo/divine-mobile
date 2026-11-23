@@ -439,7 +439,7 @@ class VideoMetadataUpdateService {
         ]);
       }
 
-      tags.add(['allow_audio_reuse', editorState.offersAudioReuse.toString()]);
+      tags.add(['allow_audio_reuse', editorState.allowAudioReuse.toString()]);
       tags.add([
         'allow_video_reuse',
         editorState.offersVideoReuse.toString(),
