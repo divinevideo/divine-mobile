@@ -77,7 +77,15 @@ _lr_write_baseline() {
     print_baseline_header
     while IFS= read -r item; do
       [[ -z "$item" ]] && continue
-      reason="$(awk -F '\t' -v target="$item" '$1 == target { print $2; exit }' "$reasons_file")"
+      # Split at the first TAB-# rather than the first TAB: an item may hold
+      # a tab (relpath<TAB>kind), but never a '#', which starts its reason.
+      reason="$(awk -v target="$item" '
+        { split_at = index($0, "\t#") }
+        split_at > 0 && substr($0, 1, split_at - 1) == target {
+          print substr($0, split_at + 1)
+          exit
+        }
+      ' "$reasons_file")"
       if [[ -n "$reason" ]]; then
         printf '%s %s\n' "$item" "$reason"
       else
