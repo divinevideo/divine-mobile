@@ -294,7 +294,8 @@ class VideoGenerationTrace implements VideoGenerationRecorder {
   }
 
   /// Sets the outcome [finish] reports, with the [failureReason] behind it
-  /// when there is one. A later call replaces an earlier one.
+  /// when there is one. A later call replaces the outcome, and the reason
+  /// only when it gives one.
   void tagOutcome(VideoGenerationOutcome outcome, {String? failureReason}) {
     if (_finished) return;
     _outcome = outcome;
