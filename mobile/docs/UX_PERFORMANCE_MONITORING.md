@@ -16,7 +16,7 @@ choosing an optimization.
 | Fullscreen video playback | `video_first_frame` | Custom **`ttff_ms`**, activation to rendered native first frame; `cache=hit/miss`, `position=initial/subsequent`; optional controller/source/playback milestones measured from activation |
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
 | Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached; `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
-| Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness and video generation duration/outcome |
+| Camera and video preparation (existing) | `camera_startup`, `video_generation` | Camera readiness; video generation duration and outcome, with step `*_ms`, output and feature metrics (see below) |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
 | Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results` or `empty` when the relays answered, `fallback` when they did not and the picker showed its cached matches instead (`reason` = `timed_out`, `no_relays` or `relay_error`), `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
 
@@ -57,7 +57,7 @@ edit changed while it ran, so the editor threw the video away and, while Post
 details still waits, rendered again under its own trace), `incomplete` (a newer render
 replaced it, or it was cancelled, for example because the user left Post
 details), `failed` or `error`, with
-`failure_reason`, `clip_count` and `aspect_ratio` as before. Each step that ran
+`failure_reason`, `clip_count` and `aspect_ratio`. Each step that ran
 reports its milliseconds, so an absent step metric means the step did not
 happen: `chroma_bake_ms` (keying takes recorded with the color mask),
 `assembly_ms` (stop-motion stills to video, summed over clips), `render_ms`
