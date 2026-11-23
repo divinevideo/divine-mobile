@@ -127,7 +127,8 @@ def findings_for(platform, base, source):
         'mobile/lib/services/content_moderation', 'mobile/packages/content_blocklist_repository/lib/',
         'mobile/lib/blocs/report/', 'mobile/lib/widgets/video_feed_item/actions/report_',
         'mobile/lib/blocs/other_profile/', 'mobile/lib/widgets/profile/unavailable_profile_actions',
-        'mobile/lib/widgets/profile/blocked_user_screen', 'mobile/lib/services/report_retry_service',
+        'mobile/lib/widgets/profile/blocked_user_screen', 'mobile/lib/widgets/profile/more_sheet/',
+        'mobile/lib/services/report_retry_service',
         'mobile/lib/providers/moderation_providers', 'mobile/lib/blocs/dm/conversation_actions/',
     )) for path in paths):
         findings.append(
@@ -141,6 +142,7 @@ def findings_for(platform, base, source):
         'mobile/lib/blocs/minor_consent_', 'mobile/lib/blocs/analytics_consent/',
         'mobile/lib/services/account_deletion_', 'mobile/lib/blocs/account_deletion_',
         'mobile/lib/constants/terms_acceptance_', 'mobile/lib/services/auth_service',
+        'mobile/lib/services/auth/',
         'mobile/lib/router/routes/auth_routes', 'mobile/lib/blocs/divine_auth/',
     )) for path in paths):
         policy = APPLE if platform == 'ios' else PLAY

@@ -169,7 +169,9 @@ class StoreReviewTest(unittest.TestCase):
             'mobile/lib/blocs/report/report_submission_cubit.dart': 'moderation flows',
             'mobile/lib/widgets/video_feed_item/actions/report_action_button.dart': 'moderation flows',
             'mobile/lib/widgets/profile/unavailable_profile_actions.dart': 'moderation flows',
+            'mobile/lib/widgets/profile/more_sheet/block_confirmation_view.dart': 'moderation flows',
             'mobile/lib/services/auth_service.dart': 'reviewer access',
+            'mobile/lib/services/auth/oauth_session_coordinator.dart': 'reviewer access',
             'mobile/lib/router/routes/auth_routes.dart': 'reviewer access',
         }
         baseline = self.base
