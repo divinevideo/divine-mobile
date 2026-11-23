@@ -10,8 +10,6 @@ import 'package:keycast_flutter/keycast_flutter.dart' show SocialProvider;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/social_sign_in/social_sign_in_cubit.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_sign_in_providers.dart';
@@ -141,38 +139,35 @@ void main() {
   group(SocialSignInScope, () {
     late _MockRepository repository;
 
-    setUp(() {
-      repository = _MockRepository();
-      when(() => repository.isAvailable(any())).thenReturn(true);
-    });
+    setUp(() => repository = _MockRepository());
 
     setUpAll(() => registerFallbackValue(SocialProvider.google));
 
-    Future<void> pumpScope(WidgetTester tester, {required bool flagOn}) =>
-        tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              socialSignInRepositoryProvider.overrideWithValue(repository),
-              authServiceProvider.overrideWithValue(_MockAuthService()),
-              isFeatureEnabledProvider(
-                FeatureFlag.socialSignIn,
-              ).overrideWith((ref) => flagOn),
-            ],
-            child: _app(
-              const SocialSignInScope(child: SocialSignInButtons()),
-            ),
-          ),
-        );
+    Future<void> pumpScope(WidgetTester tester) => tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          socialSignInRepositoryProvider.overrideWithValue(repository),
+          authServiceProvider.overrideWithValue(_MockAuthService()),
+        ],
+        child: _app(const SocialSignInScope(child: SocialSignInButtons())),
+      ),
+    );
 
-    testWidgets('offers the providers when the feature is on', (tester) async {
-      await pumpScope(tester, flagOn: true);
+    testWidgets('offers the providers this device supports', (tester) async {
+      when(() => repository.isAvailable(any())).thenReturn(true);
+
+      await pumpScope(tester);
 
       expect(find.text(_l10n.authContinueWithApple), findsOneWidget);
       expect(find.text(_l10n.authContinueWithGoogle), findsOneWidget);
     });
 
-    testWidgets('offers nothing while the feature is off', (tester) async {
-      await pumpScope(tester, flagOn: false);
+    testWidgets('offers nothing on a device that supports neither', (
+      tester,
+    ) async {
+      when(() => repository.isAvailable(any())).thenReturn(false);
+
+      await pumpScope(tester);
 
       expect(find.byType(DivineButton), findsNothing);
     });

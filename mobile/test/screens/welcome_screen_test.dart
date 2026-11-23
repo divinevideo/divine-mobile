@@ -15,8 +15,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/known_account.dart';
@@ -121,7 +119,9 @@ void main() {
     bool offerSocialSignIn = false,
   }) {
     final socialSignInRepository = _MockSocialSignInRepository();
-    when(() => socialSignInRepository.isAvailable(any())).thenReturn(true);
+    when(
+      () => socialSignInRepository.isAvailable(any()),
+    ).thenReturn(offerSocialSignIn);
     final app = MaterialApp.router(
       locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
@@ -172,14 +172,9 @@ void main() {
         currentAuthStateProvider.overrideWithValue(authState),
         databaseProvider.overrideWithValue(mockDb),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-        if (offerSocialSignIn) ...[
-          socialSignInRepositoryProvider.overrideWithValue(
-            socialSignInRepository,
-          ),
-          isFeatureEnabledProvider(
-            FeatureFlag.socialSignIn,
-          ).overrideWith((ref) => true),
-        ],
+        socialSignInRepositoryProvider.overrideWithValue(
+          socialSignInRepository,
+        ),
       ],
       child: app,
     );

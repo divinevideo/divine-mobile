@@ -8,8 +8,6 @@ import 'package:keycast_flutter/keycast_flutter.dart' show SocialProvider;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/social_sign_in/social_sign_in_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/social_sign_in_providers.dart';
@@ -24,15 +22,11 @@ class SocialSignInScope extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(socialSignInRepositoryProvider);
     final authService = ref.watch(authServiceProvider);
-    final enabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.socialSignIn),
-    );
     return BlocProvider(
-      key: ValueKey((repository, authService, enabled)),
+      key: ValueKey((repository, authService)),
       create: (_) => SocialSignInCubit(
         repository: repository,
         authService: authService,
-        enabled: enabled,
       ),
       child: child,
     );

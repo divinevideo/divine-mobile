@@ -43,10 +43,9 @@ void main() {
       when(() => authService.isAuthenticated).thenReturn(true);
     });
 
-    SocialSignInCubit buildCubit({bool enabled = true}) => SocialSignInCubit(
+    SocialSignInCubit buildCubit() => SocialSignInCubit(
       repository: repository,
       authService: authService,
-      enabled: enabled,
     );
 
     const inProgressApple = SocialSignInState(
@@ -80,10 +79,6 @@ void main() {
         ).thenReturn(false);
 
         expect(buildCubit().state.availableProviders, [SocialProvider.google]);
-      });
-
-      test('offers nothing while the feature is off', () {
-        expect(buildCubit(enabled: false).state.availableProviders, isEmpty);
       });
     });
 
@@ -225,7 +220,10 @@ void main() {
 
       blocTest<SocialSignInCubit, SocialSignInState>(
         'ignores a provider it does not offer',
-        build: () => buildCubit(enabled: false),
+        setUp: () => when(
+          () => repository.isAvailable(SocialProvider.apple),
+        ).thenReturn(false),
+        build: buildCubit,
         act: (cubit) => cubit.signIn(SocialProvider.apple),
         expect: () => <SocialSignInState>[],
         verify: (_) => verifyNever(() => authService.acceptTerms()),

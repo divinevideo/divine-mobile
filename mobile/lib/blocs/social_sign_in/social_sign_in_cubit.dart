@@ -24,17 +24,14 @@ class SocialSignInCubit extends Cubit<SocialSignInState>
   SocialSignInCubit({
     required SocialSignInRepository repository,
     required AuthService authService,
-    required bool enabled,
   }) : _repository = repository,
        _authService = authService,
        super(
          SocialSignInState(
-           availableProviders: enabled
-               ? [
-                   for (final provider in _displayOrder)
-                     if (repository.isAvailable(provider)) provider,
-                 ]
-               : const [],
+           availableProviders: [
+             for (final provider in _displayOrder)
+               if (repository.isAvailable(provider)) provider,
+           ],
          ),
        );
 

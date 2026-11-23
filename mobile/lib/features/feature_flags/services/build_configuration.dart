@@ -90,8 +90,6 @@ class BuildConfiguration {
             const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
       case FeatureFlag.largeScreenLayout:
         return const bool.fromEnvironment('FF_LARGE_SCREEN_LAYOUT');
-      case FeatureFlag.socialSignIn:
-        return const bool.fromEnvironment('FF_SOCIAL_SIGN_IN');
     }
   }
 
@@ -148,8 +146,6 @@ class BuildConfiguration {
         return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
       case FeatureFlag.largeScreenLayout:
         return 'FF_LARGE_SCREEN_LAYOUT';
-      case FeatureFlag.socialSignIn:
-        return 'FF_SOCIAL_SIGN_IN';
     }
   }
 }
