@@ -39,6 +39,7 @@ import 'package:openvine/observability/camera_startup_trace.dart';
 import 'package:openvine/observability/camera_switch_trace.dart';
 import 'package:openvine/observability/clip_postprocess_trace.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/observability/stop_motion_assemble_trace.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/front_camera_mirror_preference_service.dart';
@@ -3112,6 +3113,11 @@ class VideoRecorderBloc
     final frames = state.stopMotionFrames;
     if (frames.isEmpty) return;
 
+    final trace = StopMotionAssembleTrace(
+      _performanceMonitor,
+      frames: frames.length,
+      append: event.appendToComposition,
+    );
     // Never painted (the handler is synchronous, so this is superseded before
     // the next frame) — but required: without a distinct state in between, a
     // second assemble of the same failing frame list emits a state equal to the
@@ -3126,6 +3132,7 @@ class VideoRecorderBloc
         appendToComposition: event.appendToComposition,
       );
     } catch (e, stackTrace) {
+      trace.finish(assembled: false);
       Log.warning(
         '⚠️ Stop-motion ingest failed',
         name: 'VideoRecorderBloc',
@@ -3135,6 +3142,7 @@ class VideoRecorderBloc
       emit(state.copyWith(stopMotionStatus: StopMotionStatus.failure));
       return;
     }
+    trace.finish(assembled: true);
 
     emit(
       state.copyWith(

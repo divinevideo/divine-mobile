@@ -487,4 +487,87 @@ void main() {
       },
     );
   });
+
+  group('stop_motion_assemble trace', () {
+    late Directory frameDir;
+    late List<String> framePaths;
+
+    setUp(() {
+      stubRecorder();
+      frameDir = Directory.systemTemp.createTempSync('stop_motion_trace');
+      framePaths = [
+        for (final name in ['a', 'b', 'c']) '${frameDir.path}/$name.jpg',
+      ];
+      for (final path in framePaths) {
+        File(path).writeAsBytesSync(const [0]);
+      }
+      final clip = DivineVideoClip(
+        id: 'clip_sm_a',
+        video: EditorVideo.file('/out.mp4'),
+        duration: const Duration(seconds: 1),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+      when(
+        () => clipManager.addStopMotionClip(
+          id: any(named: 'id'),
+          frames: any(named: 'frames'),
+          originalAspectRatio: any(named: 'originalAspectRatio'),
+          targetAspectRatio: any(named: 'targetAspectRatio'),
+          duration: any(named: 'duration'),
+          thumbnailPath: any(named: 'thumbnailPath'),
+          lensMetadata: any(named: 'lensMetadata'),
+        ),
+      ).thenReturn(clip);
+      when(() => clipManager.clips).thenReturn([clip]);
+      when(
+        () => clipManager.saveClipToLibrary(any()),
+      ).thenAnswer((_) async => true);
+    });
+
+    tearDown(() {
+      if (frameDir.existsSync()) frameDir.deleteSync(recursive: true);
+    });
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'reports the stills a finished session became a clip from',
+      build: buildBloc,
+      seed: () => VideoRecorderBlocState(
+        recorderMode: VideoRecorderMode.stopMotion,
+        stopMotionFrames: framePaths,
+      ),
+      act: (bloc) => bloc.add(const VideoRecorderStopMotionAssembleRequested()),
+      verify: (bloc) {
+        expect(bloc.state.stopMotionStatus, StopMotionStatus.ready);
+        final trace = tracesNamed('stop_motion_assemble').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes, {'outcome': 'success', 'append': 'no'});
+        expect(trace.metrics['frames'], 3);
+        expect(trace.metrics.keys, {'total_ms', 'frames'});
+      },
+    );
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'reports a session without a readable still as failed',
+      build: buildBloc,
+      seed: () => VideoRecorderBlocState(
+        recorderMode: VideoRecorderMode.stopMotion,
+        stopMotionFrames: ['${frameDir.path}/missing.jpg'],
+      ),
+      act: (bloc) => bloc.add(
+        const VideoRecorderStopMotionAssembleRequested(
+          appendToComposition: true,
+        ),
+      ),
+      errors: () => [isA<StateError>()],
+      verify: (bloc) {
+        expect(bloc.state.stopMotionStatus, StopMotionStatus.failure);
+        final trace = tracesNamed('stop_motion_assemble').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes, {'outcome': 'failed', 'append': 'yes'});
+        expect(trace.metrics['frames'], 1);
+      },
+    );
+  });
 }
