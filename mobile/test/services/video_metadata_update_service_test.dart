@@ -1348,7 +1348,17 @@ void main() {
           'm',
           'application/vnd.apple.mpegurl',
         ];
-        relaysHold(newerRevision(extraTags: const [hls]));
+        const oldCover = 'https://cdn.example.com/legacy-thumbnail.jpg';
+        relaysHold(
+          newerRevision(
+            extraTags: const [
+              hls,
+              ['thumb', oldCover],
+              ['image', oldCover],
+              ['r', oldCover, 'thumbnail'],
+            ],
+          ),
+        );
         when(
           () => mockBlossomUploadService.uploadImage(
             imageFile: any(named: 'imageFile'),
@@ -1367,7 +1377,22 @@ void main() {
           newThumbnailFile: File('new-thumbnail.jpg'),
         );
 
-        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          result,
+          isA<VideoUpdateSuccess>().having(
+            (success) => success.updatedEvent.thumbnailUrl,
+            'updated thumbnail',
+            thumbnailUrl,
+          ),
+        );
+        expect(
+          capturedTags,
+          containsAll([
+            ['thumb', thumbnailUrl],
+            ['image', thumbnailUrl],
+            ['r', thumbnailUrl, 'thumbnail'],
+          ]),
+        );
         expect(capturedTags.where((tag) => tag.first == 'imeta'), [
           [
             'imeta',

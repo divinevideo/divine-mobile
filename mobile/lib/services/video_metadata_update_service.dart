@@ -421,13 +421,16 @@ class VideoMetadataUpdateService {
       // Preserve every tag the edit flow does not own; the owned ones are
       // rebuilt from the editor state below.
       final isVideoReply = video.isVideoReply;
-      final preservedTags = originalTags
-          .where(
-            (tag) =>
-                !_isEditRebuiltTag(tag, isVideoReply: isVideoReply) &&
-                !isPromotedMentionPTag(tag),
-          )
-          .toList();
+      final thumbnailUrl = uploadedThumbnailUrl;
+      final preservedTags = [
+        for (final tag in originalTags)
+          if (!_isEditRebuiltTag(tag, isVideoReply: isVideoReply) &&
+              !isPromotedMentionPTag(tag))
+            if (thumbnailUrl != null && _isLegacyThumbnailTag(tag))
+              [tag.first, thumbnailUrl, ...tag.skip(2)]
+            else
+              tag,
+      ];
 
       final tags = <List<String>>[];
 
@@ -435,7 +438,6 @@ class VideoMetadataUpdateService {
       tags.add(['d', latest.dTagValue]);
 
       final imetaTags = _imetaTagsForEdit(originalTags, fallback: video);
-      final thumbnailUrl = uploadedThumbnailUrl;
       tags.addAll(
         thumbnailUrl == null
             ? imetaTags
@@ -710,6 +712,13 @@ class VideoMetadataUpdateService {
     });
     return updated..add('image $thumbnailUrl');
   }
+
+  /// Legacy clients can read the cover from these top-level tags.
+  static bool _isLegacyThumbnailTag(List<String> tag) =>
+      tag.length >= 2 &&
+      (tag.first == 'thumb' ||
+          tag.first == 'image' ||
+          (tag.first == 'r' && tag.length >= 3 && tag[2] == 'thumbnail'));
 
   static bool _isHttpUrl(String? url) {
     if (url == null || url.isEmpty) return false;
