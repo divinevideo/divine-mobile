@@ -2646,6 +2646,66 @@ void main() {
         expect(find.text(signedInTitle), findsOneWidget);
         expect(button(l10n.verifyConnectSignedInCta), findsOneWidget);
       });
+
+      // Access read "has" on the way back, yet the verifier refuses again:
+      // a purchase its gate hasn't caught up with. Offering to buy it again
+      // would be wrong, so it says to wait instead.
+      testWidgets('a second refusal after buying says Confirmation is still '
+          'on its way, with no sheet', (tester) async {
+        refuseForConfirmation();
+        await pump(
+          tester,
+          platform: twitterGated,
+          readConfirmationAccess: answering([
+            ConfirmationAccess.unknown,
+            ConfirmationAccess.has,
+          ]),
+        );
+        await refuseAndOpenSheet(tester);
+        await tester.tap(sheetButton(l10n.verifyGetConfirmation));
+        await tester.pumpAndSettle();
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+
+        await tester.tap(button(l10n.verifyConnectSignedInCta));
+        await tester.pump();
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(cubit.state.error, VerifyConnectError.confirmationPending);
+        expect(find.text(l10n.verifyErrorConfirmationPending), findsOneWidget);
+        expect(find.text(l10n.verifyErrorConfirmationRequired), findsNothing);
+        expect(find.byType(BottomSheet), findsNothing);
+        // Kept, to approve once the purchase reaches the verifier.
+        expect(cubit.state.signedInAccount, equals('jack'));
+        expect(find.text(signedInTitle), findsOneWidget);
+        expect(button(l10n.verifyConnectSignedInCta), findsOneWidget);
+      });
+
+      testWidgets('dismissing the sheet keeps the sign-in to approve or '
+          'cancel', (tester) async {
+        refuseForConfirmation();
+        await pump(
+          tester,
+          platform: twitterGated,
+          readConfirmationAccess: answering([ConfirmationAccess.unknown]),
+        );
+        await refuseAndOpenSheet(tester);
+        expect(find.byType(BottomSheet), findsOneWidget);
+
+        // The barrier above the sheet, not one of its buttons.
+        await tester.tapAt(const Offset(400, 20));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(find.text('confirmation screen'), findsNothing);
+        expect(cubit.state.signedInAccount, equals('jack'));
+        expect(find.text(signedInTitle), findsOneWidget);
+        expect(button(l10n.verifyConnectSignedInCta), findsOneWidget);
+        // The waiting sign-in still holds the proof post closed.
+        expect(fieldIn(tester, 'verify-proof-field').enabled, isFalse);
+      });
     });
   });
 }
