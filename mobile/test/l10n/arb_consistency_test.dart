@@ -632,7 +632,6 @@ const _knownUntranslatedDebt = <String>{
   'verifyErrorConfirmationUnavailable',
   'verifyErrorConfirmationPending',
   'verifyConfirmationTitle',
-  'verifyConfirmationHeroTitle',
   'verifyConfirmationHeroBody',
   'verifyConfirmationIncludedTitle',
   'verifyConfirmationIncludedSignIn',

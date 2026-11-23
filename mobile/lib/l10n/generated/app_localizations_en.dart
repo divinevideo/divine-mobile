@@ -14699,9 +14699,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verifyConfirmationTitle => 'Divine Confirmation';
 
   @override
-  String get verifyConfirmationHeroTitle => 'Divine Confirmation';
-
-  @override
   String get verifyConfirmationHeroBody =>
       'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
 

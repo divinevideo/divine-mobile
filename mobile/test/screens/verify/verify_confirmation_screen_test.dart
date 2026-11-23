@@ -36,7 +36,7 @@ void main() {
         'soon button', (tester) async {
       await _pump(tester, canBuy: true);
 
-      expect(_inBody(l10n.verifyConfirmationHeroTitle), findsOneWidget);
+      expect(_inBody(l10n.verifyConfirmationTitle), findsOneWidget);
       expect(find.text(l10n.verifyConfirmationHeroBody), findsOneWidget);
       expect(find.text(l10n.verifyConfirmationIncludedTitle), findsOneWidget);
       expect(find.text(l10n.verifyConfirmationIncludedSignIn), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
       expect(find.text(l10n.verifyConfirmationComingSoon), findsNothing);
       expect(find.text(l10n.supporterRestorePurchases), findsNothing);
       // The pitch still renders; only the buy controls are gated.
-      expect(_inBody(l10n.verifyConfirmationHeroTitle), findsOneWidget);
+      expect(_inBody(l10n.verifyConfirmationTitle), findsOneWidget);
     });
   });
 }

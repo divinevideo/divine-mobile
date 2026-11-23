@@ -11595,11 +11595,7 @@
   },
   "verifyConfirmationTitle": "Divine Confirmation",
   "@verifyConfirmationTitle": {
-    "description": "App bar title of the Divine Confirmation screen. Placeholder until #8278."
-  },
-  "verifyConfirmationHeroTitle": "Divine Confirmation",
-  "@verifyConfirmationHeroTitle": {
-    "description": "Headline of the Divine Confirmation screen. Placeholder until #8278."
+    "description": "App bar title and headline of the Divine Confirmation screen. Placeholder until #8278."
   },
   "verifyConfirmationHeroBody": "Divine Confirmation lets you link your accounts on other platforms by signing in to them.",
   "@verifyConfirmationHeroBody": {

@@ -24591,17 +24591,11 @@ abstract class AppLocalizations {
   /// **'Needs Confirmation'**
   String get verifyStatusNeedsConfirmation;
 
-  /// App bar title of the Divine Confirmation screen. Placeholder until #8278.
+  /// App bar title and headline of the Divine Confirmation screen. Placeholder until #8278.
   ///
   /// In en, this message translates to:
   /// **'Divine Confirmation'**
   String get verifyConfirmationTitle;
-
-  /// Headline of the Divine Confirmation screen. Placeholder until #8278.
-  ///
-  /// In en, this message translates to:
-  /// **'Divine Confirmation'**
-  String get verifyConfirmationHeroTitle;
 
   /// Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278.
   ///

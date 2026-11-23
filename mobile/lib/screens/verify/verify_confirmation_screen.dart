@@ -53,7 +53,7 @@ class VerifyConfirmationPage extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n.verifyConfirmationHeroTitle,
+                l10n.verifyConfirmationTitle,
                 style: textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
