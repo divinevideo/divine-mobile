@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 // A sparse/older response is not a permanent negative, but scrolling through
 // unanswered authors must not request their full profile on every mount.
@@ -15,10 +16,14 @@ const _unknownEligibilityRetryDelay = Duration(minutes: 15);
 class ProfileApiCache {
   /// Creates a read coordinator for the optional [client].
   ///
-  /// When [batchWindow] is greater than [Duration.zero], concurrent
-  /// [getProfile] calls arriving within the window are coalesced into
-  /// `/api/users/bulk` requests (chunked at [maxBulkBatchSize]), falling back
-  /// to single `GET /api/users/<pubkey>` lookups if a bulk request fails.
+  /// With a positive [batchWindow], a [getProfile] call waits up to
+  /// [batchWindow] for others: two or more go out as one `/api/users/bulk`
+  /// request of at most [maxBulkBatchSize] pubkeys, and a lone call as a
+  /// single `GET /api/users/<pubkey>`. A pubkey the bulk response leaves out,
+  /// such as an account with a pending vanish request, is asked for on its
+  /// own. If the bulk request fails, each pubkey is retried as a single GET,
+  /// unless it timed out or was rate limited; then every caller gets that
+  /// error.
   ProfileApiCache({
     required FunnelcakeApiClient? client,
     DateTime Function()? now,
@@ -43,7 +48,8 @@ class ProfileApiCache {
   /// Pubkeys whose cached eligibility answer changed during hydration.
   Stream<String> get eligibilityChanges => _eligibilityChanges.stream;
 
-  /// Cancels any pending batch timer and releases queued callers.
+  /// Cancels the pending batch timer and completes still-queued [getProfile]
+  /// calls with `null`, as for a 404. Requests already sent still complete.
   void dispose() {
     _batchTimer?.cancel();
     _batchTimer = null;
@@ -91,8 +97,8 @@ class ProfileApiCache {
 
   /// Fetches a fresh profile response, sharing any already-running request.
   ///
-  /// When constructed with a positive `batchWindow`, concurrent single-profile
-  /// reads within the window coalesce into `/api/users/bulk`.
+  /// With a positive `batchWindow`, see [ProfileApiCache.new] for how calls
+  /// are batched.
   ///
   /// Throws [FunnelcakeException] subtypes on API errors.
   Future<UserProfileResult?> getProfile(String pubkey) async {
@@ -179,38 +185,78 @@ class ProfileApiCache {
     List<String> pubkeys,
     Map<String, Completer<UserProfileResult?>> batch,
   ) async {
+    final BulkProfilesResponse response;
     try {
-      final response = await client.getBulkProfiles(pubkeys);
-      final omitted = <MapEntry<String, Completer<UserProfileResult?>>>[];
-      for (final entry in batch.entries) {
-        final result = response.profiles[entry.key];
-        // The bulk endpoint omits an account with a pending vanish request;
-        // only the single endpoint reports it.
-        if (result == null) {
-          omitted.add(entry);
-          continue;
-        }
-        _remember(entry.key, result);
-        if (!entry.value.isCompleted) entry.value.complete(result);
-        if (identical(_inFlight[entry.key], entry.value.future)) {
-          _inFlight.remove(entry.key)?.ignore();
-        }
+      response = await client.getBulkProfiles(pubkeys);
+    } on Object catch (error, stackTrace) {
+      await _settleAfterBulkFailure(client, batch, error, stackTrace);
+      return;
+    }
+    final omitted = <MapEntry<String, Completer<UserProfileResult?>>>[];
+    for (final entry in batch.entries) {
+      final result = response.profiles[entry.key];
+      // The bulk endpoint omits an account with a pending vanish request;
+      // only the single endpoint reports it.
+      if (result == null) {
+        omitted.add(entry);
+        continue;
       }
+      _remember(entry.key, result);
+      if (!entry.value.isCompleted) entry.value.complete(result);
+      if (identical(_inFlight[entry.key], entry.value.future)) {
+        _inFlight.remove(entry.key)?.ignore();
+      }
+    }
+    await Future.wait([
+      for (final entry in omitted)
+        _completeSingleFromQueue(client, entry.key, entry.value),
+    ]);
+  }
+
+  /// Answers [queued] callers after a failed bulk request: one GET each,
+  /// unless every one of those GETs would fail the same way.
+  Future<void> _settleAfterBulkFailure(
+    FunnelcakeApiClient client,
+    Map<String, Completer<UserProfileResult?>> queued,
+    Object error,
+    StackTrace stackTrace,
+  ) async {
+    // A timeout has already spent the callers' whole budget, and a 429 would
+    // come back for every pubkey.
+    final retryIndividually =
+        error is! FunnelcakeTimeoutException &&
+        !(error is FunnelcakeApiException && error.statusCode == 429);
+    final outcome = retryIndividually
+        ? 'retrying each pubkey on its own'
+        : 'not retrying';
+    Log.warning(
+      'Bulk profile request for ${queued.length} pubkeys failed; $outcome',
+      name: 'ProfileApiCache',
+      category: LogCategory.api,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    if (retryIndividually) {
       await Future.wait([
-        for (final entry in omitted)
+        for (final entry in queued.entries)
           _completeSingleFromQueue(client, entry.key, entry.value),
       ]);
-    } on Object catch (_) {
-      // Fall back to individual GETs so a transient bulk endpoint error
-      // (e.g. HTTP 500) never drops queued profile loads.
-      await Future.wait([
-        for (final entry in batch.entries)
-          _completeSingleFromQueue(client, entry.key, entry.value),
-      ]);
+      return;
+    }
+    for (final entry in queued.entries) {
+      if (identical(_inFlight[entry.key], entry.value.future)) {
+        _inFlight.remove(entry.key)?.ignore();
+      }
+      if (!entry.value.isCompleted) {
+        entry.value.completeError(error, stackTrace);
+      }
     }
   }
 
   /// Fetches a bulk response and makes its pending rows available to lookups.
+  ///
+  /// [getProfile] calls still waiting in the batch window are answered by this
+  /// request, under the rules in [ProfileApiCache.new].
   ///
   /// Throws [FunnelcakeException] subtypes on API errors.
   Future<BulkProfilesResponse?> getBulkProfiles(List<String> pubkeys) async {
@@ -265,10 +311,11 @@ class ProfileApiCache {
       }
       return response;
     } on Object catch (error, stackTrace) {
-      for (final queued in claimedQueued.values) {
-        if (!queued.isCompleted) {
-          queued.completeError(error, stackTrace);
-        }
+      if (claimedQueued.isNotEmpty) {
+        final claims = Map.of(claimedQueued);
+        // From here the fallback owns these callers' in-flight entries.
+        claimedQueued.clear();
+        unawaited(_settleAfterBulkFailure(client, claims, error, stackTrace));
       }
       rethrow;
     } finally {

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:fake_async/fake_async.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -322,6 +325,115 @@ void main() {
         expect(bulk?.profiles.keys, [pk1]);
         expect(await single, isA<UserProfileVanished>());
         expect(requests, ['POST /api/users/bulk', 'GET /api/users/$pk2']);
+      },
+    );
+
+    test('does not retry individually after a bulk request times out', () {
+      fakeAsync((async) {
+        final requests = <String>[];
+        final httpClient = MockClient((request) {
+          requests.add('${request.method} ${request.url.path}');
+          return Completer<http.Response>().future;
+        });
+        final cache = ProfileApiCache(
+          client: FunnelcakeApiClient(
+            baseUrl: 'https://profiles.example.test',
+            httpClient: httpClient,
+            timeout: const Duration(seconds: 1),
+            retryBaseDelay: Duration.zero,
+          ),
+          batchWindow: const Duration(milliseconds: 10),
+        );
+        final errors = <Object>[];
+        for (final pubkey in [_pk(1), _pk(2)]) {
+          unawaited(
+            cache.getProfile(pubkey).then<void>((_) {}, onError: errors.add),
+          );
+        }
+
+        async.elapse(const Duration(seconds: 2));
+
+        expect(errors, hasLength(2));
+        expect(errors, everyElement(isA<FunnelcakeTimeoutException>()));
+        expect(requests, ['POST /api/users/bulk']);
+        cache.dispose();
+        httpClient.close();
+      });
+    });
+
+    test('does not retry individually after a rate-limited bulk request', () {
+      fakeAsync((async) {
+        final requests = <String>[];
+        final httpClient = MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          return http.Response('slow down', 429);
+        });
+        final cache = ProfileApiCache(
+          client: FunnelcakeApiClient(
+            baseUrl: 'https://profiles.example.test',
+            httpClient: httpClient,
+            retryBaseDelay: Duration.zero,
+          ),
+          batchWindow: const Duration(milliseconds: 10),
+        );
+        final errors = <Object>[];
+        for (final pubkey in [_pk(1), _pk(2)]) {
+          unawaited(
+            cache.getProfile(pubkey).then<void>((_) {}, onError: errors.add),
+          );
+        }
+
+        async.elapse(const Duration(milliseconds: 10));
+
+        expect(errors, hasLength(2));
+        expect(
+          errors,
+          everyElement(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              429,
+            ),
+          ),
+        );
+        expect(requests, ['POST /api/users/bulk']);
+        cache.dispose();
+        httpClient.close();
+      });
+    });
+
+    test(
+      'a claimed caller retries individually when the explicit request fails',
+      () async {
+        final requests = <String>[];
+        final pk1 = _pk(1);
+        final pk2 = _pk(2);
+        final httpClient = MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          if (request.url.path == '/api/users/bulk') {
+            return http.Response('internal error', 500);
+          }
+          return http.Response(jsonEncode(_userJson(pk1)), 200);
+        });
+        addTearDown(httpClient.close);
+        final cache = ProfileApiCache(
+          client: FunnelcakeApiClient(
+            baseUrl: 'https://profiles.example.test',
+            httpClient: httpClient,
+            retryBaseDelay: Duration.zero,
+          ),
+          batchWindow: const Duration(milliseconds: 50),
+        );
+        addTearDown(cache.dispose);
+
+        final single = cache.getProfile(pk1);
+        await expectLater(
+          cache.getBulkProfiles([pk1, pk2]),
+          throwsA(isA<FunnelcakeApiException>()),
+        );
+
+        expect(await single, isA<UserProfileFound>());
+        expect(requests, ['POST /api/users/bulk', 'GET /api/users/$pk1']);
       },
     );
 
