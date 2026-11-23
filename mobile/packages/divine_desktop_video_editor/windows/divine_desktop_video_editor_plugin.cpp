@@ -58,8 +58,8 @@ class DesktopMediaPlugin : public flutter::Plugin {
         const Value* args = call.arguments();
         int64_t pid = 0;
         if (args) {
-          if (const auto* small = std::get_if<int32_t>(args)) pid = *small;
-          if (const auto* large = std::get_if<int64_t>(args)) pid = *large;
+          if (const auto* integer32 = std::get_if<int32_t>(args)) pid = *integer32;
+          if (const auto* integer64 = std::get_if<int64_t>(args)) pid = *integer64;
         }
         if (pid <= 0 || pid > std::numeric_limits<DWORD>::max() ||
             !lifetime_.Claim(static_cast<DWORD>(pid))) {
