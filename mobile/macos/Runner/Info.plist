@@ -12,6 +12,32 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>am</string>
+		<string>ar</string>
+		<string>bg</string>
+		<string>de</string>
+		<string>es</string>
+		<string>fil</string>
+		<string>fr</string>
+		<string>id</string>
+		<string>it</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>ms</string>
+		<string>nl</string>
+		<string>pl</string>
+		<string>pt</string>
+		<string>ro</string>
+		<string>sv</string>
+		<string>te</string>
+		<string>tr</string>
+		<string>ur</string>
+		<string>vi</string>
+		<string>zh</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -20,6 +46,14 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FirebaseCrashlyticsCollectionEnabled</key>
+	<true/>
+	<key>FirebaseAutomaticScreenReportingEnabled</key>
+	<false/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.social-networking</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
@@ -59,5 +93,10 @@
 	<string>Divine needs access to save videos to your Photos library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Divine needs access to your Photos library to save videos into the Divine album.</string>
+	<!-- Required by ITMS-90683: caption_generator links Apple's Speech
+	     framework on Darwin, so Mac App Store submission requires the
+	     purpose string. -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Divine uses speech recognition only when you choose to generate captions from your recording.</string>
 </dict>
 </plist>

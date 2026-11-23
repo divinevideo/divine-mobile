@@ -55,9 +55,21 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 2
 fi
 
+# Support both iOS (.app/Info.plist, .app/<exec>, .app/Frameworks) and
+# macOS (.app/Contents/Info.plist, .app/Contents/MacOS/<exec>, .app/Contents/Frameworks).
+if [ -f "$app/Contents/Info.plist" ]; then
+  info_plist="$app/Contents/Info.plist"
+  exec_dir="$app/Contents/MacOS"
+  frameworks_dir="$app/Contents/Frameworks"
+else
+  info_plist="$app/Info.plist"
+  exec_dir="$app"
+  frameworks_dir="$app/Frameworks"
+fi
+
 # plistlib rather than PlistBuddy so the guard, and its test, run on Linux too.
-executable="$(python3 -c 'import plistlib, sys; print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleExecutable", ""))' "$app/Info.plist" 2>/dev/null || true)"
-if [ -z "$executable" ] || [ ! -f "$app/$executable" ]; then
+executable="$(python3 -c 'import plistlib, sys; print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleExecutable", ""))' "$info_plist" 2>/dev/null || true)"
+if [ -z "$executable" ] || [ ! -f "$exec_dir/$executable" ]; then
   echo "❌ $app has no CFBundleExecutable binary." >&2
   exit 2
 fi
@@ -65,15 +77,19 @@ fi
 # A release build links the SDK's static frameworks into the executable; a
 # debug build puts the app code in Runner.debug.dylib beside a stub executable,
 # and the embedded Google*.framework bundles are 50 KB SPM stubs either way.
-binaries=("$app/$executable")
-for dylib in "$app"/*.dylib; do
+binaries=("$exec_dir/$executable")
+for dylib in "$exec_dir"/*.dylib; do
   [ -f "$dylib" ] && binaries+=("$dylib")
 done
-if [ -d "$app/Frameworks" ]; then
-  for fw in "$app"/Frameworks/*.framework; do
+if [ -d "$frameworks_dir" ]; then
+  for fw in "$frameworks_dir"/*.framework; do
     [ -d "$fw" ] || continue
     name="$(basename "$fw" .framework)"
-    [ -f "$fw/$name" ] && binaries+=("$fw/$name")
+    if [ -f "$fw/$name" ]; then
+      binaries+=("$fw/$name")
+    elif [ -f "$fw/Versions/Current/$name" ]; then
+      binaries+=("$fw/Versions/Current/$name")
+    fi
   done
 fi
 

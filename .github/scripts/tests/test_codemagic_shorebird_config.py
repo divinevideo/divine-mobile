@@ -1435,6 +1435,40 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("`shorebird_code_push` is a runtime dependency", self.shorebird_doc_contents)
         self.assertIn("Crashlytics", self.shorebird_doc_contents)
 
+    def test_macos_build_signs_and_packages_for_mac_app_store(self) -> None:
+        workflow = self._resolved_config()["workflows"]["macos-build"]
+        self.assertEqual(
+            workflow["integrations"]["app_store_connect"],
+            "API key for Codemagic",
+        )
+        env_vars = workflow["environment"]["vars"]
+        self.assertEqual(env_vars["BUNDLE_ID"], "co.openvine.app")
+        self.assertEqual(env_vars["FIREBASE_ANALYTICS_WITHOUT_ADID"], "true")
+
+        step_names = [step["name"] for step in workflow["scripts"]]
+        self.assertIn("Check macOS App Store configuration", step_names)
+        self.assertIn("Setup Mac App Store code signing", step_names)
+        self.assertIn("Build macOS app", step_names)
+        self.assertIn("Archive and export Mac App Store pkg", step_names)
+        self.assertLess(
+            step_names.index("Setup Mac App Store code signing"),
+            step_names.index("Build macOS app"),
+        )
+        self.assertLess(
+            step_names.index("Build macOS app"),
+            step_names.index("Archive and export Mac App Store pkg"),
+        )
+
+        build_macos = self._definition_block("build_macos")
+        self.assertNotIn("CODE_SIGNING_ALLOWED=NO", build_macos)
+        self.assertNotIn("CODE_SIGNING_REQUIRED=NO", build_macos)
+
+        self.assertIn("build/macos/pkg/*.pkg", workflow["artifacts"])
+        publishing = workflow["publishing"]["app_store_connect"]
+        self.assertEqual(publishing["auth"], "integration")
+        self.assertIs(publishing["submit_to_testflight"], True)
+        self.assertIs(publishing["submit_to_app_store"], False)
+
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")
         next_definition = re.search(

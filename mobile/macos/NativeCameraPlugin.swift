@@ -114,32 +114,20 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
         // The app only appears in the Privacy pane after it has requested
         // media access at least once.
         let privacyPane = Self.settingsPrivacyPane()
-        if let url = URL(
+        guard let url = URL(
             string:
                 "x-apple.systempreferences:com.apple.preference.security?\(privacyPane)"
-        ) {
-            NSWorkspace.shared.open(url)
-            result(true)
+        ) else {
+            Self.logger.error("Failed to construct System Settings URL")
+            result(false)
             return
         }
 
-        let task = Process()
-        task.launchPath = "/usr/bin/open"
-        task.arguments = [
-            "-b", "com.apple.systempreferences",
-            "/System/Library/PreferencePanes/Security.prefPane",
-        ]
-
-        do {
-            try task.run()
-            result(true)
-        } catch {
-            let message = error.localizedDescription
-            Self.logger.error(
-                "Failed to open System Settings: \(message, privacy: .public)"
-            )
-            result(false)
+        let opened = NSWorkspace.shared.open(url)
+        if !opened {
+            Self.logger.error("Failed to open System Settings via NSWorkspace")
         }
+        result(opened)
     }
 
     private static func settingsPrivacyPane() -> String {

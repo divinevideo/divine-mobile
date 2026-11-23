@@ -170,6 +170,42 @@ void main() {
       expect(run([]).exitCode, 2);
     });
 
+    test('scans macOS Contents/ bundle layout and versioned frameworks', () {
+      final app = Directory(
+        '${tmp.path}/${DateTime.now().microsecondsSinceEpoch}/Divine.app',
+      )..createSync(recursive: true);
+      File('${app.path}/Contents/Info.plist')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('''
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>Divine</string>
+</dict>
+</plist>
+''');
+      File('${app.path}/Contents/MacOS/Divine')
+        ..createSync(recursive: true)
+        ..writeAsStringSync(analyticsHost);
+      final fw = Directory(
+        '${app.path}/Contents/Frameworks/GoogleAdsOnDeviceConversion.framework/'
+        'Versions/Current',
+      )..createSync(recursive: true);
+      File('${fw.path}/GoogleAdsOnDeviceConversion').writeAsStringSync(adsHost);
+
+      final result = run(['--app', app.path]);
+
+      expect(result.exitCode, 1);
+      expect(
+        result.stdout,
+        contains(
+          'GoogleAdsOnDeviceConversion links Google ads-measurement code',
+        ),
+      );
+    });
+
     test('exits 2 when Info.plist names no executable', () {
       final app = bundle(executableStrings: [analyticsHost]);
       File('${app.path}/Info.plist').writeAsStringSync('''

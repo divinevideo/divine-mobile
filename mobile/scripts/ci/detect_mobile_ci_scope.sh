@@ -138,7 +138,7 @@ while IFS= read -r path; do
     # The guard manifest and its driver decide which native-gated guards run
     # and how, so editing either must schedule them the same way editing the
     # gated scripts does.
-    .gitattributes|mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/scripts/check_native_transport_security.sh|mobile/scripts/check_ios_shipping_versions.sh|mobile/scripts/check_gradle_wrapper_checksum.sh|mobile/scripts/ci/detect_mobile_ci_scope.sh|mobile/scripts/ci/guards.tsv|mobile/scripts/ci/run_guards.sh)
+    .gitattributes|mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/scripts/check_native_transport_security.sh|mobile/scripts/check_ios_shipping_versions.sh|mobile/scripts/check_macos_app_store_config.sh|mobile/scripts/check_gradle_wrapper_checksum.sh|mobile/scripts/ci/detect_mobile_ci_scope.sh|mobile/scripts/ci/guards.tsv|mobile/scripts/ci/run_guards.sh)
       native=true ;;
   esac
 
