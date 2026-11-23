@@ -43,6 +43,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
   }
 
   @override
+  Widget buildPreview(int textureId) => Texture(textureId: textureId);
+
+  @override
   Future<void> disposeCamera() async {}
 }
 
@@ -99,6 +102,7 @@ void main() {
       try {
         await tester.pumpWidget(buildSubject(enableTapToFocus: true));
 
+        expect(tester.widget<Texture>(find.byType(Texture)).textureId, 1);
         final node = tester.getSemantics(
           find.bySemanticsLabel(l10n.videoRecorderCameraPreviewLabel),
         );
