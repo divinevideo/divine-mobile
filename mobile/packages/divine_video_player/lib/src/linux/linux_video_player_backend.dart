@@ -119,6 +119,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _initialized = false;
   bool _disposed = false;
   bool _isLooping = false;
+  // A successful property acknowledgement can precede mpv's state observation.
+  // Preserve app volume requests across output replacement, including mute.
+  double? _requestedVolume;
+  double get _volume => _requestedVolume ?? _player.state.volume / 100;
   bool _hasLoadedMedia = false;
   bool _playerHasOpenedMedia = false;
   bool _ownsPlayer = false;
@@ -182,10 +186,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       if (generation != _loadGeneration) return;
       if (_playerHasOpenedMedia || _terminalError != null) {
         _changingPlayer = true;
-        final volume = _player.state.volume;
+        final volume = _volume;
         await _retirePlayer();
         _createPlayer();
-        await _player.setVolume(volume);
+        await _player.setVolume(volume * 100);
       }
       if (_disposed || generation != _loadGeneration) {
         _changingPlayer = false;
@@ -282,7 +286,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       _clipDurations.clear();
       _clipOffsets.clear();
       _currentClipIndex = 0;
-      _emitState(const DivineVideoPlayerState());
+      _emitState(const DivineVideoPlayerState().copyWith(volume: _volume));
     });
   }
 
@@ -319,6 +323,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _ensureReady();
     await _enqueue(() async {
       await _player.setVolume(volume * 100);
+      _requestedVolume = volume;
       _emitState(_state.copyWith(volume: volume));
     });
   }
@@ -421,6 +426,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _playerHasOpenedMedia = false;
     _outputReady = false;
     _terminalError = null;
+    _reportedErrorGeneration = null;
     final generation = ++_playerGeneration;
     _listenToPlayer();
     unawaited(
@@ -475,7 +481,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
 
     void report(Object error) {
-      if (isCurrent() && _activeLoadGeneration != null) _handleError(error);
+      if (isCurrent() && _activeLoadGeneration == _loadGeneration) {
+        _handleError(error);
+      }
     }
 
     _subscriptions.addAll([
@@ -736,7 +744,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         currentClipIndex: currentIndex,
         clipCount: _clips.length,
         isLooping: _isLooping,
-        volume: playerState.volume / 100,
+        volume: _volume,
         playbackSpeed: playerState.rate,
         videoWidth: playerState.width ?? 0,
         videoHeight: playerState.height ?? 0,
@@ -760,7 +768,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   void _handleError(Object error) {
     if (_disposed) return;
     _terminalError = error;
-    _reportedErrorGeneration = _loadGeneration;
+    _reportedErrorGeneration = _activeLoadGeneration;
     _emitState(
       _state.copyWith(status: PlaybackStatus.error, errorMessage: '$error'),
     );

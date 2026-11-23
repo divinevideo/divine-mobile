@@ -14,6 +14,104 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group(MediaKitLinuxVideoPlayerBackend, () {
+    test(
+      'keeps an acknowledged mute before the SDK observes its volume',
+      () async {
+        final players = <_FakePlatformPlayer>[];
+        final states = <DivineVideoPlayerState>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            final player = _FakePlatformPlayer()..deferVolumeObservation = true;
+            players.add(player);
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+        );
+        await backend.initialize(onStateChanged: states.add, onError: (_) {});
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 4)),
+        ]);
+        await backend.setVolume(0);
+        expect(players.first.state.volume, 100);
+        expect(players.first.lastVolume, 0);
+
+        await backend.setClips([
+          const VideoClip(uri: 'file:///two.mp4', end: Duration(seconds: 4)),
+        ]);
+
+        expect(players.last.lastVolume, 0);
+        expect(states.last.volume, 0);
+        await backend.stop();
+        expect(states.last.volume, 0);
+        await backend.setClips([
+          const VideoClip(uri: 'file:///three.mp4', end: Duration(seconds: 4)),
+        ]);
+        expect(players.last.lastVolume, 0);
+        expect(states.last.volume, 0);
+      },
+    );
+
+    test(
+      'does not attribute old source errors to the replacement output',
+      () async {
+        final players = <_FakePlatformPlayer>[];
+        final outputs = <_FakeVideoController>[];
+        final states = <DivineVideoPlayerState>[];
+        final errors = <Object>[];
+        final probe = Completer<Duration>();
+        final probing = Completer<void>();
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () {
+            final player = _FakePlatformPlayer();
+            players.add(player);
+            return Player(platformPlayer: player);
+          },
+          videoControllerFactory: (_) {
+            final output = _FakeVideoController();
+            outputs.add(output);
+            return output;
+          },
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+          durationProbe: (_) {
+            probing.complete();
+            return probe.future;
+          },
+        );
+        await backend.initialize(
+          onStateChanged: states.add,
+          onError: errors.add,
+        );
+        addTearDown(backend.dispose);
+        await backend.setClips([
+          const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 4)),
+        ]);
+        final replacement = backend.setClips([
+          const VideoClip(uri: 'file:///two.mp4'),
+        ]);
+        await probing.future;
+        players.first.emitPlaybackError('Retired source decoder failure');
+        await pumpEventQueue();
+        probe.complete(4.seconds);
+        await replacement;
+        final outputError = StateError('Replacement renderer failed');
+        outputs.last.ready.completeError(outputError);
+        await pumpEventQueue();
+
+        expect(states.last.status, PlaybackStatus.error);
+        expect(
+          states.last.errorMessage,
+          contains('Replacement renderer failed'),
+        );
+        expect(errors, [same(outputError)]);
+      },
+    );
+
     test('an older stop cannot unload a newer source', () async {
       final players = <_FakePlatformPlayer>[];
       final states = <DivineVideoPlayerState>[];
@@ -1232,6 +1330,7 @@ class _FakePlatformPlayer extends PlatformPlayer {
   int disposeCalls = 0;
   int setRateCalls = 0;
   StateError? volumeError;
+  bool deferVolumeObservation = false;
   Future<void>? volumeReady;
   Timer? _durationTimer;
   StateError? rateError;
@@ -1361,6 +1460,7 @@ class _FakePlatformPlayer extends PlatformPlayer {
     await volumeReady;
     if (volumeError case final error?) throw error;
     lastVolume = volume;
+    if (deferVolumeObservation) return;
     state = state.copyWith(volume: volume);
     volumeController.add(volume);
   }
