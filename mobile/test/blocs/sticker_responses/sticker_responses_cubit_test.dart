@@ -512,16 +512,13 @@ void main() {
               filter: any(named: 'filter'),
             ),
           ).thenAnswer((_) async => const VideoResponses());
-          when(
-            () => repository.fetchVideoAt(first),
-          ).thenAnswer((_) async => null);
         });
 
         blocTest<StickerResponsesCubit, StickerResponsesState>(
           'reads the chain the answer joined, not the answer itself',
           setUp: () => when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => AddYoursChainStart.starts),
+          ).thenAnswer((_) async => AddYoursChainStart.starts(root)),
           build: () => build(_region(VideoStickerKind.prompt, target: first)),
           act: (cubit) => cubit.load(),
           verify: (cubit) {
@@ -793,10 +790,7 @@ void main() {
           final first = '34236:$_creator:first';
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => AddYoursChainStart.starts);
-          when(
-            () => repository.fetchVideoAt(first),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => AddYoursChainStart.starts(root));
           when(
             () => repository.fetchJoined(
               chainRoot: any(named: 'chainRoot'),
@@ -840,19 +834,15 @@ void main() {
         );
         final answer = _video(7, pubkey: stranger, dTag: 'answer-d');
 
-        setUp(
-          () => when(
-            () => repository.chainStart(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => AddYoursChainStart.starts),
-        );
-
         blocTest<StickerResponsesCubit, StickerResponsesState>(
           "goes by who the chain's first video lets answer",
           setUp: () {
             when(
-              () => repository.fetchVideoAt(first),
+              () => repository.chainStart(first, hashtag: 'desksetup'),
             ).thenAnswer(
-              (_) async => startingWith(VideoStickerAudience.following),
+              (_) async => AddYoursChainStart.starts(
+                startingWith(VideoStickerAudience.following),
+              ),
             );
             when(
               () => repository.fetchJoined(
@@ -890,9 +880,11 @@ void main() {
           'answer',
           setUp: () {
             when(
-              () => repository.fetchVideoAt(first),
+              () => repository.chainStart(first, hashtag: 'desksetup'),
             ).thenAnswer(
-              (_) async => startingWith(VideoStickerAudience.creator),
+              (_) async => AddYoursChainStart.starts(
+                startingWith(VideoStickerAudience.creator),
+              ),
             );
             when(
               () => repository.fetchJoined(
@@ -1012,10 +1004,7 @@ void main() {
           setUp: () {
             when(
               () => repository.chainStart(first, hashtag: 'desksetup'),
-            ).thenAnswer((_) async => AddYoursChainStart.starts);
-            when(
-              () => repository.fetchVideoAt(first),
-            ).thenAnswer((_) async => start);
+            ).thenAnswer((_) async => AddYoursChainStart.starts(start));
             stubParts([part(3, 300), part(2, 200)]);
           },
           build: () => build(
@@ -1044,10 +1033,7 @@ void main() {
             ];
             when(
               () => repository.chainStart(first, hashtag: 'desksetup'),
-            ).thenAnswer((_) async => AddYoursChainStart.starts);
-            when(
-              () => repository.fetchVideoAt(first),
-            ).thenAnswer((_) async => start);
+            ).thenAnswer((_) async => AddYoursChainStart.starts(start));
             stubParts([part(3, 300), part(2, 200)]);
           },
           build: () => build(
@@ -1071,10 +1057,7 @@ void main() {
           setUp: () {
             when(
               () => repository.chainStart(first, hashtag: 'desksetup'),
-            ).thenAnswer((_) async => AddYoursChainStart.starts);
-            when(
-              () => repository.fetchVideoAt(first),
-            ).thenAnswer((_) async => start);
+            ).thenAnswer((_) async => AddYoursChainStart.starts(start));
             stubParts([part(3, 300), part(2, 200), part(1, 150)]);
             filter = (videos) => [
               for (final video in videos)

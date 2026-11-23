@@ -952,7 +952,10 @@ void main() {
           ], endedBy: QueryEnd.settledEarly);
 
           // Read starting it, so a relay that stayed silent changes nothing.
-          expect(await chainStart(_rootAddress), AddYoursChainStart.starts);
+          expect(
+            (await chainStart(_rootAddress)).video?.addressableId,
+            _rootAddress,
+          );
           final filter =
               (verify(
                         () => nostrClient.readEvents(captureAny()),

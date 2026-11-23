@@ -587,9 +587,7 @@ void main() {
           );
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => AddYoursChainStart.starts);
-          when(() => repository.fetchVideoAt(first))
-              .thenAnswer((_) async => root);
+          ).thenAnswer((_) async => AddYoursChainStart.starts(root));
           when(() => followRepository.followingPubkeys).thenReturn([]);
           await pump(tester, answer);
           await tester.pump();
@@ -606,9 +604,6 @@ void main() {
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
           ).thenAnswer((_) async => AddYoursChainStart.unconfirmed);
-          when(
-            () => repository.fetchVideoAt(first),
-          ).thenAnswer((_) async => null);
           await pump(tester, answer);
           await tester.pump();
 
@@ -697,10 +692,7 @@ void main() {
           final first = '34236:$_creator:root-d';
           when(
             () => repository.chainStart(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => AddYoursChainStart.starts);
-          when(
-            () => repository.fetchVideoAt(first),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => AddYoursChainStart.unconfirmed);
           when(
             () => repository.fetchSeriesBy(
               chainRoot: any(named: 'chainRoot'),

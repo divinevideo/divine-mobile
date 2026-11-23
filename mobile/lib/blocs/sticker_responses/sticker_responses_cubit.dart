@@ -112,24 +112,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         if (chain == null || hashtag == null) {
           responses = const VideoResponses();
         } else {
-          // The chain's first video says who may answer the chain, so an
-          // answer posted without the audience it inherited cannot open
-          // the chain to everyone. Read alongside the answers, which only
-          // an Only me series reads differently.
-          final isAnswer = chain.read != chainAddress;
-          final results = await Future.wait<Object?>([
-            if (isAnswer) _repository.fetchVideoAt(chain.read),
-            if (audience != VideoStickerAudience.creator)
-              _repository.fetchJoined(
-                chainRoot: chain.read,
-                hashtag: hashtag,
-                limit: feedLimit,
-                // Before each person's answer is picked; filtering again
-                // below changes nothing.
-                filter: _filter,
-              ),
-          ]);
-          final first = isAnswer ? results.first as VideoEvent? : _video;
+          final first = chain.first;
           audience = _stricter(
             audience,
             _chainAudience(first, chain.read, hashtag),
@@ -142,7 +125,12 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             );
             seriesStart = first;
           } else {
-            responses = results.last! as VideoResponses;
+            responses = await _repository.fetchJoined(
+              chainRoot: chain.read,
+              hashtag: hashtag,
+              limit: feedLimit,
+              filter: _filter,
+            );
           }
         }
       }
@@ -202,19 +190,20 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   /// When a relay that did not answer may hold the named video, its chain is
   /// counted but not joined: an answer would cite the wrong first video for
   /// good.
-  Future<({String read, String? join})> _chain(
+  Future<({String read, String? join, VideoEvent? first})> _chain(
     String address,
     String hashtag,
   ) async {
     final named = _region.promptChainRoot(address);
     if (named == null || named == address) {
-      return (read: address, join: address);
+      return (read: address, join: address, first: _video);
     }
-    return switch (await _repository.chainStart(named, hashtag: hashtag)) {
-      AddYoursChainStart.starts => (read: named, join: named),
-      AddYoursChainStart.doesNotStart => (read: address, join: address),
-      AddYoursChainStart.unconfirmed => (read: named, join: null),
-    };
+    final start = await _repository.chainStart(named, hashtag: hashtag);
+    if (start == AddYoursChainStart.doesNotStart) {
+      return (read: address, join: address, first: _video);
+    }
+    final first = start.video;
+    return (read: named, join: first == null ? null : named, first: first);
   }
 
   /// Whether the sticker is an Add yours only its creator may answer, by
