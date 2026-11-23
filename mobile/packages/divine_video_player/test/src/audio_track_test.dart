@@ -7,6 +7,17 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 void main() {
+  group(AudioTrackVolumePoint, () {
+    test('rejects a volume outside the playback range', () {
+      for (final volume in [-0.01, 1.01]) {
+        expect(
+          () => AudioTrackVolumePoint(time: Duration.zero, volume: volume),
+          throwsAssertionError,
+        );
+      }
+    });
+  });
+
   group(AudioTrack, () {
     group('default constructor', () {
       test('sets uri and defaults', () {

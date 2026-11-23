@@ -229,6 +229,13 @@ void main() {
     });
 
     group('initialize', () {
+      test(
+        'registers the Windows Dart implementation without native setup',
+        () {
+          expect(DivineVideoPlayerWindowsPlugin.registerWith, returnsNormally);
+        },
+      );
+
       test('sets isInitialized to true', () async {
         await initController();
 
@@ -394,6 +401,39 @@ void main() {
         expect(controller.usesLinuxBackend, isTrue);
         expect(fakeLinuxBackend.initializeCalls, 1);
       });
+
+      test(
+        'plays and disposes through the desktop backend on Windows',
+        () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+          addTearDown(() => debugDefaultTargetPlatformOverride = null);
+          final backend = _ControllerFakeLinuxBackend();
+          DivineVideoPlayerController.linuxBackendFactory = () => backend;
+          final networkUri = Uri.https('example.com', '/video.mp4');
+          final fileUri = Uri.file(r'C:\synthetic\local.mp4', windows: true);
+          final clips = [
+            VideoClip.network(networkUri.toString()),
+            VideoClip.file(fileUri.toFilePath(windows: true)),
+          ];
+
+          await controller.initialize();
+          await controller.setClips(clips);
+          await controller.play();
+          await controller.seekTo(const Duration(seconds: 2));
+          await controller.setVolume(0.4);
+          await controller.setAudioTrackVolume(0, 0.7);
+
+          expect(controller.usesLinuxBackend, isTrue);
+          expect(backend.lastClips, clips);
+          expect(backend.playCalls, 1);
+          expect(backend.lastSeekPosition, const Duration(seconds: 2));
+          expect(controller.state.volume, 0.4);
+          expect(backend.lastAudioTrackVolume, 0.7);
+
+          await controller.dispose();
+          expect(backend.disposeCalls, 1);
+        },
+      );
     });
 
     group('playback methods', () {
@@ -1339,6 +1379,32 @@ void main() {
         expect(globalCalls, isEmpty);
       });
 
+      test('disposeAll avoids the absent native channel on Windows', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                globalCalls.add(call);
+                return null;
+              },
+            );
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('divine_video_player'),
+                null,
+              ),
+        );
+
+        await DivineVideoPlayerController.disposeAll();
+
+        expect(globalCalls, isEmpty);
+      });
+
       test('configureCache is a no-op on Linux', () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.linux;
         addTearDown(
@@ -1432,6 +1498,8 @@ class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
   int? lastAudioTrackIndex;
   double? lastAudioTrackVolume;
   double? lastVolume;
+  int playCalls = 0;
+  Duration? lastSeekPosition;
   late void Function(DivineVideoPlayerState state) _onStateChanged;
 
   @override
@@ -1459,13 +1527,17 @@ class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
   Future<void> pause() async {}
 
   @override
-  Future<void> play() async {}
+  Future<void> play() async {
+    playCalls++;
+  }
 
   @override
   Future<void> removeAllAudioTracks() async {}
 
   @override
-  Future<void> seekTo(Duration position) async {}
+  Future<void> seekTo(Duration position) async {
+    lastSeekPosition = position;
+  }
 
   @override
   Future<void> setAudioTrackVolume(int index, double volume) async {

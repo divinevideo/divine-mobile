@@ -6,7 +6,7 @@ Seamless multi-clip video player using native platform APIs.
 
 - Seamless playback across multiple video clips with no delay
 - Continuous timeline with global position tracking
-- Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS); Dart backends on media_kit/mpv (Linux) and an `HTMLVideoElement` (web), each with fewer features (see the backend notes below)
+- Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS); Dart backends on media_kit/mpv (Linux/Windows) and an `HTMLVideoElement` (web), each with fewer features (see the backend notes below)
 - Buffering handled natively, plus a best-effort `preload` of upcoming clips (see below)
 - Looping, clip jumping, and playback speed control
 - Multi-track audio overlays synced to the video timeline, each at its own playback speed with unchanged pitch (`AudioTrack.playbackSpeed`; Android, iOS and macOS)
@@ -162,7 +162,7 @@ await DivineVideoPlayerController.preload([
 temporary ExoPlayer and releases it as soon as that player is first ready,
 idle or failed, and on iOS and macOS it only makes a best-effort metadata
 request. It does not send a clip's `httpHeaders`, so it cannot warm an
-authenticated source. Linux and web register no platform channel, and
+authenticated source. Linux, Windows and web register no platform channel, and
 `preload` does not check for them, so a call there throws a
 `MissingPluginException`.
 
@@ -227,7 +227,7 @@ DivineVideoPlayerController(
 - On Android, iOS and macOS, errors arrive in
   `DivineVideoPlayerState.errorCode` as a `NativePlayerErrorCode`, with
   `shouldFailover` and `isTransient` to decide whether to try another
-  source or retry. The Linux and web backends leave `errorCode` unset.
+  source or retry. The Linux, Windows and web backends leave `errorCode` unset.
 
 ### Texture rendering
 
@@ -255,25 +255,28 @@ enabled and falls back to the platform view otherwise.
 - Web: an `HTMLVideoElement` shown through `HtmlElementView`; see the web
   notes below.
 
-## Linux Backend Notes
+## Linux and Windows Backend Notes
 
-Linux uses a Dart backend built on `media_kit` rather than the package's
-platform-channel plugin path. That keeps the public `DivineVideoPlayer`
-API consistent without introducing a separate C++ Linux plugin to maintain.
+Linux and Windows use a Dart backend built on `media_kit` rather than the
+package's platform-channel plugin path. Windows bundles mpv through
+`media_kit_libs_windows_video`; Linux uses the system or application package's
+libmpv. The original `LinuxVideoPlayerBackend`, `linuxBackendFactory`,
+`usesLinuxBackend` and `buildLinuxView` names remain for compatibility and
+refer to this shared backend on both platforms.
 
-The Linux backend supports:
+The shared desktop backend supports:
 
 - HLS and MP4 playback
 - Multi-clip timelines using `media_kit` playlists with per-clip `start` and `end`
 - Play, pause, seek, loop, buffer, volume, speed, and disposal
 
-The Linux backend does not yet support overlay audio tracks via
+The shared desktop backend does not yet support overlay audio tracks via
 `setAudioTracks`. Callers that need mixed timeline audio should continue to
 use the existing mobile/macOS native backends.
 
 It also ignores a clip's `httpHeaders`, `volume`, `equalizer` and
 `trimToCommonTrackEnd`: the playlist carries only each clip's URI, `start`
-and `end`, so a source that needs request headers cannot play on Linux.
+and `end`, so a source that needs request headers cannot play on this backend.
 `setClipVolumes`, `setClipEqualizers`, `setAudioTrackEqualizer` and
 `setFrameEffects` do nothing there, and the backend does not pause when the
 app goes to the background.

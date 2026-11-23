@@ -107,6 +107,27 @@ void main() {
   }
 
   group(DivineVideoPlayer, () {
+    testWidgets('renders the desktop video surface on Windows', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        final windowsController = DivineVideoPlayerController();
+        await windowsController.initialize();
+        addTearDown(windowsController.dispose);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(controller: windowsController),
+          ),
+        );
+
+        expect(find.text('Linux player view'), findsOneWidget);
+        expect(find.text('Platform not supported'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     testWidgets('renders Linux backend view on Linux', (tester) async {
       final linuxController = await initLinuxController();
 
