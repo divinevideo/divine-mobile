@@ -5,7 +5,6 @@ library;
 
 import 'dart:convert';
 
-// ignore: implementation_imports
 import 'package:db_client/src/database/connection/connection_web.dart';
 import 'package:drift/drift.dart'
     show OpeningDetails, QueryExecutor, QueryExecutorUser;
