@@ -4,6 +4,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bip340/bip340.dart' as schnorr;
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
@@ -122,7 +124,7 @@ void main() {
         await expectLater(signer.signEvent(event), throwsStateError);
       });
 
-      test('uses native Schnorr signer when available', () async {
+      test('signs the event id with the native Schnorr signer', () async {
         when(
           () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
         ).thenAnswer((invocation) {
@@ -133,7 +135,10 @@ void main() {
         });
 
         var nativeCalls = 0;
-        final fakeSig = 'a' * 128;
+        String? signedKey;
+        String? signedMessage;
+        String? usedAux;
+        String? nativeSig;
         final signer = LocalKeySigner(
           mockKeyContainer,
           nativeSchnorrSigner:
@@ -143,10 +148,10 @@ void main() {
                 auxRand,
               }) async {
                 nativeCalls++;
-                expect(privateKey, equals(testPrivateKey));
-                expect(message, hasLength(64));
-                expect(auxRand, hasLength(64));
-                return fakeSig;
+                signedKey = privateKey;
+                signedMessage = message;
+                usedAux = auxRand;
+                return nativeSig = schnorr.sign(privateKey, message, auxRand!);
               },
         );
         final event = Event(
@@ -159,7 +164,11 @@ void main() {
         final signedEvent = await signer.signEvent(event);
 
         expect(nativeCalls, equals(1));
-        expect(signedEvent.sig, equals(fakeSig));
+        expect(signedKey, equals(testPrivateKey));
+        expect(signedMessage, equals(event.id));
+        expect(usedAux, matches(RegExp(r'^[0-9a-f]{64}$')));
+        expect(signedEvent.sig, equals(nativeSig));
+        expect(signedEvent.isSigned, isTrue);
       });
 
       test(
@@ -243,7 +252,7 @@ void main() {
       });
 
       test(
-        'uses native Schnorr signer with deterministic zero auxRand',
+        'signs the payload digest with the native signer and zero auxRand',
         () async {
           when(
             () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
@@ -254,8 +263,8 @@ void main() {
             return callback(testPrivateKey);
           });
 
+          String? capturedMessage;
           String? capturedAux;
-          final fakeSig = 'b' * 128;
           final signer = LocalKeySigner(
             mockKeyContainer,
             nativeSchnorrSigner:
@@ -264,17 +273,68 @@ void main() {
                   required message,
                   auxRand,
                 }) async {
+                  capturedMessage = message;
                   capturedAux = auxRand;
-                  return fakeSig;
+                  return schnorr.sign(privateKey, message, auxRand!);
                 },
           );
+          final payload = Uint8List.fromList([1, 2, 3]);
+          final digest = sha256.convert(payload).toString();
 
-          final sig = await signer.signCanonicalPayload(
-            Uint8List.fromList([1, 2, 3]),
+          final sig = await signer.signCanonicalPayload(payload);
+
+          expect(capturedMessage, equals(digest));
+          expect(capturedAux, equals('0' * 64));
+          // Zero aux makes BIP-340 deterministic, so both backends must agree.
+          expect(sig, equals(schnorr.sign(testPrivateKey, digest, '0' * 64)));
+        },
+      );
+
+      test(
+        'falls back to Dart signing permanently after a native signer failure',
+        () async {
+          when(
+            () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
+          ).thenAnswer((invocation) {
+            final callback =
+                invocation.positionalArguments[0]
+                    as Future<String> Function(String);
+            return callback(testPrivateKey);
+          });
+          when(
+            () => mockKeyContainer.withPrivateKey<String>(any()),
+          ).thenAnswer((invocation) {
+            final callback =
+                invocation.positionalArguments[0] as String Function(String);
+            return callback(testPrivateKey);
+          });
+
+          var nativeCalls = 0;
+          final signer = LocalKeySigner(
+            mockKeyContainer,
+            nativeSchnorrSigner:
+                ({
+                  required privateKey,
+                  required message,
+                  auxRand,
+                }) async {
+                  nativeCalls++;
+                  throw UnsupportedError('WebCrypto unavailable');
+                },
+          );
+          final payload = Uint8List.fromList([1, 2, 3]);
+          final expected = schnorr.sign(
+            testPrivateKey,
+            sha256.convert(payload).toString(),
+            '0' * 64,
           );
 
-          expect(sig, equals(fakeSig));
-          expect(capturedAux, equals('0' * 64));
+          final first = await signer.signCanonicalPayload(payload);
+          final second = await signer.signCanonicalPayload(payload);
+
+          expect(nativeCalls, equals(1));
+          expect(first, equals(expected));
+          expect(second, equals(expected));
         },
       );
     });
