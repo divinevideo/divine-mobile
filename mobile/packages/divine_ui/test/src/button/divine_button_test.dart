@@ -295,30 +295,34 @@ void main() {
         ('dark', VineTheme.theme, VineTheme.darkColors),
         ('light', VineTheme.lightTheme, VineTheme.lightColors),
       ]) {
-        testWidgets('contrast type is pure black and white in $name mode', (
-          tester,
-        ) async {
+        testWidgets('contrast type is outlined with pure black or white '
+            'content in $name mode', (tester) async {
           await tester.pumpWidget(
             buildTestWidget(
               theme: theme,
+              label: 'Continue with Apple',
               type: DivineButtonType.contrast,
               leadingIcon: DivineIconName.appleSignIn,
               onPressed: () {},
             ),
           );
 
-          final divineIcon = tester.widget<DivineIcon>(
-            find.byType(DivineIcon),
-          );
-          final ink = tester.widget<Ink>(find.byType(Ink));
-          expect(divineIcon.color, colors.onContrastSurface);
+          final decoration =
+              tester.widget<Ink>(find.byType(Ink)).decoration! as BoxDecoration;
+          final border = decoration.border! as Border;
+          final content = name == 'dark'
+              ? const Color(0xFFFFFFFF)
+              : const Color(0xFF000000);
+          expect(decoration.color, colors.outlineButtonSurface);
+          expect(border.top.width, 1);
+          expect(border.top.color, colors.outlineButtonBorder);
           expect(
-            (ink.decoration! as BoxDecoration).color,
-            colors.contrastSurface,
+            tester.widget<DivineIcon>(find.byType(DivineIcon)).color,
+            content,
           );
           expect(
-            {colors.contrastSurface, colors.onContrastSurface},
-            {const Color(0xFFFFFFFF), const Color(0xFF000000)},
+            tester.widget<Text>(find.text('Continue with Apple')).style?.color,
+            content,
           );
         });
       }
@@ -385,7 +389,7 @@ void main() {
             .toList();
         expect(icons.first.icon, DivineIconName.googleSignIn);
         expect(icons.first.color, isNull);
-        expect(icons.last.color, VineTheme.darkColors.onContrastSurface);
+        expect(icons.last.color, VineTheme.darkColors.onContrastButton);
       });
     });
 

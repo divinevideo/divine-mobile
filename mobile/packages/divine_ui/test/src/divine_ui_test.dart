@@ -115,8 +115,7 @@ void main() {
         'inverseOnSurface': (c) => c.inverseOnSurface,
         'mediaChrome': (c) => c.mediaChrome,
         'mediaChromeForeground': (c) => c.mediaChromeForeground,
-        'contrastSurface': (c) => c.contrastSurface,
-        'onContrastSurface': (c) => c.onContrastSurface,
+        'onContrastButton': (c) => c.onContrastButton,
         'outlineButtonSurface': (c) => c.outlineButtonSurface,
         'onOutlineButtonSurface': (c) => c.onOutlineButtonSurface,
         'outlineButtonBorder': (c) => c.outlineButtonBorder,
@@ -181,8 +180,7 @@ void main() {
         inverseOnSurface: color,
         mediaChrome: color,
         mediaChromeForeground: color,
-        contrastSurface: color,
-        onContrastSurface: color,
+        onContrastButton: color,
         outlineButtonSurface: color,
         onOutlineButtonSurface: color,
         outlineButtonBorder: color,
@@ -228,8 +226,7 @@ void main() {
           inverseOnSurface: const Color(0xFF000019),
           mediaChrome: const Color(0xFF00000F),
           mediaChromeForeground: const Color(0xFF000010),
-          contrastSurface: const Color(0xFF000025),
-          onContrastSurface: const Color(0xFF000026),
+          onContrastButton: const Color(0xFF000025),
           outlineButtonSurface: const Color(0xFF000027),
           onOutlineButtonSurface: const Color(0xFF000028),
           outlineButtonBorder: const Color(0xFF000029),
@@ -276,8 +273,7 @@ void main() {
         expect(copied.inverseOnSurface, const Color(0xFF000019));
         expect(copied.mediaChrome, const Color(0xFF00000F));
         expect(copied.mediaChromeForeground, const Color(0xFF000010));
-        expect(copied.contrastSurface, const Color(0xFF000025));
-        expect(copied.onContrastSurface, const Color(0xFF000026));
+        expect(copied.onContrastButton, const Color(0xFF000025));
         expect(copied.outlineButtonSurface, const Color(0xFF000027));
         expect(copied.onOutlineButtonSurface, const Color(0xFF000028));
         expect(copied.outlineButtonBorder, const Color(0xFF000029));
@@ -393,10 +389,7 @@ void main() {
             mediaChromeForeground: token == 'mediaChromeForeground'
                 ? Colors.white
                 : null,
-            contrastSurface: token == 'contrastSurface' ? Colors.white : null,
-            onContrastSurface: token == 'onContrastSurface'
-                ? Colors.white
-                : null,
+            onContrastButton: token == 'onContrastButton' ? Colors.white : null,
             outlineButtonSurface: token == 'outlineButtonSurface'
                 ? Colors.white
                 : null,

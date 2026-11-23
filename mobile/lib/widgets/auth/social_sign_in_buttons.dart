@@ -96,10 +96,10 @@ class _ProviderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    // Apple allows only a white button on a dark background (black on a
-    // light one), with its logo in the text colour. Google's quieter
-    // outlined style keeps the green "create account" button in front, and
-    // its G must keep its own colours.
+    // Both use the quiet outlined style, so the green "create account"
+    // button stays in front. Apple's custom-button rules allow it as long as
+    // the logo and title are pure white or black, which is what `contrast`
+    // adds; Google's G keeps its own colours.
     final (label, icon, type, semanticIdentifier) = switch (provider) {
       SocialProvider.apple => (
         l10n.authContinueWithApple,

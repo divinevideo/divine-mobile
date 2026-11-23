@@ -71,8 +71,7 @@ Map<String, Color> _tokens(VineThemeColors c) => {
   'inverseOnSurface': c.inverseOnSurface,
   'mediaChrome': c.mediaChrome,
   'mediaChromeForeground': c.mediaChromeForeground,
-  'contrastSurface': c.contrastSurface,
-  'onContrastSurface': c.onContrastSurface,
+  'onContrastButton': c.onContrastButton,
   'outlineButtonSurface': c.outlineButtonSurface,
   'onOutlineButtonSurface': c.onOutlineButtonSurface,
   'outlineButtonBorder': c.outlineButtonBorder,
@@ -80,6 +79,9 @@ Map<String, Color> _tokens(VineThemeColors c) => {
 
 /// Body-copy pairs, held to the WCAG AA normal-text ratio.
 const _bodyPairs = <(String, String)>[
+  // The titles of the third-party sign-in buttons.
+  ('onContrastButton', 'outlineButtonSurface'),
+  ('onOutlineButtonSurface', 'outlineButtonSurface'),
   ('primaryText', 'background'),
   ('primaryText', 'card'),
   ('primaryText', 'surface'),
@@ -139,13 +141,13 @@ const _supportingPairs = <(String, String)>[
 /// light mode. Freezing the inventory means a future palette edit that widens
 /// this blind spot has to say so.
 const _darkAmbiguousPairs = <(String, String)>[
-  // The contrast pair is pure black and white in both appearances, and only
-  // third-party sign-in buttons use it, so sharing dark values is harmless.
-  ('background', 'onContrastSurface'),
-  ('inverseSurface', 'contrastSurface'),
-  ('mediaChromeForeground', 'contrastSurface'),
-  ('onNav', 'contrastSurface'),
-  ('primaryText', 'contrastSurface'),
+  // The contrast button's content is pure white or black in both
+  // appearances, and only third-party sign-in buttons use it, so sharing dark
+  // values is harmless.
+  ('inverseSurface', 'onContrastButton'),
+  ('mediaChromeForeground', 'onContrastButton'),
+  ('onNav', 'onContrastButton'),
+  ('primaryText', 'onContrastButton'),
   ('containerLow', 'outlineMuted'),
   ('iconButton', 'skeleton'),
   ('onNavMuted', 'disabled'),
