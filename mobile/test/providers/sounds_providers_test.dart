@@ -711,13 +711,14 @@ void main() {
         return container;
       }
 
-      /// A full page of the ranking, of which the relays returned [sounds].
-      RankedSounds rankedPage(List<AudioEvent> sounds, {int? ranked}) => (
-        sounds: sounds,
-        usageCounts: {
-          for (var i = 0; i < (ranked ?? SoundsRepository.popularPageSize); i++)
-            i < sounds.length ? sounds[i].id : 'ranked-$i': i,
-        },
+      /// A page of the ranking holding [sounds], each used once.
+      SoundIndexPage rankedPage(
+        List<AudioEvent> sounds, {
+        String? nextCursor,
+      }) => indexPage(
+        sounds,
+        usageCounts: {for (final sound in sounds) sound.id: 1},
+        nextCursor: nextCursor,
       );
 
       test('loads further down the ranking as it is scrolled', () async {
@@ -726,12 +727,12 @@ void main() {
         final second = createTestAudioEvent(id: 'second');
         when(
           () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (invocation) async => switch (invocation.namedArguments[#offset]) {
-            50 => rankedPage([again, second]),
-            _ => rankedPage([first, again]),
+          (invocation) async => switch (invocation.namedArguments[#cursor]) {
+            null => rankedPage([first, again], nextCursor: 'o:50'),
+            _ => rankedPage([again, second]),
           },
         );
         final container = buildContainer();
@@ -748,25 +749,28 @@ void main() {
           [second],
         ]);
         expect(result.usageCounts['second'], 1);
+        expect(result.hasMore, isFalse);
         // The ranking moved, so a sound from the first page came round again.
-        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(1);
+        verify(
+          () => mockRepository.fetchPopularSounds(cursor: 'o:50'),
+        ).called(1);
       });
 
       test('pages on from the top after the list started over', () async {
         final first = createTestAudioEvent(id: 'first');
         final second = createTestAudioEvent(id: 'second');
-        final stalePage = Completer<RankedSounds>();
+        final stalePage = Completer<SoundIndexPage>();
         var call = 0;
         when(
           () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer((invocation) {
           // The first loadMore, overtaken by the rebuild below.
           if (call++ == 1) return stalePage.future;
-          return Future.value(switch (invocation.namedArguments[#offset]) {
-            50 => rankedPage([second]),
-            _ => rankedPage([first]),
+          return Future.value(switch (invocation.namedArguments[#cursor]) {
+            null => rankedPage([first], nextCursor: 'o:50'),
+            _ => rankedPage([second], nextCursor: 'o:100'),
           });
         });
         final container = buildContainer();
@@ -780,7 +784,7 @@ void main() {
         final stale = container.read(popularSoundsProvider.notifier).loadMore();
         container.invalidate(popularSoundsProvider);
         await container.read(popularSoundsProvider.future);
-        stalePage.complete(rankedPage([second]));
+        stalePage.complete(rankedPage([second], nextCursor: 'o:100'));
         await stale;
         await container.read(popularSoundsProvider.notifier).loadMore();
 
@@ -788,23 +792,9 @@ void main() {
           [first],
           [second],
         ]);
-        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(2);
-      });
-
-      test('ends where the ranking does', () async {
-        final last = createTestAudioEvent(id: 'last');
-        when(
-          () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
-          ),
-        ).thenAnswer((_) async => rankedPage([last], ranked: 3));
-
-        final result = await buildContainer().read(
-          popularSoundsProvider.future,
-        );
-
-        expect(result.sounds, [last]);
-        expect(result.hasMore, isFalse);
+        verify(
+          () => mockRepository.fetchPopularSounds(cursor: 'o:50'),
+        ).called(2);
       });
     });
 
@@ -1312,8 +1302,8 @@ void main() {
         final again = createTestAudioEvent(id: 'again');
         final next = createTestAudioEvent(id: 'next');
         when(
-          () => mockRepository.fetchPopularSoundsOfKind(
-            SoundKind.effect,
+          () => mockRepository.fetchPopularSounds(
+            kind: SoundKind.effect,
             cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
@@ -1341,8 +1331,8 @@ void main() {
         ]);
         expect(result.hasMore, isFalse);
         verify(
-          () => mockRepository.fetchPopularSoundsOfKind(
-            SoundKind.effect,
+          () => mockRepository.fetchPopularSounds(
+            kind: SoundKind.effect,
             cursor: 'o:50',
           ),
         ).called(1);

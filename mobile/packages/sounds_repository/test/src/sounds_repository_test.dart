@@ -1404,154 +1404,6 @@ void main() {
       },
     );
 
-    group('fetchPopularSounds', () {
-      late _MockFunnelcakeApiClient funnelcake;
-
-      setUp(() {
-        funnelcake = _MockFunnelcakeApiClient();
-        when(() => funnelcake.isAvailable).thenReturn(true);
-      });
-
-      SoundStats ranked(String id, int usageCount) => SoundStats(
-        id: id,
-        pubkey: testPubkey1,
-        title: 'Sound',
-        createdAt: DateTime.utc(2026),
-        usageCount: usageCount,
-      );
-
-      test('returns nothing without a Funnelcake client', () async {
-        final popular = await repository.fetchPopularSounds();
-
-        expect(popular.sounds, isEmpty);
-        expect(popular.usageCounts, isEmpty);
-        verifyNoIdLookup();
-      });
-
-      test('returns nothing while Funnelcake is unavailable', () async {
-        when(() => funnelcake.isAvailable).thenReturn(false);
-        final popularRepository = SoundsRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: funnelcake,
-        );
-        addTearDown(popularRepository.dispose);
-
-        final popular = await popularRepository.fetchPopularSounds();
-
-        expect(popular.sounds, isEmpty);
-        verifyNever(
-          () => funnelcake.getTrendingSounds(
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-          ),
-        );
-      });
-
-      test(
-        'keeps the Funnelcake ranking and loads the events from relays',
-        () async {
-          when(
-            () => funnelcake.getTrendingSounds(
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-            ),
-          ).thenAnswer(
-            (_) async => [
-              ranked(testEventId2, 28),
-              ranked(testEventId1, 60),
-              ranked(testVideoEventId, 5),
-            ],
-          );
-          // Returned newest first and missing the third ranked sound.
-          answerIdLookup([
-            createAudioEvent(
-              id: testEventId1,
-              pubkey: testPubkey1,
-              title: 'Older but second',
-              createdAt: 100,
-            ),
-            createAudioEvent(
-              id: testEventId2,
-              pubkey: testPubkey2,
-              title: 'Newer but first',
-              createdAt: 200,
-            ),
-          ]);
-          final popularRepository = SoundsRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: funnelcake,
-          );
-          addTearDown(popularRepository.dispose);
-
-          final popular = await popularRepository.fetchPopularSounds(
-            limit: 20,
-          );
-
-          expect(popular.sounds.map((sound) => sound.id), [
-            testEventId2,
-            testEventId1,
-          ]);
-          expect(popular.usageCounts, {
-            testEventId2: 28,
-            testEventId1: 60,
-            testVideoEventId: 5,
-          });
-          verify(
-            () => funnelcake.getTrendingSounds(
-              limit: 20,
-              offset: any(named: 'offset'),
-            ),
-          ).called(1);
-          expect(idLookups(), [
-            [testEventId2, testEventId1, testVideoEventId],
-          ]);
-        },
-      );
-
-      test('asks Funnelcake for the ranking past offset', () async {
-        when(
-          () => funnelcake.getTrendingSounds(
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-          ),
-        ).thenAnswer((_) async => const []);
-        final popularRepository = SoundsRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: funnelcake,
-        );
-        addTearDown(popularRepository.dispose);
-
-        await popularRepository.fetchPopularSounds(offset: 100);
-
-        verify(
-          () => funnelcake.getTrendingSounds(
-            limit: any(named: 'limit'),
-            offset: 100,
-          ),
-        ).called(1);
-      });
-
-      test('skips the relay when Funnelcake ranks nothing', () async {
-        when(
-          () => funnelcake.getTrendingSounds(
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-          ),
-        ).thenAnswer((_) async => [ranked('', 3)]);
-        final popularRepository = SoundsRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: funnelcake,
-        );
-        addTearDown(popularRepository.dispose);
-
-        final popular = await popularRepository.fetchPopularSounds();
-
-        expect(popular.sounds, isEmpty);
-        expect(popular.usageCounts, isEmpty);
-        verifyNoIdLookup();
-      });
-    });
-
     group('the sounds a ranking names', () {
       late _MockFunnelcakeApiClient funnelcake;
       late SoundsRepository ranking;
@@ -1570,21 +1422,26 @@ void main() {
         funnelcake = _MockFunnelcakeApiClient();
         when(() => funnelcake.isAvailable).thenReturn(true);
         when(
-          () => funnelcake.getTrendingSounds(
+          () => funnelcake.listSounds(
+            sort: any(named: 'sort'),
+            authors: any(named: 'authors'),
+            kind: any(named: 'kind'),
             limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (_) async => [
-            for (final id in [testEventId1, testEventId2])
-              SoundStats(
-                id: id,
-                pubkey: testPubkey1,
-                title: 'Sound',
-                createdAt: DateTime.utc(2026),
-                usageCount: 1,
-              ),
-          ],
+          (_) async => SoundSearchResponse(
+            sounds: [
+              for (final id in [testEventId1, testEventId2])
+                SoundStats(
+                  id: id,
+                  pubkey: testPubkey1,
+                  title: 'Sound',
+                  createdAt: DateTime.utc(2026),
+                  usageCount: 1,
+                ),
+            ],
+          ),
         );
         ranking = SoundsRepository(
           nostrClient: mockNostrClient,
@@ -2254,14 +2111,29 @@ void main() {
         });
       });
 
-      group('fetchPopularSoundsOfKind', () {
-        test('lists them by trend', () async {
-          await lists.fetchPopularSoundsOfKind(SoundKind.music);
+      group('fetchPopularSounds', () {
+        test('lists them by trend in the index order', () async {
+          final page = await lists.fetchPopularSounds();
+
+          expect(page.sounds.map((sound) => sound.id), [
+            testEventId2,
+            testEventId1,
+          ]);
+          expect(page.usageCounts, {testEventId2: 3, testEventId1: 7});
+          expect(page.nextCursor, 'o:100');
+          verify(
+            () => funnelcake.listSounds(sort: SoundListSort.trending),
+          ).called(1);
+        });
+
+        test('lists those of a kind from where the cursor points', () async {
+          await lists.fetchPopularSounds(kind: SoundKind.music, cursor: 'o:50');
 
           verify(
             () => funnelcake.listSounds(
               sort: SoundListSort.trending,
               kind: SoundKind.music,
+              cursor: 'o:50',
             ),
           ).called(1);
         });
@@ -2276,7 +2148,7 @@ void main() {
             ),
           ]);
 
-          final page = await lists.fetchPopularSoundsOfKind(SoundKind.music);
+          final page = await lists.fetchPopularSounds();
 
           expect(page.sounds.map((sound) => sound.id), [testEventId1]);
         });
@@ -2285,7 +2157,7 @@ void main() {
             'configured', () async {
           when(() => funnelcake.isAvailable).thenReturn(false);
 
-          final page = await lists.fetchPopularSoundsOfKind(SoundKind.effect);
+          final page = await lists.fetchPopularSounds(kind: SoundKind.effect);
 
           expect(page.sounds, isEmpty);
           expect(page.nextCursor, isNull);
@@ -2564,21 +2436,26 @@ void main() {
 
       test('leaves them out of Popular, keeping their counts', () async {
         when(
-          () => funnelcake.getTrendingSounds(
+          () => funnelcake.listSounds(
+            sort: any(named: 'sort'),
+            authors: any(named: 'authors'),
+            kind: any(named: 'kind'),
             limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (_) async => [
-            for (final id in [testEventId1, testEventId2])
-              SoundStats(
-                id: id,
-                pubkey: testPubkey1,
-                title: 'Sound',
-                createdAt: DateTime.utc(2026),
-                usageCount: 3,
-              ),
-          ],
+          (_) async => SoundSearchResponse(
+            sounds: [
+              for (final id in [testEventId1, testEventId2])
+                SoundStats(
+                  id: id,
+                  pubkey: testPubkey1,
+                  title: 'Sound',
+                  createdAt: DateTime.utc(2026),
+                  usageCount: 3,
+                ),
+            ],
+          ),
         );
 
         final popular = await blocking.fetchPopularSounds();

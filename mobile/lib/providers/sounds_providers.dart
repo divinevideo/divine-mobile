@@ -278,8 +278,8 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
           kind: kind,
           cursor: cursor,
         ),
-        SoundListOfKind.popular => repository.fetchPopularSoundsOfKind(
-          kind,
+        SoundListOfKind.popular => repository.fetchPopularSounds(
+          kind: kind,
           cursor: cursor,
         ),
         SoundListOfKind.followed => repository.fetchFollowedSounds(
@@ -436,7 +436,7 @@ Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
 /// ```
 @riverpod
 class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
-  late _RankingPager _pager;
+  late _CursorPager _pager;
 
   @override
   Future<PagedSounds> build() async {
@@ -444,38 +444,15 @@ class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
     // Made anew with each build, so a page still loading for the list this
-    // build replaced cannot move the new one's offset.
-    _pager = _RankingPager(repository);
+    // build replaced cannot move the new one's cursor.
+    _pager = _CursorPager(
+      (cursor) => repository.fetchPopularSounds(cursor: cursor),
+    );
     return PagedSounds.first(await _pager.next());
   }
 
   @override
   Future<SoundPage> _nextPage() => _pager.next();
-}
-
-/// Walks the Funnelcake ranking down, a page per [next], each holding only
-/// sounds the pages before it did not.
-class _RankingPager {
-  _RankingPager(this._repository);
-
-  final SoundsRepository _repository;
-  final _seen = <String>{};
-  var _offset = 0;
-
-  Future<SoundPage> next() async {
-    final popular = await _repository.fetchPopularSounds(offset: _offset);
-    _offset += SoundsRepository.popularPageSize;
-    // The ranking moves while it is paged through, so a sound can come
-    // round again on a later page.
-    return (
-      sounds: [
-        for (final sound in popular.sounds)
-          if (_seen.add(sound.id)) sound,
-      ],
-      usageCounts: popular.usageCounts,
-      hasMore: popular.usageCounts.length >= SoundsRepository.popularPageSize,
-    );
-  }
 }
 
 /// Divine's own sounds published on the network, for the picker to show

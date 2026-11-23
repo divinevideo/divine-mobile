@@ -105,8 +105,13 @@ class SoundStats {
   );
 }
 
-/// [json] as a signed event, or `null` when it is not one: missing, or with
-/// a field of the wrong type, which [Event.fromJson] would throw on.
+/// [json] as a signed event, or `null` when it is not one: missing, with a
+/// field of the wrong type, which [Event.fromJson] would throw on, or with an
+/// id that is not the hash of its content, so a changed event is not cached
+/// under the id of the original.
+///
+/// Its signature is not verified: like the other events Funnelcake serves,
+/// it is trusted as the app's own index.
 Event? _signedEvent(Object? json) {
   if (json is! Map<String, dynamic>) return null;
   final tags = json['tags'];
@@ -119,5 +124,7 @@ Event? _signedEvent(Object? json) {
       json['sig'] is String &&
       tags is List &&
       tags.every((tag) => tag is List && tag.every((value) => value is String));
-  return wellFormed ? Event.fromJson(json) : null;
+  if (!wellFormed) return null;
+  final event = Event.fromJson(json);
+  return event.isValid ? event : null;
 }

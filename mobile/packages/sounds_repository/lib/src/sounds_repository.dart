@@ -24,13 +24,6 @@ import 'package:sounds_repository/src/sound_library_api_client.dart';
 import 'package:sounds_repository/src/sound_search_page_exception.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// The sounds being picked up right now, the most trending first, with the
-/// number of videos that use each, keyed by event id.
-typedef RankedSounds = ({
-  List<AudioEvent> sounds,
-  Map<String, int> usageCounts,
-});
-
 /// One page of a sound list from Funnelcake's sound index: its sounds, in
 /// the index's order, Funnelcake's count of the videos using each, keyed by
 /// event id, and the cursor of the page after it, `null` on the last.
@@ -125,10 +118,6 @@ class SoundsRepository {
 
   /// Default cap on the Divine library sounds one [fetchDivineSounds] pulls.
   static const int maxDivineSounds = 500;
-
-  /// How many of the ranking [fetchPopularSounds] asks for unless told
-  /// otherwise, and so how far apart its pages' offsets are.
-  static const int popularPageSize = 50;
 
   /// Default cap on the video events one batched usage-count query pulls.
   ///
@@ -329,41 +318,6 @@ class SoundsRepository {
       );
       rethrow;
     }
-  }
-
-  /// Fetch the sounds people are picking up right now, the most trending
-  /// first, with how many videos use each.
-  ///
-  /// Funnelcake ranks them; the events come from the relays, so each sound
-  /// carries the reuse and source-video tags the picker relies on. A ranked
-  /// sound no relay returns is left out. The usage counts are Funnelcake's,
-  /// keyed by event id, since they are what the ranking is built on.
-  ///
-  /// [offset] skips that many of the ranking, for the pages after the
-  /// first. The usage counts hold an entry for every ranked sound, so fewer
-  /// of them than [limit] means the ranking ends with this page.
-  ///
-  /// Returns no sounds when no Funnelcake client is available.
-  ///
-  /// Throws whatever the Funnelcake request or the relay query throws.
-  Future<RankedSounds> fetchPopularSounds({
-    int limit = popularPageSize,
-    int offset = 0,
-  }) async {
-    final client = _funnelcakeApiClient;
-    if (client == null || !client.isAvailable) {
-      return (sounds: const <AudioEvent>[], usageCounts: const <String, int>{});
-    }
-
-    final ranked = await client.getTrendingSounds(limit: limit, offset: offset);
-    final usageCounts = {
-      for (final sound in ranked)
-        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
-    };
-    return (
-      sounds: withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
-      usageCounts: usageCounts,
-    );
   }
 
   /// How long [_soundsInOrder] waits for every relay to answer on the shared
@@ -783,16 +737,18 @@ class SoundsRepository {
   Future<SoundIndexPage> fetchNewestSounds({SoundKind? kind, String? cursor}) =>
       _newestSoundList(kind: kind, cursor: cursor);
 
-  /// The sounds of [kind] people are picking up, the most trending first, a
-  /// page at a time: the picker's Popular list with a kind chosen.
+  /// The sounds people are picking up right now, the most trending first,
+  /// of [kind] when one is given, a page at a time: the picker's Popular
+  /// list.
   ///
   /// From Funnelcake's sound index, like [fetchNewestSounds], but keeping a
-  /// video's own sound, which only ranks once people use it. A single empty
-  /// page, without asking, when no Funnelcake client is available; throws
-  /// what the Funnelcake request or the relay lookup throws, as there is no
-  /// ranking to fall back on.
-  Future<SoundIndexPage> fetchPopularSoundsOfKind(
-    SoundKind kind, {
+  /// video's own sound, which only ranks once people use it. The usage
+  /// counts are Funnelcake's, since they are what the ranking is built on. A
+  /// single empty page, without asking, when no Funnelcake client is
+  /// available; throws what the Funnelcake request or the relay lookup
+  /// throws, as there is no ranking to fall back on.
+  Future<SoundIndexPage> fetchPopularSounds({
+    SoundKind? kind,
     String? cursor,
   }) async {
     final client = _funnelcakeApiClient;

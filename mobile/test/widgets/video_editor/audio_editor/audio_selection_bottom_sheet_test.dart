@@ -43,7 +43,7 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show RankedSounds, SoundSearchRelays, SoundSearchSource, SoundsRepository;
+    show SoundSearchRelays, SoundSearchSource, SoundsRepository;
 
 import '../../../helpers/recording_analytics_event_sink.dart';
 import '../../../helpers/recording_performance_monitor.dart';
@@ -155,10 +155,11 @@ void main() {
       Map<String, int> forYouUsageCounts = const {},
       List<List<AudioEvent>> laterForYouPages = const [],
       List<AudioEvent> divineSounds = const [],
-      RankedSounds popularSounds = (
-        sounds: const <AudioEvent>[],
-        usageCounts: const <String, int>{},
-      ),
+      ({List<AudioEvent> sounds, Map<String, int> usageCounts}) popularSounds =
+          (
+            sounds: const <AudioEvent>[],
+            usageCounts: const <String, int>{},
+          ),
       Map<String, List<AudioEvent>> searchResults = const {},
       Map<String, List<AudioEvent>> followedSearchResults = const {},
       Map<(SoundKind, SoundListOfKind), List<AudioEvent>> kindLists = const {},

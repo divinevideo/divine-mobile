@@ -1,4 +1,5 @@
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -28,28 +29,30 @@ void main() {
       });
 
       group('events', () {
-        Map<String, dynamic> signed(String id, {int kind = 1063}) => {
-          'id': id,
-          'pubkey': 'a' * 64,
-          'created_at': 1780000000,
-          'kind': kind,
-          'tags': [
+        final privateKey = generatePrivateKey();
+        Map<String, dynamic> signed({int kind = 1063}) => (Event(
+          getPublicKey(privateKey),
+          kind,
+          [
             ['d', 'clip'],
           ],
-          'content': '',
-          'sig': 'b' * 128,
-        };
+          '',
+          createdAt: 1780000000,
+        )..sign(privateKey)).toJson();
 
         test('reads the sound event and its source video', () {
+          final event = signed();
+          final source = signed(kind: 34236);
+
           final sound = SoundStats.fromJson({
-            'event': signed('sound'),
-            'source_event': signed('video', kind: 34236),
+            'event': event,
+            'source_event': source,
           });
 
-          expect(sound.event?.id, equals('sound'));
+          expect(sound.event?.id, equals(event['id']));
           expect(sound.event?.kind, equals(1063));
           expect(sound.sourceEventKnown, isTrue);
-          expect(sound.sourceEvent?.id, equals('video'));
+          expect(sound.sourceEvent?.id, equals(source['id']));
           expect(sound.sourceEvent?.tags, [
             ['d', 'clip'],
           ]);
@@ -71,13 +74,14 @@ void main() {
         });
 
         test('reads an unreadable source as unknown, not as gone', () {
-          final unsigned = signed('video')..remove('sig');
-          final badTag = signed('video')
+          final unsigned = signed(kind: 34236)..remove('sig');
+          final badTag = signed(kind: 34236)
             ..['tags'] = [
               ['d', 7],
             ];
+          final changed = signed(kind: 34236)..['content'] = 'changed';
 
-          for (final source in [unsigned, badTag, 'video']) {
+          for (final source in [unsigned, badTag, changed, 'video']) {
             final sound = SoundStats.fromJson({
               'event': badTag,
               'source_event': source,
@@ -88,6 +92,17 @@ void main() {
             expect(sound.sourceEvent, isNull);
           }
         });
+
+        test(
+          'leaves out a sound event whose id does not match its content',
+          () {
+            final sound = SoundStats.fromJson({
+              'event': signed()..['content'] = 'changed',
+            });
+
+            expect(sound.event, isNull);
+          },
+        );
       });
     });
 
