@@ -107,6 +107,16 @@ class PushNotificationService {
   /// callers run one attempt of a kind at a time: preferences through
   /// `NotificationPreferencesService`'s publication chain, registration
   /// through the session coordinator's single operation.
+  ///
+  /// A kept event lives only as long as this instance, which serves one
+  /// session. Re-sending a kept registration is safe only while no
+  /// deregistration (kind 3080) comes between: the push service orders the two
+  /// by `created_at`, so it would ignore the older registration while the
+  /// relay confirmed it. Every deregistration first calls
+  /// [deactivateRegistration], after which this instance registers nothing.
+  /// The push service also ignores events older than its 7-day replay window;
+  /// a kept event reaches that age only if one session retries the same
+  /// unconfirmed request for a week.
   final _unconfirmedEvents = <int, ({String request, Event event})>{};
 
   static String _pushControlRequest(

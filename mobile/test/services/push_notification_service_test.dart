@@ -803,6 +803,34 @@ void main() {
           expect(published, [same(first), same(second)]);
           service.dispose();
         });
+
+        // Every deregistration deactivates the service first, and the push
+        // service would ignore a registration older than that deregistration.
+        test(
+          'does not re-send the kept registration once deactivated',
+          () async {
+            final first = _eventWithId('first-registration-event-id');
+            final published = stubSignAndPublish(
+              PushNotificationService.pushRegistrationKind,
+              [first, _eventWithId('second-registration-event-id')],
+              [silentOutcome, acceptedOutcome],
+            );
+            final service = buildService();
+
+            expect(
+              await service.register(testPubkey),
+              PushRegistrationResult.uncertainFailure,
+            );
+            service.deactivateRegistration();
+            expect(
+              await service.register(testPubkey),
+              PushRegistrationResult.terminalFailure,
+            );
+
+            expect(published, [same(first)]);
+            service.dispose();
+          },
+        );
       });
     });
 
