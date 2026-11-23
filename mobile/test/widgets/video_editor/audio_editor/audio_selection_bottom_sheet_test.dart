@@ -38,6 +38,7 @@ import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_kind_filter_pill.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -181,6 +182,7 @@ void main() {
       SoundPickerTelemetry? telemetry,
       Completer<List<AudioEvent>>? pendingSearch,
       Map<String, Completer<List<AudioEvent>>> pendingSearches = const {},
+      Map<SoundListOfKind, Completer<PagedSounds>> pendingKindLists = const {},
       bool routed = false,
     }) {
       final blocklist = _MockContentBlocklistRepository();
@@ -327,12 +329,16 @@ void main() {
             }),
             // Always overridden: the real ones ask Funnelcake and the relays.
             soundsOfKindProvider.overrideWithBuild(
-              (_, notifier) async => PagedSounds(
-                pages: [
-                  kindLists[(notifier.kind, notifier.list)] ??
-                      const <AudioEvent>[],
-                ],
-              ),
+              (_, notifier) async {
+                final pending = pendingKindLists[notifier.list];
+                if (pending != null) return pending.future;
+                return PagedSounds(
+                  pages: [
+                    kindLists[(notifier.kind, notifier.list)] ??
+                        const <AudioEvent>[],
+                  ],
+                );
+              },
             ),
             soundsOfKindCoversProvider.overrideWith(
               (_, _) async => const <String, SoundCover?>{},
@@ -1761,6 +1767,118 @@ void main() {
       });
 
       group('answered by Funnelcake', () {
+        testWidgets('waits for the typed query and reuses a settled answer '
+            'if the query is edited back', (tester) async {
+          final beta = Completer<List<AudioEvent>>();
+          final sentQueries = <String>[];
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'alpha': [
+                  _createTestAudioEvent(id: 'answer-a', title: 'Answer A'),
+                ],
+              },
+              pendingSearches: {'beta': beta},
+              relaySearches: sentQueries,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          final field = find.byType(TextField).first;
+          await tester.enterText(field, 'alpha');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+          expect(find.text('Answer A'), findsOneWidget);
+          tester.takeAnnouncements();
+
+          await tester.enterText(field, 'beta');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.enterText(field, 'gamma');
+          await tester.pump();
+          beta.complete([
+            _createTestAudioEvent(id: 'answer-b', title: 'Answer B'),
+          ]);
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.text('Answer B'), findsNothing);
+          expect(find.text('Answer A'), findsOneWidget);
+          expect(tester.takeAnnouncements(), isEmpty);
+
+          await tester.enterText(field, 'beta');
+          await tester.pumpAndSettle();
+
+          expect(find.text('Answer B'), findsOneWidget);
+          expect(find.text('Answer A'), findsNothing);
+          expect(sentQueries, ['alpha', 'beta']);
+          expect(
+            tester.takeAnnouncements().map(
+              (announcement) => announcement.message,
+            ),
+            [l10n.soundsSearchResultCount(1)],
+          );
+        });
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        for (final (list, label) in [
+          (SoundListOfKind.followed, l10n.exploreTabForYou),
+          (SoundListOfKind.popular, l10n.exploreTabPopular),
+          (SoundListOfKind.newest, l10n.exploreTabNew),
+        ]) {
+          testWidgets('keeps ranked results on ${list.name} while the kind '
+              'browse list loads', (tester) async {
+            final browse = Completer<PagedSounds>();
+            final filtered = Completer<List<AudioEvent>>();
+            final searches = <String, Completer<List<AudioEvent>>>{};
+            final ranked = {
+              'rain': [
+                _createTestAudioEvent(id: 'ranked-rain', title: 'Ranked rain'),
+              ],
+            };
+            await tester.pumpWidget(
+              buildWidget(
+                trendingSoundsAsync: AsyncValue.data(testSounds),
+                searchSource: SoundSearchSource.funnelcake,
+                searchResults: ranked,
+                followedSearchResults: ranked,
+                pendingSearches: searches,
+                pendingKindLists: {list: browse},
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(label));
+            await tester.pumpAndSettle();
+            await tester.enterText(find.byType(TextField).first, 'rain');
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.pumpAndSettle();
+            expect(find.text('Ranked rain'), findsOneWidget);
+
+            searches['rain'] = filtered;
+            tester
+                .widget<AudioKindFilterPill>(find.byType(AudioKindFilterPill))
+                .onChanged(SoundKind.effect);
+            await tester.pump();
+
+            expect(find.text('Ranked rain'), findsOneWidget);
+            expect(find.byType(DivineLinearProgressIndicator), findsOneWidget);
+
+            filtered.complete([
+              _createTestAudioEvent(id: 'rain-hit', title: 'Rain hit'),
+            ]);
+            await tester.pumpAndSettle();
+
+            expect(find.text('Rain hit'), findsOneWidget);
+            expect(find.text('Ranked rain'), findsNothing);
+            expect(find.byType(DivineLinearProgressIndicator), findsNothing);
+            browse.complete(const PagedSounds(pages: []));
+            await tester.pumpAndSettle();
+          });
+        }
+
         testWidgets('shows rows loading, not the loaded rows that match as '
             'typed, until it first answers', (tester) async {
           final answer = Completer<List<AudioEvent>>();

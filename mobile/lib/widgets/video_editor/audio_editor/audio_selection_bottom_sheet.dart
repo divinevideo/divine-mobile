@@ -352,6 +352,11 @@ class _AudioSelectionBottomSheetState
       pages, {
       required wasSettled,
     }) {
+      // A newer edit can still be debouncing when this answer lands.
+      if (search.query != _searchQuery) {
+        _awaitedSearch = null;
+        return;
+      }
       // A failed search tells nothing about who would have answered it.
       final source = pages.hasValue
           ? ref.read(_searchResultsOf(search)).value?.source
@@ -439,7 +444,11 @@ class _AudioSelectionBottomSheetState
       return;
     }
     setState(() => _searchQuery = typed);
-    if (_searchQuery == _debouncedQuery) return;
+    if (_searchQuery == _debouncedQuery) {
+      // An edit back to the dispatched query can use its settled answer.
+      _awaitSearchAnswer();
+      return;
+    }
     _searchDebounce = Timer(_searchDebounceDelay, () {
       if (!mounted) return;
       setState(() => _debouncedQuery = _searchQuery);
@@ -1161,7 +1170,7 @@ class _AudioSelectionBottomSheetState
     // The search whose answer the open tab shows, which a screen reader
     // hears how many sounds it found as it lands.
     final answeredSearch = switch (searchViewIn(_category)) {
-      _SearchView.found => (_category, foundAnswer?.search),
+      _SearchView.found when !foundIsStale => (_category, foundAnswer?.search),
       _SearchView.typed
           when _debouncedQuery == _searchQuery &&
               soundSearchSendsQuery(_searchQuery) &&
@@ -1237,6 +1246,23 @@ class _AudioSelectionBottomSheetState
     final emptyState = isNarrowed ? searchEmptyState : const _EmptyState();
     const loadingState = Center(child: BrandedLoadingIndicator());
     const searchLoadingState = _SearchLoadingState();
+    // Ranked search has its own data and covers, so browse readiness only
+    // controls the unsearched and as-typed views.
+    Widget searchOrBrowse({
+      required AudioCategory tab,
+      required AsyncValue<PagedSounds> browse,
+      required Widget Function(PagedSounds?, _FoundSounds?) content,
+      required VoidCallback retryBrowse,
+    }) => switch (searchViewIn(tab)) {
+      _SearchView.pending => searchLoadingState,
+      _SearchView.found => content(browse.value, foundAnswer),
+      _SearchView.none || _SearchView.typed => browse.when(
+        data: (list) => content(list, null),
+        loading: () => loadingState,
+        error: (error, _) => _ErrorState(error: error, onRetry: retryBrowse),
+      ),
+    };
+
     // A list loads its next page when scrolled to its end, but not while a
     // search narrows it: a search orders it by fit, which changes with every
     // page, and may match nothing a page brings, so the end would stay in
@@ -1260,10 +1286,12 @@ class _AudioSelectionBottomSheetState
           // Sounds from people the viewer follows, ranked in among Divine's own
           // by how new they are. Divine's are always there, so a failed or empty
           // lookup still leaves a list rather than an error.
-          if (!forYouAsync.hasValue && !forYouAsync.hasError)
-            loadingState
-          else if (searchViewIn(AudioCategory.forYou) == _SearchView.pending)
+          if (searchViewIn(AudioCategory.forYou) == _SearchView.pending)
             searchLoadingState
+          else if (forYouFound == null &&
+              !forYouAsync.hasValue &&
+              !forYouAsync.hasError)
+            loadingState
           else
             _PendingAnswerBar(
               isPending: forYouFound != null && foundIsStale,
@@ -1324,13 +1352,13 @@ class _AudioSelectionBottomSheetState
                 answeredSearch: answeredIn(AudioCategory.forYou),
               ),
             ),
-          popularAsync.when(
-            data: (popular) {
-              if (searchViewIn(AudioCategory.popular) == _SearchView.pending) {
-                return searchLoadingState;
-              }
-              final found = foundIn(AudioCategory.popular);
-              final listed = {for (final sound in popular.sounds) sound.id};
+          searchOrBrowse(
+            tab: AudioCategory.popular,
+            browse: popularAsync,
+            retryBrowse: () => ref.invalidate(popularList),
+            content: (popular, found) {
+              final popularSounds = popular?.sounds ?? const <AudioEvent>[];
+              final listed = {for (final sound in popularSounds) sound.id};
               // A search result's video is looked up with the search.
               bool canBeReused(AudioEvent sound) => !_cannotBeReused(
                 sound,
@@ -1344,16 +1372,17 @@ class _AudioSelectionBottomSheetState
                   sounds: found != null
                       ? found.pages.sounds.where(canBeReused).toList()
                       : _soundsBySearchFit(
-                          _filterAudioEvents(
-                            popular.sounds,
-                          ).where(canBeReused).toList(),
+                          _filterAudioEvents(popularSounds)
+                              .where(canBeReused)
+                              .toList(),
                         ),
                   selectedSound: _selectedItem,
                   audioService: _audioService,
                   onSelect: _selectSound,
-                  usageCounts: found == null
-                      ? popular.usageCounts
-                      : {...popular.usageCounts, ...found.pages.usageCounts},
+                  usageCounts: {
+                    ...?popular?.usageCounts,
+                    ...?found?.pages.usageCounts,
+                  },
                   coversBySourceVideo: found == null
                       ? popularCovers
                       : {...?popularCovers, ...?shownCovers},
@@ -1375,19 +1404,13 @@ class _AudioSelectionBottomSheetState
                 ),
               );
             },
-            loading: () => loadingState,
-            error: (error, stack) => _ErrorState(
-              error: error,
-              onRetry: () => ref.invalidate(popularList),
-            ),
           ),
-          nostrSoundsAsync.when(
-            data: (newestList) {
-              if (searchViewIn(AudioCategory.newest) == _SearchView.pending) {
-                return searchLoadingState;
-              }
-              final found = foundIn(AudioCategory.newest);
-              final nostrSounds = newestList.sounds;
+          searchOrBrowse(
+            tab: AudioCategory.newest,
+            browse: nostrSoundsAsync,
+            retryBrowse: () => ref.invalidate(newestList),
+            content: (newestList, found) {
+              final nostrSounds = newestList?.sounds ?? const <AudioEvent>[];
               final newest = {for (final sound in nostrSounds) sound.id};
               // A search result's video is looked up with the search.
               bool canBeReused(AudioEvent sound) => !_cannotBeReused(
@@ -1421,12 +1444,11 @@ class _AudioSelectionBottomSheetState
                   usageCounts: found == null
                       ? usageCounts
                       : {...?usageCounts, ...found.pages.usageCounts},
-                  coversBySourceVideo: trendingCovers == null
+                  coversBySourceVideo: found != null
+                      ? {...?trendingCovers, ...?shownCovers}
+                      : trendingCovers == null
                       ? null
-                      : {
-                          ...trendingCovers,
-                          ...?(found != null ? shownCovers : searchCovers),
-                        },
+                      : {...trendingCovers, ...?searchCovers},
                   paging:
                       found?.pages ?? (loadsMoreOnScroll ? newestList : null),
                   onLoadMore: found != null
@@ -1446,11 +1468,6 @@ class _AudioSelectionBottomSheetState
                 ),
               );
             },
-            loading: () => loadingState,
-            error: (error, stack) => _ErrorState(
-              error: error,
-              onRetry: () => ref.invalidate(newestList),
-            ),
           ),
           // My sounds is where the user's own files live, so importing one
           // stays its first row.
