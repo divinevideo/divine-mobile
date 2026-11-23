@@ -13847,7 +13847,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get devOptionsConfirmationRequirementSimulatedSubtitle =>
-      'Shows the Confirmation screens when the verifier doesn\'t require it. Sign-ins still go through as before.';
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Videokommentar aufnehmen';

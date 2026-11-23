@@ -51,8 +51,8 @@ bool showsConfirmationUpsell({
 /// is on, for the developer setting that simulates that requirement against a
 /// verifier with it off.
 ///
-/// Like the verifier, it marks only a platform whose sign-in is on. Only the
-/// app's view changes: the verifier still approves a sign-in without
+/// Like the verifier, it marks only a platform whose sign-in is on. The
+/// verifier itself is unchanged and still approves a sign-in without
 /// Confirmation, so a refusal at confirm can't be simulated this way.
 VerifierPlatform withSimulatedConfirmationRequirement(
   VerifierPlatform platform,

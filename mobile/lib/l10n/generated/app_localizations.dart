@@ -23109,10 +23109,10 @@ abstract class AppLocalizations {
   /// **'Act as if Confirmation is required'**
   String get devOptionsConfirmationRequirementSimulatedTitle;
 
-  /// Supporting text under the developer options switch that simulates the Divine Confirmation requirement: it changes only what the app shows, not what the verifier allows.
+  /// Supporting text under the developer options switch that simulates the Divine Confirmation requirement. It names the two other settings needed to see the offer, and says the verifier still approves sign-ins: the switch changes what the app shows, not what the verifier allows.
   ///
   /// In en, this message translates to:
-  /// **'Shows the Confirmation screens when the verifier doesn\'t require it. Sign-ins still go through as before.'**
+  /// **'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.'**
   String get devOptionsConfirmationRequirementSimulatedSubtitle;
 
   /// Semantics label for the button that opens the recorder to create a video reply in comments.

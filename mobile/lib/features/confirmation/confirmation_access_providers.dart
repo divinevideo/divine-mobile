@@ -128,8 +128,14 @@ class ConfirmationRequirementSimulatedNotifier extends Notifier<bool> {
 ///
 /// It applies, like the access override, in a debug build or in any build with
 /// developer mode on, so a tester can see the Confirmation screens on a build
-/// that talks to a verifier with the requirement off. It changes only what the
-/// app shows: the verifier still approves sign-ins as before.
+/// that talks to a verifier with the requirement off. The offer itself also
+/// needs the `confirmationSignIn` flag and a "doesn't have" access answer:
+/// the override above, or the verifier's own, since "couldn't check" shows no
+/// offer.
+///
+/// Nothing the app submits changes, and the verifier still approves sign-ins
+/// as before. With the requirement shown, the app does ask the verifier
+/// whether the account has Confirmation, as it would with the gate on.
 final simulateConfirmationRequirementProvider = Provider<bool>((ref) {
   final applies =
       ref.watch(confirmationAccessDebugBuildProvider) ||
