@@ -147,8 +147,9 @@ class EnvironmentConfig {
   /// Base URL for the Divine identity verification service
   /// (verifier.divine.video). Single host across all environments; the
   /// service is not part of local_stack. A test build can point at a local
-  /// verifier with `--dart-define=VERIFIER_BASE_URL=http://localhost:8787`;
-  /// without the define every build uses production.
+  /// verifier with `--dart-define=VERIFIER_BASE_URL=<url>`, using a host the
+  /// device can reach (`10.0.2.2` on the Android emulator, `localhost` on the
+  /// iOS Simulator); without the define every build uses production.
   String get verifierBaseUrl => resolveVerifierBaseUrl(verifierBaseUrlOverride);
 
   /// Origin of the divine-name-server that owns `@divine.video` usernames

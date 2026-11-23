@@ -119,7 +119,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   /// reported, and the screen keeps the platform it opened with.
   ///
   /// With the `confirmationSignIn` flag on and a platform whose sign-in needs
-  /// Divine Confirmation, also reads the access the repository remembers.
+  /// Divine Confirmation, also reads whether the user holds it, from the
+  /// remembered answer when there is one.
   Future<void> loadPlatform() async {
     final VerifierPlatform platform;
     try {
@@ -623,8 +624,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   }
 
   // A sign-in the verifier hasn't seen yet, a Divine Confirmation check it
-  // couldn't make just now (it answers 503 so apps retry, and never caches
-  // that answer), or a request that got no usable answer. Every other answer
+  // couldn't make just now (a 5xx carrying confirmation_unavailable), or a
+  // request that got no usable answer. Every other answer
   // is final for this attempt.
   static bool _worthRetrying(VerifierClientException error) => switch (error) {
     SignInConfirmException(:final refusal) =>

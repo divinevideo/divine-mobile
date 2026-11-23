@@ -9,10 +9,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 
-/// The Divine Confirmation pitch, with the purchase controls disabled.
-///
-/// TODO(#8278): replace with the real purchase flow once the store products
-/// exist. Until then no purchase call is made from here.
+// TODO(#8278): replace with the real purchase flow once the store products
+// exist.
+/// The Divine Confirmation pitch, with the purchase controls disabled. No
+/// purchase call is made from here.
 class VerifyConfirmationPage extends ConsumerWidget {
   /// Creates a [VerifyConfirmationPage].
   const VerifyConfirmationPage({super.key});

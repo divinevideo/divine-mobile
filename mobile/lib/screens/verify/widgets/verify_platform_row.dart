@@ -23,7 +23,8 @@ class VerifyPlatformRow extends StatelessWidget {
   final VoidCallback onTap;
 
   /// Whether linking [platform] by signing in needs Divine Confirmation that
-  /// the user lacks. Changes the badge from "One tap" to say so.
+  /// the user lacks. Changes the badge and the row's screen-reader label to
+  /// say so.
   final bool needsConfirmation;
 
   @override

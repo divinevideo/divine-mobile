@@ -342,12 +342,8 @@ class _VerifyContent extends StatelessWidget {
                   ? () =>
                         _openConnect(context, claim.platform, replacing: claim)
                   : null,
-              // A link that needs Confirmation is restored by renewing it,
-              // not by signing in again (canSignInAgain is false for it). Not
-              // where sign-in is hidden (iOS below 17.4), and not while an
-              // unlink is rewriting the same links. Where this build cannot
-              // buy, a note stands in for the button.
-              // The row shows the note in preference to the button.
+              // Rules in canRenewConfirmation; where this build cannot buy,
+              // the row shows the store note instead of the button.
               onRenewConfirmation: canRenewConfirmation(claim)
                   ? () => _openConfirmation(context)
                   : null,
