@@ -137,27 +137,74 @@ void main() {
       },
     );
 
-    testWidgets('bounds the network poster decode to physical layout size', (
-      tester,
-    ) async {
-      tester.view
-        ..physicalSize = const Size(800, 1600)
-        ..devicePixelRatio = 2;
-      addTearDown(() {
+    testWidgets(
+      'caps the blurred network poster decode size and isolates paint',
+      (
+        tester,
+      ) async {
         tester.view
-          ..resetPhysicalSize()
-          ..resetDevicePixelRatio();
-      });
-      await tester.pumpWidget(buildWidget());
+          ..physicalSize = const Size(800, 1600)
+          ..devicePixelRatio = 2;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+        });
+        await tester.pumpWidget(buildWidget());
 
-      final image = tester.widget<VineCachedImage>(
-        find.byType(VineCachedImage),
-      );
-      expect(image.imageUrl, equals(testUrl));
-      expect(image.memCacheWidth, 800);
-      expect(image.memCacheHeight, 1600);
-      expect(image.resizePolicy, ResizeImagePolicy.fit);
-    });
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.imageUrl, equals(testUrl));
+        expect(
+          image.memCacheWidth,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(
+          image.memCacheHeight,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(image.resizePolicy, ResizeImagePolicy.fit);
+        expect(
+          find.descendant(
+            of: find.byType(BlurredVideoBackdrop),
+            matching: find.ancestor(
+              of: find.byType(ImageFiltered),
+              matching: find.byType(RepaintBoundary),
+            ),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'decodes a layout smaller than the cap at its own physical size',
+      (tester) async {
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const Center(
+              child: SizedBox(
+                width: 20,
+                height: 40,
+                child: BlurredVideoBackdrop(url: testUrl),
+              ),
+            ),
+          ),
+        );
+
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.memCacheWidth, equals(40));
+        expect(image.memCacheHeight, equals(80));
+      },
+    );
 
     testWidgets('uses $BoxFit cover with half opacity', (tester) async {
       await tester.pumpWidget(buildWidget());
@@ -191,6 +238,22 @@ void main() {
     });
 
     group('letterbox bands', () {
+      testWidgets('uses one paint boundary per blurred poster band', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(videoAspectRatio: 1));
+
+        expect(find.byType(ImageFiltered), findsNWidgets(2));
+        for (final blur in find.byType(ImageFiltered).evaluate()) {
+          var boundaries = 0;
+          blur.visitAncestorElements((element) {
+            if (element.widget is RepaintBoundary) boundaries++;
+            return element.widget is! BlurredVideoBackdrop;
+          });
+          expect(boundaries, 1);
+        }
+      });
+
       testWidgets(
         'renders a RepaintBoundary-isolated blur fill in each letterbox bar '
         'when the aspect ratio is known',

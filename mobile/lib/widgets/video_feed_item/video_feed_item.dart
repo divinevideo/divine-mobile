@@ -410,7 +410,7 @@ class VideoOverlayActions extends ConsumerWidget {
                 widthFactor: 1.0,
                 child: SizedBox(
                   height:
-                      MediaQuery.of(context).size.height *
+                      MediaQuery.sizeOf(context).height *
                       VideoOverlayScrims.topHeightFactor,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -441,7 +441,7 @@ class VideoOverlayActions extends ConsumerWidget {
                 widthFactor: 1.0,
                 child: SizedBox(
                   height:
-                      MediaQuery.of(context).size.height *
+                      MediaQuery.sizeOf(context).height *
                       VideoOverlayScrims.bottomHeightFactor,
                   child: DecoratedBox(
                     decoration: BoxDecoration(

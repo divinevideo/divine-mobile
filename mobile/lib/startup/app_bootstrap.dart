@@ -173,8 +173,9 @@ Future<void> startOpenVineApp({
   );
   // Fed by the debugPrint override installed below, which is process-wide, so
   // the batcher is constructed here and pinned device-scoped via
-  // DeviceScope.overrides — the startup coordinator arms its flush timer and
-  // the lifecycle handler flushes it, and both must reach this instance.
+  // DeviceScope.overrides — the startup coordinator enables its timed
+  // flushing and the lifecycle handler flushes it, and both must reach this
+  // instance.
   final logMessageBatcher = LogMessageBatcher();
   AppUptime.markStarted();
 

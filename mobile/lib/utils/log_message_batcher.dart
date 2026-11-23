@@ -1,5 +1,5 @@
 // ABOUTME: Utility for batching and deduplicating repetitive log messages to reduce console noise
-// ABOUTME: Groups similar messages and periodically outputs summaries instead of individual logs
+// ABOUTME: Groups similar messages and outputs summaries instead of individual logs
 
 import 'dart:async';
 import 'dart:collection';
@@ -18,7 +18,7 @@ class LogMessageBatcher {
   /// Map of message patterns to their batch info
   final Map<String, _BatchInfo> _batchedMessages = {};
 
-  /// Timer for periodic batch flushing
+  /// One-shot flush timer, armed by the first queued message.
   Timer? _flushTimer;
 
   /// Duration to wait before flushing batched messages
@@ -27,22 +27,43 @@ class LogMessageBatcher {
   /// Maximum number of similar messages to batch before forcing a flush
   static const int _maxBatchSize = 50;
 
-  /// Initialize the batcher with periodic flushing
+  /// Whether deferred timed flushing has been enabled via [initialize].
+  bool _initialized = false;
+
+  /// Enables timed flushing: queued messages are summarized one flush
+  /// interval after the first of them arrives, and no timer runs while
+  /// nothing is queued.
   void initialize() {
-    _flushTimer?.cancel();
-    _flushTimer = Timer.periodic(_flushInterval, (_) => _flushBatches());
+    _initialized = true;
+    if (_batchedMessages.isNotEmpty) {
+      _armFlushTimer();
+    }
   }
 
-  /// Flush pending summaries without stopping periodic batching.
+  void _armFlushTimer() {
+    if (!_initialized || _flushTimer != null) return;
+    _flushTimer = Timer(_flushInterval, () {
+      _flushTimer = null;
+      _flushBatches();
+    });
+  }
+
+  /// Flush pending summaries without disabling future timed batching.
   ///
-  /// Account-scoped lifecycle handlers use this when they unmount. The timer
-  /// belongs to the device-scoped batcher and must survive account swaps.
-  void flush() => _flushBatches();
+  /// Account-scoped lifecycle handlers use this when they unmount. The batcher
+  /// is device-scoped and must stay ready for future batches across swaps.
+  void flush() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    _flushBatches();
+  }
 
   /// Dispose the batcher and clean up resources
   void dispose() {
+    _initialized = false;
     _flushTimer?.cancel();
-    flush();
+    _flushTimer = null;
+    _flushBatches();
     _batchedMessages.clear();
   }
 
@@ -77,6 +98,12 @@ class LogMessageBatcher {
     if (batchInfo.count >= _maxBatchSize) {
       _flushSingleBatch(pattern, batchInfo);
       _batchedMessages.remove(pattern);
+      if (_batchedMessages.isEmpty) {
+        _flushTimer?.cancel();
+        _flushTimer = null;
+      }
+    } else {
+      _armFlushTimer();
     }
 
     return true; // Message was batched

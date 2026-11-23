@@ -1,4 +1,5 @@
 import CoreMedia
+import Foundation
 
 /// Keeps a paused texture on the frame a seek or reload put it on.
 ///
@@ -11,6 +12,18 @@ struct PausedFramePull {
 
     /// Whether a frame at or before `target` has reached the texture.
     private var hasTargetFrame = false
+
+    enum PollingCadence {
+        case displayRate
+        case seekProbe
+        case idle
+    }
+
+    /// Keeps looking for a late target without polling at display rate forever.
+    func pollingCadence(at now: TimeInterval, fastUntil deadline: TimeInterval) -> PollingCadence {
+        guard target.isNumeric, !hasTargetFrame else { return .idle }
+        return now < deadline ? .displayRate : .seekProbe
+    }
 
     /// Holds a paused picture at `time`, where a seek or reload put it.
     mutating func hold(at time: CMTime) {

@@ -241,48 +241,112 @@ void main() {
     });
 
     group('non-playing state resets heartbeat', () {
-      test('heartbeat counter resets when state becomes paused', () {
+      test('pauses polling and waits for a new stall after resume', () {
         fakeAsync((async) {
           final seeks = <(int, int)>[];
-          final controller = FakeController();
+          const stalled = DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            position: Duration(seconds: 1),
+          );
+          final controller = FakeController()..pushState(stalled);
           final det = _makeDetector(seekEvents: seeks)..start(0, controller);
-          // Burn grace.
-          for (var i = 0; i < StalePlaybackDetector.graceAfterPlay + 1; i++) {
-            controller.pushState(
-              DivineVideoPlayerState(
-                status: PlaybackStatus.playing,
-                position: Duration(milliseconds: i * 100),
-              ),
-            );
-            _tick(async, 1);
-          }
+          const threshold = StalePlaybackDetector.heartbeatThreshold;
 
-          // Accumulate some stale heartbeats, then pause.
-          for (
-            var i = 0;
-            i < StalePlaybackDetector.heartbeatThreshold - 1;
-            i++
-          ) {
-            controller.pushState(
-              const DivineVideoPlayerState(
-                status: PlaybackStatus.playing,
-                position: Duration(milliseconds: 1000),
-              ),
-            );
-            _tick(async, 1);
-          }
-
-          // Pause → counter resets.
+          // Pause one heartbeat before recovery would have fired.
+          _tick(async, StalePlaybackDetector.graceAfterPlay + threshold - 1);
+          expect(seeks, isEmpty);
           controller.pushState(
             const DivineVideoPlayerState(status: PlaybackStatus.paused),
           );
           _tick(async, 1);
+          expect(async.periodicTimerCount, 0);
 
-          // Resume: any further stall restarts counting from zero.
+          controller.pushState(stalled);
+          async.flushMicrotasks();
+          expect(async.periodicTimerCount, 1);
+
+          // The first tick observes the position and the next eight establish
+          // a new stall. No heartbeat from before the pause counts here.
+          _tick(async, threshold);
+          expect(seeks, isEmpty);
+          _tick(async, 1);
+          expect(seeks, [(0, 1000)]);
+          det.disposeAll();
+        });
+      });
+
+      test('starts heartbeat timer immediately when already playing', () {
+        fakeAsync((async) {
+          final controller = FakeController()
+            ..pushState(
+              const DivineVideoPlayerState(
+                status: PlaybackStatus.playing,
+                position: Duration(milliseconds: 500),
+              ),
+            );
+          final det = _makeDetector()..start(0, controller);
+
+          expect(async.periodicTimerCount, equals(1));
+          det.disposeAll();
+        });
+      });
+    });
+
+    group('heartbeat timer lifecycle', () {
+      test('arms no timer and fires no recovery for an idle controller', () {
+        fakeAsync((async) {
+          final seeks = <(int, int)>[];
+          final controller = FakeController();
+          final det = _makeDetector(seekEvents: seeks)..start(0, controller);
+
+          expect(async.periodicTimerCount, equals(0));
+          _tick(
+            async,
+            StalePlaybackDetector.graceAfterPlay +
+                StalePlaybackDetector.heartbeatThreshold +
+                2,
+          );
+
           expect(seeks, isEmpty);
           det.disposeAll();
         });
       });
+
+      test(
+        'fires recovery when frozen playing updates arrive faster than '
+        'the heartbeat',
+        () {
+          fakeAsync((async) {
+            final seeks = <(int, int)>[];
+            final controller = FakeController();
+            final det = _makeDetector(seekEvents: seeks)..start(0, controller);
+            // Android reports state every 200 ms, faster than the heartbeat,
+            // so each update must not restart the periodic timer.
+            const updateEvery = Duration(milliseconds: 200);
+            const ticksNeeded =
+                StalePlaybackDetector.graceAfterPlay +
+                StalePlaybackDetector.heartbeatThreshold +
+                1;
+            final updates =
+                (StalePlaybackDetector.interval * ticksNeeded).inMicroseconds ~/
+                    updateEvery.inMicroseconds +
+                1;
+
+            for (var i = 0; i < updates; i++) {
+              controller.pushState(
+                const DivineVideoPlayerState(
+                  status: PlaybackStatus.playing,
+                  position: Duration(milliseconds: 500),
+                ),
+              );
+              async.elapse(updateEvery);
+            }
+
+            expect(seeks, equals([(0, 500)]));
+            det.disposeAll();
+          });
+        },
+      );
     });
   });
 }

@@ -80,12 +80,17 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// see `PausedFrameRedelivery`.
     private var pausedRedelivery = PausedFrameRedelivery()
 
-    /// Window during which the display link bypasses `hasNewPixelBuffer`
-    /// and tries `copyPixelBuffer` on every tick. Covers the GOP-decode
-    /// stall after an exact seek (up to ~500 ms on long-GOP clips).
+    /// Window for detecting a stuck seek before re-priming the output.
+    /// Covers the GOP-decode stall after an exact seek.
     /// Uses `CACurrentMediaTime()` (monotonic) so NTP/TZ clock jumps
     /// can't collapse or extend the window.
     private var forceRefreshDeadline: CFTimeInterval = 0
+
+    // Allow a slow paused seek to settle without polling at display rate forever.
+    private var pausedSeekFastPollDeadline: CFTimeInterval = 0
+    private var pausedSeekPollTimer: Timer?
+    private static let pausedSeekSettleInterval: CFTimeInterval = 0.6
+    private static let pausedSeekProbeInterval: TimeInterval = 0.25
 
     /// Failed `copyPixelBuffer` ticks within the current force window.
     /// Non-zero at expiry means the compositor is stuck at this time.
@@ -244,12 +249,13 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             // keeps `onFirstFrame` from ever firing again, and the texture
             // path has no other way to clear Flutter's loader.
             hasDeliveredFirstFrame = false
-            pendingSeekTime = .invalid
+            finishRefresh()
             pausedFramePull.reset()
             pausedRedelivery.reset()
             mediaDataRearmCount = 0
             lastDeliveredItemTime = .invalid
             nextStallRecoveryTime = 0
+            resumeFrameDriverIfNeeded()
             warm.requestNotificationOfMediaDataChange(withAdvanceInterval: 0)
             return
         }
@@ -267,12 +273,13 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         attachedItem = item
         frameEffects.playerItem = item
         hasDeliveredFirstFrame = false
-        pendingSeekTime = .invalid
+        finishRefresh()
         pausedFramePull.reset()
         pausedRedelivery.reset()
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         nextStallRecoveryTime = 0
+        resumeFrameDriverIfNeeded()
 
         // The first `copyPixelBuffer` attempt right after attach often
         // races decoder init (especially on HEVC 10-bit / HDR), and
@@ -316,9 +323,17 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         pausedFramePull.hold(at: seekTime)
         pausedRedelivery.reset()
         forceRefreshDeadline = CACurrentMediaTime() + 0.6
+        pausedSeekFastPollDeadline = forceRefreshDeadline + Self.pausedSeekSettleInterval
         forceWindowFailCount = 0
         forceWindowIsRetry = isRetry
+        resumeFrameDriverIfNeeded()
         videoOutput?.requestNotificationOfMediaDataChange(withAdvanceInterval: 0)
+    }
+
+    /// Wakes the frame driver when playback begins so paused/warm players can
+    /// idle at 0 Hz without missing the start of playback.
+    func playbackDidStart() {
+        resumeFrameDriverIfNeeded()
     }
 
     /// Synchronously attempts to pull a frame at `time` and push it into
@@ -340,12 +355,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         ) else {
             return false
         }
-        pendingSeekTime = .invalid
-        forceRefreshDeadline = 0
-        forceWindowFailCount = 0
-        mediaDataRearmCount = 0
-        deliverFrame(pixelBuffer, at: time, frameTime: frameTime)
-        return true
+        return deliverFrame(pixelBuffer, at: time, frameTime: frameTime)
     }
 
     // MARK: - AVPlayerItemOutputPullDelegate
@@ -376,6 +386,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
               videoOutput === self.videoOutput else {
             return
         }
+        resumeFrameDriverIfNeeded()
         // Prefer the stored seek target; fall back to currentTime only when
         // there's no pending seek (e.g. notification from a flush).
         let targetTime: CMTime
@@ -398,10 +409,6 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             }
             return
         }
-        mediaDataRearmCount = 0
-        pendingSeekTime = .invalid
-        forceRefreshDeadline = 0
-        forceWindowFailCount = 0
         deliverFrame(pixelBuffer, at: targetTime, frameTime: frameTime)
     }
 
@@ -415,9 +422,8 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// suspension. Must be called on the main thread.
     func suspendFrameDelivery() {
         isFrameDeliveryEnabled = false
-        #if os(iOS)
-        displayLink?.isPaused = true
-        #endif
+        stopPausedSeekPolling()
+        pauseFrameDriver()
     }
 
     /// Re-enables frame delivery when the app returns to the foreground.
@@ -430,9 +436,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         // A paused texture is handed its frame again once, as before the
         // background, in case the engine dropped the copy it held.
         pausedRedelivery.reset()
-        #if os(iOS)
-        displayLink?.isPaused = false
-        #endif
+        resumeFrameDriverIfNeeded()
     }
 
     /// Cleans up the frame driver and unregisters the texture.
@@ -448,6 +452,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         isDisposed = true
         isFrameDeliveryEnabled = false
         frameEffects.dispose()
+        stopPausedSeekPolling()
         stopFrameDriver()
         itemStatusObservation?.invalidate()
         itemStatusObservation = nil
@@ -486,8 +491,21 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             target: self,
             selector: #selector(onDisplayLink)
         )
+        if #available(iOS 15.0, *) {
+            // Short-form clips are 30-60 fps; capping below 120 Hz ProMotion
+            // avoids redundant main-thread pixel-buffer polls on every vsync.
+            link.preferredFrameRateRange = CAFrameRateRange(
+                minimum: 30,
+                maximum: 60,
+                preferred: 60
+            )
+        }
         link.add(to: .main, forMode: .common)
         displayLink = link
+    }
+
+    private func pauseFrameDriver() {
+        displayLink?.isPaused = true
     }
 
     private func stopFrameDriver() {
@@ -511,11 +529,41 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         }
     }
 
+    private func pauseFrameDriver() {
+        stopFrameDriver()
+    }
+
     private func stopFrameDriver() {
         pollTimer?.invalidate()
         pollTimer = nil
     }
     #endif
+
+    private func resumeFrameDriverIfNeeded() {
+        guard !isDisposed, isFrameDeliveryEnabled, player != nil else { return }
+        stopPausedSeekPolling()
+        startFrameDriver()
+        #if os(iOS)
+        displayLink?.isPaused = false
+        #endif
+    }
+
+    private func schedulePausedSeekPoll() {
+        guard pausedSeekPollTimer == nil else { return }
+        let timer = Timer(timeInterval: Self.pausedSeekProbeInterval, repeats: false) {
+            [weak self] _ in
+            guard let self else { return }
+            self.pausedSeekPollTimer = nil
+            self.pullAndDeliverFrame()
+        }
+        pausedSeekPollTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func stopPausedSeekPolling() {
+        pausedSeekPollTimer?.invalidate()
+        pausedSeekPollTimer = nil
+    }
 
     /// Switches the frame effects to `configs` and, when the list changed,
     /// redraws the frame on screen with them, so a paused preview shows the
@@ -560,13 +608,16 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// it can lie after it. Frame effects are drawn at the time
     /// `HeldFrameEffects` picks: the frame's own, or `itemTime` once it is held
     /// or late.
+    @discardableResult
     private func deliverFrame(
-        _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
-    ) {
+        _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime
+    ) -> Bool {
         let time = frameTime.isValid ? frameTime : itemTime
         guard pausedFramePull.accepts(
             frameAt: frameTime, playing: (player?.rate ?? 0) != 0)
-        else { return }
+        else { return false }
+        mediaDataRearmCount = 0
+        finishRefresh()
         // What was drawn before this frame, so read ahead of the updates below.
         let drawnUs = lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil
         let drawTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime, drawnUs: drawnUs)
@@ -582,7 +633,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
         os_unfair_lock_unlock(&pixelBufferLock)
-        guard isFrameDeliveryEnabled else { return }
+        guard isFrameDeliveryEnabled else { return true }
         PlaybackDiagnostics.shared.recordFrameDelivered()
         registry.textureFrameAvailable(textureId)
         onFrameDelivered?(time)
@@ -590,6 +641,14 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             hasDeliveredFirstFrame = true
             onFirstFrame?()
         }
+        return true
+    }
+
+    private func finishRefresh() {
+        pendingSeekTime = .invalid
+        forceRefreshDeadline = 0
+        forceWindowFailCount = 0
+        forceWindowIsRetry = false
     }
 
     /// Pulls the current frame and pushes it into the Flutter texture.
@@ -599,31 +658,34 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
               let output = videoOutput,
               let player else { return }
 
-        let itemTime = pausedFramePull.time(
-            playing: player.rate != 0, clock: player.currentTime())
-
-        var frameTime = CMTime.invalid
-        if CACurrentMediaTime() < forceRefreshDeadline {
-            if let pixelBuffer = output.copyPixelBuffer(
-                forItemTime: itemTime,
-                itemTimeForDisplay: &frameTime
-            ) {
-                pendingSeekTime = .invalid
-                forceRefreshDeadline = 0
-                forceWindowFailCount = 0
-                // Always delivered after a seek; noted, so later ticks skip it.
-                _ = pausedRedelivery.delivers(
-                    frameAt: frameTime, playing: player.rate != 0)
-                deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
-            } else {
-                forceWindowFailCount += 1
-            }
+        guard player.currentItem != nil else {
+            pauseFrameDriver()
             return
         }
 
-        if forceWindowFailCount > 0 {
+        let itemTime = pausedFramePull.time(
+            playing: player.rate != 0, clock: player.currentTime())
+
+        let now = CACurrentMediaTime()
+        let withinForceWindow = now < forceRefreshDeadline
+        defer {
+            if player.timeControlStatus == .paused && hasDeliveredFirstFrame
+                && !frameEffects.isActive {
+                let cadence = pausedFramePull.pollingCadence(
+                    at: now, fastUntil: pausedSeekFastPollDeadline)
+                if cadence != .displayRate {
+                    pauseFrameDriver()
+                    if cadence == .seekProbe {
+                        schedulePausedSeekPoll()
+                    }
+                }
+            }
+        }
+
+        if !withinForceWindow && forceWindowFailCount > 0 {
             let stuckTime = itemTime
             let wasRetry = forceWindowIsRetry
+            let stuckDeadline = forceRefreshDeadline
             forceWindowFailCount = 0
             forceWindowIsRetry = false
             // Only a queued item has a seek to retry. `stop` empties the
@@ -631,8 +693,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             // reads an invalid time, which `AVPlayerItem` raises on.
             if !wasRetry, let stuckItem = player.currentItem, stuckTime.isNumeric {
                 DispatchQueue.main.async { [weak self, weak stuckItem] in
-                    // A reload in between replaces the item the time is for.
+                    // A frame delivery, newer seek, or reload can settle this first.
                     guard let self, let stuckItem,
+                          self.forceRefreshDeadline == stuckDeadline,
                           self.player?.currentItem === stuckItem else { return }
                     self.onSeekStuck?(stuckTime)
                 }
@@ -649,6 +712,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         // it on every display-link tick costs only the call itself; a
         // sustained `nil` streak while playing triggers an explicit
         // re-prime via `recoverStalledTextureIfNeeded`.
+        var frameTime = CMTime.invalid
         if let pixelBuffer = output.copyPixelBuffer(
             forItemTime: itemTime,
             itemTimeForDisplay: &frameTime
@@ -660,6 +724,8 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
                   pausedRedelivery.delivers(frameAt: frameTime, playing: playing)
             else { return }
             deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
+        } else if withinForceWindow {
+            forceWindowFailCount += 1
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)
             redrawEffectsOverHeldFrameIfNeeded(at: itemTime)

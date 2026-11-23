@@ -510,9 +510,10 @@ internal class DivineVideoPlayerInstance(
 
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
     private val seekTimeoutRunnable = Runnable {
-        seekAwaitsFrame = false
-        seekCompletionResult?.success(null)
-        seekCompletionResult = null
+        if (seekCompletionResult == null) return@Runnable
+        if (player?.isPlaying == false) sendStateUpdate()
+        // Release the Dart await without dropping a still-arriving paused frame.
+        completeSeekIfPending(waitForLateFrame = true)
     }
 
     /**
@@ -559,6 +560,7 @@ internal class DivineVideoPlayerInstance(
 
     private val positionUpdater = object : Runnable {
         override fun run() {
+            if (player?.isPlaying != true || eventSink == null) return
             updateFrameEffectWindows()
             syncAudioOverlays()
             sendStateUpdate()
@@ -811,7 +813,15 @@ internal class DivineVideoPlayerInstance(
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
         eventSink = events
-        mainHandler.post(positionUpdater)
+        sendStateUpdate()
+        updatePositionPolling(player?.isPlaying == true)
+    }
+
+    private fun updatePositionPolling(isPlaying: Boolean) {
+        mainHandler.removeCallbacks(positionUpdater)
+        if (isPlaying && eventSink != null) {
+            mainHandler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
+        }
     }
 
     override fun onCancel(arguments: Any?) {
@@ -2333,7 +2343,10 @@ internal class DivineVideoPlayerInstance(
     private fun onSeekFrameRendered(generation: Int) {
         if (generation != seekFrameGeneration || !seekAwaitsFrame) return
         seekAwaitsFrame = false
-        if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
+        if (player?.playbackState == Player.STATE_READY) {
+            if (player?.isPlaying == false) sendStateUpdate()
+            completeSeekIfPending()
+        }
     }
 
     /**
@@ -2363,8 +2376,8 @@ internal class DivineVideoPlayerInstance(
     }
 
     /** Completes the pending seekTo result so Dart's await returns. */
-    private fun completeSeekIfPending() {
-        seekAwaitsFrame = false
+    private fun completeSeekIfPending(waitForLateFrame: Boolean = false) {
+        if (!waitForLateFrame) seekAwaitsFrame = false
         seekCompletionResult?.let {
             mainHandler.removeCallbacks(seekTimeoutRunnable)
             it.success(null)
@@ -2786,6 +2799,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            updatePositionPolling(isPlaying)
             pictureAdvancing = false
             mainHandler.removeCallbacks(pictureAdvanceTimeoutRunnable)
             if (isPlaying) {
@@ -3059,7 +3073,8 @@ internal class DivineVideoPlayerInstance(
      * Pauses playback and remembers the previous state.
      */
     fun onAppBackgrounded() {
-        wasPlayingBeforePause = player?.isPlaying ?: false
+        mainHandler.removeCallbacks(positionUpdater)
+        wasPlayingBeforePause = player?.playWhenReady == true
         if (wasPlayingBeforePause) {
             player?.pause()
             audioOverlayManager.pauseAll()

@@ -39,13 +39,17 @@ class StalePlaybackDetector {
   final void Function(String) _log;
 
   Timer? _timer;
+  StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
   int? _lastPositionMs;
   int _heartbeats = 0;
   int _graceHeartbeats = 0;
   final _recoveryAttempts = <int, int>{};
 
-  /// Starts the heartbeat for [index], reading position from [controller].
-  /// Cancels any previous heartbeat.
+  /// Starts monitoring [controller] for [index]. Cancels any previous monitor.
+  ///
+  /// The [interval] heartbeat runs only while [controller] is actively
+  /// playing — when playback is paused or idle, the timer is cancelled and
+  /// re-armed reactively via `controller.stateStream` once playback resumes.
   void start(int index, DivineVideoPlayerController? controller) {
     stop();
     if (controller == null) return;
@@ -55,14 +59,25 @@ class StalePlaybackDetector {
     _graceHeartbeats = graceAfterPlay;
     _recoveryAttempts[index] = 0;
 
+    if (controller.state.isPlaying) {
+      _startHeartbeatTimer(index, controller);
+    }
+
+    _stateSubscription = controller.stateStream.listen((state) {
+      if (state.isPlaying) {
+        if (_timer == null) {
+          _startHeartbeatTimer(index, controller);
+        }
+      } else {
+        _pauseHeartbeatTimer();
+      }
+    });
+  }
+
+  void _startHeartbeatTimer(int index, DivineVideoPlayerController controller) {
+    _timer?.cancel();
     _timer = Timer.periodic(interval, (_) {
       final state = controller.state;
-
-      if (!state.isPlaying) {
-        _lastPositionMs = null;
-        _heartbeats = 0;
-        return;
-      }
 
       if (_graceHeartbeats > 0) {
         _graceHeartbeats--;
@@ -88,13 +103,19 @@ class StalePlaybackDetector {
     });
   }
 
-  /// Stops the active heartbeat without forgetting per-index recovery
-  /// counters.
-  void stop() {
+  void _pauseHeartbeatTimer() {
     _timer?.cancel();
     _timer = null;
     _lastPositionMs = null;
     _heartbeats = 0;
+  }
+
+  /// Stops monitoring, both the heartbeat and the state subscription, without
+  /// forgetting per-index recovery counters.
+  void stop() {
+    unawaited(_stateSubscription?.cancel());
+    _stateSubscription = null;
+    _pauseHeartbeatTimer();
   }
 
   /// Resets the post-`play()` grace period. Call after a source switch so

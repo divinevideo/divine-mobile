@@ -57,6 +57,7 @@ class BrandedLoadingIndicator extends StatefulWidget {
 class _BrandedLoadingIndicatorState extends State<BrandedLoadingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late final ValueNotifier<int> _frameIndex;
 
   static const Duration _animationDuration = Duration(milliseconds: 1800);
 
@@ -68,12 +69,25 @@ class _BrandedLoadingIndicatorState extends State<BrandedLoadingIndicator>
   @override
   void initState() {
     super.initState();
+    _frameIndex = ValueNotifier<int>(_restFrame);
     // Deliberately not started here. Whether this animates depends on
     // MediaQuery, which is not available until didChangeDependencies.
     _controller = AnimationController(
       duration: _animationDuration,
       vsync: this,
+    )..addListener(_onAnimationTick);
+  }
+
+  void _onAnimationTick() {
+    final frameIndex = (_controller.value * BrandedLoadingIndicator.frameCount)
+        .floor();
+    final clampedFrame = frameIndex.clamp(
+      0,
+      BrandedLoadingIndicator.frameCount - 1,
     );
+    if (_frameIndex.value != clampedFrame) {
+      _frameIndex.value = clampedFrame;
+    }
   }
 
   @override
@@ -103,7 +117,10 @@ class _BrandedLoadingIndicatorState extends State<BrandedLoadingIndicator>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller
+      ..removeListener(_onAnimationTick)
+      ..dispose();
+    _frameIndex.dispose();
     super.dispose();
   }
 
@@ -143,18 +160,9 @@ class _BrandedLoadingIndicatorState extends State<BrandedLoadingIndicator>
     return Semantics(
       label: widget.semanticsLabel ?? context.l10n.commonLoading,
       child: ExcludeSemantics(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            // Calculate current frame based on animation value
-            final frameIndex =
-                (_controller.value * BrandedLoadingIndicator.frameCount)
-                    .floor();
-            final clampedFrame = frameIndex.clamp(
-              0,
-              BrandedLoadingIndicator.frameCount - 1,
-            );
-
+        child: ValueListenableBuilder<int>(
+          valueListenable: _frameIndex,
+          builder: (context, clampedFrame, child) {
             final mark = _SpriteFrame(
               size: widget.size,
               frameIndex: clampedFrame,

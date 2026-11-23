@@ -43,6 +43,12 @@ class BlurredVideoBackdrop extends StatelessWidget {
     this.videoAspectRatio,
   });
 
+  /// Largest decoded width or height for the blurred poster fallback. The
+  /// heavy blur removes the detail a larger decode would carry, so this saves
+  /// decode time and image memory with no visible difference. The blur's own
+  /// raster cost scales with the widget, not the image.
+  static const int maxBlurredPosterDecodePx = 96;
+
   final String? url;
 
   /// Absolute path of a local poster file, used when no [url] is available.
@@ -63,6 +69,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
         url: url,
         filePath: filePath,
         blurhash: blurhash,
+        isolatePosterPaint: true,
       );
     }
     return LayoutBuilder(
@@ -100,11 +107,17 @@ class BlurredVideoBackdrop extends StatelessWidget {
 /// The blurred fill itself, without any letterbox clip. Prefers the cheap
 /// stretched-blurhash path and falls back to a runtime gaussian of the poster.
 class _BackdropContent extends StatelessWidget {
-  const _BackdropContent({this.url, this.filePath, this.blurhash});
+  const _BackdropContent({
+    this.url,
+    this.filePath,
+    this.blurhash,
+    this.isolatePosterPaint = false,
+  });
 
   final String? url;
   final String? filePath;
   final String? blurhash;
+  final bool isolatePosterPaint;
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +132,25 @@ class _BackdropContent extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+          final targetWidth =
+              constraints.hasBoundedWidth && constraints.maxWidth > 0
+              ? (constraints.maxWidth * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
+          final targetHeight =
+              constraints.hasBoundedHeight && constraints.maxHeight > 0
+              ? (constraints.maxHeight * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
           return _blurredPoster(
             VineCachedImage(
               imageUrl: posterUrl,
-              memCacheWidth:
-                  constraints.hasBoundedWidth && constraints.maxWidth > 0
-                  ? (constraints.maxWidth * pixelRatio).ceil()
-                  : null,
-              memCacheHeight:
-                  constraints.hasBoundedHeight && constraints.maxHeight > 0
-                  ? (constraints.maxHeight * pixelRatio).ceil()
-                  : null,
+              memCacheWidth: targetWidth,
+              memCacheHeight: targetHeight,
               resizePolicy: ResizeImagePolicy.fit,
               // Fall back to nothing on error — the parent
               // [ColoredBox(VineTheme.surfaceContainerHigh)] shows through.
@@ -153,7 +174,7 @@ class _BackdropContent extends StatelessWidget {
   }
 
   Widget _blurredPoster(Widget poster) {
-    return ClipRect(
+    final blurredPoster = ClipRect(
       // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
       // keeps the bleeding edge of the blur kernel from leaking
       // outside the widget's box and over the surrounding chrome.
@@ -162,6 +183,9 @@ class _BackdropContent extends StatelessWidget {
         child: Opacity(opacity: 0.5, child: poster),
       ),
     );
+    return isolatePosterPaint
+        ? RepaintBoundary(child: blurredPoster)
+        : blurredPoster;
   }
 }
 
