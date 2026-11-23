@@ -143,7 +143,22 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsNothing);
-      expect(find.byType(ContentWarningBlurOverlay), findsOneWidget);
+      expect(_scrimColor(tester).a, equals(1));
+    });
+
+    testWidgets('blurs by default off the web', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ContentWarningBlurOverlay(
+            labels: const ['nudity'],
+            onReveal: () {},
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsOneWidget);
     });
 
     testWidgets('includes $BackdropFilter when useBackdropBlur is true', (
@@ -162,6 +177,20 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(_scrimColor(tester).a, lessThan(1));
     });
   });
+}
+
+/// The fill of the scrim laid over the video.
+Color _scrimColor(WidgetTester tester) {
+  final scrim = tester.widget<DecoratedBox>(
+    find
+        .descendant(
+          of: find.byType(ContentWarningBlurOverlay),
+          matching: find.byType(DecoratedBox),
+        )
+        .first,
+  );
+  return (scrim.decoration as BoxDecoration).color!;
 }

@@ -64,10 +64,11 @@ Future<void> hideContentWarningsLikeThese({
   );
 }
 
-/// Full-screen content warning overlay with blur for videos with warn labels.
+/// Full-screen content warning overlay for videos with warn labels.
 ///
-/// Shows a blurred backdrop with warning text, matched content labels,
-/// and a "View Anyway" button to reveal the video.
+/// Covers the video with a blurred scrim, or an opaque one where
+/// [useBackdropBlur] is off, with warning text, matched content labels and a
+/// "View Anyway" button to reveal the video.
 class ContentWarningBlurOverlay extends StatelessWidget {
   const ContentWarningBlurOverlay({
     required this.labels,
@@ -83,18 +84,18 @@ class ContentWarningBlurOverlay extends StatelessWidget {
 
   /// Whether to blur the underlying video with a [BackdropFilter].
   ///
-  /// Defaults to `false` on web, where a 30 px Gaussian blur shader over a
-  /// `<video>` platform view causes WebGL compilation stalls; uses a higher
-  /// opacity scrim instead so sensitive content remains obscured.
+  /// Defaults to `false` on web, where the filter cannot blur the `<video>`
+  /// platform view and its 30 px blur shader is costly to compile. The scrim
+  /// is then opaque, so nothing shows through.
   final bool useBackdropBlur;
 
   @override
   Widget build(BuildContext context) {
     final scrim = DecoratedBox(
       decoration: BoxDecoration(
-        color: VineTheme.backgroundColor.withValues(
-          alpha: useBackdropBlur ? 0.6 : 0.92,
-        ),
+        color: useBackdropBlur
+            ? VineTheme.backgroundColor.withValues(alpha: 0.6)
+            : VineTheme.backgroundColor,
       ),
       child: Center(
         child: Padding(
