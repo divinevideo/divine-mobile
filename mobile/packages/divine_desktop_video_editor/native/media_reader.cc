@@ -71,14 +71,14 @@ JsonNode* metadata(JsonObject* args, bool audio_only) {
   int rotation = 0;
   if (has_video) {
     auto* video = GST_DISCOVERER_VIDEO_INFO(videos->data);
-    width = gst_discoverer_video_info_get_width(video);
-    height = gst_discoverer_video_info_get_height(video);
+    const auto geometry = display_geometry(video);
+    width = geometry.width;
+    height = geometry.height;
     numerator = gst_discoverer_video_info_get_framerate_num(video);
     denominator = gst_discoverer_video_info_get_framerate_denom(video);
     bitrate = gst_discoverer_video_info_get_bitrate(video);
-    rotation = display_rotation(video);
+    rotation = geometry.rotation;
     gst_discoverer_stream_info_list_free(videos);
-    if (rotation == 90 || rotation == 270) std::swap(width, height);
     if (width == 0 || height == 0) throw Failure{"decoder"};
   }
   const GstClockTime duration = gst_discoverer_info_get_duration(info.get());
@@ -188,6 +188,17 @@ class FrameReader {
         gst_element_set_state(pipeline_.get(), GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
       throw Failure{"decoder"};
     }
+  }
+
+  Sample last(GstClockTime duration) {
+    // A container's duration may belong to a longer audio track, and VFR has
+    // no constant final-frame interval to subtract. Drain the selected video
+    // to EOS, retaining one sample, rather than guessing an earlier seek.
+    play(0, duration);
+    Sample last;
+    while (Sample sample = next()) last = std::move(sample);
+    if (!last) throw Failure{"decoder"};
+    return last;
   }
 
   Sample next() {
@@ -360,16 +371,14 @@ JsonNode* read_frames(const std::string& method, JsonObject* args,
     const bool streaming = method == "startThumbnailStream";
     for (size_t index = 0; index < times.size(); ++index) {
       auto time = times[index];
-      if (time >= duration && boolean(member(args, "lastFrameTolerance"), false) && duration > 0) {
-        const auto frame_rate = number(member(properties, "frameRate"), 30);
-        const auto frame_duration = static_cast<GstClockTime>(GST_SECOND / frame_rate);
-        time = duration > frame_duration ? duration - frame_duration : 0;
-      }
-      if (time >= duration) {
+      // The SDK sets this flag for ThumbnailPosition.last. Its timestamp is
+      // a duration hint, not proof of the selected video stream's final PTS.
+      const bool final_picture = boolean(member(args, "lastFrameTolerance"), false);
+      if (!final_picture && time >= duration) {
         if (!streaming) json_array_add_null_element(json_node_get_array(result.get()));
         continue;
       }
-      Sample sample = reader.seek(time);
+      Sample sample = final_picture ? reader.last(duration) : reader.seek(time);
       const auto output = directory / (streaming ? "thumbnail.frame" : "thumbnail-" + std::to_string(index) + ".frame");
       write_sample(sample.get(), output, false);
       Node event = path_node(output);

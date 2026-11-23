@@ -143,13 +143,12 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   GList* streams = gst_discoverer_info_get_video_streams(info);
   if (!streams) throw Failure{"decoder"};
   auto* video_info = GST_DISCOVERER_VIDEO_INFO(streams->data);
-  auto width = gst_discoverer_video_info_get_width(video_info);
-  auto height = gst_discoverer_video_info_get_height(video_info);
+  const auto geometry = display_geometry(video_info);
+  const auto width = geometry.width;
+  const auto height = geometry.height;
   const auto source_numerator = gst_discoverer_video_info_get_framerate_num(video_info);
   const auto source_denominator = gst_discoverer_video_info_get_framerate_denom(video_info);
-  const auto rotation = display_rotation(video_info);
   gst_discoverer_stream_info_list_free(streams);
-  if (rotation == 90 || rotation == 270) std::swap(width, height);
   if (width == 0 || height == 0 || width > 8192 || height > 8192) throw Failure{"unsupported"};
   if (!has_frame_cap && (source_denominator == 0 || source_numerator == 0)) {
     throw Failure{"decoder"};
@@ -161,7 +160,7 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
     output_numerator = source_numerator;
     output_denominator = source_denominator;
   }
-  const std::string restriction = "video/x-raw,width=" + std::to_string(width) +
+  const std::string restriction = "video/x-raw,pixel-aspect-ratio=1/1,width=" + std::to_string(width) +
       ",height=" + std::to_string(height) + ",framerate=" + std::to_string(output_numerator) +
       "/" + std::to_string(output_denominator);
   Caps restrictions(gst_caps_from_string(restriction.c_str()));
@@ -185,8 +184,13 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   Caps audio_caps(gst_caps_from_string("audio/mpeg,mpegversion=4"));
   auto* container = gst_encoding_container_profile_new("divine", nullptr, container_caps.get(), nullptr);
   Profile profile(GST_ENCODING_PROFILE(container));
-  gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(
-      gst_encoding_video_profile_new(video_caps.get(), nullptr, restrictions.get(), 0)));
+  // The timeline already owns the output cadence through its restricted video
+  // track. Preserve those timestamps at encoding: encodebin's extra videorate
+  // duplicates the final frame at EOS on 1.28 when the segment has no stop.
+  auto* output_video = gst_encoding_video_profile_new(
+      video_caps.get(), nullptr, restrictions.get(), 0);
+  gst_encoding_video_profile_set_variableframerate(output_video, TRUE);
+  gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(output_video));
   gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(
       gst_encoding_audio_profile_new(audio_caps.get(), nullptr, nullptr, 0)));
   const fs::path output = directory / "render.mp4";

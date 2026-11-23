@@ -139,6 +139,73 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(code, 0, events)
             self.assertEqual(frames(Path(events[-1]['value']['path'])), expected)
 
+    def test_last_thumbnail_uses_final_video_frame_when_audio_is_longer(self):
+        directory = tempfile.TemporaryDirectory(prefix='unequal tracks ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'long-audio.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi',
+            '-i', 'color=red:s=128x240:r=20:d=0.5', '-f', 'lavfi',
+            '-i', 'color=blue:s=128x240:r=20:d=0.5', '-f', 'lavfi',
+            '-i', 'sine=frequency=440:duration=2', '-filter_complex',
+            '[0:v][1:v]concat=n=2:v=1:a=0[video]', '-map', '[video]', '-map', '2:a:0',
+            '-c:v', 'libx264', '-c:a', 'aac', str(source)], check=True)
+        code, metadata = self.invoke('getMetadata', {'inputPath': str(source)})
+        self.assertEqual(code, 0, metadata)
+        duration = metadata[-1]['value']['duration']
+        self.assertAlmostEqual(duration, 2000, delta=50)
+        args = dict(inputPath=str(source), timestamps=[duration * 1000],
+            lastFrameTolerance=True, outputWidth=64, outputHeight=120,
+            boxFit='contain', outputFormat='png')
+        code, events = self.invoke('getThumbnails', args)
+        self.assertEqual(code, 0, events)
+        actual = self.rgb(Path(events[-1]['value'][0]['path']))
+        # The final picture is blue; audio continues after video EOS.
+        expected = subprocess.check_output(['ffmpeg', '-v', 'error', '-ss', '0.95',
+            '-i', str(source), '-vf', 'scale=64:120', '-frames:v', '1',
+            '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+        self.assertEqual(len(actual), len(expected))
+        self.assertGreater(len(actual), 0)
+        center = (60 * 64 + 32) * 3
+        self.assertLess(actual[center], 20)
+        self.assertGreater(actual[center + 2], 200)
+        for x, y in [(16, 30), (48, 30), (16, 90), (48, 90)]:
+            for index in range(3):
+                offset = (y * 64 + x) * 3 + index
+                self.assertAlmostEqual(actual[offset], expected[offset], delta=8)
+
+    def test_anamorphic_input_preserves_display_geometry(self):
+        directory = tempfile.TemporaryDirectory(prefix='anamorphic input ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'anamorphic.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', str(FIXTURE),
+            '-vf', 'setsar=2/1', '-c:v', 'libx264', '-c:a', 'copy', str(source)], check=True)
+        code, events = self.invoke('getMetadata', {'inputPath': str(source)})
+        self.assertEqual(code, 0, events)
+        self.assertEqual((events[-1]['value']['width'], events[-1]['value']['height']), (256, 240))
+        for method in ['getThumbnails', 'startFrameStream']:
+            frames = []
+            args = dict(inputPath=str(source), outputWidth=64, outputHeight=64)
+            if method == 'getThumbnails':
+                args.update(timestamps=[250000], outputFormat='png', boxFit='contain')
+            else:
+                args.update(startUs=0, endUs=1000000, maxFrameRate=1)
+            code, events = self.invoke(method, args, on_data=lambda frame: frames.append(frame.copy()))
+            self.assertEqual(code, 0, events)
+            if method == 'getThumbnails':
+                decoded = self.rgb(Path(events[-1]['value'][0]['path']))
+                self.assertEqual(len(decoded), 64 * 60 * 3)
+            else:
+                self.assertTrue(frames)
+                self.assertEqual((frames[0]['width'], frames[0]['height']), (64, 60))
+        code, events = self.invoke(args=dict(videoClips=[dict(inputPath=str(source))]))
+        self.assertEqual(code, 0, events)
+        streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-show_streams', '-of', 'json', events[-1]['value']['path']]))['streams']
+        video = next(s for s in streams if s['codec_type'] == 'video')
+        self.assertEqual((video['width'], video['height']), (256, 240))
+        self.assertEqual(video['sample_aspect_ratio'], '1:1')
+        self.assertEqual(video['display_aspect_ratio'], '16:15')
+
     def test_requested_network_optimization_moves_metadata_before_media(self):
         code, events = self.invoke(args={
             'videoClips': [{'inputPath': str(FIXTURE), 'startUs': 250000, 'endUs': 750000}],

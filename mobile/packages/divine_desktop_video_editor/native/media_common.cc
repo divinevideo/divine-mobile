@@ -1,6 +1,7 @@
 #include "media_common.h"
 #include <gst/tag/tag.h>
 #include <cmath>
+#include <limits>
 
 namespace divine_media {
 JsonNode* member(JsonObject* object, const char* name) {
@@ -81,6 +82,29 @@ int display_rotation(GstDiscovererVideoInfo* video) {
     g_free(orientation);
   }
   return rotation;
+}
+
+DisplayGeometry display_geometry(GstDiscovererVideoInfo* video) {
+  const auto coded_width = gst_discoverer_video_info_get_width(video);
+  const auto coded_height = gst_discoverer_video_info_get_height(video);
+  const auto par_numerator = gst_discoverer_video_info_get_par_num(video);
+  const auto par_denominator = gst_discoverer_video_info_get_par_denom(video);
+  if (coded_width == 0 || coded_height == 0 || par_numerator == 0 || par_denominator == 0) {
+    throw Failure{"decoder"};
+  }
+  // Normalize the coded raster to square pixels before applying orientation.
+  // Coded dimensions alone squeeze anamorphic sources in every editor view.
+  const auto normalized_width = gst_util_uint64_scale_round(
+      coded_width, par_numerator, par_denominator);
+  if (normalized_width == 0 || normalized_width > std::numeric_limits<guint>::max()) {
+    throw Failure{"unsupported"};
+  }
+  DisplayGeometry geometry{static_cast<guint>(normalized_width), coded_height,
+      display_rotation(video)};
+  if (geometry.rotation == 90 || geometry.rotation == 270) {
+    std::swap(geometry.width, geometry.height);
+  }
+  return geometry;
 }
 
 }  // namespace divine_media

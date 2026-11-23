@@ -38,6 +38,8 @@ void validate_fields(JsonObject* value, const char* const* supported,
                      const char* const* null_fields);
 std::string file_uri(const fs::path& path);
 int display_rotation(GstDiscovererVideoInfo* video);
+struct DisplayGeometry { guint width; guint height; int rotation; };
+DisplayGeometry display_geometry(GstDiscovererVideoInfo* video);
 using ProgressCallback = std::function<void(double)>;
 }  // namespace divine_media
 #endif
