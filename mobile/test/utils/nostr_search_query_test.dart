@@ -117,13 +117,11 @@ void main() {
     });
 
     test('rejects an nprofile whose relay entry is not valid text', () {
-      // Valid checksum, pubkey entry intact, relay entry with bytes that are
-      // not UTF-8. The SDK rejects a string with a damaged entry, so this
-      // must come back as "not an identifier" rather than an exception.
+      // Keep the valid profile payload from above so only the relay entry
+      // can cause rejection.
+      final profileData = Bech32Decoder().convert(nprofile, 1000).data;
       final tlv = <int>[
-        TLVType.defaultType,
-        32,
-        ...List<int>.generate(32, (i) => i),
+        ...Nip19.convertBits(profileData, 5, 8, false),
         TLVType.relay,
         2,
         0xff,
