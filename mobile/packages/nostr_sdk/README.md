@@ -36,7 +36,6 @@ Notes:
 | [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md) | Browser extension signing | Supported |
 | [NIP-19](https://github.com/nostr-protocol/nips/blob/master/19.md) | bech32-encoded entities | Supported |
 | [NIP-23](https://github.com/nostr-protocol/nips/blob/master/23.md) | Long-form content | Supported |
-| [NIP-29](https://github.com/nostr-protocol/nips/blob/master/29.md) | Relay-based Groups | Supported |
 | [NIP-42](https://github.com/nostr-protocol/nips/blob/master/42.md) | Authentication of clients to relays | Supported |
 | [NIP-44](https://github.com/nostr-protocol/nips/blob/master/44.md) | Versioned Encryption | Supported |
 | [NIP-46](https://github.com/nostr-protocol/nips/blob/master/46.md) | Remote Signing | Supported |
@@ -87,7 +86,6 @@ lib/
 ├── nip44/                  # Versioned encryption
 ├── nip46/                  # Remote signing
 ├── nip47/                  # Wallet connect
-├── nip29/                  # Relay-based groups
 ├── upload/                 # File upload (NIP-96, Blossom)
 ├── zap/                    # Lightning payments
 └── utils/                  # Utility functions

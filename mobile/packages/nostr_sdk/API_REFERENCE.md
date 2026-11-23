@@ -816,35 +816,6 @@ contacts.add(Contact(
 await nostr.sendContactList(contacts, 'My follow list');
 ```
 
-### NIP-29 (Relay-based Groups)
-
-```dart
-class NIP29 {
-  static Future<void> addMember(Nostr nostr, GroupIdentifier group, String pubkey);
-  static Future<void> removeMember(Nostr nostr, GroupIdentifier group, String pubkey);
-  static Future<void> deleteEvent(Nostr nostr, GroupIdentifier group, String eventId);
-  static Future<void> editStatus(Nostr nostr, GroupIdentifier group, bool? public, bool? open);
-}
-
-class GroupIdentifier {
-  final String groupId;
-  final String host;
-  
-  GroupIdentifier(this.groupId, this.host);
-}
-```
-
-**Example:**
-```dart
-final group = GroupIdentifier('my-group', 'wss://groups.relay.com');
-
-// Add member to group
-await NIP29.addMember(nostr, group, memberPubkey);
-
-// Change group visibility
-await NIP29.editStatus(nostr, group, public: false, open: true);
-```
-
 ### NIP-44 (Versioned Encryption)
 
 Modern encryption support integrated into signers:

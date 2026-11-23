@@ -223,7 +223,6 @@ dart pub publish --dry-run
 - NIP-19 bech32 encoding/decoding
 - NIP-02 contact list management
 - NIP-04 and NIP-44 encryption support
-- NIP-29 relay-based groups
 - File upload support (NIP-96, Blossom)
 - Lightning integration (Zaps, LNURL)
 - Local SQLite storage for offline support
