@@ -557,6 +557,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: context.l10n.settingsDiscordSubtitle,
                     trailingIcon: DivineIconName.arrowUpRight,
                     trailingIconSize: 20,
+                    trailingColor: context.vineColors.accentBrand,
                     onTap: () => _openDiscord(context),
                   ),
                 ],
