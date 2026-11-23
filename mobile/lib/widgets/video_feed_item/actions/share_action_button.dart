@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_delivery/share_delivery_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
@@ -38,7 +39,6 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
-import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -676,17 +676,14 @@ class _UnifiedShareSheetView extends StatelessWidget {
                         ),
                       ),
                     if (state.attemptedRecipients.isNotEmpty)
-                      _MessageInput(
+                      _ShareMessageComposer(
                         controller: messageController,
                         isSending: state.isSending,
-                        onSend: () {
-                          if (!ensureEmailConfirmedToMessage(context)) return;
-                          bloc.add(
-                            ShareSheetSendRequested(
-                              message: messageController.text,
-                            ),
-                          );
-                        },
+                        onSend: () => bloc.add(
+                          ShareSheetSendRequested(
+                            message: messageController.text,
+                          ),
+                        ),
                       ),
                     if (state.attemptedRecipients.isEmpty) ...[
                       Divider(color: context.vineColors.card, height: 1),
@@ -721,6 +718,62 @@ class _UnifiedShareSheetView extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Keeps the email prompt and its resend feedback above the modal barrier.
+class _ShareMessageComposer extends StatelessWidget {
+  const _ShareMessageComposer({
+    required this.controller,
+    required this.isSending,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final bool isSending;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final confirmation = context
+        .select<EmailConfirmationCubit?, EmailConfirmationState?>(
+          (cubit) {
+            final state = cubit?.state;
+            return state != null && state.isUnconfirmed ? state : null;
+          },
+        );
+    final account = confirmation?.account;
+    if (confirmation == null || account == null) {
+      return _MessageInput(
+        controller: controller,
+        isSending: isSending,
+        onSend: onSend,
+      );
+    }
+
+    final l10n = context.l10n;
+    final resendStatus = confirmation.resendStatus;
+    final canResend = resendStatus != EmailConfirmationResendStatus.sending;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DivineSnackbarContainer(
+        label: switch (resendStatus) {
+          EmailConfirmationResendStatus.sent =>
+            l10n.emailConfirmationResendSent,
+          EmailConfirmationResendStatus.failed =>
+            l10n.emailConfirmationResendFailed,
+          _ => l10n.emailConfirmationSendBlocked,
+        },
+        error: resendStatus == EmailConfirmationResendStatus.failed,
+        actionLabel: canResend ? l10n.emailConfirmationResendButton : null,
+        onActionPressed: canResend
+            ? () => _runShareDetached(
+                context.read<EmailConfirmationCubit>().resend(account: account),
+                'resend confirmation email from share sheet',
+              )
+            : null,
       ),
     );
   }
