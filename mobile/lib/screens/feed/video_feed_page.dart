@@ -149,7 +149,11 @@ class VideoFeedPage extends ConsumerWidget {
                   unavailableFilter: unavailabilityGate.isVideoBroken,
                   unavailableVideoIds: unavailabilityGate.markedVideoIds,
                   classicSession: useAdaptiveClassics
-                      ? _homeClassicSession(ref, viewerPubkey)
+                      ? _homeClassicSession(
+                          ref,
+                          viewerPubkey,
+                          isUnavailable: unavailabilityGate.isVideoBroken,
+                        )
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -810,7 +814,11 @@ class _KeyboardStableBottomInsetState
 /// the provider: the old service emits a privacy change synchronously while it
 /// is disposed, and Riverpod rejects re-reading the provider inside that
 /// disposal. Such a read sees the disposed service and sends no identity.
-ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+ClassicFeedSession _homeClassicSession(
+  WidgetRef ref,
+  String? viewerPubkey, {
+  required bool Function(String videoId) isUnavailable,
+}) {
   var analytics = ref.read(analyticsServiceProvider);
   return ClassicFeedSession(
     loadPage: (request) {
@@ -842,11 +850,10 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
     // for the videos Home displays.
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
-      final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
       return repository
           .applyContentPreferences(videos)
           .where((video) => !repository.isVideoKnownDeleted(video))
-          .where((video) => !unavailabilityGate.isVideoBroken(video.id))
+          .where((video) => !isUnavailable(video.id))
           .toList();
     },
   )..setActive(active: false);
