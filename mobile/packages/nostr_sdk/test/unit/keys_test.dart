@@ -33,6 +33,8 @@ void main() {
   });
 
   group('pubkeyIsOnCurve', () {
+    const generatorX =
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
     // x = 5 has no point on secp256k1; its neighbour x = 6 does, so the two
     // differ only in whether the curve passes through them.
     const offCurve =
@@ -45,12 +47,7 @@ void main() {
     });
 
     test("accepts the generator point's x coordinate", () {
-      expect(
-        pubkeyIsOnCurve(
-          '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-        ),
-        isTrue,
-      );
+      expect(pubkeyIsOnCurve(generatorX), isTrue);
     });
 
     test('rejects a well-formed x that no point on the curve has', () {
@@ -60,7 +57,7 @@ void main() {
     });
 
     test('accepts upper-case hex like keyIsValid does', () {
-      expect(pubkeyIsOnCurve(onCurveNeighbour.toUpperCase()), isTrue);
+      expect(pubkeyIsOnCurve(generatorX.toUpperCase()), isTrue);
     });
 
     test('rejects an x at or above the field prime', () {
