@@ -124,10 +124,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _ownsPlayer = false;
   bool _changingPlayer = false;
   bool _outputReady = false;
-  Object? _outputError;
+  Object? _terminalError;
   int _loadGeneration = 0;
   int? _activeLoadGeneration = 0;
-  int? _reportedOutputErrorGeneration;
+  int? _reportedErrorGeneration;
   int _playerGeneration = 0;
   Future<void> _mutations = Future<void>.value();
   bool _didLogUnsupportedAudioTrackWarning = false;
@@ -180,7 +180,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
     await _enqueue(() async {
       if (generation != _loadGeneration) return;
-      if (_playerHasOpenedMedia || _outputError != null) {
+      if (_playerHasOpenedMedia || _terminalError != null) {
         _changingPlayer = true;
         final volume = _player.state.volume;
         await _retirePlayer();
@@ -271,9 +271,11 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _ensureReady();
     _loadGeneration++;
     _activeLoadGeneration = null;
-    await _cancelDurationProbes();
+    final cancellingProbes = _cancelDurationProbes();
     await _enqueue(() async {
+      await cancellingProbes;
       await _player.stop();
+      _terminalError = null;
       _hasLoadedMedia = false;
       _clips.clear();
       _clipSpeeds.clear();
@@ -418,7 +420,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     WidgetsBinding.instance.ensureVisualUpdate();
     _playerHasOpenedMedia = false;
     _outputReady = false;
-    _outputError = null;
+    _terminalError = null;
     final generation = ++_playerGeneration;
     _listenToPlayer();
     unawaited(
@@ -430,7 +432,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         },
         onError: (Object error) {
           if (_disposed || generation != _playerGeneration) return;
-          _outputError = error;
+          _terminalError = error;
           _reportOutputReady();
         },
       ),
@@ -443,9 +445,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         _activeLoadGeneration != _loadGeneration) {
       return;
     }
-    if (_outputError case final error?) {
-      if (_reportedOutputErrorGeneration != _loadGeneration) {
-        _reportedOutputErrorGeneration = _loadGeneration;
+    if (_terminalError case final error?) {
+      if (_reportedErrorGeneration != _loadGeneration) {
+        _reportedErrorGeneration = _loadGeneration;
         _handleError(error);
       }
     } else if (_outputReady && !_state.isFirstFrameRendered) {
@@ -473,7 +475,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
 
     void report(Object error) {
-      if (isCurrent()) _handleError(error);
+      if (isCurrent() && _activeLoadGeneration != null) _handleError(error);
     }
 
     _subscriptions.addAll([
@@ -552,15 +554,15 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     try {
       return await probe.run(uri);
     } finally {
-      _durationProbes.remove(probe);
       await probe.close();
+      _durationProbes.remove(probe);
     }
   }
 
   Future<void> _cancelDurationProbes() async {
     final probes = _durationProbes.toList();
-    _durationProbes.clear();
     await Future.wait(probes.map((probe) => probe.close(cancel: true)));
+    _durationProbes.removeAll(probes);
   }
 
   // coverage:ignore-start
@@ -668,7 +670,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   void _refreshState() {
     if (!_initialized || _disposed || _changingPlayer) return;
-    if (_outputError != null) {
+    if (_terminalError != null) {
       _reportOutputReady();
       return;
     }
@@ -757,6 +759,8 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   void _handleError(Object error) {
     if (_disposed) return;
+    _terminalError = error;
+    _reportedErrorGeneration = _loadGeneration;
     _emitState(
       _state.copyWith(status: PlaybackStatus.error, errorMessage: '$error'),
     );
@@ -804,6 +808,7 @@ class _DurationProbe {
   final _duration = Completer<Duration>();
   final _cancelled = Completer<void>();
   StreamSubscription<Duration>? _subscription;
+  StreamSubscription<String>? _errors;
   Timer? _timeout;
   Future<void>? _closing;
 
@@ -819,6 +824,10 @@ class _DurationProbe {
     }
 
     _subscription = player.stream.duration.listen(receive, onError: fail);
+    _errors = player.stream.error.listen(
+      (message) => fail(StateError(message), StackTrace.current),
+      onError: fail,
+    );
     _timeout = Timer(const Duration(seconds: 10), () {
       fail(
         TimeoutException('Could not probe duration for $uri'),
@@ -843,6 +852,7 @@ class _DurationProbe {
     return _closing ??= () async {
       _timeout?.cancel();
       await _subscription?.cancel();
+      await _errors?.cancel();
       await player.dispose();
     }();
   }

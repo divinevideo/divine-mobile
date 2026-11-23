@@ -14,6 +14,110 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group(MediaKitLinuxVideoPlayerBackend, () {
+    test('an older stop cannot unload a newer source', () async {
+      final players = <_FakePlatformPlayer>[];
+      final states = <DivineVideoPlayerState>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (controller) =>
+            (controller as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: (_) {});
+      final oldLoad = backend.setClips([
+        const VideoClip(uri: 'file:///old.mp4'),
+      ]);
+      await pumpEventQueue();
+      final probe = players[1];
+      final gate = Completer<void>();
+      probe.disposalGate = gate;
+      final stopping = backend.stop();
+      await probe.disposalStarted.future;
+      final newLoad = backend.setClips([
+        const VideoClip(uri: 'file:///new.mp4', end: Duration(seconds: 4)),
+      ]);
+      await pumpEventQueue();
+
+      gate.complete();
+      await Future.wait([oldLoad, stopping, newLoad]);
+
+      expect(states.last.clipCount, 1);
+      expect(
+        players.first.lastOpenedPlaylist?.medias.single.uri,
+        endsWith('/new.mp4'),
+      );
+      await backend.dispose();
+    });
+
+    test('disposal waits for a probe already being retired by stop', () async {
+      final players = <_FakePlatformPlayer>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (controller) =>
+            (controller as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+      final loading = backend.setClips([
+        const VideoClip(uri: 'file:///old.mp4'),
+      ]);
+      await pumpEventQueue();
+      final probe = players[1];
+      final gate = Completer<void>();
+      probe.disposalGate = gate;
+      final stopping = backend.stop();
+      await probe.disposalStarted.future;
+      var disposed = false;
+      final closing = backend.dispose().then<void>((_) => disposed = true);
+      await pumpEventQueue();
+      try {
+        expect(disposed, isFalse);
+      } finally {
+        gate.complete();
+        await Future.wait([loading, stopping, closing]);
+      }
+      expect(probe.disposeCalls, 1);
+    });
+
+    test('reports native source errors before the probe timeout', () async {
+      final players = <_FakePlatformPlayer>[
+        _FakePlatformPlayer(),
+        _FakePlatformPlayer(probeError: 'Synthetic decoder failure'),
+      ];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: players.removeAt(0)),
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (controller) =>
+            (controller as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+      addTearDown(backend.dispose);
+
+      await expectLater(
+        backend
+            .setClips([const VideoClip(uri: 'file:///bad.mp4')])
+            .timeout(1.seconds),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Synthetic decoder failure'),
+          ),
+        ),
+      );
+    });
+
     testWidgets(
       'schedules native initialization when replacing on an idle binding',
       (tester) async {
@@ -410,11 +514,19 @@ void main() {
         onError: errors.add,
       );
 
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 4)),
+      ]);
       player.emitPlaybackError('Synthetic decoder failure');
       await pumpEventQueue();
 
       expect(errors, ['Synthetic decoder failure']);
       expect(emitted.last.status, PlaybackStatus.error);
+      await backend.setVolume(0.4);
+      await pumpEventQueue();
+      expect(emitted.last.status, PlaybackStatus.error);
+      expect(emitted.last.errorMessage, contains('Synthetic decoder failure'));
+      expect(errors, ['Synthetic decoder failure']);
       await backend.dispose();
     });
 
@@ -1099,11 +1211,13 @@ class _FakePlatformPlayer extends PlatformPlayer {
     this.probeDuration,
     this.emitErrorOnDispose = false,
     this.durationDuringOpen = false,
+    this.probeError,
   }) : super(configuration: const PlayerConfiguration());
 
   final Duration? probeDuration;
   final bool emitErrorOnDispose;
   final bool durationDuringOpen;
+  final String? probeError;
 
   Playlist? lastOpenedPlaylist;
   Media? lastOpenedMedia;
@@ -1156,6 +1270,10 @@ class _FakePlatformPlayer extends PlatformPlayer {
 
     if (playable is Media) {
       lastOpenedMedia = playable;
+      if (probeError case final error?) {
+        errorController.add(error);
+        return;
+      }
       if (probeDuration != null) {
         if (durationDuringOpen) {
           state = state.copyWith(duration: probeDuration);
