@@ -74,8 +74,9 @@ class Subscription {
   /// (EOSE or `CLOSED`), no relay owes the rest of a batch it started, and
   /// every event received so far has been handed to [onEvent].
   ///
-  /// A relay that is not connected does not hold this up, while a connected
-  /// relay that never answers holds it for as long as it stays connected.
+  /// A relay that drops before starting a batch does not hold this up. A
+  /// silent relay still able to answer, or a relay with an unfinished batch,
+  /// can hold it open.
   /// [onEose] differs on both: until it first fires, any relay that owes EOSE
   /// holds it, but only for `RelayPool.subscriptionEoseSettleWindow` of
   /// silence. See [StoredEventsEnd] for what it reports.

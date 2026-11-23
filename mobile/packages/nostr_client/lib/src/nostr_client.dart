@@ -2070,8 +2070,8 @@ class NostrClient {
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has
   /// received so far and the relays whose batch may have stopped at their
-  /// result-size limit; an unreachable relay does not hold it up, where it
-  /// can hold [onEose] for the pool's EOSE settle window.
+  /// result-size limit. A relay that drops before starting a batch does not
+  /// hold it up, but can hold [onEose] for the pool's EOSE settle window.
   /// [onStoredEventsStart] fires when a relay sends them again, after a
   /// reconnect or a REQ re-sent after AUTH. See
   /// [Subscription.onStoredEventsEnd].
