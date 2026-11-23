@@ -2772,6 +2772,7 @@ void main() {
             when(
               () => tracker.markedVideoIds,
             ).thenAnswer((_) => const Stream<String>.empty());
+            when(() => tracker.brokenVideoIds).thenReturn(const []);
             when(() => tracker.markVideoBroken(any(), any()))
                 .thenAnswer((_) async {});
             final oldService = createMockVideoEventService();
@@ -2865,6 +2866,7 @@ void main() {
           when(
             () => tracker.markedVideoIds,
           ).thenAnswer((_) => const Stream<String>.empty());
+          when(() => tracker.brokenVideoIds).thenReturn(const []);
           final videoEventService = createMockVideoEventService();
           when(
             () => videoEventService.shouldHideVideo(any()),

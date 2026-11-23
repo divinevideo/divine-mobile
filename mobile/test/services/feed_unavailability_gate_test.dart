@@ -28,6 +28,7 @@ void main() {
       when(
         () => tracker.markedVideoIds,
       ).thenAnswer((_) => const Stream<String>.empty());
+      when(() => tracker.brokenVideoIds).thenReturn(const []);
       guard = _MockGuard();
     });
 
@@ -57,6 +58,7 @@ void main() {
         final next = _MockTracker();
         when(() => tracker.markedVideoIds).thenAnswer((_) => first.stream);
         when(() => next.markedVideoIds).thenAnswer((_) => second.stream);
+        when(() => next.brokenVideoIds).thenReturn(const []);
         final forwarded = <String>[];
         final subscription = gate.markedVideoIds.listen(forwarded.add);
         addTearDown(subscription.cancel);
@@ -75,6 +77,25 @@ void main() {
 
         expect(forwarded, ['first-account', 'second-account']);
       });
+
+      test(
+        'replays the ids a tracker already holds when it attaches',
+        () async {
+          // Home can serve its cached window before the tracker resolves, so
+          // nothing filtered these; the feed has to hear about them now.
+          when(() => tracker.brokenVideoIds).thenReturn(['held-1', 'held-2']);
+          final forwarded = <String>[];
+          final subscription = gate.markedVideoIds.listen(forwarded.add);
+          addTearDown(subscription.cancel);
+
+          gate.attachTracker(tracker);
+          // Reattaching the same tracker must not replay it a second time.
+          gate.attachTracker(tracker);
+          await pumpEventQueue();
+
+          expect(forwarded, ['held-1', 'held-2']);
+        },
+      );
     });
 
     group('confirmVideoUnavailable', () {

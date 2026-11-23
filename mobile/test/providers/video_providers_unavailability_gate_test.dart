@@ -33,6 +33,7 @@ void main() {
           when(
             () => tracker.markedVideoIds,
           ).thenAnswer((_) => const Stream<String>.empty());
+          when(() => tracker.brokenVideoIds).thenReturn(const []);
         }
         for (final (index, guard) in guards.indexed) {
           when(

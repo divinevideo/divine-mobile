@@ -174,7 +174,10 @@ class BrokenVideoTracker {
   /// Get count of broken videos
   int get brokenVideoCount => _brokenVideoIds.length;
 
-  /// Get all broken video IDs (for debugging)
+  /// Every id currently marked broken, as a copy.
+  ///
+  /// The feed gate replays these when it attaches this tracker, so a feed
+  /// served before the tracker loaded drops them too.
   List<String> get brokenVideoIds => _brokenVideoIds.toList();
 
   /// Clear all broken video records

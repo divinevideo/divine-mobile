@@ -22,6 +22,7 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -443,6 +444,37 @@ void main() {
         await tester.runAsync(pumpEventQueue);
 
         expect(tracker.isVideoBroken('2' * 64), isTrue);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+      },
+    );
+
+    testWidgets(
+      'drops a Home video marked in an earlier session once the tracker loads',
+      (tester) async {
+        // Home can serve its list before the tracker resolves, so nothing
+        // filtered the ids the tracker then loads from storage.
+        final trackerLoaded = Completer<BrokenVideoTracker>();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            brokenVideoTrackerProvider.overrideWith(
+              (_) => trackerLoaded.future,
+            ),
+          ],
+        );
+        await _loadRemovalVideos(tester, home);
+        final tracker = BrokenVideoTracker(ownerPubkey: _policyViewer);
+        await tester.runAsync(() async {
+          await tracker.initialize();
+          await tracker.markVideoBroken(
+            '2' * 64,
+            'Marked in an earlier session',
+          );
+        });
+
+        trackerLoaded.complete(tracker);
+        await tester.runAsync(pumpEventQueue);
+
         expect(home.originalFeed.state.videos, [_removalVideo('1')]);
       },
     );

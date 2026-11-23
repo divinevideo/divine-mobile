@@ -50,6 +50,9 @@ class FeedUnavailabilityGate {
 
   /// Ids the attached tracker marks broken, from any surface, so a feed that
   /// is already showing one can drop it. Follows identity changes.
+  ///
+  /// Attaching a tracker also replays the ids it already holds: a feed served
+  /// before the tracker resolved filtered none of them.
   Stream<String> get markedVideoIds => _markedVideoIdsController.stream;
 
   /// Attaches the current identity's tracker; null while it has not resolved.
@@ -60,6 +63,7 @@ class FeedUnavailabilityGate {
     _trackerMarks = tracker?.markedVideoIds.listen(
       _markedVideoIdsController.add,
     );
+    tracker?.brokenVideoIds.forEach(_markedVideoIdsController.add);
     if (retired != null) {
       runDetached(
         retired,
