@@ -866,8 +866,7 @@ void main() {
     group('newest revision on the relays', () {
       const audioEventId =
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-      const collaborator =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const collaborator = syntheticOtherTestPubkey;
       const subtitleTrack = [
         'text-track',
         'https://cdn.example.com/subs-en.vtt',
@@ -1034,12 +1033,15 @@ void main() {
         'shows the newest revision',
         () async {
           final opened = _testVideo();
-          final remoteCollaborators = ['1', '2', '3', '4', '5'];
+          final remoteCollaborators = List.generate(
+            5,
+            (i) => testPubkeyFromSeed(i + 1),
+          );
           relaysHold(
             newerRevision(
               extraTags: [
-                for (final digit in remoteCollaborators)
-                  ['p', digit * 64, '', 'collaborator'],
+                for (final pubkey in remoteCollaborators)
+                  ['p', pubkey, '', 'collaborator'],
               ],
             ),
           );
@@ -1047,7 +1049,7 @@ void main() {
           final result = await service.updateVideo(
             originalVideo: opened,
             editorState: editorStateFromPublishedVideo(opened)
-                .copyWith(collaboratorPubkeys: {'6' * 64}),
+                .copyWith(collaboratorPubkeys: {testPubkeyFromSeed(6)}),
             initialCollaboratorPubkeys: const {},
           );
 
@@ -1251,9 +1253,10 @@ void main() {
 
       test('still edits a video over the collaborator limit when this edit '
           'adds no one', () async {
-        final collaborators = [
-          for (final digit in ['1', '2', '3', '4', '5', '6']) digit * 64,
-        ];
+        final collaborators = List.generate(
+          6,
+          (i) => testPubkeyFromSeed(i + 1),
+        );
         relaysHold(
           newerRevision(
             extraTags: [
@@ -2608,7 +2611,7 @@ void main() {
           final result = await updateFromRelay(
             originalVideo: _testVideo(),
             editorState: VideoEditorProviderState(
-              collaboratorPubkeys: {'b' * 64},
+              collaboratorPubkeys: const {syntheticOtherTestPubkey},
             ),
             initialCollaboratorPubkeys: const {},
           );
