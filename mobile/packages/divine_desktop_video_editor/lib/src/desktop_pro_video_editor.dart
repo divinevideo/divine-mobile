@@ -96,7 +96,12 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
         }
         _frameTasks[id] = task;
         registered = true;
-        final path = await video.contentOrSafeFilePath();
+        final path = await Future.any<String>([
+          video.contentOrSafeFilePath(),
+          task.cancelledSignal.future.then<String>((_) {
+            throw const RenderCanceledException();
+          }),
+        ]);
         if (task.cancelled) throw const RenderCanceledException();
         await _transport.execute<Object?>(
           method,
@@ -371,6 +376,7 @@ class _EditorWorkerChannel extends MethodChannel {
 
 class _FrameTask {
   final done = Completer<void>();
+  final cancelledSignal = Completer<void>();
   bool cancelled = false;
   String? workerId;
   bool unsubscribed = false;
@@ -388,6 +394,7 @@ class _FrameTask {
 
   void cancel() {
     cancelled = true;
+    if (!cancelledSignal.isCompleted) cancelledSignal.complete();
     resume();
   }
 

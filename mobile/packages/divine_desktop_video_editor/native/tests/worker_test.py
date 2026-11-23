@@ -122,6 +122,23 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(code, 0, events)
         self.assertIs(events[-1]['value'], True)
 
+    def test_default_export_preserves_source_rate_and_explicit_cap_remains_a_cap(self):
+        directory = tempfile.TemporaryDirectory(prefix='high rate input ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'sixty.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', str(FIXTURE), '-r', '60',
+            '-c:v', 'libx264', '-c:a', 'copy', str(source)], check=True)
+        def frames(file):
+            streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+                '-count_frames', '-show_streams', '-of', 'json', str(file)]))['streams']
+            return int(next(s for s in streams if s['codec_type'] == 'video')['nb_read_frames'])
+        self.assertEqual(frames(source), 60)
+        for cap, expected in [(None, 60), (24, 24), (120, 60)]:
+            code, events = self.invoke(args=dict(videoClips=[dict(inputPath=str(source))],
+                maxFrameRate=cap))
+            self.assertEqual(code, 0, events)
+            self.assertEqual(frames(Path(events[-1]['value']['path'])), expected)
+
     def test_requested_network_optimization_moves_metadata_before_media(self):
         code, events = self.invoke(args={
             'videoClips': [{'inputPath': str(FIXTURE), 'startUs': 250000, 'endUs': 750000}],

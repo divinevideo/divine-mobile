@@ -96,8 +96,11 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
       (end_us != -1 && (end_us <= start_us || end_us > 86400000000.0))) {
     throw Failure{"request"};
   }
-  const double fps = number(member(args, "maxFrameRate"), 30);
-  if (fps < 1 || fps > 240 || fps != std::floor(fps)) throw Failure{"request"};
+  const bool has_frame_cap = !absent(member(args, "maxFrameRate"));
+  const double fps = number(member(args, "maxFrameRate"), 0);
+  if ((has_frame_cap && fps < 1) || fps > 240 || fps != std::floor(fps)) {
+    throw Failure{"request"};
+  }
   const bool flip_x = boolean(member(args, "flipX"), false);
   const bool flip_y = boolean(member(args, "flipY"), false);
   const double turns = number(member(args, "rotateTurns"), 0);
@@ -148,10 +151,13 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   gst_discoverer_stream_info_list_free(streams);
   if (rotation == 90 || rotation == 270) std::swap(width, height);
   if (width == 0 || height == 0 || width > 8192 || height > 8192) throw Failure{"unsupported"};
+  if (!has_frame_cap && (source_denominator == 0 || source_numerator == 0)) {
+    throw Failure{"decoder"};
+  }
   guint output_numerator = static_cast<guint>(fps);
   guint output_denominator = 1;
   if (source_denominator != 0 && source_numerator != 0 &&
-      static_cast<double>(source_numerator) / source_denominator < fps) {
+      (!has_frame_cap || static_cast<double>(source_numerator) / source_denominator < fps)) {
     output_numerator = source_numerator;
     output_denominator = source_denominator;
   }

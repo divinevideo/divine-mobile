@@ -689,6 +689,60 @@ void main() {
           expect(root.listSync(), isEmpty);
         });
       }
+
+      for (final dispose in [false, true]) {
+        test(
+          'ends preparation on ${dispose ? 'dispose' : 'unsubscribe'}',
+          () async {
+            final source = Completer<String>();
+            final errors = <Object>[];
+            final subscription = editor
+                .getThumbnailStream(
+                  ThumbnailConfigs(
+                    video: _PreparingVideo(source.future),
+                    outputSize: const Size(64, 64),
+                    timestamps: const [Duration.zero],
+                  ),
+                )
+                .listen(
+                  (_) {
+                    fail('Cancelled preparation delivered a frame.');
+                  },
+                  onError: (Object error) {
+                    errors.add(error);
+                  },
+                );
+            final closing = dispose ? editor.dispose() : subscription.cancel();
+            try {
+              await expectLater(
+                closing.timeout(const Duration(milliseconds: 200)),
+                completes,
+              );
+              expect(locations, 0);
+              expect(root.listSync(), isEmpty);
+            } finally {
+              source.completeError(
+                StateError('Late synthetic preparation failure'),
+              );
+              await closing;
+              await subscription.cancel();
+            }
+            await pumpEventQueue();
+            if (dispose) expect(errors.single, isA<RenderCanceledException>());
+          },
+        );
+      }
     });
   });
+}
+
+class _PreparingVideo implements EditorVideo {
+  _PreparingVideo(this.preparation);
+  final Future<String> preparation;
+
+  @override
+  Future<String> contentOrSafeFilePath() => preparation;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
