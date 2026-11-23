@@ -38,6 +38,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -678,11 +679,14 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       _MessageInput(
                         controller: messageController,
                         isSending: state.isSending,
-                        onSend: () => bloc.add(
-                          ShareSheetSendRequested(
-                            message: messageController.text,
-                          ),
-                        ),
+                        onSend: () {
+                          if (!ensureEmailConfirmedToMessage(context)) return;
+                          bloc.add(
+                            ShareSheetSendRequested(
+                              message: messageController.text,
+                            ),
+                          );
+                        },
                       ),
                     if (state.attemptedRecipients.isEmpty) ...[
                       Divider(color: context.vineColors.card, height: 1),

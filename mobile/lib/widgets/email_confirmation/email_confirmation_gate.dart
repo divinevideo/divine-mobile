@@ -111,3 +111,31 @@ class ConfirmEmailToMessageView extends StatelessWidget {
     );
   }
 }
+
+/// Whether the signed-in account may send a direct message now.
+///
+/// When its email is unconfirmed this says so, with a resend action, and
+/// returns false so the caller does not send. Keycast and the DM send policy
+/// refuse the send anyway; this is where the person learns why.
+bool ensureEmailConfirmedToMessage(BuildContext context) {
+  final cubit = context.read<EmailConfirmationCubit?>();
+  final state = cubit?.state;
+  if (cubit == null || state == null || !state.isUnconfirmed) return true;
+  final l10n = context.l10n;
+  final account = state.account;
+  ScaffoldMessenger.maybeOf(context)
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        l10n.emailConfirmationSendBlocked,
+        actionLabel: l10n.emailConfirmationResendButton,
+        onActionPressed: () => runDetached(
+          cubit.resend(account: account),
+          'resend confirmation email',
+          logName: 'EmailConfirmationGate',
+          category: LogCategory.auth,
+        ),
+      ),
+    );
+  return false;
+}

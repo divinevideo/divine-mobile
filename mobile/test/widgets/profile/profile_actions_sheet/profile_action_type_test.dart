@@ -28,6 +28,19 @@ void main() {
         );
       });
 
+      test('asks an account with no email to add one', () {
+        final actions = ProfileActionType.pending(
+          isOwnProfile: true,
+          isAccountEnforced: false,
+          isAnonymous: false,
+          hasAnyProfileInfo: true,
+          canBecomeSupporter: false,
+          isEmailMissing: true,
+        );
+
+        expect(actions, equals([ProfileActionType.addEmail]));
+      });
+
       test('never asks another profile to confirm its email', () {
         final actions = ProfileActionType.pending(
           isOwnProfile: false,

@@ -15,6 +15,7 @@ import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart'
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
@@ -155,6 +156,12 @@ void main() {
           primaryLabel: l10n.profileCompletePrimaryButton,
           route: ProfileSetupScreen.setupPath,
         ),
+        (
+          action: ProfileActionType.addEmail,
+          title: l10n.emailConfirmationAddEmailTitle,
+          primaryLabel: l10n.emailConfirmationAddEmailButton,
+          route: const ChangeEmailRouteData().location,
+        ),
       ];
 
       for (final destination in destinations) {
@@ -230,6 +237,48 @@ void main() {
           ),
         );
         when(() => emailConfirmationCubit.resend()).thenAnswer((_) async {});
+      });
+
+      testWidgets('steps on to the next action once the email is confirmed', (
+        tester,
+      ) async {
+        final states = StreamController<EmailConfirmationState>();
+        addTearDown(states.close);
+        const unconfirmed = EmailConfirmationState(
+          account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+          status: EmailConfirmationStatus.unconfirmed,
+          email: email,
+        );
+        whenListen(
+          emailConfirmationCubit,
+          states.stream,
+          initialState: unconfirmed,
+        );
+        await tester.pumpWidget(
+          buildApp(
+            actions: [
+              ProfileActionType.confirmEmail,
+              ProfileActionType.completeProfile,
+            ],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+
+        states.add(
+          const EmailConfirmationState(
+            account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+            status: EmailConfirmationStatus.confirmed,
+            email: email,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationTitle), findsNothing);
+        expect(find.text(l10n.profileCompleteYourProfile), findsOneWidget);
       });
 
       testWidgets('names the address waiting for confirmation', (tester) async {

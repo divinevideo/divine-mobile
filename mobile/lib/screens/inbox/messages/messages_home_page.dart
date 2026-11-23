@@ -37,22 +37,22 @@ class MessagesHomePage extends ConsumerWidget {
     );
     final restricted = ref.watch(isDmRestrictedProvider);
     // Do not instantiate chat state or new navigation when Rooms is disabled.
+    // Only Direct is locked behind email confirmation; Rooms are not DMs.
+    final gatedDirect = EmailConfirmationGate(child: direct);
     if (!enabled || restricted || account == null || account.isEmpty) {
-      return EmailConfirmationGate(child: direct);
+      return gatedDirect;
     }
     final preferences = ref.watch(messagesPreferenceServiceProvider);
     final activity = ref.watch(roomActivityRepositoryProvider);
-    return EmailConfirmationGate(
-      child: BlocProvider(
-        key: ValueKey((account, preferences)),
-        create: (_) => MessagesNavigationCubit(
-          account: account,
-          preferences: preferences,
-        ),
-        child: _RoomsActivity(
-          repository: activity,
-          direct: direct,
-        ),
+    return BlocProvider(
+      key: ValueKey((account, preferences)),
+      create: (_) => MessagesNavigationCubit(
+        account: account,
+        preferences: preferences,
+      ),
+      child: _RoomsActivity(
+        repository: activity,
+        direct: gatedDirect,
       ),
     );
   }

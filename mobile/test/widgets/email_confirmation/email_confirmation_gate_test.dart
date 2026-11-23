@@ -2,6 +2,7 @@
 // ABOUTME: view until the email is confirmed, with a working resend button.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -24,7 +25,9 @@ void main() {
 
     setUp(() {
       cubit = _MockEmailConfirmationCubit();
-      when(() => cubit.resend()).thenAnswer((_) async {});
+      when(
+        () => cubit.resend(account: any(named: 'account')),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildSubject({bool withCubit = true, bool standalone = false}) {
@@ -118,6 +121,63 @@ void main() {
       });
     });
 
+    group(r'$ensureEmailConfirmedToMessage', () {
+      Widget buildSender(ValueChanged<bool> onResult) => MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: BlocProvider<EmailConfirmationCubit>.value(
+          value: cubit,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => DivineButton(
+                label: 'send',
+                onPressed: () =>
+                    onResult(ensureEmailConfirmedToMessage(context)),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      testWidgets('stops the send and says why while unconfirmed', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: _account,
+            status: EmailConfirmationStatus.unconfirmed,
+            email: _email,
+          ),
+        );
+        bool? allowed;
+
+        await tester.pumpWidget(buildSender((value) => allowed = value));
+        await tester.tap(find.text('send'));
+        await tester.pump();
+
+        expect(allowed, isFalse);
+        expect(find.text(l10n.emailConfirmationSendBlocked), findsOneWidget);
+      });
+
+      testWidgets('lets a confirmed account send', (tester) async {
+        when(() => cubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: _account,
+            status: EmailConfirmationStatus.confirmed,
+            email: _email,
+          ),
+        );
+        bool? allowed;
+
+        await tester.pumpWidget(buildSender((value) => allowed = value));
+        await tester.tap(find.text('send'));
+        await tester.pump();
+
+        expect(allowed, isTrue);
+        expect(find.text(l10n.emailConfirmationSendBlocked), findsNothing);
+      });
+    });
+
     group('interactions', () {
       testWidgets('resends the confirmation link', (tester) async {
         when(() => cubit.state).thenReturn(
@@ -154,7 +214,7 @@ void main() {
         );
         await tester.pump();
 
-        verifyNever(() => cubit.resend());
+        verifyNever(() => cubit.resend(account: any(named: 'account')));
       });
     });
   });

@@ -437,6 +437,28 @@ class _EmailVerificationScreenState
     }
   }
 
+  /// Says what the link did once the signed-in account has been re-checked.
+  ///
+  /// The link names no account, and it may have confirmed someone else's
+  /// address, so DMs are only announced as unlocked when the signed-in
+  /// account itself now reads as confirmed.
+  static Future<void> _announceLinkConfirmation(
+    EmailConfirmationCubit? confirmation,
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+  ) async {
+    await confirmation?.refresh();
+    final unlocked =
+        confirmation?.state.status == EmailConfirmationStatus.confirmed;
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        unlocked
+            ? l10n.emailConfirmationDone
+            : l10n.emailConfirmationLinkConfirmed,
+      ),
+    );
+  }
+
   Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
     if (!_claimLeavingVerification()) return;
     if (clearPending) {
@@ -449,18 +471,15 @@ class _EmailVerificationScreenState
     if (authService.authState == AuthState.authenticated &&
         !authService.isAnonymous) {
       final confirmation = context.read<EmailConfirmationCubit?>();
-      if (confirmation != null) {
-        runDetached(
-          confirmation.refresh(),
-          'refresh email confirmation after link',
-          logName: 'EmailVerificationScreen',
-          category: LogCategory.auth,
-        );
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        DivineSnackbarContainer.snackBar(context.l10n.emailConfirmationDone),
-      );
+      final messenger = ScaffoldMessenger.of(context);
+      final l10n = context.l10n;
       context.go(ExploreScreen.pathForTab('popular'));
+      runDetached(
+        _announceLinkConfirmation(confirmation, messenger, l10n),
+        'announce email confirmation after link',
+        logName: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+      );
       return;
     }
     // Show feedback message before redirecting to login

@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -41,6 +42,7 @@ Future<void> showProfileActionsSheet({
     ProfileActionType.becomeSupporter => true,
     ProfileActionType.accountRestricted ||
     ProfileActionType.confirmEmail ||
+    ProfileActionType.addEmail ||
     ProfileActionType.secureAccount ||
     ProfileActionType.completeProfile => false,
   };
@@ -152,6 +154,16 @@ class _ProfileActionsSheetContentState
             key: key,
             onMaybeLater: _onMaybeLater,
           ),
+          ProfileActionType.addEmail => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.email,
+            title: l10n.emailConfirmationAddEmailTitle,
+            subtitle: l10n.emailConfirmationAddEmailSubtitle,
+            primaryLabel: l10n.emailConfirmationAddEmailButton,
+            onPrimaryTap: () =>
+                _openDestination(const ChangeEmailRouteData().location),
+            onSecondaryTap: _onMaybeLater,
+          ),
           ProfileActionType.secureAccount => _ActionPrompt(
             key: key,
             sticker: DivineStickerName.skeletonKey,
@@ -202,20 +214,27 @@ class _ConfirmEmailPrompt extends StatelessWidget {
       (cubit) =>
           cubit.state.resendStatus == EmailConfirmationResendStatus.sending,
     );
-    return _ActionPrompt(
-      sticker: DivineStickerName.email,
-      title: l10n.emailConfirmationTitle,
-      subtitle: l10n.emailConfirmationProfileSubtitle(email),
-      primaryLabel: l10n.emailConfirmationResendButton,
-      onPrimaryTap: isSending
-          ? null
-          : () => runDetached(
-              context.read<EmailConfirmationCubit>().resend(),
-              'resend confirmation email',
-              logName: 'ProfileActionsSheetContent',
-              category: LogCategory.auth,
-            ),
-      onSecondaryTap: onMaybeLater,
+    // Confirming in the mail app while this sheet is open clears the action,
+    // so step on to the next one instead of offering a stale resend.
+    return BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
+      listenWhen: (previous, current) =>
+          previous.isUnconfirmed && !current.isUnconfirmed,
+      listener: (_, _) => onMaybeLater(),
+      child: _ActionPrompt(
+        sticker: DivineStickerName.email,
+        title: l10n.emailConfirmationTitle,
+        subtitle: l10n.emailConfirmationProfileSubtitle(email),
+        primaryLabel: l10n.emailConfirmationResendButton,
+        onPrimaryTap: isSending
+            ? null
+            : () => runDetached(
+                context.read<EmailConfirmationCubit>().resend(),
+                'resend confirmation email',
+                logName: 'ProfileActionsSheetContent',
+                category: LogCategory.auth,
+              ),
+        onSecondaryTap: onMaybeLater,
+      ),
     );
   }
 }

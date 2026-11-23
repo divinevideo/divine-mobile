@@ -616,6 +616,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                 supporterPromptDismissal.dismiss(),
               ProfileActionType.accountRestricted ||
               ProfileActionType.confirmEmail ||
+              ProfileActionType.addEmail ||
               ProfileActionType.completeProfile => null,
             };
             if (dismissal == null) return;
