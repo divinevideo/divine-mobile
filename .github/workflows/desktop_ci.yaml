@@ -65,10 +65,12 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
       - name: Build production desktop entrypoint
-        env:
-          CODE_SIGNING_ALLOWED: "NO"
-          CODE_SIGNING_REQUIRED: "NO"
-        run: flutter build "${{ matrix.platform }}" --release --no-pub
+        run: |
+          if [[ "${{ matrix.platform }}" == macos ]]; then
+            bash scripts/desktop/build_unsigned_macos.sh
+          else
+            flutter build "${{ matrix.platform }}" --release --no-pub
+          fi
       # These unsigned bundles prove native compilation, not signing, store
       # acceptance or working camera hardware. Distribution validates those
       # separately against the reviewed source and candidate receipts.
