@@ -544,10 +544,6 @@ definitions:
           exit 0
         fi
         set -euo pipefail
-        if [ "${{ inputs.PUBLISH_TO_GITHUB }}" != YES ]; then
-          echo "Compilation complete; retaining the app bundle without creating a distribution DMG."
-          exit 0
-        fi
         APP_PATH="build/macos/Build/Products/Release"
         APP_NAME=$(ls "$APP_PATH" | grep '\.app$' | head -1)
         DMG_NAME="Divine-macOS.dmg"
