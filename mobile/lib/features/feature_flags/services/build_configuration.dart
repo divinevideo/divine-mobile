@@ -94,6 +94,8 @@ class BuildConfiguration {
         // preference cannot turn it on in a build without a developer token.
         return songCatalogConfigured &&
             const bool.fromEnvironment('FF_SONG_CATALOG');
+      case FeatureFlag.confirmationSignIn:
+        return const bool.fromEnvironment('FF_CONFIRMATION_SIGN_IN');
       case FeatureFlag.minorConsentInAppRecording:
         // A preference cannot override the build's verified-deployment gate.
         return consentDeliveryVerified &&
@@ -154,6 +156,8 @@ class BuildConfiguration {
         return 'FF_CONCORD_CHAT';
       case FeatureFlag.songCatalog:
         return 'FF_SONG_CATALOG';
+      case FeatureFlag.confirmationSignIn:
+        return 'FF_CONFIRMATION_SIGN_IN';
       case FeatureFlag.minorConsentInAppRecording:
         return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
       case FeatureFlag.largeScreenLayout:

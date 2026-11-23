@@ -3,8 +3,9 @@
 
 /// Why the verifier stopped counting a claim linked by signing in.
 ///
-/// Signing in again renews the link in place, so the dashboard offers that
-/// only for a claim carrying one of these.
+/// Signing in again renews the link in place for [expired] and
+/// [accountChanged], so the dashboard offers that only for those.
+/// [needsConfirmation] is renewed by getting Divine Confirmation instead.
 enum SignInLapse {
   /// No sign-in currently counts for this link: it lapsed, was unlinked, or was
   /// never confirmed.
@@ -13,6 +14,10 @@ enum SignInLapse {
   /// The handle now points to a different account than the one that signed
   /// in.
   accountChanged,
+
+  /// The link counts again once its owner has Divine Confirmation; renewing
+  /// restores it without signing in again.
+  needsConfirmation,
 }
 
 /// Reads the verifier's reason code on a verdict as a [SignInLapse].
@@ -23,5 +28,6 @@ enum SignInLapse {
 SignInLapse? signInLapseFromCode(String? code) => switch (code) {
   'signin_expired' => SignInLapse.expired,
   'signin_account_changed' => SignInLapse.accountChanged,
+  'signin_needs_confirmation' => SignInLapse.needsConfirmation,
   _ => null,
 };
