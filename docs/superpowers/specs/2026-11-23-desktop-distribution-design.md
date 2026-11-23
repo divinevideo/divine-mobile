@@ -77,4 +77,3 @@ Reproduce and repair native builds, establish full creation workflows, prepare a
 - https://docs.flutter.dev/deployment/windows
 - https://developer.apple.com/documentation/security/protecting-user-data-with-app-sandbox
 - https://docs.flathub.org/docs/for-app-authors/requirements#generative-ai-policy
-

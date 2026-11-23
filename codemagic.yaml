@@ -547,6 +547,10 @@ definitions:
         APP_PATH="build/macos/Build/Products/Release"
         APP_NAME=$(ls "$APP_PATH" | grep '\.app$' | head -1)
         DMG_NAME="Divine-macOS.dmg"
+        # CI compilation may be unsigned. Never turn that output into a DMG
+        # that can also be published later through artifact recovery.
+        python3 scripts/desktop/validate_macos_distribution.py \
+          "$APP_PATH/$APP_NAME" --bundle-id co.openvine.app
         echo "Packaging $APP_NAME as $DMG_NAME"
         hdiutil create -volname "Divine" -srcfolder "$APP_PATH/$APP_NAME" \
           -ov -format UDZO "$APP_PATH/$DMG_NAME"

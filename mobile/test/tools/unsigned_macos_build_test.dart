@@ -107,7 +107,8 @@ exit "${BUILD_EXIT_CODE:-0}"
 
       expect(result.exitCode, 29, reason: '${result.stderr}');
     });
-  });
+    // The fixtures exercise POSIX shell scripts, not Windows command scripts.
+  }, skip: Platform.isWindows);
 }
 
 Future<String> _symbolUploadPhase() async {
