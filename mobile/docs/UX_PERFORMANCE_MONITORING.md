@@ -55,7 +55,8 @@ editor.** It runs from the start of the render until its outcome is known and
 the draft is saved. `outcome` is `success`, `stale` (the render finished but the
 edit changed while it ran, so the editor threw the video away and, while Post
 details still waits, rendered again under its own trace), `incomplete` (a newer render
-replaced it, or teardown cancelled it), `failed` or `error`, with
+replaced it, or it was cancelled, for example because the user left Post
+details), `failed` or `error`, with
 `failure_reason`, `clip_count` and `aspect_ratio` as before. Each step that ran
 reports its milliseconds, so an absent step metric means the step did not
 happen: `chroma_bake_ms` (keying takes recorded with the color mask),

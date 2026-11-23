@@ -57,7 +57,8 @@ enum VideoGenerationOutcome {
   /// from it, so it must not count as a success.
   stale,
 
-  /// A newer render replaced this one, or teardown cancelled it.
+  /// A newer render replaced this one, or it was cancelled, for example
+  /// because the user left Post details.
   incomplete,
 
   /// The render produced no video, for the `failure_reason` it names.
