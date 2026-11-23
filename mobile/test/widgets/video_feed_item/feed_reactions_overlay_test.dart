@@ -827,7 +827,7 @@ void main() {
             hashtag.owner!.performAction(hashtag.id, SemanticsAction.tap);
             await tester.pump();
             verify(
-              () => router.push<Object?>(
+              () => router.push<void>(
                 const HashtagRouteData(tag: 'synthetic').location,
               ),
             ).called(1);

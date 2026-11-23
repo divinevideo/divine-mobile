@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -1025,11 +1026,11 @@ class _MessageTextState extends ConsumerState<_MessageText> {
   }
 
   void _navigateToHashtag(String hashtag) {
-    runDetached(
-      HashtagRouteData(tag: hashtag).push<void>(context),
-      'open hashtag from DM',
+    openHashtagFeed(
+      context,
+      hashtag,
       logName: 'MessageBubble',
-      category: LogCategory.ui,
+      description: 'open hashtag from DM',
     );
   }
 

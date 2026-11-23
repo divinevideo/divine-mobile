@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -19,9 +20,10 @@ final class LinkifiedTextNavigation {
     VoidCallback? beforeNavigate,
   }) {
     beforeNavigate?.call();
-    _pushDetached(
+    openHashtagFeed(
       context,
-      HashtagRouteData(tag: hashtag).location,
+      hashtag,
+      logName: 'LinkifiedTextNavigation',
       description: 'navigate to hashtag feed',
     );
   }
