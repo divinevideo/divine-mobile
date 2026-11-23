@@ -216,5 +216,78 @@ void main() {
       );
       expect(containerFinder, findsWidgets);
     });
+
+    group('taps before the next frame', () {
+      Future<GoRouter> pumpRow(WidgetTester tester, List<String> tags) async {
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) =>
+                  Scaffold(body: TrendingHashtagsSection(hashtags: tags)),
+            ),
+            GoRoute(
+              path: HashtagScreenRouter.path,
+              builder: (context, state) => Scaffold(
+                body: Text('opened ${state.pathParameters['tag']}'),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
+        await tester.pumpAndSettle();
+        return router;
+      }
+
+      testWidgets(
+        'a second tap opens no second feed, so one Back returns to the row',
+        (tester) async {
+          final router = await pumpRow(tester, const ['funny']);
+
+          await tester.tap(find.text('#funny'));
+          await tester.tap(find.text('#funny'));
+          await tester.pumpAndSettle();
+          expect(
+            find.text('opened funny', skipOffstage: false),
+            findsOneWidget,
+          );
+
+          router.pop();
+          await tester.pumpAndSettle();
+
+          expect(find.text('opened funny', skipOffstage: false), findsNothing);
+          expect(find.text('#funny'), findsOneWidget);
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
+
+      testWidgets(
+        'a tap on another chip in the same frame is dropped',
+        (tester) async {
+          await pumpRow(tester, const ['aaa', 'bbb']);
+
+          await tester.tap(find.text('#aaa'));
+          await tester.tap(find.text('#bbb'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('opened aaa', skipOffstage: false), findsOneWidget);
+          expect(find.text('opened bbb', skipOffstage: false), findsNothing);
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
+    });
   });
 }
