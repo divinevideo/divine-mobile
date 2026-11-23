@@ -35,7 +35,9 @@ jobs:
             bundle: build/linux/x64/release/bundle
           - platform: windows
             architecture: x64
-            runner: windows-2025
+            # The locked C++/WinRT plugins require Visual Studio 2022;
+            # MSVC 18 rejects their experimental coroutine headers.
+            runner: windows-2022
             bundle: build/windows/x64/runner/Release
           - platform: macos
             architecture: arm64
@@ -47,6 +49,14 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Select Xcode 26.2 for the macOS 26 SDK
+        if: matrix.platform == 'macos'
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+        run: |
+          test -d "$DEVELOPER_DIR"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          xcodebuild -version
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.9"

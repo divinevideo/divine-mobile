@@ -8,6 +8,7 @@ void main() {
     late Directory temporaryDirectory;
     late Directory bundle;
     late File entitlements;
+    late File profile;
     late Map<String, String> environment;
 
     setUp(() async {
@@ -26,13 +27,19 @@ void main() {
 <string>TESTTEAM.co.openvine.app</string>
 </array></dict></plist>
 ''');
+      await File('${bundle.path}/Contents/embedded.provisionprofile')
+          .writeAsString('signed profile fixture');
+      profile = File('${temporaryDirectory.path}/profile.plist');
+      await profile.writeAsString(_profile());
       final codesign = File('${temporaryDirectory.path}/codesign');
       await codesign.writeAsString(
         r'''
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "$1" == --verify ]]; then exit "${VERIFY_EXIT:-0}"; fi
-if [[ " $* " == *' --entitlements '* ]]; then
+if [[ " $* " == *' --extract-certificates '* ]]; then
+  printf '%s' 'test-cert' > "${3}0"
+elif [[ " $* " == *' --entitlements '* ]]; then
   cat "$TEST_ENTITLEMENTS"
 else
   printf '%s\n' "$TEST_SIGNATURE"
@@ -45,9 +52,15 @@ fi
         '#!/usr/bin/env bash\nexit "\${ASSESS_EXIT:-0}"\n',
       );
       await Process.run('chmod', ['+x', codesign.path, spctl.path]);
+      final security = File('${temporaryDirectory.path}/security');
+      await security.writeAsString(
+        '#!/usr/bin/env bash\ncat "\$TEST_PROFILE"\n',
+      );
+      await Process.run('chmod', ['+x', security.path]);
       environment = {
         'PATH': '${temporaryDirectory.path}:${Platform.environment['PATH']}',
         'TEST_ENTITLEMENTS': entitlements.path,
+        'TEST_PROFILE': profile.path,
         'TEST_SIGNATURE':
             'Authority=Developer ID Application: Test\nTeamIdentifier=TESTTEAM',
       };
@@ -154,6 +167,30 @@ fi
       expect(result.stderr, contains('Gatekeeper'));
     });
 
+    test('rejects missing provisioning authorization', () async {
+      await File('${bundle.path}/Contents/embedded.provisionprofile').delete();
+      final result = await validate();
+
+      expect(result.exitCode, isNot(0));
+      expect(result.stderr, contains('provisioning profile'));
+    });
+
+    for (final (name, content) in [
+      ('team', _profile(team: 'OTHERTEAM')),
+      ('app', _profile(identifier: 'TESTTEAM.other.app')),
+      ('keychain', _profile(group: 'TESTTEAM.other.app')),
+      ('expiry', _profile(expired: true)),
+      ('certificate', _profile(certificate: 'b3RoZXItY2VydA==')),
+    ]) {
+      test('rejects incompatible provisioning $name', () async {
+        await profile.writeAsString(content);
+        final result = await validate();
+
+        expect(result.exitCode, isNot(0));
+        expect(result.stderr, contains('provisioning profile'));
+      });
+    }
+
     for (final (publish, unsigned) in [
       (true, true),
       (true, false),
@@ -184,6 +221,9 @@ fi
           );
           await File('${bundle.path}/Contents/Info.plist').copy(
             '${contents.path}/Info.plist',
+          );
+          await File('${bundle.path}/Contents/embedded.provisionprofile').copy(
+            '${contents.path}/embedded.provisionprofile',
           );
           await Link('${temporaryDirectory.path}/scripts').create(
             Directory('scripts').absolute.path,
@@ -223,4 +263,26 @@ fi
     }
     // The fixtures exercise POSIX shell scripts and macOS signing commands.
   }, skip: Platform.isWindows);
+}
+
+String _profile({
+  String team = 'TESTTEAM',
+  String identifier = 'TESTTEAM.*',
+  String group = 'TESTTEAM.*',
+  String certificate = 'dGVzdC1jZXJ0',
+  bool expired = false,
+}) {
+  final expiry = DateTime.utc(
+    DateTime.now().year + (expired ? -1 : 1),
+  ).toIso8601String().replaceFirst('.000Z', 'Z');
+  return '''
+<plist version="1.0"><dict>
+<key>TeamIdentifier</key><array><string>$team</string></array>
+<key>ExpirationDate</key><date>$expiry</date>
+<key>DeveloperCertificates</key><array><data>$certificate</data></array>
+<key>Entitlements</key><dict>
+<key>com.apple.application-identifier</key><string>$identifier</string>
+<key>keychain-access-groups</key><array><string>$group</string></array>
+</dict></dict></plist>
+''';
 }

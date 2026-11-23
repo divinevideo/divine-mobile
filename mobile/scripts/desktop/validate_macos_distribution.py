@@ -2,10 +2,12 @@
 """Reject unusable direct-distribution apps before creating a public DMG."""
 
 import argparse
+from datetime import datetime, timezone
 import plistlib
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 
 def run_tool(arguments: list[str], failure: str) -> str:
@@ -13,6 +15,78 @@ def run_tool(arguments: list[str], failure: str) -> str:
     if result.returncode:
         raise ValueError(failure)
     return result.stdout + result.stderr
+
+
+def permits(claim: str, allowed: str) -> bool:
+    return claim == allowed or (
+        allowed.endswith("*") and claim.startswith(allowed[:-1])
+    )
+
+
+def verify_profile(bundle: Path, bundle_id: str, team: str, entitlements: dict) -> None:
+    profile_path = next(
+        (
+            bundle / "Contents" / name
+            for name in ("embedded.provisionprofile", "embedded.mobileprovision")
+            if (bundle / "Contents" / name).is_file()
+        ),
+        None,
+    )
+    if profile_path is None:
+        raise ValueError("a provisioning profile is required for keychain authorization")
+    result = subprocess.run(
+        ["security", "cms", "-D", "-i", str(profile_path)],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError("provisioning profile could not be decoded")
+    profile = plistlib.loads(result.stdout)
+    expiry = profile.get("ExpirationDate")
+    if (
+        not isinstance(expiry, datetime)
+        or expiry.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc)
+    ):
+        raise ValueError("provisioning profile is expired or has no expiry")
+    if team not in profile.get("TeamIdentifier", []):
+        raise ValueError("provisioning profile belongs to another signing team")
+    allowed = profile.get("Entitlements", {})
+    application = allowed.get("com.apple.application-identifier", "")
+    if not permits(f"{team}.{bundle_id}", application):
+        raise ValueError("provisioning profile does not authorize this app")
+    for key, claims in entitlements.items():
+        if key != "keychain-access-groups" and not key.startswith(
+            "com.apple.developer."
+        ):
+            continue
+        authorization = allowed.get(key)
+        if isinstance(claims, list) and isinstance(authorization, list):
+            authorized = all(
+                any(
+                    isinstance(pattern, str) and permits(claim, pattern)
+                    for pattern in authorization
+                )
+                for claim in claims
+            )
+        else:
+            authorized = claims == authorization
+        if not authorized:
+            raise ValueError(
+                "provisioning profile does not authorize a restricted entitlement"
+            )
+    with tempfile.TemporaryDirectory(prefix="divine-signing-certificate-") as temporary:
+        prefix = str(Path(temporary) / "certificate-")
+        run_tool(
+            ["codesign", "--display", "--extract-certificates", prefix, str(bundle)],
+            "provisioning profile signing certificate could not be inspected",
+        )
+        certificate = Path(f"{prefix}0")
+        if not certificate.is_file() or certificate.read_bytes() not in profile.get(
+            "DeveloperCertificates", []
+        ):
+            raise ValueError(
+                "provisioning profile does not authorize the signing certificate"
+            )
 
 
 def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> None:
@@ -54,6 +128,8 @@ def validate(bundle: Path, expected_bundle_id: str, expected_team_id: str) -> No
         "keychain-access-groups", []
     ):
         raise ValueError("keychain access group does not match the signed app")
+
+    verify_profile(bundle, expected_bundle_id, expected_team_id, entitlements)
 
     run_tool(
         ["spctl", "--assess", "--type", "execute", str(bundle)],
