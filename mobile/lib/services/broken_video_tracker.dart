@@ -137,7 +137,9 @@ class BrokenVideoTracker {
     if (!_brokenVideoIds.contains(videoId)) {
       _brokenVideoIds.add(videoId);
       _brokenTimestamps[videoId] = DateTime.now();
-      _markedVideoIdsController.add(videoId);
+      if (!_markedVideoIdsController.isClosed) {
+        _markedVideoIdsController.add(videoId);
+      }
 
       await _saveBrokenVideos();
 
@@ -151,6 +153,13 @@ class BrokenVideoTracker {
 
   /// Each id as it is newly marked, so a feed already showing it can drop it.
   Stream<String> get markedVideoIds => _markedVideoIdsController.stream;
+
+  /// Ends [markedVideoIds] when the provider rebuilds this tracker, which it
+  /// does on every auth transition.
+  ///
+  /// A confirmation that began before the rebuild can still mark a video
+  /// afterwards; the mark is saved but no longer announced.
+  void dispose() => unawaited(_markedVideoIdsController.close());
 
   /// Check if a video is known to be broken
   bool isVideoBroken(String videoId) {

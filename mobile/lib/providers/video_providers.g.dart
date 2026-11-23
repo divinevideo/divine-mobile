@@ -773,7 +773,7 @@ final class BrokenVideoTrackerProvider
 }
 
 String _$brokenVideoTrackerHash() =>
-    r'a0b2af154496e50f633f49069986b3c0ee1f5585';
+    r'ad8e0f446adb233b25ea05b39fa358f9830cbf63';
 
 /// Guard that HEAD-confirms a feed item's media is 404 and verifies moderation
 /// says the blob is `blocked` before marking it broken. A canonical API 404
@@ -930,7 +930,7 @@ final class FeedUnavailabilityGateProvider
 }
 
 String _$feedUnavailabilityGateHash() =>
-    r'e6bdbe891fa7d22dfcb0cc6c7c35db7aa0722b12';
+    r'5dab0f84135dd2099e4e496a5a8499d694fa764a';
 
 /// Provider for VideoLocalStorage instance (SQLite-backed)
 ///

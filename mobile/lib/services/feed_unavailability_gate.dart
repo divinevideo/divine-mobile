@@ -58,20 +58,30 @@ class FeedUnavailabilityGate {
   /// Attaches the current identity's tracker; null while it has not resolved.
   void attachTracker(BrokenVideoTracker? tracker) {
     if (identical(tracker, _tracker)) return;
-    final retired = _trackerMarks?.cancel();
+    _cancelTrackerMarks();
     _tracker = tracker;
     _trackerMarks = tracker?.markedVideoIds.listen(
       _markedVideoIdsController.add,
     );
     tracker?.brokenVideoIds.forEach(_markedVideoIdsController.add);
-    if (retired != null) {
-      runDetached(
-        retired,
-        'cancel the retired tracker mark subscription',
-        logName: 'FeedUnavailabilityGate',
-        category: LogCategory.video,
-      );
-    }
+  }
+
+  /// Stops forwarding marks and ends [markedVideoIds].
+  void dispose() {
+    _cancelTrackerMarks();
+    unawaited(_markedVideoIdsController.close());
+  }
+
+  void _cancelTrackerMarks() {
+    final retired = _trackerMarks?.cancel();
+    _trackerMarks = null;
+    if (retired == null) return;
+    runDetached(
+      retired,
+      'cancel the retired tracker mark subscription',
+      logName: 'FeedUnavailabilityGate',
+      category: LogCategory.video,
+    );
   }
 
   /// Attaches the current identity's guard; null while it has not resolved.

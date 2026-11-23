@@ -84,5 +84,23 @@ void main() {
         ['first', 'second'],
       );
     });
+
+    test(
+      'dispose ends the mark stream and a late mark is still saved',
+      () async {
+        final tracker = BrokenVideoTracker();
+        await tracker.initialize();
+        final announced = tracker.markedVideoIds.toList();
+
+        tracker.dispose();
+        // A confirmation that began before an auth transition can land late.
+        await tracker.markVideoBroken('late', 'test');
+
+        expect(await announced.timeout(const Duration(seconds: 5)), isEmpty);
+        final reloaded = BrokenVideoTracker();
+        await reloaded.initialize();
+        expect(reloaded.isVideoBroken('late'), isTrue);
+      },
+    );
   });
 }

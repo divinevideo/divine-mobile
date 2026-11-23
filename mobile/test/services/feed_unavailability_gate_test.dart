@@ -98,6 +98,23 @@ void main() {
       );
     });
 
+    group('dispose', () {
+      test('stops forwarding the tracker and ends markedVideoIds', () async {
+        final marks = StreamController<String>.broadcast();
+        addTearDown(marks.close);
+        when(() => tracker.markedVideoIds).thenAnswer((_) => marks.stream);
+        gate.attachTracker(tracker);
+        expect(marks.hasListener, isTrue);
+        final forwarded = gate.markedVideoIds.toList();
+
+        gate.dispose();
+        await pumpEventQueue();
+
+        expect(marks.hasListener, isFalse);
+        expect(await forwarded.timeout(const Duration(seconds: 5)), isEmpty);
+      });
+    });
+
     group('confirmVideoUnavailable', () {
       test('fails closed before a guard is attached', () async {
         await expectLater(

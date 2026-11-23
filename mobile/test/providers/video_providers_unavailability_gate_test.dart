@@ -1,6 +1,8 @@
 // ABOUTME: Pins that feedUnavailabilityGateProvider hands out one stable gate
 // ABOUTME: that follows the per-identity tracker and guard as they rebuild.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -88,5 +90,29 @@ void main() {
         );
       },
     );
+
+    test('disposing the container ends the gate mark stream', () async {
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(
+            createMockVideoEventService(),
+          ),
+          brokenVideoTrackerProvider.overrideWith(
+            (ref) => Completer<BrokenVideoTracker>().future,
+          ),
+          deadMediaFeedGuardProvider.overrideWith(
+            (ref) => Completer<DeadMediaFeedGuard>().future,
+          ),
+        ],
+      );
+      final marks = container
+          .read(feedUnavailabilityGateProvider)
+          .markedVideoIds
+          .toList();
+
+      container.dispose();
+
+      expect(await marks.timeout(const Duration(seconds: 5)), isEmpty);
+    });
   });
 }
